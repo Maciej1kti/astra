@@ -267,6 +267,26 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
     assert_eq!(read.status(), 200);
     assert!(read.headers().contains_key("etag"));
     let project = plan["project_id"].as_str().unwrap();
+    let resolved: Value = app
+        .local("POST", "/local/v1/projects/resolve")
+        .json(&json!({"absolute_path":app.project}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(resolved["project_id"], project);
+    assert_eq!(
+        app.local("POST", "/local/v1/projects/resolve")
+            .json(&json!({"absolute_path":format!("{}/child",app.project)}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        404
+    );
+
     for (path, schema) in [
         (
             format!("/api/v1/views/list?type=card&project_id={project}&limit=1"),

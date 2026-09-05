@@ -200,6 +200,20 @@ pub(super) fn run(
             engine.browser_registration_plan(&input.body)?
         }
 
+        ("POST", ["local", "v1", "projects", "resolve"]) if input.local => {
+            if !input
+                .body
+                .as_object()
+                .is_some_and(|o| o.len() == 1 && o.contains_key("absolute_path"))
+            {
+                return Err(AppError::reject(400, "INVALID_INPUT"));
+            }
+            let path = text(&input.body, "absolute_path")?;
+            if !std::path::Path::new(path).is_absolute() {
+                return Err(AppError::reject(400, "ABSOLUTE_PATH_REQUIRED"));
+            }
+            json!({"project_id":engine.resolve_path(path)?})
+        }
         ("GET", ["local", "v1", "hello"]) if input.local => {
             let (workspace, _) = engine.workspace()?;
             json!({"api_version":"1","instance_id":workspace["instance_id"],"command_epoch":engine.journal.epoch,"server_time":instant(now)})

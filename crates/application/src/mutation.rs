@@ -13,6 +13,7 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct Mutation {
     pub project_id: String,
     pub kind: Kind,

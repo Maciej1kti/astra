@@ -1,7 +1,7 @@
 //! Bounded projections. SQL applies filters and pagination before materializing output.
 use crate::{AppError, engine::Engine, index::Indexed};
 use chrono::Days;
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::{Value, json};
 fn offset(cursor: Option<&str>, scope: &Value) -> Result<u64, AppError> {
     let Some(cursor) = cursor else { return Ok(0) };
@@ -112,8 +112,23 @@ impl Engine {
             let scope=json!(["gantt",revision,project,limit]);let start=offset(cursor,&scope)?;
             let mut rows=rows(db,project,None,limit+1,start)?;let more=rows.len()>limit as usize;rows.truncate(limit as usize);
             let mut edges=Vec::new();
-            for row in &rows{for dependency in row.metadata["depends_on"].as_array().into_iter().flatten(){if let Some(id)=dependency.as_str(){edges.push(json!({"from":id,"to":row.id,"kind":"finish_to_start","outside_page":!rows.iter().any(|r|r.id==id),"warning":null}));}}}
-            Ok(json!({"rows":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"edges":edges,"page":page(&scope,revision,start,rows.len(),more),"warnings":[]}))
+            let mut warnings=Vec::new();
+            for row in &rows {
+                warnings.extend(project_domain::date_warnings(&row.metadata));
+                for dependency in row.metadata["depends_on"].as_array().into_iter().flatten() {
+                    if let Some(id)=dependency.as_str() {
+                        let predecessor:Option<(Option<String>,String)>=db.query_row("SELECT json_extract(metadata_json,'$.schedule.end'),validity FROM documents WHERE project_id=?1 AND entity_type='card' AND entity_id=?2",params![project,id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+                        let warning=match predecessor {
+                            None=>Some("DEPENDENCY_MISSING"),
+                            Some((_,validity)) if validity!="valid"=>Some("DEPENDENCY_STALE"),
+                            Some((Some(end),_)) if row.metadata["schedule"]["start"].as_str().is_some_and(|start| start<=end.as_str())=>Some("DEPENDENCY_DATE_CONFLICT"),
+                            _=>None,
+                        };
+                        edges.push(json!({"from":id,"to":row.id,"kind":"finish_to_start","outside_page":!rows.iter().any(|r|r.id==id),"warning":warning}));
+                    }
+                }
+            }
+            Ok(json!({"rows":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"edges":edges,"page":page(&scope,revision,start,rows.len(),more),"warnings":warnings}))
         })
     }
     pub fn board(

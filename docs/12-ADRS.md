@@ -66,3 +66,10 @@ field filters. It returns the existing SummaryPage contract and stable index
 cursors. This supports the cross-project list and update views without fetching
 every project's entire archive or adding an unbounded bootstrap payload. The
 per-project APIs retain their contracts. Search uses its documented `q` parameter.
+
+## ADR-017 — Exact local CLI project resolution
+
+The Unix-only POST `/local/v1/projects/resolve` reads the registry for an exact
+absolute path. It never searches parents, Git remotes or folder names. Typed CLI
+commands require `--project`; `.` is resolved explicitly by the client. This
+read-only route is not mounted on TCP and does not register unknown folders.

@@ -144,7 +144,7 @@ impl Writer<'_> {
         };
         let reply = Reply {
             http_status: 200,
-            body: json!({"api_version":"1","request_id":command.request_id,"status":if noop {"noop"} else {"committed"},"result":{"type":command.target.kind.as_str(),"id":command.target.id,"version":document::version(&after),"resource": {"type":value["type"],"metadata":value["metadata"],"body":value["body"],"version":document::version(&after)}},"warnings":[],"replayed":false}),
+            body: json!({"api_version":"1","request_id":command.request_id,"status":if noop {"noop"} else {"committed"},"result":{"type":command.target.kind.as_str(),"id":command.target.id,"version":document::version(&after),"resource": {"type":value["type"],"metadata":value["metadata"],"body":value["body"],"version":document::version(&after)}},"warnings":project_domain::date_warnings(&value["metadata"]),"replayed":false}),
         };
         if noop {
             return Ok(self

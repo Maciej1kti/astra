@@ -280,10 +280,16 @@ impl Engine {
         let workflows = Workflows {
             journal: &self.journal,
         };
+        let plan = workflows.plan(plan_id)?;
+        if let Some(reply) = self
+            .journal
+            .admit(&plan.command(request_id, epoch), now_millis())?
+        {
+            return Ok(reply);
+        }
         if self.journal.has_pending("workspace")? {
             return Err(AppError::reject(409, "WORKSPACE_RECOVERY_REQUIRED"));
         }
-        let plan = workflows.plan(plan_id)?;
         if plan.kind != "registration" {
             return Err(AppError::reject(422, "PLAN_KIND_MISMATCH"));
         }

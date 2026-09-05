@@ -630,3 +630,50 @@ fn incremental_projection_preserves_other_sources_and_handles_invalid_delete_rec
         2
     );
 }
+
+#[test]
+fn completed_registration_replays_after_restart_with_missing_project_folder() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let plan = engine
+        .registration_plan(&env.path(), Some("Retry test"), true)
+        .unwrap();
+    let plan_id = plan["plan_id"].as_str().unwrap();
+    let request = Uuid::now_v7().to_string();
+    let epoch = engine.journal.epoch.clone();
+    let first = engine
+        .commit_registration(plan_id, &request, &epoch)
+        .unwrap();
+    drop(engine);
+    fs::rename(env.root.join("project"), env.root.join("temporarily-away")).unwrap();
+    let engine = env.engine();
+    let retry = engine
+        .commit_registration(plan_id, &request, &epoch)
+        .unwrap();
+    assert_eq!(retry.body["job_id"], first.body["job_id"]);
+}
+
+#[test]
+fn schedule_warning_is_durable_and_never_moves_deadline() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let request = Uuid::now_v7().to_string();
+    let mutation = Mutation {
+        project_id: project.clone(),
+        kind: Kind::Card,
+        id: None,
+        payload: json!({"title":"Plan after due","schedule":{"start":"2026-09-01","end":"2026-09-10"},"due":{"date":"2026-09-05","kind":"hard"}}),
+        request_id: request,
+        epoch: engine.journal.epoch.clone(),
+        expected: None,
+    };
+    let first = engine.mutate(mutation.clone()).unwrap();
+    assert_eq!(first.body["warnings"][0]["code"], "SCHEDULE_AFTER_DUE");
+    assert_eq!(
+        first.body["result"]["resource"]["metadata"]["due"]["date"],
+        "2026-09-05"
+    );
+    let replay = engine.mutate(mutation).unwrap();
+    assert_eq!(replay.body["warnings"], first.body["warnings"]);
+}

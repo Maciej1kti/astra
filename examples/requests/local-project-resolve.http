@@ -1,0 +1,6 @@
+### Unix socket only: resolve an explicitly selected registered folder
+POST /local/v1/projects/resolve HTTP/1.1
+Host: localhost
+Content-Type: application/json
+
+{"absolute_path":"/home/owner/work/field-notes"}

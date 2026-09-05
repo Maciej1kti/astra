@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack, onMount } from "svelte";
+  import Markdown from "./Markdown.svelte";
   import { modal } from "./dialog";
   import {
     api,
@@ -7,6 +8,7 @@
     send,
     ApiError,
     type Resource,
+    type Summary,
     type Pending,
   } from "./api";
   let {
@@ -56,6 +58,77 @@
     busy = $state(false),
     pending = $state<Pending | null>(null),
     conflict = $state<Resource | null>(null);
+
+  let preview = $state(false),
+    discard = $state(false);
+  let phase = $state(String(metadata?.phase ?? ""));
+  let archived = $state(Boolean(metadata?.archived));
+  let milestoneId = $state(String(metadata?.milestone_id ?? ""));
+  let blockedReason = $state(
+    String((metadata?.blocked as { reason?: string })?.reason ?? ""),
+  );
+  let dependencies = $state<string[]>((metadata?.depends_on as string[]) ?? []);
+  let targetType = $state(
+    String((metadata?.target as { type?: string })?.type ?? "project"),
+  );
+  let targetId = $state(
+    String((metadata?.target as { id?: string })?.id ?? untrack(() => project)),
+  );
+  let resolves = $state(((metadata?.resolves as string[]) ?? []).join(", "));
+  let supersedes = $state(String(metadata?.supersedes ?? ""));
+  let choices = $state<Summary[]>([]),
+    choiceSearch = $state("");
+  let choiceKind = $state("card");
+  async function searchChoices() {
+    try {
+      const page = await api<{ items: Summary[] }>(
+        `/api/v1/search?q=${encodeURIComponent(choiceSearch)}&project_id=${project}&limit=50`,
+      );
+      choices = page.items.filter(
+        (item) => item.type === choiceKind && item.id !== resource?.metadata.id,
+      );
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+  function snapshot() {
+    return JSON.stringify({
+      title,
+      status,
+      priority,
+      kind,
+      start,
+      end,
+      due,
+      dueKind,
+      review,
+      body,
+      labels,
+      advanced,
+      author,
+      phase,
+      archived,
+      milestoneId,
+      blockedReason,
+      dependencies,
+      targetType,
+      targetId,
+      resolves,
+      supersedes,
+    });
+  }
+  const baseline = untrack(snapshot);
+  let dirty = $derived(snapshot() !== baseline);
+  function close() {
+    if (dirty || pending) discard = true;
+    else onclose();
+  }
+  function beforeUnload(event: BeforeUnloadEvent) {
+    if (dirty || pending) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  }
 
   let focus = $state<{
     items: { project_id: string; card_id: string }[];
@@ -170,16 +243,39 @@
       if (type === "project") {
         fields.name = title;
         fields.state = status;
+        if (phase) fields.phase = phase;
+        else if (metadata?.phase) clear.push("phase");
       } else if (type === "update") {
         fields.summary = title;
         fields.kind = kind;
         fields.author = { kind: "human", label: author };
-        fields.target = extra.target ?? { type: "project", id: project };
+        fields.target = extra.target ?? {
+          type: targetType,
+          id: targetType === "project" ? project : targetId,
+        };
+        if (kind === "resolution")
+          fields.resolves = resolves
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean);
+        if (kind === "correction") fields.supersedes = supersedes.trim();
       } else {
         fields.title = title;
         fields.status = status;
       }
       if (type === "card") {
+        fields.archived = archived;
+        if (
+          !resource ||
+          JSON.stringify(dependencies) !==
+            JSON.stringify(metadata?.depends_on ?? [])
+        )
+          fields.depends_on = dependencies;
+        if (milestoneId) fields.milestone_id = milestoneId;
+        else if (metadata?.milestone_id) clear.push("milestone_id");
+        if (blockedReason.trim())
+          fields.blocked = { reason: blockedReason.trim() };
+        else if (metadata?.blocked) clear.push("blocked");
         fields.priority = priority;
         fields.kind = kind;
         fields.labels = labels
@@ -258,13 +354,14 @@
   }
 </script>
 
+<svelte:window onbeforeunload={beforeUnload} />
 <dialog
   use:modal
   class="editor"
   aria-label={resource ? "Edit resource" : "Create resource"}
   oncancel={(e) => {
     e.preventDefault();
-    if (!busy) onclose();
+    if (!busy) close();
   }}
 >
   <header>
@@ -278,9 +375,7 @@
             : `Create ${type}`}
       </h2>
     </div>
-    <button aria-label="Close editor" onclick={onclose} disabled={busy}
-      >✕</button
-    >
+    <button aria-label="Close editor" onclick={close} disabled={busy}>✕</button>
   </header>
   <form
     onsubmit={(e) => {
@@ -288,6 +383,17 @@
       void save();
     }}
   >
+    {#if discard}<div role="alert" class="notice">
+        <p>
+          {pending
+            ? "The command result may still be unknown. Keep its request ID before closing."
+            : "Discard your unsaved draft?"}
+        </p>
+        <button type="button" onclick={onclose}>Discard draft</button><button
+          type="button"
+          onclick={() => (discard = false)}>Keep editing</button
+        >
+      </div>{/if}
     {#if readonly}<button
         type="button"
         onclick={toggleRead}
@@ -399,6 +505,81 @@
         rows="10"
         disabled={readonly || busy}></textarea></label
     >
+    <button type="button" onclick={() => (preview = !preview)}
+      >{preview ? "Hide preview" : "Preview Markdown"}</button
+    >
+    {#if preview}<Markdown source={body} />{/if}
+    {#if type === "project"}<label
+        >Phase<input bind:value={phase} disabled={busy} /></label
+      >{/if}
+    {#if type === "card"}<fieldset>
+        <legend>Connections and blockers</legend>
+        <label
+          >Milestone ID<input bind:value={milestoneId} disabled={busy} /></label
+        >
+        <label
+          >Blocked reason<textarea bind:value={blockedReason} disabled={busy}
+          ></textarea></label
+        >
+        <label
+          ><input type="checkbox" bind:checked={archived} disabled={busy} /> Archived</label
+        >
+        <p>Dependencies</p>
+        {#each dependencies as id}<div>
+            {id}<button
+              type="button"
+              onclick={() =>
+                (dependencies = dependencies.filter((value) => value !== id))}
+              disabled={busy}>Remove dependency</button
+            >
+          </div>{/each}
+        <label
+          >Search for<select bind:value={choiceKind}
+            ><option value="card">Dependency card</option><option
+              value="milestone">Milestone</option
+            ></select
+          ></label
+        >
+        <label>Find by title<input bind:value={choiceSearch} /></label><button
+          type="button"
+          onclick={searchChoices}
+          disabled={!choiceSearch.trim() || busy}>Find resources</button
+        >
+        {#each choices as item}<button
+            type="button"
+            disabled={busy}
+            onclick={() => {
+              if (item.type === "milestone") milestoneId = item.id;
+              else if (!dependencies.includes(item.id))
+                dependencies = [...dependencies, item.id];
+            }}>{item.title}</button
+          >{/each}
+      </fieldset>{/if}
+    {#if type === "update"}<fieldset disabled={readonly || busy}>
+        <legend>Report details</legend>
+        <label
+          >Target type<select bind:value={targetType}
+            ><option value="project">Project</option><option value="card"
+              >Card</option
+            ><option value="milestone">Milestone</option></select
+          ></label
+        >
+        {#if targetType !== "project"}<label
+            >Target ID<input bind:value={targetId} required /></label
+          >{/if}
+        {#if kind === "resolution"}<label
+            >Resolved report IDs, separated by commas<input
+              bind:value={resolves}
+              required
+            /></label
+          >{/if}
+        {#if kind === "correction"}<label
+            >Corrected report ID<input
+              bind:value={supersedes}
+              required
+            /></label
+          >{/if}
+      </fieldset>{/if}
     {#if !readonly}<details>
         <summary>Additional fields</summary>
         <p>
@@ -454,7 +635,7 @@
         >
       </div>{/if}
     <footer>
-      <button type="button" onclick={onclose} disabled={busy}
+      <button type="button" onclick={close} disabled={busy}
         >{readonly ? "Close" : "Cancel"}</button
       >{#if !readonly}<button
           class="primary"

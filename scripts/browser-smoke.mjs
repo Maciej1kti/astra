@@ -127,6 +127,8 @@ try {
   await page
     .getByLabel("Description Markdown source")
     .fill('A real browser write.\n\n<script>alert("untrusted")</script>');
+  await page.getByRole("button", { name: "Preview Markdown", exact: true }).click();
+  assert.equal(await page.locator(".markdown script, .markdown img").count(), 0);
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "Board", exact: true }).click();
@@ -178,6 +180,7 @@ try {
     fullPage: true,
   });
   await mobile.getByRole("button", { name: "Close editor" }).click();
+  await mobile.getByRole("button", { name: "Discard draft", exact: true }).click();
 
   await page.getByRole("heading", { name: "Ship the revised guide" }).click();
   await page.getByText("Change history", { exact: true }).click();
@@ -235,9 +238,66 @@ try {
   await writeFile(cardFile, source.replace("Ship the field guide", "External editor update"));
   await page.getByText("External editor update", { exact: true }).waitFor({timeout: 10000});
   assert.equal(cli("get", path).metadata.title, "External editor update");
+  await page.getByLabel("Project", { exact: true }).selectOption(plan.project_id);
+  await page.getByRole("button", {name:"Timeline",exact:true}).click();
+  await page.getByLabel("Month",{exact:true}).fill("2026-09");
+  const moveHandle = page.getByRole("button",{name:"Move plan: External editor update",exact:true});
+  await moveHandle.waitFor();
+  const beforeGesture = cli("get",path);
+  for (const cancellation of ["escape","pointercancel","orientationchange","second-pointer"]) {
+    const bounds=await moveHandle.boundingBox();
+    await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
+    await page.mouse.down();
+    await page.mouse.move(bounds.x+bounds.width/2+48,bounds.y+bounds.height/2,{steps:4});
+    if(cancellation==="escape") await page.keyboard.press("Escape");
+    else if(cancellation==="pointercancel") await moveHandle.dispatchEvent("pointercancel",{pointerId:1});
+    else if(cancellation==="orientationchange") await page.evaluate(()=>window.dispatchEvent(new Event("orientationchange")));
+    else await page.evaluate(()=>window.dispatchEvent(new PointerEvent("pointerdown",{pointerId:99,isPrimary:false})));
+    await page.mouse.up();
+    assert.equal(await page.getByRole("dialog").count(),0);
+    assert.equal(cli("get",path).version,beforeGesture.version);
+  }
+  const bounds=await moveHandle.boundingBox();
+  await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x+bounds.width/2+48,bounds.y+bounds.height/2,{steps:4});
+  await page.mouse.up();
+  await page.getByRole("dialog",{name:"Change planned dates"}).waitFor();
+  assert.equal(await page.getByLabel("Planned start",{exact:true}).inputValue(),"2026-09-08");
+  assert.equal(await page.getByLabel("Planned end",{exact:true}).inputValue(),"2026-09-13");
+  await page.getByRole("button",{name:"Save planned dates",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.deepEqual(cli("get",path).metadata.due,beforeGesture.metadata.due);
+  assert.equal(cli("get",path).metadata.schedule.start,"2026-09-08");
+  await page.screenshot({path:join(root,"progress/screenshots/desktop-timeline.png"),fullPage:true});
+
+  const resize = page.getByRole("button",{name:"Resize end: External editor update",exact:true});
+  const resizeBounds=await resize.boundingBox();
+  await page.mouse.move(resizeBounds.x+resizeBounds.width/2,resizeBounds.y+resizeBounds.height/2);
+  await page.mouse.down();await page.mouse.move(resizeBounds.x+resizeBounds.width/2+48,resizeBounds.y+resizeBounds.height/2,{steps:4});await page.mouse.up();
+  assert.equal(await page.getByLabel("Planned start",{exact:true}).inputValue(),"2026-09-08");
+  assert.equal(await page.getByLabel("Planned end",{exact:true}).inputValue(),"2026-09-14");
+  const conflictingPatch=join(temp,"date-conflict.json");
+  await writeFile(conflictingPatch,JSON.stringify({set:{title:"Competing timeline edit"}}));
+  cli("command","PATCH",path,"--json-file",conflictingPatch,"--if-version",cli("get",path).version);
+  await page.getByRole("button",{name:"Save planned dates",exact:true}).click();
+  await page.getByText("Current saved schedule:",{exact:false}).waitFor();
+  assert.equal(await page.getByLabel("Planned end",{exact:true}).inputValue(),"2026-09-14");
+  assert.equal(cli("get",path).metadata.schedule.end,"2026-09-13");
+  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+
+  const agentContext = cli("--project", folder, "context", "--max-bytes", "4096", "--json");
+  assert(Buffer.byteLength(JSON.stringify(agentContext)) <= 4096);
+  const typedCard = cli("--project", folder, "card", "create", "--title", "Typed CLI task");
+  const typedId = typedCard.result.resource.metadata.id;
+  assert.equal(cli("--project", folder, "card", "get", typedId).metadata.title, "Typed CLI task");
+  const patchFile = join(temp, "patch.json");
+  await writeFile(patchFile, JSON.stringify({set:{status:"active"}}));
+  cli("--project", folder, "card", "set", typedId, "--patch-file", patchFile, "--if-version", typedCard.result.resource.version);
+  assert.equal(cli("--project", folder, "card", "get", typedId).metadata.status, "active");
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings and native external file updates.",
+    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

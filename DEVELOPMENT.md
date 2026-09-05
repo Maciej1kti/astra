@@ -70,3 +70,29 @@ and an ordinary daemon, pairs Chromium through the real owner approval flow, and
 checks creation and competing edits. It cleans up its processes and temporary
 state. Screenshots and logs are evidence under `progress/`, not user project data.
 Chromium phone emulation is not physical iPhone or Safari validation.
+
+## Typed CLI and date editing
+
+Project commands require an exact registered folder; no parent or Git lookup occurs.
+
+```sh
+projectctl --socket "$SOCKET" --project . context --max-bytes 24576 --json
+projectctl --socket "$SOCKET" --project . card list --limit 50
+projectctl --socket "$SOCKET" --project . card create --title 'Write the guide'
+projectctl --socket "$SOCKET" --project . card set CARD_ID --patch-file patch.json --if-version VERSION
+projectctl --socket "$SOCKET" --project . report add --kind result --target project:PROJECT_ID --summary 'Guide reviewed'
+projectctl --socket "$SOCKET" command-status REQUEST_ID
+```
+
+Mutating typed commands accept `--request-id` together with `--epoch` for an
+identical retry. `--timeout` bounds transport waits. The generic `get` and
+`command` interfaces remain available for API operations without a dedicated alias.
+
+The editor provides escaped-HTML Markdown preview with images disabled, explicit
+connections/blockers, report targets and resolutions, and draft discard protection.
+Calendar and timeline load separately and use bounded view APIs. Timeline handles
+propose a schedule move or resize; review the dates and save with the original
+version. Deadlines are independent. Escape, pointer cancellation, a second pointer
+or orientation changes cancel a gesture without writing. Opening the date form
+with a handle also provides a keyboard alternative. Physical phone validation and
+complete release acceptance remain outstanding.

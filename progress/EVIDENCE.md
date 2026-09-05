@@ -116,3 +116,23 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
   verified only on the available macOS host, not Linux or a physical phone.
 - Archive-scale benchmarks, notification overflow/failure diagnostics and active
   project reconciliation on foreground return still need completion.
+
+## E009 — Typed CLI, safe preview and date interactions
+
+- Added exact-folder CLI resolution and typed card/milestone/report/context/focus
+  commands, bounded file reads, transport timeout and uncertain-result reporting.
+- Added safe Markdown preview (raw HTML and images disabled), explicit common
+  metadata fields, dependency search and dirty-draft protection.
+- Calendar now uses distinct schedule, deadline and review resources. Lazy-loaded
+  timeline supports move/resize proposals with conditional save and preserved
+  conflict drafts. Source date warnings remain stable in command replay.
+- Full local checks passed: 51 Rust tests, 3 Node tests, Python/contract checks,
+  Svelte with zero warnings, release build. See `checks/editor-cli-dates.txt`.
+- Browser smoke verifies typed CLI, Markdown safety, a one-day timeline move with
+  unchanged due date, resize conflict and Escape/pointercancel/orientation/second
+  pointer cancellation. See `checks/browser-smoke.txt`, `screenshots/desktop-timeline.png`.
+- A failing regression reproduced registration retry after a project disappeared
+  across restart; checking the durable result before opening the folder fixes it.
+- Not a complete gesture or release claim: physical touch behavior, calendar drag
+  trials, timeline milestone rows/edge rendering and large-data virtualization
+  still need work.

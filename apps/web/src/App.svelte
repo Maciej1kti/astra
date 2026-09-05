@@ -4,6 +4,17 @@
   import Editor from "./lib/Editor.svelte";
   import Settings from "./lib/Settings.svelte";
   let settings = $state(false);
+  let DateViews = $state<
+    typeof import("./lib/DateViews.svelte").default | null
+  >(null);
+  let viewRevision = $state(0),
+    weekStart = $state("monday");
+  $effect(() => {
+    if (view === "calendar" || view === "gantt")
+      void import("./lib/DateViews.svelte").then(
+        (module) => (DateViews = module.default),
+      );
+  });
   import {
     api,
     all,
@@ -134,10 +145,11 @@
     try {
       boot = await api<Bootstrap>("/api/v1/bootstrap");
       configure(boot);
-      const preferences = await api<{ preferences: { default_view?: View } }>(
-        "/api/v1/workspace/preferences",
-      );
+      const preferences = await api<{
+        preferences: { default_view?: View; week_start?: string };
+      }>("/api/v1/workspace/preferences");
       view = preferences.preferences.default_view ?? "focus";
+      weekStart = preferences.preferences.week_start ?? "monday";
       await refresh();
       connect();
     } catch (e) {
@@ -211,6 +223,7 @@
       }
     }
     if (generation !== refreshGeneration) return;
+    viewRevision++;
     focusCards = pinned;
     projects = p;
     focus = f.items;
@@ -728,57 +741,16 @@
                   >{:else}<p class="columnempty">Nothing here yet</p>{/each}
               </section>{/each}
           </div>
-        {:else if view === "calendar"}<div class="calendar">
-            {#each days as day}<section class:today={day === today}>
-                <header>
-                  <span
-                    >{new Date(`${day}T12:00:00Z`).toLocaleDateString("en", {
-                      weekday: "short",
-                      timeZone: "UTC",
-                    })}</span
-                  ><strong>{Number(day.slice(-2))}</strong>
-                </header>
-                {#each datesFor(day) as item}<button
-                    class:deadline={item.due?.date === day}
-                    onclick={() => open(item)}
-                    ><small
-                      >{item.due?.date === day
-                        ? `${item.due.kind} due`
-                        : item.review_on === day
-                          ? "Review"
-                          : "Planned"}</small
-                    >{item.title}</button
-                  >{/each}
-              </section>{/each}
-          </div>
-        {:else if view === "gantt"}<div class="timeline">
-            <div class="timelinehead">
-              <strong>Scheduled work</strong>
-              <div class="days">
-                {#each days as day}<span class:today={day === today}
-                    >{Number(day.slice(-2))}</span
-                  >{/each}
-              </div>
-            </div>
-            {#each filtered.filter((c) => c.schedule && c.schedule.start <= days[days.length - 1] && c.schedule.end >= days[0]) as item}{@const start =
-                Math.max(0, days.indexOf(item.schedule!.start))}{@const end =
-                item.schedule!.end > days[days.length - 1]
-                  ? days.length
-                  : days.indexOf(item.schedule!.end) + 1}
-              <div class="timelinerow">
-                <button onclick={() => open(item)}>{item.title}</button>
-                <div class="track" style={`--days:${days.length}`}>
-                  <button
-                    class="bar"
-                    style={`grid-column:${start + 1} / ${end + 1}`}
-                    onclick={() => open(item)}>{item.title}</button
-                  >
-                </div>
-              </div>{:else}<div class="empty">
-                No scheduled cards in this month. Add start and end dates in a
-                card.
-              </div>{/each}
-          </div>
+        {:else if view === "calendar" || view === "gantt"}{#if DateViews}<DateViews
+              {project}
+              {month}
+              {view}
+              revision={viewRevision}
+              {weekStart}
+              {search}
+              {open}
+              onchanged={() => void refresh().catch(message)}
+            />{:else}<p>Loading date views…</p>{/if}
         {:else if view === "updates"}<div class="updates">
             {#each visibleUpdates as item}<button
                 class="update"
@@ -822,7 +794,7 @@
                 No items match this selection.
               </div>{/each}
           </div>{/if}
-        {#if ["board", "list", "updates", "calendar", "gantt"].includes(view)}{@const kind =
+        {#if ["board", "list", "updates"].includes(view)}{@const kind =
             view === "updates"
               ? "update"
               : view === "list" && collection === "milestones"
@@ -833,10 +805,6 @@
                 onclick={() => more(kind)}>Load more</button
               >
             </div>{/if}{/if}
-        {#if view === "calendar" && pageCursors.milestone}<button
-            disabled={loadingMore}
-            onclick={() => more("milestone")}>Load more milestones</button
-          >{/if}
         <footer class="pagefooter">
           Your files are the source of truth. <span>Local Projects · v0.1</span>
         </footer>
@@ -1454,118 +1422,6 @@
   .month input {
     width: 160px;
   }
-  .calendar {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(110px, 1fr));
-    border-left: 1px solid var(--line);
-    border-top: 1px solid var(--line);
-    overflow: auto;
-  }
-  .calendar > section {
-    min-height: 130px;
-    border-right: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    padding: 10px;
-    background: var(--paper);
-  }
-  .calendar header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    font-size: 11px;
-  }
-  .calendar header span {
-    color: var(--muted);
-  }
-  .calendar button {
-    display: block;
-    width: 100%;
-    min-height: 30px;
-    text-align: left;
-    font-size: 10px;
-    background: #e8eedc;
-    border: 0;
-    border-left: 2px solid #94ab6d;
-    margin-bottom: 5px;
-    padding: 6px;
-    overflow-wrap: anywhere;
-  }
-  .calendar button small {
-    display: block;
-    font-size: 8px;
-    text-transform: uppercase;
-    margin-bottom: 3px;
-    color: #6b7f52;
-  }
-  .calendar button.deadline {
-    background: #f7ebdf;
-    border-color: #bd9268;
-  }
-  .calendar .today {
-    background: #f0f5e4;
-  }
-  .timeline {
-    overflow: auto;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-  }
-  .timelinehead,
-  .timelinerow {
-    display: grid;
-    grid-template-columns: 210px minmax(700px, 1fr);
-    min-width: 910px;
-  }
-  .timelinehead > strong {
-    font-size: 12px;
-    padding: 18px;
-  }
-  .days {
-    display: flex;
-  }
-  .days > span {
-    flex: 1;
-    text-align: center;
-    font-size: 10px;
-    padding-top: 20px;
-    border-left: 1px solid var(--line);
-  }
-  .days .today {
-    background: var(--accent);
-  }
-  .timelinerow {
-    border-top: 1px solid var(--line);
-  }
-  .timelinerow > button {
-    border: 0;
-    border-right: 1px solid var(--line);
-    border-radius: 0;
-    text-align: left;
-    font-size: 12px;
-  }
-  .track {
-    display: grid;
-    grid-template-columns: repeat(var(--days), 1fr);
-    padding: 10px 0;
-    background: repeating-linear-gradient(
-      to right,
-      transparent 0,
-      transparent calc(100% / var(--days) - 1px),
-      var(--line) calc(100% / var(--days) - 1px),
-      var(--line) calc(100% / var(--days))
-    );
-  }
-  .bar {
-    background: #d9e6b8;
-    border-color: #c9d99f;
-    min-height: 28px;
-    padding: 5px 8px;
-    font-size: 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: left;
-  }
   .table {
     background: var(--paper);
     border: 1px solid var(--line);
@@ -1715,9 +1571,6 @@
     h1 {
       font-size: 32px;
     }
-    .calendar {
-      grid-template-columns: repeat(7, minmax(90px, 1fr));
-    }
     .pairbox {
       position: static;
       width: auto;
@@ -1822,17 +1675,6 @@
     }
     .pagefooter span {
       display: none;
-    }
-    .calendar {
-      display: flex;
-      flex-direction: column;
-      max-height: 65vh;
-    }
-    .calendar > section {
-      min-height: 65px;
-    }
-    .calendar button {
-      font-size: 12px;
     }
     .month {
       width: 100%;

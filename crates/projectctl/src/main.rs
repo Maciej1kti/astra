@@ -1,3 +1,4 @@
+mod typed;
 use clap::{Parser, Subcommand};
 use serde_json::{Value, json};
 use std::{path::PathBuf, time::Duration};
@@ -11,11 +12,20 @@ use uuid::Uuid;
 struct Arguments {
     #[arg(long)]
     socket: PathBuf,
+    #[arg(long, global = true)]
+    project: Option<PathBuf>,
+    #[arg(long, global=true, default_value_t=30, value_parser=clap::value_parser!(u64).range(1..=300))]
+    timeout: u64,
+    /// JSON is the default output format; this flag makes the choice explicit.
+    #[arg(long, global = true)]
+    json: bool,
     #[command(subcommand)]
     command: Action,
 }
 #[derive(Subcommand)]
 enum Action {
+    #[command(flatten)]
+    Typed(typed::Action),
     AddRoot {
         absolute_path: PathBuf,
         #[arg(long)]
@@ -86,9 +96,10 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
     let client = reqwest::Client::builder()
         .unix_socket(args.socket)
         .no_proxy()
-        .timeout(Duration::from_secs(30))
+        .timeout(Duration::from_secs(args.timeout))
         .build()?;
     let (method, path, payload, version, request, epoch) = match args.command {
+        Action::Typed(action) => action.prepare(&client, args.project.as_deref()).await?,
         Action::AddRoot {
             absolute_path,
             label,
@@ -211,7 +222,7 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             epoch,
         } => {
             api_path(&path)?;
-            let bytes = std::fs::read(json_file)?;
+            let bytes = typed::file(&json_file)?;
             if bytes.len() > 1_100_000 {
                 return Err("JSON file too large".into());
             }
@@ -262,7 +273,17 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             .header("x-request-id", request_id)
             .header("x-command-epoch", epoch);
     }
-    let reply = builder.send().await?;
+    let reply = match builder.send().await {
+        Ok(reply) => reply,
+        Err(error) => {
+            let uncertain = method != "GET" && path.starts_with("/api/");
+            println!(
+                "{}",
+                json!({"api_version":"1","ok":false,"error":{"code":if uncertain {"RESULT_UNCERTAIN"} else {"TRANSPORT_UNAVAILABLE"},"message":error.to_string()}})
+            );
+            return Ok(if uncertain { 9 } else { 3 });
+        }
+    };
     let status = reply.status().as_u16();
     let bytes = reply.bytes().await?;
     let body: Value = if bytes.is_empty() {
@@ -276,9 +297,11 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
     );
     Ok(match status {
         200..=299 => 0,
-        409 | 412 | 428 => 3,
-        401 | 403 => 4,
-        _ => 1,
+        404 => 4,
+        409 | 412 | 428 => 5,
+        401 | 403 => 6,
+        400 | 422 => 2,
+        _ => 8,
     })
 }
 fn api_path(path: &str) -> Result<(), Box<dyn std::error::Error>> {

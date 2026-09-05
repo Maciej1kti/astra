@@ -86,6 +86,17 @@
       "path": "/local/v1/doctor",
       "input": null,
       "output": "redacted Diagnostics"
+    },
+    {
+      "method": "POST",
+      "path": "/local/v1/projects/resolve",
+      "input": {
+        "absolute_path": "exact absolute registered path"
+      },
+      "output": {
+        "project_id": "UUID"
+      },
+      "read_only": true
     }
   ],
   "maintenance_parameters": {

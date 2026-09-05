@@ -132,3 +132,16 @@ pub fn local_date(text: &str) -> Result<NaiveDate, DomainError> {
     NaiveDate::parse_from_str(text, "%Y-%m-%d")
         .map_err(|_| DomainError::Invalid("invalid calendar date"))
 }
+
+/// Planning inconsistencies are advisory; schedules never silently move deadlines.
+pub fn date_warnings(metadata: &Value) -> Vec<Value> {
+    let mut warnings = Vec::new();
+    if let (Some(end), Some(due)) = (
+        metadata["schedule"]["end"].as_str(),
+        metadata["due"]["date"].as_str(),
+    ) && end > due
+    {
+        warnings.push(serde_json::json!({"code":"SCHEDULE_AFTER_DUE","message":"The planned work ends after its due date."}));
+    }
+    warnings
+}

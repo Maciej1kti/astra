@@ -85,6 +85,22 @@ pub struct Plan {
     pub steps: Vec<Step>,
     pub view: Value,
 }
+impl Plan {
+    pub(crate) fn command(&self, request_id: &str, epoch: &str) -> Command {
+        Command {
+            request_id: request_id.into(),
+            epoch: epoch.into(),
+            method: format!("WORKFLOW:{}", self.kind),
+            target: Target {
+                project_id: self.project_id.clone(),
+                kind: Kind::Project,
+                id: self.project_id.clone(),
+            },
+            expected: None,
+            payload: json!({"plan_id":self.id}),
+        }
+    }
+}
 pub struct Workflows<'a> {
     pub journal: &'a Journal,
 }
@@ -131,18 +147,7 @@ impl Workflows<'_> {
         checkpoint: impl FnMut(usize) -> Result<(), AppError>,
     ) -> Result<Reply, AppError> {
         let plan = self.plan(plan_id)?;
-        let command = Command {
-            request_id: request_id.into(),
-            epoch: epoch.into(),
-            method: format!("WORKFLOW:{}", plan.kind),
-            target: Target {
-                project_id: plan.project_id.clone(),
-                kind: Kind::Project,
-                id: plan.project_id.clone(),
-            },
-            expected: None,
-            payload: json!({"plan_id":plan_id}),
-        };
+        let command = plan.command(request_id, epoch);
         if let Some(reply) = self.journal.admit(&command, now)? {
             return Ok(reply);
         }
