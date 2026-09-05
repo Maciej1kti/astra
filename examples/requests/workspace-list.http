@@ -1,0 +1,4 @@
+# An authenticated summary-only page. Session cookies are supplied by the client.
+GET /api/v1/views/list?type=card&limit=50 HTTP/1.1
+Host: projects.example
+Accept: application/json

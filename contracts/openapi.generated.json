@@ -3026,6 +3026,110 @@
           }
         ]
       }
+    },
+    "/api/v1/views/list": {
+      "get": {
+        "operationId": "getWorkspaceList",
+        "tags": [
+          "views"
+        ],
+        "summary": "Read a paginated workspace resource list",
+        "description": "A bounded summary-only projection across registered projects. Optional project and field filters use the same index and cursor rules as per-project collections.",
+        "responses": {
+          "200": {
+            "description": "Poprawna odpowiedź",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Kontrolowany błąd; szczegóły w katalogu kodów",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "card",
+                "milestone",
+                "update"
+              ]
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/UUID"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "milestone_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "archived",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -4022,6 +4126,10 @@
           },
           "version": {
             "$ref": "#/components/schemas/Version"
+          },
+          "read": {
+            "type": "boolean",
+            "description": "Shared owner read receipt. Independent of report resolution."
           }
         },
         "required": [
@@ -4961,6 +5069,10 @@
           },
           "milestone_id": {
             "$ref": "#/components/schemas/UUID"
+          },
+          "read": {
+            "type": "boolean",
+            "description": "Present for updates. Shared owner read receipt; does not resolve a report."
           }
         },
         "required": [

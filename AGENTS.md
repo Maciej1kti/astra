@@ -1,5 +1,7 @@
 # Praca agentów nad kodem Local Projects
 
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [progress/SCOPE.md](progress/SCOPE.md). All other work remains in scope.
+
 ## Repository language and publication policy — owner decision, 2026-09-05
 
 All new repository content must be written in English: source code identifiers,

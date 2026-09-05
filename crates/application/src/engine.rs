@@ -312,10 +312,22 @@ impl Engine {
         let store = handle.lock().map_err(|_| AppError::State)?;
         let (mut value, version) = read(&store, kind, id)?;
         value["version"] = json!(version);
+        if kind == Kind::Update {
+            value["read"] = json!(self.receipt(project_id, id)?);
+        }
         Ok(value)
     }
     pub fn list(&self, kind: Option<&str>, query: &Query) -> Result<Value, AppError> {
-        self.index.summary_page(kind, query)
+        let mut page = self.index.summary_page(kind, query)?;
+        for item in page["items"].as_array_mut().ok_or(AppError::State)? {
+            if item["type"] == "update" {
+                item["read"] = json!(self.receipt(
+                    item["project_id"].as_str().unwrap(),
+                    item["id"].as_str().unwrap()
+                )?);
+            }
+        }
+        Ok(page)
     }
     pub fn refresh_all(&self) -> Result<(), AppError> {
         let _gate = self.gate.read().map_err(|_| AppError::State)?;

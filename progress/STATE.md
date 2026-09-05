@@ -1,5 +1,7 @@
 # Implementation state
 
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
+
 Updated: 2026-09-05. Status: **in progress; not release-ready**.
 
 Public repository: https://github.com/Maciej1kti/astra. New repository content,
@@ -17,14 +19,13 @@ verified; preserve requirements from the temporary handoff until then.
 - Approved directory browsing and SSE invalidations.
 - Durable focus/preferences, conditional undo, history and browser settings.
 
-Latest committed transport/UI slice: `4e4dcc0`; evidence E005.
+Latest verified report/view slice: evidence E007 (46 Rust tests and browser smoke).
 Workspace/history verification is recorded in E006; use `git status` for the exact
 working tree. The current source supersedes historical implementation claims in
 older evidence entries.
 
 ## Outstanding
 
-Context/attention APIs, receipts,
 Markdown preview, calendar/Gantt manipulation trials, maintenance operations,
 retention/upgrades, performance/security/fault coverage, packaging and final
 English documentation cleanup. Gate and acceptance completion remain unclaimed.

@@ -1,5 +1,7 @@
 # Plan wykonania dla Astry
 
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
+
 Nie jest harmonogramem z datami ani obietnicą czasu. Bramki kończy wynik, nie liczba plików. Backlog JSON zawiera zadania i zależności; nie trzeba odczytywać całej specyfikacji w każdej sesji, ale trzeba przeczytać kontrakt danego modułu.
 
 | Bramka | Co musi powstać | Warunek przejścia |

@@ -1,5 +1,7 @@
 # Kryteria wydania v1
 
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
+
 Każdy punkt potrzebuje wskazania testu/artefaktu. Wszystkie pola na starcie są niezaliczone.
 
 - [ ] Wymagania R01–R36 pokryte wdrożonym zakresem; żaden widok v1 nie został usunięty bez decyzji właściciela.

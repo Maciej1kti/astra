@@ -1,5 +1,7 @@
 # Implementation plan — updated 2026-09-05
 
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
+
 The v1 requirements and G0–G6 gates in `delivery/PLAN.md` remain the scope.
 This file tracks the practical implementation order. It is not a release claim.
 
@@ -10,7 +12,7 @@ This file tracks the practical implementation order. It is not a release claim.
 | HTTP and Unix transport | Implemented; integration testing | Verify exact Host/Origin, session/CSRF, peer UID, same dispatcher, SSE, CLI and real browser writes. |
 | Seven-view application | Initial connected implementation | Focus/history/undo/settings work; finish attention/context APIs, receipts, safe Markdown preview and complete mobile forms. |
 | Calendar and timeline | Source-backed rendering and date editor | Required move/resize/scroll/pointercancel trials, accessible fallback, date-only correctness, conflict and cancellation tests. |
-| Reliability and maintenance | Outstanding | Backup/restore, normalization, rebalancing, relocation, retention, schema upgrades, complete fault/security tests and bounded operational behavior. |
+| Reliability and maintenance | Outstanding | Stopped-server recovery procedure, normalization, rebalancing, relocation, retention, database versioning, complete fault/security tests and bounded operational behavior. |
 | Release | Outstanding | Packaging, repeatable installation, release benchmarks, Linux/ext4 and physical iPhone evidence, clean English documentation. |
 
 ## Next actions

@@ -1,8 +1,11 @@
 pub mod auth;
+mod context;
 pub mod engine;
 mod history;
 mod mutation;
+mod receipts;
 mod roots;
+mod views;
 mod workspace;
 pub use mutation::Mutation;
 pub mod index;

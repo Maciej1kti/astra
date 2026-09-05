@@ -6,7 +6,12 @@ import type {
 } from "./domain.generated";
 export type Metadata =
   CardMetadata | MilestoneMetadata | ProjectMetadata | UpdateMetadata;
-export type Resource = { metadata: Metadata; body: string; version: string };
+export type Resource = {
+  metadata: Metadata;
+  body: string;
+  version: string;
+  read?: boolean;
+};
 export type Summary = {
   id: string;
   project_id: string;
@@ -25,6 +30,7 @@ export type Summary = {
   labels?: string[];
   archived?: boolean;
   version: string;
+  read?: boolean;
 };
 export type Bootstrap = {
   csrf_token: string;
@@ -135,12 +141,12 @@ export async function send(pending: Pending): Promise<{
     ...(pending.version ? { "If-Match": `"${pending.version}"` } : {}),
   });
 }
-export async function all(path: string): Promise<Summary[]> {
-  const items: Summary[] = [];
+export async function all<T = Summary>(path: string): Promise<T[]> {
+  const items: T[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < 100; page++) {
     const value: {
-      items: Summary[];
+      items: T[];
       next_cursor?: string | null;
       page?: { next_cursor?: string | null };
     } = await api(

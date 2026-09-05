@@ -61,6 +61,89 @@ pub(super) fn run(
     let epoch = header(&input.headers, "x-command-epoch");
     let current = session.as_ref().map(|s| s.id.as_str());
     let value = match (input.method.as_str(), parts.as_slice()) {
+        ("GET", ["api", "v1", "views", "list"]) => {
+            let fields = parameters(
+                &input,
+                &[
+                    "type",
+                    "project_id",
+                    "limit",
+                    "cursor",
+                    "status",
+                    "priority",
+                    "label",
+                    "milestone_id",
+                    "archived",
+                ],
+            )?;
+            let resource_type = parameter(&fields, "type")?;
+            if !matches!(resource_type, "card" | "milestone" | "update") {
+                return Err(AppError::reject(400, "INVALID_TYPE"));
+            }
+            let query = Query {
+                project: fields.get("project_id").cloned(),
+                limit: Some(number(&fields, "limit", 50)?),
+                cursor: fields.get("cursor").cloned(),
+                status: fields.get("status").cloned(),
+                priority: fields.get("priority").cloned(),
+                label: fields.get("label").cloned(),
+                milestone_id: fields.get("milestone_id").cloned(),
+                archived: fields
+                    .get("archived")
+                    .map(|value| {
+                        value
+                            .parse()
+                            .map_err(|_| AppError::reject(400, "INVALID_QUERY"))
+                    })
+                    .transpose()?,
+                ..Default::default()
+            };
+            engine.list(Some(resource_type), &query)?
+        }
+
+        ("GET", ["api", "v1", "projects", project, "context"]) => {
+            let fields = parameters(&input, &["max_bytes"])?;
+            let max = number(&fields, "max_bytes", 24576)?;
+            engine.context(project, max as usize)?
+        }
+        ("GET", ["api", "v1", "views", view]) => {
+            let fields = parameters(
+                &input,
+                match *view {
+                    "calendar" => &["project_id", "from", "to", "cursor", "limit"][..],
+                    "board" | "gantt" => &["project_id", "cursor", "limit"],
+                    "attention" => &["cursor", "limit"],
+                    _ => return Err(AppError::reject(404, "NOT_FOUND")),
+                },
+            )?;
+            let cursor = fields.get("cursor").map(String::as_str);
+            let limit = number(
+                &fields,
+                "limit",
+                if *view == "board" || *view == "attention" {
+                    50
+                } else {
+                    200
+                },
+            )?;
+            match *view {
+                "attention" => engine.attention(cursor, limit, now)?,
+                "calendar" => engine.calendar(
+                    fields.get("project_id").map(String::as_str),
+                    parameter(&fields, "from")?,
+                    parameter(&fields, "to")?,
+                    cursor,
+                    limit,
+                )?,
+                "board" => engine.board(parameter(&fields, "project_id")?, cursor, limit)?,
+                "gantt" => engine.gantt(parameter(&fields, "project_id")?, cursor, limit)?,
+                _ => unreachable!(),
+            }
+        }
+
+        ("POST", ["api", "v1", "workspace", "read-receipts"]) => {
+            return Ok(response(engine.receipts(&input.body, request_id, epoch)?));
+        }
         ("PUT", ["api", "v1", "workspace", "focus"])
         | ("PATCH", ["api", "v1", "workspace", "preferences"]) => {
             let expected = expected_version(&input)?;
@@ -195,7 +278,23 @@ pub(super) fn run(
         }
         .job(id)?,
         ("GET", ["api", "v1", "projects"]) => engine.list(Some("project"), &query(&input)?)?,
-        ("GET", ["api", "v1", "search"]) => engine.list(None, &query(&input)?)?,
+        ("GET", ["api", "v1", "search"]) => {
+            let fields = parameters(&input, &["q", "project_id", "limit", "cursor"])?;
+            let search = parameter(&fields, "q")?;
+            if search.trim().is_empty() {
+                return Err(AppError::reject(400, "SEARCH_REQUIRED"));
+            }
+            engine.list(
+                None,
+                &Query {
+                    search: Some(search.into()),
+                    project: fields.get("project_id").cloned(),
+                    limit: Some(number(&fields, "limit", 50)?),
+                    cursor: fields.get("cursor").cloned(),
+                    ..Default::default()
+                },
+            )?
+        }
         ("GET", ["api", "v1", "projects", project]) => {
             engine.get(project, Kind::Project, project)?
         }
@@ -308,4 +407,43 @@ fn expected_version(input: &Input) -> Result<Option<String>, AppError> {
         )
     };
     Ok(expected)
+}
+
+fn parameters(
+    input: &Input,
+    allowed: &[&str],
+) -> Result<std::collections::BTreeMap<String, String>, AppError> {
+    let mut fields = std::collections::BTreeMap::new();
+    for (key, value) in url::form_urlencoded::parse(input.query.as_bytes()) {
+        if !allowed.contains(&key.as_ref())
+            || fields
+                .insert(key.into_owned(), value.into_owned())
+                .is_some()
+        {
+            return Err(AppError::reject(400, "INVALID_QUERY"));
+        }
+    }
+    Ok(fields)
+}
+fn parameter<'a>(
+    fields: &'a std::collections::BTreeMap<String, String>,
+    key: &str,
+) -> Result<&'a str, AppError> {
+    fields
+        .get(key)
+        .map(String::as_str)
+        .ok_or_else(|| AppError::reject(400, "MISSING_QUERY_PARAMETER"))
+}
+fn number(
+    fields: &std::collections::BTreeMap<String, String>,
+    key: &str,
+    default: u32,
+) -> Result<u32, AppError> {
+    fields
+        .get(key)
+        .map(|v| {
+            v.parse()
+                .map_err(|_| AppError::reject(400, "INVALID_QUERY"))
+        })
+        .unwrap_or(Ok(default))
 }

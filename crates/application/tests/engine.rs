@@ -446,3 +446,138 @@ fn workspace_writes_replay_and_recover_without_overwriting_external_changes() {
     );
     assert!(engine.journal.has_pending("workspace").unwrap());
 }
+
+#[test]
+fn read_receipts_are_atomic_shared_and_do_not_modify_reports() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let report=engine.mutate(Mutation{project_id:project.clone(),kind:Kind::Update,id:None,payload:json!({"kind":"decision_needed","summary":"Choose a release date","target":{"type":"project","id":project},"author":{"kind":"human","label":"Owner"}}),request_id:Uuid::now_v7().to_string(),epoch:engine.journal.epoch.clone(),expected:None}).unwrap();
+    let id = report.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    let path = env.root.join(format!("project/.project/updates/{id}.md"));
+    let original = fs::read(&path).unwrap();
+    assert_eq!(
+        engine.get(&project, Kind::Update, id).unwrap()["read"],
+        false
+    );
+    let request = Uuid::now_v7().to_string();
+    let input = json!({"items":[{"project_id":project,"update_id":id,"read":true}]});
+    let reply = engine
+        .receipts(&input, &request, &engine.journal.epoch)
+        .unwrap();
+    wire::validate("CommandResponse", &reply.body).unwrap();
+    assert_eq!(
+        engine
+            .receipts(&input, &request, &engine.journal.epoch)
+            .unwrap()
+            .body["replayed"],
+        true
+    );
+    let resource = engine.get(&project, Kind::Update, id).unwrap();
+    wire::validate("UpdateResource", &resource).unwrap();
+    assert_eq!(resource["read"], true);
+    assert_eq!(resource["metadata"]["kind"], "decision_needed");
+    assert_eq!(fs::read(path).unwrap(), original);
+    wire::validate(
+        "UpdateResource",
+        &serde_json::from_str(include_str!(
+            "../../../examples/requests/update-read-response.json"
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn attention_distinguishes_hard_deadlines_and_reading_from_resolution() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    for (title, kind) in [("Soft target", "target"), ("Hard deadline", "hard")] {
+        let card = create(&engine, &project, title);
+        let resource = &card.body["result"]["resource"];
+        patch(
+            &engine,
+            &project,
+            resource["metadata"]["id"].as_str().unwrap(),
+            resource["version"].as_str().unwrap(),
+            json!({"set":{"due":{"date":"2026-09-01","kind":kind},"schedule":{"start":"2026-08-30","end":"2026-09-03"}}}),
+        );
+    }
+    let now = chrono::DateTime::parse_from_rfc3339("2026-09-05T12:00:00Z")
+        .unwrap()
+        .timestamp_millis();
+    let attention = engine.attention(None, 200, now).unwrap();
+    wire::validate("AttentionPage", &attention).unwrap();
+    assert_eq!(attention["items"].as_array().unwrap().len(), 1);
+    assert_eq!(attention["items"][0]["label"], "Hard deadline");
+    let calendar = engine
+        .calendar(Some(&project), "2026-09-01", "2026-09-30", None, 100)
+        .unwrap();
+    wire::validate("CalendarPage", &calendar).unwrap();
+    assert_eq!(calendar["items"].as_array().unwrap().len(), 4);
+    assert!(
+        engine
+            .calendar(None, "2026-02-30", "2026-03-01", None, 10)
+            .is_err()
+    );
+    wire::validate("BoardView", &engine.board(&project, None, 50).unwrap()).unwrap();
+    wire::validate("GanttPage", &engine.gantt(&project, None, 50).unwrap()).unwrap();
+    let report=engine.mutate(Mutation{project_id:project.clone(),kind:Kind::Update,id:None,payload:json!({"kind":"decision_needed","summary":"Choose scope","target":{"type":"project","id":project},"author":{"kind":"human","label":"Owner"}}),request_id:Uuid::now_v7().to_string(),epoch:engine.journal.epoch.clone(),expected:None}).unwrap();
+    let id = report.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    engine
+        .receipts(
+            &json!({"items":[{"project_id":project,"update_id":id,"read":true}]}),
+            &Uuid::now_v7().to_string(),
+            &engine.journal.epoch,
+        )
+        .unwrap();
+    assert_eq!(
+        engine.attention(None, 200, now).unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    let result=engine.mutate(Mutation{project_id:project.clone(),kind:Kind::Update,id:None,payload:json!({"kind":"resolution","summary":"Scope selected","resolves":[id],"target":{"type":"project","id":project},"author":{"kind":"human","label":"Owner"}}),request_id:Uuid::now_v7().to_string(),epoch:engine.journal.epoch.clone(),expected:None}).unwrap();
+    assert_eq!(result.http_status, 200);
+    assert_eq!(
+        engine.attention(None, 200, now).unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn agent_context_is_project_scoped_and_counts_utf8_json_overhead() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "A bounded excerpt");
+    let resource = &card.body["result"]["resource"];
+    patch(
+        &engine,
+        &project,
+        resource["metadata"]["id"].as_str().unwrap(),
+        resource["version"].as_str().unwrap(),
+        json!({"set":{"body":"🦀 Untrusted project data.\n".repeat(2000)}}),
+    );
+    let other = env.root.join("other");
+    fs::create_dir(&other).unwrap();
+    let other_id = register(&engine, other.to_str().unwrap());
+    create(&engine, &other_id, "Never export this project");
+    for budget in [4096, 24576, 131072] {
+        let context = engine.context(&project, budget).unwrap();
+        wire::validate("Context", &context).unwrap();
+        let bytes = serde_json::to_vec(&context).unwrap();
+        assert!(bytes.len() <= budget);
+        assert!(!String::from_utf8(bytes).unwrap().contains("Never export"));
+        assert_eq!(context["truncated"], true);
+    }
+}

@@ -724,6 +724,8 @@ Benchmark regresji jest częścią review zmiany warstwy danych, komponentu wido
 
 ## 10. Instalacja, aktualizacje, backup i utrzymanie
 
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
+
 ### Wydanie
 
 Artefakt zawiera `projectd`, `projectctl`, wbudowane zasoby web, schematy i szablony, konfigurację przykładową, service templates, README, checksums i third-party notices/SBOM. Brak npm/Node/Docker w runtime. Binaria macOS aarch64 oraz Linux x86_64; jeśli docelowy Arch ma inną architekturę, dodaj właściwy target i test, nie oznaczaj go domyślnie jako wspieranego.
@@ -880,6 +882,23 @@ Wszystkie wymagania P0 i testy release blocker ukończone. Telefon i desktop edy
 
 Nowe ADR dodawaj do `progress/DECISION-LOG.md`: kontekst, decyzja, alternatywy, dowód, wpływ na kontrakty i testy. Nie traktuj rejestru jako miejsca na każdy drobny refactor.
 
+### ADR-015 — expose shared report read state
+
+The original API accepted read receipts but did not return their state. Add an
+optional `read` boolean to update resources and update summaries. It comes from
+state.sqlite, never from the Markdown source or disposable index. This additive
+field enables the required unread UI without treating reading as resolution.
+Ordinary document schemas remain unchanged; receipt commands and their results
+commit together in one SQLite transaction. Tests verify source bytes are unchanged.
+
+### ADR-016 — bounded workspace resource lists
+
+Add `GET /api/v1/views/list` with a required resource type and optional project and
+field filters. It returns the existing SummaryPage contract and stable index
+cursors. This supports the cross-project list and update views without fetching
+every project's entire archive or adding an unbounded bootstrap payload. The
+per-project APIs retain their contracts. Search uses its documented `q` parameter.
+
 
 *Plik źródłowy: `docs/12-ADRS.md`.*
 
@@ -1005,6 +1024,8 @@ Zakończenie produkcji oznacza przejście `delivery/RELEASE-CHECKLIST.md`, dzia�
 <a id="annex-02"></a>
 
 ## Plan wykonania dla Astry
+
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
 
 Nie jest harmonogramem z datami ani obietnicą czasu. Bramki kończy wynik, nie liczba plików. Backlog JSON zawiera zadania i zależności; nie trzeba odczytywać całej specyfikacji w każdej sesji, ale trzeba przeczytać kontrakt danego modułu.
 
@@ -1674,6 +1695,8 @@ Typ: fault. Wymagania: R20, R27.
 <a id="annex-07"></a>
 
 ## Kryteria wydania v1
+
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
 
 Każdy punkt potrzebuje wskazania testu/artefaktu. Wszystkie pola na starcie są niezaliczone.
 

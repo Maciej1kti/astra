@@ -202,6 +202,21 @@ try {
     await page.getByRole("button", { name: view, exact: true }).click();
   }
 
+  await page.getByRole("button", { name: "Updates", exact: true }).click();
+  await page.getByRole("button", { name: "Add update", exact: false }).click();
+  await page.getByLabel("Summary", { exact: true }).fill("Browser report");
+  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await page.getByRole("heading", { name: "Browser report", exact: true }).click();
+  await page.getByRole("button", { name: "Mark read", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await page.getByLabel("Unread only").check();
+  await page.getByRole("heading", { name: "Browser report", exact: true }).waitFor({ state: "hidden" });
+  const reports = cli("get", `/api/v1/views/list?type=update&project_id=${plan.project_id}`).items;
+  assert.equal(reports[0].read, true);
+  assert.equal(cli("get", `/api/v1/projects/${plan.project_id}/updates/${reports[0].id}`).read, true);
+  await page.getByLabel("Unread only").uncheck();
+
   await page
     .getByRole("button", { name: "Workspace settings", exact: true })
     .click();
@@ -217,7 +232,7 @@ try {
   await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus and persisted settings.",
+    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts and persisted settings.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

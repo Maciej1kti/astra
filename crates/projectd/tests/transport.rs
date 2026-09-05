@@ -266,4 +266,44 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
     let read = app.local("GET", &path).send().await.unwrap();
     assert_eq!(read.status(), 200);
     assert!(read.headers().contains_key("etag"));
+    let project = plan["project_id"].as_str().unwrap();
+    for (path, schema) in [
+        (
+            format!("/api/v1/views/list?type=card&project_id={project}&limit=1"),
+            "SummaryPage",
+        ),
+        ("/api/v1/search?q=socket".into(), "SummaryPage"),
+        (
+            format!("/api/v1/projects/{project}/context?max_bytes=4096"),
+            "Context",
+        ),
+        (
+            format!("/api/v1/views/board?project_id={project}"),
+            "BoardView",
+        ),
+        (
+            format!("/api/v1/views/gantt?project_id={project}"),
+            "GanttPage",
+        ),
+        (
+            "/api/v1/views/calendar?from=2026-09-01&to=2026-09-30".into(),
+            "CalendarPage",
+        ),
+        ("/api/v1/views/attention".into(), "AttentionPage"),
+    ] {
+        let response = app.local("GET", &path).send().await.unwrap();
+        assert_eq!(response.status(), 200, "{path}");
+        let value: Value = response.json().await.unwrap();
+        project_application::wire::validate(schema, &value).unwrap();
+        if schema == "SummaryPage" {
+            assert_eq!(value["items"].as_array().unwrap().len(), 1);
+        }
+    }
+    for path in [
+        "/api/v1/views/list?type=unknown",
+        "/api/v1/views/list?type=card&type=update",
+        "/api/v1/search?search=socket",
+    ] {
+        assert_eq!(app.local("GET", path).send().await.unwrap().status(), 400);
+    }
 }

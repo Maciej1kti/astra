@@ -86,3 +86,17 @@ Scenariusze A14/A16/A51 mają częściowe podstawy, lecz nie zostały zaliczone:
 A14 wymaga parsera i zmiany pliku, A16 adapterów wszystkich widoków, A51 całego
 łańcucha adapterów. A42 wymaga instalacji na obu hostach. Wszystkie acceptance
 pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów telefonu.
+
+## E007 — Reports, bounded views and owner scope adjustment
+
+- Added durable read receipts, attention semantics, project-scoped byte-bounded
+  context, calendar/board/Gantt projections and paginated global resource lists.
+- Added protocol examples and transport/schema coverage; UI reports expose read
+  state and preserve pinned resources outside the current page.
+- Full automated checks passed (`progress/checks/reports-views.txt`): 46 Rust
+  tests, Python contract checks, Svelte checks and release build. HTTPS browser
+  smoke also passed including read receipts, conflict preservation and undo.
+- This does not establish complete date interactions, archive-scale performance,
+  Linux or physical iPhone behavior.
+- Owner deferred built-in backup/restore and source-file migration tooling;
+  `progress/SCOPE.md` overrides those portions of the original handoff.

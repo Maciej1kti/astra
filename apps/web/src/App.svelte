@@ -25,6 +25,20 @@
     pending_csrf_token: string;
     device_label: string;
   };
+  type Attention = {
+    id: string;
+    project_id: string;
+    target: { type: "project" | "card" | "milestone"; id: string };
+    reason: string;
+    label: string;
+    date?: string;
+  };
+  let attentionRows = $state<Attention[]>([]);
+  let pageCursors = $state<Record<string, string | null>>({});
+  let unreadOnly = $state(false);
+  let refreshGeneration = 0;
+  let loadingMore = $state(false);
+  let focusCards = $state<Summary[]>([]);
   type Root = { id: string; label: string; display_path: string };
   let boot = $state<Bootstrap | null>(null),
     pairing = $state<Pairing | null>(null),
@@ -92,6 +106,7 @@
     updates.filter(
       (c) =>
         (!project || c.project_id === project) &&
+        (!unreadOnly || !c.read) &&
         c.title.toLowerCase().includes(search.toLowerCase()),
     ),
   );
@@ -104,13 +119,10 @@
   });
   let selectedProject = $derived(projects.find((p) => p.id === project));
   let attention = $derived(
-    filtered.filter(
-      (c) =>
-        c.blocked ||
-        (c.due &&
-          c.due.date < today &&
-          !["done", "cancelled"].includes(c.status ?? "")) ||
-        (c.review_on && c.review_on <= today),
+    attentionRows.filter(
+      (item) =>
+        (!project || item.project_id === project) &&
+        item.label.toLowerCase().includes(search.toLowerCase()),
     ),
   );
   function message(e: unknown) {
@@ -146,28 +158,89 @@
       loading = false;
     }
   }
+
+  async function resourcePage(type: string, cursor?: string | null) {
+    return api<{ items: Summary[]; page: { next_cursor: string | null } }>(
+      `/api/v1/views/list?type=${type}&limit=200${project ? `&project_id=${project}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+    );
+  }
   async function refresh() {
-    const [p, f] = await Promise.all([
+    const generation = ++refreshGeneration;
+    const [p, f, a, c, m, u] = await Promise.all([
       all("/api/v1/projects"),
       api<{ items: typeof focus }>("/api/v1/workspace/focus"),
+      all<Attention>("/api/v1/views/attention"),
+      resourcePage("card"),
+      resourcePage("milestone"),
+      resourcePage("update"),
     ]);
-    // Load typed collections per registered project; search is a separate server filter.
-    const pages = await Promise.all(
-      p.map(async (p) =>
-        Promise.all([
-          all(`/api/v1/projects/${p.id}/cards`),
-          all(`/api/v1/projects/${p.id}/milestones`),
-          all(`/api/v1/projects/${p.id}/updates`),
-        ]),
-      ),
-    );
+    const pinned: Summary[] = [];
+    // Focus is bounded by the workspace contract; do not scan archives to resolve it.
+    for (const ref of f.items) {
+      const cached = c.items.find(
+        (item) => item.id === ref.card_id && item.project_id === ref.project_id,
+      );
+      if (cached) pinned.push(cached);
+      else {
+        try {
+          const resource = await api<Resource>(
+            resourcePath({
+              type: "card",
+              id: ref.card_id,
+              project_id: ref.project_id,
+            }),
+          );
+          pinned.push({
+            ...resource.metadata,
+            type: "card",
+            id: ref.card_id,
+            project_id: ref.project_id,
+            version: resource.version,
+            availability: "available",
+          } as Summary);
+        } catch {
+          pinned.push({
+            type: "card",
+            id: ref.card_id,
+            project_id: ref.project_id,
+            title: "Unavailable pinned card",
+            version: "",
+            availability: "unavailable",
+          });
+        }
+      }
+    }
+    if (generation !== refreshGeneration) return;
+    focusCards = pinned;
     projects = p;
-    cards = pages.flatMap((p) => p[0]);
-    milestones = pages.flatMap((p) => p[1]);
-    updates = pages
-      .flatMap((p) => p[2])
-      .sort((a, b) => (b.recorded_at ?? "").localeCompare(a.recorded_at ?? ""));
     focus = f.items;
+    attentionRows = a;
+    cards = c.items;
+    milestones = m.items;
+    updates = u.items;
+    pageCursors = {
+      card: c.page.next_cursor,
+      milestone: m.page.next_cursor,
+      update: u.page.next_cursor,
+    };
+  }
+  async function more(type: string) {
+    if (loadingMore || !pageCursors[type]) return;
+    loadingMore = true;
+    const generation = refreshGeneration;
+    try {
+      const next = await resourcePage(type, pageCursors[type]);
+      if (generation !== refreshGeneration) return;
+      if (type === "card") cards = [...cards, ...next.items];
+      else if (type === "milestone")
+        milestones = [...milestones, ...next.items];
+      else updates = [...updates, ...next.items];
+      pageCursors[type] = next.page.next_cursor;
+    } catch (e) {
+      message(e);
+    } finally {
+      loadingMore = false;
+    }
   }
   function connect() {
     source?.close();
@@ -223,7 +296,7 @@
       busy = false;
     }
   }
-  async function open(item: Summary) {
+  async function open(item: Pick<Summary, "type" | "id" | "project_id">) {
     error = "";
     try {
       editor = {
@@ -501,6 +574,7 @@
           <label class="sr" for="project">Project</label><select
             id="project"
             bind:value={project}
+            onchange={() => refresh().catch(message)}
             ><option value="">All projects</option
             >{#each projects as item}<option value={item.id}
                 >{item.title}</option
@@ -510,7 +584,9 @@
             aria-label="Filter titles"
             bind:value={search}
             placeholder="Search titles…"
-          />{#if view === "list"}<select
+          />{#if view === "updates"}<label
+              ><input type="checkbox" bind:checked={unreadOnly} /> Unread only</label
+            >{/if}{#if view === "list"}<select
               aria-label="Resource type"
               bind:value={collection}
               ><option value="cards">Cards</option><option value="milestones"
@@ -537,7 +613,7 @@
               <span>IN MOTION</span><strong
                 >{filtered.filter((c) => c.status === "active").length}</strong
               >
-              <p>Active cards</p>
+              <p>Loaded active cards</p>
             </div>
             <div>
               <span>NEEDS A LOOK</span><strong>{attention.length}</strong>
@@ -549,7 +625,7 @@
                   (m) => !["achieved", "cancelled"].includes(m.status ?? ""),
                 ).length}</strong
               >
-              <p>Open milestones</p>
+              <p>Loaded open milestones</p>
             </div>
           </div>
           <div class="sectiontitle">
@@ -557,13 +633,9 @@
             <span>{focus.length} pinned</span>
           </div>
           <div class="grid">
-            {#each focus as ref}{@const item = [
-                ...projects,
-                ...cards,
-                ...milestones,
-              ].find(
-                (c) => c.id === ref.card_id && c.project_id === ref.project_id,
-              )}{#if item}<button class="card" onclick={() => open(item)}
+            {#each focusCards as item}{#if item}<button
+                  class="card"
+                  onclick={() => open(item)}
                   ><small>{projectLabel(item.project_id)}</small>
                   <h3>{item.title}</h3>
                   <span class="badge">{item.status}</span></button
@@ -578,20 +650,21 @@
           </div>
           {#each attention as item}<button
               class="listrow"
-              onclick={() => open(item)}
-              ><span class="priority" data-priority={item.priority}></span>
+              onclick={() =>
+                open({
+                  project_id: item.project_id,
+                  type: item.target.type,
+                  id: item.target.id,
+                })}
+              ><span class="priority"></span>
               <div>
-                <strong>{item.title}</strong><small
+                <strong>{item.label}</strong><small
                   >{projectLabel(item.project_id)}</small
                 >
               </div>
-              <span class="badge"
-                >{item.blocked
-                  ? "Blocked"
-                  : item.due && item.due.date < today
-                    ? "Overdue"
-                    : "Review"}</span
-              ><span>↗</span></button
+              <span class="badge">{item.reason.replaceAll("_", " ")}</span><span
+                >↗</span
+              ></button
             >{:else}<div class="empty">
               <strong>A little breathing room.</strong>
               <p>No blocked, overdue or review items in this selection.</p>
@@ -612,7 +685,7 @@
                     (c) =>
                       c.project_id === item.id &&
                       !["done", "cancelled"].includes(c.status ?? ""),
-                  ).length} open cards · {updates.filter(
+                  ).length} loaded open cards · {updates.filter(
                     (c) => c.project_id === item.id,
                   ).length} updates
                 </p>
@@ -720,6 +793,7 @@
                   >
                   <h3>{item.title}</h3>
                   <span class="badge">{item.kind}</span>
+                  <span class="badge">{item.read ? "Read" : "Unread"}</span>
                 </div></button
               >{:else}<div class="empty">
                 No updates yet. Record a result, blocker or decision.
@@ -748,6 +822,21 @@
                 No items match this selection.
               </div>{/each}
           </div>{/if}
+        {#if ["board", "list", "updates", "calendar", "gantt"].includes(view)}{@const kind =
+            view === "updates"
+              ? "update"
+              : view === "list" && collection === "milestones"
+                ? "milestone"
+                : "card"}{#if pageCursors[kind]}<div class="sectiontitle">
+              <span>More resources are available.</span><button
+                disabled={loadingMore}
+                onclick={() => more(kind)}>Load more</button
+              >
+            </div>{/if}{/if}
+        {#if view === "calendar" && pageCursors.milestone}<button
+            disabled={loadingMore}
+            onclick={() => more("milestone")}>Load more milestones</button
+          >{/if}
         <footer class="pagefooter">
           Your files are the source of truth. <span>Local Projects · v0.1</span>
         </footer>

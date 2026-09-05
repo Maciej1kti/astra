@@ -49,3 +49,20 @@
 **Decyzja:** UI używa archiwizacji i rozrejestrowania bez kasowania źródeł. **Powód:** bezpieczeństwo danych i referencji. **Koszt:** osobny proces późniejszego purge. Trwałe usuwanie nie jest skrótem do „naprawy” konfliktu.
 
 Nowe ADR dodawaj do `progress/DECISION-LOG.md`: kontekst, decyzja, alternatywy, dowód, wpływ na kontrakty i testy. Nie traktuj rejestru jako miejsca na każdy drobny refactor.
+
+## ADR-015 — expose shared report read state
+
+The original API accepted read receipts but did not return their state. Add an
+optional `read` boolean to update resources and update summaries. It comes from
+state.sqlite, never from the Markdown source or disposable index. This additive
+field enables the required unread UI without treating reading as resolution.
+Ordinary document schemas remain unchanged; receipt commands and their results
+commit together in one SQLite transaction. Tests verify source bytes are unchanged.
+
+## ADR-016 — bounded workspace resource lists
+
+Add `GET /api/v1/views/list` with a required resource type and optional project and
+field filters. It returns the existing SummaryPage contract and stable index
+cursors. This supports the cross-project list and update views without fetching
+every project's entire archive or adding an unbounded bootstrap payload. The
+per-project APIs retain their contracts. Search uses its documented `q` parameter.

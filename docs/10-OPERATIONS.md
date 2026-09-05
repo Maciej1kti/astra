@@ -1,5 +1,7 @@
 # 10. Instalacja, aktualizacje, backup i utrzymanie
 
+> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
+
 ## Wydanie
 
 Artefakt zawiera `projectd`, `projectctl`, wbudowane zasoby web, schematy i szablony, konfigurację przykładową, service templates, README, checksums i third-party notices/SBOM. Brak npm/Node/Docker w runtime. Binaria macOS aarch64 oraz Linux x86_64; jeśli docelowy Arch ma inną architekturę, dodaj właściwy target i test, nie oznaczaj go domyślnie jako wspieranego.

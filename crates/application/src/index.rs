@@ -23,6 +23,7 @@ pub struct Query {
     pub status: Option<String>,
     pub priority: Option<String>,
     pub label: Option<String>,
+    pub milestone_id: Option<String>,
     pub archived: Option<bool>,
     pub search: Option<String>,
     pub cursor: Option<String>,
@@ -74,6 +75,19 @@ pub struct Index {
     events: Mutex<VecDeque<(i64, Value)>>,
 }
 impl Index {
+    pub(crate) fn with_snapshot<T>(
+        &self,
+        read: impl FnOnce(&Connection, &str) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        let db = self.connection.lock().map_err(|_| AppError::State)?;
+        let sequence: String = db.query_row(
+            "SELECT value FROM projection_meta WHERE key='sequence'",
+            [],
+            |r| r.get(0),
+        )?;
+        read(&db, &format!("{}:{sequence}", self.epoch))
+    }
+
     pub fn invalidate_workspace(&self, now: i64) -> Result<(), AppError> {
         let db = self.connection.lock().map_err(|_| AppError::State)?;
         let sequence:i64=db.query_row("UPDATE projection_meta SET value=CAST(value AS INTEGER)+1 WHERE key='sequence' RETURNING CAST(value AS INTEGER)",[],|r|r.get(0))?;
@@ -368,6 +382,10 @@ impl Index {
                 "json_extract(metadata_json,'$.priority')",
                 query.priority.as_deref(),
             ),
+            (
+                "json_extract(metadata_json,'$.milestone_id')",
+                query.milestone_id.as_deref(),
+            ),
         ] {
             if let Some(value) = value {
                 sql.push_str(&format!(" AND {condition}=?"));
@@ -396,7 +414,7 @@ impl Index {
                 values.push(terms.into());
             }
         }
-        sql.push_str(" ORDER BY CASE WHEN entity_type='update' THEN json_extract(metadata_json,'$.recorded_at') END DESC,COALESCE(json_extract(metadata_json,'$.position'),title),entity_id LIMIT ? OFFSET ?");
+        sql.push_str(" ORDER BY CASE WHEN entity_type='update' THEN json_extract(metadata_json,'$.recorded_at') END DESC,COALESCE(json_extract(metadata_json,'$.position'),title),entity_id,project_id,entity_type LIMIT ? OFFSET ?");
         values.push((limit as i64 + 1).into());
         values.push(offset.into());
         let mut statement = db.prepare(&sql)?;

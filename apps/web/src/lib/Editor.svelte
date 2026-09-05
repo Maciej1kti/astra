@@ -82,6 +82,19 @@
         .then((value) => (focus = value))
         .catch(() => {});
   });
+  async function toggleRead() {
+    if (!resource) return;
+    pending = command("/api/v1/workspace/read-receipts", "POST", {
+      items: [
+        {
+          project_id: project,
+          update_id: resource.metadata.id,
+          read: !resource.read,
+        },
+      ],
+    });
+    await transmit();
+  }
   async function toggleFocus() {
     if (!focus || !resource) return;
     const items = pinned
@@ -275,6 +288,12 @@
       void save();
     }}
   >
+    {#if readonly}<button
+        type="button"
+        onclick={toggleRead}
+        disabled={busy || !!pending}
+        >{resource?.read ? "Mark unread" : "Mark read"}</button
+      >{/if}
     {#if type === "card" && resource}<button
         type="button"
         onclick={toggleFocus}
