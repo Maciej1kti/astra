@@ -329,6 +329,29 @@ impl Engine {
         }
         Ok(page)
     }
+    pub fn refresh_project(
+        &self,
+        id: &str,
+        targets: Option<&[(Kind, String)]>,
+    ) -> Result<(), AppError> {
+        let _gate = self.gate.read().map_err(|_| AppError::State)?;
+        let result = (|| {
+            let handle = self.store(id)?;
+            let store = handle.lock().map_err(|_| AppError::State)?;
+            if let Some(targets) = targets {
+                self.index
+                    .refresh_targets(&store, id, targets, now_millis())
+            } else {
+                self.index.refresh(&store, id, now_millis())
+            }
+        })();
+        if result.is_err() {
+            self.index
+                .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis())?;
+        }
+        result
+    }
+
     pub fn refresh_all(&self) -> Result<(), AppError> {
         let _gate = self.gate.read().map_err(|_| AppError::State)?;
         let (workspace, _) = self.workspace()?;

@@ -1,6 +1,6 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
 import { chromium, devices } from "@playwright/test";
-import { mkdtemp, mkdir, realpath, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, readFile, writeFile, rm } from "node:fs/promises";
 import { execFileSync, spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import https from "node:https";
@@ -230,9 +230,14 @@ try {
   assert.equal(cli("get", "/api/v1/workspace/preferences").timezone, "UTC");
   await page.reload();
   await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
+  const cardFile = join(folder, ".project", "cards", `${cards[0].id}.md`);
+  const source = await readFile(cardFile, "utf8");
+  await writeFile(cardFile, source.replace("Ship the field guide", "External editor update"));
+  await page.getByText("External editor update", { exact: true }).waitFor({timeout: 10000});
+  assert.equal(cli("get", path).metadata.title, "External editor update");
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts and persisted settings.",
+    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings and native external file updates.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

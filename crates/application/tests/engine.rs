@@ -581,3 +581,52 @@ fn agent_context_is_project_scoped_and_counts_utf8_json_overhead() {
         assert_eq!(context["truncated"], true);
     }
 }
+
+#[test]
+fn incremental_projection_preserves_other_sources_and_handles_invalid_delete_recreate() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let first = create(&engine, &project, "Changed file");
+    let second = create(&engine, &project, "Untouched file");
+    let id = first.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    let other = second.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    let path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let original = fs::read(&path).unwrap();
+    let targets = [(Kind::Card, id.to_owned())];
+    fs::write(&path, b"unfinished external edit").unwrap();
+    engine.refresh_project(&project, Some(&targets)).unwrap();
+    let query = Query {
+        project: Some(project.clone()),
+        ..Default::default()
+    };
+    let rows = engine.list(Some("card"), &query).unwrap();
+    assert_eq!(rows["items"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        rows["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["id"] == id)
+            .unwrap()["availability"],
+        "stale"
+    );
+    fs::remove_file(&path).unwrap();
+    engine.refresh_project(&project, Some(&targets)).unwrap();
+    let rows = engine.list(Some("card"), &query).unwrap();
+    assert_eq!(rows["items"].as_array().unwrap().len(), 1);
+    assert_eq!(rows["items"][0]["id"], other);
+    fs::write(&path, original).unwrap();
+    engine.refresh_project(&project, Some(&targets)).unwrap();
+    assert_eq!(
+        engine.list(Some("card"), &query).unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+}

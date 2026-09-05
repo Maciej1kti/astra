@@ -100,3 +100,19 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
   Linux or physical iPhone behavior.
 - Owner deferred built-in backup/restore and source-file migration tooling;
   `progress/SCOPE.md` overrides those portions of the original handoff.
+
+## E008 — Native source observation and passive sessions
+
+- Replaced unconditional two-second source scans with native notifications, a
+  bounded 1,024-event channel, 100 ms quiet/500 ms maximum debounce and 15-minute
+  reconciliation. The two-second registry check reads workspace/directory metadata.
+- Normal writes and source-file events now reindex their named documents only;
+  invalid, deleted and recreated files retain correct isolated projection behavior.
+- SSE wakes on index changes and sends an initial comment to flush proxy headers.
+  Passive stream checks enforce expiry without extending idle lifetime.
+- Full checks passed (49 Rust tests); HTTPS browser smoke observes an external
+  file edit through the native watcher. Logs: `checks/native-watcher.txt` and
+  `checks/browser-smoke.txt`. Dependency: pinned notify 8.2.0; native behavior
+  verified only on the available macOS host, not Linux or a physical phone.
+- Archive-scale benchmarks, notification overflow/failure diagnostics and active
+  project reconciliation on foreground return still need completion.

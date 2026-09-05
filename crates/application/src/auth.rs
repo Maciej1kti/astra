@@ -173,6 +173,12 @@ impl Auth<'_> {
         })
     }
     pub fn authenticate(&self, token: &str, now: i64) -> Result<Session, AppError> {
+        self.check_session(token, now, true)
+    }
+    pub fn authenticate_passive(&self, token: &str, now: i64) -> Result<Session, AppError> {
+        self.check_session(token, now, false)
+    }
+    fn check_session(&self, token: &str, now: i64, active: bool) -> Result<Session, AppError> {
         if token.len() != 64 {
             return Err(AppError::reject(401, "SESSION_REQUIRED"));
         }
@@ -190,7 +196,7 @@ impl Auth<'_> {
             .map_err(|_| AppError::State)?
             .timestamp_millis();
         let mut seen = last;
-        if now - last_ms >= 60_000 {
+        if active && now - last_ms >= 60_000 {
             seen = instant(now);
             expires = instant((now + 30 * DAY).min(created_ms + 90 * DAY));
             db.execute(

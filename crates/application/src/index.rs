@@ -69,12 +69,22 @@ impl Indexed {
         out
     }
 }
+type ProjectionDocuments = BTreeMap<(String, String), Option<(String, Value)>>;
+
 pub struct Index {
     connection: Mutex<Connection>,
     epoch: String,
+    notifications: tokio::sync::watch::Sender<u64>,
     events: Mutex<VecDeque<(i64, Value)>>,
 }
 impl Index {
+    pub fn subscribe(&self) -> tokio::sync::watch::Receiver<u64> {
+        self.notifications.subscribe()
+    }
+    fn notify(&self) {
+        self.notifications
+            .send_modify(|sequence| *sequence = sequence.wrapping_add(1));
+    }
     pub(crate) fn with_snapshot<T>(
         &self,
         read: impl FnOnce(&Connection, &str) -> Result<T, AppError>,
@@ -100,6 +110,7 @@ impl Index {
         {
             events.pop_front();
         }
+        self.notify();
         Ok(())
     }
 
@@ -124,7 +135,16 @@ impl Index {
             [sequence.to_string()],
         )?;
         tx.commit()?;
-        self.events.lock().map_err(|_|AppError::State)?.push_back((now,json!({"kind":"health_changed","cursor":format!("{}:{sequence}",self.epoch),"project_id":project_id,"reason":"project_unavailable"})));
+        let mut events = self.events.lock().map_err(|_| AppError::State)?;
+        events.push_back((now,json!({"kind":"health_changed","cursor":format!("{}:{sequence}",self.epoch),"project_id":project_id,"reason":"project_unavailable"})));
+        while events.len() > 10_000
+            || events
+                .front()
+                .is_some_and(|(time, _)| *time < now - 600_000)
+        {
+            events.pop_front();
+        }
+        self.notify();
         Ok(())
     }
     pub fn open(path: &Path) -> Result<Self, AppError> {
@@ -145,6 +165,7 @@ impl Index {
         Ok(Self {
             connection: Mutex::new(connection),
             epoch: Uuid::new_v4().to_string(),
+            notifications: tokio::sync::watch::channel(0).0,
             events: Mutex::new(VecDeque::new()),
         })
     }
@@ -200,12 +221,71 @@ impl Index {
                 }
             }
         }
+        self.apply_projection(project_id, documents, issues, None, now)
+    }
+
+    /// Re-read only named source documents. Never accepts arbitrary filesystem paths.
+    pub fn refresh_targets(
+        &self,
+        store: &ProjectStore,
+        project_id: &str,
+        targets: &[(Kind, String)],
+        now: i64,
+    ) -> Result<(), AppError> {
+        let mut documents = BTreeMap::new();
+        let mut issues = Vec::new();
+        let mut keys = Vec::new();
+        for (kind, id) in targets {
+            if Uuid::parse_str(id).is_err() {
+                return Err(AppError::State);
+            }
+            keys.push(format!("{}:{id}", kind.as_str()));
+            let relative = if *kind == Kind::Project {
+                "project.md".to_owned()
+            } else {
+                format!("{}/{id}.md", kind.directory().unwrap())
+            };
+            let bytes = match store.location(*kind, id, false) {
+                Ok((directory, name)) => directory.read(&name),
+                Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+                    Ok(None)
+                }
+                Err(error) => Err(error),
+            };
+            let parsed = match bytes {
+                Ok(None) => continue,
+                Ok(Some(bytes)) => document::parse(*kind, Some(id), &bytes),
+                Err(error) => Err(error),
+            };
+            let key = (kind.as_str().to_owned(), id.clone());
+            match parsed {
+                Ok(parsed) => {
+                    documents.insert(key, Some((parsed.version.clone(), parsed.value())));
+                }
+                Err(_) => {
+                    documents.insert(key, None);
+                    issues.push((relative, "DOCUMENT_INVALID"));
+                }
+            }
+        }
+        self.apply_projection(project_id, documents, issues, Some(keys), now)
+    }
+
+    fn apply_projection(
+        &self,
+        project_id: &str,
+        documents: ProjectionDocuments,
+        issues: Vec<(String, &str)>,
+        keys: Option<Vec<String>>,
+        now: i64,
+    ) -> Result<(), AppError> {
+        let selected = keys.map(|keys| serde_json::to_string(&keys).unwrap());
         let mut db = self.connection.lock().map_err(|_| AppError::State)?;
         let tx = db.transaction()?;
         let previous: BTreeMap<(String, String), (String, String)> = {
-            let mut statement=tx.prepare("SELECT entity_type,entity_id,source_hash,validity FROM documents WHERE project_id=?1")?;
+            let mut statement=tx.prepare("SELECT entity_type,entity_id,source_hash,validity FROM documents WHERE project_id=?1 AND (?2 IS NULL OR entity_type||':'||entity_id IN (SELECT value FROM json_each(?2)))")?;
             statement
-                .query_map([project_id], |r| {
+                .query_map(params![project_id, selected], |r| {
                     Ok(((r.get(0)?, r.get(1)?), (r.get(2)?, r.get(3)?)))
                 })?
                 .collect::<Result<_, _>>()?
@@ -249,8 +329,8 @@ impl Index {
             }
         }
         tx.execute(
-            "DELETE FROM projection_issues WHERE project_id=?1",
-            [project_id],
+            "DELETE FROM projection_issues WHERE project_id=?1 AND (?2 IS NULL OR path IN (SELECT CASE WHEN substr(value,1,8)='project:' THEN 'project.md' ELSE substr(value,1,instr(value,':')-1)||'s/'||substr(value,instr(value,':')+1)||'.md' END FROM json_each(?2)))",
+            params![project_id, selected],
         )?;
         for (path, code) in issues {
             tx.execute(
@@ -274,6 +354,9 @@ impl Index {
         tx.commit()?;
         // Keep DB guard until publication so a snapshot never outruns its events.
         let mut events = self.events.lock().map_err(|_| AppError::State)?;
+        if !changes.is_empty() {
+            self.notify();
+        }
         events.extend(changes.into_iter().map(|event| (now, event)));
         while events.len() > 10_000
             || events

@@ -1,3 +1,4 @@
+mod watcher;
 use clap::Parser;
 use project_application::engine::Engine;
 use project_store::filesystem::Directory;
@@ -5,7 +6,6 @@ use projectd::{LocalPeer, Service};
 use std::{
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
     path::PathBuf,
-    time::Duration,
 };
 use tokio::net::{TcpListener, UnixListener};
 
@@ -50,21 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let unix = UnixListener::bind(&socket)?;
     std::fs::set_permissions(&socket, std::fs::Permissions::from_mode(0o600))?;
     let (shutdown, signal) = tokio::sync::watch::channel(false);
-    let poll_engine = service.engine.clone();
-    let mut poll_signal = signal.clone();
-    let watcher = tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(2));
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        loop {
-            tokio::select! {
-                _ = poll_signal.changed() => break,
-                _ = interval.tick() => {
-                    let engine = poll_engine.clone();
-                    if !matches!(tokio::task::spawn_blocking(move || engine.refresh_all()).await, Ok(Ok(()))) { eprintln!("Projection scan failed; diagnostics may be degraded"); }
-                }
-            }
-        }
-    });
+    let watcher = tokio::spawn(watcher::run(service.engine.clone(), signal.clone()));
     let mut stop = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
     let termination = tokio::spawn(async move {
         tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = stop.recv() => {} }

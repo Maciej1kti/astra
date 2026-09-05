@@ -19,7 +19,7 @@ verified; preserve requirements from the temporary handoff until then.
 - Approved directory browsing and SSE invalidations.
 - Durable focus/preferences, conditional undo, history and browser settings.
 
-Latest verified report/view slice: evidence E007 (46 Rust tests and browser smoke).
+Latest verified report/view slice: evidence E008 (49 Rust tests and browser smoke).
 Workspace/history verification is recorded in E006; use `git status` for the exact
 working tree. The current source supersedes historical implementation claims in
 older evidence entries.

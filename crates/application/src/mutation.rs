@@ -101,7 +101,10 @@ impl Engine {
         .execute(&mut store, &command, references, now, |_| Ok(next))?;
         if reply.http_status == 200
             && reply.body["status"] == "committed"
-            && self.index.refresh(&store, &project_id, now).is_err()
+            && self
+                .index
+                .refresh_targets(&store, &project_id, &[(kind, id.clone())], now)
+                .is_err()
         {
             reply.body["warnings"].as_array_mut().unwrap().push(json!({"code":"PROJECTION_DEGRADED","message":"Source committed; the search index needs rebuilding."}));
             let _ = self

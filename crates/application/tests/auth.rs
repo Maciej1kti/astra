@@ -142,3 +142,39 @@ fn session_idle_and_absolute_expiration_survive_restart() {
     );
     wire::validate("Sessions", &auth.sessions(None, now + 90 * day).unwrap()).unwrap();
 }
+
+#[test]
+fn passive_stream_checks_do_not_extend_session_idle_lifetime() {
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    let journal = Journal::open(&temp.path().canonicalize().unwrap()).unwrap();
+    let auth = Auth { journal: &journal };
+    let now = now_millis();
+    let pending = auth
+        .start(&json!({"device_label":"Background tab"}), now)
+        .unwrap();
+    auth.decide(
+        pending.view["id"].as_str().unwrap(),
+        pending.view["challenge"].as_str().unwrap(),
+        true,
+        now,
+    )
+    .unwrap();
+    let claimed = auth
+        .claim(
+            &pending.pending_token,
+            pending.view["pending_csrf_token"].as_str().unwrap(),
+            now,
+        )
+        .unwrap();
+    for day in 1..30 {
+        let session = auth
+            .authenticate_passive(&claimed.session_token, now + day * 86_400_000)
+            .unwrap();
+        assert_eq!(session.view["last_seen_at"], claimed.view["last_seen_at"]);
+    }
+    assert!(
+        auth.authenticate_passive(&claimed.session_token, now + 30 * 86_400_000)
+            .is_err()
+    );
+}

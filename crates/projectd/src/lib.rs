@@ -310,7 +310,7 @@ async fn events(service: Service, input: Input) -> Response {
             Auth {
                 journal: &engine.journal,
             }
-            .authenticate(&credential, now_millis())?;
+            .authenticate_passive(&credential, now_millis())?;
         }
         Ok(())
     })
@@ -320,14 +320,16 @@ async fn events(service: Service, input: Input) -> Response {
         Ok(Err(error)) => return failure(error),
         Err(_) => return failure(AppError::State),
     }
+    let mut notifications = service.engine.index.subscribe();
     let stream = async_stream::stream! {
         let _permit = permit;
+        yield Ok::<_, std::convert::Infallible>(Event::default().comment("connected"));
         loop {
             let engine = service.engine.clone();
             let credential = token.clone();
             let since = cursor.clone();
             let batch = tokio::task::spawn_blocking(move || -> Result<Vec<serde_json::Value>, AppError> {
-                if !local { Auth { journal: &engine.journal }.authenticate(&credential, now_millis())?; }
+                if !local { Auth { journal: &engine.journal }.authenticate_passive(&credential, now_millis())?; }
                 engine.index.events_since(&since, now_millis())
             }).await;
             let Ok(Ok(batch)) = batch else { break; };
@@ -336,7 +338,7 @@ async fn events(service: Service, input: Input) -> Response {
                 let event = Event::default().id(&cursor).event(value["kind"].as_str().unwrap_or("change")).data(value.to_string());
                 yield Ok::<_, std::convert::Infallible>(event);
             }
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            tokio::select! { _ = notifications.changed() => {}, _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {} }
         }
     };
     Sse::new(stream)

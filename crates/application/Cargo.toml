@@ -6,6 +6,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+tokio.workspace = true
 project-domain = { path = "../domain" }
 project-store = { path = "../project-store" }
 serde.workspace = true
