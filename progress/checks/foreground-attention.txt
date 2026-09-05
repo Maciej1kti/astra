@@ -1,0 +1,34 @@
+   Compiling project-store v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/project-store)
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.20s
+     Running tests/engine.rs (target/debug/deps/engine-fd668dbc7893c6cc)
+
+running 25 tests
+test browser_roots_reject_escape_symlinks_and_replaced_directories ... ok
+test browser_registration_plan_cannot_outlive_root_revocation ... ok
+test completed_registration_replays_after_restart_with_missing_project_folder ... ok
+test create_retry_without_client_id_returns_the_original_resource ... ok
+test foreground_project_read_reconciles_external_changes_with_a_bounded_ttl ... ok
+test gantt_pages_include_milestones_and_board_stays_card_only ... ok
+test incremental_projection_preserves_other_sources_and_handles_invalid_delete_recreate ... ok
+test attention_distinguishes_hard_deadlines_and_reading_from_resolution ... ok
+test invalid_external_source_preserves_stale_projection_without_repairing_files ... ok
+test index_rebuild_cannot_finish_before_projection_succeeds ... ok
+test attention_project_filter_applies_before_pagination ... ok
+test agent_context_is_project_scoped_and_counts_utf8_json_overhead ... ok
+test missing_receipt_target_rejection_remains_stable_after_creation ... ok
+test maintenance_plan_rejects_intervening_source_edits_and_relocates_moved_folder ... ok
+test read_receipts_are_atomic_shared_and_do_not_modify_reports ... ok
+test pagination_detects_staleness_and_stream_snapshots_do_not_lose_changes ... ok
+test maintenance_normalizes_conditionally_rebalances_and_unregisters_without_deleting_files ... ok
+test stale_registration_plan_does_not_overwrite_user_edits ... ok
+test retention_keeps_retry_window_and_pending_intents ... ok
+test registration_is_explicit_preserves_existing_instructions_and_repeats_safely ... ok
+test rebalance_rejects_new_collection_members_and_replays_rejection ... ok
+test real_card_edit_two_clients_search_and_index_rebuild ... ok
+test schedule_warning_is_durable_and_never_moves_deadline ... ok
+test undo_restores_one_change_and_refuses_later_edits ... ok
+test workspace_writes_replay_and_recover_without_overwriting_external_changes ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.02s
+

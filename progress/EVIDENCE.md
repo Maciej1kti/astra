@@ -213,3 +213,25 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
 - CI run 33981873908 for the previous commit passed Ubuntu but failed macOS during
   the resize browser test. The held-gesture changes address a reproduced race; the
   next CI result must still be observed. Physical device claims remain excluded.
+
+## E013 — Foreground refresh, degraded diagnostics and on-demand Git
+
+- Foreground project reads reconcile with a 30-second monotonic TTL; attention
+  filtering happens before bounded pagination. Tests cover external source changes
+  and project-scoped attention. The browser retains at most 200 attention rows.
+- Missing/invalid initialized workspace registries preserve sources and keep doctor
+  available. A failing startup regression preceded this change. Diagnostics expose
+  bounded issues/jobs and operational counts without source bodies or secrets.
+- Git observation inspects exact registered roots and linked worktrees on demand,
+  with fixed commands, two slots, two seconds and 2 MiB output. Tests cover unborn
+  HEAD, detached worktrees, hostile filters/fsmonitor, ancestor rejection and limits.
+  HEAD/index scope explicitly leaves working-tree and untracked changes unchecked.
+- A browser regression proved settings drafts were lost on session revocation.
+  Settings now preserve uncertain command identity, offer copying and require explicit
+  draft discard. Browser gesture hitboxes wait for rendering and enabled controls.
+- Full checks passed: 68 Rust tests, 3 Node tests, 4 Python tests, contracts, Svelte,
+  Clippy and release build (`checks/diagnostics-git.txt`). Real HTTPS browser smoke
+  passed including Git UI/CLI, diagnostics and settings pending-draft preservation.
+- Previous CI run 33983014332 passed macOS but failed Ubuntu at a missing browser
+  gesture hitbox. The test now waits for visibility/enabled state and layout; the
+  next CI run still needs observation. Physical platform evidence is not implied.

@@ -1,0 +1,9 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.35s
+     Running tests/engine.rs (target/debug/deps/engine-fd668dbc7893c6cc)
+
+running 1 test
+test broken_workspace_keeps_diagnostics_available_without_recreating_sources ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.60s
+

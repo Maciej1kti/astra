@@ -1,0 +1,6 @@
+### Read HEAD/index metadata for an explicitly registered project
+GET /api/v1/projects/01991460-0000-7000-8000-000000000001/git
+Cookie: __Host-project_session={{session}}
+
+# scope=head_and_index; working_tree_checked=false; untracked_checked=false.
+# stale=true includes an error code and must never be rendered as clean.

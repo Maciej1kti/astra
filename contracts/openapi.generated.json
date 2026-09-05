@@ -2869,6 +2869,13 @@
           },
           {
             "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/UUID"
+            }
           }
         ]
       }
@@ -3157,6 +3164,39 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SourceValidation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/git": {
+      "get": {
+        "operationId": "observeProjectGit",
+        "summary": "Bounded on-demand HEAD and index observation; working tree and untracked files are not checked",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/project_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Observation or explicit unavailable/stale result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitObservation"
                 }
               }
             }
@@ -6110,7 +6150,14 @@
         "type": "object",
         "properties": {
           "instance_id": {
-            "$ref": "#/components/schemas/UUID"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UUID"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "state": {
             "type": "string",
@@ -6142,6 +6189,85 @@
               "$ref": "#/components/schemas/Warning"
             },
             "maxItems": 100
+          },
+          "issues": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "properties": {
+                "project_id": {
+                  "$ref": "#/components/schemas/UUID"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "project_id",
+                "path",
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "jobs": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/components/schemas/UUID"
+                },
+                "state": {
+                  "enum": [
+                    "running",
+                    "needs_review"
+                  ]
+                },
+                "project_id": {
+                  "$ref": "#/components/schemas/UUID"
+                }
+              },
+              "required": [
+                "id",
+                "state",
+                "project_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "history": {
+            "type": "object",
+            "properties": {
+              "entries": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retention_days": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "byte_budget": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "entries",
+              "bytes",
+              "retention_days",
+              "byte_budget"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -6150,7 +6276,10 @@
           "invalid_documents",
           "pending_commands",
           "index_state",
-          "warnings"
+          "warnings",
+          "issues",
+          "jobs",
+          "history"
         ],
         "additionalProperties": false
       },
@@ -6473,6 +6602,80 @@
           "issues"
         ],
         "additionalProperties": false
+      },
+      "GitObservation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "observed_at",
+          "scope",
+          "stale",
+          "untracked_checked",
+          "working_tree_checked",
+          "error",
+          "branch",
+          "commit",
+          "conflicted_paths",
+          "staged_paths"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scope": {
+            "type": "string",
+            "const": "head_and_index"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "untracked_checked": {
+            "type": "boolean",
+            "const": false
+          },
+          "working_tree_checked": {
+            "type": "boolean",
+            "const": false
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branch": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "commit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conflicted_paths": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "staged_paths": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
       }
     }
   }

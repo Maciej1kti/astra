@@ -556,6 +556,13 @@ impl Index {
             json!({"items":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"page":page,"warnings":[]}),
         )
     }
+    pub(crate) fn issues(&self) -> Result<Vec<Value>, AppError> {
+        let db = self.connection.lock().map_err(|_| AppError::State)?;
+        let mut statement = db.prepare(
+            "SELECT project_id,path,code FROM projection_issues ORDER BY project_id,path LIMIT 100",
+        )?;
+        Ok(statement.query_map([],|row|Ok(json!({"project_id":row.get::<_,String>(0)?,"path":row.get::<_,String>(1)?,"code":row.get::<_,String>(2)?})))?.collect::<Result<Vec<_>,_>>()?)
+    }
     pub fn issue_count(&self) -> Result<i64, AppError> {
         Ok(self
             .connection

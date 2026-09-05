@@ -118,3 +118,44 @@ writer lease, initialization, ancestor search or modification. Online validation
 uses GET /projects/{project_id}/validation and the same parser. Validation covers
 individual source documents and normalization needs, with at most 200 diagnostics;
 it is explicitly not a claim of an atomic multi-file snapshot or graph audit.
+
+## ADR-022 — Foreground reconciliation and scoped attention pages
+
+An explicit project resource read reconciles its projection at most once per
+30 seconds using a monotonic process clock. Native source hints still refresh
+individual documents immediately; conditional writes always verify source bytes.
+The browser requests this read when its selected project returns to the foreground.
+
+Attention accepts an optional `project_id`, applied before bounded pagination.
+The browser retains at most 200 attention signals and exposes explicit next/first
+page controls rather than downloading the full attention collection.
+
+## ADR-023 — Diagnostics while the workspace registry is unavailable
+
+A missing or invalid previously initialized workspace prevents project writes but
+keeps authenticated diagnostics and local doctor available. Startup does not create
+a replacement registry or reconstruct sources from the index. Diagnostics identify
+the issue without exposing its contents. A cached operational instance ID is used
+when available; otherwise diagnostics explicitly return null.
+
+Diagnostics include at most 100 source issues, 50 unresolved jobs and history
+counts/byte limits, with actionable text for registry, clock and recovery problems.
+They contain no source bodies, cookies, session tokens or raw database rows.
+
+## ADR-024 — Bounded on-demand Git HEAD and index observation
+
+GET /projects/{project_id}/git and `projectctl --project PATH git` inspect only the
+registered repository root. The observer never searches ancestors, polls in the
+background, fetches, commits or executes a shell. Two concurrent observations are
+allowed, each limited to two seconds and 2 MiB of output. Failure returns an
+explicit stale/unavailable observation rather than a clean repository claim.
+
+The result covers branch, commit, conflicted paths and staged paths outside
+`.project`. Working-tree modifications and untracked files are explicitly unchecked.
+This scope avoids running repository clean/process filters. Fixed commands disable
+optional locks, hooks, fsmonitor, external diff and text conversion. Environment
+and executable are fixed; timeout kills and reaps the command process group.
+
+Command semantics: [Git diff-index](https://git-scm.com/docs/git-diff-index),
+[Git ls-files](https://git-scm.com/docs/git-ls-files), and
+[Git symbolic-ref](https://git-scm.com/docs/git-symbolic-ref).

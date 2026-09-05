@@ -309,6 +309,10 @@ impl Engine {
             && workflows.job(job)?["state"] == "done"
         {
             if plan.kind == "unregister" {
+                self.reconciled
+                    .lock()
+                    .map_err(|_| AppError::State)?
+                    .remove(&plan.project_id);
                 self.index.forget_project(&plan.project_id, now_millis())?;
             } else if let Some(store) = &store {
                 self.index.refresh(store, &plan.project_id, now_millis())?;

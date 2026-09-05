@@ -31,6 +31,8 @@ pub struct Page {
 }
 #[derive(Subcommand)]
 pub enum Action {
+    /// Observe HEAD and staged index changes on demand; never scans the working tree.
+    Git,
     /// Validate source documents; offline mode never writes or initializes a project.
     Validate {
         #[arg(long)]
@@ -264,6 +266,7 @@ impl Action {
             .ok_or("Invalid project resolution")?;
         let root = format!("/api/v1/projects/{project}");
         Ok(match self {
+            Self::Git => read(format!("{root}/git")),
             Self::Validate { .. } => read(format!("{root}/validation")),
             Self::Context { max_bytes } => read(format!("{root}/context?max_bytes={max_bytes}")),
             Self::Cards { page: p } => read(page(format!("{root}/cards"), p)),

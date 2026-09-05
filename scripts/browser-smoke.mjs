@@ -1,11 +1,19 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
-import { chromium, devices } from "@playwright/test";
+import { chromium, devices, expect } from "@playwright/test";
 import { mkdtemp, mkdir, realpath, readFile, writeFile, rm } from "node:fs/promises";
 import { execFileSync, spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import https from "node:https";
 import http from "node:http";
 import assert from "node:assert/strict";
+async function hitbox(locator) {
+  await locator.waitFor({state:"visible"});
+  await expect(locator).toBeEnabled();
+  await locator.scrollIntoViewIfNeeded();
+  const box = await locator.boundingBox();
+  assert(box,"The gesture target must be rendered before sending pointer input");
+  return box;
+}
 const root = resolve(import.meta.dirname, "..");
 const temp = await realpath(
   await mkdtemp(join(await realpath("/tmp"), "lp-browser-")),
@@ -251,7 +259,7 @@ try {
   await moveHandle.waitFor();
   const beforeGesture = cli("get",path);
   for (const cancellation of ["escape","pointercancel","orientationchange","second-pointer"]) {
-    const bounds=await moveHandle.boundingBox();
+    const bounds=await hitbox(moveHandle);
     await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
     await page.mouse.down();
     await page.mouse.move(bounds.x+bounds.width/2+48,bounds.y+bounds.height/2,{steps:4});
@@ -264,7 +272,7 @@ try {
     assert.equal(cli("get",path).version,beforeGesture.version);
   }
   const concurrentGesture = join(temp,"during-gesture.json");
-  const held = await moveHandle.boundingBox();
+  const held = await hitbox(moveHandle);
   await page.mouse.move(held.x+held.width/2,held.y+held.height/2);await page.mouse.down();
   await page.mouse.move(held.x+held.width/2+48,held.y+held.height/2,{steps:4});
   await writeFile(concurrentGesture,JSON.stringify({set:{title:"During held gesture"}}));
@@ -285,7 +293,7 @@ try {
   await moveHandle.waitFor();
   assert(busyReads >= 2);
   await page.unroute("**/api/v1/views/gantt?*");
-  const bounds=await moveHandle.boundingBox();
+  const bounds=await hitbox(moveHandle);
   await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
   await page.mouse.down();
   await page.mouse.move(bounds.x+bounds.width/2+48,bounds.y+bounds.height/2,{steps:4});
@@ -300,7 +308,7 @@ try {
   await page.screenshot({path:join(root,"progress/screenshots/desktop-timeline.png"),fullPage:true});
 
   const resize = page.getByRole("button",{name:"Resize end: External editor update",exact:true});
-  const resizeBounds=await resize.boundingBox();
+  const resizeBounds=await hitbox(resize);
   await page.mouse.move(resizeBounds.x+resizeBounds.width/2,resizeBounds.y+resizeBounds.height/2);
   await page.mouse.down();await page.mouse.move(resizeBounds.x+resizeBounds.width/2+48,resizeBounds.y+resizeBounds.height/2,{steps:4});await page.mouse.up();
   assert.equal(await page.getByLabel("Planned start",{exact:true}).inputValue(),"2026-09-08");
@@ -344,7 +352,7 @@ try {
   assert.equal(cli("--project",folder,"card","get",typedId).metadata.status,"planned");
   const boardHandle=page.getByRole("button",{name:"Reorder: Typed CLI task",exact:true});
   const boardTarget=page.locator(`[data-board-card="${cards[0].id}"] .title`);
-  const sourceBounds=await boardHandle.boundingBox(),targetBounds=await boardTarget.boundingBox();
+  const sourceBounds=await hitbox(boardHandle),targetBounds=await hitbox(boardTarget);
   await page.mouse.move(sourceBounds.x+sourceBounds.width/2,sourceBounds.y+sourceBounds.height/2);await page.mouse.down();
   await page.mouse.move(targetBounds.x+targetBounds.width/2,targetBounds.y+targetBounds.height/2,{steps:6});await page.mouse.up();
   await page.getByRole("button",{name:"Confirm move",exact:true}).click();
@@ -373,6 +381,13 @@ try {
   await page.getByText("Competing timeline edit",{exact:true}).waitFor();
   await page.getByText("Typed CLI task",{exact:true}).waitFor({state:"hidden"});
   await page.getByLabel("Search content",{exact:true}).fill("");
+  assert.equal(cli("--project",folder,"git").error,"NOT_A_GIT_ROOT");
+  await page.getByRole("button",{name:"Git",exact:true}).click();
+  await page.getByText("Observation unavailable: NOT_A_GIT_ROOT",{exact:true}).waitFor();
+  await page.getByRole("button",{name:"Close Git observation",exact:true}).click();
+  await page.getByRole("button",{name:"Host diagnostics",exact:true}).click();
+  await page.getByText("0 source issues · 0 unresolved commands",{exact:true}).waitFor();
+  await page.getByRole("button",{name:"Close diagnostics",exact:true}).click();
   await page.getByRole("button",{name:"Workspace settings",exact:true}).click();
   await page.getByLabel("Theme",{exact:true}).selectOption("dark");
   assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),"dark");
@@ -388,6 +403,13 @@ try {
   await mobile.getByLabel("Month",{exact:true}).fill("2026-09");
   await mobile.getByRole("button",{name:"Move plan: Competing timeline edit",exact:true}).click();
   await mobile.getByLabel("Planned end",{exact:true}).fill("2026-09-16");
+  const settingsPage = await context.newPage();
+  await settingsPage.goto(origin);
+  await settingsPage.getByRole("button",{name:"Workspace settings",exact:true}).click();
+  await settingsPage.getByLabel("Timezone",{exact:true}).fill("Europe/Warsaw");
+  await settingsPage.route("**/api/v1/workspace/preferences", route => route.request().method() === "PATCH" ? route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:{code:"SERVER_BUSY"}})}) : route.continue());
+  await settingsPage.getByRole("button",{name:"Save preferences",exact:true}).click();
+  await settingsPage.getByText("Pending command:",{exact:false}).waitFor();
   for(const session of cli("sessions").items) cli("revoke-session",session.id);
   await page.getByRole("heading",{name:"List.",exact:true}).waitFor({state:"hidden",timeout:5000});
   assert.equal(await page.getByLabel("Title",{exact:true}).inputValue(),"Unsaved revocation draft");
@@ -395,9 +417,13 @@ try {
   assert.equal(await mobile.getByLabel("Planned end",{exact:true}).inputValue(),"2026-09-16");
   await mobile.getByText("Your session ended.",{exact:false}).first().waitFor();
   await mobile.getByRole("button",{name:"Copy draft",exact:true}).waitFor();
+  await settingsPage.getByText("Your session ended. Your settings draft",{exact:false}).waitFor();
+  assert.equal(await settingsPage.getByLabel("Timezone",{exact:true}).inputValue(),"Europe/Warsaw");
+  await settingsPage.getByText("Pending command:",{exact:false}).waitFor();
+  await settingsPage.getByRole("button",{name:"Copy settings draft",exact:true}).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, dark appearance and gesture cancellation.",
+    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

@@ -172,6 +172,17 @@ async fn browser_pairing_csrf_and_local_uid_transport() {
         .await
         .unwrap();
     project_application::wire::validate("Bootstrap", &bootstrap).unwrap();
+    let diagnostics: Value = app
+        .local("GET", "/local/v1/doctor")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    project_application::wire::validate("Diagnostics", &diagnostics).unwrap();
+    assert_eq!(diagnostics["state"], "ready");
+
     assert_eq!(
         app.browser("POST", "/api/v1/auth/logout")
             .header("origin", "https://projects.test")
@@ -305,6 +316,7 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
     );
 
     for (path, schema) in [
+        (format!("/api/v1/projects/{project}/git"), "GitObservation"),
         (
             format!("/api/v1/views/list?type=card&project_id={project}&limit=1&q=socket"),
             "SummaryPage",

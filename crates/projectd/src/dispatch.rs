@@ -102,6 +102,10 @@ pub(super) fn run(
             engine.list(Some(resource_type), &query)?
         }
 
+        ("GET", ["api", "v1", "projects", project, "git"]) => {
+            parameters(&input, &[])?;
+            engine.git_observation(project)?
+        }
         ("GET", ["api", "v1", "projects", project, "validation"]) => {
             parameters(&input, &[])?;
             engine.validate_sources(project)?
@@ -117,7 +121,7 @@ pub(super) fn run(
                 match *view {
                     "calendar" => &["project_id", "from", "to", "cursor", "limit"][..],
                     "board" | "gantt" => &["project_id", "cursor", "limit"],
-                    "attention" => &["cursor", "limit"],
+                    "attention" => &["cursor", "limit", "project_id"],
                     _ => return Err(AppError::reject(404, "NOT_FOUND")),
                 },
             )?;
@@ -132,7 +136,12 @@ pub(super) fn run(
                 },
             )?;
             match *view {
-                "attention" => engine.attention(cursor, limit, now)?,
+                "attention" => engine.attention_project(
+                    fields.get("project_id").map(String::as_str),
+                    cursor,
+                    limit,
+                    now,
+                )?,
                 "calendar" => engine.calendar(
                     fields.get("project_id").map(String::as_str),
                     parameter(&fields, "from")?,
@@ -273,9 +282,7 @@ pub(super) fn run(
             json!({"api_version":"1","build_id":env!("CARGO_PKG_VERSION"),"instance_id":workspace["instance_id"],"instance_name":"Local Projects","command_epoch":engine.journal.epoch,"server_time":instant(now),"timezone":workspace["timezone"],"locale":workspace["locale"],"csrf_token":session.as_ref().map(|s|s.csrf.as_str()).unwrap_or("local-uid"),"snapshot_cursor":engine.index.cursor()?,"capabilities":["projects","cards","milestones","updates","registration","search"]})
         }
         ("GET", ["api", "v1", "diagnostics"]) | ("GET", ["local", "v1", "doctor"]) => {
-            let count = engine.index.issue_count()?;
-            let pending:i64 = engine.journal.db()?.query_row("SELECT count(*) FROM commands WHERE state IN ('prepared','blocked','needs_review')", [], |r| r.get(0))?;
-            json!({"instance_id":engine.workspace()?.0["instance_id"],"state":if count+pending>0 {"degraded"}else{"ready"},"invalid_documents":count,"pending_commands":pending,"index_state":if count>0{"degraded"}else{"ready"},"warnings":[]})
+            engine.diagnostics()?
         }
         ("GET", ["api", "v1", "auth", "pairings"]) => auth.pairings(now)?,
         ("GET", ["api", "v1", "auth", "sessions"]) => auth.sessions(current, now)?,

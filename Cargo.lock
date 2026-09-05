@@ -1160,6 +1160,7 @@ dependencies = [
  "project-domain",
  "project-store",
  "rusqlite",
+ "rustix",
  "serde",
  "serde_json",
  "sha2",

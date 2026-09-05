@@ -11,6 +11,10 @@
     moveDraft = $state<MoveProposal | null>(null);
   import Editor from "./lib/Editor.svelte";
   import Settings from "./lib/Settings.svelte";
+  import GitObservation from "./lib/GitObservation.svelte";
+  let gitProject = $state("");
+  import Diagnostics from "./lib/Diagnostics.svelte";
+  let diagnostics = $state(false);
   let settings = $state(false);
   let DateViews = $state<
     typeof import("./lib/DateViews.svelte").default | null
@@ -55,7 +59,9 @@
   };
   let registrationPending = $state<Pending | null>(null),
     registrationJob = $state<string | null>(null);
-  let attentionRows = $state<Attention[]>([]);
+  let attentionRows = $state<Attention[]>([]),
+    attentionCursor = $state<string | null>(null),
+    attentionPaged = $state(false);
   let pageHistory = $state<Record<string, (string | null)[]>>({});
   let pageCursors = $state<Record<string, string | null>>({});
   let unreadOnly = $state(false);
@@ -173,7 +179,6 @@
     attentionRows = [];
     roots = [];
     directories = [];
-    settings = false;
     adding = false;
     error = "Your session ended. Reconnect this browser to continue.";
   }
@@ -233,6 +238,38 @@
     }
   }
 
+  async function attentionPage(cursor?: string | null) {
+    return api<{ items: Attention[]; page: { next_cursor: string | null } }>(
+      `/api/v1/views/attention?limit=200${project ? `&project_id=${project}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+    );
+  }
+  async function moreAttention(first = false) {
+    if (loadingMore) return;
+    loadingMore = true;
+    const generation = refreshGeneration;
+    try {
+      const result = await attentionPage(first ? null : attentionCursor);
+      if (generation !== refreshGeneration) return;
+      attentionRows = result.items;
+      attentionCursor = result.page.next_cursor;
+      attentionPaged = !first;
+    } catch (e) {
+      message(e);
+    } finally {
+      loadingMore = false;
+    }
+  }
+  async function foreground() {
+    if (document.visibilityState !== "visible" || !boot) return;
+    try {
+      const current = await api<Bootstrap>("/api/v1/bootstrap");
+      configure(current);
+      if (project) await api(`/api/v1/projects/${project}`);
+      await refresh();
+    } catch (e) {
+      message(e);
+    }
+  }
   async function resourcePage(type: string, cursor?: string | null) {
     return api<{ items: Summary[]; page: { next_cursor: string | null } }>(
       `/api/v1/views/list?type=${type}&limit=200${["list", "updates"].includes(view) && search.trim() ? `&q=${encodeURIComponent(search)}` : ""}${project ? `&project_id=${project}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
@@ -243,7 +280,7 @@
     const [p, f, a, c, m, u] = await Promise.all([
       all("/api/v1/projects"),
       api<{ items: typeof focus }>("/api/v1/workspace/focus"),
-      all<Attention>("/api/v1/views/attention"),
+      attentionPage(),
       resourcePage("card"),
       resourcePage("milestone"),
       resourcePage("update"),
@@ -289,7 +326,9 @@
     focusCards = pinned;
     projects = p;
     focus = f.items;
-    attentionRows = a;
+    attentionRows = a.items;
+    attentionCursor = a.page.next_cursor;
+    attentionPaged = false;
     cards = c.items;
     milestones = m.items;
     updates = u.items;
@@ -536,10 +575,14 @@
   onMount(() => {
     window.addEventListener("session-ended", sessionEnded);
     window.addEventListener("command-warning", commandWarning);
+    window.addEventListener("online", foreground);
+    document.addEventListener("visibilitychange", foreground);
     void initialize();
     return () => {
       window.removeEventListener("session-ended", sessionEnded);
       window.removeEventListener("command-warning", commandWarning);
+      window.removeEventListener("online", foreground);
+      document.removeEventListener("visibilitychange", foreground);
       source?.close();
       clearTimeout(refreshTimer);
     };
@@ -587,6 +630,7 @@
           Approval is required on the host. This app does not grant access from
           a link alone.
         </p>{/if}{#if error}<p class="notice" role="alert">{error}</p>{/if}
+      <button onclick={() => (diagnostics = true)}>Host diagnostics</button>
     </section>
   </main>
 {:else}
@@ -628,7 +672,15 @@
           {selectedProject?.title ?? "All projects"}</span
         >
         <div>
+          {#if project}<button
+              class="quiet"
+              onclick={() => (gitProject = project)}>Git</button
+            >{/if}
           <span class="date">{today}</span><button
+            class="quiet"
+            aria-label="Host diagnostics"
+            onclick={() => (diagnostics = true)}>ⓘ</button
+          ><button
             class="quiet"
             aria-label="Workspace settings"
             onclick={() => (settings = true)}>⚙</button
@@ -801,6 +853,14 @@
               <strong>A little breathing room.</strong>
               <p>No blocked, overdue or review items in this selection.</p>
             </div>{/each}
+          {#if attentionCursor}<button
+              disabled={loadingMore}
+              onclick={() => moreAttention()}>Next attention page</button
+            >{/if}
+          {#if attentionPaged}<button
+              disabled={loadingMore}
+              onclick={() => moreAttention(true)}>First attention page</button
+            >{/if}
         {:else if view === "projects"}<div class="grid">
             {#each projects.filter((p) => p.title
                 .toLowerCase()
@@ -961,6 +1021,11 @@
         void refresh().catch(message);
       }}
     />{/key}{/if}
+{#if gitProject}<GitObservation
+    project={gitProject}
+    onclose={() => (gitProject = "")}
+  />{/if}
+{#if diagnostics}<Diagnostics onclose={() => (diagnostics = false)} />{/if}
 {#if settings}<Settings
     onclose={() => (settings = false)}
     onsaved={() => {

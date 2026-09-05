@@ -52,13 +52,19 @@
     scale = $state("days");
   let generation = 0,
     deferredRefresh = false;
+  let gestureActive = $state(false);
   onMount(() => {
+    const started = () => {
+      gestureActive = true;
+    };
     const released = () => {
+      gestureActive = false;
       if (deferredRefresh) {
         deferredRefresh = false;
         void load(false);
       }
     };
+    window.addEventListener("planning-gesture-started", started);
     window.addEventListener("planning-gesture-ended", released);
     return () => window.removeEventListener("planning-gesture-ended", released);
   });
@@ -313,6 +319,7 @@
                 >
                 {#if item.kind === "card_schedule"}<button
                     class="handle"
+                    disabled={loading && !gestureActive}
                     aria-label={`Move plan: ${item.title}`}
                     use:dateGesture={{
                       delta: calendarDelta,
@@ -357,6 +364,7 @@
             >
               <button
                 class="handle"
+                disabled={loading && !gestureActive}
                 aria-label={`Resize start: ${row.title}`}
                 use:dateGesture={{
                   delta: (x, _y, startX) => Math.round((x - startX) / unit),
@@ -365,6 +373,7 @@
                 onclick={() => propose(item, 0, "start")}>‹</button
               ><button
                 class="handle move"
+                disabled={loading && !gestureActive}
                 aria-label={`Move plan: ${row.title}`}
                 use:dateGesture={{
                   delta: (x, _y, startX) => Math.round((x - startX) / unit),
@@ -373,6 +382,7 @@
                 onclick={() => propose(item, 0, "move")}>{row.title}</button
               ><button
                 class="handle"
+                disabled={loading && !gestureActive}
                 aria-label={`Resize end: ${row.title}`}
                 use:dateGesture={{
                   delta: (x, _y, startX) => Math.round((x - startX) / unit),

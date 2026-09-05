@@ -1,2 +1,21 @@
-   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.18s
+
+> build
+> npm run build --workspace apps/web
+
+
+> @local-projects/web@0.1.0 build
+> vite build
+
+8:30:25 PM [vite-plugin-svelte] no Svelte config found at /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web - using default configuration.
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 155 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                       0.39 kB │ gzip:  0.26 kB
+dist/assets/DateViews-DXf7y9V0.css    2.94 kB │ gzip:  1.00 kB
+dist/assets/index-CggmLq-8.css       21.08 kB │ gzip:  4.32 kB
+dist/assets/DateViews-CBYgHFVG.js    12.99 kB │ gzip:  4.62 kB
+dist/assets/index-DK8mgtc3.js       235.72 kB │ gzip: 89.27 kB
+
+✓ built in 214ms

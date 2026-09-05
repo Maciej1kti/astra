@@ -1,0 +1,7 @@
+# Authenticated browser or peer-UID Unix request.
+GET /api/v1/diagnostics
+Accept: application/json
+
+# A broken workspace registry does not disable local diagnostics.
+GET /local/v1/doctor
+Accept: application/json

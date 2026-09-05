@@ -28,13 +28,19 @@
   let pageStarts = $state<Record<string, boolean>>({});
   let generation = 0,
     deferredRefresh = false;
+  let gestureActive = $state(false);
   onMount(() => {
+    const started = () => {
+      gestureActive = true;
+    };
     const released = () => {
+      gestureActive = false;
       if (deferredRefresh) {
         deferredRefresh = false;
         void load();
       }
     };
+    window.addEventListener("planning-gesture-started", started);
     window.addEventListener("planning-gesture-ended", released);
     return () => window.removeEventListener("planning-gesture-ended", released);
   });
@@ -162,7 +168,7 @@
             <button
               class="handle"
               aria-label={`Reorder: ${item.title}`}
-              disabled={!!search || busy}
+              disabled={!!search || (busy && !gestureActive)}
               use:dateGesture={gesture(item)}>↕</button
             ><label
               ><span class="sr">Move {item.title} to</span><select

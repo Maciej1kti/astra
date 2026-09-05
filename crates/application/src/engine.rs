@@ -27,24 +27,28 @@ pub struct Engine {
     pub index: Index,
     pub gate: RwLock<()>,
     stores: Mutex<HashMap<String, StoreHandle>>,
+    pub(crate) reconciled: Mutex<HashMap<String, std::time::Instant>>,
 }
 impl Engine {
     pub fn open(data: &Path) -> Result<Self, AppError> {
         let journal = Journal::open(data)?;
-        if journal.directory.read("workspace.json")?.is_none() {
+        if journal
+            .directory
+            .read("workspace.json")
+            .is_ok_and(|value| value.is_none())
+        {
             let initialized: bool = journal.db()?.query_row(
                 "SELECT EXISTS(SELECT 1 FROM meta WHERE key='workspace_initialized')",
                 [],
                 |r| r.get(0),
             )?;
-            if initialized {
-                return Err(AppError::reject(503, "WORKSPACE_MISSING"));
+            if !initialized {
+                let value = json!({"format_version":1,"instance_id":Uuid::new_v4().to_string(),"timezone":"Europe/Warsaw","locale":"en","projects":[],"focus":[],"preferences":{"week_start":"monday","default_view":"focus"}});
+                validate_workspace(value.clone()).map_err(|_| AppError::State)?;
+                journal
+                    .directory
+                    .replace("workspace.json", &pretty(&value), None)?;
             }
-            let value = json!({"format_version":1,"instance_id":Uuid::new_v4().to_string(),"timezone":"Europe/Warsaw","locale":"en","projects":[],"focus":[],"preferences":{"week_start":"monday","default_view":"focus"}});
-            validate_workspace(value.clone()).map_err(|_| AppError::State)?;
-            journal
-                .directory
-                .replace("workspace.json", &pretty(&value), None)?;
         }
         journal.db()?.execute(
             "INSERT OR IGNORE INTO meta(key,value) VALUES('workspace_initialized','1')",
@@ -55,7 +59,13 @@ impl Engine {
             index: Index::open(data)?,
             gate: RwLock::new(()),
             stores: Mutex::new(HashMap::new()),
+            reconciled: Mutex::new(HashMap::new()),
         };
+        let Ok((initial_workspace, _)) = engine.workspace() else {
+            // Keep authenticated diagnostics available; never reconstruct a lost registry.
+            return Ok(engine);
+        };
+        engine.journal.db()?.execute("INSERT INTO meta(key,value) VALUES('instance_id',?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value",[initial_workspace["instance_id"].as_str().ok_or(AppError::State)?])?;
         engine.recover_workspace()?;
         for (job, plan) in (Workflows {
             journal: &engine.journal,
@@ -367,6 +377,9 @@ impl Engine {
         Ok(reply)
     }
     pub fn get(&self, project_id: &str, kind: Kind, id: &str) -> Result<Value, AppError> {
+        if kind == Kind::Project {
+            self.reconcile_if_due(project_id)?;
+        }
         let _gate = self.gate.read().map_err(|_| AppError::State)?;
         let handle = self.store(project_id)?;
         let store = handle.lock().map_err(|_| AppError::State)?;
@@ -389,6 +402,21 @@ impl Engine {
         }
         Ok(page)
     }
+    fn reconcile_if_due(&self, id: &str) -> Result<(), AppError> {
+        let _ = self.store(id)?;
+        {
+            let mut checked = self.reconciled.lock().map_err(|_| AppError::State)?;
+            if checked
+                .get(id)
+                .is_some_and(|time| time.elapsed() < std::time::Duration::from_secs(30))
+            {
+                return Ok(());
+            }
+            // Reserve before scanning so concurrent foreground reads do not stampede.
+            checked.insert(id.into(), std::time::Instant::now());
+        }
+        self.refresh_project(id, None)
+    }
     pub fn refresh_project(
         &self,
         id: &str,
@@ -408,6 +436,11 @@ impl Engine {
         if result.is_err() {
             self.index
                 .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis())?;
+        } else if targets.is_none() {
+            self.reconciled
+                .lock()
+                .map_err(|_| AppError::State)?
+                .insert(id.into(), std::time::Instant::now());
         }
         result
     }

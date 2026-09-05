@@ -991,3 +991,210 @@ fn index_rebuild_cannot_finish_before_projection_succeeds() {
         "Rebuild target"
     );
 }
+
+#[test]
+fn foreground_project_read_reconciles_external_changes_with_a_bounded_ttl() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Before foreground");
+    let id = card.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    let path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let original = fs::read_to_string(&path).unwrap();
+    fs::write(
+        &path,
+        original.replace("Before foreground", "After foreground"),
+    )
+    .unwrap();
+    engine.get(&project, Kind::Project, &project).unwrap();
+    assert_eq!(
+        engine.list(Some("card"), &Query::default()).unwrap()["items"][0]["title"],
+        "After foreground"
+    );
+    fs::write(
+        &path,
+        original.replace("Before foreground", "New direct source"),
+    )
+    .unwrap();
+    engine.get(&project, Kind::Project, &project).unwrap();
+    assert_eq!(
+        engine.list(Some("card"), &Query::default()).unwrap()["items"][0]["title"],
+        "After foreground"
+    );
+    assert_eq!(
+        engine.get(&project, Kind::Card, id).unwrap()["metadata"]["title"],
+        "New direct source"
+    );
+}
+
+#[test]
+fn attention_project_filter_applies_before_pagination() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let first = register(&engine, &env.path());
+    let other = env.root.join("other");
+    fs::create_dir(&other).unwrap();
+    let second = register(&engine, other.to_str().unwrap());
+    for project in [&first, &second] {
+        let card = create(&engine, project, "Needs review");
+        let resource = &card.body["result"]["resource"];
+        patch(
+            &engine,
+            project,
+            resource["metadata"]["id"].as_str().unwrap(),
+            resource["version"].as_str().unwrap(),
+            json!({"set":{"status":"review"}}),
+        );
+    }
+    let page = engine
+        .attention_project(Some(&second), None, 1, now_millis())
+        .unwrap();
+    wire::validate("AttentionPage", &page).unwrap();
+    assert_eq!(page["items"].as_array().unwrap().len(), 1);
+    assert_eq!(page["items"][0]["project_id"], second);
+    assert!(page["page"]["next_cursor"].is_null());
+}
+
+#[test]
+fn broken_workspace_keeps_diagnostics_available_without_recreating_sources() {
+    for missing in [true, false] {
+        let env = Environment::new();
+        let engine = env.engine();
+        let project = register(&engine, &env.path());
+        let source = fs::read(env.root.join("project/.project/project.md")).unwrap();
+        drop(engine);
+        let workspace = env.root.join("state/workspace.json");
+        if missing {
+            fs::remove_file(&workspace).unwrap();
+        } else {
+            fs::write(&workspace, b"broken workspace").unwrap();
+        }
+        let engine = env.engine();
+        assert!(engine.workspace().is_err());
+        let diagnostics = engine.diagnostics().unwrap();
+        wire::validate("Diagnostics", &diagnostics).unwrap();
+        assert_eq!(diagnostics["state"], "degraded");
+        assert_eq!(
+            diagnostics["warnings"][0]["code"],
+            if missing {
+                "WORKSPACE_MISSING"
+            } else {
+                "WORKSPACE_INVALID"
+            }
+        );
+        assert!(!diagnostics.to_string().contains("broken workspace"));
+        assert_eq!(
+            fs::read(env.root.join("project/.project/project.md")).unwrap(),
+            source
+        );
+        if missing {
+            assert!(!workspace.exists());
+        } else {
+            assert_eq!(fs::read(&workspace).unwrap(), b"broken workspace");
+        }
+        assert!(
+            engine
+                .mutate(Mutation {
+                    project_id: project,
+                    kind: Kind::Card,
+                    id: None,
+                    payload: json!({"title":"Must not be created"}),
+                    request_id: Uuid::now_v7().to_string(),
+                    epoch: engine.journal.epoch.clone(),
+                    expected: None
+                })
+                .is_err()
+        );
+    }
+}
+
+#[test]
+fn git_observer_is_explicit_bounded_and_never_runs_repository_filters() {
+    use std::process::Command;
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let missing = engine.git_observation(&project).unwrap();
+    wire::validate("GitObservation", &missing).unwrap();
+    assert_eq!(missing["stale"], true);
+    assert_eq!(missing["error"], "NOT_A_GIT_ROOT");
+    let git = |args: &[&str]| {
+        let output = Command::new("/usr/bin/git")
+            .args(args)
+            .current_dir(env.path())
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .env("GIT_CONFIG_GLOBAL", "/dev/null")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{:?}: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    };
+    git(&["init", "-b", "main"]);
+    fs::write(env.root.join("project/code.txt"), "initial\n").unwrap();
+    git(&["add", "-f", "code.txt", ".project"]);
+    let unborn = engine.git_observation(&project).unwrap();
+    wire::validate("GitObservation", &unborn).unwrap();
+    assert_eq!(unborn["staged_paths"], 1);
+    assert_eq!(unborn["commit"], Value::Null);
+    git(&[
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "-m",
+        "Fixture",
+    ]);
+    fs::write(env.root.join("project/code.txt"), "staged\n").unwrap();
+    git(&["add", "code.txt"]);
+    fs::write(
+        env.root.join("project/.gitattributes"),
+        "*.txt filter=hostile diff=hostile\n",
+    )
+    .unwrap();
+    git(&[
+        "config",
+        "filter.hostile.clean",
+        "touch OBSERVER_EXECUTED; cat",
+    ]);
+    git(&["config", "diff.hostile.command", "touch OBSERVER_EXECUTED"]);
+    git(&["config", "core.fsmonitor", "touch OBSERVER_EXECUTED"]);
+    fs::write(env.root.join("project/code.txt"), "unstaged\n").unwrap();
+    let observation = engine.git_observation(&project).unwrap();
+    wire::validate("GitObservation", &observation).unwrap();
+    assert_eq!(observation["stale"], false, "{observation}");
+    assert_eq!(observation["branch"], "main");
+    assert_eq!(observation["staged_paths"], 1);
+    assert_eq!(observation["working_tree_checked"], false);
+    assert_eq!(observation["untracked_checked"], false);
+    assert!(!env.root.join("project/OBSERVER_EXECUTED").exists());
+    git(&["config", "--unset", "core.fsmonitor"]);
+    let worktree = env.root.join("worktree");
+    git(&[
+        "worktree",
+        "add",
+        "--detach",
+        worktree.to_str().unwrap(),
+        "HEAD",
+    ]);
+    fs::remove_dir_all(worktree.join(".project")).unwrap();
+    let worktree_id = register(&engine, worktree.to_str().unwrap());
+    let detached = engine.git_observation(&worktree_id).unwrap();
+    wire::validate("GitObservation", &detached).unwrap();
+    assert_eq!(detached["stale"], false, "{detached}");
+    assert_eq!(detached["branch"], Value::Null);
+    assert!(detached["commit"].is_string());
+    let child = env.root.join("project/nested");
+    fs::create_dir(&child).unwrap();
+    let nested = register(&engine, child.to_str().unwrap());
+    assert_eq!(
+        engine.git_observation(&nested).unwrap()["error"],
+        "NOT_A_GIT_ROOT"
+    );
+}

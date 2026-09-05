@@ -57,6 +57,7 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     y = startY = event.clientY;
     node.setPointerCapture(pointer);
     node.setAttribute("data-dragging", "true");
+    window.dispatchEvent(new Event("planning-gesture-started"));
     event.preventDefault();
   }
   function move(event: PointerEvent) {

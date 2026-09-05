@@ -28,16 +28,76 @@
     pending = $state<Pending | null>(null);
   let sessions = $state<Session[]>([]),
     pairings = $state<Pairing[]>([]);
+  let accessLost = $state(false),
+    confirmClose = $state(false);
+  let generation = 0;
+  let dirty = $derived(
+    !!baseline &&
+      (timezone !== baseline.timezone ||
+        week !== (baseline.preferences.week_start ?? "monday") ||
+        view !== (baseline.preferences.default_view ?? "focus")),
+  );
+  function close() {
+    if (busy) return;
+    if (dirty || pending) confirmClose = true;
+    else onclose();
+  }
+  async function copyDraft() {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(
+          {
+            timezone,
+            week_start: week,
+            default_view: view,
+            expected_version: baseline?.version,
+            pending,
+          },
+          null,
+          2,
+        ),
+      );
+      error = "Settings draft copied.";
+    } catch {
+      error =
+        "Clipboard access is unavailable. Select and copy your draft fields.";
+    }
+  }
   onMount(() => {
     void load();
+    const ended = () => {
+      generation++;
+      sessions = [];
+      pairings = [];
+      accessLost = true;
+      error =
+        "Your session ended. Your settings draft is preserved; copy it before closing, then reconnect.";
+    };
+    const restored = () => {
+      accessLost = false;
+    };
+    const leaving = (e: BeforeUnloadEvent) => {
+      if (dirty || pending) e.preventDefault();
+    };
+    window.addEventListener("session-ended", ended);
+    window.addEventListener("session-restored", restored);
+    window.addEventListener("beforeunload", leaving);
+    return () => {
+      generation++;
+      window.removeEventListener("session-ended", ended);
+      window.removeEventListener("session-restored", restored);
+      window.removeEventListener("beforeunload", leaving);
+    };
   });
   async function load() {
+    const current = ++generation;
     try {
       const [p, s, a] = await Promise.all([
         api<Preferences>("/api/v1/workspace/preferences"),
         api<{ items: Session[] }>("/api/v1/auth/sessions"),
         api<{ items: Pairing[] }>("/api/v1/auth/pairings"),
       ]);
+      if (generation !== current) return;
       baseline = p;
       timezone = p.timezone;
       week = p.preferences.week_start ?? "monday";
@@ -49,7 +109,7 @@
     }
   }
   async function save() {
-    if (!baseline) return;
+    if (!baseline || accessLost || pending) return;
     pending = command(
       "/api/v1/workspace/preferences",
       "PATCH",
@@ -63,7 +123,7 @@
     await transmit();
   }
   async function transmit() {
-    if (!pending) return;
+    if (!pending || accessLost) return;
     busy = true;
     error = "";
     try {
@@ -123,12 +183,12 @@
   aria-label="Workspace settings"
   oncancel={(e) => {
     e.preventDefault();
-    if (!busy) onclose();
+    close();
   }}
 >
   <header>
     <h2>Workspace settings</h2>
-    <button onclick={onclose} disabled={busy} aria-label="Close settings"
+    <button onclick={close} disabled={busy} aria-label="Close settings"
       >✕</button
     >
   </header>
@@ -143,7 +203,7 @@
         bind:value={timezone}
         placeholder="Europe/Warsaw"
         required
-        disabled={!baseline || busy}
+        disabled={!baseline || busy || !!pending}
       /></label
     >
     <div class="row">
@@ -151,7 +211,7 @@
         >Week starts<select
           aria-label="Week starts"
           bind:value={week}
-          disabled={busy}
+          disabled={busy || accessLost}
           ><option value="monday">Monday</option><option value="sunday"
             >Sunday</option
           ></select
@@ -160,7 +220,7 @@
         >Default view<select
           aria-label="Default view"
           bind:value={view}
-          disabled={busy}
+          disabled={busy || accessLost}
           >{#each ["focus", "projects", "board", "calendar", "gantt", "list", "updates"] as name}<option
               value={name}
               >{name === "gantt"
@@ -176,15 +236,28 @@
     </p>
     {#if error}<div class="notice" role="alert">{error}</div>{/if}
     {#if pending}<p>Pending command: {pending.requestId}</p>
-      <button type="button" onclick={transmit} disabled={busy}
+      <button type="button" onclick={transmit} disabled={busy || accessLost}
         >Retry same command</button
       >{/if}
     <button
       class="primary"
       type="submit"
-      disabled={!baseline || busy || !!pending}>Save preferences</button
+      disabled={!baseline || busy || !!pending || accessLost}
+      >Save preferences</button
     >
   </form>
+  {#if dirty || pending}<button type="button" onclick={copyDraft}
+      >Copy settings draft</button
+    >{/if}
+  {#if confirmClose}<section class="notice" role="alert">
+      <p>
+        {pending
+          ? "The command outcome may still be unknown. Discarding this draft does not cancel a server write."
+          : "Discard your unsaved settings?"}
+      </p>
+      <button onclick={() => (confirmClose = false)}>Keep editing</button>
+      <button onclick={onclose}>Discard settings draft</button>
+    </section>{/if}
   <h3>Appearance on this browser</h3>
   <label
     >Theme<select
@@ -209,7 +282,9 @@
             .replace("T", " ")}</small
         >
       </div>
-      <button onclick={() => revoke(session.id)} disabled={busy}>Revoke</button>
+      <button onclick={() => revoke(session.id)} disabled={busy || accessLost}
+        >Revoke</button
+      >
     </div>{/each}
   <h3>Pairing requests</h3>
   <p>Approve only after comparing the challenge with the requesting browser.</p>
@@ -217,8 +292,9 @@
       <div>
         <strong>{item.device_label}</strong><code>{item.challenge}</code>
       </div>
-      <button onclick={() => decide(item, false)} disabled={busy}>Deny</button
-      ><button onclick={() => decide(item, true)} disabled={busy}
+      <button onclick={() => decide(item, false)} disabled={busy || accessLost}
+        >Deny</button
+      ><button onclick={() => decide(item, true)} disabled={busy || accessLost}
         >Approve</button
       >
     </div>{:else}<p>No pending requests.</p>{/each}

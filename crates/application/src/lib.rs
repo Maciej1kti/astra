@@ -1,6 +1,8 @@
 pub mod auth;
 mod context;
+mod diagnostics;
 pub mod engine;
+mod git;
 mod history;
 mod maintenance;
 mod mutation;

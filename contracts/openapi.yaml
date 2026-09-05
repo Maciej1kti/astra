@@ -2,8 +2,8 @@ openapi: 3.1.1
 info:
   title: Local Projects HTTP API
   version: 1.0.0
-  description: Normatywny kontrakt handoffu, nie spec wygenerowana z istniejącego serwera. Semantyka w
-    docs/05, trwałość w docs/04. Admin lokalny w contracts/local-ipc.json.
+  description: Normatywny kontrakt handoffu, nie spec wygenerowana z istniejącego
+    serwera. Semantyka w docs/05, trwałość w docs/04. Admin lokalny w contracts/local-ipc.json.
 servers:
 - url: /
 security:
@@ -15,8 +15,8 @@ paths:
       tags:
       - system
       summary: health
-      description: Implementacja publicznej odpowiedzi MUST ograniczyć treść do minimalnej gotowości;
-        pełna diagnostyka ma osobny endpoint.
+      description: Implementacja publicznej odpowiedzi MUST ograniczyć treść do minimalnej
+        gotowości; pełna diagnostyka ma osobny endpoint.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -77,7 +77,8 @@ paths:
       tags:
       - auth
       summary: createPairing
-      description: Same-origin + rate limit; ustawia pending HttpOnly cookie. Nie wymaga zaufanej sesji.
+      description: Same-origin + rate limit; ustawia pending HttpOnly cookie. Nie
+        wymaga zaufanej sesji.
       responses:
         '201':
           description: Poprawna odpowiedź
@@ -123,8 +124,8 @@ paths:
       tags:
       - auth
       summary: getCurrentPairing
-      description: Wymaga poprawnego pending cookie, nie zaufanej sesji. Nigdy nie zwraca pairing innego
-        klienta.
+      description: Wymaga poprawnego pending cookie, nie zaufanej sesji. Nigdy nie
+        zwraca pairing innego klienta.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -145,8 +146,8 @@ paths:
       tags:
       - auth
       summary: claimPairing
-      description: Pending cookie i pending CSRF + Origin; kontrolowany exchange/grace według security
-        spec.
+      description: Pending cookie i pending CSRF + Origin; kontrolowany exchange/grace
+        według security spec.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -520,8 +521,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch;
-            do not submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -623,7 +624,8 @@ paths:
       tags:
       - registration
       summary: unregisterProject
-      description: Usuwa wyłącznie wpis workspace. Nigdy nie usuwa folderu, .project ani AGENTS.
+      description: Usuwa wyłącznie wpis workspace. Nigdy nie usuwa folderu, .project
+        ani AGENTS.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -645,8 +647,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch;
-            do not submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -800,8 +802,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch;
-            do not submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -958,8 +960,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch;
-            do not submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -1141,8 +1143,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch;
-            do not submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -1210,8 +1212,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch;
-            do not submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -1233,8 +1235,8 @@ paths:
       tags:
       - workspace
       summary: setReadReceipts
-      description: Idempotentne ustawienie read; stan w SQLite, jedna transakcja z command result. Nie
-        rozwiązuje raportu.
+      description: Idempotentne ustawienie read; stan w SQLite, jedna transakcja z
+        command result. Nie rozwiązuje raportu.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -1254,8 +1256,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch;
-            do not submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -1338,7 +1340,8 @@ paths:
       tags:
       - views
       summary: getCalendar
-      description: from/to inclusive; max 400 dni. Brak project_id = bieżąca instancja, nie inne hosty.
+      description: from/to inclusive; max 400 dni. Brak project_id = bieżąca instancja,
+        nie inne hosty.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -1398,6 +1401,10 @@ paths:
       parameters:
       - $ref: '#/components/parameters/Limit'
       - $ref: '#/components/parameters/Cursor'
+      - name: project_id
+        in: query
+        schema:
+          $ref: '#/components/schemas/UUID'
   /api/v1/search:
     get:
       operationId: search
@@ -1465,7 +1472,8 @@ paths:
       tags:
       - events
       summary: events
-      description: SSE event/data JSON. Cursor epoch:seq; brak replay → resync_required. Autoryzacja cookie.
+      description: SSE event/data JSON. Cursor epoch:seq; brak replay → resync_required.
+        Autoryzacja cookie.
       responses:
         '200':
           description: SSE stream
@@ -1498,8 +1506,9 @@ paths:
       tags:
       - views
       summary: Read a paginated workspace resource list
-      description: A bounded summary-only projection across registered projects. Optional project and
-        field filters use the same index and cursor rules as per-project collections.
+      description: A bounded summary-only projection across registered projects. Optional
+        project and field filters use the same index and cursor rules as per-project
+        collections.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -1573,11 +1582,32 @@ paths:
       - $ref: '#/components/parameters/project_id'
       responses:
         '200':
-          description: Document validation, with bounded diagnostics and no document contents
+          description: Document validation, with bounded diagnostics and no document
+            contents
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SourceValidation'
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/projects/{project_id}/git:
+    get:
+      operationId: observeProjectGit
+      summary: Bounded on-demand HEAD and index observation; working tree and untracked
+        files are not checked
+      parameters:
+      - $ref: '#/components/parameters/project_id'
+      responses:
+        '200':
+          description: Observation or explicit unavailable/stale result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitObservation'
         default:
           description: Controlled error
           content:
@@ -1722,8 +1752,8 @@ components:
       - 'null'
       - array
       - object
-      description: 'Ograniczone JSON values; poza schema: max depth 12, 10000 nodes, brak niebezpiecznych
-        kluczy prototypu w obiektach JS.'
+      description: 'Ograniczone JSON values; poza schema: max depth 12, 10000 nodes,
+        brak niebezpiecznych kluczy prototypu w obiektach JS.'
     Schedule:
       type: object
       properties:
@@ -2379,8 +2409,8 @@ components:
         required:
         - undo
         additionalProperties: false
-      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo wymaga If-Match
-        bieżącego targetu.
+      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo
+        wymaga If-Match bieżącego targetu.
     CardPatch:
       oneOf:
       - type: object
@@ -2477,8 +2507,8 @@ components:
         required:
         - undo
         additionalProperties: false
-      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo wymaga If-Match
-        bieżącego targetu.
+      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo
+        wymaga If-Match bieżącego targetu.
     CardCreate:
       type: object
       properties:
@@ -2553,8 +2583,8 @@ components:
         required:
         - undo
         additionalProperties: false
-      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo wymaga If-Match
-        bieżącego targetu.
+      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo
+        wymaga If-Match bieżącego targetu.
     MilestoneCreate:
       type: object
       properties:
@@ -2907,7 +2937,8 @@ components:
           $ref: '#/components/schemas/UUID'
         read:
           type: boolean
-          description: Present for updates. Shared owner read receipt; does not resolve a report.
+          description: Present for updates. Shared owner read receipt; does not resolve
+            a report.
       required:
       - type
       - project_id
@@ -3458,7 +3489,8 @@ components:
           additionalProperties:
             type: integer
             minimum: 0
-          description: Counts of included objects; omitted has counts of excluded objects.
+          description: Counts of included objects; omitted has counts of excluded
+            objects.
         next_reads:
           type: array
           maxItems: 200
@@ -3478,7 +3510,8 @@ components:
             - type
             - id
             additionalProperties: false
-          description: Only resources of this project; the CLI formats safe follow-up reads.
+          description: Only resources of this project; the CLI formats safe follow-up
+            reads.
       required:
       - api_version
       - project
@@ -3645,7 +3678,9 @@ components:
       type: object
       properties:
         instance_id:
-          $ref: '#/components/schemas/UUID'
+          anyOf:
+          - $ref: '#/components/schemas/UUID'
+          - type: 'null'
         state:
           type: string
           enum:
@@ -3669,6 +3704,63 @@ components:
           items:
             $ref: '#/components/schemas/Warning'
           maxItems: 100
+        issues:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            properties:
+              project_id:
+                $ref: '#/components/schemas/UUID'
+              path:
+                type: string
+              code:
+                type: string
+            required:
+            - project_id
+            - path
+            - code
+            additionalProperties: false
+        jobs:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            properties:
+              id:
+                $ref: '#/components/schemas/UUID'
+              state:
+                enum:
+                - running
+                - needs_review
+              project_id:
+                $ref: '#/components/schemas/UUID'
+            required:
+            - id
+            - state
+            - project_id
+            additionalProperties: false
+        history:
+          type: object
+          properties:
+            entries:
+              type: integer
+              minimum: 0
+            bytes:
+              type: integer
+              minimum: 0
+            retention_days:
+              type: integer
+              minimum: 0
+            byte_budget:
+              type: integer
+              minimum: 0
+          required:
+          - entries
+          - bytes
+          - retention_days
+          - byte_budget
+          additionalProperties: false
       required:
       - instance_id
       - state
@@ -3676,6 +3768,9 @@ components:
       - pending_commands
       - index_state
       - warnings
+      - issues
+      - jobs
+      - history
       additionalProperties: false
     ReceiptInput:
       type: object
@@ -3908,3 +4003,58 @@ components:
       - valid
       - issues
       additionalProperties: false
+    GitObservation:
+      type: object
+      additionalProperties: false
+      required:
+      - project_id
+      - observed_at
+      - scope
+      - stale
+      - untracked_checked
+      - working_tree_checked
+      - error
+      - branch
+      - commit
+      - conflicted_paths
+      - staged_paths
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        observed_at:
+          type: string
+          format: date-time
+        scope:
+          type: string
+          const: head_and_index
+        stale:
+          type: boolean
+        untracked_checked:
+          type: boolean
+          const: false
+        working_tree_checked:
+          type: boolean
+          const: false
+        error:
+          type:
+          - string
+          - 'null'
+        branch:
+          type:
+          - string
+          - 'null'
+        commit:
+          type:
+          - string
+          - 'null'
+        conflicted_paths:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+        staged_paths:
+          type:
+          - integer
+          - 'null'
+          minimum: 0

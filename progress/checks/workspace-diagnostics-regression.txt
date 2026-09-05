@@ -1,0 +1,22 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.72s
+     Running tests/engine.rs (target/debug/deps/engine-fd668dbc7893c6cc)
+
+running 1 test
+test broken_workspace_keeps_diagnostics_available_without_recreating_sources ... FAILED
+
+failures:
+
+---- broken_workspace_keeps_diagnostics_available_without_recreating_sources stdout ----
+
+thread 'broken_workspace_keeps_diagnostics_available_without_recreating_sources' (4679301) panicked at crates/application/tests/engine.rs:23:48:
+called `Result::unwrap()` on an `Err` value: Rejected(Reply { http_status: 503, body: Object {"api_version": String("1"), "error": Object {"code": String("WORKSPACE_MISSING"), "message": String("WORKSPACE_MISSING")}} })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    broken_workspace_keeps_diagnostics_available_without_recreating_sources
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.33s
+
+error: test failed, to rerun pass `-p project-application --test engine`
