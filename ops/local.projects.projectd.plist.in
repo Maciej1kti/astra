@@ -4,12 +4,12 @@
   <key>Label</key><string>local.projects.projectd</string>
   <key>ProgramArguments</key><array>
     <string>@@BIN_DIR@@/projectd</string>
-    <string>--config</string><string>@@CONFIG_FILE@@</string>
+    <string>--data-dir</string><string>@@DATA_DIR@@</string>
+    <string>--public-origin</string><string>@@PUBLIC_ORIGIN@@</string>
+    <string>--port</string><string>47831</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
   <key>ThrottleInterval</key><integer>3</integer>
   <key>Umask</key><integer>63</integer>
-  <key>StandardOutPath</key><string>@@LOG_DIR@@/projectd.out.log</string>
-  <key>StandardErrorPath</key><string>@@LOG_DIR@@/projectd.err.log</string>
 </dict></plist>

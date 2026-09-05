@@ -1,14 +1,14 @@
-# Wzorzec do adaptacji. @@...@@ wymaga podstawienia przez instalację.
-# Nie uruchamiaj jako root. Nie wystawiaj 0.0.0.0 i nie włączaj Funnel.
+# Reference defaults only: projectd does not read TOML configuration.
+# Use the generated user service and supported command-line flags.
 format_version = 1
-instance_name = "Mój host"
+instance_name = "My host"
 listen = "127.0.0.1:47831"
 public_origin = "@@PUBLIC_ORIGIN@@"
 data_dir = "@@DATA_DIR@@"
 cache_dir = "@@CACHE_DIR@@"
 runtime_dir = "@@RUNTIME_DIR@@"
 timezone = "Europe/Warsaw"
-locale = "pl"
+locale = "en"
 
 [limits]
 document_bytes = 1048576
@@ -42,6 +42,3 @@ timeout_ms = 2000
 max_output_bytes = 2097152
 max_concurrent = 2
 untracked_by_default = false
-
-# Dozwolone korzenie rejestracji WWW tworzy lokalny właściciel przez CLI.
-# To nie jest uprawnienie do dowolnego odczytu plików w tych katalogach.

@@ -18,6 +18,11 @@ conditional undo. The board and timeline support explicit move proposals and
 keyboard alternatives. Browser access requires pairing; the CLI requires the
 server's Unix socket. No write command falls back to editing files directly.
 
+## Try it locally
+
+Run `npm run try`, then follow [manual testing](MANUAL-TESTING.md) for browser pairing
+and a short test walkthrough. This uses persistent synthetic data in `.manual/`.
+
 ## Run and package
 
 Use [development instructions](DEVELOPMENT.md) to build the pinned Rust/Svelte

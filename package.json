@@ -13,7 +13,9 @@
     "contracts:check": "node scripts/generate-contracts.mjs --check",
     "check": "npm run contracts:check && npm run check --workspace apps/web",
     "build": "npm run build --workspace apps/web",
-    "dev": "npm run dev --workspace apps/web"
+    "dev": "npm run dev --workspace apps/web",
+    "try": "node scripts/try.mjs",
+    "pair:try": "node scripts/try-pair.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

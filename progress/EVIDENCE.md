@@ -235,3 +235,24 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
 - Previous CI run 33983014332 passed macOS but failed Ubuntu at a missing browser
   gesture hitbox. The test now waits for visibility/enabled state and layout; the
   next CI run still needs observation. Physical platform evidence is not implied.
+
+## E014 — Manual-test handoff
+
+- Owner redirected the immediate milestone to practical manual testing, ahead of
+  additional release hardening. Outstanding release requirements remain recorded.
+- Added explicit focus ordering, preserving version and uncertain command identity;
+  HTTPS smoke moves a pinned card and verifies persisted order. History now replaces
+  bounded pages instead of accumulating all older entries.
+- Full local checks passed (`checks/manual-ready.txt`), followed by real HTTPS smoke.
+  CI run 33984427678 passed Ubuntu 24.04 and macOS 15 for commit 00bb2bd.
+- Packaged release smoke verified checksum, repeated installation in a path with
+  spaces, no auto-start, actual daemon/CLI, clean stop/restart and stopped-copy
+  recovery. Source bytes remain identical, the index rebuilds and old epochs reject
+  writes (`checks/release-smoke.txt`). CI now runs this smoke after packaging.
+- Added `npm run try` with persistent ignored synthetic fixtures and loopback HTTPS.
+  Normal browser pairing remains required; `npm run pair:try -- CHALLENGE` approves
+  only the exact owner-supplied challenge. No service, network or certificate trust
+  configuration is installed. The local host and health endpoint were exercised.
+- Codex's embedded browser rejected the self-signed local certificate. Manual users
+  must use their normal browser and handle its local certificate prompt themselves.
+  See `MANUAL-TESTING.md` for launch, pairing, walkthrough and concrete limits.

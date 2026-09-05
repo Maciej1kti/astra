@@ -1,0 +1,2 @@
+PASS: archive checksum, repeat installation with spaces, no auto-start, packaged daemon/CLI, graceful stop/restart, quiescent copy recovery, index rebuild and old-epoch rejection.
+Temporary fixture only; no service enablement, private-network setup or physical power-loss claim.

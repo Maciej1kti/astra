@@ -12,3 +12,6 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Persistent local manual-test fixtures and credentials
+.manual/

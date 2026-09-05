@@ -1,21 +1,5 @@
    Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
-warning: taking a mutable reference to a `const` item
-   --> crates/application/src/git.rs:260:62
-    |
-260 |             run(temp.path(), &["--version"], Instant::now(), &mut MAX_OUTPUT),
-    |                                                              ^^^^^^^^^^^^^^^
-    |
-    = note: each usage of a `const` item creates a new temporary
-    = note: the mutable reference will refer to this temporary, not the original `const` item
-note: `const` item defined here
-   --> crates/application/src/git.rs:19:1
-    |
- 19 | const MAX_OUTPUT: usize = 2 * 1024 * 1024;
-    | ^^^^^^^^^^^^^^^^^^^^^^^
-    = note: `#[warn(const_item_mutation)]` on by default
-
-warning: `project-application` (lib test) generated 1 warning
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.40s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.12s
      Running unittests src/lib.rs (target/debug/deps/project_application-4cd1b6debf9a8282)
 
 running 1 test
@@ -38,17 +22,12 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; fin
      Running tests/engine.rs (target/debug/deps/engine-afbe62413ea9ac9f)
 
 running 1 test
+test git_observer_is_explicit_bounded_and_never_runs_repository_filters ... ok
 
-thread 'git_observer_is_explicit_bounded_and_never_runs_repository_filters' (4730343) panicked at crates/application/tests/engine.rs:32:10:
-called `Result::unwrap()` on an `Err` value: Rejected(Reply { http_status: 409, body: Object {"api_version": String("1"), "error": Object {"code": String("REGISTRATION_ID_PATH_CONFLICT"), "message": String("REGISTRATION_ID_PATH_CONFLICT")}} })
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-test git_observer_is_explicit_bounded_and_never_runs_repository_filters ... FAILED
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.85s
 
-failures:
+     Running tests/workflow.rs (target/debug/deps/workflow-4a646c577eacfb2d)
 
-failures:
-    git_observer_is_explicit_bounded_and_never_runs_repository_filters
+running 0 tests
 
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.55s
-
-error: test failed, to rerun pass `-p project-application --test engine`
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s

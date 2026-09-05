@@ -198,7 +198,7 @@ try {
 
   await page.getByRole("heading", { name: "Ship the revised guide" }).click();
   await page.getByText("Change history", { exact: true }).click();
-  await page.getByRole("button", { name: "Load history", exact: true }).click();
+  await page.getByRole("button", { name: "First history page", exact: true }).click();
   await page
     .locator("button:enabled")
     .filter({ hasText: /^Undo this change$/ })
@@ -365,6 +365,17 @@ try {
   await page.getByRole("button",{name:"Confirm move",exact:true}).click();
   await page.getByRole("dialog").waitFor({state:"hidden"});
   assert.equal(cli("--project",folder,"card","list","--status","planned").items.at(-1).id,typedId);
+
+  const focusBefore = cli("get","/api/v1/workspace/focus");
+  const focusFile = join(temp,"focus.json");
+  await writeFile(focusFile,JSON.stringify({items:[...focusBefore.items,{project_id:plan.project_id,card_id:typedId}]}));
+  cli("command","PUT","/api/v1/workspace/focus","--json-file",focusFile,"--if-version",focusBefore.version);
+  await page.getByRole("button",{name:"Focus",exact:true}).click();
+  await page.getByRole("button",{name:"Arrange focus",exact:true}).click();
+  await page.getByRole("button",{name:"Move up: Typed CLI task",exact:true}).click();
+  await page.getByRole("button",{name:"Save focus order",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(cli("get","/api/v1/workspace/focus").items[0].card_id,typedId);
 
   const milestoneFile=join(temp,"milestone.json");
   await writeFile(milestoneFile,JSON.stringify({title:"Release gate",due:{date:"2026-09-30",kind:"hard"}}));

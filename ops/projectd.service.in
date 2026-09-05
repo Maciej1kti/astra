@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=@@BIN_DIR@@/projectd --config @@CONFIG_FILE@@
+ExecStart="@@BIN_DIR@@/projectd" --data-dir "@@DATA_DIR@@" --public-origin "@@PUBLIC_ORIGIN@@" --port 47831
 Restart=on-failure
 RestartSec=3
 TimeoutStopSec=30

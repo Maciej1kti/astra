@@ -18,3 +18,11 @@ Still required for v1:
 Deferred acceptance portions are not passes. T35 and the archive/source-migration
 portions of R27, A40, T41 and related release checks move beyond v1; remaining
 recovery, compatibility and soak obligations stay in scope.
+
+## Manual-test milestone — owner steering, 2026-09-05
+
+Prioritize a working version the owner can test now. Stop expanding pre-release
+hardening and feature polishing before that feedback. Finish and verify changes
+already in progress, provide a simple local launch, then hand over for manual use.
+Outstanding full-release requirements remain recorded; they are not blockers to
+this manual-test milestone and are not silently marked passed.

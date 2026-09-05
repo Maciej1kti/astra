@@ -231,7 +231,7 @@
       }>(
         `${path()}/history${more && historyCursor ? `?cursor=${encodeURIComponent(historyCursor)}` : ""}`,
       );
-      history = more ? [...history, ...page.items] : page.items;
+      history = page.items;
       historyCursor = page.page.next_cursor;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -633,7 +633,7 @@
         <summary>Change history</summary><button
           type="button"
           onclick={() => loadHistory()}
-          disabled={busy}>Load history</button
+          disabled={busy || accessLost}>First history page</button
         >{#each history as entry}<div class="historyentry">
             <small>{entry.recorded_at}</small>
             <p>{entry.changed_fields.join(", ")}</p>
@@ -644,7 +644,8 @@
             >
           </div>{/each}{#if historyCursor}<button
             type="button"
-            onclick={() => loadHistory(true)}>Load older changes</button
+            disabled={busy || accessLost}
+            onclick={() => loadHistory(true)}>Older changes</button
           >{/if}
       </details>{/if}
     {#if error}<div bind:this={notice} class="notice" role="alert">

@@ -11,6 +11,8 @@
     moveDraft = $state<MoveProposal | null>(null);
   import Editor from "./lib/Editor.svelte";
   import Settings from "./lib/Settings.svelte";
+  import FocusOrder from "./lib/FocusOrder.svelte";
+  let arrangeFocus = $state(false);
   import GitObservation from "./lib/GitObservation.svelte";
   let gitProject = $state("");
   import Diagnostics from "./lib/Diagnostics.svelte";
@@ -815,6 +817,9 @@
           <div class="sectiontitle">
             <h2>In focus</h2>
             <span>{focus.length} pinned</span>
+            {#if focus.length > 1}<button onclick={() => (arrangeFocus = true)}
+                >Arrange focus</button
+              >{/if}
           </div>
           <div class="grid">
             {#each focusCards as item}{#if item}<button
@@ -1112,6 +1117,15 @@
           >{/if}{/if}{#if error}<p class="notice">{error}</p>{/if}
     </dialog>
   </div>{/if}
+
+{#if arrangeFocus}<FocusOrder
+    cards={focusCards}
+    onclose={() => (arrangeFocus = false)}
+    onsaved={() => {
+      arrangeFocus = false;
+      void refresh().catch(message);
+    }}
+  />{/if}
 
 <style>
   :global(:root) {

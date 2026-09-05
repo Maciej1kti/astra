@@ -2,7 +2,7 @@
 
 > Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
 
-Updated: 2026-09-05. Status: **in progress; not release-ready**.
+Updated: 2026-09-05. Status: **ready for owner manual testing; full release acceptance remains open**.
 
 Public repository: https://github.com/Maciej1kti/astra. New repository content,
 UI text and commits are English. Continue until the v1 scope is implemented and
@@ -24,7 +24,13 @@ Workspace/history verification is recorded in E006; use `git status` for the exa
 working tree. The current source supersedes historical implementation claims in
 older evidence entries.
 
-## Outstanding
+## Current handoff
+
+Owner steering prioritizes manual feedback over further pre-release hardening.
+Run `npm run try`; see `MANUAL-TESTING.md`. The current local automated checks and
+HTTPS smoke pass. CI run 33984427678 passed Ubuntu and macOS for 00bb2bd.
+
+## Outstanding after manual feedback
 
 Finish remaining UI forms and release ergonomics,
 remaining performance/security/fault coverage, CI/platform verification and final
