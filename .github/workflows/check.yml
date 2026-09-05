@@ -1,0 +1,49 @@
+name: Verify source and package
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.0
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install pinned toolchains and dependencies
+        run: |
+          rustup toolchain install 1.92.0 --profile minimal --component rustfmt --component clippy
+          python -m venv .venv-check
+          .venv-check/bin/pip install -r scripts/requirements-validation.lock
+          npm ci
+      - name: Verify contracts, tests and release build
+        run: .venv-check/bin/python scripts/check.py
+      - name: Install browser test runtime
+        run: npx playwright install --with-deps chromium
+      - name: Exercise HTTPS browser and Unix CLI
+        run: |
+          scripts/cargo-local build --workspace --locked
+          node scripts/browser-smoke.mjs
+      - name: Build host archive
+        run: python scripts/package.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-${{ matrix.os }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+            progress/screenshots/*.png

@@ -84,6 +84,8 @@ pub struct Plan {
     pub expires_at: i64,
     pub steps: Vec<Step>,
     pub view: Value,
+    #[serde(default)]
+    pub approved_root: Option<Value>,
 }
 impl Plan {
     pub(crate) fn command(&self, request_id: &str, epoch: &str) -> Command {

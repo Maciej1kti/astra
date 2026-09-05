@@ -18,8 +18,8 @@ This file tracks the practical implementation order. It is not a release claim.
 ## Next actions
 
 1. Keep verified slices committed and pushed, with explicit evidence and gaps.
-2. Finish reports/receipts, bounded agent context and attention/view APIs.
-3. Complete date interactions, safe Markdown and mobile forms.
+2. Finish board/date interactions, complete mobile forms and reconnect behavior.
+3. Verify maintenance/recovery edge cases, installer and CI results.
 4. Finish maintenance, reliability tests and release work.
 
 ## Constraints

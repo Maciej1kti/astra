@@ -200,6 +200,19 @@ pub(super) fn run(
             engine.browser_registration_plan(&input.body)?
         }
 
+        ("POST", ["local", "v1", "maintenance", "plans"]) if input.local => {
+            engine.maintenance_plan(&input.body)?
+        }
+        ("POST", ["local", "v1", "maintenance", "jobs"]) if input.local => {
+            if input.body.as_object().is_none_or(|o| o.len() != 3) {
+                return Err(AppError::reject(422, "INVALID_INPUT"));
+            }
+            return Ok(response(engine.commit_maintenance(
+                text(&input.body, "plan_id")?,
+                text(&input.body, "request_id")?,
+                text(&input.body, "command_epoch")?,
+            )?));
+        }
         ("POST", ["local", "v1", "projects", "resolve"]) if input.local => {
             if !input
                 .body

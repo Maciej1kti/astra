@@ -178,3 +178,33 @@ fn passive_stream_checks_do_not_extend_session_idle_lifetime() {
             .is_err()
     );
 }
+
+#[test]
+fn state_schema_version_and_explicit_restore_epoch_survive_restart() {
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    let path = temp.path().canonicalize().unwrap();
+    let mut journal = Journal::open(&path).unwrap();
+    let old = journal.epoch.clone();
+    assert_eq!(
+        journal
+            .db()
+            .unwrap()
+            .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
+            .unwrap(),
+        1
+    );
+    journal.rotate_after_restore(now_millis()).unwrap();
+    let restored = journal.epoch.clone();
+    assert_ne!(old, restored);
+    drop(journal);
+    let journal = Journal::open(&path).unwrap();
+    assert_eq!(journal.epoch, restored);
+    drop(journal);
+    let connection = rusqlite::Connection::open(path.join("state.sqlite")).unwrap();
+    connection.pragma_update(None, "user_version", 2).unwrap();
+    drop(connection);
+    assert!(
+        matches!(Journal::open(&path),Err(AppError::Rejected(reply)) if reply.body["error"]["code"]=="STATE_SCHEMA_TOO_NEW")
+    );
+}

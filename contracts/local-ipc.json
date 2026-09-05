@@ -61,8 +61,8 @@
       "method": "POST",
       "path": "/local/v1/maintenance/plans",
       "input": {
-        "operation": "backup|restore|normalize|rebalance|relocate|index_rebuild",
-        "parameters": "typed union, no shell/string command"
+        "operation": "normalize|rebalance|relocate|unregister|index_rebuild",
+        "fields": "strict flattened variant in maintenance_parameters"
       },
       "output": {
         "plan_id": "UUID",
@@ -100,37 +100,34 @@
     }
   ],
   "maintenance_parameters": {
-    "backup": {
-      "destination": "absolute approved path outside watched source",
-      "include_history": "boolean"
-    },
-    "restore": {
-      "archive": "absolute path",
-      "path_mapping": "array of old logical project_id to approved new path",
-      "revoke_sessions": "must be true by default"
-    },
     "normalize": {
       "project_id": "UUID",
-      "target_ids": "array UUID",
-      "expected_versions": "object UUID to Version"
+      "kind": "project|card|milestone|update",
+      "id": "UUID",
+      "expected_version": "Version"
     },
     "rebalance": {
       "project_id": "UUID",
-      "collection": "cards/status or milestones",
-      "expected_projection_revision": "opaque string"
+      "kind": "card|milestone",
+      "expected_projection_revision": "opaque cursor"
     },
     "relocate": {
       "project_id": "UUID",
-      "new_absolute_path": "string",
-      "expected_registration_version": "Version"
+      "new_absolute_path": "exact absolute path of already moved/copied project",
+      "expected_workspace_version": "Version"
+    },
+    "unregister": {
+      "project_id": "UUID",
+      "expected_workspace_version": "Version"
     },
     "index_rebuild": {
-      "project_id": "optional UUID; absence = instance"
+      "project_id": "UUID"
     }
   },
   "notes": [
     "Plan is no destructive action. Commit rechecks preconditions.",
     "Maintenance API is internal, not offered to unauthenticated loopback or remote browser.",
-    "Schema variants must be implemented as strict tagged unions, not unrestricted maps."
+    "Schema variants must be implemented as strict tagged unions, not unrestricted maps.",
+    "Built-in backup/restore archives and source-file migrations are deferred by the owner on 2026-09-05."
   ]
 }

@@ -1,0 +1,21 @@
+   Compiling syn v3.0.5
+   Compiling once_cell v1.21.4
+   Compiling fastrand v2.5.0
+   Compiling ahash v0.8.12
+   Compiling tempfile v3.27.0
+   Compiling jsonschema-value v0.52.1
+   Compiling ref-cast-impl v1.0.27
+   Compiling thiserror-impl v2.0.20
+   Compiling tokio-macros v2.7.2
+   Compiling ref-cast v1.0.27
+   Compiling tokio v1.53.1
+   Compiling thiserror v2.0.20
+   Compiling fluent-uri v0.4.1
+   Compiling saphyr-parser v0.0.12
+   Compiling referencing v0.52.1
+   Compiling jsonschema v0.52.0
+   Compiling project-domain v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/domain)
+   Compiling project-store v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/project-store)
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `release` profile [optimized] target(s) in 14.34s
+     Running `target/release/examples/benchmark 100 100 500`

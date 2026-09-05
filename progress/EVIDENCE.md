@@ -136,3 +136,29 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
 - Not a complete gesture or release claim: physical touch behavior, calendar drag
   trials, timeline milestone rows/edge rendering and large-data virtualization
   still need work.
+
+## E010 — Maintenance, retention, packaging and measured queries
+
+- Added local plan/apply workflows for normalization, rebalance, relocation,
+  unregister and index rebuild. Tests cover intervening edits, moving a live
+  registered folder, preserved files and release of the writer lease.
+- Root-revocation regression failed before the fix and now rejects old browser
+  registration plans; known completed results remain replayable.
+- Added actual state schema version guarding, one-time restored-state epoch/session
+  reset, stopped-server recovery instructions and bounded optional retention.
+- Full checks passed: 56 Rust tests, 3 Node tests, 4 Python tests, protocol checks
+  and release build. See `checks/maintenance.txt`.
+- Added host packaging and a temporary-prefix installer test. The installer only
+  generates a reviewable user-service configuration. No service or network setup
+  was enabled on the owner's machine. CI for Ubuntu 24.04/macOS 15 is configured;
+  success must be observed separately.
+- Synthetic release profile: 100 projects, 10,000 cards, 50,000 short note reports;
+  200 measured samples after 20 warmups. Query p95 19.72 ms, attention p95 31.35 ms,
+  durable mutation p95 110.37 ms. Initial attention p95 was 322.52 ms; targeted
+  indexes reduced its scan cost. Logs `checks/benchmark-standard.txt` and
+  `checks/benchmark-indexed.txt`; benchmark source is in application/examples.
+- These are application-level timings on a shared macOS ARM64 development host,
+  excluding HTTP/VPN/browser latency. Notes do not stress decision-resolution
+  graphs. Startup 8.06 s and reconciliation 5.03 s remain separate costs. RSS,
+  overloaded profiles, physical device/platform tests and release acceptance
+  remain unclaimed.

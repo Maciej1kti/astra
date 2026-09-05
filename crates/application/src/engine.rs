@@ -62,6 +62,13 @@ impl Engine {
         })
         .pending()?
         {
+            if plan.kind == "unregister" {
+                let _ = (Workflows {
+                    journal: &engine.journal,
+                })
+                .resume(&job);
+                continue;
+            }
             let path = plan.view["display_path"].as_str().ok_or(AppError::State)?;
             if let Ok(handle) = engine.store_path(path, true) {
                 let _store = handle.lock().map_err(|_| AppError::State)?;
@@ -72,6 +79,7 @@ impl Engine {
             }
         }
         let (workspace, _) = engine.workspace()?;
+        engine.index.retain_registered(&workspace["projects"])?;
         for registration in workspace["projects"].as_array().ok_or(AppError::State)? {
             let id = registration["project_id"].as_str().ok_or(AppError::State)?;
             let path = registration["path"].as_str().ok_or(AppError::State)?;
@@ -103,6 +111,13 @@ impl Engine {
         let value: Value = serde_json::from_slice(&bytes).map_err(|_| AppError::State)?;
         validate_workspace(value.clone()).map_err(|_| AppError::State)?;
         Ok((value, document::version(&bytes)))
+    }
+    pub(crate) fn release_store_path(&self, path: &str) -> Result<(), AppError> {
+        self.stores
+            .lock()
+            .map_err(|_| AppError::State)?
+            .remove(path);
+        Ok(())
     }
     pub(crate) fn store_path(&self, path: &str, create: bool) -> Result<StoreHandle, AppError> {
         let mut stores = self.stores.lock().map_err(|_| AppError::State)?;
@@ -261,6 +276,7 @@ impl Engine {
             journal: &self.journal,
         })
         .save(&Plan {
+            approved_root: None,
             id: plan_id,
             kind: "registration".into(),
             project_id: id,
@@ -292,6 +308,26 @@ impl Engine {
         }
         if plan.kind != "registration" {
             return Err(AppError::reject(422, "PLAN_KIND_MISMATCH"));
+        }
+        if let Some(approval) = &plan.approved_root {
+            let permitted = self
+                .allowed_directory(
+                    approval["root_id"].as_str().ok_or(AppError::State)?,
+                    approval["relative_path"].as_str().ok_or(AppError::State)?,
+                )
+                .is_ok_and(|directory| {
+                    directory
+                        .identity()
+                        .is_ok_and(|identity| json!(identity) == approval["identity"])
+                });
+            if !permitted {
+                let command = plan.command(request_id, epoch);
+                let reply = Reply::error(403, "REGISTRATION_AUTHORITY_REVOKED", request_id);
+                return Ok(self
+                    .journal
+                    .record(&command, &reply, None, now_millis(), true)?
+                    .unwrap_or(reply));
+            }
         }
         let handle = self.store_path(
             plan.view["display_path"].as_str().ok_or(AppError::State)?,

@@ -78,6 +78,28 @@ pub struct Index {
     events: Mutex<VecDeque<(i64, Value)>>,
 }
 impl Index {
+    pub fn retain_registered(&self, projects: &Value) -> Result<(), AppError> {
+        let mut db = self.connection.lock().map_err(|_| AppError::State)?;
+        let tx = db.transaction()?;
+        let input = serde_json::to_string(projects).map_err(|_| AppError::State)?;
+        tx.execute("DELETE FROM documents WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
+        tx.execute("DELETE FROM projection_issues WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
+        tx.commit()?;
+        Ok(())
+    }
+    pub fn forget_project(&self, project: &str, now: i64) -> Result<(), AppError> {
+        {
+            let mut db = self.connection.lock().map_err(|_| AppError::State)?;
+            let tx = db.transaction()?;
+            tx.execute("DELETE FROM documents WHERE project_id=?1", [project])?;
+            tx.execute(
+                "DELETE FROM projection_issues WHERE project_id=?1",
+                [project],
+            )?;
+            tx.commit()?;
+        }
+        self.invalidate_workspace(now)
+    }
     pub fn subscribe(&self) -> tokio::sync::watch::Receiver<u64> {
         self.notifications.subscribe()
     }

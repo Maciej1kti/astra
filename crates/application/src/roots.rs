@@ -62,7 +62,11 @@ impl Engine {
         }
         Ok(json!({"removed":items.len()!=old}))
     }
-    fn allowed_directory(&self, id: &str, relative: &str) -> Result<Directory, AppError> {
+    pub(crate) fn allowed_directory(
+        &self,
+        id: &str,
+        relative: &str,
+    ) -> Result<Directory, AppError> {
         let (items, _) = self.root_records()?;
         let root = items
             .iter()
@@ -136,11 +140,27 @@ impl Engine {
             input["root_id"].as_str().unwrap(),
             input["relative_path"].as_str().unwrap(),
         )?;
-        self.registration_plan(
+        let view = self.registration_plan(
             directory.path().to_str().ok_or(AppError::State)?,
             input["name"].as_str(),
             input["git_mode"] != "tracked",
-        )
+        )?;
+        let workflows = crate::workflow::Workflows {
+            journal: &self.journal,
+        };
+        let id = view["plan_id"].as_str().ok_or(AppError::State)?;
+        let mut plan = workflows.plan(id)?;
+        plan.approved_root = Some(
+            json!({"root_id":input["root_id"],"relative_path":input["relative_path"],"identity":directory.identity()?}),
+        );
+        self.journal.db()?.execute(
+            "UPDATE workflow_plans SET plan_json=?2 WHERE id=?1",
+            rusqlite::params![
+                id,
+                serde_json::to_string(&plan).map_err(|_| AppError::State)?
+            ],
+        )?;
+        Ok(view)
     }
 }
 fn root_view(value: &Value) -> Value {

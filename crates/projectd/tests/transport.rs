@@ -319,6 +319,18 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
             assert_eq!(value["items"].as_array().unwrap().len(), 1);
         }
     }
+    let plan: Value = app
+        .local("POST", "/local/v1/maintenance/plans")
+        .json(&json!({"operation":"index_rebuild","project_id":project}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(plan["kind"], "index_rebuild");
+    let applied=app.local("POST","/local/v1/maintenance/jobs").json(&json!({"plan_id":plan["plan_id"],"request_id":Uuid::now_v7().to_string(),"command_epoch":epoch})).send().await.unwrap();
+    assert_eq!(applied.status(), 202);
     for path in [
         "/api/v1/views/list?type=unknown",
         "/api/v1/views/list?type=card&type=update",

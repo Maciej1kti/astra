@@ -24,6 +24,19 @@ struct Arguments {
 }
 #[derive(Subcommand)]
 enum Action {
+    /// Prepare a local maintenance operation from a strict JSON input file.
+    MaintenancePlan {
+        #[arg(long)]
+        json_file: PathBuf,
+    },
+    /// Apply a reviewed plan, preserving identity on retries.
+    MaintenanceApply {
+        plan_id: String,
+        #[arg(long)]
+        request_id: Option<String>,
+        #[arg(long)]
+        epoch: Option<String>,
+    },
     #[command(flatten)]
     Typed(typed::Action),
     AddRoot {
@@ -99,6 +112,53 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
         .timeout(Duration::from_secs(args.timeout))
         .build()?;
     let (method, path, payload, version, request, epoch) = match args.command {
+        Action::MaintenancePlan { json_file } => (
+            "POST".into(),
+            "/local/v1/maintenance/plans".into(),
+            Some(serde_json::from_slice(&typed::file(&json_file)?)?),
+            None,
+            None,
+            None,
+        ),
+        Action::MaintenanceApply {
+            plan_id,
+            request_id,
+            epoch,
+        } => {
+            if request_id.is_some() != epoch.is_some() {
+                return Err("Retry requires both --request-id and --epoch".into());
+            }
+            let (request_id, epoch) = if let (Some(id), Some(epoch)) = (request_id, epoch) {
+                (id, epoch)
+            } else {
+                let hello: Value = client
+                    .get("http://localhost/local/v1/hello")
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .json()
+                    .await?;
+                (
+                    request_id_at(hello["server_time"].as_str().ok_or("Invalid server time")?)?,
+                    hello["command_epoch"]
+                        .as_str()
+                        .ok_or("Invalid hello")?
+                        .to_owned(),
+                )
+            };
+            eprintln!(
+                "{}",
+                json!({"request_id":request_id,"command_epoch":epoch,"plan_id":plan_id})
+            );
+            (
+                "POST".into(),
+                "/local/v1/maintenance/jobs".into(),
+                Some(json!({"plan_id":plan_id,"request_id":request_id,"command_epoch":epoch})),
+                None,
+                None,
+                None,
+            )
+        }
         Action::Typed(action) => action.prepare(&client, args.project.as_deref()).await?,
         Action::AddRoot {
             absolute_path,
@@ -276,7 +336,8 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
     let reply = match builder.send().await {
         Ok(reply) => reply,
         Err(error) => {
-            let uncertain = method != "GET" && path.starts_with("/api/");
+            let uncertain = method != "GET"
+                && (path.starts_with("/api/") || path == "/local/v1/maintenance/jobs");
             println!(
                 "{}",
                 json!({"api_version":"1","ok":false,"error":{"code":if uncertain {"RESULT_UNCERTAIN"} else {"TRANSPORT_UNAVAILABLE"},"message":error.to_string()}})

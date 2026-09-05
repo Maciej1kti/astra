@@ -19,6 +19,9 @@ struct Arguments {
     data_dir: PathBuf,
     #[arg(long)]
     public_origin: String,
+    /// After restoring a stopped-server copy, invalidate old sessions and command retries.
+    #[arg(long)]
+    after_restore: bool,
     #[arg(long, default_value_t = 47831)]
     port: u16,
 }
@@ -28,7 +31,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Require an explicit owner-only directory; do not chmod a user's existing tree.
     let directory = Directory::open(&args.data_dir)?;
     directory.require_private()?;
-    let engine = Engine::open(&args.data_dir)?;
+    let mut engine = Engine::open(&args.data_dir)?;
+    if args.after_restore {
+        engine
+            .journal
+            .rotate_after_restore(project_application::now_millis())?;
+    }
     let service = Service::new(engine, &args.public_origin)?;
     let socket = args.data_dir.join("projectd.sock");
     if let Ok(metadata) = std::fs::symlink_metadata(&socket) {

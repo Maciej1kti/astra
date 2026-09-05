@@ -56,7 +56,11 @@ pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
                 }
                 if overflow.swap(false,Ordering::Relaxed) { refresh(&engine, &projects, None).await; }
             },
-            _ = reconcile.tick() => refresh(&engine, &projects, None).await,
+            _ = reconcile.tick() => {
+                refresh(&engine, &projects, None).await;
+                let worker=engine.clone();
+                let _=tokio::task::spawn_blocking(move || worker.journal.retain(project_application::now_millis())).await;
+            },
             event = receiver.recv() => {
                 let Some(event) = event else { break; };
                 let mut paths = BTreeSet::new();

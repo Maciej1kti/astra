@@ -1,0 +1,17 @@
+ Downloading crates ...
+  Downloaded winapi-util v0.1.11
+  Downloaded inotify-sys v0.1.8
+  Downloaded windows-targets v0.53.5
+  Downloaded kqueue v1.2.1
+  Downloaded kqueue-sys v1.1.2
+  Downloaded inotify v0.11.5
+  Downloaded windows_x86_64_gnullvm v0.53.1
+  Downloaded windows_x86_64_msvc v0.53.1
+  Downloaded windows_i686_gnullvm v0.53.1
+  Downloaded windows_aarch64_msvc v0.53.1
+  Downloaded windows_aarch64_gnullvm v0.53.1
+  Downloaded windows_x86_64_gnu v0.53.1
+  Downloaded windows_i686_msvc v0.53.1
+  Downloaded windows_i686_gnu v0.53.1
+  Downloaded windows-sys v0.60.2
+/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/dist/local-projects-0.1.0-darwin-arm64.tar.gz

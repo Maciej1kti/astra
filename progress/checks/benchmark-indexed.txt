@@ -1,0 +1,31 @@
+{
+  "architecture": "aarch64",
+  "attention": {
+    "p50_ms": 30.123,
+    "p95_ms": 31.351499999999998,
+    "p99_ms": 32.954125,
+    "samples": 200
+  },
+  "build": "release",
+  "durable_mutation": {
+    "p50_ms": 28.379459,
+    "p95_ms": 110.365792,
+    "p99_ms": 114.210458,
+    "samples": 200
+  },
+  "limitations": "Application-level timings exclude HTTP/VPN and browser rendering. Fixture generation is included in external process peak RSS.",
+  "os": "macos",
+  "profile": {
+    "cards": 10000,
+    "projects": 100,
+    "reports": 50000
+  },
+  "query": {
+    "p50_ms": 18.972209,
+    "p95_ms": 19.717417,
+    "p99_ms": 20.686209,
+    "samples": 200
+  },
+  "reconciliation_ms": 5025.826,
+  "startup_ms": 8057.594625
+}

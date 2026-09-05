@@ -65,6 +65,31 @@ pub struct Journal {
     lease: Lease,
 }
 impl Journal {
+    /// Explicit recovery of a stopped-server copy invalidates old client intentions.
+    pub fn rotate_after_restore(&mut self, now: i64) -> Result<(), AppError> {
+        let epoch = Uuid::new_v4().to_string();
+        {
+            let mut db = self.db()?;
+            let tx = db.transaction()?;
+            let pending:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM commands WHERE state IN ('prepared','blocked','needs_review'))",[],|r|r.get(0))?;
+            if pending {
+                return Err(AppError::reject(409, "RECOVERY_REQUIRED"));
+            }
+            tx.execute(
+                "UPDATE meta SET value=?1 WHERE key='command_epoch'",
+                [&epoch],
+            )?;
+            tx.execute(
+                "UPDATE sessions SET revoked_at=?1 WHERE revoked_at IS NULL",
+                [instant(now)],
+            )?;
+            tx.execute("UPDATE pairings SET state='denied' WHERE state IN ('pending','approved','claimed')",[])?;
+            tx.commit()?;
+        }
+        self.epoch = epoch;
+        self.directory.sync()?;
+        Ok(())
+    }
     pub fn open(path: &Path) -> Result<Self, AppError> {
         let directory = Directory::open(path)?;
         directory.require_private()?;
@@ -78,9 +103,18 @@ impl Journal {
             path.join("state.sqlite"),
             OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
         )?;
+        let schema: u32 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
+        if schema > 1 {
+            return Err(AppError::reject(503, "STATE_SCHEMA_TOO_NEW"));
+        }
         connection.busy_timeout(Duration::from_secs(2))?;
         connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA fullfsync=ON; PRAGMA checkpoint_fullfsync=ON;")?;
-        connection.execute_batch(include_str!("../../../contracts/state-starting-schema.sql"))?;
+        if schema == 0 {
+            connection.execute_batch("BEGIN IMMEDIATE;")?;
+            connection
+                .execute_batch(include_str!("../../../contracts/state-starting-schema.sql"))?;
+            connection.execute_batch("PRAGMA user_version=1; COMMIT;")?;
+        }
         let epoch: Option<String> = connection
             .query_row(
                 "SELECT value FROM meta WHERE key='command_epoch'",

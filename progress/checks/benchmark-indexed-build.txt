@@ -1,0 +1,3 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `release` profile [optimized] target(s) in 4.72s
+     Running `target/release/examples/benchmark 100 100 500`

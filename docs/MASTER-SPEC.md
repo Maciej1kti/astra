@@ -906,6 +906,21 @@ absolute path. It never searches parents, Git remotes or folder names. Typed CLI
 commands require `--project`; `.` is resolved explicitly by the client. This
 read-only route is not mounted on TCP and does not register unknown folders.
 
+### ADR-018 — Local maintenance and bounded retention
+
+Local maintenance uses strict tagged JSON inputs and durable plan/apply jobs.
+Normalization retains original bytes in the plan and exposes before/after previews;
+rebalance preserves order, relocation verifies the project ID at its new explicit
+path, and unregister removes only workspace registration/focus references. All
+steps recheck their approved directory identities and source hashes. Plans expire
+after five minutes and are limited to 32 MiB of before/after data.
+
+A bounded retention pass preserves unresolved operations and at least seven days
+of command results. Optional unpinned history expires after 30 days or under a
+1 GiB content budget, with up to 500 rows processed per pass. Actual operational
+SQLite layouts have a version guard; there is no future source-format converter.
+Archive backup/restore remains deferred under the owner scope decision.
+
 
 *Plik źródłowy: `docs/12-ADRS.md`.*
 
