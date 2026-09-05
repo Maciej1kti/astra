@@ -85,4 +85,17 @@ CREATE TABLE IF NOT EXISTS history (
   pinned INTEGER NOT NULL DEFAULT 0 CHECK(pinned IN (0,1))
 ) STRICT;
 CREATE INDEX IF NOT EXISTS commands_pending ON commands(state,received_at);
+CREATE TABLE IF NOT EXISTS workflow_plans (
+  id TEXT PRIMARY KEY,
+  plan_json TEXT NOT NULL
+) STRICT;
+CREATE TABLE IF NOT EXISTS workflow_jobs (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL UNIQUE REFERENCES workflow_plans(id),
+  epoch TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  state TEXT NOT NULL CHECK(state IN ('running','done','needs_review')),
+  next_step INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id)
+) STRICT;
 CREATE INDEX IF NOT EXISTS history_target ON history(project_id,target_kind,target_id,recorded_at);

@@ -1,4 +1,11 @@
+pub mod auth;
+pub mod engine;
+mod mutation;
+pub use mutation::Mutation;
+pub mod index;
 pub mod journal;
+pub mod wire;
+pub mod workflow;
 pub mod writer;
 
 use serde::{Deserialize, Serialize};
@@ -6,12 +13,19 @@ use serde_json::{Value, json};
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
+    #[error("request rejected")]
+    Rejected(Reply),
     #[error("{0}")]
     Store(#[from] project_store::StoreError),
     #[error("state database error: {0}")]
     Database(#[from] rusqlite::Error),
     #[error("invalid operational state")]
     State,
+}
+impl AppError {
+    pub fn reject(status: u16, code: &str) -> Self {
+        Self::Rejected(Reply::error(status, code, ""))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

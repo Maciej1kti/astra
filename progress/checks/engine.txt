@@ -1,0 +1,200 @@
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python scripts/generate_api_schema.py --check
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python scripts/check_package.py --skip-manifest
+PASS JSON files
+PASS JSON Schema and all local references
+PASS Domain examples
+PASS Markdown/JSON roundtrip and cross-references
+PASS Reference validation vectors
+PASS OpenAPI structure
+PASS HTTP request examples
+PASS Requirements/tests/tasks traceability
+PASS SQLite starting schemas
+PASS Deployment template syntax
+PASS Markdown relative links
+{"status": "passed", "counts": {"json_files": 28, "domain_definitions": 25, "openapi_schemas": 80, "domain_examples": 6, "markdown_domain_examples": 5, "reference_vectors": 33, "openapi_paths": 39, "openapi_operations": 49, "request_examples": 5, "requirements": 36, "acceptance_scenarios": 60, "tasks": 42, "fault_scenarios": 16}}
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python -m openapi_spec_validator contracts/openapi.yaml
+contracts/openapi.yaml: OK
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python -m unittest discover -s scripts/tests
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.002s
+
+OK
+
+RUN scripts/cargo-local fmt --all -- --check
+
+RUN scripts/cargo-local clippy --workspace --all-targets --locked -- -D warnings
+    Checking project-domain v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/domain)
+    Checking project-store v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/project-store)
+    Checking project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.95s
+
+RUN scripts/cargo-local test --workspace --locked
+   Compiling project-store v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/project-store)
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.16s
+     Running unittests src/lib.rs (target/debug/deps/project_application-a0520a23893d9a70)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/auth.rs (target/debug/deps/auth-f25a68afcb27b48c)
+
+running 3 tests
+test pairing_requires_owner_approval_cookie_and_csrf_and_claim_retry_rotates ... ok
+test rate_limits_and_expiration_are_enforced ... ok
+test session_idle_and_absolute_expiration_survive_restart ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
+     Running tests/durability.rs (target/debug/deps/durability-c720efefa0c907cd)
+
+running 10 tests
+test fault_child ... ok
+test unknown_expired_ids_and_old_epochs_are_never_reexecuted ... ok
+test replacement_symlink_after_prepared_requires_review ... ok
+test external_edits_after_prepared_are_not_overwritten ... ok
+test missing_precondition_and_invalid_source_never_write ... ok
+test recovery_rechecks_dependencies_even_when_target_is_unchanged ... ok
+test invalid_request_ids_produce_valid_errors_and_state_loss_changes_epoch ... ok
+test committed_conflicts_replays_and_noops_follow_the_contract ... ok
+test state_database_can_grow_beyond_document_limits_and_restart ... ok
+test subprocess_crashes_at_every_durability_boundary_recover_once ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.85s
+
+     Running tests/engine.rs (target/debug/deps/engine-57aff5a24b69233c)
+
+running 6 tests
+test stale_registration_plan_does_not_overwrite_user_edits ... ok
+test create_retry_without_client_id_returns_the_original_resource ... ok
+test invalid_external_source_preserves_stale_projection_without_repairing_files ... ok
+test registration_is_explicit_preserves_existing_instructions_and_repeats_safely ... ok
+test pagination_detects_staleness_and_stream_snapshots_do_not_lose_changes ... ok
+test real_card_edit_two_clients_search_and_index_rebuild ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.31s
+
+     Running tests/workflow.rs (target/debug/deps/workflow-1c968e595723fa37)
+
+running 1 test
+test recovery_rechecks_completed_steps_before_publishing_registration ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running unittests src/lib.rs (target/debug/deps/project_domain-d12dd16df1085b37)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/contracts.rs (target/debug/deps/contracts-fab156d8a72fb09c)
+
+running 7 tests
+test handoff_rank_vectors_and_exhaustion ... ok
+test handoff_calendar_vectors ... ok
+test fractional_timestamps_compare_as_instants ... ok
+test examples_roundtrip_without_losing_optional_fields_or_body ... ok
+test handoff_document_vectors ... ok
+test validation_enforces_bytes_depth_and_safe_extensions ... ok
+test handoff_graph_vectors_and_long_chain ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src/lib.rs (target/debug/deps/project_store-c8f703da2c464677)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/documents.rs (target/debug/deps/documents-00391a5f7f63993e)
+
+running 5 tests
+test rejects_yaml_abuse_and_invalid_source_identity ... ok
+test metadata_edits_preserve_body_and_extensions_byte_for_byte ... ok
+test all_handoff_parser_vectors ... ok
+test hashes_inside_scalars_are_content_including_unicode_and_blocks ... ok
+test comments_and_encoding_require_explicit_normalization ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/filesystem.rs (target/debug/deps/filesystem-d332ae6cf343cb19)
+
+running 5 tests
+test project_directory_must_not_be_a_symlink ... ok
+test detached_directory_cannot_receive_a_write ... ok
+test symlinks_hardlinks_traversal_and_replaced_leases_are_rejected ... ok
+test failure_after_rename_keeps_the_new_source_for_recovery ... ok
+test conditional_create_replace_and_exclusive_lease ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+   Doc-tests project_application
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests project_domain
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests project_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+RUN scripts/cargo-local build --workspace --release --locked
+   Compiling project-store v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/project-store)
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `release` profile [optimized] target(s) in 3.43s
+
+RUN npm run check
+
+> check
+> npm run contracts:check && npm run check --workspace apps/web
+
+
+> contracts:check
+> node scripts/generate-contracts.mjs --check
+
+
+> @local-projects/web@0.1.0 check
+> svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+
+RUN npm run build
+
+> build
+> npm run build --workspace apps/web
+
+
+> @local-projects/web@0.1.0 build
+> vite build
+
+4:20:35 PM [vite-plugin-svelte] no Svelte config found at /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web - using default configuration.
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 111 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  0.39 kB │ gzip: 0.27 kB
+dist/assets/index-KVaXRuoc.css   0.26 kB │ gzip: 0.21 kB
+dist/assets/index-DE87_tAF.js   23.09 kB │ gzip: 9.47 kB
+
+✓ built in 66ms
+
+PASS G0 local checks. No server, E2E, durability or device claim.

@@ -577,12 +577,14 @@ name = "project-application"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "getrandom 0.4.3",
  "jsonschema",
  "project-domain",
  "project-store",
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "thiserror",
  "uuid",

@@ -115,7 +115,7 @@ impl Journal {
         self.directory.verify()?;
         self.connection.lock().map_err(|_| AppError::State)
     }
-    fn known(db: &Connection, command: &Command) -> Result<Option<Reply>, AppError> {
+    pub(crate) fn known(db: &Connection, command: &Command) -> Result<Option<Reply>, AppError> {
         let row: Option<(String, String, Option<String>, Option<String>)> = db.query_row(
             "SELECT digest,state,result_json,error_json FROM commands WHERE epoch=?1 AND request_id=?2",
             params![command.epoch, command.request_id], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;

@@ -62,6 +62,25 @@ pub fn sync_file(file: &File) -> Result<(), StoreError> {
     Ok(())
 }
 impl Directory {
+    pub fn identity(&self) -> Result<(u64, u64), StoreError> {
+        let stat = fs::fstat(&self.file)?;
+        Ok((stat.st_dev as u64, stat.st_ino as u64))
+    }
+    pub fn names(&self) -> Result<Vec<String>, StoreError> {
+        self.verify()?;
+        let mut names = Vec::new();
+        for entry in std::fs::read_dir(&self.path)? {
+            names.push(
+                entry?
+                    .file_name()
+                    .into_string()
+                    .map_err(|_| StoreError::Invalid("NON_UTF8_PATH"))?,
+            );
+        }
+        self.verify()?;
+        names.sort();
+        Ok(names)
+    }
     pub fn exists_regular(&self, name: &str) -> Result<bool, StoreError> {
         component(name)?;
         self.verify()?;
