@@ -34,6 +34,15 @@ CREATE TABLE IF NOT EXISTS write_intents (
   PRIMARY KEY(epoch,request_id,step),
   FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id) ON DELETE RESTRICT
 ) STRICT;
+-- Recovery needs the original command identity and reference versions, not only target bytes.
+CREATE TABLE IF NOT EXISTS intent_context (
+  epoch TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  command_json TEXT NOT NULL,
+  references_json TEXT NOT NULL,
+  PRIMARY KEY(epoch,request_id),
+  FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id)
+) STRICT;
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   token_hash BLOB NOT NULL UNIQUE,

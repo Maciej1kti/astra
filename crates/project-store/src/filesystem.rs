@@ -62,6 +62,34 @@ pub fn sync_file(file: &File) -> Result<(), StoreError> {
     Ok(())
 }
 impl Directory {
+    pub fn exists_regular(&self, name: &str) -> Result<bool, StoreError> {
+        component(name)?;
+        self.verify()?;
+        let fd = match fs::openat(
+            &self.file,
+            name,
+            OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
+            Mode::empty(),
+        ) {
+            Ok(fd) => fd,
+            Err(rustix::io::Errno::NOENT) => return Ok(false),
+            Err(error) => return Err(error.into()),
+        };
+        regular(&File::from(fd))?;
+        Ok(true)
+    }
+    pub fn require_private(&self) -> Result<(), StoreError> {
+        let stat = fs::fstat(&self.file)?;
+        if stat.st_mode & 0o077 != 0 || stat.st_uid != rustix::process::getuid().as_raw() {
+            return Err(StoreError::Invalid("PRIVATE_DIRECTORY_REQUIRED"));
+        }
+        Ok(())
+    }
+    pub fn sync(&self) -> Result<(), StoreError> {
+        self.verify()?;
+        self.file.sync_all()?;
+        Ok(())
+    }
     pub fn open(path: &Path) -> Result<Self, StoreError> {
         Ok(Self {
             file: open_directory(path)?,
@@ -248,6 +276,7 @@ impl ProjectStore {
         let root = Directory::open(project_root)?;
         let directory = root.child(".project", create)?;
         let local = directory.child(".local", true)?;
+        local.require_private()?;
         let lease = local.lease("writer.lock")?;
         Ok(Self { directory, lease })
     }

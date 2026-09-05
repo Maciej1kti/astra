@@ -16,6 +16,9 @@ pub enum StoreError {
 }
 impl From<rustix::io::Errno> for StoreError {
     fn from(error: rustix::io::Errno) -> Self {
+        if error == rustix::io::Errno::LOOP || error == rustix::io::Errno::NOTDIR {
+            return Self::Invalid("SYMLINK_OR_INVALID_DIRECTORY");
+        }
         Self::Io(error.into())
     }
 }

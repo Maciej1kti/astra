@@ -9,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 STEPS = [
+    [sys.executable, "scripts/generate_api_schema.py", "--check"],
     [sys.executable, "scripts/check_package.py", "--skip-manifest"],
     [sys.executable, "-m", "openapi_spec_validator", "contracts/openapi.yaml"],
     [sys.executable, "-m", "unittest", "discover", "-s", "scripts/tests"],

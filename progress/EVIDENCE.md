@@ -1,5 +1,27 @@
 # Dowody wykonania
 
+## E003 — durable commands and subprocess recovery, 2026-09-05
+
+Application journal and one-file writer now persist epoch, UUIDv7 admission floor,
+payload/precondition digest, original results, PREPARED bytes, reference versions
+and history. Source writes occur outside the DB mutex. Retry resolves stored
+results before checking stale versions; rejected outcomes are stable and no-ops
+do not rewrite source or append content history.
+
+Ten application integration tests passed, including a separate process exiting at
+each of six commit boundaries. Restart recovers the intended result exactly once,
+keeps epoch unchanged and replays the original response. Tests also cover stale
+versions, changed payloads, missing preconditions, expired/future IDs, clock
+rollback, state loss/new epoch, replaced source symlinks, changed references,
+invalid source preservation, and state databases larger than document limits.
+Success/error/pending response bodies are validated against OpenAPI.
+
+Full local checks passed: [journal log](checks/journal.txt). Total Rust tests: 27
+(including the subprocess harness entry). These are controlled process-failure
+tests on macOS, not physical power-loss or full fault-matrix certification.
+Pending work includes command retention/maintenance, registration workflows,
+projections, transport authentication, Linux and physical device checks.
+
 ## E002 — strict document storage foundation, 2026-09-05
 
 T04/T06 implementation is in progress. `project-store` now parses bounded YAML

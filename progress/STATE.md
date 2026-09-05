@@ -1,10 +1,11 @@
 # Stan wykonania
 
-Status: **G1_IN_PROGRESS — strict parser and filesystem layer pass local checks**.
+Status: **G1_IN_PROGRESS — durable command and process-recovery tests pass locally**.
 
-Current implementation: `project-domain`, `project-store`, and a Svelte build
-scaffold. 17 Rust tests pass. Next: SQLite command journal, retry admission,
-durable commit/recovery and process fault tests, then the server/CLI/UI slice.
+Current implementation: `project-domain`, `project-store`, `project-application`
+journal/writer and a Svelte build scaffold. 27 Rust tests pass, including restart
+after six subprocess crash points. Next: pairing/session service, registration
+workflows, server/CLI/UI slice, and calendar/Gantt interaction trials.
 Public remote: https://github.com/Maciej1kti/astra. All new repository content is
 English; the Polish sections below are the historical G0 record.
 

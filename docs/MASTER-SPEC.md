@@ -396,6 +396,16 @@ Stare nieznane request ID poza oknem przyjęcia są odrzucane. Klient nie tworzy
 
 ## 05. API HTTP, kontrakty i aktualizowanie widoków
 
+### Unresolved single-resource commands — implementation clarification
+
+A mutation that durably reached PREPARED but has no confirmed outcome returns
+HTTP 202 with `CommandStatus` (`api_version: "1"`, `request_id`, `state`).
+The state is `prepared`, `blocked`, or `needs_review` as observed in the journal.
+It does not return `CommandResponse.status=committed` or a new job ID. Poll the
+command status with the original request ID and epoch. A workflow returning
+`Accepted` with a job ID remains a separate contract. See ADR-014 and
+`examples/requests/command-pending-response.json`.
+
 Pełna lista ścieżek, typów, nagłówków i podstawowych odpowiedzi jest w `contracts/openapi.yaml` (OpenAPI 3.1.1 [S21]). Kontrakt ma być sprawdzany w CI. Poniższy opis definiuje semantykę wykraczającą poza sam schemat.
 
 ### Wersja i format
@@ -1067,7 +1077,7 @@ Completed z dowodem / In progress / Blocked z konkretną przyczyną / Not starte
 
 ## Backlog wykonawczy
 
-Źródło strukturalne: BACKLOG.json. Żadne zadanie nie jest tu oznaczone jako zaimplementowane.
+Źródło statusów: BACKLOG.json. T01–T03 ukończone w zakresie G0; T05 w toku. Dowody w progress/EVIDENCE.md. Scenariusze odbioru produktu pozostają niezaliczone.
 
 | ID | Bramka | Rola | Zadanie | Zależności |
 |---|---|---|---|---|
