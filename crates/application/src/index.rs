@@ -74,6 +74,21 @@ pub struct Index {
     events: Mutex<VecDeque<(i64, Value)>>,
 }
 impl Index {
+    pub fn invalidate_workspace(&self, now: i64) -> Result<(), AppError> {
+        let db = self.connection.lock().map_err(|_| AppError::State)?;
+        let sequence:i64=db.query_row("UPDATE projection_meta SET value=CAST(value AS INTEGER)+1 WHERE key='sequence' RETURNING CAST(value AS INTEGER)",[],|r|r.get(0))?;
+        let mut events = self.events.lock().map_err(|_| AppError::State)?;
+        events.push_back((now,json!({"kind":"resync_required","cursor":format!("{}:{sequence}",self.epoch),"reason":"workspace_changed"})));
+        while events.len() > 10_000
+            || events
+                .front()
+                .is_some_and(|(time, _)| *time < now - 600_000)
+        {
+            events.pop_front();
+        }
+        Ok(())
+    }
+
     pub fn mark_unavailable(&self, project_id: &str, code: &str, now: i64) -> Result<(), AppError> {
         let mut db = self.connection.lock().map_err(|_| AppError::State)?;
         let tx = db.transaction()?;

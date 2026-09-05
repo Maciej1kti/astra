@@ -1,7 +1,9 @@
 pub mod auth;
 pub mod engine;
+mod history;
 mod mutation;
 mod roots;
+mod workspace;
 pub use mutation::Mutation;
 pub mod index;
 pub mod journal;

@@ -61,6 +61,40 @@ pub(super) fn run(
     let epoch = header(&input.headers, "x-command-epoch");
     let current = session.as_ref().map(|s| s.id.as_str());
     let value = match (input.method.as_str(), parts.as_slice()) {
+        ("PUT", ["api", "v1", "workspace", "focus"])
+        | ("PATCH", ["api", "v1", "workspace", "preferences"]) => {
+            let expected = expected_version(&input)?;
+            return Ok(response(engine.mutate_workspace(
+                parts[3],
+                &input.body,
+                request_id,
+                epoch,
+                expected.as_deref(),
+            )?));
+        }
+        ("GET", ["api", "v1", "projects", project, "history"]) => {
+            let q = query(&input)?;
+            engine.history(
+                project,
+                Kind::Project,
+                project,
+                q.cursor.as_deref(),
+                q.limit.unwrap_or(50),
+            )?
+        }
+        ("GET", ["api", "v1", "projects", project, collection, id, "history"])
+            if *collection != "updates" =>
+        {
+            let q = query(&input)?;
+            engine.history(
+                project,
+                kind(collection)?,
+                id,
+                q.cursor.as_deref(),
+                q.limit.unwrap_or(50),
+            )?
+        }
+
         ("GET", ["api", "v1", "roots"]) => engine.roots()?,
         ("POST", ["local", "v1", "roots"]) if input.local => engine.add_root(
             text(&input.body, "absolute_path")?,
@@ -242,6 +276,19 @@ fn mutate(
     kind: Kind,
     id: Option<&str>,
 ) -> Result<Response, AppError> {
+    let expected = expected_version(input)?;
+    Ok(response(engine.mutate(Mutation {
+        project_id: project.into(),
+        kind,
+        id: id.map(str::to_owned),
+        payload: input.body.clone(),
+        request_id: header(&input.headers, "x-request-id").into(),
+        epoch: header(&input.headers, "x-command-epoch").into(),
+        expected,
+    })?))
+}
+
+fn expected_version(input: &Input) -> Result<Option<String>, AppError> {
     let raw = header(&input.headers, "if-match");
     let expected = if raw.is_empty() {
         None
@@ -260,13 +307,5 @@ fn mutate(
                 .into(),
         )
     };
-    Ok(response(engine.mutate(Mutation {
-        project_id: project.into(),
-        kind,
-        id: id.map(str::to_owned),
-        payload: input.body.clone(),
-        request_id: header(&input.headers, "x-request-id").into(),
-        epoch: header(&input.headers, "x-command-epoch").into(),
-        expected,
-    })?))
+    Ok(expected)
 }

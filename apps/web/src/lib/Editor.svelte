@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from "svelte";
+  import { untrack, onMount } from "svelte";
   import { modal } from "./dialog";
   import {
     api,
@@ -56,6 +56,76 @@
     busy = $state(false),
     pending = $state<Pending | null>(null),
     conflict = $state<Resource | null>(null);
+
+  let focus = $state<{
+    items: { project_id: string; card_id: string }[];
+    version: string;
+  } | null>(null);
+  let history = $state<
+    {
+      id: string;
+      recorded_at: string;
+      changed_fields: string[];
+      can_undo: boolean;
+    }[]
+  >([]);
+  let historyCursor = $state<string | null>(null);
+  let pinned = $derived(
+    !!focus?.items.some(
+      (item) =>
+        item.project_id === project && item.card_id === resource?.metadata.id,
+    ),
+  );
+  onMount(() => {
+    if (type === "card" && resource)
+      void api<typeof focus>("/api/v1/workspace/focus")
+        .then((value) => (focus = value))
+        .catch(() => {});
+  });
+  async function toggleFocus() {
+    if (!focus || !resource) return;
+    const items = pinned
+      ? focus.items.filter(
+          (item) =>
+            item.project_id !== project ||
+            item.card_id !== resource.metadata.id,
+        )
+      : [
+          ...focus.items,
+          { project_id: project, card_id: resource.metadata.id },
+        ];
+    pending = command(
+      "/api/v1/workspace/focus",
+      "PUT",
+      { items },
+      focus.version,
+    );
+    await transmit();
+  }
+  async function loadHistory(more = false) {
+    try {
+      const page = await api<{
+        items: typeof history;
+        page: { next_cursor: string | null };
+      }>(
+        `${path()}/history${more && historyCursor ? `?cursor=${encodeURIComponent(historyCursor)}` : ""}`,
+      );
+      history = more ? [...history, ...page.items] : page.items;
+      historyCursor = page.page.next_cursor;
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+  async function undo(id: string) {
+    if (!resource) return;
+    pending = command(
+      path(),
+      "PATCH",
+      { undo: { history_entry_id: id } },
+      resource.version,
+    );
+    await transmit();
+  }
   let notice = $state<HTMLDivElement>();
   $effect(() => {
     if (error) notice?.scrollIntoView({ block: "center" });
@@ -205,6 +275,12 @@
       void save();
     }}
   >
+    {#if type === "card" && resource}<button
+        type="button"
+        onclick={toggleFocus}
+        disabled={!focus || busy || !!pending}
+        >{pinned ? "Remove from focus" : "Pin to focus"}</button
+      >{/if}
     <label
       >{type === "project"
         ? "Name"
@@ -219,11 +295,14 @@
     >
     {#if type !== "update"}<div class="row">
         <label
-          >Status<select bind:value={status} disabled={busy}
+          >Status<select aria-label="Status" bind:value={status} disabled={busy}
             >{#each statuses as item}<option>{item}</option>{/each}</select
           ></label
         >{#if type === "card"}<label
-            >Priority<select bind:value={priority} disabled={busy}
+            >Priority<select
+              aria-label="Priority"
+              bind:value={priority}
+              disabled={busy}
               >{#each ["low", "normal", "high", "urgent"] as item}<option
                   >{item}</option
                 >{/each}</select
@@ -231,7 +310,10 @@
           >{/if}
       </div>{/if}
     {#if type === "card" || type === "update"}<label
-        >Kind<select bind:value={kind} disabled={readonly || busy}
+        >Kind<select
+          aria-label="Kind"
+          bind:value={kind}
+          disabled={readonly || busy}
           >{#each type === "card" ? ["outcome", "decision"] : ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
               >{item}</option
             >{/each}</select
@@ -267,7 +349,10 @@
         <label
           >Due date<input type="date" bind:value={due} disabled={busy} /></label
         ><label
-          >Deadline type<select bind:value={dueKind} disabled={busy}
+          >Deadline type<select
+            aria-label="Deadline type"
+            bind:value={dueKind}
+            disabled={busy}
             ><option value="target">Target</option><option value="hard"
               >Hard deadline</option
             ></select
@@ -308,6 +393,24 @@
           spellcheck="false"
           disabled={busy}></textarea>
       </details>{/if}
+    {#if resource && !readonly}<details>
+        <summary>Change history</summary><button
+          type="button"
+          onclick={() => loadHistory()}
+          disabled={busy}>Load history</button
+        >{#each history as entry}<div class="historyentry">
+            <small>{entry.recorded_at}</small>
+            <p>{entry.changed_fields.join(", ")}</p>
+            <button
+              type="button"
+              disabled={!entry.can_undo || busy || !!pending}
+              onclick={() => undo(entry.id)}>Undo this change</button
+            >
+          </div>{/each}{#if historyCursor}<button
+            type="button"
+            onclick={() => loadHistory(true)}>Load older changes</button
+          >{/if}
+      </details>{/if}
     {#if error}<div bind:this={notice} class="notice" role="alert">
         {error}
       </div>{/if}
@@ -345,6 +448,10 @@
 </dialog>
 
 <style>
+  .historyentry {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
   .editor::backdrop {
     background: #152d2860;
   }

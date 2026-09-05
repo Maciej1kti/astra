@@ -322,3 +322,127 @@ fn browser_roots_reject_escape_symlinks_and_replaced_directories() {
     assert_eq!(engine.remove_root(id).unwrap()["removed"], true);
     assert!(engine.browse_root(id, "", None).is_err());
 }
+
+#[test]
+fn undo_restores_one_change_and_refuses_later_edits() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Original");
+    let original = &created.body["result"]["resource"];
+    let id = original["metadata"]["id"].as_str().unwrap();
+    let edited = patch(
+        &engine,
+        &project,
+        id,
+        original["version"].as_str().unwrap(),
+        json!({"set":{"title":"Edited"}}),
+    );
+    let version = edited.body["result"]["resource"]["version"]
+        .as_str()
+        .unwrap();
+    let history = engine.history(&project, Kind::Card, id, None, 50).unwrap();
+    wire::validate("HistoryPage", &history).unwrap();
+    let entry = history["items"][0]["id"].as_str().unwrap();
+    assert_eq!(history["items"][0]["can_undo"], true);
+    let undone = patch(
+        &engine,
+        &project,
+        id,
+        version,
+        json!({"undo":{"history_entry_id":entry}}),
+    );
+    assert_eq!(undone.http_status, 200, "{undone:?}");
+    assert_eq!(
+        undone.body["result"]["resource"]["metadata"]["title"],
+        "Original"
+    );
+    let current = undone.body["result"]["resource"]["version"]
+        .as_str()
+        .unwrap();
+    let stale = patch(
+        &engine,
+        &project,
+        id,
+        current,
+        json!({"undo":{"history_entry_id":entry}}),
+    );
+    assert_eq!(stale.http_status, 409);
+    assert_eq!(
+        engine.get(&project, Kind::Card, id).unwrap()["metadata"]["title"],
+        "Original"
+    );
+}
+
+#[test]
+fn workspace_writes_replay_and_recover_without_overwriting_external_changes() {
+    use project_application::{AppError, writer::CommitPoint};
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Focus card");
+    let id = card.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    let (_, version) = engine.workspace().unwrap();
+    let request = Uuid::now_v7().to_string();
+    let epoch = engine.journal.epoch.clone();
+    let payload = json!({"items":[{"project_id":project,"card_id":id}]});
+    let result = engine
+        .mutate_workspace_with(
+            "focus",
+            &payload,
+            &request,
+            &epoch,
+            Some(&version),
+            |point| {
+                if point == CommitPoint::Renamed {
+                    Err(AppError::State)
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+    assert_eq!(result.http_status, 202);
+    drop(engine);
+    let engine = env.engine();
+    assert_eq!(engine.workspace().unwrap().0["focus"], payload["items"]);
+    let replay = engine
+        .mutate_workspace("focus", &payload, &request, &epoch, Some(&version))
+        .unwrap();
+    assert_eq!(replay.body["replayed"], true);
+    wire::validate("CommandResponse", &replay.body).unwrap();
+    let (_, current) = engine.workspace().unwrap();
+    let result = engine
+        .mutate_workspace_with(
+            "preferences",
+            &json!({"locale":"en","preferences":{"default_view":"board"}}),
+            &Uuid::now_v7().to_string(),
+            &epoch,
+            Some(&current),
+            |point| {
+                if point == CommitPoint::Prepared {
+                    Err(AppError::State)
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+    assert_eq!(result.http_status, 202);
+    let mut workspace = engine.workspace().unwrap().0;
+    workspace["preferences"]["default_view"] = json!("calendar");
+    fs::write(
+        env.root.join("state/workspace.json"),
+        serde_json::to_vec_pretty(&workspace).unwrap(),
+    )
+    .unwrap();
+    drop(engine);
+    let engine = env.engine();
+    assert_eq!(
+        engine.workspace().unwrap().0["preferences"]["default_view"],
+        "calendar"
+    );
+    assert!(engine.journal.has_pending("workspace").unwrap());
+}

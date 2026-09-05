@@ -1,5 +1,10 @@
 # Implementation evidence
 
+## E006 — workspace and history, 2026-09-05
+
+See [E006](E006-workspace-history.md) for durable workspace writes, conditional undo
+and real browser verification of focus and persistent preferences.
+
 ## E005 — transport and connected UI, 2026-09-05
 
 See [E005](E005-transport-ui.md) for the verified HTTP/Unix/browser slice and its

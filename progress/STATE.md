@@ -15,15 +15,16 @@ verified; preserve requirements from the temporary handoff until then.
 - HTTP/Unix service, authenticated browser/UID transports and CLI (integration work).
 - Initial seven-view Svelte UI and common editor connected to real API resources.
 - Approved directory browsing and SSE invalidations.
+- Durable focus/preferences, conditional undo, history and browser settings.
 
-Latest fully verified committed engine slice: `a7a822a`; evidence E004.
-Transport/UI changes are under active verification; use `git status` for the exact
+Latest committed transport/UI slice: `4e4dcc0`; evidence E005.
+Workspace/history verification is recorded in E006; use `git status` for the exact
 working tree. The current source supersedes historical implementation claims in
 older evidence entries.
 
 ## Outstanding
 
-Full workspace writes, history/undo/context/attention APIs, receipts, settings,
+Context/attention APIs, receipts,
 Markdown preview, calendar/Gantt manipulation trials, maintenance operations,
 retention/upgrades, performance/security/fault coverage, packaging and final
 English documentation cleanup. Gate and acceptance completion remain unclaimed.

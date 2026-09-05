@@ -90,7 +90,7 @@ impl Engine {
         let handle = self.store(&project_id)?;
         let mut store = handle.lock().map_err(|_| AppError::State)?;
         let now = now_millis();
-        let (next, references) = match prepare(&store, &command, create, now) {
+        let (next, references) = match prepare(&self.journal, &store, &command, create, now) {
             Ok(value) => value,
             Err(AppError::Rejected(reply)) => return reject(reply),
             Err(error) => return Err(error),
@@ -118,6 +118,7 @@ impl Engine {
     }
 }
 fn prepare(
+    journal: &crate::journal::Journal,
     store: &ProjectStore,
     command: &Command,
     create: bool,
@@ -184,8 +185,14 @@ fn prepare(
         json!({"type":kind.as_str(),"metadata":metadata,"body":body})
     } else {
         let mut next = previous.clone().unwrap();
-        if payload.get("undo").is_some() {
-            return Err(AppError::reject(422, "USE_HISTORY_UNDO"));
+        if let Some(undo) = payload.get("undo") {
+            let (_, current) = read(store, kind, id)?;
+            next = crate::history::undo_document(
+                journal,
+                command,
+                undo["history_entry_id"].as_str().ok_or(AppError::State)?,
+                &current,
+            )?;
         }
         if let Some(set) = payload["set"].as_object() {
             for (key, value) in set {
@@ -287,7 +294,9 @@ fn prepare(
             version: Some(version),
         });
     }
-    if kind == Kind::Card && (create || payload["set"].get("depends_on").is_some()) {
+    if kind == Kind::Card
+        && (create || payload["set"].get("depends_on").is_some() || payload.get("undo").is_some())
+    {
         let cards = collection(store, Kind::Card)?;
         let mut graph = BTreeMap::new();
         for (value, version) in &cards {

@@ -178,12 +178,46 @@ try {
     fullPage: true,
   });
   await mobile.getByRole("button", { name: "Close editor" }).click();
+
+  await page.getByRole("heading", { name: "Ship the revised guide" }).click();
+  await page.getByText("Change history", { exact: true }).click();
+  await page.getByRole("button", { name: "Load history", exact: true }).click();
+  await page
+    .locator("button:enabled")
+    .filter({ hasText: /^Undo this change$/ })
+    .first()
+    .click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal(cli("get", path).metadata.title, "Ship the field guide");
+  await page.getByRole("heading", { name: "Ship the field guide" }).click();
+  await page.getByRole("button", { name: "Pin to focus", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal(
+    cli("get", "/api/v1/workspace/focus").items[0].card_id,
+    cards[0].id,
+  );
+  await page.getByRole("button", { name: "Focus", exact: true }).click();
+  await page.getByRole("heading", { name: "Ship the field guide" }).waitFor();
   for (const view of ["Calendar", "Timeline", "List", "Updates", "Projects"]) {
     await page.getByRole("button", { name: view, exact: true }).click();
   }
+
+  await page
+    .getByRole("button", { name: "Workspace settings", exact: true })
+    .click();
+  await page.getByLabel("Timezone", { exact: true }).fill("UTC");
+  await page.getByLabel("Default view", { exact: true }).selectOption("list");
+  await page
+    .getByRole("button", { name: "Save preferences", exact: true })
+    .click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
+  assert.equal(cli("get", "/api/v1/workspace/preferences").timezone, "UTC");
+  await page.reload();
+  await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views.",
+    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus and persisted settings.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

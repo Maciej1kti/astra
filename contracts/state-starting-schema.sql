@@ -99,3 +99,15 @@ CREATE TABLE IF NOT EXISTS workflow_jobs (
   FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id)
 ) STRICT;
 CREATE INDEX IF NOT EXISTS history_target ON history(project_id,target_kind,target_id,recorded_at);
+-- Single-file workspace commands share command identity and admission semantics.
+CREATE TABLE IF NOT EXISTS workspace_intents (
+  epoch TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  before_bytes BLOB NOT NULL,
+  after_bytes BLOB NOT NULL,
+  references_json TEXT NOT NULL,
+  result_json TEXT NOT NULL,
+  resolved INTEGER NOT NULL DEFAULT 0 CHECK(resolved IN (0,1)),
+  PRIMARY KEY(epoch,request_id),
+  FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id)
+) STRICT;

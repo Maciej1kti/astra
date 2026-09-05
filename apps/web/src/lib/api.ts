@@ -47,11 +47,26 @@ export class ApiError extends Error {
     public status: number,
     public data: Record<string, unknown>,
   ) {
+    const code = (data.error as { code?: string })?.code ?? "";
+    const messages: Record<string, string> = {
+      VERSION_CONFLICT:
+        "This resource changed since you opened it. Your draft has been kept.",
+      UNDO_TARGET_CHANGED:
+        "A later change prevents this undo. The saved resource has not been changed.",
+      EPOCH_CHANGED:
+        "The server state changed. Check the current resource before starting a new command.",
+      VALIDATION_FAILED:
+        "Some fields are not valid. Check the dates and additional fields.",
+      WORKSPACE_RECOVERY_REQUIRED:
+        "The workspace has an unresolved save. Check diagnostics before retrying.",
+      SESSION_REQUIRED: "Your session ended. Connect this browser again.",
+    };
     super(
-      String(
-        (data.error as { message?: string })?.message ??
-          `Request failed (${status})`,
-      ),
+      messages[code] ??
+        String(
+          (data.error as { message?: string })?.message ??
+            `Request failed (${status})`,
+        ),
     );
   }
 }

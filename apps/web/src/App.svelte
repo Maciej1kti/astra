@@ -2,6 +2,8 @@
   import { onMount } from "svelte";
   import { modal } from "./lib/dialog";
   import Editor from "./lib/Editor.svelte";
+  import Settings from "./lib/Settings.svelte";
+  let settings = $state(false);
   import {
     api,
     all,
@@ -31,7 +33,7 @@
     cards = $state<Summary[]>([]),
     milestones = $state<Summary[]>([]),
     updates = $state<Summary[]>([]),
-    focus = $state<{ project_id: string; type: string; id: string }[]>([]);
+    focus = $state<{ project_id: string; card_id: string }[]>([]);
   let view = $state<View>("focus"),
     project = $state(""),
     search = $state(""),
@@ -120,10 +122,20 @@
     try {
       boot = await api<Bootstrap>("/api/v1/bootstrap");
       configure(boot);
+      const preferences = await api<{ preferences: { default_view?: View } }>(
+        "/api/v1/workspace/preferences",
+      );
+      view = preferences.preferences.default_view ?? "focus";
       await refresh();
       connect();
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
+        boot = null;
+        projects = [];
+        cards = [];
+        milestones = [];
+        updates = [];
+        focus = [];
         try {
           pairing = await api<Pairing>("/api/v1/auth/pairings/current");
         } catch {
@@ -417,6 +429,10 @@
         <div>
           <span class="date">{today}</span><button
             class="quiet"
+            aria-label="Workspace settings"
+            onclick={() => (settings = true)}>⚙</button
+          ><button
+            class="quiet"
             onclick={() => refresh().catch(message)}
             aria-label="Refresh">↻</button
           >
@@ -546,7 +562,7 @@
                 ...cards,
                 ...milestones,
               ].find(
-                (c) => c.id === ref.id && c.project_id === ref.project_id,
+                (c) => c.id === ref.card_id && c.project_id === ref.project_id,
               )}{#if item}<button class="card" onclick={() => open(item)}
                   ><small>{projectLabel(item.project_id)}</small>
                   <h3>{item.title}</h3>
@@ -739,6 +755,13 @@
     </div>
   </div>
 {/if}
+{#if settings}<Settings
+    onclose={() => (settings = false)}
+    onsaved={() => {
+      settings = false;
+      void initialize();
+    }}
+  />{/if}
 {#if editor}{#key editor}<Editor
       {...editor}
       onclose={() => (editor = null)}

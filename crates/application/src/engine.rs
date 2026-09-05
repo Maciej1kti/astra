@@ -56,6 +56,7 @@ impl Engine {
             gate: RwLock::new(()),
             stores: Mutex::new(HashMap::new()),
         };
+        engine.recover_workspace()?;
         for (job, plan) in (Workflows {
             journal: &engine.journal,
         })
@@ -279,6 +280,9 @@ impl Engine {
         let workflows = Workflows {
             journal: &self.journal,
         };
+        if self.journal.has_pending("workspace")? {
+            return Err(AppError::reject(409, "WORKSPACE_RECOVERY_REQUIRED"));
+        }
         let plan = workflows.plan(plan_id)?;
         if plan.kind != "registration" {
             return Err(AppError::reject(422, "PLAN_KIND_MISMATCH"));
