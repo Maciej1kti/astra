@@ -96,7 +96,7 @@
       "owner_role": "store",
       "title": "Parser i canonical serializer",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T02",
         "T03"
@@ -116,7 +116,10 @@
         "normalization plan"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T05",
@@ -160,7 +163,7 @@
       "owner_role": "store",
       "title": "Path policy i leases",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T03"
       ],
@@ -180,7 +183,10 @@
         "instance/project lock"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T07",
@@ -188,7 +194,7 @@
       "owner_role": "store",
       "title": "State journal i command epoch",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T02",
         "T06"
@@ -208,7 +214,10 @@
         "retry policy"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T08",
@@ -216,7 +225,7 @@
       "owner_role": "store",
       "title": "Durable one-file commit",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T04",
         "T07"
@@ -236,7 +245,10 @@
         "fault hooks"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T09",
@@ -244,7 +256,7 @@
       "owner_role": "store",
       "title": "Recovery i uncertain state",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T08"
       ],
@@ -265,7 +277,10 @@
         "operator diagnostics"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T10",
@@ -273,7 +288,7 @@
       "owner_role": "api",
       "title": "Minimal HTTP i UDS",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T02",
         "T03"
@@ -292,7 +307,10 @@
         "HTTP skeleton"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T11",
@@ -356,7 +374,7 @@
       "owner_role": "qa",
       "title": "Harness awarii",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T06",
         "T07"
@@ -375,7 +393,10 @@
         "isolated tmp filesystem fixtures"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T14",
@@ -383,7 +404,7 @@
       "owner_role": "core",
       "title": "Rejestracja i workspace",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T04",
         "T06",
@@ -409,7 +430,10 @@
         "workspace writes"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T15",
@@ -417,7 +441,7 @@
       "owner_role": "api",
       "title": "Pierwsze create/get/patch + CLI",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T05",
         "T09",
@@ -440,7 +464,10 @@
         "request status"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T16",
@@ -448,7 +475,7 @@
       "owner_role": "ui",
       "title": "Shell i jedna edytowalna karta",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T11",
         "T12",
@@ -470,7 +497,10 @@
         "save/conflict states"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T17",
@@ -478,7 +508,7 @@
       "owner_role": "qa",
       "title": "Pionowy przepływ dwóch klientów",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T13",
         "T15",
@@ -501,7 +531,10 @@
         "G2 evidence"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T18",
@@ -509,7 +542,7 @@
       "owner_role": "security",
       "title": "Parowanie, sesje i CSRF",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T10",
         "T07"
@@ -530,7 +563,10 @@
         "revoke"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T19",
@@ -538,7 +574,7 @@
       "owner_role": "core",
       "title": "Index i FTS",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T04",
         "T05",
@@ -561,7 +597,10 @@
         "bounded queries"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T20",
@@ -569,7 +608,7 @@
       "owner_role": "core",
       "title": "Watcher i external edits",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T19",
         "T06"
@@ -592,7 +631,10 @@
         "rescan"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T21",
@@ -600,7 +642,7 @@
       "owner_role": "api",
       "title": "SSE i snapshot cursors",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T19",
         "T18"
@@ -622,7 +664,10 @@
         "resync contract"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T22",
@@ -630,7 +675,7 @@
       "owner_role": "core",
       "title": "Milestones i zależności",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T05",
         "T15"
@@ -648,7 +693,10 @@
         "reference diagnostics"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T23",
@@ -656,7 +704,7 @@
       "owner_role": "core",
       "title": "Raporty, resolutions i receipts",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T15",
         "T19"
@@ -675,7 +723,10 @@
         "receipt transactions"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T24",
@@ -683,7 +734,7 @@
       "owner_role": "core",
       "title": "Focus i attention",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T14",
         "T22",
@@ -702,7 +753,10 @@
         "deterministic attention"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T25",
@@ -710,7 +764,7 @@
       "owner_role": "api",
       "title": "Pełny kontrakt HTTP/CLI",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T21",
         "T22",
@@ -732,7 +786,10 @@
         "CLI commands"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T26",
@@ -740,7 +797,7 @@
       "owner_role": "security",
       "title": "Roots i bezpieczny Markdown",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T14",
         "T18",
@@ -761,7 +818,10 @@
         "CSP"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T27",
@@ -769,7 +829,7 @@
       "owner_role": "ui",
       "title": "Design system i adaptive shell",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T16",
         "T18"
@@ -788,7 +848,10 @@
         "shared inspector"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T28",
@@ -796,7 +859,7 @@
       "owner_role": "ui",
       "title": "Focus, projekty i lista",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T24",
         "T25",
@@ -819,7 +882,10 @@
         "deep links"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T29",
@@ -827,7 +893,7 @@
       "owner_role": "ui",
       "title": "Kanban produkcyjny",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T25",
         "T27"
@@ -848,7 +914,10 @@
         "keyboard fallback"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T30",
@@ -856,7 +925,7 @@
       "owner_role": "ui",
       "title": "Kalendarz produkcyjny",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T11",
         "T25",
@@ -880,7 +949,10 @@
         "typed date adapters"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T31",
@@ -888,7 +960,7 @@
       "owner_role": "ui",
       "title": "Gantt produkcyjny",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T12",
         "T22",
@@ -915,7 +987,10 @@
         "dependencies"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T32",
@@ -923,7 +998,7 @@
       "owner_role": "ui",
       "title": "Aktualizacje i wspólna karta",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T23",
         "T25",
@@ -944,7 +1019,10 @@
         "card/milestone panels"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T33",
@@ -952,7 +1030,7 @@
       "owner_role": "ui",
       "title": "Reconnect, conflicts i app update",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T21",
         "T28",
@@ -979,7 +1057,10 @@
         "safe reload"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T34",
@@ -1045,7 +1126,7 @@
       "owner_role": "core",
       "title": "Diagnostyka i obserwator Git",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T19",
         "T20"
@@ -1067,7 +1148,10 @@
         "redacted logs"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T37",
@@ -1104,7 +1188,7 @@
       "owner_role": "qa",
       "title": "Bezpieczeństwo i testy nadużyć",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T18",
         "T26",
@@ -1134,7 +1218,10 @@
         "regression tests"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     },
     {
       "id": "T39",
@@ -1245,7 +1332,7 @@
       "owner_role": "lead",
       "title": "Dokumentacja użytkownika i wydanie",
       "priority": "P0",
-      "status": "not_started",
+      "status": "in_progress",
       "depends_on": [
         "T17",
         "T25",
@@ -1280,7 +1367,10 @@
         "known limits"
       ],
       "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
-      "evidence": []
+      "evidence": [
+        "progress/E004-application.md",
+        "progress/E005-transport-ui.md"
+      ]
     }
   ]
 }

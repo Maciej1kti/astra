@@ -24,4 +24,3 @@ CREATE TRIGGER IF NOT EXISTS documents_ai AFTER INSERT ON documents BEGIN INSERT
         CREATE TRIGGER IF NOT EXISTS documents_ad AFTER DELETE ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body); END;
         CREATE TRIGGER IF NOT EXISTS documents_au AFTER UPDATE OF title,body ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body); INSERT INTO documents_fts(rowid,title,body) VALUES(new.rowid,new.title,new.body); END;
         CREATE TABLE IF NOT EXISTS projection_issues(project_id TEXT NOT NULL,path TEXT NOT NULL,code TEXT NOT NULL,PRIMARY KEY(project_id,path)) STRICT;
-

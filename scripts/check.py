@@ -13,12 +13,12 @@ STEPS = [
     [sys.executable, "scripts/check_package.py", "--skip-manifest"],
     [sys.executable, "-m", "openapi_spec_validator", "contracts/openapi.yaml"],
     [sys.executable, "-m", "unittest", "discover", "-s", "scripts/tests"],
+    ["npm", "run", "check"],
+    ["npm", "run", "build"],
     ["scripts/cargo-local", "fmt", "--all", "--", "--check"],
     ["scripts/cargo-local", "clippy", "--workspace", "--all-targets", "--locked", "--", "-D", "warnings"],
     ["scripts/cargo-local", "test", "--workspace", "--locked"],
     ["scripts/cargo-local", "build", "--workspace", "--release", "--locked"],
-    ["npm", "run", "check"],
-    ["npm", "run", "build"],
 ]
 
 for command in STEPS:
@@ -26,4 +26,4 @@ for command in STEPS:
     result = subprocess.run(command, cwd=ROOT)
     if result.returncode:
         raise SystemExit(result.returncode)
-print("\nPASS G0 local checks. No server, E2E, durability or device claim.")
+print("\nPASS local automated checks. See progress evidence for coverage and platform limitations.")

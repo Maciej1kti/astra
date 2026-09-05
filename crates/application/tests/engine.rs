@@ -299,3 +299,26 @@ fn invalid_external_source_preserves_stale_projection_without_repairing_files() 
             .is_empty()
     );
 }
+
+#[test]
+fn browser_roots_reject_escape_symlinks_and_replaced_directories() {
+    use std::os::unix::fs::symlink;
+    let env = Environment::new();
+    let engine = env.engine();
+    let root = engine.add_root(&env.path(), "Approved projects").unwrap();
+    let id = root["id"].as_str().unwrap();
+    wire::validate("Roots", &engine.roots().unwrap()).unwrap();
+    assert!(engine.browse_root(id, "../state", None).is_err());
+    assert!(engine.browse_root(id, "/", None).is_err());
+    symlink(env.root.join("state"), env.root.join("project/escape")).unwrap();
+    assert!(engine.browse_root(id, "escape", None).is_err());
+    assert_eq!(
+        engine.browse_root(id, "", None).unwrap()["items"],
+        json!([])
+    );
+    fs::rename(env.root.join("project"), env.root.join("old-project")).unwrap();
+    fs::create_dir(env.root.join("project")).unwrap();
+    assert!(engine.browse_root(id, "", None).is_err());
+    assert_eq!(engine.remove_root(id).unwrap()["removed"], true);
+    assert!(engine.browse_root(id, "", None).is_err());
+}

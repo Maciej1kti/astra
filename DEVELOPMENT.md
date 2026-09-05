@@ -1,61 +1,72 @@
-# Rozwój Local Projects
+# Development
 
-Kod i dokumentacja są w tym katalogu. Repo Git zainicjalizowano tutaj, na gałęzi
-`main`; nie przenosimy materiałów do katalogu nadrzędnego. Nie ma jeszcze serwera ani CLI.
+The application is under active implementation. Read `progress/STATE.md` for
+current coverage and limitations. The temporary handoff remains normative until
+its requirements have been implemented and verified.
 
-## Przygotowanie
+## Toolchains
 
-Python używany podczas G0: 3.14.6. Walidator wymaga Python 3.11+.
+Use Node 24.11.0 (`.nvmrc`), Rust 1.92.0 (`rust-toolchain.toml`) and Python 3.14.
+On this checkout, `scripts/cargo-local` uses the repository-local Rust installation
+under `.tools/`. On a fresh machine, install the pinned Rust toolchain with rustup
+or provide the same local directories. Dependencies are pinned in Cargo.lock,
+package-lock.json and scripts/requirements-validation.lock.
 
 ```sh
 python3 -m venv .venv-check
-.venv-check/bin/python -m pip install -r scripts/requirements-validation.lock
+.venv-check/bin/pip install -r scripts/requirements-validation.lock
 npm ci
-```
-
-Rust jest przypięty w `rust-toolchain.toml` do 1.92.0. Jeżeli używasz własnego
-rustup, standardowe `cargo` pobierze wskazany toolchain. W obecnym środowisku
-rustup i toolchain są lokalnie w `.tools/cargo` i `.tools/rustup`.
-`scripts/cargo-local` wybiera tę instalację, bez zmiany profilu powłoki.
-Node 24.11.0 wskazuje `.nvmrc`; zależności npm mają dokładne wersje i lockfile.
-
-## Kontrola jednym poleceniem
-
-```sh
+npm run build
+scripts/cargo-local build --workspace --locked
 .venv-check/bin/python scripts/check.py
 ```
 
-Obejmuje walidację materiałów, pełne OpenAPI, kontrolę dowodów postępu,
-Rust fmt/clippy/test/release build, kontrolę driftu generowanych typów,
-Svelte/TypeScript i produkcyjny build frontendu. Nie obejmuje jeszcze testów
-serwera, trwałości, przeglądarek ani urządzeń; będą dodawane wraz z implementacją.
+Build the frontend before compiling `projectd`: the daemon embeds the production
+assets. `scripts/check.py` enforces that order. Development API requests must go
+through the normal session/CSRF protections; there is no authentication bypass.
+
+## Run
+
+Choose an absolute, non-symlink, owner-only state directory. Keep the Unix socket
+path short enough for the host OS (macOS has a small sockaddr_un limit).
 
 ```sh
-npm run dev
-npm run contracts
-scripts/cargo-local test --workspace --locked
+mkdir -m 700 "$HOME/.local-projects"
+target/debug/projectd --data-dir "$HOME/.local-projects" --public-origin https://your-host.example
 ```
 
-Frontend developmentowy nasłuchuje tylko na loopback. Obecny ekran jest
-szkieletem kompilacji; nie zawiera projektów demonstracyjnych ani funkcji zapisu.
+The HTTP listener binds only `127.0.0.1:47831`. Configure your own trusted HTTPS
+proxy (for example an existing Tailscale Serve setup) to preserve the public Host.
+The origin must match `--public-origin` exactly. The daemon does not configure
+network access, VPNs, TLS certificates or public hosting.
 
-## Zasady zależności i kontraktów
+```sh
+target/debug/projectctl --socket "$HOME/.local-projects/projectd.sock" hello
+target/debug/projectctl --socket "$HOME/.local-projects/projectd.sock" add-root /absolute/projects --label Projects
+```
 
-- Python: `.venv-check`, lock w `scripts/requirements-validation.lock`.
-- Rust: dokładne zależności w workspace i `Cargo.lock`; brak sieciowych resolverów
-  JSON Schema w runtime. Schemat wkompilowany, walidator inicjalizowany raz.
-- Frontend: `package-lock.json`, `npm ci`; Node potrzebny wyłącznie w development/build.
-- Typy TypeScript generuje `json-schema-to-typescript` z normatywnego schematu.
-  Modele Rust przechodzą ten sam schema gate i testy zachowania reprezentacji.
-  Deserializacja samych struktur Rust nie oznacza walidacji; granicą wejścia są
-  `validate_document` i `validate_workspace`. Relacje między dokumentami wymagają
-  dodatkowej walidacji pod lockiem projektu.
-- Aktualizacja zależności wymaga ponownego wykonania kontroli; pełny audyt licencji
-  i advisories Rust pozostaje elementem przygotowania wydania.
+Open the HTTPS origin, request pairing, compare the displayed challenge and
+approve it through `projectctl ... approve ID --challenge "the displayed challenge"`.
+Then confirm in the browser. List pending requests with `projectctl ... pairings`.
 
-Manifest SHA-256 zachowuje oryginalny baseline handoffu. Po rozpoczęciu budowy
-kontrole używają `--skip-manifest`; oryginalny wynik zachowano w `progress/`.
-Nie regeneruj manifestu, aby ukryć zmiany względem pakietu wejściowego.
+For CLI registration, run `registration-plan /absolute/project`, inspect the JSON
+plan, then `register PLAN_ID`. Use `projects`, `get /api/v1/...` and `command --help`
+for resource operations. Existing resource edits require `--if-version`.
+CLI commands print the request ID and epoch to stderr before sending. An uncertain
+result must be checked through `/api/v1/commands/REQUEST_ID`; retries must provide
+both `--request-id` and `--epoch` with unchanged input and version.
 
-Plan najbliższej pracy: [progress/PLAN.md](progress/PLAN.md).
-Stan i ograniczenia: [progress/STATE.md](progress/STATE.md).
+## Browser integration test
+
+```sh
+npx playwright install chromium
+npm run build
+scripts/cargo-local build --workspace --locked
+node scripts/browser-smoke.mjs
+```
+
+This creates temporary synthetic projects, a short-lived self-signed HTTPS proxy
+and an ordinary daemon, pairs Chromium through the real owner approval flow, and
+checks creation and competing edits. It cleans up its processes and temporary
+state. Screenshots and logs are evidence under `progress/`, not user project data.
+Chromium phone emulation is not physical iPhone or Safari validation.

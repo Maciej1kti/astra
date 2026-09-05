@@ -1,4 +1,15 @@
-# Dowody wykonania
+# Implementation evidence
+
+## E005 — transport and connected UI, 2026-09-05
+
+See [E005](E005-transport-ui.md) for the verified HTTP/Unix/browser slice and its
+remaining scope, and the full check and browser logs linked there.
+
+## E004 — application engine, 2026-09-05
+
+See [E004](E004-application.md) for registration, sessions, indexing and resumable
+workflow recovery evidence. Committed and pushed as `a7a822a`.
+
 
 ## E003 — durable commands and subprocess recovery, 2026-09-05
 

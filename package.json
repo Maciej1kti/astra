@@ -2,8 +2,12 @@
   "name": "local-projects-workspace",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/web"],
-  "engines": { "node": ">=24.11.0 <25" },
+  "workspaces": [
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
   "scripts": {
     "contracts": "node scripts/generate-contracts.mjs",
     "contracts:check": "node scripts/generate-contracts.mjs --check",
@@ -11,5 +15,10 @@
     "build": "npm run build --workspace apps/web",
     "dev": "npm run dev --workspace apps/web"
   },
-  "devDependencies": { "json-schema-to-typescript": "16.0.0" }
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "json-schema-to-typescript": "16.0.0",
+    "prettier": "3.9.6",
+    "prettier-plugin-svelte": "4.1.1"
+  }
 }

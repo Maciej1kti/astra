@@ -1,43 +1,41 @@
-# Stan wykonania
+# Implementation state
 
-Status: **G1_IN_PROGRESS — durable command and process-recovery tests pass locally**.
+Updated: 2026-09-05. Status: **in progress; not release-ready**.
 
-Current implementation: `project-domain`, `project-store`, `project-application`
-journal/writer and a Svelte build scaffold. 27 Rust tests pass, including restart
-after six subprocess crash points. Next: pairing/session service, registration
-workflows, server/CLI/UI slice, and calendar/Gantt interaction trials.
-Public remote: https://github.com/Maciej1kti/astra. All new repository content is
-English; the Polish sections below are the historical G0 record.
+Public repository: https://github.com/Maciej1kti/astra. New repository content,
+UI text and commits are English. Continue until the v1 scope is implemented and
+verified; preserve requirements from the temporary handoff until then.
 
-Ostatnia aktualizacja: 2026-09-05. Baseline: handoff 1.0.
+## Implemented
 
-## Zrobione w sesji 2026-09-05
+- Shared Rust domain and generated TypeScript models; strict document validation.
+- Descriptor-based storage, exclusive project leases and durable conditional writes.
+- SQLite command journal, stable retries, crash recovery and history recording.
+- Resumable registration plans, pairing and sessions, FTS projections and cursors.
+- HTTP/Unix service, authenticated browser/UID transports and CLI (integration work).
+- Initial seven-view Svelte UI and common editor connected to real API resources.
+- Approved directory browsing and SSE invalidations.
 
-- Repo Git `main` zainicjalizowane w katalogu pakietu; bez commitów i remote.
-- Lokalny Python venv i lock zależności; izolowany rustup/Rust 1.92.0 w `.tools/`.
-- Cargo workspace i `project-domain`: wire models, schema gate, date/rank/graph rules.
-- Svelte 5/TypeScript/Vite workspace, generowane typy domeny i kontrola driftu.
-- Testy przykładów, 27 wektorów domenowych, limity i graf 10 000 kart.
-- Pełny walidator OpenAPI uzupełnia kontrolę oryginalnego pakietu.
-- Powtarzalne lokalne kontrole: `.venv-check/bin/python scripts/check.py`.
-- Plan wykonania i braków w `progress/PLAN.md`; instrukcja w `DEVELOPMENT.md`.
+Latest fully verified committed engine slice: `a7a822a`; evidence E004.
+Transport/UI changes are under active verification; use `git status` for the exact
+working tree. The current source supersedes historical implementation claims in
+older evidence entries.
 
-## Środowisko i ograniczenia
+## Outstanding
 
-macOS 27.0 (26A5425a), ARM64, SDK CommandLineTools; Node 24.11.0, Python 3.14.6,
-Rust 1.92.0. Nie instalowano usług ani nie zmieniano sieci/profilu powłoki.
-Nie istnieją jeszcze serwer, CLI, parser plików ani produkcyjne UI. Brak testów
-Archa, fizycznego iPhone'a, trwałości, security i wydajności aplikacji.
+Full workspace writes, history/undo/context/attention APIs, receipts, settings,
+Markdown preview, calendar/Gantt manipulation trials, maintenance operations,
+retention/upgrades, performance/security/fault coverage, packaging and final
+English documentation cleanup. Gate and acceptance completion remain unclaimed.
 
-## Następny krok
+## Environment
 
-T04: parser/serializer `.project` z ograniczeniami i zachowaniem body, potem T06
-safe paths/lease oraz T07–T09/T13 trwałość. Próby calendar/Gantt pozostają obowiązkowe
-w G1 przed pełnym UI. Szczegóły: `progress/PLAN.md`.
+macOS 27.0 ARM64; Rust 1.92.0 in `.tools/`; Node 24.11.0; Python 3.14.6 in
+`.venv-check`. No Linux/ext4, physical iPhone or physical power-loss evidence.
+The HTTPS browser test uses temporary self-signed TLS and the normal pairing
+flow, with temporary synthetic projects; it does not change the user's network.
 
-Dowody i zakres poszczególnych testów: `progress/EVIDENCE.md`.
-
-Ostatnia pełna kontrola: `.venv-check/bin/python scripts/check.py` — PASS;
-log `progress/checks/g0.txt`. T01–T03 ukończone w zakresie fundamentu,
-T05 częściowo wykonane. Scenariusze odbioru produktu pozostają `not_run`:
-podstawowe testy domeny nie zastępują całych A14/A16/A51 ani instalacji A42.
+Read `progress/PLAN.md` and the newest evidence entry, then continue the next
+unfinished slice. Full checks: `.venv-check/bin/python scripts/check.py`.
+Browser smoke: `node scripts/browser-smoke.mjs` after the frontend and debug Rust
+workspace are built and Playwright Chromium is installed.
