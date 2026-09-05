@@ -840,3 +840,154 @@ fn retention_keeps_retry_window_and_pending_intents() {
         "Test project"
     );
 }
+
+#[test]
+fn rebalance_rejects_new_collection_members_and_replays_rejection() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let first = create(&engine, &project, "Original member");
+    let id = first.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    let path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let original = fs::read(&path).unwrap();
+    let plan = engine.maintenance_plan(&json!({"operation":"rebalance","project_id":project,"kind":"card","expected_projection_revision":engine.index.cursor().unwrap()})).unwrap();
+    let added = create(&engine, &project, "New member after preview");
+    let request = Uuid::now_v7().to_string();
+    let result = engine
+        .commit_maintenance(
+            plan["plan_id"].as_str().unwrap(),
+            &request,
+            &engine.journal.epoch,
+        )
+        .unwrap();
+    assert_eq!(result.http_status, 409);
+    assert_eq!(fs::read(&path).unwrap(), original);
+    let added_id = added.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    fs::remove_file(
+        env.root
+            .join(format!("project/.project/cards/{added_id}.md")),
+    )
+    .unwrap();
+    let replay = engine
+        .commit_maintenance(
+            plan["plan_id"].as_str().unwrap(),
+            &request,
+            &engine.journal.epoch,
+        )
+        .unwrap();
+    assert_eq!(replay.body, result.body);
+}
+
+#[test]
+fn gantt_pages_include_milestones_and_board_stays_card_only() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    create(&engine, &project, "Scheduled card");
+    let milestone = engine
+        .mutate(Mutation {
+            project_id: project.clone(),
+            kind: Kind::Milestone,
+            id: None,
+            payload: json!({"title":"Release gate","due":{"date":"2026-09-30","kind":"hard"}}),
+            request_id: Uuid::now_v7().to_string(),
+            epoch: engine.journal.epoch.clone(),
+            expected: None,
+        })
+        .unwrap();
+    assert_eq!(milestone.http_status, 200, "{milestone:?}");
+    let first = engine.gantt(&project, None, 1).unwrap();
+    wire::validate("GanttPage", &first).unwrap();
+    assert_eq!(first["rows"][0]["type"], "card");
+    let second = engine
+        .gantt(&project, first["page"]["next_cursor"].as_str(), 1)
+        .unwrap();
+    wire::validate("GanttPage", &second).unwrap();
+    assert_eq!(second["rows"][0]["type"], "milestone");
+    assert_eq!(second["rows"][0]["due"]["date"], "2026-09-30");
+    let board = engine.board(&project, None, 50).unwrap();
+    assert_eq!(
+        board["columns"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["items"].as_array().unwrap().len())
+            .sum::<usize>(),
+        1
+    );
+}
+
+#[test]
+fn missing_receipt_target_rejection_remains_stable_after_creation() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let id = Uuid::new_v4().to_string();
+    let request = Uuid::now_v7().to_string();
+    let payload = json!({"items":[{"project_id":project,"update_id":id,"read":true}]});
+    let response = |value: Result<Reply, project_application::AppError>| match value {
+        Ok(reply) | Err(project_application::AppError::Rejected(reply)) => reply,
+        Err(error) => panic!("{error:?}"),
+    };
+    let first = response(engine.receipts(&payload, &request, &engine.journal.epoch));
+    assert_eq!(first.http_status, 404);
+    let created = engine.mutate(Mutation { project_id: project.clone(), kind: Kind::Update, id: None, payload: json!({"id":id,"kind":"note","summary":"Later report","target":{"type":"project","id":project},"author":{"kind":"human","label":"Owner"}}), request_id:Uuid::now_v7().to_string(), epoch:engine.journal.epoch.clone(), expected:None }).unwrap();
+    assert_eq!(created.http_status, 200);
+    let second = response(engine.receipts(&payload, &request, &engine.journal.epoch));
+    assert_eq!(second.http_status, 404);
+    assert_eq!(
+        engine.get(&project, Kind::Update, &id).unwrap()["read"],
+        false
+    );
+}
+
+#[test]
+fn index_rebuild_cannot_finish_before_projection_succeeds() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    create(&engine, &project, "Rebuild target");
+    let plan = engine
+        .maintenance_plan(&json!({"operation":"index_rebuild","project_id":project}))
+        .unwrap();
+    let index = rusqlite::Connection::open(env.root.join("state/index.sqlite")).unwrap();
+    index.execute("DROP TABLE projection_issues", []).unwrap();
+    let _ = engine.commit_maintenance(
+        plan["plan_id"].as_str().unwrap(),
+        &Uuid::now_v7().to_string(),
+        &engine.journal.epoch,
+    );
+    let state: String = engine
+        .journal
+        .db()
+        .unwrap()
+        .query_row(
+            "SELECT state FROM workflow_jobs WHERE plan_id=?1",
+            [plan["plan_id"].as_str().unwrap()],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_ne!(state, "done");
+    drop(index);
+    drop(engine);
+    let engine = env.engine();
+    let state: String = engine
+        .journal
+        .db()
+        .unwrap()
+        .query_row(
+            "SELECT state FROM workflow_jobs WHERE plan_id=?1",
+            [plan["plan_id"].as_str().unwrap()],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(state, "done");
+    assert_eq!(
+        engine.list(Some("card"), &Query::default()).unwrap()["items"][0]["title"],
+        "Rebuild target"
+    );
+}

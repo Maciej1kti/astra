@@ -86,8 +86,21 @@ pub struct Plan {
     pub view: Value,
     #[serde(default)]
     pub approved_root: Option<Value>,
+    #[serde(default)]
+    pub collection_guard: Option<(String, Vec<String>)>,
 }
 impl Plan {
+    fn collection_matches(&self) -> Result<bool, AppError> {
+        let Some((path, expected)) = &self.collection_guard else {
+            return Ok(true);
+        };
+        let directory = Directory::open(Path::new(path))?;
+        let mut actual = directory.names()?;
+        actual.retain(|name| name.ends_with(".md"));
+        actual.sort();
+        Ok(&actual == expected)
+    }
+
     pub(crate) fn command(&self, request_id: &str, epoch: &str) -> Command {
         Command {
             request_id: request_id.into(),
@@ -148,6 +161,17 @@ impl Workflows<'_> {
         now: i64,
         checkpoint: impl FnMut(usize) -> Result<(), AppError>,
     ) -> Result<Reply, AppError> {
+        self.commit_with_completion(plan_id, request_id, epoch, now, checkpoint, || Ok(()))
+    }
+    pub(crate) fn commit_with_completion(
+        &self,
+        plan_id: &str,
+        request_id: &str,
+        epoch: &str,
+        now: i64,
+        checkpoint: impl FnMut(usize) -> Result<(), AppError>,
+        completion: impl FnMut() -> Result<(), AppError>,
+    ) -> Result<Reply, AppError> {
         let plan = self.plan(plan_id)?;
         let command = plan.command(request_id, epoch);
         if let Some(reply) = self.journal.admit(&command, now)? {
@@ -165,6 +189,9 @@ impl Workflows<'_> {
         }
         if self.journal.has_pending(&plan.project_id)? {
             return reject("PROJECT_RECOVERY_REQUIRED");
+        }
+        if !plan.collection_matches()? {
+            return reject("PLAN_STALE");
         }
         for step in &plan.steps {
             if step.read()? != step.before {
@@ -197,7 +224,7 @@ impl Workflows<'_> {
         }
         // The original acceptance result always identifies the same durable job.
         // A failed attempt leaves the job available for diagnostics/recovery.
-        let _ = self.resume_with(&job_id, checkpoint);
+        let _ = self.resume_with_completion(&job_id, checkpoint, completion);
         Ok(reply)
     }
     pub fn resume(&self, id: &str) -> Result<(), AppError> {
@@ -206,7 +233,15 @@ impl Workflows<'_> {
     pub fn resume_with(
         &self,
         id: &str,
+        checkpoint: impl FnMut(usize) -> Result<(), AppError>,
+    ) -> Result<(), AppError> {
+        self.resume_with_completion(id, checkpoint, || Ok(()))
+    }
+    pub(crate) fn resume_with_completion(
+        &self,
+        id: &str,
         mut checkpoint: impl FnMut(usize) -> Result<(), AppError>,
+        mut completion: impl FnMut() -> Result<(), AppError>,
     ) -> Result<(), AppError> {
         let (plan_id, epoch, request_id, state, next): (String, String, String, String, i64) =
             self.journal.db()?.query_row(
@@ -273,6 +308,13 @@ impl Workflows<'_> {
                 "UPDATE workflow_jobs SET next_step=?2 WHERE id=?1",
                 params![id, (index + 1) as i64],
             )?;
+        }
+        if let Err(error) = completion() {
+            self.journal.db()?.execute(
+                "UPDATE commands SET state='blocked' WHERE epoch=?1 AND request_id=?2",
+                params![epoch, request_id],
+            )?;
+            return Err(error);
         }
         let mut db = self.journal.db()?;
         let tx = db.transaction()?;

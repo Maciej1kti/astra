@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { applyTheme, readTheme } from "./lib/appearance";
+  onMount(() => applyTheme(readTheme()));
   import { modal } from "./lib/dialog";
+  import Board from "./lib/Board.svelte";
   import Editor from "./lib/Editor.svelte";
   import Settings from "./lib/Settings.svelte";
   let settings = $state(false);
@@ -26,6 +29,7 @@
     type Bootstrap,
     type Summary,
     type Resource,
+    type Pending,
   } from "./lib/api";
   type View =
     "focus" | "projects" | "board" | "calendar" | "gantt" | "list" | "updates";
@@ -44,7 +48,10 @@
     label: string;
     date?: string;
   };
+  let registrationPending = $state<Pending | null>(null),
+    registrationJob = $state<string | null>(null);
   let attentionRows = $state<Attention[]>([]);
+  let pageHistory = $state<Record<string, (string | null)[]>>({});
   let pageCursors = $state<Record<string, string | null>>({});
   let unreadOnly = $state(false);
   let refreshGeneration = 0;
@@ -59,9 +66,17 @@
     milestones = $state<Summary[]>([]),
     updates = $state<Summary[]>([]),
     focus = $state<{ project_id: string; card_id: string }[]>([]);
+  const initialRoute = new URLSearchParams(location.search);
+  const validId = (id: string | null): id is string =>
+    !!id &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
+      id,
+    );
   let view = $state<View>("focus"),
-    project = $state(""),
-    search = $state(""),
+    project = $state(
+      validId(initialRoute.get("project")) ? initialRoute.get("project")! : "",
+    ),
+    search = $state(initialRoute.get("q") ?? ""),
     collection = $state("cards"),
     error = $state(""),
     loading = $state(true),
@@ -82,7 +97,11 @@
   let directories = $state<
     { name: string; relative_path: string; registered: boolean }[]
   >([]);
-  let month = $state(new Date().toISOString().slice(0, 7));
+  let month = $state(
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(initialRoute.get("month") ?? "")
+      ? initialRoute.get("month")!
+      : new Date().toISOString().slice(0, 7),
+  );
   let source: EventSource | undefined,
     refreshTimer: ReturnType<typeof setTimeout> | undefined;
   const views: View[] = [
@@ -110,15 +129,13 @@
       (c) =>
         (!project || c.project_id === project) &&
         !c.archived &&
-        c.title.toLowerCase().includes(search.toLowerCase()),
+        (view === "list" ||
+          c.title.toLowerCase().includes(search.toLowerCase())),
     ),
   );
   let visibleUpdates = $derived(
     updates.filter(
-      (c) =>
-        (!project || c.project_id === project) &&
-        (!unreadOnly || !c.read) &&
-        c.title.toLowerCase().includes(search.toLowerCase()),
+      (c) => (!project || c.project_id === project) && (!unreadOnly || !c.read),
     ),
   );
   let days = $derived.by(() => {
@@ -148,10 +165,25 @@
       const preferences = await api<{
         preferences: { default_view?: View; week_start?: string };
       }>("/api/v1/workspace/preferences");
-      view = preferences.preferences.default_view ?? "focus";
+      view = views.includes(initialRoute.get("view") as View)
+        ? (initialRoute.get("view") as View)
+        : (preferences.preferences.default_view ?? "focus");
       weekStart = preferences.preferences.week_start ?? "monday";
       await refresh();
       connect();
+      const linked = initialRoute.get("resource"),
+        linkedType = initialRoute.get("type");
+      if (
+        !editor &&
+        project &&
+        validId(linked) &&
+        ["project", "card", "milestone", "update"].includes(linkedType ?? "")
+      )
+        await open({
+          project_id: project,
+          id: linked,
+          type: linkedType as Summary["type"],
+        });
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         boot = null;
@@ -173,7 +205,7 @@
 
   async function resourcePage(type: string, cursor?: string | null) {
     return api<{ items: Summary[]; page: { next_cursor: string | null } }>(
-      `/api/v1/views/list?type=${type}&limit=200${project ? `&project_id=${project}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      `/api/v1/views/list?type=${type}&limit=200${["list", "updates"].includes(view) && search.trim() ? `&q=${encodeURIComponent(search)}` : ""}${project ? `&project_id=${project}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
     );
   }
   async function refresh() {
@@ -231,23 +263,31 @@
     cards = c.items;
     milestones = m.items;
     updates = u.items;
+    pageHistory = { card: [null], milestone: [null], update: [null] };
     pageCursors = {
       card: c.page.next_cursor,
       milestone: m.page.next_cursor,
       update: u.page.next_cursor,
     };
   }
-  async function more(type: string) {
-    if (loadingMore || !pageCursors[type]) return;
+  async function more(type: string, back = false) {
+    if (
+      loadingMore ||
+      (!back && !pageCursors[type]) ||
+      (back && (pageHistory[type]?.length ?? 0) < 2)
+    )
+      return;
     loadingMore = true;
     const generation = refreshGeneration;
     try {
-      const next = await resourcePage(type, pageCursors[type]);
+      const history = pageHistory[type] ?? [null];
+      const target = back ? history[history.length - 2] : pageCursors[type];
+      const next = await resourcePage(type, target);
       if (generation !== refreshGeneration) return;
-      if (type === "card") cards = [...cards, ...next.items];
-      else if (type === "milestone")
-        milestones = [...milestones, ...next.items];
-      else updates = [...updates, ...next.items];
+      pageHistory[type] = back ? history.slice(0, -1) : [...history, target];
+      if (type === "card") cards = next.items;
+      else if (type === "milestone") milestones = next.items;
+      else updates = next.items;
       pageCursors[type] = next.page.next_cursor;
     } catch (e) {
       message(e);
@@ -334,6 +374,7 @@
   }
   async function addProject() {
     adding = true;
+    if (registrationPending) return;
     plan = null;
     error = "";
     try {
@@ -346,6 +387,7 @@
     }
   }
   async function browse(path: string) {
+    if (registrationPending) return;
     relative = path;
     plan = null;
     try {
@@ -377,13 +419,27 @@
     if (!plan) return;
     busy = true;
     try {
-      const result = await send(
-        command("/api/v1/registrations", "POST", { plan_id: plan.plan_id }),
+      if (!registrationJob) {
+        registrationPending ??= command("/api/v1/registrations", "POST", {
+          plan_id: plan.plan_id,
+        });
+        const result = await send(registrationPending);
+        registrationJob = result.job_id ?? null;
+        if (!registrationJob)
+          throw new Error(
+            "Registration result is pending. Retry the same request.",
+          );
+      }
+      const job = await api<{ state: string }>(
+        `/api/v1/jobs/${registrationJob}`,
       );
-      const job = await api<{ state: string }>(`/api/v1/jobs/${result.job_id}`);
       if (job.state !== "done")
-        throw new Error(`Registration is ${job.state}. Job: ${result.job_id}`);
+        throw new Error(
+          `Registration is ${job.state}. Job: ${registrationJob}`,
+        );
       adding = false;
+      registrationPending = null;
+      registrationJob = null;
       await refresh();
     } catch (e) {
       message(e);
@@ -411,17 +467,30 @@
       .toISOString()
       .slice(0, 7);
   }
-  function datesFor(day: string) {
-    return [
-      ...filtered,
-      ...milestones.filter((m) => !project || m.project_id === project),
-    ].filter(
-      (c) =>
-        c.due?.date === day ||
-        c.review_on === day ||
-        (c.schedule && c.schedule.start <= day && c.schedule.end >= day),
-    );
-  }
+  $effect(() => {
+    if (!boot) return;
+    const route = new URLSearchParams();
+    route.set("view", view);
+    if (project) route.set("project", project);
+    if (search) route.set("q", search);
+    if (view === "calendar" || view === "gantt") route.set("month", month);
+    if (editor?.resource) {
+      route.set("project", editor.project);
+      route.set("type", editor.type);
+      route.set("resource", editor.resource.metadata.id);
+    }
+    history.replaceState(null, "", `${location.pathname}?${route}`);
+  });
+  $effect(() => {
+    const query = search,
+      selectedView = view;
+    if (!boot || loading || !["list", "updates"].includes(selectedView)) return;
+    const timer = setTimeout(() => {
+      void query;
+      void refresh().catch(message);
+    }, 250);
+    return () => clearTimeout(timer);
+  });
   onMount(() => {
     void initialize();
     return () => {
@@ -594,9 +663,13 @@
               >{/each}</select
           ><input
             class="search"
-            aria-label="Filter titles"
+            aria-label={["list", "updates"].includes(view)
+              ? "Search content"
+              : "Filter loaded titles"}
             bind:value={search}
-            placeholder="Search titles…"
+            placeholder={["list", "updates"].includes(view)
+              ? "Search content…"
+              : "Filter loaded titles…"}
           />{#if view === "updates"}<label
               ><input type="checkbox" bind:checked={unreadOnly} /> Unread only</label
             >{/if}{#if view === "list"}<select
@@ -711,6 +784,13 @@
                 <button onclick={addProject}>Add your first project</button>
               </div>{/each}
           </div>
+        {:else if view === "board" && project}<Board
+            {project}
+            {search}
+            revision={viewRevision}
+            {open}
+            onchanged={() => void refresh().catch(message)}
+          />
         {:else if view === "board"}<div class="board">
             {#each statuses as status}<section class="column">
                 <div class="sectiontitle">
@@ -777,9 +857,7 @@
                 >Due date</span
               >
             </div>
-            {#each collection === "cards" ? filtered : milestones.filter((m) => (!project || m.project_id === project) && m.title
-                      .toLowerCase()
-                      .includes(search.toLowerCase())) as item}<button
+            {#each collection === "cards" ? filtered : milestones.filter((m) => !project || m.project_id === project) as item}<button
                 class="listrow"
                 onclick={() => open(item)}
                 ><div>
@@ -794,7 +872,7 @@
                 No items match this selection.
               </div>{/each}
           </div>{/if}
-        {#if ["board", "list", "updates"].includes(view)}{@const kind =
+        {#if ["board", "list", "updates"].includes(view) && (view !== "board" || !project)}{@const kind =
             view === "updates"
               ? "update"
               : view === "list" && collection === "milestones"
@@ -802,9 +880,18 @@
                 : "card"}{#if pageCursors[kind]}<div class="sectiontitle">
               <span>More resources are available.</span><button
                 disabled={loadingMore}
-                onclick={() => more(kind)}>Load more</button
+                onclick={() => more(kind)}>Next page</button
               >
             </div>{/if}{/if}
+        {#if ["list", "updates"].includes(view)}{@const kind =
+            view === "updates"
+              ? "update"
+              : collection === "milestones"
+                ? "milestone"
+                : "card"}{#if (pageHistory[kind]?.length ?? 0) > 1}<button
+              disabled={loadingMore}
+              onclick={() => more(kind, true)}>Previous page</button
+            >{/if}{/if}
         <footer class="pagefooter">
           Your files are the source of truth. <span>Local Projects · v0.1</span>
         </footer>
@@ -847,6 +934,7 @@
         >{:else}<label
           >Approved directory<select
             bind:value={root}
+            disabled={!!registrationPending || busy}
             onchange={() => browse("")}
             >{#each roots as r}<option value={r.id}>{r.label}</option
               >{/each}</select
@@ -869,19 +957,31 @@
         <label
           >Project name<input
             bind:value={projectName}
+            disabled={!!registrationPending || busy}
             placeholder="Use folder name"
           /></label
         ><label class="check"
-          ><input type="checkbox" bind:checked={tracked} /> Track .project files in
-          the project’s Git repository</label
+          ><input
+            type="checkbox"
+            disabled={!!registrationPending || busy}
+            bind:checked={tracked}
+          /> Track .project files in the project’s Git repository</label
         >{#if plan}<details open>
             <summary>Planned changes</summary>
             <pre>{JSON.stringify(plan, null, 2)}</pre>
           </details>
           <button class="primary" onclick={register} disabled={busy}
-            >Confirm registration</button
-          >{:else}<button class="primary" onclick={preview} disabled={busy}
-            >Preview registration</button
+            >{registrationJob
+              ? "Check registration"
+              : registrationPending
+                ? "Retry same registration"
+                : "Confirm registration"}</button
+          >{#if registrationPending}<p>
+              Request: {registrationPending.requestId}
+            </p>{/if}{:else}<button
+            class="primary"
+            onclick={preview}
+            disabled={busy}>Preview registration</button
           >{/if}{/if}{#if error}<p class="notice">{error}</p>{/if}
     </dialog>
   </div>{/if}
@@ -895,10 +995,54 @@
     --line: #e2e5dc;
     --green: #245840;
     --accent: #dce8a9;
+    --hover: #f0f3e8;
+    --soft: #edf0e6;
+    --notice-bg: #fff0e5;
+    --notice-ink: #803c22;
+    --notice-line: #efccb9;
+    --plan-bg: #dce8c8;
+    --review-bg: #eee8f4;
+    color-scheme: light;
     font-family: Inter, ui-sans-serif, system-ui, sans-serif;
     color: var(--ink);
     background: var(--bg);
     font-synthesis: none;
+  }
+  :global(:root[data-theme="dark"]) {
+    --bg: #17221d;
+    --paper: #202e27;
+    --ink: #e7eee4;
+    --muted: #a9b7aa;
+    --line: #46554a;
+    --green: #366748;
+    --accent: #405436;
+    --hover: #314236;
+    --soft: #2a392e;
+    --notice-bg: #463325;
+    --notice-ink: #ffcea5;
+    --notice-line: #8a6449;
+    --plan-bg: #364e30;
+    --review-bg: #45384f;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"]):not([data-theme="dark"])) {
+      --bg: #17221d;
+      --paper: #202e27;
+      --ink: #e7eee4;
+      --muted: #a9b7aa;
+      --line: #46554a;
+      --green: #366748;
+      --accent: #405436;
+      --hover: #314236;
+      --soft: #2a392e;
+      --notice-bg: #463325;
+      --notice-ink: #ffcea5;
+      --notice-line: #8a6449;
+      --plan-bg: #364e30;
+      --review-bg: #45384f;
+      color-scheme: dark;
+    }
   }
   :global(body) {
     margin: 0;
@@ -924,7 +1068,7 @@
   }
   :global(button:hover) {
     border-color: #a5b69e;
-    background: #f0f3e8;
+    background: var(--hover);
   }
   :global(button:disabled) {
     opacity: 0.5;
@@ -969,10 +1113,10 @@
     color: var(--muted);
   }
   :global(.notice) {
-    background: #fff0e5;
-    color: #803c22;
+    background: var(--notice-bg);
+    color: var(--notice-ink);
     padding: 14px;
-    border: 1px solid #efccb9;
+    border: 1px solid var(--notice-line);
     border-radius: 8px;
     overflow-wrap: anywhere;
   }
@@ -1079,7 +1223,7 @@
     padding: 30px 20px;
     position: fixed;
     inset: 0 auto 0 0;
-    background: #f0f2e9;
+    background: var(--soft);
     display: flex;
     flex-direction: column;
   }
@@ -1109,7 +1253,7 @@
     color: #7e8d7d;
   }
   nav button.chosen {
-    background: #e0e8cc;
+    background: var(--accent);
     font-weight: 650;
   }
   nav button.chosen .navicon {
@@ -1272,7 +1416,7 @@
   }
   .badge {
     font-size: 10px;
-    background: #edf0e6;
+    background: var(--soft);
     padding: 5px 8px;
     border-radius: 5px;
     white-space: nowrap;
@@ -1292,8 +1436,8 @@
     margin-left: auto;
   }
   .projectinitial {
-    background: #e4ead6;
-    color: #587344;
+    background: var(--accent);
+    color: var(--ink);
     padding: 12px;
     border-radius: 10px;
     display: inline-block;
@@ -1354,7 +1498,7 @@
     background: #cfab62;
   }
   .empty {
-    background: #f0f2e9;
+    background: var(--soft);
     border: 1px dashed #d4dbc9;
     padding: 30px;
     border-radius: 12px;
@@ -1410,7 +1554,7 @@
     gap: 4px;
   }
   .tags span {
-    background: #f2efdf;
+    background: var(--soft);
     padding: 3px 6px;
     font-size: 9px;
     border-radius: 4px;
@@ -1461,7 +1605,7 @@
     border-radius: 12px;
   }
   .updateicon {
-    background: #e5ebd6;
+    background: var(--soft);
     border-radius: 50%;
     padding: 12px;
     color: var(--green);
@@ -1477,7 +1621,7 @@
   .connection {
     padding: 12px;
     font-size: 12px;
-    background: #fff2d7;
+    background: var(--notice-bg);
     border-radius: 8px;
     margin-bottom: 16px;
   }

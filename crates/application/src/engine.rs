@@ -71,11 +71,22 @@ impl Engine {
             }
             let path = plan.view["display_path"].as_str().ok_or(AppError::State)?;
             if let Ok(handle) = engine.store_path(path, true) {
-                let _store = handle.lock().map_err(|_| AppError::State)?;
+                let store = handle.lock().map_err(|_| AppError::State)?;
                 let _ = (Workflows {
                     journal: &engine.journal,
                 })
-                .resume(&job);
+                .resume_with_completion(
+                    &job,
+                    |_| Ok(()),
+                    || {
+                        if plan.kind == "index_rebuild" {
+                            engine
+                                .index
+                                .refresh(&store, &plan.project_id, now_millis())?;
+                        }
+                        Ok(())
+                    },
+                );
             }
         }
         let (workspace, _) = engine.workspace()?;
@@ -277,6 +288,7 @@ impl Engine {
         })
         .save(&Plan {
             approved_root: None,
+            collection_guard: None,
             id: plan_id,
             kind: "registration".into(),
             project_id: id,
@@ -425,7 +437,12 @@ pub(crate) fn read(
     kind: Kind,
     id: &str,
 ) -> Result<(Value, String), AppError> {
-    let (directory, name) = store.location(kind, id, false)?;
+    let (directory, name) = match store.location(kind, id, false) {
+        Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Err(AppError::reject(404, "RESOURCE_NOT_FOUND"));
+        }
+        value => value?,
+    };
     let bytes = directory
         .read(&name)?
         .ok_or_else(|| AppError::reject(404, "RESOURCE_NOT_FOUND"))?;

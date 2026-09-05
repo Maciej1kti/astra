@@ -289,7 +289,7 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
 
     for (path, schema) in [
         (
-            format!("/api/v1/views/list?type=card&project_id={project}&limit=1"),
+            format!("/api/v1/views/list?type=card&project_id={project}&limit=1&q=socket"),
             "SummaryPage",
         ),
         ("/api/v1/search?q=socket".into(), "SummaryPage"),

@@ -4,6 +4,7 @@ use project_application::engine::Engine;
 use project_store::document::Kind;
 use std::{
     collections::{BTreeMap, BTreeSet},
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -17,25 +18,26 @@ pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
     let (sender, mut receiver) = mpsc::channel(1024);
     let overflow = Arc::new(AtomicBool::new(false));
     let lost = overflow.clone();
-    let mut watcher: RecommendedWatcher =
+    let mut watcher: Option<RecommendedWatcher> =
         match notify::recommended_watcher(move |event: notify::Result<Event>| {
             if sender.try_send(event).is_err() {
                 lost.store(true, Ordering::Relaxed);
             }
         }) {
-            Ok(watcher) => watcher,
+            Ok(watcher) => Some(watcher),
             Err(_) => {
-                eprintln!("Native source watcher unavailable");
-                return;
+                eprintln!("Native source watcher unavailable; reconciling every 30 seconds");
+                None
             }
         };
-    let mut watched = BTreeSet::new();
+    let mut watched: BTreeMap<PathBuf, (u64, u64)> = BTreeMap::new();
+    let mut retry_refresh = tokio::time::Instant::now() - Duration::from_secs(30);
     let mut projects = BTreeMap::new();
     let mut membership = tokio::time::interval(Duration::from_secs(2));
     membership.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let mut reconcile = tokio::time::interval_at(
-        tokio::time::Instant::now() + Duration::from_secs(900),
-        Duration::from_secs(900),
+        tokio::time::Instant::now() + Duration::from_secs(if watcher.is_some() { 900 } else { 30 }),
+        Duration::from_secs(if watcher.is_some() { 900 } else { 30 }),
     );
     reconcile.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
@@ -46,22 +48,37 @@ pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
                 let worker = engine.clone();
                 if let Ok(Ok((workspace,_))) = tokio::task::spawn_blocking(move || worker.workspace()).await {
                     projects = workspace["projects"].as_array().unwrap().iter().map(|p| (PathBuf::from(p["path"].as_str().unwrap()),p["project_id"].as_str().unwrap().to_owned())).collect();
-                    let desired: BTreeSet<_> = projects.keys().flat_map(|root| [root.clone(),root.join(".project"),root.join(".project/cards"),root.join(".project/milestones"),root.join(".project/updates")]).filter(|path| std::fs::symlink_metadata(path).is_ok_and(|m|m.is_dir() && !m.file_type().is_symlink())).collect();
-                    for path in watched.difference(&desired) { let _ = watcher.unwatch(path); }
-                    watched.retain(|path|desired.contains(path));
-                    for path in desired.difference(&watched).cloned().collect::<Vec<_>>() {
-                        if watcher.watch(&path, RecursiveMode::NonRecursive).is_ok() { watched.insert(path); }
-                        else { overflow.store(true,Ordering::Relaxed); }
+                    let desired: BTreeMap<_,_> = projects.keys().flat_map(|root| [root.clone(),root.join(".project"),root.join(".project/cards"),root.join(".project/milestones"),root.join(".project/updates")]).filter_map(|path| {
+                        std::fs::symlink_metadata(&path).ok().filter(|m| m.is_dir() && !m.file_type().is_symlink()).map(|m| (path,(m.dev(),m.ino())))
+                    }).collect();
+                    let mut changed = BTreeSet::new();
+                    if let Some(watcher) = &mut watcher {
+                        for (path, identity) in &watched {
+                            if desired.get(path) != Some(identity) { let _ = watcher.unwatch(path); changed.insert(path.clone()); }
+                        }
+                        watched.retain(|path, identity| desired.get(path) == Some(identity));
+                        for (path, identity) in &desired {
+                            if watched.contains_key(path) { continue; }
+                            if watcher.watch(path, RecursiveMode::NonRecursive).is_ok() {
+                                watched.insert(path.clone(), *identity);
+                                // Close the scan-before-watch gap, including replaced directories.
+                                changed.insert(path.clone());
+                            } else if retry_refresh.elapsed() >= Duration::from_secs(30) {
+                                eprintln!("Source watch registration failed; reconciling affected sources");
+                                overflow.store(true, Ordering::Relaxed);
+                            }
+                        }
                     }
+                    if !changed.is_empty() { refresh(&engine, &projects, Some(&changed)).await; }
                 }
-                if overflow.swap(false,Ordering::Relaxed) { refresh(&engine, &projects, None).await; }
+                if overflow.swap(false,Ordering::Relaxed) { refresh(&engine, &projects, None).await; retry_refresh = tokio::time::Instant::now(); }
             },
             _ = reconcile.tick() => {
                 refresh(&engine, &projects, None).await;
                 let worker=engine.clone();
                 let _=tokio::task::spawn_blocking(move || worker.journal.retain(project_application::now_millis())).await;
             },
-            event = receiver.recv() => {
+            event = receiver.recv(), if watcher.is_some() => {
                 let Some(event) = event else { break; };
                 let mut paths = BTreeSet::new();
                 collect(event, &mut paths, &overflow);

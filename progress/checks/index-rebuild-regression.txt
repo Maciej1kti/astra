@@ -1,0 +1,24 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.50s
+     Running tests/engine.rs (target/debug/deps/engine-fd668dbc7893c6cc)
+
+running 1 test
+test index_rebuild_cannot_finish_before_projection_succeeds ... FAILED
+
+failures:
+
+---- index_rebuild_cannot_finish_before_projection_succeeds stdout ----
+
+thread 'index_rebuild_cannot_finish_before_projection_succeeds' (4568390) panicked at crates/application/tests/engine.rs:959:5:
+assertion `left != right` failed
+  left: "done"
+ right: "done"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    index_rebuild_cannot_finish_before_projection_succeeds
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 22 filtered out; finished in 0.31s
+
+error: test failed, to rerun pass `-p project-application --test engine`

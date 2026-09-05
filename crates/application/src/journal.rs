@@ -65,6 +65,24 @@ pub struct Journal {
     lease: Lease,
 }
 impl Journal {
+    /// Persist definite preflight rejections; transient storage failures remain retryable.
+    pub(crate) fn reject_error(
+        &self,
+        command: &Command,
+        error: AppError,
+        now: i64,
+    ) -> Result<Reply, AppError> {
+        match error {
+            AppError::Rejected(mut reply) => {
+                reply.body["error"]["request_id"] = json!(command.request_id);
+                Ok(self
+                    .record(command, &reply, None, now, true)?
+                    .unwrap_or(reply))
+            }
+            error => Err(error),
+        }
+    }
+
     /// Explicit recovery of a stopped-server copy invalidates old client intentions.
     pub fn rotate_after_restore(&mut self, now: i64) -> Result<(), AppError> {
         let epoch = Uuid::new_v4().to_string();

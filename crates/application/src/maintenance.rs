@@ -69,6 +69,7 @@ impl Engine {
         }
         let old_path = path.clone();
         let mut steps = Vec::new();
+        let mut collection_guard = None;
         let mut warnings = Vec::new();
         let kind = match request {
             Maintenance::Normalize {
@@ -110,6 +111,16 @@ impl Engine {
                 }
                 let handle = self.store(&project)?;
                 let store = handle.lock().map_err(|_| AppError::State)?;
+                let directory = store
+                    .directory
+                    .child(kind.directory().ok_or(AppError::State)?, false)?;
+                let mut names = directory.names()?;
+                names.retain(|name| name.ends_with(".md"));
+                names.sort();
+                collection_guard = Some((
+                    directory.path().to_str().ok_or(AppError::State)?.to_owned(),
+                    names,
+                ));
                 let mut values = collection(&store, kind)?;
                 values.sort_by(|a, b| {
                     a.0["metadata"]["status"]
@@ -230,6 +241,7 @@ impl Engine {
             steps,
             view: view.clone(),
             approved_root: None,
+            collection_guard,
         })?;
         Ok(view)
     }
@@ -276,7 +288,23 @@ impl Engine {
             .as_ref()
             .map(|handle| handle.lock().map_err(|_| AppError::State))
             .transpose()?;
-        let reply = workflows.commit(plan_id, request, epoch, now_millis())?;
+        let reply = workflows.commit_with_completion(
+            plan_id,
+            request,
+            epoch,
+            now_millis(),
+            |_| Ok(()),
+            || {
+                if plan.kind == "index_rebuild" {
+                    self.index.refresh(
+                        store.as_ref().ok_or(AppError::State)?,
+                        &plan.project_id,
+                        now_millis(),
+                    )?;
+                }
+                Ok(())
+            },
+        )?;
         if let Some(job) = reply.body["job_id"].as_str()
             && workflows.job(job)?["state"] == "done"
         {

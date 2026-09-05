@@ -921,6 +921,20 @@ of command results. Optional unpinned history expires after 30 days or under a
 SQLite layouts have a version guard; there is no future source-format converter.
 Archive backup/restore remains deferred under the owner scope decision.
 
+### ADR-019 — Bounded full-text resource pages
+
+The global resource-list endpoint accepts optional `q` for full-text search within
+one resource type. The list/report screens request bounded pages and replace the
+current page instead of accumulating the entire archive in browser memory.
+Title-only filters in board/date views remain explicitly scoped to loaded results.
+
+### ADR-020 — Milestones in bounded timeline pages
+
+The Gantt endpoint pages cards and milestones together, using the existing typed
+Summary contract. Cards carry schedules and optional deadlines; milestone rows
+carry deadlines only. Dependencies remain card-to-card finish-to-start edges.
+Board pages continue to contain cards only. The combined page limit still applies.
+
 
 *Plik źródłowy: `docs/12-ADRS.md`.*
 

@@ -45,9 +45,14 @@ impl Engine {
             if !unique.insert((project, id)) {
                 return reject("DUPLICATE_RECEIPT");
             }
-            let handle = self.store(project)?;
+            let handle = match self.store(project) {
+                Ok(handle) => handle,
+                Err(error) => return self.journal.reject_error(&command, error, now),
+            };
             let store = handle.lock().map_err(|_| AppError::State)?;
-            read(&store, Kind::Update, id)?;
+            if let Err(error) = read(&store, Kind::Update, id) {
+                return self.journal.reject_error(&command, error, now);
+            }
         }
         let mut db = self.journal.db()?;
         if let Some(reply) = Journal::known(&db, &command)? {

@@ -110,7 +110,7 @@ impl Engine {
         bounded(limit, 500)?;
         self.index.with_snapshot(|db,revision|{
             let scope=json!(["gantt",revision,project,limit]);let start=offset(cursor,&scope)?;
-            let mut rows=rows(db,project,None,limit+1,start)?;let more=rows.len()>limit as usize;rows.truncate(limit as usize);
+            let mut rows=rows(db,project,None,limit+1,start,true)?;let more=rows.len()>limit as usize;rows.truncate(limit as usize);
             let mut edges=Vec::new();
             let mut warnings=Vec::new();
             for row in &rows {
@@ -128,7 +128,7 @@ impl Engine {
                     }
                 }
             }
-            Ok(json!({"rows":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"edges":edges,"page":page(&scope,revision,start,rows.len(),more),"warnings":warnings}))
+            Ok(json!({"rows":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"edges":edges,"page":page(&scope,revision,start,rows.len(),more),"warnings":warnings.into_iter().take(100).collect::<Vec<_>>()}))
         })
     }
     pub fn board(
@@ -143,7 +143,7 @@ impl Engine {
             let (selected,start)=if let Some(cursor)=cursor{let value:Value=serde_json::from_str(cursor).map_err(|_|AppError::reject(400,"INVALID_CURSOR"))?;if value[0]!=scope{return Err(AppError::reject(409,"PAGE_STALE"));}(value[1].as_str().ok_or(AppError::State)?.to_owned(),value[2].as_u64().filter(|n|*n<=i64::MAX as u64).ok_or(AppError::State)?)}else{(String::new(),0)};
             let mut columns=Vec::new();
             for status in ["planned","active","review","done","cancelled"]{
-                let start=if selected==status{start}else{0};let mut values=rows(db,project,Some(status),limit+1,start)?;
+                let start=if selected==status{start}else{0};let mut values=rows(db,project,Some(status),limit+1,start,false)?;
                 let more=values.len()>limit as usize;values.truncate(limit as usize);
                 let total:i64=db.query_row("SELECT count(*) FROM documents WHERE project_id=?1 AND entity_type='card' AND json_extract(metadata_json,'$.status')=?2 AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0",[project,status],|r|r.get(0))?;
                 let mut page=page(&scope,revision,start,values.len(),more);page["next_cursor"]=json!(more.then(||json!([scope,status,start+values.len()as u64]).to_string()));
@@ -159,22 +159,27 @@ fn rows(
     status: Option<&str>,
     limit: u32,
     offset: u64,
+    include_milestones: bool,
 ) -> Result<Vec<Indexed>, AppError> {
-    let mut statement=db.prepare("SELECT entity_id,source_hash,metadata_json,validity FROM documents WHERE project_id=?1 AND entity_type='card' AND (?2 IS NULL OR json_extract(metadata_json,'$.status')=?2) AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0 ORDER BY json_extract(metadata_json,'$.status'),json_extract(metadata_json,'$.position'),entity_id LIMIT ?3 OFFSET ?4")?;
+    let mut statement=db.prepare("SELECT entity_id,source_hash,metadata_json,validity,entity_type FROM documents WHERE project_id=?1 AND (entity_type='card' OR (?5 AND entity_type='milestone')) AND (?2 IS NULL OR json_extract(metadata_json,'$.status')=?2) AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0 ORDER BY entity_type,json_extract(metadata_json,'$.status'),json_extract(metadata_json,'$.position'),entity_id LIMIT ?3 OFFSET ?4")?;
     statement
-        .query_map(params![project, status, limit, offset as i64], |r| {
-            Ok((
-                r.get::<_, String>(0)?,
-                r.get::<_, String>(1)?,
-                r.get::<_, String>(2)?,
-                r.get::<_, String>(3)?,
-            ))
-        })?
+        .query_map(
+            params![project, status, limit, offset as i64, include_milestones],
+            |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, String>(2)?,
+                    r.get::<_, String>(3)?,
+                    r.get::<_, String>(4)?,
+                ))
+            },
+        )?
         .map(|r| {
-            let (id, version, metadata, validity) = r?;
+            let (id, version, metadata, validity, kind) = r?;
             Ok(Indexed {
                 project_id: project.into(),
-                kind: "card".into(),
+                kind,
                 id,
                 version,
                 metadata: serde_json::from_str(&metadata).map_err(|_| AppError::State)?,

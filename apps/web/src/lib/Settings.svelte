@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { applyTheme, readTheme, type Theme } from "./appearance";
+  let theme = $state<Theme>(readTheme());
   import { modal } from "./dialog";
   import { api, command, send, ApiError, type Pending } from "./api";
   let { onclose, onsaved }: { onclose: () => void; onsaved: () => void } =
@@ -178,6 +180,16 @@
       disabled={!baseline || busy || !!pending}>Save preferences</button
     >
   </form>
+  <h3>Appearance on this browser</h3>
+  <label
+    >Theme<select
+      aria-label="Theme"
+      bind:value={theme}
+      onchange={() => applyTheme(theme)}
+      ><option value="system">System</option><option value="light">Light</option
+      ><option value="dark">Dark</option></select
+    ></label
+  >
   <h3>Browser access</h3>
   <p>Revoke a device to end its session and stop future requests.</p>
   {#each sessions as session}<div class="item">

@@ -2,3 +2,7 @@
 GET /api/v1/views/list?type=card&limit=50 HTTP/1.1
 Host: projects.example
 Accept: application/json
+
+### Full-text search within updates
+GET /api/v1/views/list?type=update&q=review&limit=50 HTTP/1.1
+Host: projects.example.test

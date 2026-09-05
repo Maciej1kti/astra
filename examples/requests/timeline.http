@@ -1,0 +1,5 @@
+# Timeline pages contain typed card and milestone summaries.
+GET /api/v1/views/gantt?project_id=10000000-0000-4000-8000-000000000001&limit=50
+Accept: application/json
+
+# Pass page.next_cursor unchanged to fetch the next bounded page.

@@ -2714,7 +2714,7 @@
         "tags": [
           "views"
         ],
-        "summary": "getGantt",
+        "summary": "Get bounded card and milestone timeline rows",
         "description": "",
         "responses": {
           "200": {
@@ -3126,6 +3126,16 @@
             "schema": {
               "type": "boolean",
               "default": false
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Optional full-text search within this resource type.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
             }
           }
         ]

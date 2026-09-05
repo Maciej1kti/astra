@@ -88,7 +88,10 @@ impl Engine {
             Err(AppError::Rejected(reply)) => return reject(reply),
             Err(error) => return Err(error),
         }
-        let handle = self.store(&project_id)?;
+        let handle = match self.store(&project_id) {
+            Ok(handle) => handle,
+            Err(error) => return self.journal.reject_error(&command, error, now_millis()),
+        };
         let mut store = handle.lock().map_err(|_| AppError::State)?;
         let now = now_millis();
         let (next, references) = match prepare(&self.journal, &store, &command, create, now) {

@@ -33,13 +33,24 @@
     busy = true;
     error = "";
     try {
-      await send(pending);
+      const result = await send(pending);
+      if (result.state) {
+        error = `Command is ${result.state}. Check its status before retrying.`;
+        return;
+      }
       onsaved();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
       if (e instanceof ApiError && e.status < 500) {
         pending = null;
-        if ([409, 412].includes(e.status)) conflict = await api<Resource>(path);
+        if ([409, 412].includes(e.status)) {
+          try {
+            conflict = await api<Resource>(path);
+          } catch {
+            error +=
+              " The current resource is unavailable; your proposed dates remain here.";
+          }
+        }
       }
     } finally {
       busy = false;

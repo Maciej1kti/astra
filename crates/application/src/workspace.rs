@@ -95,9 +95,15 @@ impl Engine {
             for item in payload["items"].as_array().unwrap() {
                 let project = item["project_id"].as_str().unwrap();
                 let id = item["card_id"].as_str().unwrap();
-                let handle = self.store(project)?;
+                let handle = match self.store(project) {
+                    Ok(handle) => handle,
+                    Err(error) => return self.journal.reject_error(&command, error, now),
+                };
                 let store = handle.lock().map_err(|_| AppError::State)?;
-                let (card, hash) = read(&store, Kind::Card, id)?;
+                let (card, hash) = match read(&store, Kind::Card, id) {
+                    Ok(value) => value,
+                    Err(error) => return self.journal.reject_error(&command, error, now),
+                };
                 if card["metadata"]["archived"] == true {
                     return reject(409, "FOCUS_TARGET_ARCHIVED");
                 }

@@ -1,0 +1,24 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.03s
+     Running tests/engine.rs (target/debug/deps/engine-fd668dbc7893c6cc)
+
+running 1 test
+test missing_receipt_target_rejection_remains_stable_after_creation ... FAILED
+
+failures:
+
+---- missing_receipt_target_rejection_remains_stable_after_creation stdout ----
+
+thread 'missing_receipt_target_rejection_remains_stable_after_creation' (4553682) panicked at crates/application/tests/engine.rs:941:5:
+assertion `left == right` failed
+  left: 200
+ right: 404
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    missing_receipt_target_rejection_remains_stable_after_creation
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 21 filtered out; finished in 0.33s
+
+error: test failed, to rerun pass `-p project-application --test engine`

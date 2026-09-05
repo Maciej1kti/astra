@@ -2,8 +2,8 @@ openapi: 3.1.1
 info:
   title: Local Projects HTTP API
   version: 1.0.0
-  description: Normatywny kontrakt handoffu, nie spec wygenerowana z istniejącego serwera. Semantyka w docs/05,
-    trwałość w docs/04. Admin lokalny w contracts/local-ipc.json.
+  description: Normatywny kontrakt handoffu, nie spec wygenerowana z istniejącego
+    serwera. Semantyka w docs/05, trwałość w docs/04. Admin lokalny w contracts/local-ipc.json.
 servers:
 - url: /
 security:
@@ -15,8 +15,8 @@ paths:
       tags:
       - system
       summary: health
-      description: Implementacja publicznej odpowiedzi MUST ograniczyć treść do minimalnej gotowości; pełna diagnostyka
-        ma osobny endpoint.
+      description: Implementacja publicznej odpowiedzi MUST ograniczyć treść do minimalnej
+        gotowości; pełna diagnostyka ma osobny endpoint.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -77,7 +77,8 @@ paths:
       tags:
       - auth
       summary: createPairing
-      description: Same-origin + rate limit; ustawia pending HttpOnly cookie. Nie wymaga zaufanej sesji.
+      description: Same-origin + rate limit; ustawia pending HttpOnly cookie. Nie
+        wymaga zaufanej sesji.
       responses:
         '201':
           description: Poprawna odpowiedź
@@ -123,7 +124,8 @@ paths:
       tags:
       - auth
       summary: getCurrentPairing
-      description: Wymaga poprawnego pending cookie, nie zaufanej sesji. Nigdy nie zwraca pairing innego klienta.
+      description: Wymaga poprawnego pending cookie, nie zaufanej sesji. Nigdy nie
+        zwraca pairing innego klienta.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -144,7 +146,8 @@ paths:
       tags:
       - auth
       summary: claimPairing
-      description: Pending cookie i pending CSRF + Origin; kontrolowany exchange/grace według security spec.
+      description: Pending cookie i pending CSRF + Origin; kontrolowany exchange/grace
+        według security spec.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -518,8 +521,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch; do not
-            submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -621,7 +624,8 @@ paths:
       tags:
       - registration
       summary: unregisterProject
-      description: Usuwa wyłącznie wpis workspace. Nigdy nie usuwa folderu, .project ani AGENTS.
+      description: Usuwa wyłącznie wpis workspace. Nigdy nie usuwa folderu, .project
+        ani AGENTS.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -643,8 +647,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch; do not
-            submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -798,8 +802,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch; do not
-            submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -956,8 +960,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch; do not
-            submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -1139,8 +1143,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch; do not
-            submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -1208,8 +1212,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch; do not
-            submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -1231,8 +1235,8 @@ paths:
       tags:
       - workspace
       summary: setReadReceipts
-      description: Idempotentne ustawienie read; stan w SQLite, jedna transakcja z command result. Nie rozwiązuje
-        raportu.
+      description: Idempotentne ustawienie read; stan w SQLite, jedna transakcja z
+        command result. Nie rozwiązuje raportu.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -1252,8 +1256,8 @@ paths:
         '503': *id004
         '507': *id005
         '202':
-          description: The command is unresolved. Poll its status with the original request ID and epoch; do not
-            submit a new intention.
+          description: The command is unresolved. Poll its status with the original
+            request ID and epoch; do not submit a new intention.
           content:
             application/json:
               schema:
@@ -1301,7 +1305,7 @@ paths:
       operationId: getGantt
       tags:
       - views
-      summary: getGantt
+      summary: Get bounded card and milestone timeline rows
       description: ''
       responses:
         '200':
@@ -1336,7 +1340,8 @@ paths:
       tags:
       - views
       summary: getCalendar
-      description: from/to inclusive; max 400 dni. Brak project_id = bieżąca instancja, nie inne hosty.
+      description: from/to inclusive; max 400 dni. Brak project_id = bieżąca instancja,
+        nie inne hosty.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -1463,7 +1468,8 @@ paths:
       tags:
       - events
       summary: events
-      description: SSE event/data JSON. Cursor epoch:seq; brak replay → resync_required. Autoryzacja cookie.
+      description: SSE event/data JSON. Cursor epoch:seq; brak replay → resync_required.
+        Autoryzacja cookie.
       responses:
         '200':
           description: SSE stream
@@ -1496,8 +1502,9 @@ paths:
       tags:
       - views
       summary: Read a paginated workspace resource list
-      description: A bounded summary-only projection across registered projects. Optional project and field filters
-        use the same index and cursor rules as per-project collections.
+      description: A bounded summary-only projection across registered projects. Optional
+        project and field filters use the same index and cursor rules as per-project
+        collections.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -1556,6 +1563,13 @@ paths:
         schema:
           type: boolean
           default: false
+      - name: q
+        in: query
+        description: Optional full-text search within this resource type.
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 256
 components:
   securitySchemes:
     BrowserSession:
@@ -1694,8 +1708,8 @@ components:
       - 'null'
       - array
       - object
-      description: 'Ograniczone JSON values; poza schema: max depth 12, 10000 nodes, brak niebezpiecznych kluczy
-        prototypu w obiektach JS.'
+      description: 'Ograniczone JSON values; poza schema: max depth 12, 10000 nodes,
+        brak niebezpiecznych kluczy prototypu w obiektach JS.'
     Schedule:
       type: object
       properties:
@@ -2351,8 +2365,8 @@ components:
         required:
         - undo
         additionalProperties: false
-      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo wymaga If-Match bieżącego
-        targetu.
+      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo
+        wymaga If-Match bieżącego targetu.
     CardPatch:
       oneOf:
       - type: object
@@ -2449,8 +2463,8 @@ components:
         required:
         - undo
         additionalProperties: false
-      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo wymaga If-Match bieżącego
-        targetu.
+      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo
+        wymaga If-Match bieżącego targetu.
     CardCreate:
       type: object
       properties:
@@ -2525,8 +2539,8 @@ components:
         required:
         - undo
         additionalProperties: false
-      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo wymaga If-Match bieżącego
-        targetu.
+      description: Typed patch; set i clear nie mogą obejmować tego samego pola. Undo
+        wymaga If-Match bieżącego targetu.
     MilestoneCreate:
       type: object
       properties:
@@ -2879,7 +2893,8 @@ components:
           $ref: '#/components/schemas/UUID'
         read:
           type: boolean
-          description: Present for updates. Shared owner read receipt; does not resolve a report.
+          description: Present for updates. Shared owner read receipt; does not resolve
+            a report.
       required:
       - type
       - project_id
@@ -3430,7 +3445,8 @@ components:
           additionalProperties:
             type: integer
             minimum: 0
-          description: Counts of included objects; omitted has counts of excluded objects.
+          description: Counts of included objects; omitted has counts of excluded
+            objects.
         next_reads:
           type: array
           maxItems: 200
@@ -3450,7 +3466,8 @@ components:
             - type
             - id
             additionalProperties: false
-          description: Only resources of this project; the CLI formats safe follow-up reads.
+          description: Only resources of this project; the CLI formats safe follow-up
+            reads.
       required:
       - api_version
       - project

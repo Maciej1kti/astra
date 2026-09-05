@@ -17,6 +17,7 @@ fn recovery_rechecks_completed_steps_before_publishing_registration() {
     let workflows = Workflows { journal: &journal };
     let plan = Plan {
         approved_root: None,
+        collection_guard: None,
         id: Uuid::new_v4().to_string(),
         kind: "registration".into(),
         project_id: Uuid::new_v4().to_string(),

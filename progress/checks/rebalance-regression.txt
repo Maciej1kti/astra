@@ -1,0 +1,21 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.82s
+     Running tests/engine.rs (target/debug/deps/engine-fd668dbc7893c6cc)
+
+running 1 test
+
+thread 'rebalance_rejects_new_collection_members_and_replays_rejection' (4527165) panicked at crates/application/tests/engine.rs:857:5:
+assertion `left == right` failed
+  left: 202
+ right: 409
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test rebalance_rejects_new_collection_members_and_replays_rejection ... FAILED
+
+failures:
+
+failures:
+    rebalance_rejects_new_collection_members_and_replays_rejection
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 19 filtered out; finished in 0.42s
+
+error: test failed, to rerun pass `-p project-application --test engine`

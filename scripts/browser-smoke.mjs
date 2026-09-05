@@ -286,6 +286,20 @@ try {
   assert.equal(cli("get",path).metadata.schedule.end,"2026-09-13");
   await page.getByRole("button",{name:"Cancel",exact:true}).click();
 
+  try { await page.getByRole("button",{name:"Move plan: Competing timeline edit",exact:true}).click(); } catch (error) { console.error(await page.locator("body").innerText(), errors, daemonLog); throw error; }
+  await page.getByLabel("Planned end",{exact:true}).fill("2026-09-14");
+  await page.route(`**${path}`,async route=>{
+    if(route.request().method()==="PATCH") await route.fulfill({status:202,contentType:"application/json",body:JSON.stringify({state:"prepared"})});
+    else await route.continue();
+  });
+  await page.getByRole("button",{name:"Save planned dates",exact:true}).click();
+  await page.getByText("Command is prepared.",{exact:false}).waitFor({timeout:2000});
+  assert.equal(cli("get",path).metadata.schedule.end,"2026-09-13");
+  await page.unroute(`**${path}`);
+  await page.getByRole("button",{name:"Retry same command",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(cli("get",path).metadata.schedule.end,"2026-09-14");
+
   const agentContext = cli("--project", folder, "context", "--max-bytes", "4096", "--json");
   assert(Buffer.byteLength(JSON.stringify(agentContext)) <= 4096);
   const typedCard = cli("--project", folder, "card", "create", "--title", "Typed CLI task");
@@ -295,9 +309,53 @@ try {
   await writeFile(patchFile, JSON.stringify({set:{status:"active"}}));
   cli("--project", folder, "card", "set", typedId, "--patch-file", patchFile, "--if-version", typedCard.result.resource.version);
   assert.equal(cli("--project", folder, "card", "get", typedId).metadata.status, "active");
+  await page.getByRole("button",{name:"Board",exact:true}).click();
+  await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("planned");
+  await page.getByRole("button",{name:"Confirm move",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(cli("--project",folder,"card","get",typedId).metadata.status,"planned");
+  const boardHandle=page.getByRole("button",{name:"Reorder: Typed CLI task",exact:true});
+  const boardTarget=page.locator(`[data-board-card="${cards[0].id}"] .title`);
+  const sourceBounds=await boardHandle.boundingBox(),targetBounds=await boardTarget.boundingBox();
+  await page.mouse.move(sourceBounds.x+sourceBounds.width/2,sourceBounds.y+sourceBounds.height/2);await page.mouse.down();
+  await page.mouse.move(targetBounds.x+targetBounds.width/2,targetBounds.y+targetBounds.height/2,{steps:6});await page.mouse.up();
+  await page.getByRole("button",{name:"Confirm move",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  const ordered=cli("--project",folder,"card","list","--status","planned").items;
+  assert.equal(ordered[0].id,typedId);
+  await page.screenshot({path:join(root,"progress/screenshots/desktop-board.png"),fullPage:true});
+  await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("planned");
+  await page.getByLabel("Position",{exact:true}).selectOption("");
+  await page.getByRole("button",{name:"Confirm move",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(cli("--project",folder,"card","list","--status","planned").items.at(-1).id,typedId);
+
+  const milestoneFile=join(temp,"milestone.json");
+  await writeFile(milestoneFile,JSON.stringify({title:"Release gate",due:{date:"2026-09-30",kind:"hard"}}));
+  cli("command","POST",`/api/v1/projects/${plan.project_id}/milestones`,"--json-file",milestoneFile);
+  await page.getByRole("button",{name:"Timeline",exact:true}).click();
+  await page.getByRole("button",{name:"hard milestone deadline: Release gate",exact:true}).waitFor();
+  await page.getByRole("button",{name:"Calendar",exact:true}).click();
+  await page.getByLabel("Calendar layout",{exact:true}).selectOption("week");
+  assert.equal(await page.locator("[data-calendar-day]").count(),7);
+  assert.equal(await page.locator("[data-calendar-day]").first().getAttribute("data-calendar-day"),"2026-08-31");
+  await page.getByLabel("Calendar layout",{exact:true}).selectOption("month");
+  await page.getByRole("button",{name:"List",exact:true}).click();
+  await page.getByLabel("Search content",{exact:true}).fill("untrusted");
+  await page.getByText("Competing timeline edit",{exact:true}).waitFor();
+  await page.getByText("Typed CLI task",{exact:true}).waitFor({state:"hidden"});
+  await page.getByLabel("Search content",{exact:true}).fill("");
+  await page.getByRole("button",{name:"Workspace settings",exact:true}).click();
+  await page.getByLabel("Theme",{exact:true}).selectOption("dark");
+  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),"dark");
+  await page.getByRole("button",{name:"Close settings",exact:true}).click();
+  await page.screenshot({path:join(root,"progress/screenshots/desktop-dark.png"),fullPage:true});
+  await page.reload();
+  await page.getByRole("heading",{name:"List.",exact:true}).waitFor();
+  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),"dark");
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict and gesture cancellation.",
+    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, milestone timeline, aligned calendar weeks, full-text search and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

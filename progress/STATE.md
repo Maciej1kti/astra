@@ -19,14 +19,14 @@ verified; preserve requirements from the temporary handoff until then.
 - Approved directory browsing and SSE invalidations.
 - Durable focus/preferences, conditional undo, history and browser settings.
 
-Latest verified report/view slice: evidence E010 (56 Rust tests; last browser coverage E009).
+Latest verified slice: evidence E011 (60 Rust tests and extended real HTTPS browser coverage).
 Workspace/history verification is recorded in E006; use `git status` for the exact
 working tree. The current source supersedes historical implementation claims in
 older evidence entries.
 
 ## Outstanding
 
-Complete calendar/Gantt/board interactions, maintenance edge cases,
+Finish remaining CLI ergonomics/validation, reconnect and drag races, operational diagnostics,
 remaining performance/security/fault coverage, CI/platform verification and final
 English documentation cleanup. Gate and acceptance completion remain unclaimed.
 

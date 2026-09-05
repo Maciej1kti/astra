@@ -66,6 +66,7 @@ pub(super) fn run(
                 &input,
                 &[
                     "type",
+                    "q",
                     "project_id",
                     "limit",
                     "cursor",
@@ -82,6 +83,7 @@ pub(super) fn run(
             }
             let query = Query {
                 project: fields.get("project_id").cloned(),
+                search: fields.get("q").cloned(),
                 limit: Some(number(&fields, "limit", 50)?),
                 cursor: fields.get("cursor").cloned(),
                 status: fields.get("status").cloned(),
@@ -96,7 +98,6 @@ pub(super) fn run(
                             .map_err(|_| AppError::reject(400, "INVALID_QUERY"))
                     })
                     .transpose()?,
-                ..Default::default()
             };
             engine.list(Some(resource_type), &query)?
         }

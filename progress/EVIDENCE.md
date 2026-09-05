@@ -162,3 +162,28 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
   graphs. Startup 8.06 s and reconciliation 5.03 s remain separate costs. RSS,
   overloaded profiles, physical device/platform tests and release acceptance
   remain unclaimed.
+
+## E011 — Bounded interactive views and maintenance preconditions
+
+- Board pages hold at most 50 cards per column and expose drag and keyboard
+  placement. Date and list pages replace bounded pages instead of accumulating
+  all rows. List/report searches query indexed title and body text.
+- Timeline pages include milestones and visible dependency connectors; calendar
+  weeks align to workspace week start, including neighboring month dates.
+- Date and registration requests retain their identity while outcomes are unknown.
+  URL view/project/filter/resource state supports direct navigation. Browser-local
+  light/dark/system appearance contains no project data or credentials.
+- Failing regressions proved and fixed rebalance collection changes, stable missing
+  receipt rejection, missing collection reads and index jobs finishing before their
+  projection succeeds. Index completion resumes after restart.
+- Native watchers reattach after directory identity changes and reconcile newly
+  watched paths. Watcher initialization failure falls back to 30-second scans.
+- Full local checks passed: 60 Rust tests, 3 Node tests, 4 Python tests, contracts,
+  zero Svelte diagnostics, strict Clippy and release build (`checks/full-check.txt`).
+- Extended real HTTPS browser smoke passed: drag and keyboard ordering, pending
+  date request retention, milestone timeline, aligned weeks, body search and dark
+  appearance persistence, in addition to previous tests (`checks/browser-smoke.txt`).
+  An earlier timeline refresh timeout did not recur in later runs; it is not proof
+  of all reconnect/drag races. Screenshots are synthetic browser fixtures.
+- CI for commit 3625b18 passed on Ubuntu 24.04 and macOS 15, run 33979005959.
+  This does not establish physical iPhone, Arch/ext4 or physical power-loss coverage.
