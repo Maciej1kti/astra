@@ -1,0 +1,21 @@
+# Przykład protokołu, nie plik z działającym tokenem. Narzędzie klienta musi
+# wygenerować nowe UUIDv7 i pobrać epoch/CSRF/version z działającej instancji.
+# GET detail zwraca ETag; PATCH zmienia plan, nie deadline.
+GET https://HOST.TAILNET.ts.net/api/v1/projects/PROJECT_ID/cards/CARD_ID
+Cookie: __Host-project_session=REPLACE_FROM_PAIRED_BROWSER
+
+###
+PATCH https://HOST.TAILNET.ts.net/api/v1/projects/PROJECT_ID/cards/CARD_ID
+Content-Type: application/json
+Origin: https://HOST.TAILNET.ts.net
+Cookie: __Host-project_session=REPLACE_FROM_PAIRED_BROWSER
+X-CSRF-Token: REPLACE_FROM_BOOTSTRAP
+X-Request-ID: REPLACE_WITH_FRESH_UUIDV7
+X-Command-Epoch: REPLACE_FROM_BOOTSTRAP
+If-Match: "r1.REPLACE_WITH_CURRENT_HASH"
+
+{"set":{"schedule":{"start":"2026-09-14","end":"2026-09-21"}},"clear":[]}
+
+# Utrata odpowiedzi: zachowaj wszystkie powyższe wartości (poza cookies/CSRF
+# po ponownym auth), sprawdź /commands/{request_id}?epoch=... . Nie generuj
+# nowego ID, nie aktualizuj If-Match i nie zakładaj, że zapis się nie udał.

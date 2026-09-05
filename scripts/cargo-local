@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if [ -x "$REPO_ROOT/.tools/cargo/bin/cargo" ]; then
+    export CARGO_HOME="$REPO_ROOT/.tools/cargo"
+    export RUSTUP_HOME="$REPO_ROOT/.tools/rustup"
+    export PATH="$CARGO_HOME/bin:$PATH"
+fi
+cd "$REPO_ROOT"
+exec cargo "$@"

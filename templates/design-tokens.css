@@ -1,0 +1,26 @@
+/* Proponowane tokeny startowe. Wymagają przeglądu kontrastu i testów UI;
+   nie stanowią obietnicy zgodności WCAG ani finalnego brandingu. */
+:root {
+  color-scheme: light;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --surface: #f6f7f9; --panel: #ffffff; --text: #17202a;
+  --muted: #546171; --border: #d1d7df; --accent: #2459ae;
+  --danger: #ab2638; --warning: #825300; --success: #226b4d;
+  --focus-ring: #1c63c7;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px;
+  --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  --radius-control: 6px; --radius-card: 9px;
+  --motion-fast: 140ms; --motion-panel: 180ms;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #14171c; --panel: #1d222a; --text: #edf1f7;
+  --muted: #a7b2c1; --border: #424c5c; --accent: #96bfff;
+  --danger: #ffa3aa; --warning: #edc777; --success: #88d2b0;
+  --focus-ring: #a4cbff;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0ms; --motion-panel: 0ms; }
+}
+/* Adapter musi rozwiązać prefers-color-scheme bez nadpisania jawnego wyboru.
+   Touch target 44px jest celem UI, nie globalnym paddingiem każdego wiersza. */

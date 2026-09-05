@@ -1,0 +1,1286 @@
+{
+  "version": 1,
+  "note": "Backlog wykonawczy agentów; nie importować automatycznie jako kart użytkownika do .project.",
+  "tasks": [
+    {
+      "id": "T01",
+      "phase": "G0",
+      "owner_role": "lead",
+      "title": "Inwentaryzacja i baseline",
+      "priority": "P0",
+      "status": "completed",
+      "depends_on": [],
+      "requirements": [
+        "R26",
+        "R33"
+      ],
+      "acceptance_tests": [
+        "A51"
+      ],
+      "deliverables": [
+        "repo inventory",
+        "progress/STATE",
+        "dependency policy"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": [
+        "progress/EVIDENCE.md",
+        "progress/checks/g0.txt"
+      ]
+    },
+    {
+      "id": "T02",
+      "phase": "G0",
+      "owner_role": "core",
+      "title": "Schema i typed models",
+      "priority": "P0",
+      "status": "completed",
+      "depends_on": [
+        "T01"
+      ],
+      "requirements": [
+        "R25",
+        "R26",
+        "R33"
+      ],
+      "acceptance_tests": [
+        "A14",
+        "A16",
+        "A51"
+      ],
+      "deliverables": [
+        "Rust domain types",
+        "TS generated contract",
+        "fixtures tests"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": [
+        "progress/EVIDENCE.md",
+        "progress/checks/g0.txt"
+      ]
+    },
+    {
+      "id": "T03",
+      "phase": "G0",
+      "owner_role": "lead",
+      "title": "Workspace build i lokalne CI",
+      "priority": "P0",
+      "status": "completed",
+      "depends_on": [
+        "T01"
+      ],
+      "requirements": [
+        "R26",
+        "R28",
+        "R33",
+        "R36"
+      ],
+      "acceptance_tests": [
+        "A42",
+        "A51"
+      ],
+      "deliverables": [
+        "Cargo workspace",
+        "web build",
+        "checks one-command"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": [
+        "progress/EVIDENCE.md",
+        "progress/checks/g0.txt"
+      ]
+    },
+    {
+      "id": "T04",
+      "phase": "G1",
+      "owner_role": "store",
+      "title": "Parser i canonical serializer",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T02",
+        "T03"
+      ],
+      "requirements": [
+        "R21",
+        "R26"
+      ],
+      "acceptance_tests": [
+        "A13",
+        "A14",
+        "A15"
+      ],
+      "deliverables": [
+        "bounded parser",
+        "round-trip",
+        "normalization plan"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T05",
+      "phase": "G1",
+      "owner_role": "core",
+      "title": "Daty, graf, rank i alerts",
+      "priority": "P0",
+      "status": "in_progress",
+      "depends_on": [
+        "T02"
+      ],
+      "requirements": [
+        "R07",
+        "R09",
+        "R12",
+        "R18",
+        "R20",
+        "R25"
+      ],
+      "acceptance_tests": [
+        "A16",
+        "A18",
+        "A19",
+        "A20",
+        "A36",
+        "A57"
+      ],
+      "deliverables": [
+        "pure domain rules",
+        "property tests"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": [
+        "progress/EVIDENCE.md",
+        "progress/checks/g0.txt"
+      ]
+    },
+    {
+      "id": "T06",
+      "phase": "G1",
+      "owner_role": "store",
+      "title": "Path policy i leases",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T03"
+      ],
+      "requirements": [
+        "R02",
+        "R16",
+        "R21",
+        "R29"
+      ],
+      "acceptance_tests": [
+        "A28",
+        "A44",
+        "A56"
+      ],
+      "deliverables": [
+        "safe filesystem adapter",
+        "instance/project lock"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T07",
+      "phase": "G1",
+      "owner_role": "store",
+      "title": "State journal i command epoch",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T02",
+        "T06"
+      ],
+      "requirements": [
+        "R19",
+        "R27"
+      ],
+      "acceptance_tests": [
+        "A07",
+        "A08",
+        "A09",
+        "A54"
+      ],
+      "deliverables": [
+        "SQLite migrations",
+        "retry policy"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T08",
+      "phase": "G1",
+      "owner_role": "store",
+      "title": "Durable one-file commit",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T04",
+        "T07"
+      ],
+      "requirements": [
+        "R18",
+        "R20"
+      ],
+      "acceptance_tests": [
+        "A05",
+        "A10",
+        "A11",
+        "A57"
+      ],
+      "deliverables": [
+        "atomic write platform adapter",
+        "fault hooks"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T09",
+      "phase": "G1",
+      "owner_role": "store",
+      "title": "Recovery i uncertain state",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T08"
+      ],
+      "requirements": [
+        "R19",
+        "R20",
+        "R22",
+        "R24"
+      ],
+      "acceptance_tests": [
+        "A06",
+        "A10",
+        "A11",
+        "A52"
+      ],
+      "deliverables": [
+        "recovery runner",
+        "operator diagnostics"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T10",
+      "phase": "G1",
+      "owner_role": "api",
+      "title": "Minimal HTTP i UDS",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T02",
+        "T03"
+      ],
+      "requirements": [
+        "R04",
+        "R34"
+      ],
+      "acceptance_tests": [
+        "A46",
+        "A47"
+      ],
+      "deliverables": [
+        "shared command dispatcher",
+        "UDS principal",
+        "HTTP skeleton"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T11",
+      "phase": "G1",
+      "owner_role": "ui",
+      "title": "Próba kalendarza dotykowego",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T03"
+      ],
+      "requirements": [
+        "R08",
+        "R09",
+        "R13",
+        "R25"
+      ],
+      "acceptance_tests": [
+        "A32",
+        "A58"
+      ],
+      "deliverables": [
+        "real widget prototype",
+        "license/bundle report"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T12",
+      "phase": "G1",
+      "owner_role": "ui",
+      "title": "Próba Gantta dotykowego",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T03"
+      ],
+      "requirements": [
+        "R08",
+        "R09",
+        "R13",
+        "R23",
+        "R25"
+      ],
+      "acceptance_tests": [
+        "A23",
+        "A32",
+        "A58"
+      ],
+      "deliverables": [
+        "real widget prototype",
+        "choice ADR"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T13",
+      "phase": "G1",
+      "owner_role": "qa",
+      "title": "Harness awarii",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T06",
+        "T07"
+      ],
+      "requirements": [
+        "R20",
+        "R27"
+      ],
+      "acceptance_tests": [
+        "A10",
+        "A11",
+        "A60"
+      ],
+      "deliverables": [
+        "fault matrix execution",
+        "isolated tmp filesystem fixtures"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T14",
+      "phase": "G2",
+      "owner_role": "core",
+      "title": "Rejestracja i workspace",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T04",
+        "T06",
+        "T09"
+      ],
+      "requirements": [
+        "R01",
+        "R03",
+        "R16",
+        "R20",
+        "R27",
+        "R34"
+      ],
+      "acceptance_tests": [
+        "A01",
+        "A02",
+        "A03",
+        "A60"
+      ],
+      "deliverables": [
+        "registration plans",
+        "resume workflow",
+        "workspace writes"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T15",
+      "phase": "G2",
+      "owner_role": "api",
+      "title": "Pierwsze create/get/patch + CLI",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T05",
+        "T09",
+        "T10",
+        "T14"
+      ],
+      "requirements": [
+        "R04",
+        "R18",
+        "R19",
+        "R24"
+      ],
+      "acceptance_tests": [
+        "A05",
+        "A06",
+        "A47"
+      ],
+      "deliverables": [
+        "working cards HTTP+CLI",
+        "request status"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T16",
+      "phase": "G2",
+      "owner_role": "ui",
+      "title": "Shell i jedna edytowalna karta",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T11",
+        "T12",
+        "T15"
+      ],
+      "requirements": [
+        "R18",
+        "R21",
+        "R24"
+      ],
+      "acceptance_tests": [
+        "A05",
+        "A12",
+        "A24"
+      ],
+      "deliverables": [
+        "web shell",
+        "detail panel",
+        "save/conflict states"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T17",
+      "phase": "G2",
+      "owner_role": "qa",
+      "title": "Pionowy przepływ dwóch klientów",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T13",
+        "T15",
+        "T16"
+      ],
+      "requirements": [
+        "R18",
+        "R19",
+        "R20",
+        "R24"
+      ],
+      "acceptance_tests": [
+        "A05",
+        "A06",
+        "A10",
+        "A24"
+      ],
+      "deliverables": [
+        "CLI+two browsers proof",
+        "G2 evidence"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T18",
+      "phase": "G3",
+      "owner_role": "security",
+      "title": "Parowanie, sesje i CSRF",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T10",
+        "T07"
+      ],
+      "requirements": [
+        "R14",
+        "R15"
+      ],
+      "acceptance_tests": [
+        "A25",
+        "A26",
+        "A27",
+        "A55"
+      ],
+      "deliverables": [
+        "session store",
+        "pairing UI endpoints",
+        "revoke"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T19",
+      "phase": "G3",
+      "owner_role": "core",
+      "title": "Index i FTS",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T04",
+        "T05",
+        "T14"
+      ],
+      "requirements": [
+        "R02",
+        "R11",
+        "R20",
+        "R22"
+      ],
+      "acceptance_tests": [
+        "A04",
+        "A37",
+        "A52"
+      ],
+      "deliverables": [
+        "index schema",
+        "incremental projection",
+        "bounded queries"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T20",
+      "phase": "G3",
+      "owner_role": "core",
+      "title": "Watcher i external edits",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T19",
+        "T06"
+      ],
+      "requirements": [
+        "R02",
+        "R21",
+        "R23",
+        "R26"
+      ],
+      "acceptance_tests": [
+        "A12",
+        "A13",
+        "A21",
+        "A56"
+      ],
+      "deliverables": [
+        "notify adapter",
+        "debounce",
+        "rescan"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T21",
+      "phase": "G3",
+      "owner_role": "api",
+      "title": "SSE i snapshot cursors",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T19",
+        "T18"
+      ],
+      "requirements": [
+        "R15",
+        "R20",
+        "R22",
+        "R23"
+      ],
+      "acceptance_tests": [
+        "A21",
+        "A22",
+        "A26",
+        "A52"
+      ],
+      "deliverables": [
+        "event broker",
+        "resync contract"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T22",
+      "phase": "G3",
+      "owner_role": "core",
+      "title": "Milestones i zależności",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T05",
+        "T15"
+      ],
+      "requirements": [
+        "R09",
+        "R12"
+      ],
+      "acceptance_tests": [
+        "A18",
+        "A36"
+      ],
+      "deliverables": [
+        "milestone CRUD",
+        "reference diagnostics"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T23",
+      "phase": "G3",
+      "owner_role": "core",
+      "title": "Raporty, resolutions i receipts",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T15",
+        "T19"
+      ],
+      "requirements": [
+        "R05",
+        "R10",
+        "R12"
+      ],
+      "acceptance_tests": [
+        "A35",
+        "A34"
+      ],
+      "deliverables": [
+        "append-only updates",
+        "receipt transactions"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T24",
+      "phase": "G3",
+      "owner_role": "core",
+      "title": "Focus i attention",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T14",
+        "T22",
+        "T23"
+      ],
+      "requirements": [
+        "R10",
+        "R12"
+      ],
+      "acceptance_tests": [
+        "A34",
+        "A36"
+      ],
+      "deliverables": [
+        "workspace focus",
+        "deterministic attention"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T25",
+      "phase": "G3",
+      "owner_role": "api",
+      "title": "Pełny kontrakt HTTP/CLI",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T21",
+        "T22",
+        "T23",
+        "T24"
+      ],
+      "requirements": [
+        "R04",
+        "R26",
+        "R33"
+      ],
+      "acceptance_tests": [
+        "A47",
+        "A51"
+      ],
+      "deliverables": [
+        "all v1 endpoints",
+        "typed API client",
+        "CLI commands"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T26",
+      "phase": "G3",
+      "owner_role": "security",
+      "title": "Roots i bezpieczny Markdown",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T14",
+        "T18",
+        "T16"
+      ],
+      "requirements": [
+        "R16",
+        "R17"
+      ],
+      "acceptance_tests": [
+        "A28",
+        "A29",
+        "A30"
+      ],
+      "deliverables": [
+        "root browser policy",
+        "sanitized rendering",
+        "CSP"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T27",
+      "phase": "G4",
+      "owner_role": "ui",
+      "title": "Design system i adaptive shell",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T16",
+        "T18"
+      ],
+      "requirements": [
+        "R06",
+        "R13"
+      ],
+      "acceptance_tests": [
+        "A31",
+        "A33"
+      ],
+      "deliverables": [
+        "tokens",
+        "mobile navigation",
+        "shared inspector"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T28",
+      "phase": "G4",
+      "owner_role": "ui",
+      "title": "Focus, projekty i lista",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T24",
+        "T25",
+        "T27"
+      ],
+      "requirements": [
+        "R06",
+        "R10",
+        "R11",
+        "R13"
+      ],
+      "acceptance_tests": [
+        "A31",
+        "A34",
+        "A37"
+      ],
+      "deliverables": [
+        "connected views",
+        "search/filter",
+        "deep links"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T29",
+      "phase": "G4",
+      "owner_role": "ui",
+      "title": "Kanban produkcyjny",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T25",
+        "T27"
+      ],
+      "requirements": [
+        "R06",
+        "R07",
+        "R13"
+      ],
+      "acceptance_tests": [
+        "A19",
+        "A31",
+        "A33"
+      ],
+      "deliverables": [
+        "virtual board",
+        "placement gestures",
+        "keyboard fallback"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T30",
+      "phase": "G4",
+      "owner_role": "ui",
+      "title": "Kalendarz produkcyjny",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T11",
+        "T25",
+        "T27"
+      ],
+      "requirements": [
+        "R06",
+        "R08",
+        "R09",
+        "R13",
+        "R25"
+      ],
+      "acceptance_tests": [
+        "A17",
+        "A31",
+        "A32",
+        "A58"
+      ],
+      "deliverables": [
+        "month/week/agenda",
+        "typed date adapters"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T31",
+      "phase": "G4",
+      "owner_role": "ui",
+      "title": "Gantt produkcyjny",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T12",
+        "T22",
+        "T25",
+        "T27"
+      ],
+      "requirements": [
+        "R08",
+        "R09",
+        "R12",
+        "R13",
+        "R23",
+        "R25"
+      ],
+      "acceptance_tests": [
+        "A18",
+        "A23",
+        "A32",
+        "A58"
+      ],
+      "deliverables": [
+        "Gantt scales",
+        "virtual rows",
+        "dependencies"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T32",
+      "phase": "G4",
+      "owner_role": "ui",
+      "title": "Aktualizacje i wspólna karta",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T23",
+        "T25",
+        "T27"
+      ],
+      "requirements": [
+        "R05",
+        "R06",
+        "R12",
+        "R13"
+      ],
+      "acceptance_tests": [
+        "A31",
+        "A35"
+      ],
+      "deliverables": [
+        "report inbox",
+        "card/milestone panels"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T33",
+      "phase": "G4",
+      "owner_role": "ui",
+      "title": "Reconnect, conflicts i app update",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T21",
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32"
+      ],
+      "requirements": [
+        "R13",
+        "R21",
+        "R23",
+        "R24",
+        "R33"
+      ],
+      "acceptance_tests": [
+        "A12",
+        "A23",
+        "A24",
+        "A43"
+      ],
+      "deliverables": [
+        "server/draft/gesture state machines",
+        "safe reload"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T34",
+      "phase": "G4",
+      "owner_role": "core",
+      "title": "Historia, undo i archiwizacja",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T09",
+        "T25"
+      ],
+      "requirements": [
+        "R01",
+        "R32"
+      ],
+      "acceptance_tests": [
+        "A48",
+        "A49"
+      ],
+      "deliverables": [
+        "conditional inverse operations",
+        "history API"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T35",
+      "phase": "G5",
+      "owner_role": "ops",
+      "title": "Backup/verify/restore",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T09",
+        "T14",
+        "T18",
+        "T23",
+        "T34"
+      ],
+      "requirements": [
+        "R16",
+        "R19",
+        "R27"
+      ],
+      "acceptance_tests": [
+        "A09",
+        "A40",
+        "A41"
+      ],
+      "deliverables": [
+        "backup manifest",
+        "staging restore",
+        "epoch reset"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T36",
+      "phase": "G5",
+      "owner_role": "core",
+      "title": "Diagnostyka i obserwator Git",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T19",
+        "T20"
+      ],
+      "requirements": [
+        "R02",
+        "R21",
+        "R31",
+        "R35"
+      ],
+      "acceptance_tests": [
+        "A39",
+        "A50",
+        "A56"
+      ],
+      "deliverables": [
+        "bounded Git",
+        "doctor",
+        "redacted logs"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T37",
+      "phase": "G5",
+      "owner_role": "ops",
+      "title": "Pakowanie i usługi hostów",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T25",
+        "T35",
+        "T36"
+      ],
+      "requirements": [
+        "R14",
+        "R28",
+        "R36"
+      ],
+      "acceptance_tests": [
+        "A42",
+        "A59"
+      ],
+      "deliverables": [
+        "Linux/macOS artifacts",
+        "systemd/launchd",
+        "checksums/SBOM"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T38",
+      "phase": "G5",
+      "owner_role": "qa",
+      "title": "Bezpieczeństwo i testy nadużyć",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T18",
+        "T26",
+        "T35",
+        "T36"
+      ],
+      "requirements": [
+        "R14",
+        "R15",
+        "R16",
+        "R17",
+        "R27",
+        "R31",
+        "R35"
+      ],
+      "acceptance_tests": [
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A39",
+        "A41",
+        "A50"
+      ],
+      "deliverables": [
+        "security findings",
+        "regression tests"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T39",
+      "phase": "G5",
+      "owner_role": "qa",
+      "title": "Testy realnych platform i iPhone",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T32",
+        "T33",
+        "T37"
+      ],
+      "requirements": [
+        "R06",
+        "R08",
+        "R09",
+        "R13",
+        "R14",
+        "R25",
+        "R28",
+        "R36"
+      ],
+      "acceptance_tests": [
+        "A31",
+        "A32",
+        "A33",
+        "A42",
+        "A58",
+        "A59"
+      ],
+      "deliverables": [
+        "device evidence",
+        "platform matrix"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T40",
+      "phase": "G5",
+      "owner_role": "qa",
+      "title": "Wydajność i optymalizacja",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T28",
+        "T29",
+        "T30",
+        "T31",
+        "T33",
+        "T36"
+      ],
+      "requirements": [
+        "R30"
+      ],
+      "acceptance_tests": [
+        "A38"
+      ],
+      "deliverables": [
+        "release benchmark",
+        "RAM+bundle profile",
+        "regression budgets"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T41",
+      "phase": "G5",
+      "owner_role": "qa",
+      "title": "Upgrade, restore i soak",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T35",
+        "T37",
+        "T38",
+        "T39",
+        "T40"
+      ],
+      "requirements": [
+        "R19",
+        "R27",
+        "R29",
+        "R33"
+      ],
+      "acceptance_tests": [
+        "A40",
+        "A43",
+        "A45",
+        "A54"
+      ],
+      "deliverables": [
+        "upgrade/rollback proof",
+        "long-run test"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    },
+    {
+      "id": "T42",
+      "phase": "G6",
+      "owner_role": "lead",
+      "title": "Dokumentacja użytkownika i wydanie",
+      "priority": "P0",
+      "status": "not_started",
+      "depends_on": [
+        "T17",
+        "T25",
+        "T34",
+        "T41"
+      ],
+      "requirements": [
+        "R01",
+        "R03",
+        "R04",
+        "R06",
+        "R13",
+        "R14",
+        "R27",
+        "R28",
+        "R34",
+        "R36"
+      ],
+      "acceptance_tests": [
+        "A01",
+        "A31",
+        "A40",
+        "A42",
+        "A46",
+        "A53",
+        "A59"
+      ],
+      "deliverables": [
+        "install guide",
+        "agent integration",
+        "release evidence",
+        "known limits"
+      ],
+      "definition_of_done": "Zintegrowany kod, wskazane testy uruchomione z dowodem, kontrakty zaktualizowane, review bez utraty zakresu.",
+      "evidence": []
+    }
+  ]
+}

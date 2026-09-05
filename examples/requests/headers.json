@@ -1,0 +1,7 @@
+{
+  "X-Request-ID": "01a0711e-3440-7123-8000-123456789abc",
+  "X-Command-Epoch": "77777777-7777-4777-8777-777777777777",
+  "If-Match": "\"r1.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"",
+  "X-CSRF-Token": "EXAMPLE-NOT-A-REAL-SECRET",
+  "note": "Dane ilustracyjne. W realnym wywołaniu pobierz version/epoch/csrf z serwera i wygeneruj nowy request UUIDv7."
+}

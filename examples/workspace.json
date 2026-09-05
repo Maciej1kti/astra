@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "instance_id": "66666666-6666-4666-8666-666666666666",
+  "timezone": "Europe/Warsaw",
+  "locale": "pl",
+  "projects": [
+    {
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "path": "/EXAMPLE/replace-with-real-project-path",
+      "added_at": "2026-09-05T10:00:00Z"
+    }
+  ],
+  "focus": [
+    {
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "card_id": "22222222-2222-4222-8222-222222222222"
+    }
+  ],
+  "preferences": {
+    "week_start": "monday",
+    "default_view": "focus"
+  }
+}

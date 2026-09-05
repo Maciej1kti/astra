@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "requirements": [
+    {
+      "id": "R01",
+      "source": "U02",
+      "title": "Dokładny folder i idempotentna rejestracja",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R02",
+      "source": "U02",
+      "title": "Jawne pliki .project jako jedyne źródło danych projektu",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R03",
+      "source": "U02",
+      "title": "Niedestrukcyjny zarządzany blok AGENTS.md",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R04",
+      "source": "U04",
+      "title": "CLI pełny klient serwera, JSON i błędy",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R05",
+      "source": "U03",
+      "title": "Raporty rezultatów bez planów implementacyjnych agentów",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R06",
+      "source": "U08",
+      "title": "Jedno UI z pełną edycją na telefonie i desktopie",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R07",
+      "source": "U05",
+      "title": "Kanban z porządkiem i zmianą statusu",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R08",
+      "source": "U05",
+      "title": "Kalendarz z planem, deadline i przeglądem",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R09",
+      "source": "U05",
+      "title": "Gantt z resize/move, milestones i zależnościami",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R10",
+      "source": "B",
+      "title": "Focus wspólny w instancji, ręczny i niezależny od statusu",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R11",
+      "source": "B",
+      "title": "Lista i wyszukiwanie, ograniczone projekcje",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R12",
+      "source": "B",
+      "title": "Milestones, blokady, decyzje i wyjaśnione alerts",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R13",
+      "source": "U06",
+      "title": "Płynne gesty, spójny wygląd, dostępność",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R14",
+      "source": "U09",
+      "title": "Prywatne HTTPS, loopback i brak publicznego wystawienia",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R15",
+      "source": "B",
+      "title": "Parowanie/sesje/CSRF/odwołanie urządzenia",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R16",
+      "source": "B",
+      "title": "Bezpieczne ścieżki i brak arbitrary filesystem API",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R17",
+      "source": "B",
+      "title": "Bezpieczny Markdown i limity wejścia",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R18",
+      "source": "B",
+      "title": "Jeden koordynator zapisów i warunkowe mutacje",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R19",
+      "source": "B",
+      "title": "Trwały request journal, ograniczone retry i epoch",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R20",
+      "source": "B",
+      "title": "Testowany zapis, awarie i recovery",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R21",
+      "source": "B",
+      "title": "Zewnętrzna edycja wykrywana bez cichej naprawy",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R22",
+      "source": "B",
+      "title": "Indeks odtwarzalny bez utraty stanu użytkownika",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R23",
+      "source": "B",
+      "title": "SSE/snapshot bez luk i bez nadpisania szkicu",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R24",
+      "source": "U10",
+      "title": "Brak trybu offline; jawny niepewny wynik sieciowy",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R25",
+      "source": "B",
+      "title": "Date-only, strefa workspace, plan != deadline",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R26",
+      "source": "B",
+      "title": "Kontrolowany YAML, extensions, body round-trip",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R27",
+      "source": "B",
+      "title": "Backup, restore, migracje i sesje po restore",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R28",
+      "source": "U07",
+      "title": "Wydania macOS ARM64 i Arch, bez runtime Node",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R29",
+      "source": "B",
+      "title": "Wyłączność hosta i brak automatycznej federacji",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R30",
+      "source": "U06",
+      "title": "Mierzalne budżety serwera i klienta",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R31",
+      "source": "B",
+      "title": "Ograniczony, bezpieczny obserwator Git",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R32",
+      "source": "B",
+      "title": "Warunkowe undo i archiwizacja bez kasowania",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R33",
+      "source": "B",
+      "title": "Zgodność kontraktów, ograniczone API i aktualizacje UI",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R34",
+      "source": "U11",
+      "title": "Brak zarządzania worktree i zgadywania celu",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R35",
+      "source": "B",
+      "title": "Lokalna diagnostyka, brak wycieku treści i sekretów",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    },
+    {
+      "id": "R36",
+      "source": "B",
+      "title": "Bezpieczne zarządzanie usługą i config użytkownika",
+      "priority": "P0",
+      "status": "specified_not_implemented"
+    }
+  ]
+}

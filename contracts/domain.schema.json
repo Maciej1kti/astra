@@ -1,0 +1,788 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local-projects.invalid/schemas/domain-v1.json",
+  "title": "Local Projects — file contract 1",
+  "description": "Walidacja sparsowanych dokumentów; reguły domenowe i limity bajtów są osobne.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ProjectDocument"
+    },
+    {
+      "$ref": "#/$defs/CardDocument"
+    },
+    {
+      "$ref": "#/$defs/MilestoneDocument"
+    },
+    {
+      "$ref": "#/$defs/UpdateDocument"
+    },
+    {
+      "$ref": "#/$defs/Workspace"
+    }
+  ],
+  "$defs": {
+    "UUID": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "RequestID": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "LocalDate": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "Instant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "Version": {
+      "type": "string",
+      "pattern": "^r1\\.[0-9a-f]{64}$"
+    },
+    "Position": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$",
+      "not": {
+        "enum": [
+          "00000000000000000000000000000000",
+          "ffffffffffffffffffffffffffffffff"
+        ]
+      }
+    },
+    "ExtensionValue": {
+      "type": [
+        "string",
+        "number",
+        "boolean",
+        "null",
+        "array",
+        "object"
+      ],
+      "description": "Ograniczone JSON values; poza schema: max depth 12, 10000 nodes, brak niebezpiecznych kluczy prototypu w obiektach JS."
+    },
+    "Schedule": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/LocalDate"
+        },
+        "end": {
+          "$ref": "#/$defs/LocalDate"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "Due": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "$ref": "#/$defs/LocalDate"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "hard",
+            "target"
+          ]
+        }
+      },
+      "required": [
+        "date",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "Blocked": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "Author": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "kind",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Target": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "project",
+            "card",
+            "milestone"
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/UUID"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "Evidence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "url"
+            },
+            "value": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https?://",
+              "maxLength": 2048
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "commit"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{7,64}$"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "path"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ProjectMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "created_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "active",
+            "paused",
+            "archived"
+          ]
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "review_on": {
+          "$ref": "#/$defs/LocalDate"
+        }
+      },
+      "required": [
+        "schema_version",
+        "id",
+        "name",
+        "state",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-[a-z0-9][a-z0-9_.-]{0,62}$": {
+          "$ref": "#/$defs/ExtensionValue"
+        }
+      }
+    },
+    "CardMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "created_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "outcome",
+            "decision"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "active",
+            "review",
+            "done",
+            "cancelled"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "low",
+            "normal",
+            "high",
+            "urgent"
+          ]
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "schedule": {
+          "$ref": "#/$defs/Schedule"
+        },
+        "due": {
+          "$ref": "#/$defs/Due"
+        },
+        "review_on": {
+          "$ref": "#/$defs/LocalDate"
+        },
+        "milestone_id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "blocked": {
+          "$ref": "#/$defs/Blocked"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UUID"
+          },
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48
+          },
+          "maxItems": 20,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "kind",
+        "status",
+        "priority",
+        "position",
+        "archived",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-[a-z0-9][a-z0-9_.-]{0,62}$": {
+          "$ref": "#/$defs/ExtensionValue"
+        }
+      }
+    },
+    "MilestoneMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "created_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "active",
+            "achieved",
+            "cancelled"
+          ]
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "due": {
+          "$ref": "#/$defs/Due"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "position",
+        "archived",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-[a-z0-9][a-z0-9_.-]{0,62}$": {
+          "$ref": "#/$defs/ExtensionValue"
+        }
+      }
+    },
+    "UpdateMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "result",
+            "blocker",
+            "decision_needed",
+            "note",
+            "correction",
+            "resolution"
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/Target"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "author": {
+          "$ref": "#/$defs/Author"
+        },
+        "recorded_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "supersedes": {
+          "$ref": "#/$defs/UUID"
+        },
+        "resolves": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UUID"
+          },
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "target",
+        "summary",
+        "author",
+        "recorded_at"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-[a-z0-9][a-z0-9_.-]{0,62}$": {
+          "$ref": "#/$defs/ExtensionValue"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "correction"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "supersedes"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "resolution"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "resolves"
+            ],
+            "properties": {
+              "resolves": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "not": {
+                  "const": "correction"
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "supersedes"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "not": {
+                  "const": "resolution"
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "resolves"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "ProjectDocument": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "project"
+        },
+        "metadata": {
+          "$ref": "#/$defs/ProjectMetadata"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 983040
+        }
+      },
+      "required": [
+        "type",
+        "metadata",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "CardDocument": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "card"
+        },
+        "metadata": {
+          "$ref": "#/$defs/CardMetadata"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 983040
+        }
+      },
+      "required": [
+        "type",
+        "metadata",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "MilestoneDocument": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "milestone"
+        },
+        "metadata": {
+          "$ref": "#/$defs/MilestoneMetadata"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 983040
+        }
+      },
+      "required": [
+        "type",
+        "metadata",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "UpdateDocument": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "update"
+        },
+        "metadata": {
+          "$ref": "#/$defs/UpdateMetadata"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 983040
+        }
+      },
+      "required": [
+        "type",
+        "metadata",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "FocusRef": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "card_id": {
+          "$ref": "#/$defs/UUID"
+        }
+      },
+      "required": [
+        "project_id",
+        "card_id"
+      ],
+      "additionalProperties": false
+    },
+    "ProjectRegistration": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "added_at": {
+          "$ref": "#/$defs/Instant"
+        }
+      },
+      "required": [
+        "project_id",
+        "path",
+        "added_at"
+      ],
+      "additionalProperties": false
+    },
+    "Preferences": {
+      "type": "object",
+      "properties": {
+        "week_start": {
+          "type": "string",
+          "enum": [
+            "monday",
+            "sunday"
+          ]
+        },
+        "default_view": {
+          "type": "string",
+          "enum": [
+            "focus",
+            "projects",
+            "board",
+            "calendar",
+            "gantt",
+            "list",
+            "updates"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Workspace": {
+      "type": "object",
+      "properties": {
+        "format_version": {
+          "const": 1
+        },
+        "instance_id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "locale": {
+          "type": "string",
+          "enum": [
+            "pl",
+            "en"
+          ]
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProjectRegistration"
+          },
+          "maxItems": 10000
+        },
+        "focus": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FocusRef"
+          },
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "preferences": {
+          "$ref": "#/$defs/Preferences"
+        }
+      },
+      "required": [
+        "format_version",
+        "instance_id",
+        "timezone",
+        "locale",
+        "projects",
+        "focus",
+        "preferences"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

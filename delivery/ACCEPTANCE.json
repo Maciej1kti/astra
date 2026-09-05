@@ -1,0 +1,811 @@
+{
+  "version": 1,
+  "tests": [
+    {
+      "id": "A01",
+      "requirements": [
+        "R01",
+        "R03"
+      ],
+      "title": "Rejestracja i ponowienie",
+      "steps": "Dodaj pusty folder, potem powtórz tę samą operację i sprawdź pliki oraz profil.",
+      "expected": "Jedno ID projektu, jeden blok AGENTS, bez resetu i duplikatu.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A02",
+      "requirements": [
+        "R01",
+        "R16"
+      ],
+      "title": "Plan a cudze pliki",
+      "steps": "Zaplanuj rejestrację, zmień istniejący AGENTS przed commit planu.",
+      "expected": "PLAN_STALE lub konflikt; żadnego nadpisania cudzej treści.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A03",
+      "requirements": [
+        "R01",
+        "R34"
+      ],
+      "title": "Dokładny cwd",
+      "steps": "Wywołaj --project . w folderze podrzędnym bez .project, gdy rodzic ma projekt.",
+      "expected": "Brak znalezionego projektu, brak inicjalizacji i brak zapisu w rodzicu.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A04",
+      "requirements": [
+        "R02",
+        "R22"
+      ],
+      "title": "Usunięcie indeksu",
+      "steps": "Po zapisaniu kart/focusu/sesji zatrzymaj usługę, usuń wyłącznie index, uruchom.",
+      "expected": "Te same źródła i focus, sesja działa, widoki odbudowane.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A05",
+      "requirements": [
+        "R18"
+      ],
+      "title": "Dwa zapisy tej samej wersji",
+      "steps": "Telefon i CLI dostają V1; oba edytują tę samą kartę.",
+      "expected": "Jeden commit, drugi 412; obie intencje dostępne, brak cichego overwrite.",
+      "type": "e2e",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A06",
+      "requirements": [
+        "R19",
+        "R24"
+      ],
+      "title": "Utracona odpowiedź",
+      "steps": "Zapisz komendę, odetnij odpowiedź po commit, ponów identyczny request.",
+      "expected": "Jeden skutek, wynik replayed; UI rozpoznaje committed.",
+      "type": "fault",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A07",
+      "requirements": [
+        "R19"
+      ],
+      "title": "Ten sam ID inny payload",
+      "steps": "Po przyjęciu request ID wyślij z nim inny patch lub precondition.",
+      "expected": "409 IDEMPOTENCY_KEY_REUSED, bez drugiego zapisu.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A08",
+      "requirements": [
+        "R19"
+      ],
+      "title": "Retry po retencji",
+      "steps": "Przesuń zegar testowy poza 7 dni i usuń wynik zgodnie z polityką; ponów stary request.",
+      "expected": "Nie jest wykonany jako nowy; expired window i wymóg nowej świadomej intencji.",
+      "type": "unit",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A09",
+      "requirements": [
+        "R19",
+        "R27"
+      ],
+      "title": "Restore i stary klient",
+      "steps": "Wykonaj backup/restore, zachowując stary niepewny request w kliencie.",
+      "expected": "Stary epoch odrzucony; sesje nie są automatycznie przywrócone.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A10",
+      "requirements": [
+        "R20"
+      ],
+      "title": "Awaria w punktach zapisu",
+      "steps": "Uruchom wszystkie punkty tests/fault-matrix.json z kill/fault injection.",
+      "expected": "Before/after lub jawne needs_review; brak fałszywego sukcesu i duplikatu.",
+      "type": "fault",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A11",
+      "requirements": [
+        "R20"
+      ],
+      "title": "Brak miejsca i uprawnień",
+      "steps": "Wstrzyknij ENOSPC/EACCES przed journal, temp, rename i commit.",
+      "expected": "Nie ma uszkodzonego źródła ani sukcesu bez trwałego wyniku; stan niepewny izolowany.",
+      "type": "fault",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A12",
+      "requirements": [
+        "R21"
+      ],
+      "title": "Zewnętrzny edytor podczas formularza",
+      "steps": "Otwórz edytor, zmień plik z zewnątrz, potem zapisz szkic.",
+      "expected": "Zmiana wykryta, szkic nie znika; zapis wymaga rozstrzygnięcia konfliktu.",
+      "type": "e2e",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A13",
+      "requirements": [
+        "R21",
+        "R26"
+      ],
+      "title": "Błędny YAML",
+      "steps": "Podmień nagłówek karty na duplicate key, alias lub konflikt merge.",
+      "expected": "Diagnoza dokumentu, zwykły zapis zablokowany, inne zdrowe projekty działają.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A14",
+      "requirements": [
+        "R26"
+      ],
+      "title": "Round-trip i extensions",
+      "steps": "Zmień wyłącznie status pliku z nietypowym body i x-*; porównaj body bajtowo.",
+      "expected": "Body identyczne, rozszerzenia zachowane, reszta nagłówka zgodna ze schema.",
+      "type": "unit",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A15",
+      "requirements": [
+        "R26"
+      ],
+      "title": "Komentarz YAML",
+      "steps": "Spróbuj zwykłego patcha pliku z komentarzem, którego serializer by nie zachował.",
+      "expected": "NORMALIZATION_REQUIRED; dopiero jawny plan/aplikacja normalizacji po If-Match.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A16",
+      "requirements": [
+        "R25"
+      ],
+      "title": "Daty graniczne",
+      "steps": "Wykonaj wektory leap year, zmiana miesiąca/roku, DST i inna strefa telefonu.",
+      "expected": "Plan/date-only identyczny w pliku, liście, calendar i Gantt.",
+      "type": "unit",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A17",
+      "requirements": [
+        "R08",
+        "R25"
+      ],
+      "title": "Plan nie zmienia deadline",
+      "steps": "Rozciągnij pasek poza hard deadline.",
+      "expected": "Zmienia się tylko schedule; ostrzeżenie, deadline nietknięty.",
+      "type": "e2e",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A18",
+      "requirements": [
+        "R09",
+        "R12"
+      ],
+      "title": "Graf i brak autoschedulera",
+      "steps": "Dodaj cykl/self-edge; następnie legalną krawędź ze sprzecznymi datami.",
+      "expected": "Cykl odrzucony, konflikt dat ostrzega, następnik nie przesuwa się sam.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A19",
+      "requirements": [
+        "R07"
+      ],
+      "title": "Porządek i nieaktualni sąsiedzi",
+      "steps": "Przenieś kartę, równolegle zmień sąsiadów; powtórz z nieaktualnym placement.",
+      "expected": "Deterministyczne sortowanie; ORDER_CHANGED zamiast losowej pozycji.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A20",
+      "requirements": [
+        "R07",
+        "R20"
+      ],
+      "title": "Wyczerpany rank",
+      "steps": "Utwórz sąsiadujące ranki bez luki, spróbuj move; wykonaj jawny rebalance z awarią.",
+      "expected": "Brak ukrytej masowej zmiany; workflow wznawia się i kończy resync.",
+      "type": "fault",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A21",
+      "requirements": [
+        "R23"
+      ],
+      "title": "Snapshot/subscribe race",
+      "steps": "Wstaw zmianę pomiędzy snapshot i nawiązaniem SSE.",
+      "expected": "Zmiana widoczna przez replay lub resync; żadnej utraconej inwalidacji.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A22",
+      "requirements": [
+        "R23"
+      ],
+      "title": "Restart i overflow SSE",
+      "steps": "Przepełnij ring, odłącz klienta, zrestartuj serwer, podłącz stary cursor.",
+      "expected": "resync_required; nowy snapshot, nie udawany pełny replay.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A23",
+      "requirements": [
+        "R23",
+        "R13"
+      ],
+      "title": "SSE podczas drag",
+      "steps": "Podczas chwytania paska agent edytuje kartę.",
+      "expected": "Pasek nie skacze, preview zachowany, commit pokazuje konflikt.",
+      "type": "device",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A24",
+      "requirements": [
+        "R24"
+      ],
+      "title": "Brak połączenia",
+      "steps": "Wyłącz host podczas otwartego UI i spróbuj nowych zmian.",
+      "expected": "Jawna niedostępność, brak offline queue; bieżący szkic możliwy do skopiowania.",
+      "type": "e2e",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A25",
+      "requirements": [
+        "R15"
+      ],
+      "title": "Parowanie",
+      "steps": "Niesparowany klient próbuje odczytu i zapisu; zatwierdź porównany pairing.",
+      "expected": "Przed pairing brak danych; potem pełna edycja, poprawne Secure cookie.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A26",
+      "requirements": [
+        "R15"
+      ],
+      "title": "Revoke aktywnej sesji",
+      "steps": "Odwołaj urządzenie przy otwartym SSE i formularzu.",
+      "expected": "SSE zamknięte, nowy zapis odrzucony, UI usuwa potwierdzony prywatny stan.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A27",
+      "requirements": [
+        "R14",
+        "R15"
+      ],
+      "title": "Origin i CSRF",
+      "steps": "Wyślij mutacje cross-origin, bez tokenu, z obcym Host i origin null.",
+      "expected": "Brak zmian, prawidłowy kod; localhost TCP nie staje się zaufanym IPC.",
+      "type": "security",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A28",
+      "requirements": [
+        "R16"
+      ],
+      "title": "Traversal i symlink",
+      "steps": "Spróbuj rejestracji ../, absolutnej ścieżki w HTTP, symlink swap i specjalnego pliku.",
+      "expected": "Brak wyjścia poza zatwierdzone korzenie; brak zapisu w innych miejscach.",
+      "type": "security",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A29",
+      "requirements": [
+        "R17"
+      ],
+      "title": "Złośliwy Markdown",
+      "steps": "Karta z script, onerror, javascript URL i zewnętrznym obrazkiem.",
+      "expected": "Żaden skrypt/auto-fetch nie działa; bezpieczne renderowanie i CSP.",
+      "type": "security",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A30",
+      "requirements": [
+        "R17"
+      ],
+      "title": "Payload/recursion bomb",
+      "steps": "Przekrocz rozmiar HTTP, front matter, depth i node budget.",
+      "expected": "Wczesne bounded odrzucenie, bez nieograniczonej pamięci i blokady procesu.",
+      "type": "security",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A31",
+      "requirements": [
+        "R06",
+        "R13"
+      ],
+      "title": "Pełna mobilna edycja",
+      "steps": "Na realnym iPhonie zmień title/body/status/daty/focus/zależność i dodaj raport.",
+      "expected": "Te same skutki co desktop, widoczne po drugiej stronie, brak readonly ograniczeń.",
+      "type": "device",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A32",
+      "requirements": [
+        "R08",
+        "R09",
+        "R13"
+      ],
+      "title": "Gesty mobilne",
+      "steps": "Resize/move, scroll, edge auto-scroll, pointercancel, orientacja, drugi palec.",
+      "expected": "Przewidywalny gest lub anulowanie bez zapisu; panel stanowi alternatywę.",
+      "type": "device",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A33",
+      "requirements": [
+        "R13"
+      ],
+      "title": "Dostępność",
+      "steps": "Keyboard-only, screen reader, 200% zoom, reduced motion, jasny/ciemny motyw.",
+      "expected": "Brak trap, czytelny focus i pola; najważniejsze operacje bez drag.",
+      "type": "manual",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A34",
+      "requirements": [
+        "R10"
+      ],
+      "title": "Focus wspólny i manualny",
+      "steps": "Zmień focus z telefonu, przeczytaj raport z desktopu, wygeneruj alert.",
+      "expected": "Focus wspólny, alert nie przestawia kolejności; read receipt wspólne.",
+      "type": "e2e",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A35",
+      "requirements": [
+        "R05",
+        "R12"
+      ],
+      "title": "Raport != stan karty",
+      "steps": "Dodaj blocker/result/decision_needed, oznacz read, potem resolution.",
+      "expected": "Brak automatycznej zmiany karty; read nie rozwiązuje; resolution zamyka właściwy sygnał.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A36",
+      "requirements": [
+        "R12"
+      ],
+      "title": "Akceptacja milestone",
+      "steps": "Zamknij wszystkie jego karty; następnie świadomie zaakceptuj milestone.",
+      "expected": "Przed akceptacją milestone nie staje się achieved sam.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A37",
+      "requirements": [
+        "R11"
+      ],
+      "title": "Wyszukiwanie i stronicowanie",
+      "steps": "Szukaj polskich znaków, wstrzyknij znaki SQL/FTS, zmień dane między stronami.",
+      "expected": "Bezpieczne wyniki, brak injection, jawne CURSOR_STALE lub spójna strona.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A38",
+      "requirements": [
+        "R30"
+      ],
+      "title": "Benchmark referencyjny",
+      "steps": "Uruchom release na małym/referencyjnym/stress zbiorze; zmierz UI i host.",
+      "expected": "Raport p50/p95/p99, RAM/bundle/latency, brak fałszywego spełnienia.",
+      "type": "benchmark",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A39",
+      "requirements": [
+        "R31"
+      ],
+      "title": "Duże i nietypowe repo Git",
+      "steps": "Repo z fsmonitor, untracked tree, submodules; timeout i brak Git.",
+      "expected": "Brak testów/fetch/hook execution; bounded runtime, tablica działa, scope jawny.",
+      "type": "security",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A40",
+      "requirements": [
+        "R27"
+      ],
+      "title": "Backup i restore",
+      "steps": "Zrób kopię, verify, odtwórz do czystej instancji, sparuj i edytuj.",
+      "expected": "Identyczne źródła/focus/read receipts, nowy epoch, odbudowany index i działający zapis.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A41",
+      "requirements": [
+        "R27",
+        "R16"
+      ],
+      "title": "Złośliwe archiwum",
+      "steps": "Przywróć archiwum z ../, symlink, absurdalnym rozmiarem i złą checksum.",
+      "expected": "Odrzucenie przed zmianą docelowych danych; brak traversal.",
+      "type": "security",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A42",
+      "requirements": [
+        "R28",
+        "R36"
+      ],
+      "title": "Instalacja hostów",
+      "steps": "Na macOS ARM64 i Arch zainstaluj release, uruchom usługę i foreground.",
+      "expected": "Działa bez Node/Docker i roota, CLI trafia do jednej instancji.",
+      "type": "platform",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A43",
+      "requirements": [
+        "R33"
+      ],
+      "title": "Stary frontend",
+      "steps": "Otwórz edytor, zaktualizuj serwer do niezgodnego kontraktu/chunku, zapisz.",
+      "expected": "Szkic zachowany, brak błędnego zapisu, kontrolowany reload.",
+      "type": "e2e",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A44",
+      "requirements": [
+        "R29"
+      ],
+      "title": "Drugi pisarz",
+      "steps": "Uruchom drugi server instancji i inną instancję na tym samym .project.",
+      "expected": "Odmowa writer lease, brak dwóch aktywnych pisarzy.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A45",
+      "requirements": [
+        "R29"
+      ],
+      "title": "Dwie maszyny",
+      "steps": "Otwórz dwie instancje o podobnych nazwach projektów.",
+      "expected": "Wyraźny gospodarz, rozdzielny focus; brak cichego scalania.",
+      "type": "e2e",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A46",
+      "requirements": [
+        "R04",
+        "R34"
+      ],
+      "title": "CLI bez serwera",
+      "steps": "Zatrzymaj server i wywołaj card set; potem validate --offline.",
+      "expected": "Brak fallback zapisu; offline validator tylko czyta.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A47",
+      "requirements": [
+        "R04"
+      ],
+      "title": "JSON kontrakt",
+      "steps": "Wywołaj sukces/błąd CLI w --json ze spacjami i Unicode w ścieżce.",
+      "expected": "Pojedynczy JSON na stdout, stabilne code i exit, brak ANSI/logów w JSON.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A48",
+      "requirements": [
+        "R32"
+      ],
+      "title": "Undo po zmianie agenta",
+      "steps": "Zmień kartę, potem agent zmienia ją ponownie, wykonaj stare undo.",
+      "expected": "Warunkowa odmowa/konflikt, nie utrata późniejszej zmiany.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A49",
+      "requirements": [
+        "R01",
+        "R32"
+      ],
+      "title": "Archiwizacja i remove",
+      "steps": "Archiwizuj kartę i rozrejestruj projekt, sprawdź pliki.",
+      "expected": "Źródła nieusunięte, brak ukrytej kaskady referencji.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A50",
+      "requirements": [
+        "R35"
+      ],
+      "title": "Redakcja diagnostyki",
+      "steps": "Wstaw sekret-like tekst w body i sprawdź logi błędu, pairing i bundle.",
+      "expected": "Brak body/cookies/raw secrets; metryki tylko lokalne.",
+      "type": "security",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A51",
+      "requirements": [
+        "R26",
+        "R33"
+      ],
+      "title": "Drift kontraktów",
+      "steps": "Zmień nazwę pola tylko w jednym adapterze i uruchom test contract.",
+      "expected": "CI wykrywa różnicę Rust/TS/schema/OpenAPI; brak cichej rozbieżności.",
+      "type": "contract",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A52",
+      "requirements": [
+        "R20",
+        "R22"
+      ],
+      "title": "Commit przy awarii indeksu",
+      "steps": "Wstrzyknij błąd SQLite index po trwałym zapisie.",
+      "expected": "Command committed, źródło poprawne, degraded/resync zamiast rollback.",
+      "type": "fault",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A53",
+      "requirements": [
+        "R03"
+      ],
+      "title": "Brak prywatnego folderu po klonie",
+      "steps": "AGENTS istnieje, .project brak. Agent odczytuje instrukcje.",
+      "expected": "Brak samowolnej inicjalizacji lub wyboru innego repo.",
+      "type": "manual",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A54",
+      "requirements": [
+        "R19"
+      ],
+      "title": "Zegar hosta wstecz",
+      "steps": "Cofnij kontrolowany zegar za floor po cleanup starych requestów.",
+      "expected": "Nowe mutacje wstrzymane do diagnozy; brak ponownego dopuszczenia wygasłej komendy.",
+      "type": "unit",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A55",
+      "requirements": [
+        "R15"
+      ],
+      "title": "Lost pairing claim",
+      "steps": "Zgub Set-Cookie odpowiedzi claim, ponów z poprawnym pending secret w grace.",
+      "expected": "Nowa sesja kontrolowanie wydana, poprzednia odwołana, po grace nowy pairing.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A56",
+      "requirements": [
+        "R02",
+        "R21"
+      ],
+      "title": "Niedostępny folder",
+      "steps": "Odłącz folder/mount, potem przywróć.",
+      "expected": "Stan unavailable, brak masowego kasowania i odtwarzania z cache.",
+      "type": "integration",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A57",
+      "requirements": [
+        "R18"
+      ],
+      "title": "No-op",
+      "steps": "Prześlij patch ustawiający te same wartości z poprawną wersją.",
+      "expected": "No-op bez zmiany updated_at/hash, zapisany wynik requestu.",
+      "type": "unit",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A58",
+      "requirements": [
+        "R08",
+        "R09",
+        "R25"
+      ],
+      "title": "Widget date round-trip",
+      "steps": "Pokaż i przesuń jednodniowy plan, przełom roku oraz DST w obu widgetach.",
+      "expected": "Te same LocalDate po wszystkich adapterach; bez błędu o jeden dzień.",
+      "type": "device",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A59",
+      "requirements": [
+        "R14"
+      ],
+      "title": "Dostęp prywatny",
+      "steps": "Wejdź przez prywatny HTTPS z telefonu poza domem; sprawdź listen i config proxy.",
+      "expected": "Usługa dostępna wyłącznie zgodnie z prywatną konfiguracją; brak Funnel/public bind.",
+      "type": "platform",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "A60",
+      "requirements": [
+        "R20",
+        "R27"
+      ],
+      "title": "Wznawialna inicjalizacja",
+      "steps": "Przerwij add po każdym utworzonym pliku; zmień jeden z nich przed resume.",
+      "expected": "Idempotentny resume bez resetu; cudza zmiana prowadzi do review, nie rollback delete.",
+      "type": "fault",
+      "release_blocker": true,
+      "status": "not_run",
+      "evidence": null
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "kind": "result",
+  "target": {
+    "type": "card",
+    "id": "22222222-2222-4222-8222-222222222222"
+  },
+  "summary": "Wynik jest gotowy do przeglądu.",
+  "author": {
+    "kind": "agent",
+    "label": "Astra"
+  },
+  "body": "Raport nie akceptuje automatycznie karty."
+}

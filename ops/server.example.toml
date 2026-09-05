@@ -1,0 +1,47 @@
+# Wzorzec do adaptacji. @@...@@ wymaga podstawienia przez instalację.
+# Nie uruchamiaj jako root. Nie wystawiaj 0.0.0.0 i nie włączaj Funnel.
+format_version = 1
+instance_name = "Mój host"
+listen = "127.0.0.1:47831"
+public_origin = "@@PUBLIC_ORIGIN@@"
+data_dir = "@@DATA_DIR@@"
+cache_dir = "@@CACHE_DIR@@"
+runtime_dir = "@@RUNTIME_DIR@@"
+timezone = "Europe/Warsaw"
+locale = "pl"
+
+[limits]
+document_bytes = 1048576
+frontmatter_bytes = 65536
+body_bytes = 983040
+max_yaml_depth = 12
+max_yaml_nodes = 10000
+http_body_bytes = 1258291
+
+[commands]
+new_request_max_age_hours = 24
+future_clock_tolerance_seconds = 300
+result_retention_days = 7
+history_days = 30
+history_max_bytes = 1073741824
+
+[sessions]
+idle_days = 30
+absolute_days = 90
+pairing_ttl_seconds = 300
+pairing_claim_grace_seconds = 60
+
+[events]
+max_buffer_events = 10000
+max_buffer_age_seconds = 600
+heartbeat_seconds = 20
+
+[git]
+enabled = true
+timeout_ms = 2000
+max_output_bytes = 2097152
+max_concurrent = 2
+untracked_by_default = false
+
+# Dozwolone korzenie rejestracji WWW tworzy lokalny właściciel przez CLI.
+# To nie jest uprawnienie do dowolnego odczytu plików w tych katalogach.

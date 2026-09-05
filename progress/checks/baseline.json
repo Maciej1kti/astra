@@ -1,0 +1,160 @@
+{
+  "package": "astra-project-handoff-v1.0",
+  "generated_at": "2026-09-05T12:45:48.750611+00:00",
+  "scope": "handoff artifacts only; not the target application",
+  "status": "passed",
+  "tools": {
+    "python": "3.14.6",
+    "PyYAML": "6.0.3",
+    "jsonschema": "4.26.0",
+    "sqlite": "3.53.2"
+  },
+  "counts": {
+    "json_files": 21,
+    "domain_definitions": 25,
+    "openapi_schemas": 80,
+    "domain_examples": 6,
+    "markdown_domain_examples": 5,
+    "reference_vectors": 33,
+    "openapi_paths": 39,
+    "openapi_operations": 49,
+    "request_examples": 5,
+    "requirements": 36,
+    "acceptance_scenarios": 60,
+    "tasks": 42,
+    "fault_scenarios": 16
+  },
+  "checks": [
+    {
+      "check": "JSON files",
+      "status": "passed",
+      "detail": {
+        "files": 21
+      }
+    },
+    {
+      "check": "JSON Schema and all local references",
+      "status": "passed",
+      "detail": {
+        "domain_definitions": 25,
+        "openapi_schemas": 80
+      }
+    },
+    {
+      "check": "Domain examples",
+      "status": "passed",
+      "detail": {
+        "examples": 6
+      }
+    },
+    {
+      "check": "Markdown/JSON roundtrip and cross-references",
+      "status": "passed",
+      "detail": {
+        "roundtrips": 5,
+        "cross_references": "passed"
+      }
+    },
+    {
+      "check": "Reference validation vectors",
+      "status": "passed",
+      "detail": {
+        "document_cases": 14,
+        "date_cases": 5,
+        "graph_cases": 5,
+        "rank_cases": 3,
+        "parser_cases": 6
+      }
+    },
+    {
+      "check": "OpenAPI structure",
+      "status": "passed",
+      "detail": {
+        "paths": 39,
+        "operations": 49,
+        "scope": "structural checks, not complete OAS conformance"
+      }
+    },
+    {
+      "check": "HTTP request examples",
+      "status": "passed",
+      "detail": {
+        "examples": 5
+      }
+    },
+    {
+      "check": "Requirements/tests/tasks traceability",
+      "status": "passed",
+      "detail": {
+        "requirements": 36,
+        "acceptance_scenarios": 60,
+        "tasks": 42,
+        "fault_scenarios": 16,
+        "cycles": false,
+        "coverage": "complete IDs (not proof of test quality or implementation)"
+      }
+    },
+    {
+      "check": "SQLite starting schemas",
+      "status": "passed",
+      "detail": {
+        "sqlite": "3.53.2",
+        "tables": {
+          "state-starting-schema.sql": [
+            "commands",
+            "history",
+            "meta",
+            "pairings",
+            "read_receipts",
+            "sessions",
+            "write_intents"
+          ],
+          "index-starting-schema.sql": [
+            "documents",
+            "documents_fts",
+            "documents_fts_config",
+            "documents_fts_data",
+            "documents_fts_docsize",
+            "documents_fts_idx",
+            "projection_meta"
+          ]
+        },
+        "scope": "syntax and empty initialization only"
+      }
+    },
+    {
+      "check": "Deployment template syntax",
+      "status": "passed",
+      "detail": {
+        "toml": "parsed",
+        "plist": "parsed",
+        "systemd": "basic structure only; not systemd-analyze",
+        "installation": "not executed"
+      }
+    },
+    {
+      "check": "Markdown relative links",
+      "status": "passed",
+      "detail": {
+        "relative_links_checked": 10
+      }
+    },
+    {
+      "check": "Package checksums",
+      "status": "passed",
+      "detail": {
+        "files": 82,
+        "note": "integrity, not a digital signature"
+      }
+    }
+  ],
+  "not_performed": [
+    "complete OpenAPI standards-validator run",
+    "application build or unit/integration tests",
+    "actual crash/durability tests",
+    "systemd/launchd installation",
+    "macOS, Arch or iPhone execution",
+    "performance benchmarks",
+    "security penetration testing"
+  ]
+}

@@ -1,0 +1,170 @@
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python scripts/check_package.py --skip-manifest
+PASS JSON files
+PASS JSON Schema and all local references
+PASS Domain examples
+PASS Markdown/JSON roundtrip and cross-references
+PASS Reference validation vectors
+PASS OpenAPI structure
+PASS HTTP request examples
+PASS Requirements/tests/tasks traceability
+PASS SQLite starting schemas
+PASS Deployment template syntax
+PASS Markdown relative links
+{"status": "passed", "counts": {"json_files": 26, "domain_definitions": 25, "openapi_schemas": 80, "domain_examples": 6, "markdown_domain_examples": 5, "reference_vectors": 33, "openapi_paths": 39, "openapi_operations": 49, "request_examples": 5, "requirements": 36, "acceptance_scenarios": 60, "tasks": 42, "fault_scenarios": 16}}
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python -m openapi_spec_validator contracts/openapi.yaml
+contracts/openapi.yaml: OK
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python -m unittest discover -s scripts/tests
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.002s
+
+OK
+
+RUN scripts/cargo-local fmt --all -- --check
+
+RUN scripts/cargo-local clippy --workspace --all-targets --locked -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
+
+RUN scripts/cargo-local test --workspace --locked
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running unittests src/lib.rs (target/debug/deps/project_domain-abdf3e60f2b738fa)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/contracts.rs (target/debug/deps/contracts-edc260562a1bd6d1)
+
+running 7 tests
+test handoff_calendar_vectors ... ok
+test handoff_rank_vectors_and_exhaustion ... ok
+test examples_roundtrip_without_losing_optional_fields_or_body ... ok
+test fractional_timestamps_compare_as_instants ... ok
+test handoff_document_vectors ... ok
+test validation_enforces_bytes_depth_and_safe_extensions ... ok
+test handoff_graph_vectors_and_long_chain ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+   Doc-tests project_domain
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+RUN scripts/cargo-local build --workspace --release --locked
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling autocfg v1.5.1
+   Compiling serde_core v1.0.228
+   Compiling libc v0.2.189
+   Compiling serde v1.0.228
+   Compiling memchr v2.8.3
+   Compiling cfg-if v1.0.4
+   Compiling getrandom v0.3.4
+   Compiling zmij v1.0.23
+   Compiling zerocopy v0.8.56
+   Compiling num-traits v0.2.19
+   Compiling version_check v0.9.5
+   Compiling ahash v0.8.12
+   Compiling ref-cast v1.0.27
+   Compiling regex-syntax v0.8.11
+   Compiling parking_lot_core v0.9.12
+   Compiling serde_json v1.0.149
+   Compiling aho-corasick v1.1.5
+   Compiling scopeguard v1.2.0
+   Compiling smallvec v1.16.0
+   Compiling itoa v1.0.18
+   Compiling once_cell v1.21.4
+   Compiling lock_api v0.4.14
+   Compiling syn v2.0.119
+   Compiling syn v3.0.5
+   Compiling allocator-api2 v0.2.21
+   Compiling num-integer v0.1.47
+   Compiling num-complex v0.4.6
+   Compiling unicode-general-category v1.1.0
+   Compiling num-bigint v0.4.8
+   Compiling num-iter v0.1.46
+   Compiling regex-automata v0.4.18
+   Compiling equivalent v1.0.2
+   Compiling heck v0.5.0
+   Compiling foldhash v0.2.0
+   Compiling bit-vec v0.8.0
+   Compiling borrow-or-share v0.2.4
+   Compiling hashbrown v0.17.1
+   Compiling bit-set v0.8.0
+   Compiling num-rational v0.4.2
+   Compiling serde_derive v1.0.228
+   Compiling ref-cast-impl v1.0.27
+   Compiling strum_macros v0.28.0
+   Compiling num v0.4.3
+   Compiling fraction v0.17.0
+   Compiling parking_lot v0.12.5
+   Compiling num-cmp v0.1.0
+   Compiling vsimd v0.8.0
+   Compiling outref v0.5.2
+   Compiling micromap v0.3.0
+   Compiling thiserror v2.0.18
+   Compiling bytecount v0.6.9
+   Compiling percent-encoding v2.3.2
+   Compiling fancy-regex v0.19.0
+   Compiling regex v1.13.1
+   Compiling strum v0.28.0
+   Compiling uuid-simd v0.8.0
+   Compiling thiserror-impl v2.0.18
+   Compiling jsonschema-regex v0.52.1
+   Compiling data-encoding v2.11.1
+   Compiling chrono v0.4.44
+   Compiling fluent-uri v0.4.1
+   Compiling jsonschema-value v0.52.1
+   Compiling email_address v0.2.9
+   Compiling referencing v0.52.1
+   Compiling jsonschema v0.52.0
+   Compiling project-domain v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/domain)
+    Finished `release` profile [optimized] target(s) in 15.73s
+
+RUN npm run check
+
+> check
+> npm run contracts:check && npm run check --workspace apps/web
+
+
+> contracts:check
+> node scripts/generate-contracts.mjs --check
+
+
+> @local-projects/web@0.1.0 check
+> svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+
+RUN npm run build
+
+> build
+> npm run build --workspace apps/web
+
+
+> @local-projects/web@0.1.0 build
+> vite build
+
+2:57:20 PM [vite-plugin-svelte] no Svelte config found at /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web - using default configuration.
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 111 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  0.39 kB │ gzip: 0.27 kB
+dist/assets/index-KVaXRuoc.css   0.26 kB │ gzip: 0.21 kB
+dist/assets/index-DE87_tAF.js   23.09 kB │ gzip: 9.47 kB
+
+✓ built in 68ms
+
+PASS G0 local checks. No server, E2E, durability or device claim.

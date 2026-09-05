@@ -1,0 +1,125 @@
+{
+  "protocol": "HTTP/1.1 over Unix domain socket",
+  "version": 1,
+  "authentication": "peer UID equals service UID; 0700 directory and 0600 socket",
+  "tcp_mount_forbidden": true,
+  "common_api": "/api/v1 resources: same dispatcher, Principal::LocalUid, CSRF exemption only for this transport",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/local/v1/hello",
+      "input": null,
+      "output": [
+        "instance_id",
+        "command_epoch",
+        "server_time",
+        "api_version"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/local/v1/registration-plans",
+      "input": {
+        "absolute_path": "string",
+        "name": "optional string",
+        "git_mode": "private|tracked"
+      },
+      "output": "RegistrationPlan"
+    },
+    {
+      "method": "POST",
+      "path": "/local/v1/pairings/{pairing_id}/approve",
+      "input": {
+        "challenge": "string"
+      },
+      "output": "Pairing"
+    },
+    {
+      "method": "POST",
+      "path": "/local/v1/pairings/{pairing_id}/deny",
+      "input": {},
+      "output": "Pairing"
+    },
+    {
+      "method": "POST",
+      "path": "/local/v1/roots",
+      "input": {
+        "absolute_path": "string",
+        "label": "string"
+      },
+      "output": "Root"
+    },
+    {
+      "method": "DELETE",
+      "path": "/local/v1/roots/{root_id}",
+      "input": {},
+      "output": {
+        "removed": "boolean"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/local/v1/maintenance/plans",
+      "input": {
+        "operation": "backup|restore|normalize|rebalance|relocate|index_rebuild",
+        "parameters": "typed union, no shell/string command"
+      },
+      "output": {
+        "plan_id": "UUID",
+        "steps": "array",
+        "warnings": "array",
+        "expires_at": "Instant"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/local/v1/maintenance/jobs",
+      "input": {
+        "plan_id": "UUID",
+        "request_id": "UUIDv7",
+        "command_epoch": "UUID"
+      },
+      "output": "Accepted"
+    },
+    {
+      "method": "GET",
+      "path": "/local/v1/doctor",
+      "input": null,
+      "output": "redacted Diagnostics"
+    }
+  ],
+  "maintenance_parameters": {
+    "backup": {
+      "destination": "absolute approved path outside watched source",
+      "include_history": "boolean"
+    },
+    "restore": {
+      "archive": "absolute path",
+      "path_mapping": "array of old logical project_id to approved new path",
+      "revoke_sessions": "must be true by default"
+    },
+    "normalize": {
+      "project_id": "UUID",
+      "target_ids": "array UUID",
+      "expected_versions": "object UUID to Version"
+    },
+    "rebalance": {
+      "project_id": "UUID",
+      "collection": "cards/status or milestones",
+      "expected_projection_revision": "opaque string"
+    },
+    "relocate": {
+      "project_id": "UUID",
+      "new_absolute_path": "string",
+      "expected_registration_version": "Version"
+    },
+    "index_rebuild": {
+      "project_id": "optional UUID; absence = instance"
+    }
+  },
+  "notes": [
+    "Plan is no destructive action. Commit rechecks preconditions.",
+    "Maintenance API is internal, not offered to unauthenticated loopback or remote browser.",
+    "Schema variants must be implemented as strict tagged unions, not unrestricted maps."
+  ]
+}

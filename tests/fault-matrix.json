@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "note": "Oczekiwania procesu/recovery; test kill nie dowodzi odporności sprzętu na utratę zasilania.",
+  "cases": [
+    {
+      "id": "F01",
+      "injection_point": "before_intent",
+      "expected": "Źródło stare, brak prepared; request bez skutku.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F02",
+      "injection_point": "after_intent_before_temp",
+      "expected": "Źródło stare, recovery wznawia lub jawnie odrzuca zamiar.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F03",
+      "injection_point": "during_temp_write",
+      "expected": "Źródło stare, niepełny temp ignorowany i bezpiecznie usunięty.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F04",
+      "injection_point": "after_temp_sync_before_replace",
+      "expected": "Źródło stare; recovery używa zapisanych bajtów po weryfikacji.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F05",
+      "injection_point": "after_replace_before_directory_sync",
+      "expected": "Wynik niepewny do recovery/durability sync; brak odpowiedzi committed.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F06",
+      "injection_point": "after_source_durable_before_journal_commit",
+      "expected": "Hash after → zakończenie committed, jeden skutek.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F07",
+      "injection_point": "after_journal_commit_before_index",
+      "expected": "Komenda committed, indeks odtwarzalny, UI może dostać degraded.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F08",
+      "injection_point": "after_index_before_sse",
+      "expected": "Replay/resync lub nowy snapshot pokazuje zmianę.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F09",
+      "injection_point": "after_commit_before_http_response",
+      "expected": "Ten sam request zwraca wynik, nie wykonuje drugi raz.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F10",
+      "injection_point": "external_change_before_recovery",
+      "expected": "Inny hash → needs_review bez overwrite.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F11",
+      "injection_point": "disk_full_during_intent",
+      "expected": "Brak zmiany źródła.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F12",
+      "injection_point": "disk_full_after_source_replace",
+      "expected": "Niepewny wynik izolowany; journal prepared pozostaje.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F13",
+      "injection_point": "target_disappears",
+      "expected": "Unexpected missing → needs_review lub blocked, nie odtworzenie cache.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F14",
+      "injection_point": "create_collision",
+      "expected": "No-replace odmawia nadpisania istniejącego targetu.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F15",
+      "injection_point": "source_symlink_swap",
+      "expected": "Brak zapisu do celu linku.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    },
+    {
+      "id": "F16",
+      "injection_point": "registration_mid_step",
+      "expected": "Resume-safe kroki, cudze zmiany wymagają review.",
+      "applies_to": [
+        "linux",
+        "macos"
+      ],
+      "evidence_required": true
+    }
+  ]
+}

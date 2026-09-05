@@ -1,0 +1,14 @@
+.DS_Store
+.venv*/
+.tools/
+node_modules/
+target/
+dist/
+__pycache__/
+*.log
+.project/
+!examples/demo-repo/.project/
+!examples/demo-repo/.project/**
+.env
+.env.*
+!.env.example
