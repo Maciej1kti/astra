@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.waitFor: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('heading', { name: 'List.', exact: true }) to be hidden[22m
+[2m    14 × locator resolved to visible <h1 class="svelte-1n46o8q">List.</h1>[22m
+
+    at /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/scripts/browser-smoke.mjs:365:61 {
+  log: [
+    "  - waiting for getByRole('heading', { name: 'List.', exact: true }) to be hidden",
+    '    14 × locator resolved to visible <h1 class="svelte-1n46o8q">List.</h1>'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.11.0

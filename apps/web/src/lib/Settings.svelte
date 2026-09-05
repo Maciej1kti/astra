@@ -76,7 +76,12 @@
       onsaved();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
-      if (e instanceof ApiError && e.status < 500) pending = null;
+      if (
+        e instanceof ApiError &&
+        e.status < 500 &&
+        ![401, 403, 429].includes(e.status)
+      )
+        pending = null;
     } finally {
       busy = false;
     }

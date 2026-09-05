@@ -935,6 +935,22 @@ Summary contract. Cards carry schedules and optional deadlines; milestone rows
 carry deadlines only. Dependencies remain card-to-card finish-to-start edges.
 Board pages continue to contain cards only. The combined page limit still applies.
 
+### ADR-021 — CLI outcomes and read-only source validation
+
+CLI stdout uses `api_version`, `ok`, `data` or `error`, and `request_id`; HTTP
+responses also include `http_status`, and mutations preserve `command_epoch`.
+Accepted/in-progress or uncertain mutations exit 9. Malformed or truncated replies
+after a mutation preserve the same identity, because the write may have committed.
+Syntax, transport, missing resources, conflicts and access failures use exits
+2, 3, 4, 5 and 6; invalid documents/recovery use 7 and internal failures use 8.
+The legacy `{http_status, body}` wrapper is replaced before the first release.
+
+`validate --offline --project PATH` reads exactly PATH/.project without a socket,
+writer lease, initialization, ancestor search or modification. Online validation
+uses GET /projects/{project_id}/validation and the same parser. Validation covers
+individual source documents and normalization needs, with at most 200 diagnostics;
+it is explicitly not a claim of an atomic multi-file snapshot or graph audit.
+
 
 *Plik źródłowy: `docs/12-ADRS.md`.*
 

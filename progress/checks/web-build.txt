@@ -6,16 +6,16 @@
 > @local-projects/web@0.1.0 build
 > vite build
 
-7:40:59 PM [vite-plugin-svelte] no Svelte config found at /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web - using default configuration.
+8:04:05 PM [vite-plugin-svelte] no Svelte config found at /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web - using default configuration.
 vite v8.2.2 building client environment for production...
 transforming...
-✓ 150 modules transformed.
+✓ 151 modules transformed.
 rendering chunks...
 computing gzip size...
-dist/index.html                       0.39 kB │ gzip:  0.27 kB
-dist/assets/DateViews-DpjXDBdW.css    3.34 kB │ gzip:  1.14 kB
-dist/assets/index-ovSs6H2_.css       18.87 kB │ gzip:  3.93 kB
-dist/assets/DateViews-H5Yazixe.js    15.40 kB │ gzip:  5.63 kB
-dist/assets/index-B2eCG0XT.js       218.94 kB │ gzip: 84.68 kB
+dist/index.html                       0.39 kB │ gzip:  0.26 kB
+dist/assets/DateViews-DXf7y9V0.css    2.94 kB │ gzip:  1.00 kB
+dist/assets/index-DqWFByW6.css       20.28 kB │ gzip:  4.23 kB
+dist/assets/DateViews-BrrKx5N7.js    12.81 kB │ gzip:  4.58 kB
+dist/assets/index-jodQXg5p.js       227.12 kB │ gzip: 86.99 kB
 
-✓ built in 223ms
+✓ built in 204ms

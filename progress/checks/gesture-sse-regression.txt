@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Incoming SSE must not replace the held gesture baseline
+
+0 !== 1
+
+    at file:///Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/scripts/browser-smoke.mjs:273:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.11.0

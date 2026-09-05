@@ -31,6 +31,11 @@ pub struct Page {
 }
 #[derive(Subcommand)]
 pub enum Action {
+    /// Validate source documents; offline mode never writes or initializes a project.
+    Validate {
+        #[arg(long)]
+        offline: bool,
+    },
     Context {
         #[arg(long, default_value_t=24576,value_parser=clap::value_parser!(u32).range(4096..=131072))]
         max_bytes: u32,
@@ -252,17 +257,14 @@ impl Action {
             .json(&json!({"absolute_path":path}))
             .send()
             .await?;
-        if !response.status().is_success() {
-            return Err(
-                "Selected folder is not registered or the server rejected resolution".into(),
-            );
-        }
+        let response = response.error_for_status()?;
         let resolved: Value = response.json().await?;
         let project = resolved["project_id"]
             .as_str()
             .ok_or("Invalid project resolution")?;
         let root = format!("/api/v1/projects/{project}");
         Ok(match self {
+            Self::Validate { .. } => read(format!("{root}/validation")),
             Self::Context { max_bytes } => read(format!("{root}/context?max_bytes={max_bytes}")),
             Self::Cards { page: p } => read(page(format!("{root}/cards"), p)),
             Self::Reports { page: p } => read(page(format!("{root}/updates"), p)),

@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { api, resourcePath, type Summary } from "./api";
   import { dateGesture } from "./date-gesture";
   import { dayDistance, shiftedSchedule, shiftDate } from "./dates";
-  import DateChange from "./DateChange.svelte";
+  import type { DateProposal } from "./proposals";
   type CalendarItem = {
     item_id: string;
     kind: string;
@@ -28,7 +29,7 @@
     weekStart = "monday",
     search = "",
     open,
-    onchanged,
+    onpropose,
   }: {
     project: string;
     month: string;
@@ -37,7 +38,7 @@
     weekStart?: string;
     search?: string;
     open: (item: Pick<Summary, "type" | "id" | "project_id">) => void;
-    onchanged: () => void;
+    onpropose: (proposal: DateProposal) => void;
   } = $props();
   let items = $state<CalendarItem[]>([]),
     rows = $state<Summary[]>([]),
@@ -49,12 +50,18 @@
     mode = $state("month"),
     week = $state(0),
     scale = $state("days");
-  let edit = $state<{
-    path: string;
-    version: string;
-    schedule: { start: string; end: string };
-  } | null>(null);
-  let generation = 0;
+  let generation = 0,
+    deferredRefresh = false;
+  onMount(() => {
+    const released = () => {
+      if (deferredRefresh) {
+        deferredRefresh = false;
+        void load(false);
+      }
+    };
+    window.addEventListener("planning-gesture-ended", released);
+    return () => window.removeEventListener("planning-gesture-ended", released);
+  });
   let days = $derived.by(() => {
     const [year, m] = month.split("-").map(Number);
     return Array.from(
@@ -167,6 +174,10 @@
         `${path}&limit=200${more && cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
       );
       if (current !== generation) return;
+      if (document.querySelector("[data-dragging]")) {
+        deferredRefresh = true;
+        return;
+      }
       items = data.items ?? [];
       paged = more;
       rows = data.rows ?? [];
@@ -203,7 +214,7 @@
     operation: "move" | "start" | "end",
   ) {
     try {
-      edit = {
+      onpropose({
         path: resourcePath(target(item)),
         version: item.version,
         schedule: shiftedSchedule(
@@ -211,7 +222,7 @@
           delta,
           operation,
         ),
-      };
+      });
     } catch (e) {
       error = String(e);
     }
@@ -444,15 +455,6 @@
 {#if paged}<button disabled={loading} onclick={() => load(false)}
     >First page</button
   >{/if}
-{#if edit}<DateChange
-    {...edit}
-    onclose={() => (edit = null)}
-    onsaved={() => {
-      edit = null;
-      void load(false);
-      onchanged();
-    }}
-  />{/if}
 
 <style>
   .date-toolbar {

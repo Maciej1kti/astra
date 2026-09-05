@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { modal } from "./dialog";
   import {
     api,
@@ -28,8 +29,40 @@
     error = $state(""),
     busy = $state(false),
     conflict = $state<Resource | null>(null);
+  let accessLost = $state(false);
+  onMount(() => {
+    const lost = () => {
+      accessLost = true;
+      error =
+        "Your session ended. Copy this proposal before closing and reconnecting.";
+    };
+    const restored = () => {
+      accessLost = false;
+    };
+    window.addEventListener("session-ended", lost);
+    window.addEventListener("session-restored", restored);
+    return () => {
+      window.removeEventListener("session-ended", lost);
+      window.removeEventListener("session-restored", restored);
+    };
+  });
+  async function copyDraft() {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(
+          { path, version, schedule: { start, end }, pending },
+          null,
+          2,
+        ),
+      );
+      error = "Proposal copied.";
+    } catch {
+      error =
+        "Clipboard access is unavailable. Select and copy the proposal and request ID.";
+    }
+  }
   async function transmit() {
-    if (!pending) return;
+    if (!pending || accessLost) return;
     busy = true;
     error = "";
     try {
@@ -41,7 +74,11 @@
       onsaved();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
-      if (e instanceof ApiError && e.status < 500) {
+      if (
+        e instanceof ApiError &&
+        e.status < 500 &&
+        ![401, 403, 429].includes(e.status)
+      ) {
         pending = null;
         if ([409, 412].includes(e.status)) {
           try {
@@ -57,6 +94,7 @@
     }
   }
   async function save() {
+    if (accessLost) return;
     pending = command(
       path,
       "PATCH",
@@ -66,7 +104,7 @@
     await transmit();
   }
   async function status() {
-    if (!pending) return;
+    if (!pending || accessLost) return;
     busy = true;
     try {
       const reply = await api<{ state: string }>(
@@ -103,7 +141,7 @@
         type="date"
         bind:value={start}
         required
-        disabled={busy || !!pending || !!conflict}
+        disabled={busy || !!pending || !!conflict || accessLost}
       /></label
     >
     <label
@@ -112,7 +150,7 @@
         bind:value={end}
         min={start}
         required
-        disabled={busy || !!pending || !!conflict}
+        disabled={busy || !!pending || !!conflict || accessLost}
       /></label
     >
     {#if error}<p role="alert">{error}</p>{/if}
@@ -128,10 +166,21 @@
       ><button type="button" onclick={transmit} disabled={busy}
         >Retry same command</button
       >{/if}
+    <button type="button" onclick={copyDraft}>Copy draft</button>
+    {#if accessLost && pending}<details>
+        <summary>Close without resolving</summary>
+        <p>
+          Copy the request ID and proposal first. The operation may already have
+          committed.
+        </p>
+        <button type="button" onclick={onclose}>Discard this proposal</button>
+      </details>{/if}
     <footer>
       <button type="button" onclick={onclose} disabled={busy || !!pending}
         >Cancel</button
-      ><button type="submit" disabled={busy || !!pending || !!conflict}
+      ><button
+        type="submit"
+        disabled={busy || !!pending || !!conflict || accessLost}
         >Save planned dates</button
       >
     </footer>

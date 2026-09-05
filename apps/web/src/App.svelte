@@ -4,6 +4,11 @@
   onMount(() => applyTheme(readTheme()));
   import { modal } from "./lib/dialog";
   import Board from "./lib/Board.svelte";
+  import DateChange from "./lib/DateChange.svelte";
+  import MoveChange from "./lib/MoveChange.svelte";
+  import type { DateProposal, MoveProposal } from "./lib/proposals";
+  let dateDraft = $state<DateProposal | null>(null),
+    moveDraft = $state<MoveProposal | null>(null);
   import Editor from "./lib/Editor.svelte";
   import Settings from "./lib/Settings.svelte";
   let settings = $state(false);
@@ -153,6 +158,30 @@
         item.label.toLowerCase().includes(search.toLowerCase()),
     ),
   );
+  function sessionEnded() {
+    refreshGeneration++;
+    clearTimeout(refreshTimer);
+    source?.close();
+    boot = null;
+    connected = false;
+    projects = [];
+    cards = [];
+    milestones = [];
+    updates = [];
+    focus = [];
+    focusCards = [];
+    attentionRows = [];
+    roots = [];
+    directories = [];
+    settings = false;
+    adding = false;
+    error = "Your session ended. Reconnect this browser to continue.";
+  }
+  function commandWarning(event: Event) {
+    const warnings = (event as CustomEvent<{ code: string; message: string }[]>)
+      .detail;
+    error = warnings.map((item) => item.message || item.code).join(" ");
+  }
   function message(e: unknown) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -162,6 +191,7 @@
     try {
       boot = await api<Bootstrap>("/api/v1/bootstrap");
       configure(boot);
+      window.dispatchEvent(new Event("session-restored"));
       const preferences = await api<{
         preferences: { default_view?: View; week_start?: string };
       }>("/api/v1/workspace/preferences");
@@ -302,7 +332,12 @@
       `/api/v1/events?cursor=${encodeURIComponent(boot.snapshot_cursor)}`,
     );
     source.onopen = () => (connected = true);
-    source.onerror = () => (connected = false);
+    source.onerror = () => {
+      connected = false;
+      // A closed stream may be a network outage or a revoked session. Probe once;
+      // the API layer distinguishes 401 without discarding drafts on a timeout.
+      void api("/api/v1/bootstrap").catch(() => {});
+    };
     for (const kind of [
       "changed",
       "health_changed",
@@ -374,7 +409,14 @@
   }
   async function addProject() {
     adding = true;
-    if (registrationPending) return;
+    if (registrationPending) {
+      try {
+        roots = (await api<{ items: Root[] }>("/api/v1/roots")).items;
+      } catch (e) {
+        message(e);
+      }
+      return;
+    }
     plan = null;
     error = "";
     try {
@@ -492,8 +534,12 @@
     return () => clearTimeout(timer);
   });
   onMount(() => {
+    window.addEventListener("session-ended", sessionEnded);
+    window.addEventListener("command-warning", commandWarning);
     void initialize();
     return () => {
+      window.removeEventListener("session-ended", sessionEnded);
+      window.removeEventListener("command-warning", commandWarning);
       source?.close();
       clearTimeout(refreshTimer);
     };
@@ -789,7 +835,7 @@
             {search}
             revision={viewRevision}
             {open}
-            onchanged={() => void refresh().catch(message)}
+            onpropose={(proposal) => (moveDraft = proposal)}
           />
         {:else if view === "board"}<div class="board">
             {#each statuses as status}<section class="column">
@@ -829,7 +875,7 @@
               {weekStart}
               {search}
               {open}
-              onchanged={() => void refresh().catch(message)}
+              onpropose={(proposal) => (dateDraft = proposal)}
             />{:else}<p>Loading date views…</p>{/if}
         {:else if view === "updates"}<div class="updates">
             {#each visibleUpdates as item}<button
@@ -899,6 +945,22 @@
     </div>
   </div>
 {/if}
+{#if dateDraft}{#key dateDraft}<DateChange
+      {...dateDraft}
+      onclose={() => (dateDraft = null)}
+      onsaved={() => {
+        dateDraft = null;
+        void refresh().catch(message);
+      }}
+    />{/key}{/if}
+{#if moveDraft}{#key moveDraft}<MoveChange
+      {...moveDraft}
+      onclose={() => (moveDraft = null)}
+      onsaved={() => {
+        moveDraft = null;
+        void refresh().catch(message);
+      }}
+    />{/key}{/if}
 {#if settings}<Settings
     onclose={() => (settings = false)}
     onsaved={() => {

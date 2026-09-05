@@ -67,9 +67,15 @@ impl Directory {
         Ok((stat.st_dev as u64, stat.st_ino as u64))
     }
     pub fn names(&self) -> Result<Vec<String>, StoreError> {
+        self.names_bounded(100_000)
+    }
+    pub fn names_bounded(&self, limit: usize) -> Result<Vec<String>, StoreError> {
         self.verify()?;
         let mut names = Vec::new();
         for entry in std::fs::read_dir(&self.path)? {
+            if names.len() >= limit {
+                return Err(StoreError::Invalid("DIRECTORY_ENTRY_LIMIT"));
+            }
             names.push(
                 entry?
                     .file_name()

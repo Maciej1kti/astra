@@ -15,14 +15,20 @@ const state = join(temp, "state"),
 await mkdir(state, { mode: 0o700 });
 await mkdir(folder, { mode: 0o700 });
 const socket = join(state, "projectd.sock");
-const cli = (...args) =>
-  JSON.parse(
-    execFileSync(
-      join(root, "target/debug/projectctl"),
-      ["--socket", socket, ...args],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-    ),
-  ).body;
+const cli = (...args) => {
+  let output;
+  try {
+    output = execFileSync(join(root,"target/debug/projectctl"),["--socket",socket,...args],{encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+  } catch (error) {
+    // Registration returns an accepted job; the test explicitly checks its state.
+    if(error.status !== 9) throw error;
+    output = error.stdout;
+  }
+  const envelope = JSON.parse(output);
+  assert.equal(envelope.api_version,"1");
+  assert.equal(envelope.ok,true);
+  return envelope.data;
+};
 execFileSync(
   "openssl",
   [
@@ -257,6 +263,28 @@ try {
     assert.equal(await page.getByRole("dialog").count(),0);
     assert.equal(cli("get",path).version,beforeGesture.version);
   }
+  const concurrentGesture = join(temp,"during-gesture.json");
+  const held = await moveHandle.boundingBox();
+  await page.mouse.move(held.x+held.width/2,held.y+held.height/2);await page.mouse.down();
+  await page.mouse.move(held.x+held.width/2+48,held.y+held.height/2,{steps:4});
+  await writeFile(concurrentGesture,JSON.stringify({set:{title:"During held gesture"}}));
+  cli("command","PATCH",path,"--json-file",concurrentGesture,"--if-version",cli("get",path).version);
+  await page.waitForTimeout(700);
+  assert.equal(await moveHandle.count(),1,"Incoming SSE must not replace the held gesture baseline");
+  await page.mouse.up();
+  await page.getByRole("button",{name:"Save planned dates",exact:true}).click();
+  await page.getByText("Current saved schedule:",{exact:false}).waitFor();
+  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+  let busyReads = 0;
+  await page.route("**/api/v1/views/gantt?*", async route => {
+    if (busyReads++ === 0) await route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({api_version:"1",error:{code:"SERVER_BUSY",message:"Synthetic bounded worker saturation"}})});
+    else await route.continue();
+  });
+  await writeFile(concurrentGesture,JSON.stringify({set:{title:"External editor update"}}));
+  cli("command","PATCH",path,"--json-file",concurrentGesture,"--if-version",cli("get",path).version);
+  await moveHandle.waitFor();
+  assert(busyReads >= 2);
+  await page.unroute("**/api/v1/views/gantt?*");
   const bounds=await moveHandle.boundingBox();
   await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
   await page.mouse.down();
@@ -353,9 +381,23 @@ try {
   await page.reload();
   await page.getByRole("heading",{name:"List.",exact:true}).waitFor();
   assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),"dark");
+  await page.getByText("Competing timeline edit",{exact:true}).click();
+  await page.getByLabel("Title",{exact:true}).fill("Unsaved revocation draft");
+  await mobile.getByRole("button",{name:"Timeline",exact:true}).click();
+  await mobile.getByLabel("Project",{exact:true}).selectOption(plan.project_id);
+  await mobile.getByLabel("Month",{exact:true}).fill("2026-09");
+  await mobile.getByRole("button",{name:"Move plan: Competing timeline edit",exact:true}).click();
+  await mobile.getByLabel("Planned end",{exact:true}).fill("2026-09-16");
+  for(const session of cli("sessions").items) cli("revoke-session",session.id);
+  await page.getByRole("heading",{name:"List.",exact:true}).waitFor({state:"hidden",timeout:5000});
+  assert.equal(await page.getByLabel("Title",{exact:true}).inputValue(),"Unsaved revocation draft");
+  await page.getByRole("button",{name:"Copy draft",exact:true}).waitFor();
+  assert.equal(await mobile.getByLabel("Planned end",{exact:true}).inputValue(),"2026-09-16");
+  await mobile.getByText("Your session ended.",{exact:false}).first().waitFor();
+  await mobile.getByRole("button",{name:"Copy draft",exact:true}).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, milestone timeline, aligned calendar weeks, full-text search and gesture cancellation.",
+    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, dark appearance and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

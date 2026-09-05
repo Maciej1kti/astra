@@ -1,0 +1,32 @@
+   Compiling rustix v1.1.4
+   Compiling num-traits v0.2.19
+   Compiling tower-http v0.6.11
+   Compiling reqwest v0.13.4
+   Compiling chrono v0.4.44
+   Compiling tempfile v3.27.0
+   Compiling projectctl v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectctl)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.85s
+     Running tests/output.rs (target/debug/deps/output-faa139d70506cc1e)
+
+running 2 tests
+test argument_and_transport_failures_are_single_json_with_stable_exits ... ok
+test accepted_and_malformed_mutation_replies_preserve_command_identity ... FAILED
+
+failures:
+
+---- accepted_and_malformed_mutation_replies_preserve_command_identity stdout ----
+
+thread 'accepted_and_malformed_mutation_replies_preserve_command_identity' (4600497) panicked at crates/projectctl/tests/output.rs:32:9:
+assertion `left == right` failed: {"api_version":"1","error":{"code":"CLIENT_ERROR","message":"expected ident at line 1 column 2"},"ok":false,"request_id":null}
+
+  left: Some(2)
+ right: Some(9)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    accepted_and_malformed_mutation_replies_preserve_command_identity
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+error: test failed, to rerun pass `-p projectctl --test output`

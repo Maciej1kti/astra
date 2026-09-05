@@ -113,6 +113,12 @@ impl Engine {
         }
         Ok(engine)
     }
+    pub fn validate_sources(&self, project: &str) -> Result<Value, AppError> {
+        let _gate = self.gate.read().map_err(|_| AppError::State)?;
+        let handle = self.store(project)?;
+        let store = handle.lock().map_err(|_| AppError::State)?;
+        Ok(project_store::validation::report(&store.directory)?)
+    }
     pub fn workspace(&self) -> Result<(Value, String), AppError> {
         let bytes = self
             .journal

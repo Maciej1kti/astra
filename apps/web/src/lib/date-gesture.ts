@@ -31,6 +31,8 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     node.removeAttribute("data-dragging");
     if (captured !== null && node.hasPointerCapture(captured))
       node.releasePointerCapture(captured);
+    if (captured !== null)
+      window.dispatchEvent(new Event("planning-gesture-ended"));
   }
   function paint() {
     frame = 0;

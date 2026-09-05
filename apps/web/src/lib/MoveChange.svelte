@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { untrack } from "svelte";
   import { modal } from "./dialog";
   import {
@@ -34,8 +35,36 @@
     busy = $state(false),
     error = $state(""),
     conflict = $state(false);
+  let accessLost = $state(false);
+  onMount(() => {
+    const lost = () => {
+      accessLost = true;
+      error =
+        "Your session ended. Copy this proposal before closing and reconnecting.";
+    };
+    const restored = () => {
+      accessLost = false;
+    };
+    window.addEventListener("session-ended", lost);
+    window.addEventListener("session-restored", restored);
+    return () => {
+      window.removeEventListener("session-ended", lost);
+      window.removeEventListener("session-restored", restored);
+    };
+  });
+  async function copyDraft() {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify({ item, status, before, pending }, null, 2),
+      );
+      error = "Proposal copied.";
+    } catch {
+      error =
+        "Clipboard access is unavailable. Select and copy the proposal and request ID.";
+    }
+  }
   async function transmit() {
-    if (!pending) return;
+    if (!pending || accessLost) return;
     busy = true;
     try {
       const result = await send(pending);
@@ -46,7 +75,11 @@
       onsaved();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
-      if (e instanceof ApiError && e.status < 500) {
+      if (
+        e instanceof ApiError &&
+        e.status < 500 &&
+        ![401, 403, 429].includes(e.status)
+      ) {
         pending = null;
         conflict = true;
       }
@@ -55,6 +88,7 @@
     }
   }
   async function save() {
+    if (accessLost) return;
     const index = neighbors.findIndex((row) => row.id === before);
     const chosen = before
       ? { before_id: before, after_id: neighbors[index - 1]?.id ?? null }
@@ -70,7 +104,7 @@
     await transmit();
   }
   async function check() {
-    if (!pending) return;
+    if (!pending || accessLost) return;
     busy = true;
     try {
       const result = await api<{ state: string }>(
@@ -121,6 +155,15 @@
       onclick={transmit}
       disabled={busy}>Retry same command</button
     >{/if}
+  <button type="button" onclick={copyDraft}>Copy draft</button>
+  {#if accessLost && pending}<details>
+      <summary>Close without resolving</summary>
+      <p>
+        Copy the request ID and proposal first. The operation may already have
+        committed.
+      </p>
+      <button type="button" onclick={onclose}>Discard this proposal</button>
+    </details>{/if}
   <footer>
     <button onclick={onclose} disabled={busy || !!pending}>Cancel</button
     ><button
@@ -128,6 +171,7 @@
       disabled={busy ||
         !!pending ||
         conflict ||
+        accessLost ||
         (!before && !lastPage && status === item.status)}>Confirm move</button
     >
   </footer>

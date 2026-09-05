@@ -187,3 +187,29 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
   of all reconnect/drag races. Screenshots are synthetic browser fixtures.
 - CI for commit 3625b18 passed on Ubuntu 24.04 and macOS 15, run 33979005959.
   This does not establish physical iPhone, Arch/ext4 or physical power-loss coverage.
+
+## E012 — CLI outcomes, read-only validation and live-client races
+
+- CLI now emits the documented JSON envelope and stable exit codes. Accepted or
+  uncertain writes exit 9 and preserve request ID/epoch, including malformed
+  responses. A failing wire regression preceded the response-handling fix.
+- Added online and offline document validation using the same source parser. The
+  offline path needs no socket, creates no metadata/lease and never searches a
+  parent project. Its declared scope is individual documents, not a graph audit.
+  Directory enumeration now has a 100,000-entry bound; diagnostics cap at 200.
+- A failing real-browser test exposed retained confirmed views after session
+  revocation. They now clear while editor and date/move proposals remain available
+  for explicit copying. Uncertain request identities survive authorization errors.
+- A second failing browser test exposed SSE replacing a held drag baseline. Views
+  defer incoming projections until release; the proposed write retains its original
+  version and correctly conflicts with an external edit.
+- Browser reads use three concurrent slots and bounded waiting. Rejected SERVER_BUSY
+  reads receive at most two short retries; mutations never use this retry mechanism.
+  The HTTPS smoke includes a synthetic busy response to verify recovery.
+- Full checks passed: 63 Rust tests, 3 Node tests, 4 Python tests, contract validation,
+  zero Svelte diagnostics, strict Clippy and release build (`checks/cli-validation.txt`).
+  Extended browser smoke passed with desktop and mobile-emulation draft retention,
+  held-pointer SSE conflict and dark appearance persistence (`checks/browser-smoke.txt`).
+- CI run 33981873908 for the previous commit passed Ubuntu but failed macOS during
+  the resize browser test. The held-gesture changes address a reproduced race; the
+  next CI result must still be observed. Physical device claims remain excluded.

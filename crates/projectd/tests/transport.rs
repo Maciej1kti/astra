@@ -235,6 +235,23 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
         .await
         .unwrap();
     assert_eq!(registration.status(), 202);
+    let validation: Value = app
+        .local(
+            "GET",
+            &format!(
+                "/api/v1/projects/{}/validation",
+                plan["project_id"].as_str().unwrap()
+            ),
+        )
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    project_application::wire::validate("SourceValidation", &validation).unwrap();
+    assert_eq!(validation["valid"], true);
+
     let path = format!(
         "/api/v1/projects/{}/cards",
         plan["project_id"].as_str().unwrap()

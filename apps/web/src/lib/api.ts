@@ -82,25 +82,76 @@ export function configure(value: Bootstrap) {
   bootstrap = value;
   clockOffset = Date.parse(value.server_time) - Date.now();
 }
+let activeReads = 0;
+const waitingReads: (() => void)[] = [];
+async function readSlot() {
+  if (activeReads < 3) activeReads++;
+  else {
+    if (waitingReads.length >= 32)
+      throw new ApiError(503, {
+        error: {
+          code: "SERVER_BUSY",
+          message: "Waiting for previous reads to finish.",
+        },
+      });
+    await new Promise<void>((resolve) => waitingReads.push(resolve));
+  }
+  return () => {
+    const next = waitingReads.shift();
+    if (next) next();
+    else activeReads--;
+  };
+}
 export async function api<T>(
   path: string,
   method = "GET",
   payload?: unknown,
   headers: Record<string, string> = {},
 ): Promise<T> {
-  const response = await fetch(path, {
-    method,
-    credentials: "same-origin",
-    headers: {
-      ...(payload !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...(bootstrap ? { "X-CSRF-Token": bootstrap.csrf_token } : {}),
-      ...headers,
-    },
-    ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
-  });
-  const value = response.status === 204 ? null : await response.json();
-  if (!response.ok) throw new ApiError(response.status, value);
-  return value as T;
+  for (let attempt = 0; ; attempt++) {
+    let release: (() => void) | undefined;
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      if (method === "GET") release = await readSlot();
+      timeout = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(path, {
+        method,
+        credentials: "same-origin",
+        signal: controller.signal,
+        headers: {
+          ...(payload !== undefined
+            ? { "Content-Type": "application/json" }
+            : {}),
+          ...(bootstrap ? { "X-CSRF-Token": bootstrap.csrf_token } : {}),
+          ...headers,
+        },
+        ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
+      });
+      const value = response.status === 204 ? null : await response.json();
+      if (response.status === 401)
+        window.dispatchEvent(new Event("session-ended"));
+      if (!response.ok) throw new ApiError(response.status, value);
+      return value as T;
+    } catch (error) {
+      // Only retry rejected reads. Mutations retain their original identity and
+      // always require an explicit retry after an uncertain transport result.
+      if (!(
+        method === "GET" &&
+        attempt < 2 &&
+        error instanceof ApiError &&
+        error.status === 503 &&
+        (error.data.error as { code?: string })?.code === "SERVER_BUSY"
+      ))
+        throw error;
+    } finally {
+      clearTimeout(timeout);
+      release?.();
+    }
+    await new Promise((resolve) =>
+      setTimeout(resolve, 100 * (attempt + 1) + Math.random() * 80),
+    );
+  }
 }
 export function command(
   path: string,
@@ -134,12 +185,23 @@ export async function send(pending: Pending): Promise<{
   result?: { resource?: Resource };
   job_id?: string;
   state?: string;
+  warnings?: { code: string; message: string }[];
 }> {
-  return api(pending.path, pending.method, pending.payload, {
+  const reply = await api<{
+    result?: { resource?: Resource };
+    job_id?: string;
+    state?: string;
+    warnings?: { code: string; message: string }[];
+  }>(pending.path, pending.method, pending.payload, {
     "X-Request-ID": pending.requestId,
     "X-Command-Epoch": pending.epoch,
     ...(pending.version ? { "If-Match": `"${pending.version}"` } : {}),
   });
+  if (reply.warnings?.length)
+    window.dispatchEvent(
+      new CustomEvent("command-warning", { detail: reply.warnings }),
+    );
+  return reply;
 }
 export async function all<T = Summary>(path: string): Promise<T[]> {
   const items: T[] = [];

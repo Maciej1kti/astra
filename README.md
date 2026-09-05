@@ -1,52 +1,63 @@
-# Local Projects — implementacja i specyfikacja
+# Local Projects
 
-Budowa rozpoczęta 5 września 2026. Działa fundament G0: biblioteka domeny Rust,
-szkielet Svelte i lokalne kontrole. Serwer, CLI i funkcje użytkowe nie są jeszcze gotowe.
+A local planner tied to explicitly selected folders. Project content lives in
+Markdown/YAML under `.project/`; a Rust daemon coordinates conditional, durable
+writes. A Svelte browser interface and a Unix-socket CLI use the same application
+engine. SQLite provides a rebuildable search index and separate operational state
+for sessions, command retries, receipts and history.
 
-**Development:** [DEVELOPMENT.md](DEVELOPMENT.md) · [stan](progress/STATE.md) ·
-[plan dalszej pracy](progress/PLAN.md) · [dowody](progress/EVIDENCE.md).
+The application is under active implementation. See [current status](progress/STATE.md)
+and [verification evidence](progress/EVIDENCE.md) for implemented scope and known
+limitations. Physical iPhone/Safari, Arch/ext4 and physical power-loss acceptance
+are not established. Built-in backup/restore archives and source-format migration
+frameworks are [deferred](progress/SCOPE.md).
+
+Features include seven source-backed views, cards and milestones, date planning,
+reports and explicit resolutions, shared focus, full-text search, history and
+conditional undo. The board and timeline support explicit move proposals and
+keyboard alternatives. Browser access requires pairing; the CLI requires the
+server's Unix socket. No write command falls back to editing files directly.
+
+## Run and package
+
+Use [development instructions](DEVELOPMENT.md) to build the pinned Rust/Svelte
+workspace. Run all local checks with:
 
 ```sh
 .venv-check/bin/python scripts/check.py
 ```
 
-Poniżej orientacja w oryginalnym handoffie 1.0. Jego instrukcje rozpoczęcia oraz
-dołączone raporty opisują baseline; aktualny postęp jest w `progress/`.
+Release packages include the daemon, CLI, embedded frontend and a user-service
+configuration generator. See [installation](ops/PACKAGE.md). Runtime use does not
+require Node.js or Docker. The daemon listens on loopback; configure an owner-managed
+private HTTPS proxy before using the browser. The installer does not enable a
+service or change network settings automatically.
 
-**Zacznij od [START_HERE.md](START_HERE.md), a następnie [instrukcji dla Astry](ASTRA-KICKOFF.md).**
+## CLI
 
-| Materiał | Lokalizacja |
-|---|---|
-| Pełna scalona specyfikacja | [MASTER-SPEC.md](docs/MASTER-SPEC.md) |
-| Decyzje i rozróżnienie [U]/[B]/[S] | [00-DECISIONS.md](docs/00-DECISIONS.md) |
-| Kontrakt źródeł | [domain.schema.json](contracts/domain.schema.json) |
-| Kontrakt HTTP | [openapi.yaml](contracts/openapi.yaml) |
-| Plan produkcji | [PLAN.md](delivery/PLAN.md) |
-| Backlog wykonawczy | [BACKLOG.md](delivery/BACKLOG.md) |
-| Scenariusze odbioru | [ACCEPTANCE.md](delivery/ACCEPTANCE.md) |
-| Wynik sprawdzenia pakietu | [PACKAGE-VALIDATION.md](delivery/PACKAGE-VALIDATION.md) |
-
-Dane w `examples/` są syntetyczne. Nazwy programu i ścieżki są robocze. Szablony w `ops/` wymagają dostosowania; nie uruchamiaj ich bez zmiany placeholderów i kontroli aktualnej konfiguracji hosta.
-
-## Powtórzenie sprawdzenia pakietu
-
-Python 3.11+; zależności walidatora instaluj w oddzielnym środowisku, nie w systemowym Pythonie Archa:
+Select a registered folder explicitly; parent folders are never searched:
 
 ```sh
-python3 -m venv .venv-check
-.venv-check/bin/python -m pip install -r scripts/requirements-validation.txt
-.venv-check/bin/python scripts/check_package.py
+projectctl --socket /absolute/state/projectd.sock --project /absolute/project context
+projectctl --socket /absolute/state/projectd.sock --project /absolute/project card list
+projectctl --project /absolute/project validate --offline
 ```
 
-Powyższa instalacja może wymagać sieci. Sam walidator pracuje offline, nie uruchamia serwera i nie modyfikuje repozytoriów użytkownika. Opcja `--report /ścieżka/poza/pakietem/report.json` zapisuje raport. Nie nadpisuj dołączonego raportu przed kontrolą sum, bo zmienisz plik objęty manifestem.
+Normal output is one JSON envelope with `api_version`, `ok`, `data` or `error`, and
+`request_id`. Exit 9 means an operation is still in progress or its result is
+uncertain. Keep the request ID, command epoch, original payload and resource version
+when retrying. Read-only offline validation checks source documents without
+creating project metadata or requiring a running server.
 
-Skrypt sprawdza artefakty handoffu, nie spełnienie testów produktu. Pełna walidacja standardu OpenAPI przez osobne narzędzie, rzeczywiste testy hostów/telefonu, testy awarii i pomiary aplikacji pozostają pracą Astry.
+## Contracts and development evidence
 
-## Aktualizacja dokumentacji podczas budowy
+- [Source schemas](contracts/domain.schema.json), [HTTP API](contracts/openapi.yaml),
+  [CLI output](contracts/cli-output.schema.json) and [local IPC](contracts/local-ipc.json).
+- [Architecture decisions](docs/12-ADRS.md), [implementation plan](progress/PLAN.md)
+  and [acceptance scenarios](delivery/ACCEPTANCE.json).
+- Original handoff documents remain temporary implementation references until their
+  outstanding requirements are resolved. They are not a claim of product readiness.
 
-```sh
-python3 scripts/assemble_spec.py
-python3 scripts/check_package.py --skip-manifest
-```
-
-Manifest `MANIFEST.sha256` dotyczy niezmienionego pakietu startowego, nie późniejszych zmian kodu. Sumy kontrolne wykrywają zmianę bajtów; nie są podpisem autora. Raporty postępu w `progress/` należy aktualizować na podstawie rzeczywistych dowodów. Walidator początkowy pilnuje stanu `not_run`/`not_started`; po rozpoczęciu pracy Astra dostosowuje tę kontrolę do legalnych statusów i wymaga dowodów dla ukończonych elementów.
+All new repository content is English. Fixtures and screenshots contain synthetic
+projects; user project data, credentials, runtime state and local dependencies are
+excluded from version control.

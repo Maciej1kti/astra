@@ -102,6 +102,10 @@ pub(super) fn run(
             engine.list(Some(resource_type), &query)?
         }
 
+        ("GET", ["api", "v1", "projects", project, "validation"]) => {
+            parameters(&input, &[])?;
+            engine.validate_sources(project)?
+        }
         ("GET", ["api", "v1", "projects", project, "context"]) => {
             let fields = parameters(&input, &["max_bytes"])?;
             let max = number(&fields, "max_bytes", 24576)?;

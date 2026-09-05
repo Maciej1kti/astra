@@ -1201,9 +1201,11 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
+ "project-store",
  "reqwest",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "url",
  "uuid",

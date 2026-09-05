@@ -119,6 +119,41 @@
   }
   const baseline = untrack(snapshot);
   let dirty = $derived(snapshot() !== baseline);
+  let accessLost = $state(false);
+  async function copyDraft() {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify({ fields: JSON.parse(snapshot()), pending }, null, 2),
+      );
+      error = "Draft copied.";
+    } catch {
+      error =
+        "Clipboard access is unavailable. Select and copy your draft fields.";
+    }
+  }
+  onMount(() => {
+    const ended = () => {
+      if (!dirty && !pending) {
+        onclose();
+        return;
+      }
+      accessLost = true;
+      history = [];
+      focus = null;
+      conflict = null;
+      error =
+        "Your session ended. Your draft is preserved; copy it before closing, then reconnect.";
+    };
+    const restored = () => {
+      accessLost = false;
+    };
+    window.addEventListener("session-ended", ended);
+    window.addEventListener("session-restored", restored);
+    return () => {
+      window.removeEventListener("session-ended", ended);
+      window.removeEventListener("session-restored", restored);
+    };
+  });
   function close() {
     if (dirty || pending) discard = true;
     else onclose();
@@ -310,7 +345,7 @@
     }
   }
   async function transmit() {
-    if (!pending) return;
+    if (!pending || accessLost) return;
     busy = true;
     error = "";
     try {
@@ -331,7 +366,8 @@
             /* Keep the draft even if the source is unavailable. */
           }
         }
-        if (e.status < 500) pending = null;
+        if (e.status < 500 && ![401, 403, 429].includes(e.status))
+          pending = null;
       }
     } finally {
       busy = false;
@@ -634,13 +670,16 @@
           >Retry same command</button
         >
       </div>{/if}
+    {#if dirty || pending}<button type="button" onclick={copyDraft}
+        >Copy draft</button
+      >{/if}
     <footer>
       <button type="button" onclick={close} disabled={busy}
         >{readonly ? "Close" : "Cancel"}</button
       >{#if !readonly}<button
           class="primary"
           type="submit"
-          disabled={busy || !!pending || !!conflict}
+          disabled={busy || !!pending || !!conflict || accessLost}
           >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</button
         >{/if}
     </footer>

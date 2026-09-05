@@ -1,19 +1,20 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { api, type Summary } from "./api";
   import { dateGesture } from "./date-gesture";
-  import MoveChange from "./MoveChange.svelte";
+  import type { MoveProposal } from "./proposals";
   let {
     project,
     revision,
     search,
     open,
-    onchanged,
+    onpropose,
   }: {
     project: string;
     revision: number;
     search: string;
     open: (item: Summary) => void;
-    onchanged: () => void;
+    onpropose: (proposal: MoveProposal) => void;
   } = $props();
   type Column = {
     status: string;
@@ -23,14 +24,20 @@
   };
   let columns = $state<Column[]>([]),
     error = $state(""),
-    busy = $state(false),
-    proposal = $state<{
-      item: Summary;
-      status: string;
-      placement?: { after_id: string | null; before_id: string | null };
-    } | null>(null);
+    busy = $state(false);
   let pageStarts = $state<Record<string, boolean>>({});
-  let generation = 0;
+  let generation = 0,
+    deferredRefresh = false;
+  onMount(() => {
+    const released = () => {
+      if (deferredRefresh) {
+        deferredRefresh = false;
+        void load();
+      }
+    };
+    window.addEventListener("planning-gesture-ended", released);
+    return () => window.removeEventListener("planning-gesture-ended", released);
+  });
   $effect(() => {
     void project;
     void revision;
@@ -45,6 +52,10 @@
         `/api/v1/views/board?project_id=${project}&limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
       );
       if (current !== generation) return;
+      if (document.querySelector("[data-dragging]")) {
+        deferredRefresh = true;
+        return;
+      }
       if (status) pageStarts[status] = !cursor;
       else
         pageStarts = Object.fromEntries(
@@ -62,6 +73,22 @@
     } finally {
       if (current === generation) busy = false;
     }
+  }
+  function propose(
+    item: Summary,
+    status: string,
+    placement?: MoveProposal["placement"],
+  ) {
+    const column = columns.find((column) => column.status === status);
+    if (!column) return;
+    onpropose({
+      item,
+      status,
+      placement,
+      neighbors: column.items.filter((row) => row.id !== item.id),
+      firstPage: pageStarts[status] ?? true,
+      lastPage: !column.page.next_cursor,
+    });
   }
   function gesture(item: Summary) {
     let destination: {
@@ -100,7 +127,8 @@
         return 1;
       },
       commit: () => {
-        if (destination) proposal = { item, ...destination };
+        if (destination)
+          propose(item, destination.status, destination.placement);
       },
     };
   }
@@ -142,7 +170,7 @@
                 value=""
                 disabled={busy}
                 onchange={(event) => {
-                  proposal = { item, status: event.currentTarget.value };
+                  propose(item, event.currentTarget.value);
                   event.currentTarget.value = "";
                 }}
                 ><option value="" disabled>Move to…</option
@@ -164,21 +192,6 @@
         >{/if}
     </section>{/each}
 </div>
-{#if proposal}<MoveChange
-    {...proposal}
-    neighbors={(
-      columns.find((column) => column.status === proposal!.status)?.items ?? []
-    ).filter((item) => item.id !== proposal!.item.id)}
-    firstPage={pageStarts[proposal.status] ?? true}
-    lastPage={!columns.find((column) => column.status === proposal!.status)
-      ?.page.next_cursor}
-    onclose={() => (proposal = null)}
-    onsaved={() => {
-      proposal = null;
-      void load();
-      onchanged();
-    }}
-  />{/if}
 
 <style>
   .board {

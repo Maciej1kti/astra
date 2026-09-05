@@ -1,0 +1,10 @@
+   Compiling projectctl v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectctl)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.52s
+     Running tests/output.rs (target/debug/deps/output-faa139d70506cc1e)
+
+running 2 tests
+test argument_and_transport_failures_are_single_json_with_stable_exits ... ok
+test accepted_and_malformed_mutation_replies_preserve_command_identity ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
