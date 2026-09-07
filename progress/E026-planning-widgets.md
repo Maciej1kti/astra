@@ -101,3 +101,14 @@ Environment: Arch Linux, Chromium 151.0.7922.173, Node 24.11.0 and system Rust
 1.98.0. Physical iPhone/Safari, macOS, accessibility acceptance and representative
 large-dataset rendering performance remain unverified. Domain timing and build
 size are not a claim of browser frame rate or complete product acceptance.
+
+## Documentation handoff — 2026-09-08
+
+At the owner's request, the README, manual planning walkthrough, entry-point
+status and current environment notes were synchronized with this implementation.
+The consolidated specification was regenerated from authoritative chapters,
+including ADR-026 and the planning API/UI contracts. The generator now describes
+the implemented application and retains outstanding handoff requirements rather
+than claiming acceptance. Package and relative-link validation passed with
+`--skip-manifest`; the original handoff checksum manifest remains historical.
+Implementation and browser evidence are preserved in commit `6c01d16`.

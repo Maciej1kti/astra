@@ -2,7 +2,7 @@
 
 > Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
 
-Updated: 2026-09-05. Status: **ready for owner manual testing; full release acceptance remains open**.
+Updated: 2026-09-08. Status: **ready for owner manual testing; full release acceptance remains open**.
 
 Public repository: https://github.com/Maciej1kti/astra. New repository content,
 UI text and commits are English. Continue until the v1 scope is implemented and
@@ -41,12 +41,16 @@ English documentation cleanup. Gate and acceptance completion remain unclaimed.
 
 ## Environment
 
-macOS 27.0 ARM64; Rust 1.92.0 in `.tools/`; Node 24.11.0; Python 3.14.6 in
-`.venv-check`. No Linux/ext4, physical iPhone or physical power-loss evidence.
+Latest planning verification: Arch Linux, system Rust 1.98.0, Node 24.11.0 and
+Chromium 151.0.7922.173. Earlier macOS evidence is retained in its original
+entries; E026 does not establish macOS or physical iPhone/Safari acceptance.
+Physical power-loss acceptance also remains open.
 The HTTPS browser test uses temporary self-signed TLS and the normal pairing
 flow, with temporary synthetic projects; it does not change the user's network.
 
 Read `progress/PLAN.md` and the newest evidence entry, then continue the next
 unfinished slice. Full checks: `.venv-check/bin/python scripts/check.py`.
-Browser smoke: `node scripts/browser-smoke.mjs` after the frontend and debug Rust
-workspace are built and Playwright Chromium is installed.
+Browser suites: `node scripts/browser-smoke.mjs` and
+`node scripts/planning-browser.mjs` after the frontend and debug Rust workspace
+are built and Playwright Chromium is installed. Set `ASTRA_TEST_PROFILE=release`
+to exercise release binaries.

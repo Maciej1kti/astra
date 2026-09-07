@@ -14,9 +14,13 @@ frameworks are [deferred](progress/SCOPE.md).
 
 Features include seven source-backed views, cards and milestones, date planning,
 reports and explicit resolutions, shared focus, full-text search, history and
-conditional undo. The board and timeline support explicit move proposals and
-keyboard alternatives. Browser access requires pairing; the CLI requires the
-server's Unix socket. No write command falls back to editing files directly.
+conditional undo. The board supports dragging and keyboard ordering. The Gantt
+view connects cards with finish-to-start dependencies and previews their impact
+on the project finish.
+The calendar provides day, week, month and agenda views with movement, resizing
+and keyboard alternatives. Planning widgets are pinned MIT dependencies; see
+[planning implementation and verification](progress/E026-planning-widgets.md).
+Browser access requires pairing; the CLI requires the server's Unix socket. No write command falls back to editing files directly.
 
 ## Try it locally
 

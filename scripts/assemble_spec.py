@@ -10,13 +10,13 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS = sorted((ROOT / "docs").glob("[0-9][0-9]-*.md"))
 ANNEXES = [
-    ("Instrukcja startowa dla Astry", ROOT / "ASTRA-KICKOFF.md"),
-    ("Plan wykonania i bramki", ROOT / "delivery/PLAN.md"),
-    ("Podział pracy i integracja", ROOT / "delivery/AGENT-ROLES.md"),
-    ("Backlog wykonawczy", ROOT / "delivery/BACKLOG.md"),
-    ("Testy akceptacyjne", ROOT / "delivery/ACCEPTANCE.md"),
-    ("Powiązanie wymagań, zadań i testów", ROOT / "delivery/TRACEABILITY.md"),
-    ("Lista kontrolna wydania", ROOT / "delivery/RELEASE-CHECKLIST.md"),
+    ("Astra kickoff instructions", ROOT / "ASTRA-KICKOFF.md"),
+    ("Implementation plan and gates", ROOT / "delivery/PLAN.md"),
+    ("Work coordination and integration", ROOT / "delivery/AGENT-ROLES.md"),
+    ("Implementation backlog", ROOT / "delivery/BACKLOG.md"),
+    ("Acceptance tests", ROOT / "delivery/ACCEPTANCE.md"),
+    ("Requirements and test traceability", ROOT / "delivery/TRACEABILITY.md"),
+    ("Release checklist", ROOT / "delivery/RELEASE-CHECKLIST.md"),
 ]
 
 
@@ -40,31 +40,42 @@ def assemble() -> str:
         title = path.read_text(encoding="utf-8").splitlines()[0].lstrip("# ")
         entries.append((f"chapter-{number:02d}", title, path))
     for number, (title, path) in enumerate(ANNEXES, start=1):
-        entries.append((f"annex-{number:02d}", f"Załącznik {number}. {title}", path))
-    intro = """# Local Projects — pełna specyfikacja wykonawcza dla Astry GPT6
+        entries.append((f"annex-{number:02d}", f"Annex {number}. {title}", path))
+    intro = """# Local Projects — consolidated specification
 
-**Wersja:** 1.0 · **Data:** 5 września 2026 r.  
-**Status:** pakiet do budowy, nie zaimplementowany produkt.  
-**Platformy:** serwer macOS Apple Silicon i Arch Linux/Omarchy; pełne webowe UI na desktopie i telefonie przez prywatne HTTPS.
+**Status:** implemented application under active verification; full release acceptance remains open.
+**Platforms:** macOS Apple Silicon and Arch Linux hosts, with browser access over private HTTPS.
 
-## Jak korzystać z tego dokumentu
+## How to use this document
 
-To scalona kopia specyfikacji i materiałów zarządzania wykonaniem. Źródłem poszczególnych rozdziałów są wymienione pliki w pakiecie `astra-project-handoff-v1.0`. Zmiany nanosimy w źródłowych rozdziałach i odtwarzamy ten dokument skryptem `scripts/assemble_spec.py`; nie utrzymujemy dwóch niezależnych specyfikacji.
+This is a generated copy of the authoritative chapters and delivery references.
+Edit the source files and run `python scripts/assemble_spec.py`; do not maintain
+this document independently. The source package includes contracts, examples,
+templates, acceptance scenarios and deployment references.
 
-**Przekaż Astrze cały ZIP, nie tylko ten dokument.** W `contracts/` znajdują się JSON Schema, OpenAPI, katalog lokalnego IPC i początkowe schematy SQL. `examples/`, `templates/`, `tests/` i `ops/` zawierają materiały do użycia w implementacji. `delivery/PACKAGE-VALIDATION.md` opisuje rzeczywisty zakres sprawdzenia plików.
+Implementation evidence and remaining limits live in `progress/STATE.md` and the
+numbered evidence entries. The latest planning implementation is documented in
+`progress/E026-planning-widgets.md`. Acceptance criteria in the retained handoff
+are requirements, not proof of completion. Existing Polish references remain
+until their requirements have been implemented and verified; newly authored
+repository content is English.
 
-Najważniejszy kontrakt: `.project/` jest źródłem prawdy, jeden serwer koordynuje zapisy, CLI jest klientem lokalnym, a telefon ma te same funkcje edycji przez przeglądarkę. Nie budujemy MCP, worktree-managera, synchronizacji offline ani osobnego klienta iOS.
+Owner decisions recorded in `AGENTS.md` and `progress/SCOPE.md` take precedence
+over older handoff wording. Built-in backup/restore and source-file migration
+tooling are deferred beyond v1. All other outstanding requirements remain.
 
-[U] oznacza wymaganie użytkownika, [B] domyślne rozstrzygnięcie wykonawcze, [S] wybór wymagający próby. Testy i budżety opisują warunki przyszłej implementacji; nie są deklaracją wyników istniejącej aplikacji.
+The central contract remains unchanged: `.project/` is the source of truth;
+one server coordinates normal writes; the CLI and browser share the domain.
+SQLite is a derived index. A forecast is not a persisted schedule change.
 
-## Spis treści
+## Contents
 
 """
     table = "\n".join(f"- [{title}](#{anchor})" for anchor, title, _ in entries)
     body = []
     for anchor, title, path in entries:
         content = path.read_text(encoding="utf-8")
-        body.append(f'\n\n---\n\n<a id="{anchor}"></a>\n\n' + shift_headings(content) + f"\n\n*Plik źródłowy: `{path.relative_to(ROOT).as_posix()}`.*\n")
+        body.append(f'\n\n---\n\n<a id="{anchor}"></a>\n\n' + shift_headings(content) + f"\n\n*Source file: `{path.relative_to(ROOT).as_posix()}`.*\n")
     return intro + table + "\n" + "".join(body)
 
 

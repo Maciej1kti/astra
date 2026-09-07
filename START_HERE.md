@@ -2,7 +2,7 @@
 
 **Odbiorca:** Astra GPT6, agent prowadzący wykonanie i integrację projektu.  
 **Wersja pakietu:** 1.0, 5 września 2026 r.  
-**Status:** specyfikacja wykonawcza i materiały startowe; nie gotowa aplikacja.  
+**Status:** implemented application under verification; full release acceptance remains open.
 **Nazwy robocze:** Local Projects, `projectd`, `projectctl`. Nazwa handlowa nie jest rozstrzygnięta.
 
 ## Misja
@@ -23,7 +23,12 @@ Nie buduj orkiestratora agentów, natywnego klienta iOS, MCP, synchronizacji off
 
 Opis zachowania produktu, model danych i JSON Schema, kontrakt OpenAPI, katalog CLI/IPC, opis trwałości i awarii, strategia bezpieczeństwa, specyfikacja widoków i gestów, przykładowy projekt, konfiguracje usług, zadania z zależnościami, testy akceptacyjne i skrypt weryfikujący spójność pakietu.
 
-Schematy i przykłady są kontraktem wejściowym do implementacji. Skrypty kontroli pakietu **nie są testami gotowego produktu**. Nie ma tu implementacji serwera, UI ani CLI; polecenia `projectctl` są projektowanym interfejsem.
+The repository now contains the Rust server, Unix CLI and Svelte UI. Read
+[README.md](README.md) and [progress/STATE.md](progress/STATE.md) for current
+behavior and verification, and [MANUAL-TESTING.md](MANUAL-TESTING.md) for the
+planning walkthrough. Schemas and examples remain contracts; package validation
+alone does not establish product acceptance. Retained handoff requirements below
+still apply unless superseded by explicit owner decisions.
 
 ## Pierwsza sesja Astry
 

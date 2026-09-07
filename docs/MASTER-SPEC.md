@@ -1,20 +1,31 @@
-# Local Projects — pełna specyfikacja wykonawcza dla Astry GPT6
+# Local Projects — consolidated specification
 
-**Wersja:** 1.0 · **Data:** 5 września 2026 r.  
-**Status:** pakiet do budowy, nie zaimplementowany produkt.  
-**Platformy:** serwer macOS Apple Silicon i Arch Linux/Omarchy; pełne webowe UI na desktopie i telefonie przez prywatne HTTPS.
+**Status:** implemented application under active verification; full release acceptance remains open.
+**Platforms:** macOS Apple Silicon and Arch Linux hosts, with browser access over private HTTPS.
 
-## Jak korzystać z tego dokumentu
+## How to use this document
 
-To scalona kopia specyfikacji i materiałów zarządzania wykonaniem. Źródłem poszczególnych rozdziałów są wymienione pliki w pakiecie `astra-project-handoff-v1.0`. Zmiany nanosimy w źródłowych rozdziałach i odtwarzamy ten dokument skryptem `scripts/assemble_spec.py`; nie utrzymujemy dwóch niezależnych specyfikacji.
+This is a generated copy of the authoritative chapters and delivery references.
+Edit the source files and run `python scripts/assemble_spec.py`; do not maintain
+this document independently. The source package includes contracts, examples,
+templates, acceptance scenarios and deployment references.
 
-**Przekaż Astrze cały ZIP, nie tylko ten dokument.** W `contracts/` znajdują się JSON Schema, OpenAPI, katalog lokalnego IPC i początkowe schematy SQL. `examples/`, `templates/`, `tests/` i `ops/` zawierają materiały do użycia w implementacji. `delivery/PACKAGE-VALIDATION.md` opisuje rzeczywisty zakres sprawdzenia plików.
+Implementation evidence and remaining limits live in `progress/STATE.md` and the
+numbered evidence entries. The latest planning implementation is documented in
+`progress/E026-planning-widgets.md`. Acceptance criteria in the retained handoff
+are requirements, not proof of completion. Existing Polish references remain
+until their requirements have been implemented and verified; newly authored
+repository content is English.
 
-Najważniejszy kontrakt: `.project/` jest źródłem prawdy, jeden serwer koordynuje zapisy, CLI jest klientem lokalnym, a telefon ma te same funkcje edycji przez przeglądarkę. Nie budujemy MCP, worktree-managera, synchronizacji offline ani osobnego klienta iOS.
+Owner decisions recorded in `AGENTS.md` and `progress/SCOPE.md` take precedence
+over older handoff wording. Built-in backup/restore and source-file migration
+tooling are deferred beyond v1. All other outstanding requirements remain.
 
-[U] oznacza wymaganie użytkownika, [B] domyślne rozstrzygnięcie wykonawcze, [S] wybór wymagający próby. Testy i budżety opisują warunki przyszłej implementacji; nie są deklaracją wyników istniejącej aplikacji.
+The central contract remains unchanged: `.project/` is the source of truth;
+one server coordinates normal writes; the CLI and browser share the domain.
+SQLite is a derived index. A forecast is not a persisted schedule change.
 
-## Spis treści
+## Contents
 
 - [00. Decyzje, status i reguły interpretacji](#chapter-00)
 - [01. Produkt i doświadczenie użytkownika](#chapter-01)
@@ -31,13 +42,13 @@ Najważniejszy kontrakt: `.project/` jest źródłem prawdy, jeden serwer koordy
 - [12. Rejestr decyzji architektonicznych (baseline)](#chapter-12)
 - [13. Ryzyka, kontrole i decyzje delegowane](#chapter-13)
 - [14. Źródła techniczne](#chapter-14)
-- [Załącznik 1. Instrukcja startowa dla Astry](#annex-01)
-- [Załącznik 2. Plan wykonania i bramki](#annex-02)
-- [Załącznik 3. Podział pracy i integracja](#annex-03)
-- [Załącznik 4. Backlog wykonawczy](#annex-04)
-- [Załącznik 5. Testy akceptacyjne](#annex-05)
-- [Załącznik 6. Powiązanie wymagań, zadań i testów](#annex-06)
-- [Załącznik 7. Lista kontrolna wydania](#annex-07)
+- [Annex 1. Astra kickoff instructions](#annex-01)
+- [Annex 2. Implementation plan and gates](#annex-02)
+- [Annex 3. Work coordination and integration](#annex-03)
+- [Annex 4. Implementation backlog](#annex-04)
+- [Annex 5. Acceptance tests](#annex-05)
+- [Annex 6. Requirements and test traceability](#annex-06)
+- [Annex 7. Release checklist](#annex-07)
 
 
 ---
@@ -94,7 +105,7 @@ Samo ulepszenie układu modułów nie wymaga zgody użytkownika. Zmiana topologi
 Nie podajemy dat ukończenia. Etapy kończą się dowodami. Zgodność z przyszłym macOS 28 nie jest potwierdzona; dokumentujemy rzeczywiście testowane systemy i przeglądarki.
 
 
-*Plik źródłowy: `docs/00-DECISIONS.md`.*
+*Source file: `docs/00-DECISIONS.md`.*
 
 
 ---
@@ -156,7 +167,7 @@ MCP, zarządzanie agentami i worktree, natywne frontend'y, wrapper, godziny prac
 Użytkownik prowadzi co najmniej trzy rzeczywiste projekty w testach akceptacji bez ręcznego naprawiania plików, może zapisać i cofnąć zmianę z telefonu, a utrata sieci nie usuwa danych. Lista testów jest w `delivery/ACCEPTANCE.json`. „Ładny dashboard na fixture” nie spełnia tego kryterium.
 
 
-*Plik źródłowy: `docs/01-PRODUCT.md`.*
+*Source file: `docs/01-PRODUCT.md`.*
 
 
 ---
@@ -224,7 +235,7 @@ Linux: usługa użytkownika systemd, macOS: LaunchAgent, plus foreground do deve
 Uszkodzony dokument jest izolowany. Błędny `project.md` blokuje zwykłe zapisy całego projektu, nie całej instancji. Problem indeksu oznacza degraded projections, nie cofnięcie zatwierdzonego zapisu. Niejasny stan recovery blokuje dany target/projekt. Brak serwera zwraca błąd CLI bez trybu awaryjnego pisania.
 
 
-*Plik źródłowy: `docs/02-ARCHITECTURE.md`.*
+*Source file: `docs/02-ARCHITECTURE.md`.*
 
 
 ---
@@ -309,7 +320,7 @@ Limit testowy 100 projektów/10k kart/50k raportów nie jest limitem danych. Lis
 W `workspace.json`: format_version, instance_id, timezone, locale, projects (ID, ścieżka, data dodania), focus (referencje w kolejności), preferences. Sekrety i sesje nie są tu przechowywane. `focus` max 100 pozycji, rekomendacja UX 3–5, bez twardej blokady przy czwartej. Nieistniejąca referencja pozostaje oznaczona, dopóki użytkownik jej nie usunie. Root do rejestracji przez WWW jest konfiguracją hosta; nie wynika z dowolnej treści workspace.
 
 
-*Plik źródłowy: `docs/03-DATA-FORMAT.md`.*
+*Source file: `docs/03-DATA-FORMAT.md`.*
 
 
 ---
@@ -387,7 +398,7 @@ Retencja wyników 7 dni jest minimalnym gwarantowanym oknem. Historia treści: d
 Stare nieznane request ID poza oknem przyjęcia są odrzucane. Klient nie tworzy automatycznie nowego ID po wygaśnięciu wyniku; najpierw odczyt aktualnego stanu i świadoma nowa decyzja. Po restore nowe epoch oraz sesje zapobiegają niezamierzonemu odtworzeniu starych kliknięć.
 
 
-*Plik źródłowy: `docs/04-WRITES-AND-RECOVERY.md`.*
+*Source file: `docs/04-WRITES-AND-RECOVERY.md`.*
 
 
 ---
@@ -462,8 +473,19 @@ Jeśli plik został committed, lecz indeksowanie zawiodło, nie emituj zwykłego
 
 Build ID i contract version są jawne. Przy niezgodności zapisu UI zachowuje szkic i prosi o bezpieczny reload. Nie odświeżaj automatycznie strony nad wpisywanym tekstem. Stare lazy chunk URL muszą dawać rzeczywisty błąd, nie HTML 200. HTML: no-cache; prywatne API: no-store; hashowane zasoby: immutable. Nie ma service workera w v1.
 
+### Dependency forecast projection
 
-*Plik źródłowy: `docs/05-API-AND-EVENTS.md`.*
+`GET /api/v1/views/gantt` includes `analysis` for the project snapshot and
+`forecasts` for the requested page's cards. Both are read-only and defined in
+OpenAPI as `TimelineAnalysis` / `TimelineForecast`. The project analysis is
+independent of row pagination; it considers up to 10,000 non-archived,
+non-cancelled cards. `complete=false` requires the client to label the finish as
+partial, including missing dates, missing/invalid predecessors, cycles and the
+analysis bound. Forecast ranges retain inclusive source-date semantics. See
+ADR-026 and `examples/gantt-forecast.json` for the deterministic waterfall rule.
+
+
+*Source file: `docs/05-API-AND-EVENTS.md`.*
 
 
 ---
@@ -534,7 +556,7 @@ Blok ma begin/end markers i template_version. Istniejąca treść poza nim musi 
 Agent domyślnie dopisuje tylko nowe istotne informacje. Zmiana zakresu, terminu, focusu lub akceptacja rezultatu wymaga wyraźnego polecenia użytkownika. Nie jest to sandbox dla procesu z pełnymi prawami użytkownika. Aplikacja nie potrafi dowieść tożsamości modelu po polu `author.label`.
 
 
-*Plik źródłowy: `docs/06-CLI-AND-AGENTS.md`.*
+*Source file: `docs/06-CLI-AND-AGENTS.md`.*
 
 
 ---
@@ -595,7 +617,7 @@ Astra sprawdza utrzymanie, licencję i advisory przy przypinaniu zależności. �
 Logi zawierają request ID, czasy, code, logiczny target i statystyki, nie body dokumentów, cookies, pairing secret ani komendy z prywatną treścią. Local telemetry bez wysyłki. Endpoint diagnostics wymaga sesji; unauth health zwraca tylko gotowość bez listy projektów. Rozbudowany bundle diagnostyczny tworzy właściciel z podglądem zawartości.
 
 
-*Plik źródłowy: `docs/07-SECURITY.md`.*
+*Source file: `docs/07-SECURITY.md`.*
 
 
 ---
@@ -668,8 +690,38 @@ Nie przechwytuj przeglądarkowego find, edycji tekstu i systemowych skrótów. C
 
 Sprawdź EventCalendar oraz open-source SVAR Gantt [S04][S05]. Adapter bierze nasz ViewModel i emituje wyłącznie intencje; nie trzyma źródła danych w stanie widgetu. Wewnętrzne formularze widgetu nie obchodzą wspólnego panelu i ETag. Test licencji, rozmiaru bundle, CSP, keyboard i mobile przed adopcją. W przypadku dyskwalifikującego błędu wybierz mały własny komponent lub alternatywę i zapisz decyzję; nie zmieniaj całego stosu z powodu koloru kontrolki.
 
+### Adopted planning components — 2026-09-07
 
-*Plik źródłowy: `docs/08-UI-AND-INTERACTIONS.md`.*
+SVAR Svelte Gantt 2.7.2 and EventCalendar 5.12.2 are pinned MIT dependencies,
+loaded separately when their view opens. All assets are served by the host.
+The shared editor and versioned command transport own persistence. A pointer
+gesture or keyboard move opens an explicit proposal; it does not silently save.
+
+Each scheduled card is one Gantt bar. Milestone deadlines remain distinct.
+Connect a predecessor to a successor using the two card connectors or the
+labelled connection form; disconnecting preserves the successor's other edges.
+The server validates the graph, including cycle rejection. Dependencies outside
+the current page remain listed. The project timing summary covers up to 10,000
+cards independently of the 200-row UI page and marks incomplete estimates.
+The optional forecast preserves durations, applies finish-to-start ordering and
+highlights one chain driving the estimated project finish. It never changes
+recorded dates. See ADR-026 for the forecast's semantics and limits.
+
+The calendar supports day, all-day week, month and agenda views. Clicking an
+empty date or selecting a range opens a scheduled card draft in the selected
+project. Planned work can move or resize at either boundary; deadlines and
+reviews open their resource editor. Overflow and loading/error states remain
+visible. The model remains date-only, so there is no hourly time blocking.
+
+On a focused planned calendar event or Gantt handle, Alt+Left/Right changes the
+date by a day and Shift changes the step to a week. In the calendar region,
+Alt+Left/Right navigates, Alt+T returns to today and Alt+1 through Alt+4 select
+day/week/month/agenda. Text fields retain their normal shortcuts. Escape cancels
+an active gesture. Touch and keyboard alternatives remain available through
+the shared card editor; physical iPhone ergonomics still require device testing.
+
+
+*Source file: `docs/08-UI-AND-INTERACTIONS.md`.*
 
 
 ---
@@ -720,7 +772,7 @@ Lokale metryki: czas parse/write/sync/index/query, queue depth, request codes, i
 Benchmark regresji jest częścią review zmiany warstwy danych, komponentu widoku lub dużej zależności. Każde odstępstwo od targetu opisuje pomiar, wpływ i decyzję; nie zmieniamy threshold po cichu na wartość właśnie zmierzoną.
 
 
-*Plik źródłowy: `docs/09-PERFORMANCE.md`.*
+*Source file: `docs/09-PERFORMANCE.md`.*
 
 
 ---
@@ -776,7 +828,7 @@ Doctor wskazuje nierozstrzygnięte commands bez ujawniania prywatnej treści w l
 Nie usuwaj index.sqlite, gdy działa pisarz indeksu; użyj rebuild API/maintenance. Nie kasuj state.sqlite w ramach czyszczenia cache. Usunięcie state jest zdarzeniem odzyskiwania: nowe epoch, utrata sesji/history jawnie opisana, walidacja źródeł przed zapisem.
 
 
-*Plik źródłowy: `docs/10-OPERATIONS.md`.*
+*Source file: `docs/10-OPERATIONS.md`.*
 
 
 ---
@@ -828,7 +880,7 @@ Kod zintegrowany, testy zmienionego obszaru uruchomione, kontrakty spójne, przy
 Wszystkie wymagania P0 i testy release blocker ukończone. Telefon i desktop edytują przez ten sam origin/prywatną sieć; agent przez CLI. Każdy widok działa na realnych plikach. Konflikt i niepewny wynik są obsłużone. Backup odtworzony. Wydania obu hostów instalowalne, zasady ograniczeń udokumentowane. Nie wolno zmieniać nazwy release na „v1” tylko dlatego, że część ekranów wygląda dobrze.
 
 
-*Plik źródłowy: `docs/11-QUALITY-AND-TESTS.md`.*
+*Source file: `docs/11-QUALITY-AND-TESTS.md`.*
 
 
 ---
@@ -1018,8 +1070,45 @@ provides the macOS command semantics. No browser file-upload handle is mistaken 
 an absolute host path. This owner decision supersedes the earlier browser-root-only
 restriction for this explicitly interactive host-native flow.
 
+### ADR-026 — Planning widgets and dependency forecasts (2026-09-07)
 
-*Plik źródłowy: `docs/12-ADRS.md`.*
+The owner requested implementation of the researched Gantt/calendar components,
+card-to-card waterfall dependencies, and visibility into project completion.
+Use MIT SVAR Svelte Gantt 2.7.2 and EventCalendar 5.12.2 as separately lazy-loaded
+renderers. Keep the shared editor and versioned proposal transport. SVAR is
+configured read-only internally: Astra's tested pointer handles and explicit
+connection form own edits, preserving cancellation and conflict semantics.
+EventCalendar drag/resize callbacks revert local changes before proposing a write.
+No widget REST provider, PRO module, remote assets or paid feature is adopted.
+
+GanttPage now contains required `analysis` and page-local `forecasts` projections.
+The domain computes finish-to-start dates for up to 10,000 non-archived,
+non-cancelled cards from a single project index snapshot, irrespective of row
+pagination. Recorded start dates are lower bounds; durations include both end
+dates and weekends. Completed cards retain their recorded schedule because the
+model has no actual finish date. Milestone due dates are commitments, not work
+durations, and do not extend this card-work forecast. Unknown/invalid/missing
+predecessors and cycles prevent a complete forecast. Truncation is explicitly
+incomplete. The returned driving path is one deterministic chain determining
+finish, not a claim of all critical paths, available capacity or remaining work.
+
+Forecasting never mutates schedules, deadlines or dependency relationships.
+Dependencies remain same-project `depends_on` fields checked by the existing
+server graph validation. The forecast checkbox is a read-only projection;
+users edit recorded dates explicitly. Day view adds navigation within the
+existing all-day model; it does not introduce hours, recurring events or a new
+source format. Physical iPhone and macOS acceptance still require those devices.
+
+The adapter avoids SVAR's static inline theme/holiday wrappers to retain the
+existing strict CSP. Its read-only compact chart mode dereferences a missing
+action column in 2.7.2. A minimum-width renderer inside a bounded horizontal
+viewport avoids that path, with the title grid collapsed on narrow screens.
+Vendor display-mode switches are intercepted; the shared selection/editor
+controls remain available. Only bar content receives overflow styling, so the
+chart itself retains its native scrolling and virtualization.
+
+
+*Source file: `docs/12-ADRS.md`.*
 
 
 ---
@@ -1063,7 +1152,7 @@ Własna struktura indeksu zamiast SQLite, dodatkowe pule i procesy, worker dla k
 Nie obiecujemy działania przy uszkodzonym sprzęcie, izolacji od właściciela dysku, uniwersalnego exactly-once z ręczną edycją ani płynności bez pomiaru. Za to wymagamy precyzyjnych błędów, zachowania źródeł, testów odzyskiwania i dokumentacji realnych ograniczeń. Niesprawdzona hipoteza jest oznaczona jako hipoteza, nie jako przeszkoda „niemożliwa do rozwiązania”.
 
 
-*Plik źródłowy: `docs/13-RISKS-AND-OPTIMIZATIONS.md`.*
+*Source file: `docs/13-RISKS-AND-OPTIMIZATIONS.md`.*
 
 
 ---
@@ -1107,7 +1196,7 @@ Sprawdzone na potrzeby pakietu 5 września 2026 r. To dokumentacja pierwotna. Po
 Nie kopiujemy demonstracyjnego bind `0.0.0.0` z przykładów bibliotek do naszego release. Prywatny bind jest wymaganiem produktu niezależnym od przykładu dokumentacji. Zgłoszenie błędu w repo widgetu nie jest dowodem występowania go w każdej wersji; rozstrzyga test przypiętej wersji.
 
 
-*Plik źródłowy: `docs/14-SOURCES.md`.*
+*Source file: `docs/14-SOURCES.md`.*
 
 
 ---
@@ -1135,7 +1224,7 @@ Po każdej zakończonej sesji uaktualnij `progress/STATE.md`: co faktycznie dzia
 Zakończenie produkcji oznacza przejście `delivery/RELEASE-CHECKLIST.md`, działającą instalację, backup i przywracanie oraz udokumentowane testy mobilne i platformowe. Jeżeli nie da się czegoś sprawdzić w obecnym środowisku, wykonaj resztę i oznacz konkretny brak dowodu; nie fabrykuj testu ani zgodności z przyszłą wersją macOS.
 
 
-*Plik źródłowy: `ASTRA-KICKOFF.md`.*
+*Source file: `ASTRA-KICKOFF.md`.*
 
 
 ---
@@ -1175,7 +1264,7 @@ Po każdym przekroju pokaż działający scenariusz i stan wymagań. Jeżeli nie
 Plugin system, role zespołowe, sync, native app, CRDT, wspólny focus hostów i godziny pracy nie są rezerwą zadań do zrobienia „przy okazji”. Poprawa narzędzi developerskich też ma uzasadniać koszt w obecnym produkcie. Więcej kodu nie jest miarą postępu.
 
 
-*Plik źródłowy: `delivery/PLAN.md`.*
+*Source file: `delivery/PLAN.md`.*
 
 
 ---
@@ -1208,7 +1297,7 @@ Nie deleguj równolegle sprzecznych zmian tych samych schema lub modułu pisarza
 Completed z dowodem / In progress / Blocked z konkretną przyczyną / Not started. Nie używaj procentu „90% gotowe” bez kryteriów. Wyjaśniaj ryzyko i następny krok, nie zasypuj użytkownika logiem wszystkich drobnych komend.
 
 
-*Plik źródłowy: `delivery/AGENT-ROLES.md`.*
+*Source file: `delivery/AGENT-ROLES.md`.*
 
 
 ---
@@ -1265,7 +1354,7 @@ Completed z dowodem / In progress / Blocked z konkretną przyczyną / Not starte
 | T42 | G6 | lead | Dokumentacja użytkownika i wydanie | T17, T25, T34, T41 |
 
 
-*Plik źródłowy: `delivery/BACKLOG.md`.*
+*Source file: `delivery/BACKLOG.md`.*
 
 
 ---
@@ -1757,7 +1846,7 @@ Typ: fault. Wymagania: R20, R27.
 **Oczekiwany wynik:** Idempotentny resume bez resetu; cudza zmiana prowadzi do review, nie rollback delete.
 
 
-*Plik źródłowy: `delivery/ACCEPTANCE.md`.*
+*Source file: `delivery/ACCEPTANCE.md`.*
 
 
 ---
@@ -1806,7 +1895,7 @@ Typ: fault. Wymagania: R20, R27.
 | R36 — Bezpieczne zarządzanie usługą i config użytkownika | A42 | T03, T37, T39, T42 |
 
 
-*Plik źródłowy: `delivery/TRACEABILITY.md`.*
+*Source file: `delivery/TRACEABILITY.md`.*
 
 
 ---
@@ -1839,4 +1928,4 @@ Każdy punkt potrzebuje wskazania testu/artefaktu. Wszystkie pola na starcie są
 - [ ] Właściciel zatwierdził ewentualną publiczną publikację/licencję; domyślnie tylko przekazanie lokalnego wydania.
 
 
-*Plik źródłowy: `delivery/RELEASE-CHECKLIST.md`.*
+*Source file: `delivery/RELEASE-CHECKLIST.md`.*

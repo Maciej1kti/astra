@@ -41,10 +41,11 @@ layout issues. This handoff is for practical feedback, not final release accepta
 
 ## Known limits
 
-- This local launcher is available only on this Mac. Phone access needs the intended
-  private HTTPS network setup, which has not been installed here.
-- Physical iPhone/Safari and Arch Linux testing remain outstanding. Automated CI
-  covers Ubuntu and macOS; browser automation uses Chromium.
+- The launcher listens on localhost on the host computer. Phone access requires
+  the intended private HTTPS network setup.
+- The planning views have local Arch Linux/Chromium verification. Physical
+  iPhone/Safari and macOS planning acceptance remain outstanding; CI results
+  and earlier platform evidence are recorded separately in `progress/`.
 - Git observation covers HEAD and staged changes, excluding `.project`; it does not
   claim to check unstaged or untracked files.
 - Some less common metadata fields use the advanced JSON editor. Full release polish,
@@ -76,3 +77,46 @@ owner-approved directory browser as an alternative.
 Registration adds `.project` planning files and a managed `AGENTS.md` block while
 preserving existing content. The user selects the repository; no file attachments
 or automatic repository discovery are involved.
+
+
+## Gantt and calendar walkthrough
+
+Use a sample project and three cards named Design, Build and Review. Set their
+inclusive schedules to September 7–9, September 8–10 and September 9–10, 2026.
+In **Timeline**, choose September 2026, then:
+
+1. Connect Design to Build and Build to Review using the predecessor/successor
+   form. Confirm each dependency proposal. Alternatively, click the connector
+   beside the predecessor's bar and then the successor's connector.
+2. Inspect the arrows and project timing summary. With only these three cards,
+   the recorded finish is September 10 and the dependency forecast ends on
+   September 14. Enable **Dependency forecast** to see the shifted bars and the
+   amber underline on one chain determining that finish.
+3. Disable the forecast. Drag a bar or either edge and confirm the date proposal.
+   Escape during a gesture cancels it. Alt+Left/Right on a focused handle changes
+   one day; adding Shift changes a week. Open the selected card for full editing.
+4. Expand **Dependencies** to disconnect an edge. The successor's other
+   predecessors must remain. Attempting Review → Design while the original
+   chain exists should show a cycle error and leave the graph unchanged.
+
+The forecast is a read-only estimate within one project. It includes weekends,
+respects recorded starts and preserves durations. Missing dates or predecessors
+make the estimate incomplete. It does not automatically save a waterfall plan,
+move deadlines or account for resource capacity.
+
+In **Calendar**, navigate to the same dates and try day, week, month and agenda.
+Select an empty day/range or use **New scheduled card** to open a prefilled draft.
+Move planned work or resize either end, then confirm the proposal. Deadline and
+review markers open the shared editor and remain separate from the planned range.
+
+The **Calendar shortcuts & editing** disclosure lists controls. Alt+1 through
+Alt+4 select the four layouts; Alt+T returns to today. Alt+Left/Right navigates
+when the calendar region has focus and moves dates when a planned event has
+focus; Shift changes that move to a week. Normal text-entry shortcuts are kept.
+All views use whole-day dates; there is no hourly reservation model.
+
+Repeat an edit in two browser tabs to inspect conflict handling. Keep an uncertain
+proposal open and use **Retry same command** or check its status; do not submit
+an independent replacement without knowing the first outcome. On a narrow
+screen, pan inside the timeline and use the selected-card controls as an editing
+alternative. Record physical-device findings separately from browser emulation.
