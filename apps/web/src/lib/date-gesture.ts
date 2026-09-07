@@ -1,6 +1,7 @@
 type Options = {
   delta: (x: number, y: number, startX: number, startY: number) => number;
   commit: (days: number) => void;
+  operation?: "move" | "start" | "end";
 };
 /** Gesture previews never write data. Only pointerup proposes a versioned edit. */
 export function dateGesture(node: HTMLElement, initial: Options) {
@@ -13,6 +14,14 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     frame = 0,
     days = 0;
   let suppressClick = false;
+  let previewNode = node,
+    scroll: HTMLElement | null = null,
+    scrollStart = 0;
+  let originalTransform = "",
+    originalWidth = "",
+    width = 0;
+  const travel = () => (scroll?.scrollLeft ?? 0) - scrollStart;
+
   function click(event: MouseEvent) {
     if (suppressClick) {
       event.preventDefault();
@@ -27,7 +36,8 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     cancelAnimationFrame(frame);
     frame = 0;
     days = 0;
-    node.style.transform = "";
+    previewNode.style.transform = originalTransform;
+    previewNode.style.width = originalWidth;
     node.removeAttribute("data-dragging");
     if (captured !== null && node.hasPointerCapture(captured))
       node.releasePointerCapture(captured);
@@ -37,9 +47,14 @@ export function dateGesture(node: HTMLElement, initial: Options) {
   function paint() {
     frame = 0;
     if (pointer === null) return;
-    days = options.delta(x, y, startX, startY);
-    node.style.transform = `translate(${x - startX}px, ${y - startY}px)`;
-    const scroll = node.closest<HTMLElement>(".date-scroll");
+    const dx = x - startX + travel();
+    days = options.delta(x + travel(), y, startX, startY);
+    if (options.operation === "end")
+      previewNode.style.width = `${Math.max(1, width + dx)}px`;
+    else if (options.operation === "start") {
+      previewNode.style.transform = `translateX(${Math.min(dx, width - 1)}px)`;
+      previewNode.style.width = `${Math.max(1, width - dx)}px`;
+    } else previewNode.style.transform = `translateX(${dx}px)`;
     if (scroll) {
       const rect = scroll.getBoundingClientRect();
       const direction = x < rect.left + 32 ? -1 : x > rect.right - 32 ? 1 : 0;
@@ -52,6 +67,12 @@ export function dateGesture(node: HTMLElement, initial: Options) {
   function down(event: PointerEvent) {
     if (pointer !== null || !event.isPrimary || event.button !== 0) return;
     suppressClick = false;
+    previewNode = node.closest<HTMLElement>(".wx-bar") ?? node;
+    originalTransform = previewNode.style.transform;
+    originalWidth = previewNode.style.width;
+    width = previewNode.getBoundingClientRect().width;
+    scroll = node.closest<HTMLElement>(".wx-chart, .date-scroll");
+    scrollStart = scroll?.scrollLeft ?? 0;
     pointer = event.pointerId;
     x = startX = event.clientX;
     y = startY = event.clientY;
@@ -68,7 +89,12 @@ export function dateGesture(node: HTMLElement, initial: Options) {
   }
   function up(event: PointerEvent) {
     if (event.pointerId !== pointer) return;
-    const delta = options.delta(event.clientX, event.clientY, startX, startY);
+    const delta = options.delta(
+      event.clientX + travel(),
+      event.clientY,
+      startX,
+      startY,
+    );
     cancel();
     suppressClick = delta !== 0;
     if (delta) options.commit(delta);

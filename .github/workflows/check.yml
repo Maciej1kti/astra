@@ -37,6 +37,7 @@ jobs:
         run: |
           scripts/cargo-local build --workspace --locked
           node scripts/browser-smoke.mjs
+          node scripts/planning-browser.mjs
       - name: Build host archive
         run: python scripts/package.py
       - name: Exercise packaged installation and stopped-copy recovery

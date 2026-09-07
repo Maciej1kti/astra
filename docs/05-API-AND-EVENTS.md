@@ -65,3 +65,14 @@ Jeśli plik został committed, lecz indeksowanie zawiodło, nie emituj zwykłego
 ## API stalej karty po aktualizacji serwera
 
 Build ID i contract version są jawne. Przy niezgodności zapisu UI zachowuje szkic i prosi o bezpieczny reload. Nie odświeżaj automatycznie strony nad wpisywanym tekstem. Stare lazy chunk URL muszą dawać rzeczywisty błąd, nie HTML 200. HTML: no-cache; prywatne API: no-store; hashowane zasoby: immutable. Nie ma service workera w v1.
+
+## Dependency forecast projection
+
+`GET /api/v1/views/gantt` includes `analysis` for the project snapshot and
+`forecasts` for the requested page's cards. Both are read-only and defined in
+OpenAPI as `TimelineAnalysis` / `TimelineForecast`. The project analysis is
+independent of row pagination; it considers up to 10,000 non-archived,
+non-cancelled cards. `complete=false` requires the client to label the finish as
+partial, including missing dates, missing/invalid predecessors, cycles and the
+analysis bound. Forecast ranges retain inclusive source-date semantics. See
+ADR-026 and `examples/gantt-forecast.json` for the deterministic waterfall rule.

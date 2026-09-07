@@ -63,3 +63,33 @@ Nie przechwytuj przeglądarkowego find, edycji tekstu i systemowych skrótów. C
 ## Dobór komponentów
 
 Sprawdź EventCalendar oraz open-source SVAR Gantt [S04][S05]. Adapter bierze nasz ViewModel i emituje wyłącznie intencje; nie trzyma źródła danych w stanie widgetu. Wewnętrzne formularze widgetu nie obchodzą wspólnego panelu i ETag. Test licencji, rozmiaru bundle, CSP, keyboard i mobile przed adopcją. W przypadku dyskwalifikującego błędu wybierz mały własny komponent lub alternatywę i zapisz decyzję; nie zmieniaj całego stosu z powodu koloru kontrolki.
+
+## Adopted planning components — 2026-09-07
+
+SVAR Svelte Gantt 2.7.2 and EventCalendar 5.12.2 are pinned MIT dependencies,
+loaded separately when their view opens. All assets are served by the host.
+The shared editor and versioned command transport own persistence. A pointer
+gesture or keyboard move opens an explicit proposal; it does not silently save.
+
+Each scheduled card is one Gantt bar. Milestone deadlines remain distinct.
+Connect a predecessor to a successor using the two card connectors or the
+labelled connection form; disconnecting preserves the successor's other edges.
+The server validates the graph, including cycle rejection. Dependencies outside
+the current page remain listed. The project timing summary covers up to 10,000
+cards independently of the 200-row UI page and marks incomplete estimates.
+The optional forecast preserves durations, applies finish-to-start ordering and
+highlights one chain driving the estimated project finish. It never changes
+recorded dates. See ADR-026 for the forecast's semantics and limits.
+
+The calendar supports day, all-day week, month and agenda views. Clicking an
+empty date or selecting a range opens a scheduled card draft in the selected
+project. Planned work can move or resize at either boundary; deadlines and
+reviews open their resource editor. Overflow and loading/error states remain
+visible. The model remains date-only, so there is no hourly time blocking.
+
+On a focused planned calendar event or Gantt handle, Alt+Left/Right changes the
+date by a day and Shift changes the step to a week. In the calendar region,
+Alt+Left/Right navigates, Alt+T returns to today and Alt+1 through Alt+4 select
+day/week/month/agenda. Text fields retain their normal shortcuts. Escape cancels
+an active gesture. Touch and keyboard alternatives remain available through
+the shared card editor; physical iPhone ergonomics still require device testing.

@@ -1,6 +1,7 @@
 //! Shared domain boundary, without HTTP, filesystem access or command execution.
 pub mod models;
 pub mod ordering;
+pub mod timeline;
 
 use chrono::{DateTime, NaiveDate};
 use models::{Document, Workspace};

@@ -180,3 +180,40 @@ dialog on the host; they cannot select a phone folder for the host's filesystem.
 provides the macOS command semantics. No browser file-upload handle is mistaken for
 an absolute host path. This owner decision supersedes the earlier browser-root-only
 restriction for this explicitly interactive host-native flow.
+
+## ADR-026 — Planning widgets and dependency forecasts (2026-09-07)
+
+The owner requested implementation of the researched Gantt/calendar components,
+card-to-card waterfall dependencies, and visibility into project completion.
+Use MIT SVAR Svelte Gantt 2.7.2 and EventCalendar 5.12.2 as separately lazy-loaded
+renderers. Keep the shared editor and versioned proposal transport. SVAR is
+configured read-only internally: Astra's tested pointer handles and explicit
+connection form own edits, preserving cancellation and conflict semantics.
+EventCalendar drag/resize callbacks revert local changes before proposing a write.
+No widget REST provider, PRO module, remote assets or paid feature is adopted.
+
+GanttPage now contains required `analysis` and page-local `forecasts` projections.
+The domain computes finish-to-start dates for up to 10,000 non-archived,
+non-cancelled cards from a single project index snapshot, irrespective of row
+pagination. Recorded start dates are lower bounds; durations include both end
+dates and weekends. Completed cards retain their recorded schedule because the
+model has no actual finish date. Milestone due dates are commitments, not work
+durations, and do not extend this card-work forecast. Unknown/invalid/missing
+predecessors and cycles prevent a complete forecast. Truncation is explicitly
+incomplete. The returned driving path is one deterministic chain determining
+finish, not a claim of all critical paths, available capacity or remaining work.
+
+Forecasting never mutates schedules, deadlines or dependency relationships.
+Dependencies remain same-project `depends_on` fields checked by the existing
+server graph validation. The forecast checkbox is a read-only projection;
+users edit recorded dates explicitly. Day view adds navigation within the
+existing all-day model; it does not introduce hours, recurring events or a new
+source format. Physical iPhone and macOS acceptance still require those devices.
+
+The adapter avoids SVAR's static inline theme/holiday wrappers to retain the
+existing strict CSP. Its read-only compact chart mode dereferences a missing
+action column in 2.7.2. A minimum-width renderer inside a bounded horizontal
+viewport avoids that path, with the title grid collapsed on narrow screens.
+Vendor display-mode switches are intercepted; the shared selection/editor
+controls remain available. Only bar content receives overflow styling, so the
+chart itself retains its native scrolling and virtualization.

@@ -119,7 +119,18 @@ impl Engine {
         bounded(limit, 500)?;
         self.index.with_snapshot(|db,revision|{
             let scope=json!(["gantt",revision,project,limit]);let start=offset(cursor,&scope)?;
-            let mut rows=rows(db,project,None,limit+1,start,true)?;let more=rows.len()>limit as usize;rows.truncate(limit as usize);
+            let mut rows=self::rows(db,project,None,limit+1,start,true)?;let more=rows.len()>limit as usize;rows.truncate(limit as usize);
+            // Analyze the entire bounded project snapshot, independently of UI pagination.
+            let mut statement=db.prepare("SELECT entity_id,json_extract(metadata_json,'$.schedule'),json_extract(metadata_json,'$.depends_on'),validity FROM documents WHERE project_id=?1 AND entity_type='card' AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0 AND COALESCE(json_extract(metadata_json,'$.status'),'')!='cancelled' ORDER BY entity_id LIMIT 10001")?;
+            let mut cards=statement.query_map([project],|r|Ok((r.get::<_,String>(0)?,r.get::<_,Option<String>>(1)?,r.get::<_,Option<String>>(2)?,r.get::<_,String>(3)?)))?.map(|row|{
+                let (id,schedule,dependencies,validity)=row?;
+                let parse=|text:Option<String>|->Result<Value,AppError>{text.map(|s|serde_json::from_str(&s).map_err(|_|AppError::State)).unwrap_or(Ok(Value::Null))};
+                Ok(json!({"id":id,"schedule":parse(schedule)?,"depends_on":parse(dependencies)?,"x-analysis-invalid":validity!="valid"}))
+            }).collect::<Result<Vec<_>,AppError>>()?;
+            let truncated=cards.len()>10_000;
+            cards.truncate(10_000);
+            let analysis=project_domain::timeline::analyze(&cards,truncated);
+            let forecasts=rows.iter().filter_map(|r|analysis.forecasts.get(&r.id)).collect::<Vec<_>>();
             let mut edges=Vec::new();
             let mut warnings=Vec::new();
             for row in &rows {
@@ -137,7 +148,7 @@ impl Engine {
                     }
                 }
             }
-            Ok(json!({"rows":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"edges":edges,"page":page(&scope,revision,start,rows.len(),more),"warnings":warnings.into_iter().take(100).collect::<Vec<_>>()}))
+            Ok(json!({"analysis":analysis,"forecasts":forecasts,"rows":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"edges":edges,"page":page(&scope,revision,start,rows.len(),more),"warnings":warnings.into_iter().take(100).collect::<Vec<_>>()}))
         })
     }
     pub fn board(

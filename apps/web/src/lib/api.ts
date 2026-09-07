@@ -55,6 +55,7 @@ export class ApiError extends Error {
   ) {
     const code = (data.error as { code?: string })?.code ?? "";
     const messages: Record<string, string> = {
+      DEPENDENCY_INVALID: "This dependency would create a cycle or refer to a missing card. Choose a different connection.",
       VERSION_CONFLICT:
         "This resource changed since you opened it. Your draft has been kept.",
       UNDO_TARGET_CHANGED:

@@ -1,0 +1,5 @@
+Failed to load resource: the server responded with a status of 401 (Unauthorized)
+Failed to load resource: the server responded with a status of 404 (Not Found)
+Failed to load resource: the server responded with a status of 401 (Unauthorized)
+Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+PASS: real HTTPS Gantt rendering and narrow viewport, forecast, connector links, identical uncertain retry, disconnect preserving other edges, calendar day/week/month/agenda, native drag, both resize boundaries and Escape cancellation. No page errors, external assets or CSP violations. Screenshots are Chromium, not physical iPhone evidence.

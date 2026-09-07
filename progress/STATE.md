@@ -19,7 +19,10 @@ verified; preserve requirements from the temporary handoff until then.
 - Approved directory browsing and SSE invalidations.
 - Durable focus/preferences, conditional undo, history and browser settings.
 
-Latest verified slice: evidence E013 (68 Rust tests and extended real HTTPS browser coverage).
+Latest planning slice: [E026](E026-planning-widgets.md), implementing the owner's
+2026-09-07 Gantt and calendar request. The preceding Kanban freeze is recorded
+in E025 and remains in place. E026 records current Arch Linux checks and the
+remaining physical-device and rendering-performance limits.
 Workspace/history verification is recorded in E006; use `git status` for the exact
 working tree. The current source supersedes historical implementation claims in
 older evidence entries.

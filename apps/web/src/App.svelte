@@ -767,7 +767,7 @@
                   : view === "calendar"
                     ? "Planned work, deadlines and reviews — kept distinct."
                     : view === "gantt"
-                      ? "All-day schedules. Open a card to adjust its dates."
+                      ? "See the sequence, connect cards and understand the finish date."
                       : "Keep the next step visible."}
             </p>
           </div>
@@ -829,7 +829,7 @@
               ><option value="cards">Cards</option><option value="milestones"
                 >Milestones</option
               ></select
-            >{/if}{#if view === "calendar" || view === "gantt"}<div
+            >{/if}{#if view === "gantt"}<div
               class="month"
             >
               <button
@@ -997,6 +997,7 @@
               {search}
               {open}
               onpropose={(proposal) => (dateDraft = proposal)}
+              oncreate={(schedule) => create("card", { schedule })}
             />{:else}<p>Loading date views…</p>{/if}
         {:else if view === "updates"}<div class="updates">
             {#each visibleUpdates as item}<button

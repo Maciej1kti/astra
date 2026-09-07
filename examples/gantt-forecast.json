@@ -1,0 +1,36 @@
+{
+  "analysis": {
+    "planned_start": "2026-09-01",
+    "planned_end": "2026-09-04",
+    "forecast_end": "2026-09-06",
+    "delay_days": 2,
+    "scheduled_cards": 2,
+    "unscheduled_cards": 0,
+    "unresolved_cards": 0,
+    "complete": true,
+    "driving_path": [
+      "22222222-2222-4222-8222-222222222222",
+      "33333333-3333-4333-8333-333333333333"
+    ]
+  },
+  "forecasts": [
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "schedule": {
+        "start": "2026-09-01",
+        "end": "2026-09-03"
+      },
+      "delay_days": 0,
+      "drives_finish": true
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "schedule": {
+        "start": "2026-09-04",
+        "end": "2026-09-06"
+      },
+      "delay_days": 2,
+      "drives_finish": true
+    }
+  ]
+}

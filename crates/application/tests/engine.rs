@@ -1198,3 +1198,59 @@ fn git_observer_is_explicit_bounded_and_never_runs_repository_filters() {
         "NOT_A_GIT_ROOT"
     );
 }
+
+#[test]
+fn timeline_forecast_uses_other_pages_without_changing_recorded_dates() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let a = create(&engine, &project, "Design");
+    let aid = a.body["result"]["id"].as_str().unwrap();
+    patch(
+        &engine,
+        &project,
+        aid,
+        a.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"schedule":{"start":"2026-09-01","end":"2026-09-03"}}}),
+    );
+    let b = create(&engine, &project, "Build");
+    let bid = b.body["result"]["id"].as_str().unwrap();
+    let changed = patch(
+        &engine,
+        &project,
+        bid,
+        b.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"schedule":{"start":"2026-09-02","end":"2026-09-04"},"depends_on":[aid]}}),
+    );
+    assert_eq!(changed.http_status, 200);
+    let first = engine.gantt(&project, None, 1).unwrap();
+    wire::validate("GanttPage", &first).unwrap();
+    assert_eq!(first["analysis"]["forecast_end"], "2026-09-06");
+    assert_eq!(first["analysis"]["delay_days"], 2);
+    assert_eq!(first["analysis"]["complete"], true);
+    let next = engine
+        .gantt(&project, first["page"]["next_cursor"].as_str(), 1)
+        .unwrap();
+    wire::validate("GanttPage", &next).unwrap();
+    assert_eq!(first["analysis"], next["analysis"]);
+    let all = engine.gantt(&project, None, 50).unwrap();
+    assert_eq!(
+        all["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"] == bid)
+            .unwrap()["schedule"]["start"],
+        "2026-09-02"
+    );
+}
+
+#[test]
+fn forecast_example_matches_projection_contracts() {
+    let example: Value =
+        serde_json::from_str(include_str!("../../../examples/gantt-forecast.json")).unwrap();
+    wire::validate("TimelineAnalysis", &example["analysis"]).unwrap();
+    for forecast in example["forecasts"].as_array().unwrap() {
+        wire::validate("TimelineForecast", forecast).unwrap();
+    }
+}

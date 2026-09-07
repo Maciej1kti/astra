@@ -2,7 +2,9 @@ import type { Summary } from "./api";
 export type DateProposal = {
   path: string;
   version: string;
-  schedule: { start: string; end: string };
+  schedule?: { start: string; end: string };
+  dependencies?: string[];
+  title?: string;
 };
 export type MoveProposal = {
   item: Summary;

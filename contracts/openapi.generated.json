@@ -5456,9 +5456,112 @@
         ],
         "additionalProperties": false
       },
+      "TimelineAnalysis": {
+        "type": "object",
+        "description": "Read-only finish-to-start forecast over up to 10000 non-archived, non-cancelled cards in the project snapshot. Recorded starts are lower bounds; inclusive durations include weekends. Unknown predecessors block descendants. A partial forecast is not a complete project estimate. One deterministic driving chain is returned, not all critical paths or resource leveling.",
+        "additionalProperties": false,
+        "required": [
+          "planned_start",
+          "planned_end",
+          "forecast_end",
+          "delay_days",
+          "scheduled_cards",
+          "unscheduled_cards",
+          "unresolved_cards",
+          "complete",
+          "driving_path"
+        ],
+        "properties": {
+          "planned_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "planned_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "forecast_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "delay_days": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scheduled_cards": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "unscheduled_cards": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "unresolved_cards": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "driving_path": {
+            "type": "array",
+            "maxItems": 10000,
+            "items": {
+              "$ref": "#/components/schemas/UUID"
+            }
+          }
+        }
+      },
+      "TimelineForecast": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "schedule",
+          "delay_days",
+          "drives_finish"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
+          "delay_days": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "drives_finish": {
+            "type": "boolean"
+          }
+        }
+      },
       "GanttPage": {
         "type": "object",
         "properties": {
+          "analysis": {
+            "$ref": "#/components/schemas/TimelineAnalysis"
+          },
+          "forecasts": {
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "$ref": "#/components/schemas/TimelineForecast"
+            }
+          },
           "rows": {
             "type": "array",
             "items": {
@@ -5485,6 +5588,8 @@
           }
         },
         "required": [
+          "analysis",
+          "forecasts",
           "rows",
           "edges",
           "page",

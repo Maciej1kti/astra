@@ -138,7 +138,7 @@ try {
   });
   const page = await context.newPage();
   const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => { errors.push(error.message); console.error(error.stack); });
   await page.goto(origin);
   await page.getByRole("button", { name: "Request access" }).click();
   await page.getByText("Compare this challenge on the host machine:").waitFor();
@@ -449,9 +449,14 @@ try {
   assert.equal(ordered[0].id,typedId);
   await page.screenshot({path:join(root,"progress/screenshots/desktop-board.png"),fullPage:true});
   await expect(boardHandle).toBeEnabled();
-  await boardHandle.focus();
-  await page.keyboard.press("Alt+ArrowDown");
-  await expect.poll(() => cli("--project",folder,"card","list","--status","planned").items.at(-1).id).toBe(typedId);
+  await expect(page.locator('[data-board-status="planned"]').first()).toHaveAttribute("data-board-card", typedId);
+  await boardHandle.press("Alt+ArrowDown");
+  try {
+    await expect.poll(() => cli("--project",folder,"card","list","--status","planned").items.at(-1).id).toBe(typedId);
+  } catch (error) {
+    console.error("Keyboard reorder state", ordered, cli("--project",folder,"card","list","--status","planned").items, errors, await page.locator("body").innerText());
+    throw error;
+  }
   await page.getByRole("dialog").waitFor({state:"hidden"});
 
   // Drag between statuses, retaining the exact command when a response is uncertain.
@@ -643,8 +648,58 @@ try {
   await page.getByRole("button",{name:"hard milestone deadline: Release gate",exact:true}).waitFor();
   await page.getByRole("button",{name:"Calendar",exact:true}).click();
   await page.getByLabel("Calendar layout",{exact:true}).selectOption("week");
-  assert.equal(await page.locator("[data-calendar-day]").count(),7);
-  assert.equal(await page.locator("[data-calendar-day]").first().getAttribute("data-calendar-day"),"2026-08-31");
+  await expect(page.locator(".ec-body .ec-day")).toHaveCount(7);
+  await expect(page.getByLabel("Go to date",{exact:true})).toHaveValue("2026-09-01");
+  await page.getByLabel("Go to date",{exact:true}).fill("2026-09-08");
+  await page.getByLabel("Calendar layout",{exact:true}).selectOption("day");
+  await expect(page.locator(".ec-body .ec-day")).toHaveCount(1);
+  await page.getByRole("button",{name:"Next calendar period",exact:true}).click();
+  await expect(page.getByLabel("Go to date",{exact:true})).toHaveValue("2026-09-09");
+  await page.getByRole("button",{name:"Previous calendar period",exact:true}).focus();
+  await page.keyboard.press("Alt+2");
+  await expect(page.getByLabel("Calendar layout",{exact:true})).toHaveValue("week");
+  await page.getByRole("button",{name:"New scheduled card",exact:true}).click();
+  await expect(page.getByLabel("Start",{exact:true})).toHaveValue("2026-09-09");
+  await page.getByLabel("Title",{exact:true}).fill("Waterfall successor");
+  await page.getByLabel("End",{exact:true}).fill("2026-09-11");
+  await page.getByRole("button",{name:"Create",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  const waterfall = cli("get",`/api/v1/views/list?type=card&project_id=${plan.project_id}&limit=200`).items.find(row=>row.title==="Waterfall successor");
+  assert(waterfall);
+  await page.getByRole("button",{name:"Timeline",exact:true}).click();
+  await page.getByLabel("Predecessor",{exact:true}).selectOption(cards[0].id);
+  await page.getByLabel("Successor",{exact:true}).selectOption(waterfall.id);
+  await page.getByRole("button",{name:"Connect cards",exact:true}).click();
+  await page.getByRole("button",{name:"Save dependencies",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  const waterfallPath=`/api/v1/projects/${plan.project_id}/cards/${waterfall.id}`;
+  assert.deepEqual(cli("get",waterfallPath).metadata.depends_on,[cards[0].id]);
+  const forecast=cli("get",`/api/v1/views/gantt?project_id=${plan.project_id}`).forecasts.find(row=>row.id===waterfall.id);
+  assert.equal(forecast.schedule.start,"2026-09-15");
+  assert.equal(forecast.schedule.end,"2026-09-17");
+  await page.getByLabel("Dependency forecast",{exact:true}).check();
+  await expect(page.getByRole("button",{name:"Move plan: Waterfall successor",exact:true})).toBeDisabled();
+  assert.equal(cli("get",waterfallPath).metadata.schedule.start,"2026-09-09");
+  await page.screenshot({path:join(root,"progress/screenshots/gantt-waterfall.png"),fullPage:true});
+  await page.getByLabel("Dependency forecast",{exact:true}).uncheck();
+  await page.getByLabel("Predecessor",{exact:true}).selectOption(waterfall.id);
+  await page.getByLabel("Successor",{exact:true}).selectOption(cards[0].id);
+  await page.getByRole("button",{name:"Connect cards",exact:true}).click();
+  await page.getByRole("button",{name:"Save dependencies",exact:true}).click();
+  await page.getByRole("alert").filter({hasText:/DEPENDENCY|dependency/i}).waitFor();
+  assert(!cli("get",path).metadata.depends_on?.includes(waterfall.id));
+  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+  await page.getByRole("button",{name:"Calendar",exact:true}).click();
+  await page.getByLabel("Go to date",{exact:true}).fill("2026-09-09");
+  await page.getByLabel("Calendar layout",{exact:true}).selectOption("week");
+  const calendarCard=page.getByRole("button",{name:"Planned work: Waterfall successor",exact:true});
+  await calendarCard.waitFor();
+  await calendarCard.focus();await page.keyboard.press("Alt+ArrowRight");
+  await expect(page.getByLabel("Planned start",{exact:true})).toHaveValue("2026-09-10");
+  await page.getByRole("button",{name:"Save planned dates",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(cli("get",waterfallPath).metadata.schedule.end,"2026-09-12");
+  await page.screenshot({path:join(root,"progress/screenshots/calendar-week.png"),fullPage:true});
   await page.getByLabel("Calendar layout",{exact:true}).selectOption("month");
   await page.getByRole("button",{name:"List",exact:true}).click();
   await page.getByLabel("Search content",{exact:true}).fill("untrusted");
