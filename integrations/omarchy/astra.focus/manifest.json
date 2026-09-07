@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "astra.focus",
+  "name": "Astra Focus",
+  "version": "0.1.0",
+  "author": "Astra",
+  "description": "Local server availability and a read-only Focus preview.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {"barWidget": "Widget.qml"},
+  "barWidget": {
+    "displayName": "Astra Focus",
+    "category": "Productivity",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {"socketPath": "", "webUrl": ""},
+    "schema": [
+      {"key": "socketPath", "type": "path", "label": "Local projectd socket"},
+      {"key": "webUrl", "type": "string", "label": "Astra HTTPS URL"}
+    ]
+  }
+}
