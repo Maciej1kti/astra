@@ -106,7 +106,18 @@
     relative = $state(""),
     projectName = $state(""),
     tracked = $state(false),
-    plan = $state<Record<string, unknown> | null>(null);
+    plan = $state<{
+      plan_id: string;
+      project_id: string;
+      display_path: string;
+      changes: { path: string; action: string; description: string }[];
+      warnings: { message: string }[];
+    } | null>(null);
+  let browsing = $state(false),
+    directoryReady = $state(false),
+    directoryCursor = $state<string | null>(null),
+    directoryPaged = $state(false);
+  let browseGeneration = 0;
   let directories = $state<
     { name: string; relative_path: string; registered: boolean }[]
   >([]);
@@ -181,6 +192,8 @@
     attentionRows = [];
     roots = [];
     directories = [];
+    browseGeneration++;
+    directoryReady = false;
     adding = false;
     error = "Your session ended. Reconnect this browser to continue.";
   }
@@ -459,6 +472,8 @@
       return;
     }
     plan = null;
+    projectName = "";
+    directoryReady = false;
     error = "";
     try {
       roots = (await api<{ items: Root[] }>("/api/v1/roots")).items;
@@ -469,22 +484,38 @@
       message(e);
     }
   }
-  async function browse(path: string) {
-    if (registrationPending) return;
+  async function browse(path: string, cursor: string | null = null) {
+    if (registrationPending || busy) return;
+    const generation = ++browseGeneration,
+      selectedRoot = root;
     relative = path;
     plan = null;
+    directoryReady = false;
+    browsing = true;
+    directories = [];
+    error = "";
     try {
-      directories = (
-        await api<{ items: typeof directories }>(
-          `/api/v1/roots/${root}/directories?relative_path=${encodeURIComponent(path)}`,
-        )
-      ).items;
+      const page = await api<{
+        items: typeof directories;
+        next_cursor: string | null;
+      }>(
+        `/api/v1/roots/${selectedRoot}/directories?relative_path=${encodeURIComponent(path)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      );
+      if (generation !== browseGeneration) return;
+      directories = page.items;
+      directoryCursor = page.next_cursor;
+      directoryPaged = !!cursor;
+      directoryReady = true;
     } catch (e) {
-      message(e);
+      if (generation === browseGeneration) message(e);
+    } finally {
+      if (generation === browseGeneration) browsing = false;
     }
   }
   async function preview() {
+    if (!directoryReady || browsing || registrationPending) return;
     busy = true;
+    error = "";
     try {
       plan = await api("/api/v1/registration-plans", "POST", {
         root_id: root,
@@ -520,6 +551,9 @@
         throw new Error(
           `Registration is ${job.state}. Job: ${registrationJob}`,
         );
+      project = plan.project_id;
+      view = "board";
+      search = "";
       adding = false;
       registrationPending = null;
       registrationJob = null;
@@ -1055,8 +1089,13 @@
     >
       <header>
         <h2>Add a project</h2>
-        <button onclick={() => (adding = false)} aria-label="Close">✕</button>
+        <button
+          onclick={() => (adding = false)}
+          aria-label="Close"
+          disabled={busy}>✕</button
+        >
       </header>
+      <p>Choose the project folder on this host. Files stay in that folder.</p>
       {#if !roots.length}<p>
           No directories have been approved yet. On the host, run:
         </p>
@@ -1064,7 +1103,7 @@
           >projectctl --socket /path/to/projectd.sock add-root /absolute/path
           --label "Projects"</code
         >{:else}<label
-          >Approved directory<select
+          >Project folders<select
             bind:value={root}
             disabled={!!registrationPending || busy}
             onchange={() => browse("")}
@@ -1076,20 +1115,36 @@
           {roots.find((r) => r.id === root)?.display_path}/{relative}
         </p>
         <button
+          disabled={!relative || busy || !!registrationPending || browsing}
           onclick={() => browse(relative.split("/").slice(0, -1).join("/"))}
           >↑ Parent directory</button
         >
         <div class="directories">
+          {#if browsing}<p role="status">Loading folders…</p>{/if}
           {#each directories as directory}<button
+              disabled={busy || !!registrationPending || browsing}
+              aria-label={`Open folder: ${directory.name}`}
               onclick={() => browse(directory.relative_path)}
               >▱ {directory.name}{directory.registered ? " · registered" : ""}
               <span>→</span></button
-            >{/each}
+            >{:else}{#if directoryReady}<p>
+                No subfolders here. You can select this folder.
+              </p>{/if}{/each}
         </div>
+        {#if directoryPaged}<button
+            disabled={busy || browsing || !!registrationPending}
+            onclick={() => browse(relative)}>First folder page</button
+          >{/if}
+        {#if directoryCursor}<button
+            disabled={busy || browsing || !!registrationPending}
+            onclick={() => browse(relative, directoryCursor)}
+            >More folders</button
+          >{/if}
         <label
           >Project name<input
             bind:value={projectName}
             disabled={!!registrationPending || busy}
+            oninput={() => (plan = null)}
             placeholder="Use folder name"
           /></label
         ><label class="check"
@@ -1097,23 +1152,38 @@
             type="checkbox"
             disabled={!!registrationPending || busy}
             bind:checked={tracked}
+            onchange={() => (plan = null)}
           /> Track .project files in the project’s Git repository</label
-        >{#if plan}<details open>
-            <summary>Planned changes</summary>
-            <pre>{JSON.stringify(plan, null, 2)}</pre>
-          </details>
+        >{#if plan}<section class="notice">
+            <strong>Selected folder</strong>
+            <p class="breadcrumb">{plan.display_path}</p>
+            <p>
+              Add planning files in .project and project instructions in
+              AGENTS.md. Existing content is preserved.
+            </p>
+            {#each plan.warnings as warning}<p>{warning.message}</p>{/each}
+            <details>
+              <summary>Files to update</summary>
+              {#each plan.changes.filter((change) => change.action !== "no_change") as change}<p
+                  class="breadcrumb"
+                >
+                  {change.path}
+                </p>{/each}
+            </details>
+          </section>
           <button class="primary" onclick={register} disabled={busy}
             >{registrationJob
               ? "Check registration"
               : registrationPending
                 ? "Retry same registration"
-                : "Confirm registration"}</button
+                : "Add selected project"}</button
           >{#if registrationPending}<p>
               Request: {registrationPending.requestId}
             </p>{/if}{:else}<button
             class="primary"
             onclick={preview}
-            disabled={busy}>Preview registration</button
+            disabled={busy || browsing || !directoryReady}
+            >Choose this folder</button
           >{/if}{/if}{#if error}<p class="notice">{error}</p>{/if}
     </dialog>
   </div>{/if}
@@ -1827,13 +1897,6 @@
     font-size: 12px;
     overflow-wrap: anywhere;
     color: var(--muted);
-  }
-  .modal pre {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    font-size: 10px;
-    max-height: 220px;
-    overflow: auto;
   }
   .modal details {
     margin: 20px 0;

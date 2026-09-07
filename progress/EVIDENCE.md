@@ -256,3 +256,17 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
 - Codex's embedded browser rejected the self-signed local certificate. Manual users
   must use their normal browser and handle its local certificate prompt themselves.
   See `MANUAL-TESTING.md` for launch, pairing, walkthrough and concrete limits.
+
+## E015 — Add a project by selecting a host folder
+
+- The add-project dialog presents a host folder picker, bounded folder pagination,
+  loading/empty states, the selected path and a readable confirmation. Changing
+  name or Git mode invalidates the preview. Late directory replies cannot replace
+  the current selection. Successful registration opens that project's board.
+- Extended HTTPS browser smoke selects a fixture folder, verifies preview creates
+  no source file, confirms registration and verifies the real project document.
+  Existing end-to-end scenarios still pass (`checks/folder-picker-browser.txt`).
+- Svelte check reports zero errors/warnings, frontend build and embedded release
+  build pass. The local manual-test host was restarted with the new application.
+- Folder access uses the existing host-approved roots API and normal authentication.
+  This is an in-app host folder picker, not the browser's native file-upload dialog.

@@ -57,3 +57,16 @@ The prepared binary is in `target/release/`. To rebuild after changing source:
 npm run build
 scripts/cargo-local build --workspace --release
 ```
+
+## Add an existing project folder
+
+Open **Projects → Add project**. Choose a configured location, open the folder you
+want, then select **Choose this folder → Add selected project**. You may change the
+project name before confirming. The app opens the new project's board when ready.
+Browsing and previewing do not create project files. Confirmation adds `.project`
+planning files and managed project instructions while preserving existing content.
+
+The folder list belongs to the host running projectd, including when the browser
+is on another device. The host owner configures available locations once with
+`projectctl --socket SOCKET add-root /absolute/projects/path --label Projects`.
+The current local test host has its Projects location configured.

@@ -130,6 +130,21 @@ try {
   await page
     .getByRole("heading", { name: "Make room for what matters." })
     .waitFor();
+  const pickRoot = join(temp, "Selectable folders");
+  const selectedFolder = join(pickRoot, "Chosen project");
+  await mkdir(selectedFolder, {recursive:true});
+  cli("add-root", pickRoot, "--label", "Test projects");
+  await page.getByRole("button",{name:"Projects",exact:true}).click();
+  await page.getByRole("button",{name:"Add project",exact:false}).click();
+  await page.getByRole("button",{name:"Open folder: Chosen project",exact:true}).click();
+  await page.getByLabel("Project name",{exact:true}).fill("Chosen in browser");
+  await page.getByRole("button",{name:"Choose this folder",exact:true}).click();
+  await page.getByText("Selected folder",{exact:true}).waitFor();
+  await assert.rejects(readFile(join(selectedFolder,".project/project.md")),{code:"ENOENT"});
+  await page.getByRole("button",{name:"Add selected project",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(cli("projects").items.some(item => item.title === "Chosen in browser"),true);
+  assert.match(await readFile(join(selectedFolder,".project/project.md"),"utf8"),/Chosen in browser/);
   await page
     .getByLabel("Project", { exact: true })
     .selectOption(plan.project_id);
@@ -434,7 +449,7 @@ try {
   await settingsPage.getByRole("button",{name:"Copy settings draft",exact:true}).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
+    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",
