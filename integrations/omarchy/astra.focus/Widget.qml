@@ -33,10 +33,13 @@ Panel {
   }
 
   function launch() {
-    if (!validUrl) return
-    Quickshell.execDetached(["omarchy", "launch", "webapp", webUrl])
+    if (!validUrl || launcher.running) return
+    launcher.command = ["python3", decodeURIComponent(Qt.resolvedUrl("launch.py").toString().replace(/^file:\/\//, "")), webUrl]
+    launcher.running = true
     close()
   }
+
+  Process { id: launcher }
 
   function updateHover() {
     if (button.tooltipHovered || popup.containsMouse) {

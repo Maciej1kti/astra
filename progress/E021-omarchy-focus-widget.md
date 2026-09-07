@@ -56,3 +56,21 @@ was instead loaded and exercised inside the installed shell. Initial discovery
 was asynchronous. Cached QML and a transient duplicate IPC registration during
 rapid layout changes required one shell restart; current widget IPC exposes the
 updated methods and live status. Installation notes document this behavior.
+
+## Follow-up: reuse the existing WebUI window
+
+The owner reported that every click created another browser app window. The
+widget now checks Hyprland clients for the configured host's Chromium app class
+and Astra's title, then focuses the matching window. Only an absent window
+triggers a browser launch. The widget keeps one launch operation in flight while
+waiting for the new window, suppressing duplicate clicks during normal startup.
+The helper passes argument arrays without shell evaluation and validates window
+addresses before constructing the fixed Hyprland dispatcher expression.
+
+Eight Python tests pass, including window selection, unrelated browser/app
+exclusion, and invalid address handling. On the live desktop, three widget IPC
+activations from another focused application returned to the original Astra
+window; its address and the single-window count remained unchanged. Plugin
+validation and whitespace checks pass. Existing open windows were not closed.
+Chromium app classes omit ports; matching two Astra instances on one hostname
+remains ambiguous and is documented in the integration README.

@@ -7,7 +7,8 @@ dependencies. The full application remains the existing WebUI.
 - Hover for 250 ms to see local API availability and the first five Focus pins.
 - Move into the popup to use its buttons; leaving both surfaces closes it after
   450 ms. Left-click the bar icon or **Open Astra** to launch the configured
-  WebUI in Omarchy's browser app mode. Right-click toggles the preview;
+  WebUI in Omarchy's browser app mode, or focus its existing window. Repeated
+  clicks are ignored while a launch is in progress. Right-click toggles the preview;
   middle-click refreshes it.
 - Check on startup, on hover with a five-second throttle, every 60 seconds while
   closed, and every 15 seconds while open. The timestamp identifies the last
@@ -54,6 +55,12 @@ omarchy-shell astra.focus open
 omarchy-shell astra.focus close
 omarchy-shell astra.focus launchUI
 ```
+
+Window matching uses the Chromium web-app class for the configured hostname
+and Astra's `Local Projects` title. It does not focus ordinary browser tabs or
+other local web apps. Chromium omits the port from that class, so two Astra
+instances on different ports of the same hostname cannot be distinguished by
+this integration yet; use distinct hostnames for those instances.
 
 To remove it from the bar: `omarchy plugin disable astra.focus`. The source
 folder can remain for later use. This widget depends on Omarchy's shell APIs;
