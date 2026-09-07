@@ -1,0 +1,56 @@
+[
+  {
+    "view": "board",
+    "width": 320,
+    "scrollWidth": 320,
+    "buttons": 63
+  },
+  {
+    "view": "calendar",
+    "width": 320,
+    "scrollWidth": 320,
+    "buttons": 16
+  },
+  {
+    "view": "gantt",
+    "width": 320,
+    "scrollWidth": 320,
+    "buttons": 65
+  },
+  {
+    "view": "board",
+    "width": 768,
+    "scrollWidth": 768,
+    "buttons": 64
+  },
+  {
+    "view": "calendar",
+    "width": 768,
+    "scrollWidth": 768,
+    "buttons": 17
+  },
+  {
+    "view": "gantt",
+    "width": 768,
+    "scrollWidth": 768,
+    "buttons": 66
+  },
+  {
+    "view": "board",
+    "width": 1280,
+    "scrollWidth": 1280,
+    "buttons": 64
+  },
+  {
+    "view": "calendar",
+    "width": 1280,
+    "scrollWidth": 1280,
+    "buttons": 17
+  },
+  {
+    "view": "gantt",
+    "width": 1280,
+    "scrollWidth": 1280,
+    "buttons": 66
+  }
+]

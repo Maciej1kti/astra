@@ -1,0 +1,1349 @@
+[
+  {
+    "viewport": 390,
+    "scrollWidth": 390,
+    "height": 2353,
+    "controls": [
+      {
+        "text": "Focus",
+        "width": 53,
+        "height": 42
+      },
+      {
+        "text": "Projects",
+        "width": 63,
+        "height": 42
+      },
+      {
+        "text": "Board",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Calendar",
+        "width": 67,
+        "height": 42
+      },
+      {
+        "text": "Timeline",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "List",
+        "width": 39,
+        "height": 42
+      },
+      {
+        "text": "Updates",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "Git",
+        "width": 49,
+        "height": 42
+      },
+      {
+        "text": "Host diagnostics",
+        "width": 44,
+        "height": 42
+      },
+      {
+        "text": "Workspace settings",
+        "width": 38,
+        "height": 42
+      },
+      {
+        "text": "Refresh",
+        "width": 41,
+        "height": 42
+      },
+      {
+        "text": "＋ Add card",
+        "width": 108,
+        "height": 42
+      },
+      {
+        "text": "All projectsEmpty project — QA syntheticPersonal lab — QA syntheticStudio launch",
+        "width": 173,
+        "height": 43
+      },
+      {
+        "text": "Filter loaded titles",
+        "width": 173,
+        "height": 43
+      },
+      {
+        "text": "Studio launch — QA synthetic Draft-loss probe cancelled",
+        "width": 354,
+        "height": 134
+      },
+      {
+        "text": "Design system foundationsStudio launch — QA synthetic overdue↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 13Studio launch — QA synthetic overdue↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 31Studio launch — QA synthetic overdue↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "Conflict probeStudio launch — QA synthetic overdue↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "Design system foundationsStudio launch — QA synthetic blocked↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "Choose the launch dateStudio launch — QA synthetic decision needed↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 22Studio launch — QA synthetic blocked↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 36Studio launch — QA synthetic blocked↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "Design system foundationsStudio launch — QA synthetic review due↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 17Studio launch — QA synthetic review due↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 33Studio launch — QA synthetic review due↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "Prototype readyStudio launch — QA synthetic due soon↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 13Studio launch — QA synthetic review↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 23Studio launch — QA synthetic review↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 33Studio launch — QA synthetic review↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 18Studio launch — QA synthetic review↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "Review accessibilityStudio launch — QA synthetic review↗",
+        "width": 354,
+        "height": 69
+      },
+      {
+        "text": "QA work package 28Studio launch — QA synthetic review↗",
+        "width": 354,
+        "height": 69
+      }
+    ]
+  },
+  {
+    "viewport": 390,
+    "scrollWidth": 390,
+    "height": 1076,
+    "controls": [
+      {
+        "text": "Focus",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Projects",
+        "width": 63,
+        "height": 42
+      },
+      {
+        "text": "Board",
+        "width": 53,
+        "height": 42
+      },
+      {
+        "text": "Calendar",
+        "width": 67,
+        "height": 42
+      },
+      {
+        "text": "Timeline",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "List",
+        "width": 39,
+        "height": 42
+      },
+      {
+        "text": "Updates",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "Git",
+        "width": 49,
+        "height": 42
+      },
+      {
+        "text": "Host diagnostics",
+        "width": 44,
+        "height": 42
+      },
+      {
+        "text": "Workspace settings",
+        "width": 38,
+        "height": 42
+      },
+      {
+        "text": "Refresh",
+        "width": 41,
+        "height": 42
+      },
+      {
+        "text": "＋ Add card",
+        "width": 108,
+        "height": 42
+      },
+      {
+        "text": "All projectsEmpty project — QA syntheticPersonal lab — QA syntheticStudio launch",
+        "width": 173,
+        "height": 43
+      },
+      {
+        "text": "Filter loaded titles",
+        "width": 173,
+        "height": 43
+      },
+      {
+        "text": "Collapse column",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Add card to planned · 9",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Design system foundations urgent Blocked Due: 2026-09-07 Schedule: 2026-09-07 – ",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "History probe high   Schedule: 2026-09-12 – 2026-09-14  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "Polish copy — Zażółć gęślą jaźń 🧪    Schedule: 2026-09-17 – 2026-09-19  designl",
+        "width": 262,
+        "height": 126
+      },
+      {
+        "text": "QA work package 16 low  Due: 2026-09-07   frontendqa",
+        "width": 262,
+        "height": 80
+      },
+      {
+        "text": "QA work package 21 urgent   Schedule: 2026-09-12 – 2026-09-14  designlaunch",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 26 high   Schedule: 2026-09-17 – 2026-09-19  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 31   Due: 2026-09-07 Schedule: 2026-09-07 – 2026-09-09  designla",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 36 low Blocked  Schedule: 2026-09-12 – 2026-09-14  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "Created through browser — QA urgent   Schedule: 2026-09-09 – 2026-09-12  qabrows",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "Add card in planned",
+        "width": 262,
+        "height": 42
+      },
+      {
+        "text": "Collapse column",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Add card to active · 7",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Build onboarding flow high   Schedule: 2026-09-08 – 2026-09-10  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "Conflict probe   Due: 2026-09-07 Schedule: 2026-09-13 – 2026-09-15  designlaunch",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "A very long synthetic card title that exercises wrapping in a crowded project bo",
+        "width": 262,
+        "height": 232
+      },
+      {
+        "text": "QA work package 17 urgent   Schedule: 2026-09-08 – 2026-09-10 Review: 2026-09-08",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 22 high Blocked Due: 2026-09-07   frontendqa",
+        "width": 262,
+        "height": 106
+      },
+      {
+        "text": "QA work package 27    Schedule: 2026-09-18 – 2026-09-20  designlaunch",
+        "width": 262,
+        "height": 106
+      },
+      {
+        "text": "QA work package 32 low   Schedule: 2026-09-08 – 2026-09-10  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "Add card in active",
+        "width": 262,
+        "height": 42
+      },
+      {
+        "text": "Collapse column",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Add card to review · 6",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Review accessibility    Schedule: 2026-09-09 – 2026-09-11  designlaunch",
+        "width": 262,
+        "height": 106
+      },
+      {
+        "text": "QA work package 13 urgent  Due: 2026-09-07 Schedule: 2026-09-19 – 2026-09-21  de",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 18 high   Schedule: 2026-09-09 – 2026-09-11  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 23    Schedule: 2026-09-14 – 2026-09-16  designlaunch",
+        "width": 262,
+        "height": 106
+      },
+      {
+        "text": "QA work package 28 low  Due: 2026-09-07   frontendqa",
+        "width": 262,
+        "height": 80
+      },
+      {
+        "text": "QA work package 33 urgent   Schedule: 2026-09-09 – 2026-09-11 Review: 2026-09-08",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "Add card in review",
+        "width": 262,
+        "height": 42
+      },
+      {
+        "text": "Collapse column",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Add card to done · 7",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Confirm launch scope low  Due: 2026-09-07   frontendqa",
+        "width": 262,
+        "height": 80
+      },
+      {
+        "text": "Keyboard order probe urgent   Schedule: 2026-09-15 – 2026-09-17 Review: 2026-09-",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 14 high   Schedule: 2026-09-20 – 2026-09-22  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 19   Due: 2026-09-07 Schedule: 2026-09-10 – 2026-09-12  designla",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 24 low   Schedule: 2026-09-15 – 2026-09-17  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 29 urgent Blocked  Schedule: 2026-09-20 – 2026-09-22  designlaun",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 34 high  Due: 2026-09-07   frontendqa",
+        "width": 262,
+        "height": 80
+      },
+      {
+        "text": "Add card in done",
+        "width": 262,
+        "height": 42
+      },
+      {
+        "text": "Collapse column",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Add card to cancelled · 7",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Draft-loss probe urgent   Schedule: 2026-09-11 – 2026-09-13  designlaunch",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "Undated backlog idea high  Due: 2026-09-07   frontendqa",
+        "width": 262,
+        "height": 80
+      },
+      {
+        "text": "QA work package 15  Blocked  Schedule: 2026-09-21 – 2026-09-23  designlaunch",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 20 low   Schedule: 2026-09-11 – 2026-09-13  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 25 urgent  Due: 2026-09-07 Schedule: 2026-09-16 – 2026-09-18 Rev",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 30 high   Schedule: 2026-09-21 – 2026-09-23  frontendqa",
+        "width": 262,
+        "height": 132
+      },
+      {
+        "text": "QA work package 35    Schedule: 2026-09-11 – 2026-09-13  designlaunch",
+        "width": 262,
+        "height": 106
+      },
+      {
+        "text": "Add card in cancelled",
+        "width": 262,
+        "height": 42
+      }
+    ]
+  },
+  {
+    "viewport": 390,
+    "scrollWidth": 390,
+    "height": 4756,
+    "controls": [
+      {
+        "text": "Focus",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Projects",
+        "width": 63,
+        "height": 42
+      },
+      {
+        "text": "Board",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Calendar",
+        "width": 70,
+        "height": 42
+      },
+      {
+        "text": "Timeline",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "List",
+        "width": 39,
+        "height": 42
+      },
+      {
+        "text": "Updates",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "Git",
+        "width": 49,
+        "height": 42
+      },
+      {
+        "text": "Host diagnostics",
+        "width": 44,
+        "height": 42
+      },
+      {
+        "text": "Workspace settings",
+        "width": 38,
+        "height": 42
+      },
+      {
+        "text": "Refresh",
+        "width": 41,
+        "height": 42
+      },
+      {
+        "text": "＋ Add card",
+        "width": 108,
+        "height": 42
+      },
+      {
+        "text": "All projectsEmpty project — QA syntheticPersonal lab — QA syntheticStudio launch",
+        "width": 173,
+        "height": 43
+      },
+      {
+        "text": "Filter loaded titles",
+        "width": 173,
+        "height": 43
+      },
+      {
+        "text": "Previous calendar period",
+        "width": 43,
+        "height": 44
+      },
+      {
+        "text": "Today",
+        "width": 69,
+        "height": 44
+      },
+      {
+        "text": "Next calendar period",
+        "width": 43,
+        "height": 44
+      },
+      {
+        "text": "",
+        "width": 149,
+        "height": 44
+      },
+      {
+        "text": "Calendar layout",
+        "width": 113,
+        "height": 44
+      },
+      {
+        "text": "New scheduled card",
+        "width": 162,
+        "height": 44
+      }
+    ]
+  },
+  {
+    "viewport": 390,
+    "scrollWidth": 390,
+    "height": 2382,
+    "controls": [
+      {
+        "text": "Focus",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Projects",
+        "width": 63,
+        "height": 42
+      },
+      {
+        "text": "Board",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Calendar",
+        "width": 67,
+        "height": 42
+      },
+      {
+        "text": "Timeline",
+        "width": 67,
+        "height": 42
+      },
+      {
+        "text": "List",
+        "width": 39,
+        "height": 42
+      },
+      {
+        "text": "Updates",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "Git",
+        "width": 49,
+        "height": 42
+      },
+      {
+        "text": "Host diagnostics",
+        "width": 44,
+        "height": 42
+      },
+      {
+        "text": "Workspace settings",
+        "width": 38,
+        "height": 42
+      },
+      {
+        "text": "Refresh",
+        "width": 41,
+        "height": 42
+      },
+      {
+        "text": "＋ Add card",
+        "width": 108,
+        "height": 42
+      },
+      {
+        "text": "All projectsEmpty project — QA syntheticPersonal lab — QA syntheticStudio launch",
+        "width": 173,
+        "height": 43
+      },
+      {
+        "text": "Filter loaded titles",
+        "width": 173,
+        "height": 43
+      },
+      {
+        "text": "Previous month",
+        "width": 43,
+        "height": 43
+      },
+      {
+        "text": "Month",
+        "width": 257,
+        "height": 43
+      },
+      {
+        "text": "Next month",
+        "width": 43,
+        "height": 43
+      },
+      {
+        "text": "Timeline scale",
+        "width": 103,
+        "height": 44
+      },
+      {
+        "text": "",
+        "width": 13,
+        "height": 13
+      },
+      {
+        "text": "New scheduled card",
+        "width": 162,
+        "height": 42
+      },
+      {
+        "text": "Resize start: Build onboarding flow",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: Build onboarding flow",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: Build onboarding flow",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from Build onboarding flow",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: Conflict probe",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: Conflict probe",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: Conflict probe",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from Conflict probe",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: A very long synthetic card title that exercises wrapping in a crowded project board and small calendar cells while keeping important actions reachable",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: A very long synthetic card title that exercises wrapping in a crowded project board and small calendar cells while keeping important actions reachable",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: A very long synthetic card title that exercises wrapping in a crowded project board and small calendar cells while keeping important actions reachable",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from A very long synthetic card title that exercises wrapping in a crowded project board and small calendar cells while keeping important actions reachable",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: QA work package 17",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: QA work package 17",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: QA work package 17",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from QA work package 17",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: QA work package 27",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: QA work package 27",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: QA work package 27",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from QA work package 27",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: QA work package 32",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: QA work package 32",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: QA work package 32",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from QA work package 32",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: Draft-loss probe",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: Draft-loss probe",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: Draft-loss probe",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from Draft-loss probe",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: QA work package 15",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: QA work package 15",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: QA work package 15",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from QA work package 15",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: QA work package 20",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: QA work package 20",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: QA work package 20",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from QA work package 20",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Resize start: QA work package 25",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Move plan: QA work package 25",
+        "width": 398,
+        "height": 53
+      },
+      {
+        "text": "Resize end: QA work package 25",
+        "width": 16,
+        "height": 53
+      },
+      {
+        "text": "Connect from QA work package 25",
+        "width": 40,
+        "height": 53
+      },
+      {
+        "text": "Selected card",
+        "width": 354,
+        "height": 44
+      },
+      {
+        "text": "Open card",
+        "width": 97,
+        "height": 42
+      },
+      {
+        "text": "Predecessor",
+        "width": 354,
+        "height": 44
+      },
+      {
+        "text": "Successor",
+        "width": 354,
+        "height": 44
+      },
+      {
+        "text": "Connect cards",
+        "width": 124,
+        "height": 42
+      },
+      {
+        "text": "Disconnect Design system foundations from Build onboarding flow",
+        "width": 103,
+        "height": 42
+      },
+      {
+        "text": "Disconnect Build onboarding flow from Review accessibility",
+        "width": 103,
+        "height": 42
+      },
+      {
+        "text": "QA work package 22 · Set planned dates",
+        "width": 292,
+        "height": 42
+      },
+      {
+        "text": "Undated backlog idea · Set planned dates",
+        "width": 299,
+        "height": 42
+      },
+      {
+        "text": "Confirm launch scope · Set planned dates",
+        "width": 299,
+        "height": 42
+      },
+      {
+        "text": "QA work package 34 · Set planned dates",
+        "width": 292,
+        "height": 42
+      },
+      {
+        "text": "QA work package 16 · Set planned dates",
+        "width": 290,
+        "height": 42
+      },
+      {
+        "text": "QA work package 28 · Set planned dates",
+        "width": 292,
+        "height": 42
+      }
+    ]
+  },
+  {
+    "viewport": 390,
+    "scrollWidth": 390,
+    "height": 2974,
+    "controls": [
+      {
+        "text": "Focus",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Projects",
+        "width": 63,
+        "height": 42
+      },
+      {
+        "text": "Board",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Calendar",
+        "width": 67,
+        "height": 42
+      },
+      {
+        "text": "Timeline",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "List",
+        "width": 40,
+        "height": 42
+      },
+      {
+        "text": "Updates",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "Git",
+        "width": 49,
+        "height": 42
+      },
+      {
+        "text": "Host diagnostics",
+        "width": 44,
+        "height": 42
+      },
+      {
+        "text": "Workspace settings",
+        "width": 38,
+        "height": 42
+      },
+      {
+        "text": "Refresh",
+        "width": 41,
+        "height": 42
+      },
+      {
+        "text": "＋ Add card",
+        "width": 108,
+        "height": 42
+      },
+      {
+        "text": "All projectsEmpty project — QA syntheticPersonal lab — QA syntheticStudio launch",
+        "width": 113,
+        "height": 43
+      },
+      {
+        "text": "Search content",
+        "width": 113,
+        "height": 43
+      },
+      {
+        "text": "Resource type",
+        "width": 113,
+        "height": 43
+      },
+      {
+        "text": "Design system foundationsStudio launch — QA synthetic planned2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "Build onboarding flowStudio launch — QA synthetic active—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "Draft-loss probeStudio launch — QA synthetic cancelled—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "Confirm launch scopeStudio launch — QA synthetic done2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "Review accessibilityStudio launch — QA synthetic review—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "Keyboard order probeStudio launch — QA synthetic done—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "Undated backlog ideaStudio launch — QA synthetic cancelled2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "History probeStudio launch — QA synthetic planned—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "Conflict probeStudio launch — QA synthetic active2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 13Studio launch — QA synthetic review2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 14Studio launch — QA synthetic done—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "A very long synthetic card title that exercises wrapping in a crowded project bo",
+        "width": 352,
+        "height": 149
+      },
+      {
+        "text": "Polish copy — Zażółć gęślą jaźń 🧪Studio launch — QA synthetic planned—",
+        "width": 352,
+        "height": 84
+      },
+      {
+        "text": "QA work package 15Studio launch — QA synthetic cancelled—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 17Studio launch — QA synthetic active—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 19Studio launch — QA synthetic done2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 16Studio launch — QA synthetic planned2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 18Studio launch — QA synthetic review—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 20Studio launch — QA synthetic cancelled—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 23Studio launch — QA synthetic review—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 24Studio launch — QA synthetic done—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 21Studio launch — QA synthetic planned—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 22Studio launch — QA synthetic active2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 25Studio launch — QA synthetic cancelled2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 29Studio launch — QA synthetic done—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 27Studio launch — QA synthetic active—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 26Studio launch — QA synthetic planned—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 30Studio launch — QA synthetic cancelled—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 28Studio launch — QA synthetic review2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 35Studio launch — QA synthetic cancelled—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 31Studio launch — QA synthetic planned2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 33Studio launch — QA synthetic review—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 32Studio launch — QA synthetic active—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 34Studio launch — QA synthetic done2026-09-07",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "QA work package 36Studio launch — QA synthetic planned—",
+        "width": 352,
+        "height": 64
+      },
+      {
+        "text": "Created through browser — QAStudio launch — QA synthetic planned—",
+        "width": 352,
+        "height": 81
+      }
+    ]
+  },
+  {
+    "viewport": 390,
+    "scrollWidth": 390,
+    "height": 1092,
+    "controls": [
+      {
+        "text": "Focus",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Projects",
+        "width": 63,
+        "height": 42
+      },
+      {
+        "text": "Board",
+        "width": 51,
+        "height": 42
+      },
+      {
+        "text": "Calendar",
+        "width": 67,
+        "height": 42
+      },
+      {
+        "text": "Timeline",
+        "width": 64,
+        "height": 42
+      },
+      {
+        "text": "List",
+        "width": 39,
+        "height": 42
+      },
+      {
+        "text": "Updates",
+        "width": 66,
+        "height": 42
+      },
+      {
+        "text": "Git",
+        "width": 49,
+        "height": 42
+      },
+      {
+        "text": "Host diagnostics",
+        "width": 44,
+        "height": 42
+      },
+      {
+        "text": "Workspace settings",
+        "width": 38,
+        "height": 42
+      },
+      {
+        "text": "Refresh",
+        "width": 41,
+        "height": 42
+      },
+      {
+        "text": "＋ Add update",
+        "width": 125,
+        "height": 42
+      },
+      {
+        "text": "All projectsEmpty project — QA syntheticPersonal lab — QA syntheticStudio launch",
+        "width": 113,
+        "height": 43
+      },
+      {
+        "text": "Search content",
+        "width": 113,
+        "height": 43
+      },
+      {
+        "text": "",
+        "width": 13,
+        "height": 13
+      },
+      {
+        "text": "↗ Studio launch — QA synthetic · 2026-09-07 Audit notes and observations note Un",
+        "width": 354,
+        "height": 134
+      },
+      {
+        "text": "↗ Studio launch — QA synthetic · 2026-09-07 Choose the launch date decision_need",
+        "width": 354,
+        "height": 134
+      },
+      {
+        "text": "↗ Studio launch — QA synthetic · 2026-09-07 Awaiting launch decision blocker Unr",
+        "width": 354,
+        "height": 134
+      },
+      {
+        "text": "↗ Studio launch — QA synthetic · 2026-09-07 Prototype tested on synthetic fixtur",
+        "width": 354,
+        "height": 152
+      }
+    ]
+  }
+]

@@ -1,0 +1,143 @@
+{
+  "results": [
+    {
+      "id": "20",
+      "name": "Competing browser edits retain stale draft and preserve first save",
+      "status": "pass",
+      "detail": "Conflict stops overwrite, draft remains visible; current record is raw JSON",
+      "ms": 642
+    },
+    {
+      "id": "21",
+      "name": "Invalid schedule is blocked before saving",
+      "status": "pass",
+      "detail": {
+        "valid": false,
+        "message": "Value must be 15/09/2026 or later."
+      },
+      "ms": 261
+    },
+    {
+      "id": "22",
+      "name": "Required title rejects blank new card",
+      "status": "pass",
+      "detail": {
+        "valid": false,
+        "message": "Please fill out this field."
+      },
+      "ms": 111
+    },
+    {
+      "id": "23",
+      "name": "Markdown remains safe and preview shows formatting",
+      "status": "pass",
+      "detail": "Formatting renders; raw script remains inert; no image element",
+      "ms": 309
+    },
+    {
+      "id": "24",
+      "name": "History undo restores saved edit",
+      "status": "pass",
+      "detail": "Undo restored prior title",
+      "ms": 569
+    },
+    {
+      "id": "25",
+      "name": "Update read state and unread filter",
+      "status": "pass",
+      "detail": "Mark read persisted; unread filter removes it",
+      "ms": 212
+    },
+    {
+      "id": "26",
+      "name": "Browser Back returns previous application view",
+      "status": "fail",
+      "error": "AssertionError [ERR_ASSERTION]: Application navigation does not create view history\n+ actual - expected\n\n+ 'The latest from your work.'\n- 'Board.'\n",
+      "ms": 156
+    },
+    {
+      "id": "27",
+      "name": "Mobile Sign out reachable as named action",
+      "status": "fail",
+      "error": "AssertionError [ERR_ASSERTION]: Sign out hidden on mobile and no More menu exposed\n\nfalse !== true\n",
+      "ms": 63
+    },
+    {
+      "id": "28",
+      "name": "Layout boundaries at 320, 768 and 1280 pixels",
+      "status": "pass",
+      "detail": [
+        {
+          "view": "board",
+          "width": 320,
+          "scrollWidth": 320,
+          "buttons": 63
+        },
+        {
+          "view": "calendar",
+          "width": 320,
+          "scrollWidth": 320,
+          "buttons": 16
+        },
+        {
+          "view": "gantt",
+          "width": 320,
+          "scrollWidth": 320,
+          "buttons": 65
+        },
+        {
+          "view": "board",
+          "width": 768,
+          "scrollWidth": 768,
+          "buttons": 64
+        },
+        {
+          "view": "calendar",
+          "width": 768,
+          "scrollWidth": 768,
+          "buttons": 17
+        },
+        {
+          "view": "gantt",
+          "width": 768,
+          "scrollWidth": 768,
+          "buttons": 66
+        },
+        {
+          "view": "board",
+          "width": 1280,
+          "scrollWidth": 1280,
+          "buttons": 64
+        },
+        {
+          "view": "calendar",
+          "width": 1280,
+          "scrollWidth": 1280,
+          "buttons": 17
+        },
+        {
+          "view": "gantt",
+          "width": 1280,
+          "scrollWidth": 1280,
+          "buttons": 66
+        }
+      ],
+      "ms": 559
+    },
+    {
+      "id": "29",
+      "name": "Pinned cards obey selected project and title filter",
+      "status": "pass",
+      "ms": 135
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+  ],
+  "failed": [],
+  "browser": "153.0.8010.12"
+}

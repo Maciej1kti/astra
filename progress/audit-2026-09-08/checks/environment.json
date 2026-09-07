@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-08",
+  "commit": "c3b912fc122b58780f870ee4da27c2d29411725a",
+  "platform": "macOS 27.0 (26A5425a)",
+  "architecture": "arm64",
+  "node": "v24.11.0",
+  "npm": "11.6.1",
+  "results": {
+    "npm run check": {
+      "exit_code": 0,
+      "svelte_errors": 0,
+      "svelte_warnings": 0,
+      "contract_drift": false
+    },
+    "node --test scripts/tests/*.test.mjs": {
+      "exit_code": 0,
+      "pass": 7,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "scope_limits": [
+    "Rust test suite not run by this audit worker",
+    "No .project context present in exact selected repository folder; no project report initialized"
+  ],
+  "browser_regression_results": "../regression/results.json"
+}

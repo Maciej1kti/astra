@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "id": "30",
+      "name": "Populated screenshots after data and widget readiness",
+      "status": "pass",
+      "detail": "28 populated light/dark desktop/narrow screenshots with readiness checks",
+      "ms": 4948
+    },
+    {
+      "id": "31",
+      "name": "Focus respects project and search after all pins load",
+      "status": "fail",
+      "error": "TimeoutError: locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Separate project focus probe', { exact: true }) to be visible\u001b[22m\n",
+      "ms": 7086
+    },
+    {
+      "id": "32",
+      "name": "Editing title must preserve an existing comma-containing label",
+      "status": "fail",
+      "error": "AssertionError [ERR_ASSERTION]: Unedited label was split into two tags by an unrelated title edit\n+ actual - expected\n\n  [\n+   'Research',\n+   'discovery'\n-   'Research, discovery'\n  ]\n",
+      "ms": 718
+    },
+    {
+      "id": "33",
+      "name": "Duplicate tag input is handled through visible feedback",
+      "status": "pass",
+      "detail": {
+        "feedback": "Some fields are not valid. Check the dates and additional fields.",
+        "interpretation": "Server rejects duplicate labels; inspect whether message identifies the offending field"
+      },
+      "ms": 326
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+  ],
+  "failed": [],
+  "browser": "153.0.8010.12"
+}

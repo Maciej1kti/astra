@@ -1,0 +1,145 @@
+{
+  "results": [
+    {
+      "id": "01",
+      "name": "Seven views render with populated synthetic data",
+      "status": "pass",
+      "detail": [
+        "focus",
+        "projects",
+        "board",
+        "calendar",
+        "gantt",
+        "list",
+        "updates"
+      ],
+      "ms": 947
+    },
+    {
+      "id": "02",
+      "name": "Create card through shared UI and preserve after reload",
+      "status": "pass",
+      "detail": "Created, visible, persisted",
+      "ms": 210
+    },
+    {
+      "id": "03",
+      "name": "Cancel dirty editor preserves draft until explicit discard",
+      "status": "pass",
+      "detail": "Dirty guard works on Close",
+      "ms": 224
+    },
+    {
+      "id": "04",
+      "name": "Pin action must preserve unsaved card edits",
+      "status": "fail",
+      "error": "AssertionError [ERR_ASSERTION]: Editor closed and unsaved title was discarded by focus mutation\n+ actual - expected\n\n+ 'Draft-loss probe'\n- 'Unsaved pin probe'\n",
+      "ms": 291
+    },
+    {
+      "id": "05",
+      "name": "List milestone choice should not affect Board primary action",
+      "status": "fail",
+      "error": "AssertionError [ERR_ASSERTION]: Board primary action inherited milestone collection",
+      "ms": 91
+    },
+    {
+      "id": "06",
+      "name": "Calendar date and layout survive reload",
+      "status": "fail",
+      "error": "AssertionError [ERR_ASSERTION]: Calendar date/layout reset on reload\n+ actual - expected\n\n  {\n+   date: '2026-09-01',\n+   layout: 'month',\n-   date: '2026-10-13',\n-   layout: 'week',\n    url: 'https://localhost:52821/?view=calendar&project=932f1024-a20f-4a65-9d94-1fe648219bc3&month=2026-09'\n  }\n",
+      "ms": 117
+    },
+    {
+      "id": "07",
+      "name": "Body search works in List and matches no unrelated rows",
+      "status": "pass",
+      "detail": "Body search resolves QA work package 13",
+      "ms": 347
+    },
+    {
+      "id": "08",
+      "name": "Empty state exposes meaningful action",
+      "status": "pass",
+      "detail": "A LITTLE CLARITY, EVERY DAY\n\nBoard.\n\nKeep the next step visible.\n\n＋ Add card\nProject\nAll projects\nEmpty project — QA synthetic\nPersonal lab — QA synthetic\nStudio launch — QA synthetic\nPlanned · 0\n+ Add a card\nActive · 0\n+ Add a card\nReview · 0\n+ Add a card\nDone · 0\n+ Add a card\nCancelled · 0\n+ Add a card\nYour files are the source of truth.\nLocal Projects · v0.1",
+      "ms": 90
+    },
+    {
+      "id": "09",
+      "name": "Archive card and inspect recovery affordances",
+      "status": "pass",
+      "detail": "Archive persisted; normal List and search hide it, no archive control visible",
+      "ms": 483
+    },
+    {
+      "id": "10",
+      "name": "Mobile view layout and available controls at 390 × 844",
+      "status": "pass",
+      "detail": [
+        {
+          "view": "focus",
+          "viewport": 390,
+          "scrollWidth": 390,
+          "smallTargets": 14
+        },
+        {
+          "view": "board",
+          "viewport": 390,
+          "scrollWidth": 390,
+          "smallTargets": 29
+        },
+        {
+          "view": "calendar",
+          "viewport": 390,
+          "scrollWidth": 390,
+          "smallTargets": 16
+        },
+        {
+          "view": "gantt",
+          "viewport": 390,
+          "scrollWidth": 390,
+          "smallTargets": 59
+        },
+        {
+          "view": "list",
+          "viewport": 390,
+          "scrollWidth": 390,
+          "smallTargets": 15
+        },
+        {
+          "view": "updates",
+          "viewport": 390,
+          "scrollWidth": 390,
+          "smallTargets": 15
+        }
+      ],
+      "ms": 353
+    },
+    {
+      "id": "11",
+      "name": "Mobile card editor",
+      "status": "pass",
+      "detail": "Editor opens and scrolls",
+      "ms": 276
+    },
+    {
+      "id": "12",
+      "name": "Dark view rendering and persistence",
+      "status": "pass",
+      "detail": "Dark renders and survives reload",
+      "ms": 407
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Juy/dqDy1gy1mQy4F6mUri5UHx+atHEcvCxdvfnDs2w='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+  ],
+  "failed": [],
+  "browser": "153.0.8010.12"
+}

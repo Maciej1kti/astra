@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "id": "38",
+      "name": "Previously browser-created milestone can be linked through title picker",
+      "status": "pass",
+      "detail": "Creation from check35 persisted; title lookup and assignment now verified. Check35 exact accessible-label locator was a harness mismatch.",
+      "ms": 559
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "failed": [],
+  "browser": "153.0.8010.12"
+}

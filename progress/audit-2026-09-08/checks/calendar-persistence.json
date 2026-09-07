@@ -1,0 +1,12 @@
+{
+  "before": {
+    "layout": "week",
+    "date": "2026-10-13",
+    "url": "https://localhost:52821/?view=calendar&project=932f1024-a20f-4a65-9d94-1fe648219bc3&month=2026-09"
+  },
+  "after": {
+    "layout": "month",
+    "date": "2026-09-01",
+    "url": "https://localhost:52821/?view=calendar&project=932f1024-a20f-4a65-9d94-1fe648219bc3&month=2026-09"
+  }
+}
