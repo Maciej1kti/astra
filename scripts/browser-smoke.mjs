@@ -419,9 +419,11 @@ try {
   await footerAdd.focus();
   await expect(footerAdd).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByLabel("Status", {exact:true})).toHaveValue("review");
-  await page.getByLabel("Title", {exact:true}).fill("Column-created card");
-  await page.getByRole("button", {name:"Create", exact:true}).click();
+  const quickTitle = page.getByLabel("New card title in review",{exact:true});
+  await expect(quickTitle).toBeFocused();
+  await quickTitle.fill("Column-created card");
+  await quickTitle.press("Enter");
+  await expect.poll(() => cli("--project",folder,"card","list","--status","review").items.length).toBe(1);
   await page.getByRole("dialog").waitFor({state:"hidden"});
   assert.equal(cli("--project",folder,"card","list","--status","review").items[0].title,"Column-created card");
   await expect(page.locator("[data-board-card] select, [data-board-card] .handle, [data-board-card] details")).toHaveCount(0);
@@ -446,6 +448,7 @@ try {
   const ordered=cli("--project",folder,"card","list","--status","planned").items;
   assert.equal(ordered[0].id,typedId);
   await page.screenshot({path:join(root,"progress/screenshots/desktop-board.png"),fullPage:true});
+  await expect(boardHandle).toBeEnabled();
   await boardHandle.focus();
   await page.keyboard.press("Alt+ArrowDown");
   await expect.poll(() => cli("--project",folder,"card","list","--status","planned").items.at(-1).id).toBe(typedId);
@@ -576,6 +579,52 @@ try {
   await expect(mobile.locator("[data-board-drag-preview]")).toHaveCount(0);
   await cdp.detach();
 
+  // Quick creation keeps its title and command identity when the result is uncertain.
+  const quickAttempts = [];
+  await page.route(`**/api/v1/projects/${plan.project_id}/cards`,async route => {
+    const request=route.request();
+    if(request.method() !== "POST") return route.continue();
+    quickAttempts.push({body:request.postData(),id:request.headers()["x-request-id"],epoch:request.headers()["x-command-epoch"]});
+    if(quickAttempts.length === 1) return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:{code:"SERVER_BUSY"}})});
+    return route.continue();
+  });
+  await page.getByRole("button",{name:"Add card in active",exact:true}).click();
+  await page.getByLabel("New card title in active",{exact:true}).fill("Quick retry card");
+  await page.getByLabel("New card title in active",{exact:true}).press("Enter");
+  await page.getByRole("button",{name:"Retry same command",exact:true}).waitFor();
+  await expect(page.getByLabel("Title",{exact:true})).toHaveValue("Quick retry card");
+  await expect(page.getByRole("button",{name:"Create",exact:true})).toBeDisabled();
+  await page.getByRole("button",{name:"Retry same command",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(quickAttempts.length,2); assert.deepEqual(quickAttempts[0],quickAttempts[1]);
+  assert.equal(cli("--project",folder,"card","list","--status","active").items.filter(item=>item.title==="Quick retry card").length,1);
+  await page.unroute(`**/api/v1/projects/${plan.project_id}/cards`);
+
+  // Each project's collapse and first-page scroll survive navigation and reload.
+  await page.locator(".astra-column-active").getByRole("button",{name:"Collapse column",exact:true}).click();
+  const savedScroll = await page.evaluate(() => {
+    const horizontal=document.querySelector(".astra-board .date-scroll");
+    const vertical=document.querySelector(".astra-column-review [data-kanban-column-cards]");
+    horizontal.scrollLeft=40; vertical.scrollTop=240;
+    return {horizontal:horizontal.scrollLeft,vertical:vertical.scrollTop};
+  });
+  assert(savedScroll.horizontal>0 && savedScroll.vertical>0);
+  await page.getByRole("button",{name:"Focus",exact:true}).click();
+  await page.getByRole("button",{name:"Board",exact:true}).click();
+  const assertRestored = async () => {
+    await expect(page.locator(".astra-column-active").getByRole("button",{name:"Expand column",exact:true})).toBeVisible();
+    await expect.poll(() => page.locator(".astra-board .date-scroll").evaluate(node=>node.scrollLeft)).toBe(savedScroll.horizontal);
+    await expect.poll(() => page.locator(".astra-column-review [data-kanban-column-cards]").evaluate(node=>node.scrollTop)).toBe(savedScroll.vertical);
+  };
+  await assertRestored();
+  await page.getByLabel("Project",{exact:true}).selectOption(nativePlan.project_id);
+  await expect(page.locator(".astra-column-active").getByRole("button",{name:"Collapse column",exact:true})).toBeVisible();
+  await page.getByLabel("Project",{exact:true}).selectOption(plan.project_id);
+  await assertRestored();
+  await page.reload();
+  await assertRestored();
+  await page.screenshot({path:join(root,"progress/screenshots/board-remembered-view.png"),fullPage:true});
+
   const focusBefore = cli("get","/api/v1/workspace/focus");
   const focusFile = join(temp,"focus.json");
   await writeFile(focusFile,JSON.stringify({items:[...focusBefore.items,{project_id:plan.project_id,card_id:typedId}]}));
@@ -644,7 +693,7 @@ try {
   await settingsPage.getByRole("button",{name:"Copy settings draft",exact:true}).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, whole-card drag without controls, immediate drop persistence, same-command retry, keyboard ordering, vertical auto-scroll and cancellation, touch hold-to-drag and normal touch scrolling, SVAR collapse, column footer creation, held board conflict, 51-card pagination boundaries, dark/mobile board layout, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
+    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, whole-card drag without controls, immediate drop persistence, same-command retry, keyboard ordering, vertical auto-scroll and cancellation, touch hold-to-drag and normal touch scrolling, SVAR collapse, quick title creation with identical retry, per-project collapse and scroll restoration across navigation and reload, held board conflict, 51-card pagination boundaries, dark/mobile board layout, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

@@ -108,6 +108,7 @@
       type: string;
       resource: Resource | null;
       initialMetadata?: Record<string, unknown>;
+      autoCreate?: boolean;
     } | null>(null),
     adding = $state(false),
     roots = $state<Root[]>([]),
@@ -459,12 +460,16 @@
       message(e);
     }
   }
-  function create(type: string, initialMetadata: Record<string, unknown> = {}) {
+  function create(
+    type: string,
+    initialMetadata: Record<string, unknown> = {},
+    autoCreate = false,
+  ) {
     if (!project) {
       error = "Select a project before creating a resource.";
       return;
     }
-    editor = { project, type, resource: null, initialMetadata };
+    editor = { project, type, resource: null, initialMetadata, autoCreate };
   }
   async function saved() {
     editor = null;

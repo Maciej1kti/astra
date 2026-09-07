@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, setContext, untrack, tick } from "svelte";
   import { on } from "svelte/events";
+  import { readBoardView, writeBoardView } from "./board-view";
   import { api, type Summary } from "./api";
   import {
     Kanban,
@@ -23,7 +24,11 @@
     search: string;
     open: (item: Summary) => void;
     onpropose: (proposal: MoveProposal) => void;
-    oncreate: (type: string, initial: Record<string, unknown>) => void;
+    oncreate: (
+      type: string,
+      initial: Record<string, unknown>,
+      autoCreate?: boolean,
+    ) => void;
   } = $props();
   type Column = {
     status: string;
@@ -35,6 +40,48 @@
     error = $state(""),
     busy = $state(false);
   let pageStarts = $state<Record<string, boolean>>({});
+  const viewState = untrack(() => readBoardView(project));
+  let boardRoot: HTMLElement | undefined;
+  let initialView = true;
+  let restoring = false,
+    saveTimer = 0;
+  let quickStatus = $state<string | null>(null);
+  let quickTitles = $state<Record<string, string>>({});
+  function focusTitle(node: HTMLInputElement) {
+    node.focus();
+  }
+  function quickCreate(status: string) {
+    const title = (quickTitles[status] ?? "").trim();
+    if (!title || title.length > 240 || busy || gestureActive) return;
+    oncreate("card", { title, status }, true);
+    quickTitles[status] = "";
+  }
+  function saveView() {
+    writeBoardView(project, viewState);
+  }
+  async function restoreView(current: number) {
+    await tick();
+    if (current !== generation || !boardRoot) return;
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    {
+      if (!boardRoot || current !== generation) return;
+      const scroll = boardRoot.querySelector<HTMLElement>(".date-scroll");
+      if (scroll) scroll.scrollLeft = viewState.horizontal;
+      for (const node of boardRoot.querySelectorAll<HTMLElement>(
+        "[data-kanban-column-cards]",
+      )) {
+        const status = node.dataset.kanbanColumnCards?.replace(/^:/, "") ?? "";
+        node.scrollTop =
+          pageStarts[status] && !search ? (viewState.vertical[status] ?? 0) : 0;
+      }
+    }
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    if (current === generation) restoring = false;
+  }
   let generation = 0,
     deferredRefresh = false;
   let gestureActive = $state(false);
@@ -79,8 +126,12 @@
         deferredRefresh = true;
         return;
       }
-      if (status) pageStarts[status] = !cursor;
-      else
+      const restore = initialView || !!status;
+      restoring = restore;
+      if (status) {
+        pageStarts[status] = !cursor;
+        viewState.vertical[status] = 0;
+      } else
         pageStarts = Object.fromEntries(
           result.columns.map((column) => [column.status, true]),
         );
@@ -91,6 +142,8 @@
               : column,
           )
         : result.columns;
+      if (restore) await restoreView(current);
+      if (current === generation) initialView = false;
     } catch (e) {
       error = String(e);
     } finally {
@@ -181,7 +234,9 @@
     };
   }
 
-  const collapsed = new Map<string, boolean>();
+  const collapsed = new Map<string, boolean>(
+    Object.entries(viewState.collapsed),
+  );
   const boardColumns = $derived(
     columns.map((column) => ({
       id: column.status,
@@ -256,7 +311,30 @@
     };
   }
   function scrolling(node: HTMLElement) {
+    boardRoot = node;
     node.querySelector(".wx-scroll")?.classList.add("date-scroll");
+    const scrolled = (event: Event) => {
+      if (restoring || search || !(event.target instanceof HTMLElement)) return;
+      const target = event.target;
+      if (target.classList.contains("date-scroll"))
+        viewState.horizontal = target.scrollLeft;
+      else if (target.matches("[data-kanban-column-cards]")) {
+        const status =
+          target.dataset.kanbanColumnCards?.replace(/^:/, "") ?? "";
+        if (pageStarts[status]) viewState.vertical[status] = target.scrollTop;
+      } else return;
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(saveView, 150);
+    };
+    node.addEventListener("scroll", scrolled, true);
+    return {
+      destroy() {
+        node.removeEventListener("scroll", scrolled, true);
+        window.clearTimeout(saveTimer);
+        saveView();
+        boardRoot = undefined;
+      },
+    };
   }
   function initialize(store: KanbanInstanceApi) {
     // SVAR is a view adapter. It never commits or optimistically changes cards.
@@ -279,8 +357,12 @@
         event.column &&
         typeof event.column === "object" &&
         "collapsed" in event.column
-      )
-        collapsed.set(String(event.id), Boolean(event.column.collapsed));
+      ) {
+        const status = String(event.id);
+        collapsed.set(status, Boolean(event.column.collapsed));
+        viewState.collapsed[status] = Boolean(event.column.collapsed);
+        saveView();
+      }
     });
   }
 </script>
@@ -303,13 +385,51 @@
   </Willow>
   {#each columns as column}
     <footer class="column-footer" use:columnFooter={column.status}>
-      <button
-        class="add-card"
-        aria-label={`Add card in ${column.status}`}
-        disabled={busy || gestureActive}
-        onclick={() => oncreate("card", { status: column.status })}
-        >+ Add a card</button
-      >
+      {#if quickStatus === column.status}
+        <form
+          class="quick-add"
+          onsubmit={(event) => {
+            event.preventDefault();
+            quickCreate(column.status);
+          }}
+        >
+          <input
+            aria-label={`New card title in ${column.status}`}
+            placeholder="Card title…"
+            maxlength="240"
+            required
+            bind:value={quickTitles[column.status]}
+            use:focusTitle
+            onkeydown={(event) => {
+              if (event.key === "Escape") {
+                event.stopPropagation();
+                quickStatus = null;
+              }
+            }}
+          />
+          <div class="pagination">
+            <button
+              type="submit"
+              disabled={busy ||
+                gestureActive ||
+                !(quickTitles[column.status] ?? "").trim()}>Add</button
+            >
+            <button type="button" onclick={() => (quickStatus = null)}
+              >Close</button
+            >
+          </div>
+        </form>
+      {:else}
+        <button
+          class="add-card"
+          aria-label={`Add card in ${column.status}`}
+          disabled={busy || gestureActive}
+          onclick={() => {
+            quickTitles[column.status] ??= "";
+            quickStatus = column.status;
+          }}>+ Add a card</button
+        >
+      {/if}
       {#if column.total > 50}
         <small>{column.items.length} of {column.total} loaded</small>
         <div class="pagination">
@@ -389,6 +509,15 @@
   }
   .astra-board :global(.wx-collapsed .column-footer) {
     display: none;
+  }
+  .quick-add {
+    display: grid;
+    gap: 6px;
+  }
+  .quick-add input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
   .add-card {
     text-align: left;

@@ -26,3 +26,12 @@ hardening and feature polishing before that feedback. Finish and verify changes
 already in progress, provide a simple local launch, then hand over for manual use.
 Outstanding full-release requirements remain recorded; they are not blockers to
 this manual-test milestone and are not silently marked passed.
+
+## Kanban feature freeze — owner decision, 2026-09-07
+
+Finish title-only column creation and per-project view restoration, then freeze
+new Kanban features. E024 whole-card dragging and E025 final polish define this
+iteration. Further feature expansion or new Kanban dependencies require renewed
+owner direction. Bug fixes and remaining platform, accessibility and performance
+verification stay in scope. This freeze does not mark outstanding release
+acceptance checks as passed or waive the physical-device requirements.

@@ -16,6 +16,7 @@
     type,
     resource,
     initialMetadata,
+    autoCreate = false,
     onclose,
     onsaved,
   }: {
@@ -23,6 +24,7 @@
     type: string;
     resource: Resource | null;
     initialMetadata?: Record<string, unknown>;
+    autoCreate?: boolean;
     onclose: () => void;
     onsaved: () => void;
   } = $props();
@@ -188,6 +190,7 @@
     ),
   );
   onMount(() => {
+    if (autoCreate && type === "card" && !resource) void save();
     if (type === "card" && resource)
       void api<typeof focus>("/api/v1/workspace/focus")
         .then((value) => (focus = value))
@@ -403,294 +406,314 @@
     if (!busy) close();
   }}
 >
-  <header>
-    <div>
-      <p class="eyebrow">{type} · {resource ? "Details" : "New"}</p>
-      <h2>
-        {readonly
-          ? "Update record"
-          : resource
-            ? "Edit details"
-            : `Create ${type}`}
-      </h2>
-    </div>
-    <button aria-label="Close editor" onclick={close} disabled={busy}>✕</button>
-  </header>
-  <form
-    onsubmit={(e) => {
-      e.preventDefault();
-      void save();
-    }}
-  >
-    {#if discard}<div role="alert" class="notice">
-        <p>
-          {pending
-            ? "The command result may still be unknown. Keep its request ID before closing."
-            : "Discard your unsaved draft?"}
-        </p>
-        <button type="button" onclick={onclose}>Discard draft</button><button
-          type="button"
-          onclick={() => (discard = false)}>Keep editing</button
-        >
-      </div>{/if}
-    {#if readonly}<button
-        type="button"
-        onclick={toggleRead}
-        disabled={busy || !!pending}
-        >{resource?.read ? "Mark unread" : "Mark read"}</button
-      >{/if}
-    {#if type === "card" && resource}<button
-        type="button"
-        onclick={toggleFocus}
-        disabled={!focus || busy || !!pending}
-        >{pinned ? "Remove from focus" : "Pin to focus"}</button
-      >{/if}
-    <label
-      >{type === "project"
-        ? "Name"
-        : type === "update"
-          ? "Summary"
-          : "Title"}<input
-        bind:value={title}
-        required
-        maxlength={type === "project" ? 120 : type === "update" ? 500 : 240}
-        disabled={readonly || busy}
-      /></label
+  {#if autoCreate && !error && !conflict && !discard}<p role="status">
+      Creating card…
+    </p>{/if}
+  <div class:quick-pending={autoCreate && !error && !conflict && !discard}>
+    <header>
+      <div>
+        <p class="eyebrow">{type} · {resource ? "Details" : "New"}</p>
+        <h2>
+          {readonly
+            ? "Update record"
+            : resource
+              ? "Edit details"
+              : `Create ${type}`}
+        </h2>
+      </div>
+      <button aria-label="Close editor" onclick={close} disabled={busy}
+        >✕</button
+      >
+    </header>
+    <form
+      onsubmit={(e) => {
+        e.preventDefault();
+        void save();
+      }}
     >
-    {#if type !== "update"}<div class="row">
-        <label
-          >Status<select aria-label="Status" bind:value={status} disabled={busy}
-            >{#each statuses as item}<option>{item}</option>{/each}</select
-          ></label
-        >{#if type === "card"}<label
-            >Priority<select
-              aria-label="Priority"
-              bind:value={priority}
-              disabled={busy}
-              >{#each ["low", "normal", "high", "urgent"] as item}<option
-                  >{item}</option
-                >{/each}</select
-            ></label
-          >{/if}
-      </div>{/if}
-    {#if type === "card" || type === "update"}<label
-        >Kind<select
-          aria-label="Kind"
-          bind:value={kind}
+      {#if discard}<div role="alert" class="notice">
+          <p>
+            {pending
+              ? "The command result may still be unknown. Keep its request ID before closing."
+              : "Discard your unsaved draft?"}
+          </p>
+          <button type="button" onclick={onclose}>Discard draft</button><button
+            type="button"
+            onclick={() => (discard = false)}>Keep editing</button
+          >
+        </div>{/if}
+      {#if readonly}<button
+          type="button"
+          onclick={toggleRead}
+          disabled={busy || !!pending}
+          >{resource?.read ? "Mark unread" : "Mark read"}</button
+        >{/if}
+      {#if type === "card" && resource}<button
+          type="button"
+          onclick={toggleFocus}
+          disabled={!focus || busy || !!pending}
+          >{pinned ? "Remove from focus" : "Pin to focus"}</button
+        >{/if}
+      <label
+        >{type === "project"
+          ? "Name"
+          : type === "update"
+            ? "Summary"
+            : "Title"}<input
+          bind:value={title}
+          required
+          maxlength={type === "project" ? 120 : type === "update" ? 500 : 240}
           disabled={readonly || busy}
-          >{#each type === "card" ? ["outcome", "decision"] : ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
-              >{item}</option
-            >{/each}</select
-        ></label
-      >{/if}
-    {#if type === "card"}<fieldset>
-        <legend>Planned work · inclusive dates</legend>
-        <div class="row">
+        /></label
+      >
+      {#if type !== "update"}<div class="row">
           <label
-            >Start<input
+            >Status<select
+              aria-label="Status"
+              bind:value={status}
+              disabled={busy}
+              >{#each statuses as item}<option>{item}</option>{/each}</select
+            ></label
+          >{#if type === "card"}<label
+              >Priority<select
+                aria-label="Priority"
+                bind:value={priority}
+                disabled={busy}
+                >{#each ["low", "normal", "high", "urgent"] as item}<option
+                    >{item}</option
+                  >{/each}</select
+              ></label
+            >{/if}
+        </div>{/if}
+      {#if type === "card" || type === "update"}<label
+          >Kind<select
+            aria-label="Kind"
+            bind:value={kind}
+            disabled={readonly || busy}
+            >{#each type === "card" ? ["outcome", "decision"] : ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
+                >{item}</option
+              >{/each}</select
+          ></label
+        >{/if}
+      {#if type === "card"}<fieldset>
+          <legend>Planned work · inclusive dates</legend>
+          <div class="row">
+            <label
+              >Start<input
+                type="date"
+                bind:value={start}
+                disabled={busy}
+              /></label
+            ><label
+              >End<input
+                type="date"
+                bind:value={end}
+                min={start}
+                disabled={busy}
+              /></label
+            >
+          </div>
+        </fieldset>
+        <label
+          >Labels<input
+            bind:value={labels}
+            placeholder="Separate with commas"
+            disabled={busy}
+          /></label
+        >{/if}
+      {#if type === "card" || type === "milestone"}<div class="row">
+          <label
+            >Due date<input
               type="date"
-              bind:value={start}
+              bind:value={due}
               disabled={busy}
             /></label
           ><label
-            >End<input
-              type="date"
-              bind:value={end}
-              min={start}
+            >Deadline type<select
+              aria-label="Deadline type"
+              bind:value={dueKind}
+              disabled={busy}
+              ><option value="target">Target</option><option value="hard"
+                >Hard deadline</option
+              ></select
+            ></label
+          >
+        </div>{/if}
+      {#if type === "card" || type === "project"}<label
+          >Review on<input
+            type="date"
+            bind:value={review}
+            disabled={busy}
+          /></label
+        >{/if}
+      {#if type === "update" && !readonly}<label
+          >Author<input
+            bind:value={author}
+            required
+            maxlength="120"
+            disabled={busy}
+          /></label
+        >{/if}
+      <label
+        >Description <span>Markdown source</span><textarea
+          bind:value={body}
+          rows="10"
+          disabled={readonly || busy}></textarea></label
+      >
+      <button type="button" onclick={() => (preview = !preview)}
+        >{preview ? "Hide preview" : "Preview Markdown"}</button
+      >
+      {#if preview}<Markdown source={body} />{/if}
+      {#if type === "project"}<label
+          >Phase<input bind:value={phase} disabled={busy} /></label
+        >{/if}
+      {#if type === "card"}<fieldset>
+          <legend>Connections and blockers</legend>
+          <label
+            >Milestone ID<input
+              bind:value={milestoneId}
               disabled={busy}
             /></label
           >
-        </div>
-      </fieldset>
-      <label
-        >Labels<input
-          bind:value={labels}
-          placeholder="Separate with commas"
-          disabled={busy}
-        /></label
-      >{/if}
-    {#if type === "card" || type === "milestone"}<div class="row">
-        <label
-          >Due date<input type="date" bind:value={due} disabled={busy} /></label
-        ><label
-          >Deadline type<select
-            aria-label="Deadline type"
-            bind:value={dueKind}
-            disabled={busy}
-            ><option value="target">Target</option><option value="hard"
-              >Hard deadline</option
-            ></select
-          ></label
-        >
-      </div>{/if}
-    {#if type === "card" || type === "project"}<label
-        >Review on<input
-          type="date"
-          bind:value={review}
-          disabled={busy}
-        /></label
-      >{/if}
-    {#if type === "update" && !readonly}<label
-        >Author<input
-          bind:value={author}
-          required
-          maxlength="120"
-          disabled={busy}
-        /></label
-      >{/if}
-    <label
-      >Description <span>Markdown source</span><textarea
-        bind:value={body}
-        rows="10"
-        disabled={readonly || busy}></textarea></label
-    >
-    <button type="button" onclick={() => (preview = !preview)}
-      >{preview ? "Hide preview" : "Preview Markdown"}</button
-    >
-    {#if preview}<Markdown source={body} />{/if}
-    {#if type === "project"}<label
-        >Phase<input bind:value={phase} disabled={busy} /></label
-      >{/if}
-    {#if type === "card"}<fieldset>
-        <legend>Connections and blockers</legend>
-        <label
-          >Milestone ID<input bind:value={milestoneId} disabled={busy} /></label
-        >
-        <label
-          >Blocked reason<textarea bind:value={blockedReason} disabled={busy}
-          ></textarea></label
-        >
-        <label
-          ><input type="checkbox" bind:checked={archived} disabled={busy} /> Archived</label
-        >
-        <p>Dependencies</p>
-        {#each dependencies as id}<div>
-            {id}<button
-              type="button"
-              onclick={() =>
-                (dependencies = dependencies.filter((value) => value !== id))}
-              disabled={busy}>Remove dependency</button
-            >
-          </div>{/each}
-        <label
-          >Search for<select bind:value={choiceKind}
-            ><option value="card">Dependency card</option><option
-              value="milestone">Milestone</option
-            ></select
-          ></label
-        >
-        <label>Find by title<input bind:value={choiceSearch} /></label><button
-          type="button"
-          onclick={searchChoices}
-          disabled={!choiceSearch.trim() || busy}>Find resources</button
-        >
-        {#each choices as item}<button
+          <label
+            >Blocked reason<textarea bind:value={blockedReason} disabled={busy}
+            ></textarea></label
+          >
+          <label
+            ><input type="checkbox" bind:checked={archived} disabled={busy} /> Archived</label
+          >
+          <p>Dependencies</p>
+          {#each dependencies as id}<div>
+              {id}<button
+                type="button"
+                onclick={() =>
+                  (dependencies = dependencies.filter((value) => value !== id))}
+                disabled={busy}>Remove dependency</button
+              >
+            </div>{/each}
+          <label
+            >Search for<select bind:value={choiceKind}
+              ><option value="card">Dependency card</option><option
+                value="milestone">Milestone</option
+              ></select
+            ></label
+          >
+          <label>Find by title<input bind:value={choiceSearch} /></label><button
             type="button"
-            disabled={busy}
-            onclick={() => {
-              if (item.type === "milestone") milestoneId = item.id;
-              else if (!dependencies.includes(item.id))
-                dependencies = [...dependencies, item.id];
-            }}>{item.title}</button
-          >{/each}
-      </fieldset>{/if}
-    {#if type === "update"}<fieldset disabled={readonly || busy}>
-        <legend>Report details</legend>
-        <label
-          >Target type<select bind:value={targetType}
-            ><option value="project">Project</option><option value="card"
-              >Card</option
-            ><option value="milestone">Milestone</option></select
-          ></label
-        >
-        {#if targetType !== "project"}<label
-            >Target ID<input bind:value={targetId} required /></label
-          >{/if}
-        {#if kind === "resolution"}<label
-            >Resolved report IDs, separated by commas<input
-              bind:value={resolves}
-              required
-            /></label
-          >{/if}
-        {#if kind === "correction"}<label
-            >Corrected report ID<input
-              bind:value={supersedes}
-              required
-            /></label
-          >{/if}
-      </fieldset>{/if}
-    {#if !readonly}<details>
-        <summary>Additional fields</summary>
+            onclick={searchChoices}
+            disabled={!choiceSearch.trim() || busy}>Find resources</button
+          >
+          {#each choices as item}<button
+              type="button"
+              disabled={busy}
+              onclick={() => {
+                if (item.type === "milestone") milestoneId = item.id;
+                else if (!dependencies.includes(item.id))
+                  dependencies = [...dependencies, item.id];
+              }}>{item.title}</button
+            >{/each}
+        </fieldset>{/if}
+      {#if type === "update"}<fieldset disabled={readonly || busy}>
+          <legend>Report details</legend>
+          <label
+            >Target type<select bind:value={targetType}
+              ><option value="project">Project</option><option value="card"
+                >Card</option
+              ><option value="milestone">Milestone</option></select
+            ></label
+          >
+          {#if targetType !== "project"}<label
+              >Target ID<input bind:value={targetId} required /></label
+            >{/if}
+          {#if kind === "resolution"}<label
+              >Resolved report IDs, separated by commas<input
+                bind:value={resolves}
+                required
+              /></label
+            >{/if}
+          {#if kind === "correction"}<label
+              >Corrected report ID<input
+                bind:value={supersedes}
+                required
+              /></label
+            >{/if}
+        </fieldset>{/if}
+      {#if !readonly}<details>
+          <summary>Additional fields</summary>
+          <p>
+            JSON fields for dependencies, blocked state, milestone, update
+            target, evidence or corrections. The server validates all fields.
+          </p>
+          <textarea
+            aria-label="Additional fields JSON"
+            bind:value={advanced}
+            rows="5"
+            spellcheck="false"
+            disabled={busy}></textarea>
+        </details>{/if}
+      {#if resource && !readonly}<details>
+          <summary>Change history</summary><button
+            type="button"
+            onclick={() => loadHistory()}
+            disabled={busy || accessLost}>First history page</button
+          >{#each history as entry}<div class="historyentry">
+              <small>{entry.recorded_at}</small>
+              <p>{entry.changed_fields.join(", ")}</p>
+              <button
+                type="button"
+                disabled={!entry.can_undo || busy || !!pending}
+                onclick={() => undo(entry.id)}>Undo this change</button
+              >
+            </div>{/each}{#if historyCursor}<button
+              type="button"
+              disabled={busy || accessLost}
+              onclick={() => loadHistory(true)}>Older changes</button
+            >{/if}
+        </details>{/if}
+      {#if error}<div bind:this={notice} class="notice" role="alert">
+          {error}
+        </div>{/if}
+      {#if conflict}<details open>
+          <summary>Current saved version · your draft stays above</summary>
+          <pre>{JSON.stringify(
+              conflict.metadata,
+              null,
+              2,
+            )}{"\n"}{conflict.body}</pre>
+        </details>
         <p>
-          JSON fields for dependencies, blocked state, milestone, update target,
-          evidence or corrections. The server validates all fields.
-        </p>
-        <textarea
-          aria-label="Additional fields JSON"
-          bind:value={advanced}
-          rows="5"
-          spellcheck="false"
-          disabled={busy}></textarea>
-      </details>{/if}
-    {#if resource && !readonly}<details>
-        <summary>Change history</summary><button
-          type="button"
-          onclick={() => loadHistory()}
-          disabled={busy || accessLost}>First history page</button
-        >{#each history as entry}<div class="historyentry">
-            <small>{entry.recorded_at}</small>
-            <p>{entry.changed_fields.join(", ")}</p>
-            <button
-              type="button"
-              disabled={!entry.can_undo || busy || !!pending}
-              onclick={() => undo(entry.id)}>Undo this change</button
-            >
-          </div>{/each}{#if historyCursor}<button
-            type="button"
-            disabled={busy || accessLost}
-            onclick={() => loadHistory(true)}>Older changes</button
-          >{/if}
-      </details>{/if}
-    {#if error}<div bind:this={notice} class="notice" role="alert">
-        {error}
-      </div>{/if}
-    {#if conflict}<details open>
-        <summary>Current saved version · your draft stays above</summary>
-        <pre>{JSON.stringify(
-            conflict.metadata,
-            null,
-            2,
-          )}{"\n"}{conflict.body}</pre>
-      </details>
-      <p>
-        Close and reopen to edit the current version. Copy any draft changes you
-        want to keep first.
-      </p>{/if}
-    {#if pending}<p>Request <code>{pending.requestId}</code></p>
-      <div class="row">
-        <button type="button" onclick={resolve} disabled={busy}
-          >Check status</button
-        ><button type="button" onclick={transmit} disabled={busy}
-          >Retry same command</button
-        >
-      </div>{/if}
-    {#if dirty || pending}<button type="button" onclick={copyDraft}
-        >Copy draft</button
-      >{/if}
-    <footer>
-      <button type="button" onclick={close} disabled={busy}
-        >{readonly ? "Close" : "Cancel"}</button
-      >{#if !readonly}<button
-          class="primary"
-          type="submit"
-          disabled={busy || !!pending || !!conflict || accessLost}
-          >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</button
+          Close and reopen to edit the current version. Copy any draft changes
+          you want to keep first.
+        </p>{/if}
+      {#if pending}<p>Request <code>{pending.requestId}</code></p>
+        <div class="row">
+          <button type="button" onclick={resolve} disabled={busy}
+            >Check status</button
+          ><button type="button" onclick={transmit} disabled={busy}
+            >Retry same command</button
+          >
+        </div>{/if}
+      {#if dirty || pending}<button type="button" onclick={copyDraft}
+          >Copy draft</button
         >{/if}
-    </footer>
-  </form>
+      <footer>
+        <button type="button" onclick={close} disabled={busy}
+          >{readonly ? "Close" : "Cancel"}</button
+        >{#if !readonly}<button
+            class="primary"
+            type="submit"
+            disabled={busy || !!pending || !!conflict || accessLost}
+            >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</button
+          >{/if}
+      </footer>
+    </form>
+  </div>
 </dialog>
 
 <style>
+  .quick-pending {
+    display: none;
+  }
   .historyentry {
     padding: 12px 0;
     border-bottom: 1px solid var(--line);
