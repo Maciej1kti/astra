@@ -15,17 +15,20 @@
     project,
     type,
     resource,
+    initialMetadata,
     onclose,
     onsaved,
   }: {
     project: string;
     type: string;
     resource: Resource | null;
+    initialMetadata?: Record<string, unknown>;
     onclose: () => void;
     onsaved: () => void;
   } = $props();
-  const metadata = untrack(() => resource?.metadata) as unknown as
-    Record<string, unknown> | undefined;
+  const metadata = untrack(
+    () => resource?.metadata ?? initialMetadata,
+  ) as unknown as Record<string, unknown> | undefined;
   let title = $state(
     String(metadata?.title ?? metadata?.name ?? metadata?.summary ?? ""),
   );

@@ -3,7 +3,13 @@
   import { applyTheme, readTheme } from "./lib/appearance";
   onMount(() => applyTheme(readTheme()));
   import { modal } from "./lib/dialog";
-  import Board from "./lib/Board.svelte";
+  let Board = $state<typeof import("./lib/Board.svelte").default | null>(null);
+  $effect(() => {
+    if (view === "board" && project)
+      void import("./lib/Board.svelte")
+        .then((module) => (Board = module.default))
+        .catch(message);
+  });
   import DateChange from "./lib/DateChange.svelte";
   import MoveChange from "./lib/MoveChange.svelte";
   import type { DateProposal, MoveProposal } from "./lib/proposals";
@@ -101,6 +107,7 @@
       project: string;
       type: string;
       resource: Resource | null;
+      initialMetadata?: Record<string, unknown>;
     } | null>(null),
     adding = $state(false),
     roots = $state<Root[]>([]),
@@ -452,12 +459,12 @@
       message(e);
     }
   }
-  function create(type: string) {
+  function create(type: string, initialMetadata: Record<string, unknown> = {}) {
     if (!project) {
       error = "Select a project before creating a resource.";
       return;
     }
-    editor = { project, type, resource: null };
+    editor = { project, type, resource: null, initialMetadata };
   }
   async function saved() {
     editor = null;
@@ -934,13 +941,14 @@
                 <button onclick={addProject}>Add your first project</button>
               </div>{/each}
           </div>
-        {:else if view === "board" && project}<Board
-            {project}
-            {search}
-            revision={viewRevision}
-            {open}
-            onpropose={(proposal) => (moveDraft = proposal)}
-          />
+        {:else if view === "board" && project}{#if Board}{#key project}<Board
+                {project}
+                {search}
+                revision={viewRevision}
+                {open}
+                onpropose={(proposal) => (moveDraft = proposal)}
+                oncreate={create}
+              />{/key}{:else}<p role="status">Loading board…</p>{/if}
         {:else if view === "board"}<div class="board">
             {#each statuses as status}<section class="column">
                 <div class="sectiontitle">

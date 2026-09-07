@@ -15,6 +15,7 @@ async function hitbox(locator) {
   return box;
 }
 const root = resolve(import.meta.dirname, "..");
+const binaries = join(root,"target",process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug");
 const temp = await realpath(
   await mkdtemp(join(await realpath("/tmp"), "lp-browser-")),
 );
@@ -26,7 +27,7 @@ const socket = join(state, "projectd.sock");
 const cli = (...args) => {
   let output;
   try {
-    output = execFileSync(join(root,"target/debug/projectctl"),["--socket",socket,...args],{encoding:"utf8",stdio:["ignore","pipe","pipe"]});
+    output = execFileSync(join(binaries,"projectctl"),["--socket",socket,...args],{encoding:"utf8",stdio:["ignore","pipe","pipe"]});
   } catch (error) {
     // Registration returns an accepted job; the test explicitly checks its state.
     if(error.status !== 9) throw error;
@@ -90,7 +91,7 @@ const proxy = https.createServer(
 await new Promise((r) => proxy.listen(0, "127.0.0.1", r));
 const origin = `https://localhost:${proxy.address().port}`;
 const daemon = spawn(
-  join(root, "target/debug/projectd"),
+  join(binaries, "projectd"),
   ["--data-dir", state, "--public-origin", origin, "--port", String(port)],
   { stdio: ["ignore", "ignore", "pipe"] },
 );
@@ -113,7 +114,7 @@ try {
   assert(ready, daemonLog + lastFailure);
   const plan = cli("registration-plan", folder, "--name", "Field notes");
   cli("register", plan.plan_id);
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, executablePath: process.env.ASTRA_TEST_CHROMIUM || undefined });
   const context = await browser.newContext({
     ignoreHTTPSErrors: true,
     viewport: { width: 1440, height: 1000 },
@@ -391,6 +392,21 @@ try {
   cli("--project", folder, "card", "set", typedId, "--patch-file", patchFile, "--if-version", typedCard.result.resource.version);
   assert.equal(cli("--project", folder, "card", "get", typedId).metadata.status, "active");
   await page.getByRole("button",{name:"Board",exact:true}).click();
+  await expect(page.locator(".astra-board .date-scroll")).toHaveCount(1);
+  const activeColumn = page.locator(".astra-column-active");
+  await activeColumn.getByRole("button", {name:"Collapse column", exact:true}).click();
+  await expect(page.getByLabel("Move Typed CLI task to", {exact:true})).toHaveCount(0);
+  await activeColumn.getByRole("button", {name:"Expand column", exact:true}).click();
+  await page.getByRole("button", {name:/Add card to review/}).click();
+  await expect(page.getByLabel("Status", {exact:true})).toHaveValue("review");
+  await page.getByLabel("Title", {exact:true}).fill("Column-created card");
+  await page.getByRole("button", {name:"Create", exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(cli("--project",folder,"card","list","--status","review").items[0].title,"Column-created card");
+  await page.getByLabel("Actions: Typed CLI task", {exact:true}).click();
+  await page.getByRole("button", {name:"Add update", exact:true}).click();
+  await expect(page.getByLabel("Target ID", {exact:true})).toHaveValue(typedId);
+  await page.getByRole("button", {name:"Close editor", exact:true}).click();
   await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("planned");
   await page.getByRole("button",{name:"Confirm move",exact:true}).click();
   await page.getByRole("dialog").waitFor({state:"hidden"});
@@ -410,6 +426,52 @@ try {
   await page.getByRole("button",{name:"Confirm move",exact:true}).click();
   await page.getByRole("dialog").waitFor({state:"hidden"});
   assert.equal(cli("--project",folder,"card","list","--status","planned").items.at(-1).id,typedId);
+
+  // A live refresh must not replace the version captured by a held board gesture.
+  const heldSource = await hitbox(boardHandle), heldTarget = await hitbox(boardTarget);
+  await page.mouse.move(heldSource.x + heldSource.width/2, heldSource.y + heldSource.height/2);
+  await page.mouse.down();
+  const heldVersion = cli("--project", folder, "card", "get", typedId).version;
+  await writeFile(patchFile, JSON.stringify({set:{priority:"high"}}));
+  cli("--project", folder, "card", "set", typedId, "--patch-file", patchFile, "--if-version", heldVersion);
+  await expect.poll(() => page.locator("[data-dragging]").count()).toBe(1);
+  await page.waitForTimeout(300);
+  await page.mouse.move(heldTarget.x + heldTarget.width/2, heldTarget.y + heldTarget.height/2, {steps:6});
+  await page.mouse.up();
+  await page.getByRole("button", {name:"Confirm move", exact:true}).click();
+  await page.getByText("The card or its neighbors changed.", {exact:false}).waitFor();
+  await expect(page.getByRole("button", {name:"Confirm move", exact:true})).toBeDisabled();
+  await page.getByRole("button", {name:"Cancel", exact:true}).click();
+  assert.equal(cli("--project",folder,"card","list","--status","planned").items.at(-1).id,typedId);
+  assert.equal(cli("--project",folder,"card","get",typedId).metadata.priority,"high");
+
+  // Counts and legal placements refer to server pages, not SVAR's loaded array.
+  const pageFixture = join(temp,"board-page.json");
+  for (let index = 0; index < 50; index++) {
+    await writeFile(pageFixture, JSON.stringify({title:`Review page ${index}`,status:"review"}));
+    cli("command","POST",`/api/v1/projects/${plan.project_id}/cards`,"--json-file",pageFixture);
+  }
+  const reviewColumn = page.locator(".astra-column-review");
+  await expect(reviewColumn.getByRole("heading", {name:"review · 51",exact:true})).toBeVisible();
+  await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(50);
+  await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("review");
+  await expect(page.getByLabel("Position",{exact:true}).locator("option").first()).toHaveJSProperty("disabled",false);
+  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+  await page.getByRole("button",{name:"Next 50 in review",exact:true}).click();
+  await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(1);
+  await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("review");
+  await expect(page.getByLabel("Position",{exact:true}).locator("option").nth(1)).toHaveJSProperty("disabled",true);
+  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+  await page.getByRole("button",{name:"First page in review",exact:true}).click();
+  await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(50);
+  await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; window.scrollTo(0,0); });
+  await page.screenshot({path:join(root,"progress/screenshots/desktop-board-dark.png"),fullPage:true});
+  await page.evaluate(() => document.documentElement.dataset.theme = "light");
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(() => window.scrollTo(0,0));
+  await page.screenshot({path:join(root,"progress/screenshots/mobile-board.png"),fullPage:true});
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.setViewportSize({width:1440,height:1000});
 
   const focusBefore = cli("get","/api/v1/workspace/focus");
   const focusFile = join(temp,"focus.json");
@@ -479,7 +541,7 @@ try {
   await settingsPage.getByRole("button",{name:"Copy settings draft",exact:true}).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
+    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, SVAR collapse, column-default creation, report target, held board conflict, 51-card pagination boundaries, dark/mobile board layout, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

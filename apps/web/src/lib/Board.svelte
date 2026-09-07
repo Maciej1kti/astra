@@ -1,7 +1,13 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, setContext } from "svelte";
   import { api, type Summary } from "./api";
-  import { dateGesture } from "./date-gesture";
+  import {
+    Kanban,
+    Willow,
+    type KanbanInstanceApi,
+  } from "@svar-ui/svelte-kanban";
+  import BoardCard from "./BoardCard.svelte";
+  import { BOARD_CONTEXT, type BoardContext } from "./board-context";
   import type { MoveProposal } from "./proposals";
   let {
     project,
@@ -9,12 +15,14 @@
     search,
     open,
     onpropose,
+    oncreate,
   }: {
     project: string;
     revision: number;
     search: string;
     open: (item: Summary) => void;
     onpropose: (proposal: MoveProposal) => void;
+    oncreate: (type: string, initial: Record<string, unknown>) => void;
   } = $props();
   type Column = {
     status: string;
@@ -42,7 +50,11 @@
     };
     window.addEventListener("planning-gesture-started", started);
     window.addEventListener("planning-gesture-ended", released);
-    return () => window.removeEventListener("planning-gesture-ended", released);
+    return () => {
+      generation++;
+      window.removeEventListener("planning-gesture-started", started);
+      window.removeEventListener("planning-gesture-ended", released);
+    };
   });
   $effect(() => {
     void project;
@@ -50,6 +62,10 @@
     void load();
   });
   async function load(status?: string, cursor?: string | null) {
+    if (gestureActive) {
+      deferredRefresh = true;
+      return;
+    }
     const current = ++generation;
     busy = true;
     error = "";
@@ -109,10 +125,11 @@
         const card = nodes.find((node) => node.matches("[data-board-card]")) as
           HTMLElement | undefined;
         const columnNode = nodes.find((node) =>
-          node.matches("[data-board-column]"),
+          node.matches("[data-kanban-column-cards]"),
         ) as HTMLElement | undefined;
         const status =
-          card?.dataset.boardStatus ?? columnNode?.dataset.boardColumn;
+          card?.dataset.boardStatus ??
+          columnNode?.dataset.kanbanColumnCards?.replace(/^:/, "");
         const column = columns.find((column) => column.status === status);
         if (!column) return 0;
         if (card) {
@@ -138,129 +155,165 @@
       },
     };
   }
+
+  const collapsed = new Map<string, boolean>();
+  const boardColumns = $derived(
+    columns.map((column) => ({
+      id: column.status,
+      label: `${column.status} · ${column.total}`,
+      cardLimit: false,
+      collapsed: collapsed.get(column.status) ?? false,
+      css: `astra-column-${column.status}`,
+    })),
+  );
+  const boardCards = $derived(
+    columns.flatMap((column) =>
+      column.items
+        .filter((item) =>
+          item.title.toLowerCase().includes(search.toLowerCase()),
+        )
+        .map((item) => ({
+          id: item.id,
+          column: column.status,
+          label: item.title,
+          astra: item,
+        })),
+    ),
+  );
+  setContext<BoardContext>(BOARD_CONTEXT, {
+    open: (item) => open(item),
+    propose,
+    gesture,
+    disabled: () => !!search.trim() || (busy && !gestureActive),
+    busy: () => busy,
+    update: (item) =>
+      oncreate("update", { target: { type: "card", id: item.id } }),
+  });
+  function scrolling(node: HTMLElement) {
+    node.querySelector(".wx-scroll")?.classList.add("date-scroll");
+  }
+  function initialize(store: KanbanInstanceApi) {
+    // SVAR is a view adapter. It never commits or optimistically changes cards.
+    store.intercept("add-card", (event) => {
+      if ("card" in event && event.card && "column" in event.card)
+        oncreate("card", { status: String(event.card.column) });
+      return false;
+    });
+    for (const action of [
+      "move-card",
+      "delete-card",
+      "update-card",
+      "select-card",
+    ] as const)
+      store.intercept(action, () => false);
+    store.on("update-column", (event) => {
+      if (
+        "id" in event &&
+        "column" in event &&
+        event.column &&
+        typeof event.column === "object" &&
+        "collapsed" in event.column
+      )
+        collapsed.set(String(event.id), Boolean(event.column.collapsed));
+    });
+  }
 </script>
 
-{#if error}<p role="alert">{error}</p>{/if}{#if search}<p>
-    Reordering is disabled while filtering. Change status through the card
-    editor.
+{#if error}<p role="alert">{error}</p>{/if}
+{#if search}<p>
+    Filtering searches the loaded pages only. Reordering is disabled while
+    filtering.
   </p>{/if}
-<div class="board date-scroll">
-  {#each columns as column}<section
-      class="column"
-      data-board-column={column.status}
-    >
-      <header>
-        <h2>{column.status}</h2>
-        <span>{column.total}</span>
-      </header>
-      {#each column.items.filter((item) => item.title
-          .toLowerCase()
-          .includes(search.toLowerCase())) as item}<article
-          data-board-card={item.id}
-          data-board-status={column.status}
-        >
-          <button class="title" onclick={() => open(item)}
-            ><h3>{item.title}</h3>
-            <small>{item.due?.date ?? item.schedule?.start ?? "No date"}</small
-            >{#if item.blocked}<span> · Blocked</span>{/if}</button
-          >
-          <div class="actions">
-            <button
-              class="handle"
-              aria-label={`Reorder: ${item.title}`}
-              disabled={!!search || (busy && !gestureActive)}
-              use:dateGesture={gesture(item)}>↕</button
-            ><label
-              ><span class="sr">Move {item.title} to</span><select
-                aria-label={`Move ${item.title} to`}
-                value=""
-                disabled={busy}
-                onchange={(event) => {
-                  propose(item, event.currentTarget.value);
-                  event.currentTarget.value = "";
-                }}
-                ><option value="" disabled>Move to…</option
-                >{#each ["planned", "active", "review", "done", "cancelled"] as status}<option
-                    value={status}>{status}</option
-                  >{/each}</select
-              ></label
-            >
-          </div>
-        </article>{:else}<p>No cards in this page.</p>{/each}
+<div class="astra-board" use:scrolling>
+  <Willow fonts={false}>
+    <Kanban
+      cards={boardCards}
+      columns={boardColumns}
+      cardContent={BoardCard}
+      card={{ menu: false }}
+      init={initialize}
+      render={{ fixedColumnWidth: true, virtualizeCards: false }}
+    />
+  </Willow>
+</div>
+<div class="pages">
+  {#each columns.filter((column) => column.total > 50) as column}
+    <div>
+      <span>{column.status}: {column.items.length} loaded / {column.total}</span
+      >
       {#if column.page.next_cursor}<button
-          disabled={busy}
+          disabled={busy || gestureActive}
           onclick={() => load(column.status, column.page.next_cursor)}
-          >Next 50 cards</button
+          >Next 50 in {column.status}</button
         >{/if}
-      {#if column.total > 50}<button
-          disabled={busy}
-          onclick={() => load(column.status)}>First page</button
-        >{/if}
-    </section>{/each}
+      <button
+        disabled={busy || gestureActive || pageStarts[column.status]}
+        onclick={() => load(column.status)}
+        >First page in {column.status}</button
+      >
+    </div>
+  {/each}
 </div>
 
 <style>
-  .board {
-    display: flex;
-    gap: 16px;
-    overflow: auto;
-    align-items: flex-start;
+  .astra-board {
+    min-width: 0;
+    height: clamp(360px, 68vh, 900px);
   }
-  .column {
-    width: 260px;
-    min-width: 260px;
-    background: var(--paper);
+  .astra-board :global(.wx-willow-theme) {
+    --wx-font-family: inherit;
+    --wx-color-font: var(--ink);
+    --wx-color-font-alt: var(--ink);
+    --wx-background: var(--paper);
+    --wx-background-alt: var(--paper);
+    --wx-background-hover: var(--hover);
+    --wx-kanban-bg: transparent;
+    --wx-kanban-column-bg: var(--paper);
+    --wx-kanban-card-bg: var(--paper);
+    --wx-kanban-border-color: var(--line);
+  }
+  .astra-board :global(.wx-column) {
     border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 12px;
   }
-  .column header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .column h2 {
-    font-size: 14px;
-    text-transform: capitalize;
-  }
-  .column article {
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    margin: 10px 0;
-  }
-  .title {
-    display: block;
-    width: 100%;
-    border: 0;
-    text-align: left;
-    background: none;
-  }
-  .title h3 {
-    font-size: 15px;
-    margin: 4px 0 12px;
-  }
-  .actions {
-    display: flex;
-    align-items: center;
+  .astra-board :global(.wx-column-header) {
     padding: 4px;
+    gap: 2px;
   }
-  .handle {
-    touch-action: none;
-    min-width: 44px;
-    min-height: 44px;
-    cursor: grab;
+  .astra-board :global(.wx-column-header button) {
+    min-width: 40px;
+    min-height: 42px;
   }
-  .handle:global([data-dragging]) {
-    z-index: 10;
+  .astra-board :global(.wx-title) {
+    text-transform: capitalize;
+    font-size: 14px;
   }
-  .actions select {
-    max-width: 155px;
+  .astra-board :global(.wx-card) {
+    touch-action: pan-y;
+    padding: 0;
+    border-top: 0;
   }
-  .sr {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+  .astra-board :global(.wx-icon::before) {
+    font-family: sans-serif;
+    font-style: normal;
+  }
+  .astra-board :global(.wxi-plus::before) {
+    content: "+";
+  }
+  .astra-board :global(.wxi-angle-left::before) {
+    content: "‹";
+  }
+  .astra-board :global(.wxi-angle-right::before) {
+    content: "›";
+  }
+  .pages {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+  }
+  .pages > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
   }
 </style>

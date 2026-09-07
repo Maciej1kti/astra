@@ -9,6 +9,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
+    "@svar-ui/svelte-kanban": "2.6.0",
     "markdown-it": "15.0.1",
     "svelte": "5.57.0"
   },
