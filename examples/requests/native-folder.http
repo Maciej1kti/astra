@@ -1,0 +1,11 @@
+### Open a native folder dialog on the host, using the normal browser session
+POST /api/v1/native-folder-selections
+Cookie: __Host-project_session={{session}}
+X-CSRF-Token: {{csrf}}
+Content-Type: application/json
+
+{"selection_id":"01991460-0000-4000-8000-000000000001","git_mode":"private"}
+
+### Poll the same selection; a selected result contains a normal RegistrationPlan
+GET /api/v1/native-folder-selections/01991460-0000-4000-8000-000000000001
+Cookie: __Host-project_session={{session}}

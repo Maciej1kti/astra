@@ -3213,6 +3213,87 @@
           }
         }
       }
+    },
+    "/api/v1/native-folder-selections": {
+      "post": {
+        "operationId": "startNativeFolderSelection",
+        "summary": "Open the host system folder dialog; repeat the same selection ID to resume",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CSRF"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeFolderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Selection state; selecting prepares a plan without changing project files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeFolderSelection"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/native-folder-selections/{selection_id}": {
+      "get": {
+        "operationId": "getNativeFolderSelection",
+        "summary": "Read a native folder selection belonging to the current session",
+        "parameters": [
+          {
+            "name": "selection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Selection state; selecting prepares a plan without changing project files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeFolderSelection"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6674,6 +6755,71 @@
               "null"
             ],
             "minimum": 0
+          }
+        }
+      },
+      "NativeFolderInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "selection_id",
+          "git_mode"
+        ],
+        "properties": {
+          "selection_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "git_mode": {
+            "type": "string",
+            "enum": [
+              "private",
+              "tracked"
+            ]
+          }
+        }
+      },
+      "NativeFolderSelection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "selection_id",
+          "state",
+          "plan",
+          "error"
+        ],
+        "properties": {
+          "selection_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "selected",
+              "cancelled",
+              "failed"
+            ]
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RegistrationPlan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       }

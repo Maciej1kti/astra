@@ -60,13 +60,17 @@ scripts/cargo-local build --workspace --release
 
 ## Add an existing project folder
 
-Open **Projects → Add project**. Choose a configured location, open the folder you
-want, then select **Choose this folder → Add selected project**. You may change the
-project name before confirming. The app opens the new project's board when ready.
-Browsing and previewing do not create project files. Confirmation adds `.project`
-planning files and managed project instructions while preserving existing content.
+Open **Projects → Add project → Choose folder…**. The host's operating-system
+folder dialog opens. Select any repository folder, review the displayed path and
+click **Add project**. There is no restriction to a Projects directory. Cancelling
+the system dialog creates no project files. The app opens the selected project's
+board after registration succeeds.
 
-The folder list belongs to the host running projectd, including when the browser
-is on another device. The host owner configures available locations once with
-`projectctl --socket SOCKET add-root /absolute/projects/path --label Projects`.
-The current local test host has its Projects location configured.
+The dialog appears on the computer running projectd. On macOS it uses the system
+folder picker; Linux desktop hosts need Zenity. For a remote host without a desktop,
+**Remote host without a desktop? → Browse approved folders** retains the existing
+owner-approved directory browser as an alternative.
+
+Registration adds `.project` planning files and a managed `AGENTS.md` block while
+preserving existing content. The user selects the repository; no file attachments
+or automatic repository discovery are involved.

@@ -34,7 +34,12 @@ Skrypty, fonty i CSS nie pochodzą z CDN. Obrazy i preview linków z opisów nie
 
 ## Ścieżki i repo
 
-HTTP rejestruje tylko root_id + bezpieczną ścieżkę względną. Rooty ustawia lokalny właściciel. Odrzucamy `..`, NUL, ścieżki absolutne, traversal po dekodowaniu, symlinki uciekające poza root i specjalne pliki. Identyfikatory obiektów nie są ścieżkami. Bazujemy na otwartych deskryptorach katalogu i ponownej weryfikacji, nie na jednorazowym string-prefix compare.
+Browser registration uses either an approved root plus a validated relative path,
+or the host-native folder selection explicitly requested by the owner (ADR-025).
+The native dialog supplies the path; the browser cannot submit an arbitrary path
+or script. The chosen folder produces a normal conditional registration plan.
+Root browsing still rejects traversal, absolute paths and unsafe symlinks and
+verifies open directory identities. Resource IDs are never interpreted as paths.
 
 `.project` nie może być symlinkiem. Pliki docelowe muszą być zwykłymi plikami, bez podążania za symlinkami. Hardlink count >1 przy modyfikacji daje diagnozę; nie zapisuj pliku współdzielonego z nieznanym miejscem. Nie otwieramy sieciowych filesystemów jako wspieranego trybu trwałości v1. Ścieżka UTF-8 jest baseline v1; niepoprawne bajty ścieżki dają czytelny błąd, nie lossy alias.
 

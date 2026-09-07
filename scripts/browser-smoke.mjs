@@ -130,12 +130,42 @@ try {
   await page
     .getByRole("heading", { name: "Make room for what matters." })
     .waitFor();
+  let pickerRequests = 0;
+  await page.route("**/api/v1/native-folder-selections", route => {
+    pickerRequests++;
+    const input = route.request().postDataJSON();
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({selection_id:input.selection_id,state:"cancelled",plan:null,error:null})});
+  });
+  await page.getByRole("button",{name:"Projects",exact:true}).click();
+  await page.getByRole("button",{name:"Add project",exact:false}).click();
+  await page.getByRole("button",{name:"Choose folder…",exact:true}).click();
+  await page.getByText("Folder selection cancelled. No project files were changed.",{exact:true}).waitFor();
+  assert.equal(pickerRequests,1);
+  await page.getByRole("button",{name:"Close add project",exact:true}).click();
+  await page.unroute("**/api/v1/native-folder-selections");
+  const nativeFolder = join(temp,"Native selection fixture");
+  await mkdir(nativeFolder);
+  const nativePlan = cli("registration-plan",nativeFolder,"--name","Native-selected project");
+  await page.route("**/api/v1/native-folder-selections",route => {
+    const input = route.request().postDataJSON();
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({selection_id:input.selection_id,state:"selected",plan:nativePlan,error:null})});
+  });
+  await page.getByRole("button",{name:"Add project",exact:false}).click();
+  await page.getByRole("button",{name:"Choose folder…",exact:true}).click();
+  await page.getByText(nativeFolder,{exact:true}).waitFor();
+  await assert.rejects(readFile(join(nativeFolder,".project/project.md")),{code:"ENOENT"});
+  await page.getByRole("dialog").getByRole("button",{name:"Add project",exact:true}).click();
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.match(await readFile(join(nativeFolder,".project/project.md"),"utf8"),/Native-selected project/);
+  await page.unroute("**/api/v1/native-folder-selections");
   const pickRoot = join(temp, "Selectable folders");
   const selectedFolder = join(pickRoot, "Chosen project");
   await mkdir(selectedFolder, {recursive:true});
   cli("add-root", pickRoot, "--label", "Test projects");
   await page.getByRole("button",{name:"Projects",exact:true}).click();
   await page.getByRole("button",{name:"Add project",exact:false}).click();
+  await page.getByText("Remote host without a desktop?",{exact:true}).click();
+  await page.getByRole("button",{name:"Browse approved folders",exact:true}).click();
   await page.getByRole("button",{name:"Open folder: Chosen project",exact:true}).click();
   await page.getByLabel("Project name",{exact:true}).fill("Chosen in browser");
   await page.getByRole("button",{name:"Choose this folder",exact:true}).click();

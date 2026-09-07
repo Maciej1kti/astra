@@ -192,6 +192,14 @@ pub(super) fn run(
             )?
         }
 
+        ("POST", ["api", "v1", "native-folder-selections"]) => service.picker.start(
+            service.engine.clone(),
+            current.unwrap_or("local-uid"),
+            &input.body,
+        )?,
+        ("GET", ["api", "v1", "native-folder-selections", id]) => {
+            service.picker.get(current.unwrap_or("local-uid"), id)?
+        }
         ("GET", ["api", "v1", "roots"]) => engine.roots()?,
         ("POST", ["local", "v1", "roots"]) if input.local => engine.add_root(
             text(&input.body, "absolute_path")?,

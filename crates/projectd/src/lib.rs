@@ -16,10 +16,12 @@ use std::sync::Arc;
 use tokio::{net::UnixListener, sync::Semaphore};
 use url::Url;
 mod dispatch;
+mod picker;
 
 #[derive(Clone)]
 pub struct Service {
     pub engine: Arc<Engine>,
+    picker: Arc<picker::Picker>,
     origin: String,
     host: String,
     slots: Arc<Semaphore>,
@@ -44,6 +46,7 @@ impl Service {
         };
         Ok(Self {
             engine: Arc::new(engine),
+            picker: Arc::new(picker::Picker::default()),
             origin: url.origin().ascii_serialization(),
             host,
             slots: Arc::new(Semaphore::new(8)),

@@ -1614,6 +1614,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/native-folder-selections:
+    post:
+      operationId: startNativeFolderSelection
+      summary: Open the host system folder dialog; repeat the same selection ID to
+        resume
+      parameters:
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NativeFolderInput'
+      responses: &id008
+        '200':
+          description: Selection state; selecting prepares a plan without changing
+            project files
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NativeFolderSelection'
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/native-folder-selections/{selection_id}:
+    get:
+      operationId: getNativeFolderSelection
+      summary: Read a native folder selection belonging to the current session
+      parameters:
+      - name: selection_id
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/UUID'
+      responses: *id008
 components:
   securitySchemes:
     BrowserSession:
@@ -2418,16 +2456,16 @@ components:
           set:
             type: object
             properties:
-              title: &id008
+              title: &id009
                 type: string
                 minLength: 1
                 maxLength: 240
-              kind: &id009
+              kind: &id010
                 type: string
                 enum:
                 - outcome
                 - decision
-              status: &id010
+              status: &id011
                 type: string
                 enum:
                 - planned
@@ -2435,32 +2473,32 @@ components:
                 - review
                 - done
                 - cancelled
-              priority: &id011
+              priority: &id012
                 type: string
                 enum:
                 - low
                 - normal
                 - high
                 - urgent
-              archived: &id012
+              archived: &id013
                 type: boolean
-              schedule: &id013
+              schedule: &id014
                 $ref: '#/components/schemas/Schedule'
-              due: &id014
+              due: &id015
                 $ref: '#/components/schemas/Due'
-              review_on: &id015
+              review_on: &id016
                 $ref: '#/components/schemas/LocalDate'
-              milestone_id: &id016
+              milestone_id: &id017
                 $ref: '#/components/schemas/UUID'
-              blocked: &id017
+              blocked: &id018
                 $ref: '#/components/schemas/Blocked'
-              depends_on: &id018
+              depends_on: &id019
                 type: array
                 items:
                   $ref: '#/components/schemas/UUID'
                 maxItems: 100
                 uniqueItems: true
-              labels: &id019
+              labels: &id020
                 type: array
                 items:
                   type: string
@@ -2468,7 +2506,7 @@ components:
                   maxLength: 48
                 maxItems: 20
                 uniqueItems: true
-              body: &id020
+              body: &id021
                 type: string
                 minLength: 0
                 maxLength: 983040
@@ -2512,19 +2550,19 @@ components:
     CardCreate:
       type: object
       properties:
-        title: *id008
-        kind: *id009
-        status: *id010
-        priority: *id011
-        archived: *id012
-        schedule: *id013
-        due: *id014
-        review_on: *id015
-        milestone_id: *id016
-        blocked: *id017
-        depends_on: *id018
-        labels: *id019
-        body: *id020
+        title: *id009
+        kind: *id010
+        status: *id011
+        priority: *id012
+        archived: *id013
+        schedule: *id014
+        due: *id015
+        review_on: *id016
+        milestone_id: *id017
+        blocked: *id018
+        depends_on: *id019
+        labels: *id020
+        body: *id021
         id:
           $ref: '#/components/schemas/UUID'
       required:
@@ -2537,22 +2575,22 @@ components:
           set:
             type: object
             properties:
-              title: &id021
+              title: &id022
                 type: string
                 minLength: 1
                 maxLength: 240
-              status: &id022
+              status: &id023
                 type: string
                 enum:
                 - planned
                 - active
                 - achieved
                 - cancelled
-              archived: &id023
+              archived: &id024
                 type: boolean
-              due: &id024
+              due: &id025
                 $ref: '#/components/schemas/Due'
-              body: &id025
+              body: &id026
                 type: string
                 minLength: 0
                 maxLength: 983040
@@ -2588,11 +2626,11 @@ components:
     MilestoneCreate:
       type: object
       properties:
-        title: *id021
-        status: *id022
-        archived: *id023
-        due: *id024
-        body: *id025
+        title: *id022
+        status: *id023
+        archived: *id024
+        due: *id025
+        body: *id026
         id:
           $ref: '#/components/schemas/UUID'
       required:
@@ -4058,3 +4096,47 @@ components:
           - integer
           - 'null'
           minimum: 0
+    NativeFolderInput:
+      type: object
+      additionalProperties: false
+      required:
+      - selection_id
+      - git_mode
+      properties:
+        selection_id:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        git_mode:
+          type: string
+          enum:
+          - private
+          - tracked
+    NativeFolderSelection:
+      type: object
+      additionalProperties: false
+      required:
+      - selection_id
+      - state
+      - plan
+      - error
+      properties:
+        selection_id:
+          $ref: '#/components/schemas/UUID'
+        state:
+          type: string
+          enum:
+          - pending
+          - selected
+          - cancelled
+          - failed
+        plan:
+          oneOf:
+          - $ref: '#/components/schemas/RegistrationPlan'
+          - type: 'null'
+        error:
+          type:
+          - string
+          - 'null'

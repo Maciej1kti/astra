@@ -577,7 +577,12 @@ Skrypty, fonty i CSS nie pochodzą z CDN. Obrazy i preview linków z opisów nie
 
 ### Ścieżki i repo
 
-HTTP rejestruje tylko root_id + bezpieczną ścieżkę względną. Rooty ustawia lokalny właściciel. Odrzucamy `..`, NUL, ścieżki absolutne, traversal po dekodowaniu, symlinki uciekające poza root i specjalne pliki. Identyfikatory obiektów nie są ścieżkami. Bazujemy na otwartych deskryptorach katalogu i ponownej weryfikacji, nie na jednorazowym string-prefix compare.
+Browser registration uses either an approved root plus a validated relative path,
+or the host-native folder selection explicitly requested by the owner (ADR-025).
+The native dialog supplies the path; the browser cannot submit an arbitrary path
+or script. The chosen folder produces a normal conditional registration plan.
+Root browsing still rejects traversal, absolute paths and unsafe symlinks and
+verifies open directory identities. Resource IDs are never interpreted as paths.
 
 `.project` nie może być symlinkiem. Pliki docelowe muszą być zwykłymi plikami, bez podążania za symlinkami. Hardlink count >1 przy modyfikacji daje diagnozę; nie zapisuj pliku współdzielonego z nieznanym miejscem. Nie otwieramy sieciowych filesystemów jako wspieranego trybu trwałości v1. Ścieżka UTF-8 jest baseline v1; niepoprawne bajty ścieżki dają czytelny błąd, nie lossy alias.
 
@@ -991,6 +996,27 @@ and executable are fixed; timeout kills and reaps the command process group.
 Command semantics: [Git diff-index](https://git-scm.com/docs/git-diff-index),
 [Git ls-files](https://git-scm.com/docs/git-ls-files), and
 [Git symbolic-ref](https://git-scm.com/docs/git-symbolic-ref).
+
+### ADR-025 — Explicit host-native project folder selection
+
+The owner requests an operating-system folder picker without the approved-root
+list restriction. An authenticated, CSRF-protected request opens the host's native
+dialog (macOS Standard Additions, or Zenity on a Linux desktop). The local human's
+selection authorizes exactly the selected folder for a registration plan. No paths,
+scripts or shell arguments are accepted from the browser. Normal registration and
+its conditional file steps remain the only project-writing operation.
+
+The selection runs outside HTTP workers with one active dialog, a two-minute timeout
+and up to 16 session-bound results retained for ten minutes. Repeating a selection
+ID with identical input resumes that selection. Polling does not reopen the dialog.
+Cancel, timeout and missing desktop support are explicit outcomes. A server restart
+loses selection handles but not committed registrations. Mobile browsers open the
+dialog on the host; they cannot select a phone folder for the host's filesystem.
+
+[Apple's native folder selection reference](https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/PromptforaFileorFolder.html)
+provides the macOS command semantics. No browser file-upload handle is mistaken for
+an absolute host path. This owner decision supersedes the earlier browser-root-only
+restriction for this explicitly interactive host-native flow.
 
 
 *Plik źródłowy: `docs/12-ADRS.md`.*

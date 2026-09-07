@@ -159,3 +159,24 @@ and executable are fixed; timeout kills and reaps the command process group.
 Command semantics: [Git diff-index](https://git-scm.com/docs/git-diff-index),
 [Git ls-files](https://git-scm.com/docs/git-ls-files), and
 [Git symbolic-ref](https://git-scm.com/docs/git-symbolic-ref).
+
+## ADR-025 — Explicit host-native project folder selection
+
+The owner requests an operating-system folder picker without the approved-root
+list restriction. An authenticated, CSRF-protected request opens the host's native
+dialog (macOS Standard Additions, or Zenity on a Linux desktop). The local human's
+selection authorizes exactly the selected folder for a registration plan. No paths,
+scripts or shell arguments are accepted from the browser. Normal registration and
+its conditional file steps remain the only project-writing operation.
+
+The selection runs outside HTTP workers with one active dialog, a two-minute timeout
+and up to 16 session-bound results retained for ten minutes. Repeating a selection
+ID with identical input resumes that selection. Polling does not reopen the dialog.
+Cancel, timeout and missing desktop support are explicit outcomes. A server restart
+loses selection handles but not committed registrations. Mobile browsers open the
+dialog on the host; they cannot select a phone folder for the host's filesystem.
+
+[Apple's native folder selection reference](https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/PromptforaFileorFolder.html)
+provides the macOS command semantics. No browser file-upload handle is mistaken for
+an absolute host path. This owner decision supersedes the earlier browser-root-only
+restriction for this explicitly interactive host-native flow.

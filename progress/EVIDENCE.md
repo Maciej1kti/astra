@@ -270,3 +270,23 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
   build pass. The local manual-test host was restarted with the new application.
 - Folder access uses the existing host-approved roots API and normal authentication.
   This is an in-app host folder picker, not the browser's native file-upload dialog.
+
+## E016 — System-native repository selection
+
+- Owner clarified that the missing flow is selecting the repository folder, not
+  uploading plan attachments. The default Add project dialog now opens the host's
+  native system folder picker, independent of approved-root lists. The existing
+  directory browser is an explicit remote-headless alternative.
+- Selection is asynchronous and session-bound, with stable repeat IDs, cancellation,
+  a two-minute dialog timeout and one active dialog. A selected folder only prepares
+  a normal registration plan; the final Add project action commits existing durable
+  registration steps. Failed registration can be retried or reselected appropriately.
+- Full local checks pass: 69 Rust tests, contract checks, frontend checks/build,
+  Clippy and release build (`checks/native-folder-full.txt`). The native selection
+  test injects a selected fixture path, proves no files exist before confirmation,
+  and verifies cancellation, failure, ownership and replay behavior.
+- HTTPS browser smoke passes with deterministic native selection/cancellation
+  responses and real subsequent registration writes, alongside the existing suite
+  (`checks/native-folder-browser.txt`). The macOS AppleScript compiled successfully.
+  Automated tests do not drive the real system dialog; physical interaction remains
+  an owner manual check. No attachment subsystem was added.

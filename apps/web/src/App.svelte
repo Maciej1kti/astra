@@ -11,6 +11,8 @@
     moveDraft = $state<MoveProposal | null>(null);
   import Editor from "./lib/Editor.svelte";
   import Settings from "./lib/Settings.svelte";
+  import NativeProject from "./lib/NativeProject.svelte";
+  let nativeAdding = $state(false);
   import FocusOrder from "./lib/FocusOrder.svelte";
   let arrangeFocus = $state(false);
   import GitObservation from "./lib/GitObservation.svelte";
@@ -461,7 +463,10 @@
     editor = null;
     await refresh().catch(message);
   }
-  async function addProject() {
+  function addProject() {
+    nativeAdding = true;
+  }
+  async function browseProjects() {
     adding = true;
     if (registrationPending) {
       try {
@@ -1193,6 +1198,21 @@
     onclose={() => (arrangeFocus = false)}
     onsaved={() => {
       arrangeFocus = false;
+      void refresh().catch(message);
+    }}
+  />{/if}
+
+{#if nativeAdding}<NativeProject
+    onclose={() => (nativeAdding = false)}
+    onbrowse={() => {
+      nativeAdding = false;
+      void browseProjects();
+    }}
+    onadded={(id) => {
+      nativeAdding = false;
+      project = id;
+      view = "board";
+      search = "";
       void refresh().catch(message);
     }}
   />{/if}
