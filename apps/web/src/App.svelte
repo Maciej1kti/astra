@@ -949,7 +949,11 @@
                 onpropose={(proposal) => (moveDraft = proposal)}
                 oncreate={create}
               />{/key}{:else}<p role="status">Loading board…</p>{/if}
-        {:else if view === "board"}<div class="board">
+        {:else if view === "board"}<p role="status">
+            All projects is an overview. Select a project above to drag and
+            reorder cards.
+          </p>
+          <div class="board">
             {#each statuses as status}<section class="column">
                 <div class="sectiontitle">
                   <h2>{status}</h2>

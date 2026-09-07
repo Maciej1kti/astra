@@ -11,4 +11,5 @@ export type MoveProposal = {
   neighbors: Summary[];
   firstPage: boolean;
   lastPage: boolean;
+  autoCommit?: boolean;
 };

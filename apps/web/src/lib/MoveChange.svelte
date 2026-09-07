@@ -18,6 +18,7 @@
     neighbors,
     firstPage,
     lastPage,
+    autoCommit = false,
     onclose,
     onsaved,
   }: {
@@ -27,6 +28,7 @@
     neighbors: Summary[];
     firstPage: boolean;
     lastPage: boolean;
+    autoCommit?: boolean;
     onclose: () => void;
     onsaved: () => void;
   } = $props();
@@ -47,6 +49,7 @@
     };
     window.addEventListener("session-ended", lost);
     window.addEventListener("session-restored", restored);
+    if (autoCommit) void save();
     return () => {
       window.removeEventListener("session-ended", lost);
       window.removeEventListener("session-restored", restored);

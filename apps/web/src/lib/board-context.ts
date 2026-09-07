@@ -1,19 +1,10 @@
+import type { BoardGestureOptions } from "./board-gesture";
 import type { Summary } from "./api";
-import type { MoveProposal } from "./proposals";
 
 export const BOARD_CONTEXT = Symbol("astra-board");
 export type BoardContext = {
   open: (item: Summary) => void;
-  update: (item: Summary) => void;
-  propose: (
-    item: Summary,
-    status: string,
-    placement?: MoveProposal["placement"],
-  ) => void;
-  disabled: () => boolean;
+  reorder: (item: Summary, direction: -1 | 1) => void;
   busy: () => boolean;
-  gesture: (item: Summary) => {
-    delta: (x: number, y: number) => number;
-    commit: () => void;
-  };
+  gesture: (item: Summary) => BoardGestureOptions;
 };

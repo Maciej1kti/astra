@@ -6,13 +6,30 @@ import { join, resolve } from "node:path";
 import https from "node:https";
 import http from "node:http";
 import assert from "node:assert/strict";
-async function hitbox(locator) {
+async function hitbox(locator, attempt = 0) {
+  try {
   await locator.waitFor({state:"visible"});
   await expect(locator).toBeEnabled();
   await locator.scrollIntoViewIfNeeded();
+  // Layout can settle after scrollIntoView or a preceding full-page screenshot.
+  await locator.evaluate(element => new Promise(resolve => {
+    let previous = "", stable = 0, frames = 0;
+    const check = () => {
+      const rect = element.getBoundingClientRect();
+      const current = `${rect.x},${rect.y},${rect.width},${rect.height}`;
+      stable = current === previous ? stable + 1 : 0;
+      previous = current;
+      if (stable >= 2 || ++frames >= 120) resolve(null); else requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }));
   const box = await locator.boundingBox();
   assert(box,"The gesture target must be rendered before sending pointer input");
   return box;
+  } catch (error) {
+    if (attempt < 2 && /not attached|detached/.test(String(error))) return hitbox(locator, attempt + 1);
+    throw error;
+  }
 }
 const root = resolve(import.meta.dirname, "..");
 const binaries = join(root,"target",process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug");
@@ -395,50 +412,84 @@ try {
   await expect(page.locator(".astra-board .date-scroll")).toHaveCount(1);
   const activeColumn = page.locator(".astra-column-active");
   await activeColumn.getByRole("button", {name:"Collapse column", exact:true}).click();
-  await expect(page.getByLabel("Move Typed CLI task to", {exact:true})).toHaveCount(0);
+  await expect(page.locator(`[data-board-card="${typedId}"]`)).toHaveCount(0);
   await activeColumn.getByRole("button", {name:"Expand column", exact:true}).click();
-  await page.getByRole("button", {name:/Add card to review/}).click();
+  const footerAdd = page.getByRole("button", {name:"Add card in review",exact:true});
+  await hitbox(footerAdd);
+  await footerAdd.focus();
+  await expect(footerAdd).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect(page.getByLabel("Status", {exact:true})).toHaveValue("review");
   await page.getByLabel("Title", {exact:true}).fill("Column-created card");
   await page.getByRole("button", {name:"Create", exact:true}).click();
   await page.getByRole("dialog").waitFor({state:"hidden"});
   assert.equal(cli("--project",folder,"card","list","--status","review").items[0].title,"Column-created card");
-  await page.getByLabel("Actions: Typed CLI task", {exact:true}).click();
-  await page.getByRole("button", {name:"Add update", exact:true}).click();
-  await expect(page.getByLabel("Target ID", {exact:true})).toHaveValue(typedId);
-  await page.getByRole("button", {name:"Close editor", exact:true}).click();
-  await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("planned");
-  await page.getByRole("button",{name:"Confirm move",exact:true}).click();
+  await expect(page.locator("[data-board-card] select, [data-board-card] .handle, [data-board-card] details")).toHaveCount(0);
+  await page.locator(`[data-board-card="${typedId}"] .title`).click();
+  await page.getByLabel("Status",{exact:true}).selectOption("planned");
+  await page.getByRole("button",{name:"Save changes",exact:true}).click();
   await page.getByRole("dialog").waitFor({state:"hidden"});
   assert.equal(cli("--project",folder,"card","get",typedId).metadata.status,"planned");
-  const boardHandle=page.getByRole("button",{name:"Reorder: Typed CLI task",exact:true});
+  const boardHandle=page.locator(`[data-board-card="${typedId}"] .title`);
   const boardTarget=page.locator(`[data-board-card="${cards[0].id}"] .title`);
-  const sourceBounds=await hitbox(boardHandle),targetBounds=await hitbox(boardTarget);
+  // Regression: dragging a card title should move the card, not open its editor.
+  const sourceTitle = page.locator(`[data-board-card="${typedId}"] .title`);
+  const sourceBounds=await hitbox(sourceTitle),targetBounds=await hitbox(boardTarget);
   await page.mouse.move(sourceBounds.x+sourceBounds.width/2,sourceBounds.y+sourceBounds.height/2);await page.mouse.down();
-  await page.mouse.move(targetBounds.x+targetBounds.width/2,targetBounds.y+targetBounds.height/2,{steps:6});await page.mouse.up();
-  await page.getByRole("button",{name:"Confirm move",exact:true}).click();
+  await page.mouse.move(targetBounds.x+targetBounds.width/2,targetBounds.y+10,{steps:6});
+  await expect(page.locator("[data-board-drag-preview]")).toBeVisible();
+  await expect(page.locator("[data-board-drop-indicator]")).toBeVisible();
+  await page.screenshot({path:join(root,"progress/screenshots/board-drag-preview.png"),fullPage:true});
+  await page.mouse.up();
+  await expect.poll(() => cli("--project",folder,"card","list","--status","planned").items[0].id).toBe(typedId);
   await page.getByRole("dialog").waitFor({state:"hidden"});
   const ordered=cli("--project",folder,"card","list","--status","planned").items;
   assert.equal(ordered[0].id,typedId);
   await page.screenshot({path:join(root,"progress/screenshots/desktop-board.png"),fullPage:true});
-  await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("planned");
-  await page.getByLabel("Position",{exact:true}).selectOption("");
-  await page.getByRole("button",{name:"Confirm move",exact:true}).click();
+  await boardHandle.focus();
+  await page.keyboard.press("Alt+ArrowDown");
+  await expect.poll(() => cli("--project",folder,"card","list","--status","planned").items.at(-1).id).toBe(typedId);
   await page.getByRole("dialog").waitFor({state:"hidden"});
-  assert.equal(cli("--project",folder,"card","list","--status","planned").items.at(-1).id,typedId);
+
+  // Drag between statuses, retaining the exact command when a response is uncertain.
+  const typedPath = `/api/v1/projects/${plan.project_id}/cards/${typedId}`;
+  const attempts = [];
+  await page.route(`**${typedPath}`, async route => {
+    const request = route.request();
+    if (request.method() !== "PATCH") return route.continue();
+    attempts.push({body:request.postData(),id:request.headers()["x-request-id"],epoch:request.headers()["x-command-epoch"],version:request.headers()["if-match"]});
+    if (attempts.length === 1) return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:{code:"SERVER_BUSY"}})});
+    return route.continue();
+  });
+  const statusSource = await hitbox(boardHandle);
+  const emptyColumn = await page.locator(".astra-column-active [data-kanban-column-cards]").boundingBox();
+  await page.mouse.move(statusSource.x+30,statusSource.y+20); await page.mouse.down();
+  await page.mouse.move(emptyColumn.x+60,emptyColumn.y+60,{steps:6}); await page.mouse.up();
+  await page.getByRole("button",{name:"Retry same command",exact:true}).waitFor();
+  assert.equal(cli("get",typedPath).metadata.status,"planned");
+  await page.getByRole("button",{name:"Retry same command",exact:true}).click();
+  await expect.poll(() => cli("get",typedPath).metadata.status).toBe("active");
+  await page.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(attempts.length,2); assert.deepEqual(attempts[0],attempts[1]);
+  await page.unroute(`**${typedPath}`);
+  const returnSource = await hitbox(boardHandle), returnTarget = await hitbox(boardTarget);
+  await page.mouse.move(returnSource.x+30,returnSource.y+20); await page.mouse.down();
+  await page.mouse.move(returnTarget.x+60,returnTarget.y+returnTarget.height+15,{steps:6}); await page.mouse.up();
+  await expect.poll(() => cli("get",typedPath).metadata.status).toBe("planned");
+  await page.getByRole("dialog").waitFor({state:"hidden"});
 
   // A live refresh must not replace the version captured by a held board gesture.
   const heldSource = await hitbox(boardHandle), heldTarget = await hitbox(boardTarget);
   await page.mouse.move(heldSource.x + heldSource.width/2, heldSource.y + heldSource.height/2);
   await page.mouse.down();
+  await page.mouse.move(heldSource.x + heldSource.width/2 + 8, heldSource.y + heldSource.height/2, {steps:2});
   const heldVersion = cli("--project", folder, "card", "get", typedId).version;
   await writeFile(patchFile, JSON.stringify({set:{priority:"high"}}));
   cli("--project", folder, "card", "set", typedId, "--patch-file", patchFile, "--if-version", heldVersion);
   await expect.poll(() => page.locator("[data-dragging]").count()).toBe(1);
   await page.waitForTimeout(300);
-  await page.mouse.move(heldTarget.x + heldTarget.width/2, heldTarget.y + heldTarget.height/2, {steps:6});
+  await page.mouse.move(heldTarget.x + heldTarget.width/2, heldTarget.y + 10, {steps:6});
   await page.mouse.up();
-  await page.getByRole("button", {name:"Confirm move", exact:true}).click();
   await page.getByText("The card or its neighbors changed.", {exact:false}).waitFor();
   await expect(page.getByRole("button", {name:"Confirm move", exact:true})).toBeDisabled();
   await page.getByRole("button", {name:"Cancel", exact:true}).click();
@@ -454,14 +505,39 @@ try {
   const reviewColumn = page.locator(".astra-column-review");
   await expect(reviewColumn.getByRole("heading", {name:"review · 51",exact:true})).toBeVisible();
   await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(50);
-  await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("review");
-  await expect(page.getByLabel("Position",{exact:true}).locator("option").first()).toHaveJSProperty("disabled",false);
-  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+  await expect(reviewColumn.locator(".column-footer")).toHaveCount(1);
+  await page.locator(`[data-board-card="${typedId}"] .title`).click();
+  await expect(page.getByLabel("Title",{exact:true})).toHaveValue("Typed CLI task");
+  await page.getByRole("button",{name:"Close editor",exact:true}).click();
+  const scrollColumn = reviewColumn.locator("[data-kanban-column-cards]");
+  const scrollBox = await scrollColumn.boundingBox();
+  const dragBox = await hitbox(boardHandle);
+  const dragVersion = cli("--project",folder,"card","get",typedId).version;
+  await page.mouse.move(dragBox.x + 20, dragBox.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(scrollBox.x + scrollBox.width/2,scrollBox.y + scrollBox.height - 12,{steps:8});
+  await expect.poll(() => scrollColumn.evaluate(node => node.scrollTop)).toBeGreaterThan(30);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(page.locator("[data-board-drag-preview]")).toHaveCount(0);
+  const stoppedScroll = await scrollColumn.evaluate(node => node.scrollTop);
+  await page.waitForTimeout(100);
+  assert.equal(await scrollColumn.evaluate(node => node.scrollTop),stoppedScroll);
+  assert.equal(cli("--project",folder,"card","get",typedId).version,dragVersion);
+  await scrollColumn.evaluate(node => node.scrollTop = 0);
   await page.getByRole("button",{name:"Next 50 in review",exact:true}).click();
   await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(1);
-  await page.getByLabel("Move Typed CLI task to",{exact:true}).selectOption("review");
-  await expect(page.getByLabel("Position",{exact:true}).locator("option").nth(1)).toHaveJSProperty("disabled",true);
-  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+  // The preceding card is unknown on page two, so dropping before its first card is illegal.
+  const hiddenPredecessorTarget = await hitbox(reviewColumn.locator("[data-board-card] .title"));
+  const boundarySource = await hitbox(boardHandle);
+  await page.mouse.move(boundarySource.x + 20,boundarySource.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(hiddenPredecessorTarget.x + 30,hiddenPredecessorTarget.y + 5,{steps:6});
+  await expect(page.locator("[data-board-drag-preview]")).toBeVisible();
+  await expect(page.locator("[data-board-drop-indicator]")).toBeHidden();
+  await page.mouse.up();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  assert.equal(cli("--project",folder,"card","get",typedId).version,dragVersion);
   await page.getByRole("button",{name:"First page in review",exact:true}).click();
   await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(50);
   await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; window.scrollTo(0,0); });
@@ -472,6 +548,33 @@ try {
   await page.screenshot({path:join(root,"progress/screenshots/mobile-board.png"),fullPage:true});
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.setViewportSize({width:1440,height:1000});
+
+  // Touch starts with a hold; an immediate swipe must remain normal scrolling.
+  await mobile.getByRole("button",{name:"Board",exact:true}).click();
+  await mobile.getByLabel("Project",{exact:true}).selectOption(plan.project_id);
+  const mobileSource = mobile.locator(`[data-board-card="${typedId}"] .title`);
+  const mobileTarget = mobile.locator(`[data-board-card="${cards[0].id}"] .title`);
+  const touchSource = await hitbox(mobileSource), touchTarget = await hitbox(mobileTarget);
+  const cdp = await second.newCDPSession(mobile);
+  const touchPoint = (x,y) => [{x,y,id:1,radiusX:3,radiusY:3}];
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:touchPoint(touchSource.x+30,touchSource.y+20)});
+  await expect(mobile.locator("[data-board-drag-preview]")).toBeVisible();
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:touchPoint(touchTarget.x+30,touchTarget.y+5)});
+  await expect(mobile.locator("[data-board-drop-indicator]")).toBeVisible();
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+  await expect.poll(() => cli("--project",folder,"card","list","--status","planned").items[0].id).toBe(typedId);
+  await mobile.getByRole("dialog").waitFor({state:"hidden"});
+  const mobileReview = mobile.locator(".astra-column-review [data-kanban-column-cards]");
+  await mobileReview.scrollIntoViewIfNeeded();
+  await mobileReview.evaluate(node => node.scrollTop = 0);
+  const swipeBox = await mobileReview.boundingBox();
+  const swipeX = swipeBox.x + swipeBox.width/2, swipeY = Math.min(swipeBox.y + swipeBox.height - 20, (await mobile.evaluate(() => innerHeight)) - 20);
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:touchPoint(swipeX,swipeY)});
+  for (let step = 1; step <= 4; step++) await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:touchPoint(swipeX,swipeY-step*25)});
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+  await expect.poll(() => mobileReview.evaluate(node => node.scrollTop)).toBeGreaterThan(10);
+  await expect(mobile.locator("[data-board-drag-preview]")).toHaveCount(0);
+  await cdp.detach();
 
   const focusBefore = cli("get","/api/v1/workspace/focus");
   const focusFile = join(temp,"focus.json");
@@ -541,7 +644,7 @@ try {
   await settingsPage.getByRole("button",{name:"Copy settings draft",exact:true}).waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, board drag and keyboard ordering, SVAR collapse, column-default creation, report target, held board conflict, 51-card pagination boundaries, dark/mobile board layout, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
+    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, whole-card drag without controls, immediate drop persistence, same-command retry, keyboard ordering, vertical auto-scroll and cancellation, touch hold-to-drag and normal touch scrolling, SVAR collapse, column footer creation, held board conflict, 51-card pagination boundaries, dark/mobile board layout, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

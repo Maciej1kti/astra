@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount, setContext } from "svelte";
+  import { onMount, setContext, untrack, tick } from "svelte";
+  import { on } from "svelte/events";
   import { api, type Summary } from "./api";
   import {
     Kanban,
@@ -59,7 +60,7 @@
   $effect(() => {
     void project;
     void revision;
-    void load();
+    untrack(() => void load());
   });
   async function load(status?: string, cursor?: string | null) {
     if (gestureActive) {
@@ -74,7 +75,7 @@
         `/api/v1/views/board?project_id=${project}&limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
       );
       if (current !== generation) return;
-      if (document.querySelector("[data-dragging]")) {
+      if (gestureActive || document.querySelector("[data-dragging]")) {
         deferredRefresh = true;
         return;
       }
@@ -100,6 +101,7 @@
     item: Summary,
     status: string,
     placement?: MoveProposal["placement"],
+    autoCommit = false,
   ) {
     const column = columns.find((column) => column.status === status);
     if (!column) return;
@@ -110,6 +112,7 @@
       neighbors: column.items.filter((row) => row.id !== item.id),
       firstPage: pageStarts[status] ?? true,
       lastPage: !column.page.next_cursor,
+      autoCommit,
     });
   }
   function gesture(item: Summary) {
@@ -118,40 +121,62 @@
       placement?: { after_id: string | null; before_id: string | null };
     } | null = null;
     return {
-      delta: (x: number, y: number) => {
+      disabled: () => !!search.trim() || busy,
+      target: (x: number, y: number) => {
         destination = null;
-        if (search.trim()) return 0;
-        const nodes = document.elementsFromPoint(x, y);
-        const card = nodes.find((node) => node.matches("[data-board-card]")) as
-          HTMLElement | undefined;
-        const columnNode = nodes.find((node) =>
-          node.matches("[data-kanban-column-cards]"),
-        ) as HTMLElement | undefined;
-        const status =
-          card?.dataset.boardStatus ??
-          columnNode?.dataset.kanbanColumnCards?.replace(/^:/, "");
+        if (search.trim()) return null;
+        const columnNode = document
+          .elementFromPoint(x, y)
+          ?.closest<HTMLElement>("[data-kanban-column-cards]");
+        const status = columnNode?.dataset.kanbanColumnCards?.replace(/^:/, "");
         const column = columns.find((column) => column.status === status);
-        if (!column) return 0;
-        if (card) {
-          const target = column.items.find(
-            (row) => row.id === card.dataset.boardCard,
-          );
-          if (!target || target.id === item.id) return 0;
-          const rows = column.items.filter((row) => row.id !== item.id);
-          const index = rows.findIndex((row) => row.id === target.id);
-          const after = rows[index - 1]?.id ?? null;
-          // A paginated column may hide the predecessor; do not guess it.
-          if (index === 0 && !pageStarts[column.status]) return 0;
-          destination = {
-            status: column.status,
-            placement: { after_id: after, before_id: target.id },
-          };
-        } else destination = { status: column.status };
-        return 1;
+        if (!column || !columnNode) return null;
+        const rows = column.items.filter((row) => row.id !== item.id);
+        const cards = [
+          ...columnNode.querySelectorAll<HTMLElement>("[data-board-card]"),
+        ].filter((node) => node.dataset.boardCard !== item.id);
+        const next = cards.find((node) => {
+          const rect = node.getBoundingClientRect();
+          return y < rect.top + rect.height / 2;
+        });
+        const index = next
+          ? rows.findIndex((row) => row.id === next.dataset.boardCard)
+          : rows.length;
+        if (
+          index < 0 ||
+          (index === 0 && !pageStarts[column.status]) ||
+          (index === rows.length && column.page.next_cursor)
+        )
+          return null;
+        const placement = {
+          after_id: rows[index - 1]?.id ?? null,
+          before_id: rows[index]?.id ?? null,
+        };
+        const currentIndex = column.items.findIndex(
+          (row) => row.id === item.id,
+        );
+        if (
+          column.status === item.status &&
+          placement.after_id === (column.items[currentIndex - 1]?.id ?? null) &&
+          placement.before_id === (column.items[currentIndex + 1]?.id ?? null)
+        )
+          return null;
+        destination = { status: column.status, placement };
+        const rect = columnNode.getBoundingClientRect();
+        const edge =
+          next?.getBoundingClientRect().top ??
+          cards.at(-1)?.getBoundingClientRect().bottom ??
+          rect.top + 12;
+        return {
+          left: rect.left + 8,
+          top: Math.max(rect.top + 3, Math.min(rect.bottom - 3, edge)),
+          width: rect.width - 16,
+          label: column.status,
+        };
       },
       commit: () => {
         if (destination)
-          propose(item, destination.status, destination.placement);
+          propose(item, destination.status, destination.placement, true);
       },
     };
   }
@@ -182,13 +207,54 @@
   );
   setContext<BoardContext>(BOARD_CONTEXT, {
     open: (item) => open(item),
-    propose,
+    reorder: (item, direction) => {
+      if (busy || search.trim()) return;
+      const column = columns.find((column) => column.status === item.status);
+      if (!column) return;
+      const index = column.items.findIndex((row) => row.id === item.id);
+      const rows = column.items.filter((row) => row.id !== item.id);
+      const destination = index + direction;
+      if (
+        index < 0 ||
+        destination < 0 ||
+        destination > rows.length ||
+        (destination === 0 && !pageStarts[column.status]) ||
+        (destination === rows.length && column.page.next_cursor)
+      )
+        return;
+      propose(
+        item,
+        column.status,
+        {
+          after_id: rows[destination - 1]?.id ?? null,
+          before_id: rows[destination]?.id ?? null,
+        },
+        true,
+      );
+    },
     gesture,
-    disabled: () => !!search.trim() || (busy && !gestureActive),
     busy: () => busy,
-    update: (item) =>
-      oncreate("update", { target: { type: "card", id: item.id } }),
   });
+  function columnFooter(node: HTMLElement, status: string) {
+    let alive = true;
+    const stopKeys = on(node, "keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+    });
+    void tick().then(() => {
+      if (alive)
+        node
+          .closest(".astra-board")
+          ?.querySelector(`.astra-column-${status}`)
+          ?.append(node);
+    });
+    return {
+      destroy() {
+        alive = false;
+        stopKeys();
+        node.remove();
+      },
+    };
+  }
   function scrolling(node: HTMLElement) {
     node.querySelector(".wx-scroll")?.classList.add("date-scroll");
   }
@@ -235,23 +301,32 @@
       render={{ fixedColumnWidth: true, virtualizeCards: false }}
     />
   </Willow>
-</div>
-<div class="pages">
-  {#each columns.filter((column) => column.total > 50) as column}
-    <div>
-      <span>{column.status}: {column.items.length} loaded / {column.total}</span
-      >
-      {#if column.page.next_cursor}<button
-          disabled={busy || gestureActive}
-          onclick={() => load(column.status, column.page.next_cursor)}
-          >Next 50 in {column.status}</button
-        >{/if}
+  {#each columns as column}
+    <footer class="column-footer" use:columnFooter={column.status}>
       <button
-        disabled={busy || gestureActive || pageStarts[column.status]}
-        onclick={() => load(column.status)}
-        >First page in {column.status}</button
+        class="add-card"
+        aria-label={`Add card in ${column.status}`}
+        disabled={busy || gestureActive}
+        onclick={() => oncreate("card", { status: column.status })}
+        >+ Add a card</button
       >
-    </div>
+      {#if column.total > 50}
+        <small>{column.items.length} of {column.total} loaded</small>
+        <div class="pagination">
+          {#if column.page.next_cursor}<button
+              aria-label={`Next 50 in ${column.status}`}
+              disabled={busy || gestureActive}
+              onclick={() => load(column.status, column.page.next_cursor)}
+              >Next 50</button
+            >{/if}
+          <button
+            aria-label={`First page in ${column.status}`}
+            disabled={busy || gestureActive || pageStarts[column.status]}
+            onclick={() => load(column.status)}>First page</button
+          >
+        </div>
+      {/if}
+    </footer>
   {/each}
 </div>
 
@@ -305,15 +380,31 @@
   .astra-board :global(.wxi-angle-right::before) {
     content: "›";
   }
-  .pages {
-    margin-top: 12px;
+  .column-footer {
+    flex-shrink: 0;
+    padding: 8px;
+    border-top: 1px solid var(--line);
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
-  .pages > div {
+  .astra-board :global(.wx-collapsed .column-footer) {
+    display: none;
+  }
+  .add-card {
+    text-align: left;
+    border: 0;
+    background: transparent;
+  }
+  .add-card:hover {
+    background: var(--hover);
+  }
+  .pagination {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
+    gap: 6px;
+  }
+  .pagination button {
+    flex: 1;
+    padding: 6px;
+    font-size: 13px;
   }
 </style>
