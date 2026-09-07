@@ -290,3 +290,30 @@ pozostają `not_run`; nie wykonano serwera, fault injection, E2E ani testów tel
   (`checks/native-folder-browser.txt`). The macOS AppleScript compiled successfully.
   Automated tests do not drive the real system dialog; physical interaction remains
   an owner manual check. No attachment subsystem was added.
+
+## E017 — Linux folder selection through XDG Desktop Portal
+
+- Reproduced the Linux launch failure: `/usr/bin/zenity` is absent, while the
+  desktop FileChooser portal version 4 and GTK backend are available. The former
+  implementation required Zenity and never attempted the portal.
+- Linux now requests one directory through the session-bus XDG FileChooser API,
+  subscribes before opening the dialog, decodes local file URIs and validates the
+  selected directory. Cancellation creates no plan; timeout closes the request.
+  Zenity remains a fallback when the portal is unavailable. The existing
+  registration confirmation, session ownership and replay handling remain intact.
+- `npm run check` passed with zero Svelte errors/warnings; frontend and release
+  workspace builds passed. `cargo test -p projectd --release --locked picker`
+  passed both automated picker tests. The full projectd release test suite also
+  passed (five automated tests; desktop test run separately). Release Clippy for all projectd targets
+  passed with warnings denied.
+- Ran the opt-in `desktop_portal_opens_and_times_out` test on this Arch desktop:
+  the compositor reported an `xdg-desktop-portal-gtk` window titled
+  `Choose a project folder for Local Projects`; after five seconds the test
+  passed and the window was absent. No Zenity installation was needed.
+  This verifies actual opening and timeout cleanup, not an owner-selected folder
+  or complete end-to-end registration through the real dialog.
+- Restarted the manual host with the rebuilt binary; HTTPS returned HTTP 200.
+  Verification used Node 24.11.0 and system Rust 1.98.0; pinned Rust 1.92 and
+  macOS were not exercised in this change.
+- API reference: [XDG FileChooser](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html)
+  and [request lifecycle](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Request.html).

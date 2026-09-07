@@ -29,8 +29,12 @@ projectctl --socket "$HOME/.lp/projectd.sock" register PLAN_ID
 
 Open the HTTPS origin, request access, then use `pairings` and
 `approve PAIRING_ID --challenge CHALLENGE` on the host. Compare the displayed
-challenge first. For browser-based registration, the host owner must explicitly
-add an allowed directory using `add-root /absolute/path --label 'Work'`.
+challenge first. The browser can open a native folder dialog on the host desktop. Linux uses
+XDG Desktop Portal (FileChooser version 3 or newer) with a GTK or KDE backend,
+and falls back to Zenity when the portal is unavailable. The daemon must have
+access to the desktop user session bus. For the headless directory browser,
+the owner must explicitly add an allowed directory using
+`add-root /absolute/path --label 'Work'`.
 
 Project commands use `--project /exact/registered/folder`. Run `--help`,
 `card --help`, `report --help` or `context --help` for typed operations. Reads

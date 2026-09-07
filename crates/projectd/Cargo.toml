@@ -20,6 +20,10 @@ project-application = { path = "../application" }
 project-store = { path = "../project-store" }
 notify = "=8.2.0"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = { version = "=5.13.2", default-features = false, features = ["tokio"] }
+futures-util = "=0.3.34"
+
 [dev-dependencies]
 reqwest.workspace = true
 tempfile.workspace = true

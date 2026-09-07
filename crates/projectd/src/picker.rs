@@ -10,6 +10,8 @@ use std::{
     time::{Duration, Instant},
 };
 use uuid::Uuid;
+#[cfg(target_os = "linux")]
+mod portal;
 #[derive(Default)]
 pub(crate) struct Picker {
     jobs: Mutex<HashMap<String, Job>>,
@@ -116,6 +118,11 @@ impl Picker {
     }
 }
 fn choose_folder() -> Result<Option<String>, &'static str> {
+    #[cfg(target_os = "linux")]
+    match portal::choose(Duration::from_secs(120)) {
+        Err("NATIVE_FOLDER_PICKER_UNAVAILABLE") if Path::new("/usr/bin/zenity").is_file() => {}
+        result => return result,
+    }
     let mut command;
     if cfg!(target_os = "macos") {
         command = Command::new("/usr/bin/osascript");

@@ -49,7 +49,7 @@
   function explain(code: string) {
     const messages: Record<string, string> = {
       NATIVE_FOLDER_PICKER_UNAVAILABLE:
-        "The host has no available desktop folder picker. On Linux, install Zenity and run the host in your desktop session.",
+        "The system folder dialog is unavailable. Run the host in your desktop session and check that a file chooser portal or Zenity is installed.",
       NATIVE_FOLDER_PICKER_TIMEOUT:
         "Folder selection timed out. Choose a folder again.",
       NATIVE_FOLDER_PICKER_FAILED:

@@ -67,7 +67,9 @@ the system dialog creates no project files. The app opens the selected project's
 board after registration succeeds.
 
 The dialog appears on the computer running projectd. On macOS it uses the system
-folder picker; Linux desktop hosts need Zenity. For a remote host without a desktop,
+folder picker; Linux desktop hosts use XDG Desktop Portal with a FileChooser backend (such as
+xdg-desktop-portal-gtk or KDE); Zenity is a fallback. Run the host in the desktop
+session so it can reach the user session bus. For a remote host without a desktop,
 **Remote host without a desktop? → Browse approved folders** retains the existing
 owner-approved directory browser as an alternative.
 
