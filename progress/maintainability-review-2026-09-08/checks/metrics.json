@@ -1,0 +1,44 @@
+{
+  "revision": "3057c0f4e20009cb585fbbe82e3bd59c62902c83",
+  "tracked_files": 829,
+  "tracked_progress_files": 489,
+  "tracked_progress_bytes": 31537528,
+  "note": "Counts describe the tracked baseline, excluding the new untracked review and ignored files. Line counts include blank lines; script/style counts are the text between their tags. Search counts are descriptive, not defect counts.",
+  "components": {
+    "apps/web/src/App.svelte": {
+      "total": 894,
+      "script": 463,
+      "style": 0
+    },
+    "apps/web/src/features/board/Board.svelte": {
+      "total": 633,
+      "script": 426,
+      "style": 111
+    },
+    "apps/web/src/features/planning/GanttView.svelte": {
+      "total": 801,
+      "script": 380,
+      "style": 186
+    },
+    "apps/web/src/features/planning/CalendarView.svelte": {
+      "total": 763,
+      "script": 402,
+      "style": 229
+    },
+    "apps/web/src/features/tags/TagManager.svelte": {
+      "total": 814,
+      "script": 364,
+      "style": 183
+    },
+    "apps/web/src/features/editor/Editor.svelte": {
+      "total": 691,
+      "script": 386,
+      "style": 0
+    }
+  },
+  "application_searches": {
+    "impl Engine": 17,
+    "AppError::State": 56,
+    "\\.journal\\s*\\.db\\(": 32
+  }
+}
