@@ -5,6 +5,7 @@
   import type { Summary } from "./api";
   import { BOARD_CONTEXT, type BoardContext } from "./board-context";
   import { boardGesture } from "./board-gesture";
+  import ResourceMetadata from "./ResourceMetadata.svelte";
   let { card }: { card: KanbanCard } = $props();
   const actions = getContext<BoardContext>(BOARD_CONTEXT);
   const item = $derived(card.astra as Summary);
@@ -58,18 +59,7 @@
     }}
   >
     <h3>{item.title}</h3>
-    <div class="metadata">
-      {#if item.priority && item.priority !== "normal"}<span
-          >{item.priority}</span
-        >{/if}
-      {#if item.blocked}<span title={item.blocked.reason}>Blocked</span>{/if}
-      {#if item.due}<span>Due: {item.due.date}</span>{/if}
-      {#if item.schedule}<span
-          >Schedule: {item.schedule.start} – {item.schedule.end}</span
-        >{/if}
-      {#if item.review_on}<span>Review: {item.review_on}</span>{/if}
-      {#each item.labels ?? [] as label}<span class="tag">{label}</span>{/each}
-    </div>
+    <ResourceMetadata {item} compact />
   </button>
 </article>
 
@@ -93,25 +83,15 @@
     background: none;
     cursor: inherit;
     color: inherit;
+    border-radius: 7px;
+  }
+  .title:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
   }
   h3 {
     font-size: 15px;
     margin: 0;
     overflow-wrap: anywhere;
-  }
-  .metadata {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    font-size: 12px;
-    margin-top: 8px;
-  }
-  .metadata:empty {
-    display: none;
-  }
-  .tag {
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 1px 4px;
   }
 </style>

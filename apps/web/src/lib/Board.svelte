@@ -250,7 +250,7 @@
     columns.flatMap((column) =>
       column.items
         .filter((item) =>
-          item.title.toLowerCase().includes(search.toLowerCase()),
+          item.title.toLowerCase().includes(search.trim().toLowerCase()),
         )
         .map((item) => ({
           id: item.id,
@@ -290,6 +290,9 @@
     gesture,
     busy: () => busy,
   });
+  // Load Willow's stylesheet without its inline-styled wrapper. Portals still
+  // inherit the same theme context from this CSS-only wrapper's component.
+  setContext("wx-theme", "willow");
   function columnFooter(node: HTMLElement, status: string) {
     let alive = true;
     const stopKeys = on(node, "keydown", (event) => {
@@ -367,13 +370,21 @@
   }
 </script>
 
-{#if error}<p role="alert">{error}</p>{/if}
-{#if search}<p>
+{#if error}<p role="alert">
+    {error}
+    <button disabled={busy || gestureActive} onclick={() => load()}
+      >Reload board</button
+    >
+  </p>{/if}
+{#if busy && !columns.length}<p role="status">Loading board…</p>{/if}
+{#if search.trim()}<p>
     Filtering searches the loaded pages only. Reordering is disabled while
     filtering.
+    {#if !busy && !boardCards.length}No matching cards in the loaded pages.{/if}
   </p>{/if}
-<div class="astra-board" use:scrolling>
-  <Willow fonts={false}>
+<div class="astra-board" aria-busy={busy} use:scrolling>
+  <Willow fonts={false} children={undefined} />
+  <div class="board-theme wx-theme wx-willow-theme">
     <Kanban
       cards={boardCards}
       columns={boardColumns}
@@ -382,7 +393,7 @@
       init={initialize}
       render={{ fixedColumnWidth: true, virtualizeCards: false }}
     />
-  </Willow>
+  </div>
   {#each columns as column}
     <footer class="column-footer" use:columnFooter={column.status}>
       {#if quickStatus === column.status}
@@ -455,17 +466,27 @@
     min-width: 0;
     height: clamp(360px, 68vh, 900px);
   }
+  .board-theme {
+    height: 100%;
+    min-width: 0;
+  }
   .astra-board :global(.wx-willow-theme) {
     --wx-font-family: inherit;
     --wx-color-font: var(--ink);
     --wx-color-font-alt: var(--ink);
     --wx-background: var(--paper);
-    --wx-background-alt: var(--paper);
+    --wx-background-alt: var(--soft);
     --wx-background-hover: var(--hover);
     --wx-kanban-bg: transparent;
-    --wx-kanban-column-bg: var(--paper);
+    --wx-kanban-column-bg: var(--soft);
     --wx-kanban-card-bg: var(--paper);
     --wx-kanban-border-color: var(--line);
+    --wx-border-color: var(--line);
+    --wx-color-primary: var(--ink);
+    --wx-icon-color: var(--ink);
+    --wx-border-radius: 8px;
+    --wx-kanban-card-shadow: 0 1px 2px #0000000a;
+    --wx-kanban-card-shadow-hover: 0 2px 6px #00000012;
   }
   .astra-board :global(.wx-column) {
     border: 1px solid var(--line);
@@ -474,9 +495,15 @@
     padding: 4px;
     gap: 2px;
   }
-  .astra-board :global(.wx-column-header button) {
-    min-width: 40px;
-    min-height: 42px;
+  .astra-board :global(.wx-column-header button),
+  .astra-board :global(.wx-expand) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .astra-board :global(.wx-collapsed) {
+    flex-basis: 44px;
+    min-width: 44px;
+    max-width: 44px;
   }
   .astra-board :global(.wx-title) {
     text-transform: capitalize;
@@ -485,7 +512,15 @@
   .astra-board :global(.wx-card) {
     touch-action: pan-y;
     padding: 0;
-    border-top: 0;
+    border: 1px solid var(--line);
+  }
+  .astra-board :global(.wx-card:hover),
+  .astra-board :global(.wx-card:focus-within) {
+    border-color: var(--muted);
+  }
+  .astra-board :global(.wx-icon) {
+    color: var(--ink);
+    margin-top: 0;
   }
   .astra-board :global(.wx-icon::before) {
     font-family: sans-serif;
@@ -506,6 +541,7 @@
     border-top: 1px solid var(--line);
     display: grid;
     gap: 6px;
+    background: var(--soft);
   }
   .astra-board :global(.wx-collapsed .column-footer) {
     display: none;

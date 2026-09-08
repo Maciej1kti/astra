@@ -29,7 +29,12 @@ function sanitize(value: unknown): BoardView {
       statuses.map((status) => [status, offset(vertical[status])]),
     ),
     collapsed: Object.fromEntries(
-      statuses.map((status) => [status, collapsed[status] === true]),
+      statuses.map((status) => [
+        status,
+        typeof collapsed[status] === "boolean"
+          ? collapsed[status]
+          : status === "cancelled",
+      ]),
     ),
   };
 }

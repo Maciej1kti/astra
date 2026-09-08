@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { applyTheme, readTheme, type Theme } from "./appearance";
   let theme = $state<Theme>(readTheme());
   import { modal } from "./dialog";
@@ -24,6 +24,8 @@
     week = $state("monday"),
     view = $state("focus"),
     error = $state(""),
+    info = $state(""),
+    loading = $state(true),
     busy = $state(false),
     pending = $state<Pending | null>(null);
   let sessions = $state<Session[]>([]),
@@ -31,6 +33,8 @@
   let accessLost = $state(false),
     confirmClose = $state(false);
   let generation = 0;
+  let preferencesForm: HTMLFormElement;
+  let closeTrigger: HTMLElement | null = null;
   let dirty = $derived(
     !!baseline &&
       (timezone !== baseline.timezone ||
@@ -39,8 +43,25 @@
   );
   function close() {
     if (busy) return;
-    if (dirty || pending) confirmClose = true;
-    else onclose();
+    if (dirty || pending) {
+      closeTrigger = document.activeElement as HTMLElement | null;
+      confirmClose = true;
+    } else onclose();
+  }
+  function focusConfirmation(node: HTMLButtonElement) {
+    node.focus();
+  }
+  async function keepEditing() {
+    confirmClose = false;
+    await tick();
+    if (closeTrigger?.isConnected) closeTrigger.focus();
+  }
+  function keydown(event: KeyboardEvent) {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      if (!confirmClose && dirty && !busy && !pending && !accessLost)
+        preferencesForm?.requestSubmit();
+    }
   }
   async function copyDraft() {
     try {
@@ -57,7 +78,7 @@
           2,
         ),
       );
-      error = "Settings draft copied.";
+      info = "Settings draft copied.";
     } catch {
       error =
         "Clipboard access is unavailable. Select and copy your draft fields.";
@@ -69,6 +90,7 @@
       generation++;
       sessions = [];
       pairings = [];
+      loading = false;
       accessLost = true;
       error =
         "Your session ended. Your settings draft is preserved; copy it before closing, then reconnect.";
@@ -90,7 +112,10 @@
     };
   });
   async function load() {
+    if (dirty || pending) return;
     const current = ++generation;
+    loading = true;
+    error = "";
     try {
       const [p, s, a] = await Promise.all([
         api<Preferences>("/api/v1/workspace/preferences"),
@@ -105,11 +130,14 @@
       sessions = s.items;
       pairings = a.items;
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      if (generation === current)
+        error = e instanceof Error ? e.message : String(e);
+    } finally {
+      if (generation === current) loading = false;
     }
   }
   async function save() {
-    if (!baseline || accessLost || pending) return;
+    if (!baseline || !dirty || busy || accessLost || pending) return;
     pending = command(
       "/api/v1/workspace/preferences",
       "PATCH",
@@ -123,9 +151,10 @@
     await transmit();
   }
   async function transmit() {
-    if (!pending || accessLost) return;
+    if (!pending || busy || accessLost) return;
     busy = true;
     error = "";
+    info = "";
     try {
       const result = await send(pending);
       if (result.state) {
@@ -147,14 +176,19 @@
     }
   }
   async function revoke(id: string) {
+    const current = sessions.find((s) => s.id === id)?.current;
+    if (busy || accessLost || pending || (current && dirty)) return;
     busy = true;
+    error = "";
+    info = "";
     try {
       await api(`/api/v1/auth/sessions/${id}`, "DELETE", {});
-      if (sessions.find((s) => s.id === id)?.current) {
+      if (current) {
         onsaved();
         return;
       }
       sessions = sessions.filter((s) => s.id !== id);
+      info = "Browser access revoked.";
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -162,7 +196,10 @@
     }
   }
   async function decide(item: Pairing, approve: boolean) {
+    if (busy || accessLost || pending) return;
     busy = true;
+    error = "";
+    info = "";
     try {
       await api(
         `/api/v1/auth/pairings/${item.id}/${approve ? "approve" : "deny"}`,
@@ -170,6 +207,7 @@
         approve ? { challenge: item.challenge } : {},
       );
       pairings = pairings.filter((p) => p.id !== item.id);
+      info = approve ? "Pairing request approved." : "Pairing request denied.";
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -181,6 +219,7 @@
 <dialog
   use:modal
   aria-label="Workspace settings"
+  onkeydown={keydown}
   oncancel={(e) => {
     e.preventDefault();
     close();
@@ -192,124 +231,214 @@
       >✕</button
     >
   </header>
-  <form
-    onsubmit={(e) => {
-      e.preventDefault();
-      void save();
-    }}
-  >
-    <label
-      >Timezone<input
-        bind:value={timezone}
-        placeholder="Europe/Warsaw"
-        required
-        disabled={!baseline || busy || !!pending}
-      /></label
-    >
-    <div class="row">
-      <label
-        >Week starts<select
-          aria-label="Week starts"
-          bind:value={week}
-          disabled={busy || accessLost}
-          ><option value="monday">Monday</option><option value="sunday"
-            >Sunday</option
-          ></select
-        ></label
-      ><label
-        >Default view<select
-          aria-label="Default view"
-          bind:value={view}
-          disabled={busy || accessLost}
-          >{#each ["focus", "projects", "board", "calendar", "gantt", "list", "updates"] as name}<option
-              value={name}
-              >{name === "gantt"
-                ? "Timeline"
-                : name[0].toUpperCase() + name.slice(1)}</option
-            >{/each}</select
-        ></label
-      >
-    </div>
-    <p>
-      Dates follow this timezone. Changing it does not move any saved all-day
-      dates.
-    </p>
+  <div class="dialog-body">
+    {#if loading}<p role="status">Loading workspace settings…</p>{/if}
     {#if error}<div class="notice" role="alert">{error}</div>{/if}
-    {#if pending}<p>Pending command: {pending.requestId}</p>
-      <button type="button" onclick={transmit} disabled={busy || accessLost}
-        >Retry same command</button
+    {#if !loading && !baseline && !accessLost}<button onclick={load}
+        >Reload settings</button
       >{/if}
-    <button
-      class="primary"
-      type="submit"
-      disabled={!baseline || busy || !!pending || accessLost}
-      >Save preferences</button
+    {#if confirmClose}<section class="notice discard" role="alert">
+        <p>
+          {pending
+            ? "The command outcome may still be unknown. Discarding this draft does not cancel a server write."
+            : "Discard your unsaved settings?"}
+        </p>
+        <div class="actions">
+          <button onclick={keepEditing} use:focusConfirmation
+            >Keep editing</button
+          >
+          <button onclick={onclose}>Discard settings draft</button>
+        </div>
+      </section>{/if}
+    <form
+      id="workspace-preferences"
+      bind:this={preferencesForm}
+      onsubmit={(e) => {
+        e.preventDefault();
+        void save();
+      }}
     >
-  </form>
-  {#if dirty || pending}<button type="button" onclick={copyDraft}
-      >Copy settings draft</button
-    >{/if}
-  {#if confirmClose}<section class="notice" role="alert">
-      <p>
-        {pending
-          ? "The command outcome may still be unknown. Discarding this draft does not cancel a server write."
-          : "Discard your unsaved settings?"}
-      </p>
-      <button onclick={() => (confirmClose = false)}>Keep editing</button>
-      <button onclick={onclose}>Discard settings draft</button>
-    </section>{/if}
-  <h3>Appearance on this browser</h3>
-  <label
-    >Theme<select
-      aria-label="Theme"
-      bind:value={theme}
-      onchange={() => applyTheme(theme)}
-      ><option value="system">System</option><option value="light">Light</option
-      ><option value="dark">Dark</option></select
-    ></label
-  >
-  <h3>Browser access</h3>
-  <p>Revoke a device to end its session and stop future requests.</p>
-  {#each sessions as session}<div class="item">
-      <div>
-        <strong
-          >{session.device_label}{session.current
-            ? " · this browser"
-            : ""}</strong
-        ><small
-          >Last seen {session.last_seen_at
-            .slice(0, 16)
-            .replace("T", " ")}</small
+      <label
+        >Timezone<input
+          bind:value={timezone}
+          placeholder="Europe/Warsaw"
+          required
+          disabled={!baseline || busy || !!pending || accessLost}
+        /></label
+      >
+      <div class="row">
+        <label
+          >Week starts<select
+            aria-label="Week starts"
+            bind:value={week}
+            disabled={!baseline || busy || !!pending || accessLost}
+            ><option value="monday">Monday</option><option value="sunday"
+              >Sunday</option
+            ></select
+          ></label
+        ><label
+          >Default view<select
+            aria-label="Default view"
+            bind:value={view}
+            disabled={!baseline || busy || !!pending || accessLost}
+            >{#each ["focus", "projects", "board", "calendar", "gantt", "list", "updates"] as name}<option
+                value={name}
+                >{name === "gantt"
+                  ? "Timeline"
+                  : name[0].toUpperCase() + name.slice(1)}</option
+              >{/each}</select
+          ></label
         >
       </div>
-      <button onclick={() => revoke(session.id)} disabled={busy || accessLost}
-        >Revoke</button
+      <p>
+        Dates follow this timezone. Changing it does not move any saved all-day
+        dates.
+      </p>
+      {#if pending}<section class="notice">
+          <p>
+            Pending command: awaiting confirmation. Your submitted preferences
+            are kept unchanged.
+          </p>
+          <button type="button" onclick={transmit} disabled={busy || accessLost}
+            >Retry same command</button
+          >
+          <details>
+            <summary>Save details</summary><code>{pending.requestId}</code>
+          </details>
+        </section>{/if}
+    </form>
+    <section class="appearance">
+      <h3>Appearance</h3>
+      <label
+        >Theme<select
+          aria-label="Theme"
+          bind:value={theme}
+          onchange={() => applyTheme(theme)}
+          ><option value="system">System</option><option value="light"
+            >Light</option
+          ><option value="dark">Dark</option></select
+        ></label
       >
-    </div>{/each}
-  <h3>Pairing requests</h3>
-  <p>Approve only after comparing the challenge with the requesting browser.</p>
-  {#each pairings as item}<div class="item">
-      <div>
-        <strong>{item.device_label}</strong><code>{item.challenge}</code>
-      </div>
-      <button onclick={() => decide(item, false)} disabled={busy || accessLost}
-        >Deny</button
-      ><button onclick={() => decide(item, true)} disabled={busy || accessLost}
-        >Approve</button
+      <p>Theme changes apply immediately to this browser.</p>
+    </section>
+    <details class="access-section">
+      <summary>Browser access</summary>
+      <p>Revoke a device to end its session and stop future requests.</p>
+      {#each sessions as session}<div class="item">
+          <div>
+            <strong
+              >{session.device_label}{session.current
+                ? " · this browser"
+                : ""}</strong
+            ><small
+              >Last seen {session.last_seen_at.slice(0, 16).replace("T", " ")} UTC</small
+            >
+          </div>
+          <button
+            aria-label={session.current
+              ? "Sign out this browser"
+              : `Revoke access: ${session.device_label}`}
+            title={session.current && (dirty || pending)
+              ? "Save or discard your preferences before signing out this browser."
+              : undefined}
+            onclick={() => revoke(session.id)}
+            disabled={busy ||
+              accessLost ||
+              !!pending ||
+              (session.current && dirty)}
+            >{session.current ? "Sign out" : "Revoke"}</button
+          >
+        </div>{:else}<p>
+          {loading
+            ? "Loading browser sessions…"
+            : accessLost
+              ? "Reconnect to view browser sessions."
+              : "No active browser sessions."}
+        </p>{/each}
+      {#if dirty || pending}<p>
+          Save or discard your preferences before signing out this browser.
+        </p>{/if}
+    </details>
+    <details class="access-section" open={pairings.length > 0}>
+      <summary
+        >Pairing requests{#if pairings.length}
+          · {pairings.length}{/if}</summary
       >
-    </div>{:else}<p>No pending requests.</p>{/each}
+      <p>
+        Approve only after comparing the challenge with the requesting browser.
+      </p>
+      {#each pairings as item}<div class="item">
+          <div>
+            <strong>{item.device_label}</strong><code>{item.challenge}</code>
+          </div>
+          <div class="actions">
+            <button
+              onclick={() => decide(item, false)}
+              disabled={busy || accessLost || !!pending}>Deny</button
+            ><button
+              onclick={() => decide(item, true)}
+              disabled={busy || accessLost || !!pending}>Approve</button
+            >
+          </div>
+        </div>{:else}<p>
+          {loading
+            ? "Loading pairing requests…"
+            : accessLost
+              ? "Reconnect to view pairing requests."
+              : "No pending requests."}
+        </p>{/each}
+    </details>
+  </div>
+  <footer>
+    <p class="save-state" role="status">
+      {info ||
+        (busy
+          ? "Applying changes…"
+          : pending
+            ? "Confirmation required"
+            : dirty
+              ? "Unsaved preferences"
+              : loading
+                ? "Loading preferences…"
+                : baseline
+                  ? "Preferences are up to date"
+                  : "Preferences unavailable")}
+    </p>
+    <div class="actions">
+      {#if dirty || pending}<button type="button" onclick={copyDraft}
+          >Copy settings draft</button
+        >{/if}
+      <button
+        class="primary"
+        type="submit"
+        form="workspace-preferences"
+        aria-keyshortcuts="Control+Enter Meta+Enter"
+        disabled={!baseline ||
+          !dirty ||
+          busy ||
+          !!pending ||
+          accessLost ||
+          confirmClose}>Save preferences</button
+      >
+    </div>
+  </footer>
 </dialog>
 
 <style>
   dialog {
-    width: min(560px, 100vw);
-    max-width: 100vw;
+    width: min(600px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
     max-height: 90dvh;
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--paper);
     color: var(--ink);
-    padding: 28px;
+    padding: 0;
+    overflow: hidden;
+  }
+  dialog[open] {
+    display: flex;
+    flex-direction: column;
   }
   dialog::backdrop {
     background: #152d2860;
@@ -320,20 +449,39 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 12px;
+  }
+  header,
+  footer {
+    flex-shrink: 0;
+    padding: 16px 20px;
+    background: var(--paper);
+  }
+  header {
+    border-bottom: 1px solid var(--line);
+  }
+  footer {
+    border-top: 1px solid var(--line);
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .dialog-body {
+    padding: 0 20px 20px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   h2 {
-    font:
-      28px Georgia,
-      serif;
+    margin: 0;
+    font-size: 21px;
+    line-height: 1.3;
   }
   h3 {
-    margin-top: 30px;
+    margin: 0;
     font-size: 16px;
   }
   label {
     display: block;
-    font-size: 12px;
+    font-size: 13px;
     margin: 16px 0;
     flex: 1;
     min-width: 0;
@@ -346,7 +494,7 @@
   p,
   small {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.6;
   }
   small,
@@ -360,6 +508,11 @@
   }
   .item > div {
     flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .item > .actions {
+    flex: 0 1 auto;
   }
   .item button {
     font-size: 12px;
@@ -367,8 +520,64 @@
   code {
     margin-top: 8px;
     font-size: 15px;
+    overflow-wrap: anywhere;
   }
   .notice {
-    margin-bottom: 15px;
+    margin: 16px 0;
+    overflow-wrap: anywhere;
+  }
+  .discard {
+    padding: 12px;
+    border: 1px solid var(--notice-line);
+    background: var(--notice-bg);
+    border-radius: 8px;
+  }
+  .appearance,
+  .access-section {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    margin-top: 20px;
+  }
+  summary {
+    min-height: 44px;
+    padding: 10px 0;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .save-state {
+    margin: 0 0 10px;
+  }
+  button {
+    min-height: 44px;
+  }
+  header button {
+    min-width: 44px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 520px) {
+    header,
+    footer {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+    .dialog-body {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+    .row {
+      display: block;
+    }
+    .item {
+      flex-wrap: wrap;
+    }
+    input,
+    select {
+      font-size: 16px;
+    }
   }
 </style>

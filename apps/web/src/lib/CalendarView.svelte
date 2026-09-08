@@ -8,14 +8,22 @@
     calendarTarget,
     calendarLabel,
     dateOnly,
-    widgetDate,
     inclusiveSchedule,
     type CalendarItem,
   } from "./planning";
   import type { DateProposal } from "./proposals";
+  import {
+    calendarWidgetView,
+    isCalendarDate,
+    navigateCalendar,
+    type CalendarLayout,
+  } from "./planning-navigation";
   let {
     project,
-    month,
+    calendarDate,
+    calendarLayout,
+    workspaceToday,
+    onCalendarNavigate,
     revision,
     weekStart,
     search,
@@ -24,7 +32,10 @@
     oncreate,
   }: {
     project: string;
-    month: string;
+    calendarDate: string;
+    calendarLayout: CalendarLayout;
+    workspaceToday: string;
+    onCalendarNavigate: (date: string, layout: CalendarLayout) => void;
     revision: number;
     weekStart: string;
     search: string;
@@ -32,12 +43,19 @@
     onpropose: (p: DateProposal) => void;
     oncreate: (s: { start: string; end: string }) => void;
   } = $props();
-  let mode = $state("month"),
-    date = $state(untrack(() => `${month}-01`));
+  const mode = $derived(calendarLayout),
+    date = $derived(calendarDate);
+  let compact = $state(false),
+    mobileMonthGrid = $state(false);
+  const widgetView = $derived(
+    calendarWidgetView(mode, compact, mobileMonthGrid),
+  );
+  const monthAgenda = $derived(widgetView === "listMonth");
+  const monthGrid = $derived(widgetView === "dayGridMonth");
   let items = $state<CalendarItem[]>([]),
     range = $state({
-      start: untrack(() => `${month}-01`),
-      end: untrack(() => `${month}-28`),
+      start: untrack(() => calendarDate),
+      end: untrack(() => calendarDate),
     });
   let loading = $state(false),
     error = $state(""),
@@ -49,15 +67,9 @@
     cancelled = false,
     pointer: number | null = null,
     reset = $state(0);
-  const viewNames: Record<string, string> = {
-    day: "dayGridDay",
-    week: "dayGridWeek",
-    month: "dayGridMonth",
-    agenda: "listWeek",
-  };
   let options = $state<Calendar.Options>({
-    view: "dayGridMonth",
-    date: untrack(() => `${month}-01`),
+    view: untrack(() => calendarWidgetView(calendarLayout, false, false)),
+    date: untrack(() => calendarDate),
     headerToolbar: { start: "", center: "", end: "" },
     height: "auto",
     locale: "en-GB",
@@ -68,9 +80,10 @@
     longPressDelay: 350,
     dragScroll: true,
     dayMaxEvents: true,
+    noEventsContent: "No dated items in this period.",
     eventDurationEditable: true,
     selectable: false,
-    buttonText: { today: "Today" },
+    buttonText: { today: "Today", close: "Close" },
     datesSet: (info) => {
       const next = {
         start: dateOnly(info.start),
@@ -96,10 +109,20 @@
     eventResize: change,
   });
   $effect(() => {
-    options.view = viewNames[mode];
+    options.view = widgetView;
+    // EventCalendar limits stacked events to the day cell's measured height.
+    // An auto-height uniform month instead grows every week to its busiest day.
+    options.height = monthGrid
+      ? compact
+        ? "740px"
+        : "clamp(600px, calc(100dvh - 260px), 820px)"
+      : monthAgenda
+        ? "clamp(400px, calc(100dvh - 240px), 680px)"
+        : "auto";
+    options.dayMaxEvents = monthGrid;
   });
   $effect(() => {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) options.date = date;
+    if (isCalendarDate(date)) options.date = date;
   });
   $effect(() => {
     options.firstDay = weekStart === "sunday" ? 0 : 1;
@@ -186,19 +209,22 @@
   }
   function navigate(delta: number) {
     if (active) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      today();
-      return;
+    try {
+      onCalendarNavigate(navigateCalendar(date, mode, delta), mode);
+    } catch (e) {
+      error = String(e);
     }
-    if (mode === "month") {
-      const next = widgetDate(date);
-      next.setDate(1);
-      next.setMonth(next.getMonth() + delta);
-      date = dateOnly(next);
-    } else date = shiftDate(date, delta * (mode === "day" ? 1 : 7));
   }
   function today() {
-    date = dateOnly(new Date());
+    if (!active && isCalendarDate(workspaceToday))
+      onCalendarNavigate(workspaceToday, mode);
+  }
+  function changeDate(input: HTMLInputElement) {
+    if (isCalendarDate(input.value)) onCalendarNavigate(input.value, mode);
+    else input.value = date;
+  }
+  function changeLayout(value: CalendarLayout) {
+    if (!active) onCalendarNavigate(date, value);
   }
   function shortcutRegion(node: HTMLElement) {
     node.addEventListener("keydown", shortcuts);
@@ -226,7 +252,9 @@
     }
     if (["1", "2", "3", "4"].includes(event.key)) {
       event.preventDefault();
-      mode = ["day", "week", "month", "agenda"][Number(event.key) - 1];
+      changeLayout(
+        (["day", "week", "month", "agenda"] as const)[Number(event.key) - 1],
+      );
     }
   }
   function eventAccess(node: HTMLElement, item: CalendarItem) {
@@ -320,8 +348,15 @@
       },
     };
   }
-  onMount(() => () => {
-    generation++;
+  onMount(() => {
+    const media = window.matchMedia("(max-width: 720px)");
+    const update = () => (compact = media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => {
+      generation++;
+      media.removeEventListener("change", update);
+    };
   });
 </script>
 
@@ -341,9 +376,19 @@
         onclick={() => navigate(1)}>→</button
       >
     </div>
-    <label>Go to date<input type="date" bind:value={date} required /></label>
+    <label class="date-control"
+      >Go to date<input
+        type="date"
+        value={date}
+        onchange={(e) => changeDate(e.currentTarget)}
+        required
+      /></label
+    >
     <label
-      >Calendar layout<select aria-label="Calendar layout" bind:value={mode}
+      >Calendar layout<select
+        aria-label="Calendar layout"
+        value={mode}
+        onchange={(e) => changeLayout(e.currentTarget.value as CalendarLayout)}
         ><option value="day">Day</option><option value="week">Week</option
         ><option value="month">Month</option><option value="agenda"
           >Agenda</option
@@ -351,26 +396,34 @@
       ></label
     >
     <button
-      disabled={!project}
+      class="create-scheduled"
+      disabled={!project || !isCalendarDate(date)}
       onclick={() => oncreate({ start: date, end: date })}
       >New scheduled card</button
     >
   </div>
-  <p class="legend">
-    <span>▬ Planned work</span><span>◆ Deadline</span><span>◉ Review</span><span
-      >All-day dates</span
-    >
-  </p>
-  <details class="help">
-    <summary>Calendar shortcuts & editing</summary>
-    <p>
-      Drag planned work to move it; drag either edge to resize. On touch, hold a
-      plan to select it. Click a day or select a range to create a card. Enter
-      opens a focused item. Alt+←/→ on a plan moves it one day; Shift changes a
-      week. Elsewhere in this view, Alt+←/→ navigates, Alt+T opens today, and
-      Alt+1/2/3/4 selects day/week/month/agenda. Escape cancels a gesture.
+  <div class="view-meta">
+    <p class="legend">
+      <span>▬ Plan</span><span>◆ Deadline</span><span>◉ Review</span>
     </p>
-  </details>
+    <details class="help">
+      <summary>Calendar shortcuts & editing</summary>
+      <p>
+        Drag planned work to move it; drag either edge to resize. On touch, hold
+        a plan to select it. Click a day or select a range to create a card.
+        Enter opens a focused item. Alt+←/→ on a plan moves it one day; Shift
+        changes a week. Elsewhere in this view, Alt+←/→ navigates, Alt+T opens
+        today, and Alt+1/2/3/4 selects day/week/month/agenda. Escape cancels a
+        gesture.
+      </p>
+    </details>
+  </div>
+  {#if compact && mode === "month"}<div class="mobile-month-mode">
+      <span>{monthAgenda ? "Month agenda" : "Month grid"}</span>
+      <button onclick={() => (mobileMonthGrid = !mobileMonthGrid)}>
+        {monthAgenda ? "Show month grid" : "Show month agenda"}
+      </button>
+    </div>{/if}
   {#if !project}<p>
       Select a project to create a card. Existing items from all projects can be
       edited.
@@ -379,8 +432,25 @@
       {error} <button onclick={() => load(false)}>Reload calendar</button>
     </p>{/if}
   {#if loading}<p role="status">Loading calendar…</p>{/if}
-  <div class="calendar-surface" class:month={mode === "month"} use:guard>
+  <div
+    class="calendar-surface"
+    class:month={monthGrid}
+    class:agenda={monthAgenda || mode === "agenda"}
+    use:guard
+  >
     {#key reset}<Calendar plugins={[DayGrid, List, Interaction]} {options}>
+        {#snippet dayCellContent({ date: day })}
+          <span
+            data-workspace-today={dateOnly(day) === workspaceToday}
+            aria-current={dateOnly(day) === workspaceToday ? "date" : undefined}
+          >
+            {monthAgenda || mode === "agenda"
+              ? new Intl.DateTimeFormat("en-GB", { weekday: "long" }).format(
+                  day,
+                )
+              : day.getDate()}
+          </span>
+        {/snippet}
         {#snippet eventContent({ event })}
           {@const item = event.extendedProps.astra as CalendarItem}
           <div
@@ -423,11 +493,36 @@
     align-items: end;
   }
   .toolbar {
-    margin-bottom: 16px;
+    margin-bottom: 10px;
+  }
+  .navigation {
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .navigation button {
+    min-width: 44px;
+  }
+  .create-scheduled {
+    margin-left: auto;
+  }
+  .view-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-bottom: 12px;
   }
   label {
     display: grid;
     gap: 5px;
+    font-size: 12px;
+    min-width: 0;
+  }
+  input,
+  select {
+    min-width: 0;
+    max-width: 100%;
   }
   input,
   select,
@@ -437,16 +532,26 @@
   .legend {
     color: var(--muted);
     font-size: 12px;
-    gap: 20px;
+    gap: 14px;
+    margin: 0;
   }
   .help {
     font-size: 13px;
     color: var(--muted);
-    margin: 12px 0;
+    margin: 0;
   }
   .help p {
     max-width: 850px;
     line-height: 1.6;
+  }
+  .mobile-month-mode {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--muted);
   }
   .calendar-surface {
     overflow: auto;
@@ -458,7 +563,8 @@
     --ec-bg-color: var(--paper);
     --ec-text-color: var(--ink);
     --ec-border-color: var(--line);
-    --ec-today-bg-color: color-mix(in srgb, var(--accent) 7%, var(--paper));
+    /* The library's local-clock Today class must not contradict workspace dates. */
+    --ec-today-bg-color: transparent;
     --ec-event-bg-color: var(--calendar-plan-bg);
     --ec-event-text-color: var(--ink);
     --ec-button-bg-color: var(--paper);
@@ -467,11 +573,44 @@
     font: inherit;
     min-height: 400px;
   }
+  .calendar-surface :global(.ec-day:has([data-workspace-today="true"])) {
+    background-color: color-mix(in srgb, var(--accent) 7%, var(--paper));
+  }
+  .calendar-surface :global([data-workspace-today="true"]) {
+    color: var(--ink);
+    font-weight: 700;
+  }
   .month :global(.ec) {
     min-width: 640px;
   }
   .calendar-surface :global(.ec-day) {
     min-height: 115px;
+  }
+  .month :global(.ec-day) {
+    min-height: 0;
+  }
+  .month :global(.ec-day-foot a) {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    padding: 0 4px;
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .calendar-surface :global(.ec-popup) {
+    min-inline-size: min(300px, 80vw);
+    max-inline-size: min(440px, 90vw);
+    border-radius: 8px;
+    z-index: 5;
+  }
+  .calendar-surface :global(.ec-popup .ec-day-head a) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
   }
   .calendar-surface :global(.ec-event) {
     border-radius: 5px;
@@ -496,12 +635,50 @@
     font-weight: 550;
     white-space: nowrap;
   }
+  .agenda strong,
+  .calendar-surface :global(.ec-popup strong) {
+    display: block;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+  .agenda :global(.ec-day) {
+    min-height: 0;
+  }
+  .agenda :global(.ec-main) {
+    display: block;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .agenda :global(.ec-event-tag) {
+    display: none;
+  }
   .calendar-item:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: -2px;
   }
   @media (max-width: 720px) {
     .toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px;
+    }
+    .navigation {
+      order: 0;
+    }
+    .create-scheduled {
+      order: 1;
+      margin-left: 0;
+      padding-inline: 8px;
+    }
+    .toolbar label {
+      order: 2;
+    }
+    .toolbar input,
+    .toolbar select {
+      width: 100%;
+    }
+    .view-meta {
       gap: 8px;
     }
     .legend {
@@ -511,6 +688,9 @@
       min-width: 0;
     }
     .calendar-item {
+      min-height: 44px;
+    }
+    .month :global(.ec-day-foot a) {
       min-height: 44px;
     }
   }

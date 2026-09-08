@@ -1,12 +1,17 @@
 <script lang="ts">
   import type { Summary } from "./api";
   import type { DateProposal } from "./proposals";
+  import type { CalendarLayout } from "./planning-navigation";
   let {
     project,
     month,
     view,
     revision,
     weekStart,
+    calendarDate,
+    calendarLayout,
+    workspaceToday,
+    onCalendarNavigate,
     search,
     open,
     onpropose,
@@ -17,6 +22,10 @@
     view: "calendar" | "gantt";
     revision: number;
     weekStart: string;
+    calendarDate: string;
+    calendarLayout: CalendarLayout;
+    workspaceToday: string;
+    onCalendarNavigate: (date: string, layout: CalendarLayout) => void;
     search: string;
     open: (row: Pick<Summary, "id" | "type" | "project_id">) => void;
     onpropose: (proposal: DateProposal) => void;
@@ -43,7 +52,10 @@
 {#if error}<p role="alert">{error}</p>{/if}
 {#if view === "calendar" && CalendarView}<CalendarView
     {project}
-    {month}
+    {calendarDate}
+    {calendarLayout}
+    {workspaceToday}
+    {onCalendarNavigate}
     {revision}
     {weekStart}
     {search}

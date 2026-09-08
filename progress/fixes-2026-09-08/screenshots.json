@@ -1,0 +1,262 @@
+[
+  {
+    "path": "board-dialog-browser/board-dark-1440.png",
+    "bytes": 217017,
+    "sha256": "df2c38052045b26e5a37bc876435ec8f55741615e2dab6984d17d362cf19b243"
+  },
+  {
+    "path": "board-dialog-browser/board-dark-320.png",
+    "bytes": 61610,
+    "sha256": "eb5eaf27ecf96c5f677f1ea848fde0a133cfe9b0708eade99bed3b1526f4e580"
+  },
+  {
+    "path": "board-dialog-browser/board-dark-390.png",
+    "bytes": 66577,
+    "sha256": "cc84b07d4d3c812ded1cdee83e0ded61bbc8c488a810ca230f4693bb7eff024d"
+  },
+  {
+    "path": "board-dialog-browser/board-drag-before-cancel.png",
+    "bytes": 236217,
+    "sha256": "c82a40f11517c715647617be584ca1c2044cac759fbf665f0e85e2b4970a15fe"
+  },
+  {
+    "path": "board-dialog-browser/board-light-1440.png",
+    "bytes": 224789,
+    "sha256": "edd6407eb9773a3552998827484149eaa776733b08cbbbcc52648b20bbb10ede"
+  },
+  {
+    "path": "board-dialog-browser/board-light-320.png",
+    "bytes": 60265,
+    "sha256": "f26679f47c0e4e1f6a7eac974dc0f2e27da5a70421f050b4ab20f2e3248e1e11"
+  },
+  {
+    "path": "board-dialog-browser/board-light-390.png",
+    "bytes": 65284,
+    "sha256": "5f3488fd82da1336b9060fc1d65bfa9b201eac1dfdd7fa0ef4a97f68eef490b4"
+  },
+  {
+    "path": "board-dialog-browser/focus-order-1440.png",
+    "bytes": 259223,
+    "sha256": "c77756e2edde6eec972770122108e6613cbe0ebfdb6f01d037b027d3b3d77708"
+  },
+  {
+    "path": "board-dialog-browser/focus-order-320.png",
+    "bytes": 224594,
+    "sha256": "0e5ed05492aa68a8e22740eccbe986b5158bc3d93726dc7ee13c150c56892fc3"
+  },
+  {
+    "path": "board-dialog-browser/focus-order-390.png",
+    "bytes": 226513,
+    "sha256": "601556348d56dd6a7cd5737c1010cf2f754e5c3fbfb8176f3cd605e5b7a8be56"
+  },
+  {
+    "path": "board-dialog-browser/mobile-direct-updates.png",
+    "bytes": 74379,
+    "sha256": "87453a41edae3db24832f7d9117ffed2242dbfc4537e121382126d6b6d0090d5"
+  },
+  {
+    "path": "board-dialog-browser/mobile-sign-out-available.png",
+    "bytes": 65785,
+    "sha256": "db06ab7abaf4995a709be438dcdb1d8cdd1413098926dd22060bd719eb3bc199"
+  },
+  {
+    "path": "board-dialog-browser/mobile-signed-out.png",
+    "bytes": 48221,
+    "sha256": "8bb27c3c6cf25e36d0a441a04edb63de898f184a1845db80ab82e211cddc42fa"
+  },
+  {
+    "path": "board-dialog-browser/settings-1440.png",
+    "bytes": 241910,
+    "sha256": "6ab0d2b55fa871063e2619145f8fb0a1c98f015d48bfc2ca11dadfc9621cd099"
+  },
+  {
+    "path": "board-dialog-browser/settings-320.png",
+    "bytes": 160555,
+    "sha256": "46e8eb1f81410bcfd378561468b7d43f519854454db305037bc2e1d4784eac87"
+  },
+  {
+    "path": "board-dialog-browser/settings-390.png",
+    "bytes": 158292,
+    "sha256": "405075095ef2e80e3af77a50dbd6289c29fb402c5db74ffcb1d2b90cd3774c7c"
+  },
+  {
+    "path": "board-dialog-browser/settings-pending-command.png",
+    "bytes": 162913,
+    "sha256": "3a4f2d34210ee1394746b69ea6d9553959fb8a151e68623a329fd8180cbcaf78"
+  },
+  {
+    "path": "editor-browser/A01-preserved-draft.png",
+    "bytes": 138655,
+    "sha256": "e8d0ee7493d4d20c3c4fa69c7e13dbd3796226094ce761e63e5fe5582d4bb0f0"
+  },
+  {
+    "path": "editor-browser/A01-recovered-focus-draft.png",
+    "bytes": 134472,
+    "sha256": "71b1470bd1b31a023c19a3e0e0ddc45850b08133e9bdaab46a48b926fc98ab4e"
+  },
+  {
+    "path": "editor-browser/A02-exact-tags.png",
+    "bytes": 137966,
+    "sha256": "de114526dc7a66868a55118c40205c88597529f4400040975840d773468696f0"
+  },
+  {
+    "path": "editor-browser/A04-restored-archive.png",
+    "bytes": 64263,
+    "sha256": "0b269793bbadf082e5976629565a489c99a2272a9f94c1c9909929de24ee3bae"
+  },
+  {
+    "path": "editor-browser/A07-kept-navigation-draft.png",
+    "bytes": 106576,
+    "sha256": "5961f7debc6b4f3ab2dad77bbc2d2dd33921668e428d10e2d79cba738cdf12c1"
+  },
+  {
+    "path": "editor-browser/A07-save-and-history.png",
+    "bytes": 116188,
+    "sha256": "fd2fb3a01ad27a16e2ee76dd7074e0b3d877826558dfe51e376d3514cda0ff05"
+  },
+  {
+    "path": "editor-browser/A09-scoped-focus.png",
+    "bytes": 85701,
+    "sha256": "28afa218209a8c6c2eeb8d5f61cfbee55e357cd0f06792e2c40d7db3babcb85b"
+  },
+  {
+    "path": "editor-browser/A10-mobile-tag-limit.png",
+    "bytes": 48929,
+    "sha256": "cb2fbb481dc80ec9be3a664e2f71a7386699ef8441fce22874b8a8fd2162a0a2"
+  },
+  {
+    "path": "editor-browser/A10-tag-chips.png",
+    "bytes": 137123,
+    "sha256": "26f44a3ccd34d57aec144699af044f4464d45c20f188858efe7660794103d3fa"
+  },
+  {
+    "path": "editor-browser/inspector-related-context.png",
+    "bytes": 142298,
+    "sha256": "650a4a776739580d74d26c7929ecadc4b04b54843c5b7df32c5e09844a20ba4c"
+  },
+  {
+    "path": "planning-browser/desktop-calendar-month.png",
+    "bytes": 114626,
+    "sha256": "1d805cf0bdbb8147b66d3bed0ee90bc6689c8c7a7e15f06c23e0e02417c47253"
+  },
+  {
+    "path": "planning-browser/desktop-calendar-overflow.png",
+    "bytes": 153626,
+    "sha256": "f479733d7f569926a94f29b7189ccc287471774e4730323b66af5a625dfb21e8"
+  },
+  {
+    "path": "planning-browser/desktop-calendar-workspace-today.png",
+    "bytes": 189091,
+    "sha256": "3ca887c4416613a6fd44fda0a366f4ff15f75f88046595b2f599069effef91b5"
+  },
+  {
+    "path": "planning-browser/desktop-timeline-selection.png",
+    "bytes": 260995,
+    "sha256": "6049baf04c7aca02fd4f3326e600bec06e1e00fb12be126116c3594a25523788"
+  },
+  {
+    "path": "planning-browser/mobile-390-calendar-agenda.png",
+    "bytes": 83153,
+    "sha256": "e0a5449326a5afb95e2d0fdb3cf23f3e1e848f88e1d68e64e29ee21aad286bd3"
+  },
+  {
+    "path": "planning-browser/mobile-390-calendar-grid.png",
+    "bytes": 77835,
+    "sha256": "b192ada8fd6d6df0d0be6f49084a98ee53e2114d6711c372753fdf0c3be8058a"
+  },
+  {
+    "path": "planning-browser/mobile-390-timeline-selection.png",
+    "bytes": 227439,
+    "sha256": "59191f4955070d00b34584d91122ee35728effb3b7d297adb36ca4898f77744d"
+  },
+  {
+    "path": "regression/browser/board-drag-preview.png",
+    "bytes": 71032,
+    "sha256": "5370f3c35754c63c2f098b02111749d8b2787a5a93bce21f81c6e081d6cb35ec"
+  },
+  {
+    "path": "regression/browser/board-remembered-view.png",
+    "bytes": 82649,
+    "sha256": "a829bb0f476d3ea6c09dcc5a80179b313b6abc71e091c5186901219b6f4e71a8"
+  },
+  {
+    "path": "regression/browser/calendar-week.png",
+    "bytes": 77502,
+    "sha256": "86ad35f5a91290afa8d81d981a9a55b5820838876aba23372379f76e761eacde"
+  },
+  {
+    "path": "regression/browser/desktop-board-dark.png",
+    "bytes": 87934,
+    "sha256": "8df3ee9aac719dd527864114cdef6e92f2196ccf79e3d105ad590425ed1edc2f"
+  },
+  {
+    "path": "regression/browser/desktop-board.png",
+    "bytes": 68333,
+    "sha256": "1bd1747795b22a6224e874b67dbe65334dd8915930f00611345cd71f7354d905"
+  },
+  {
+    "path": "regression/browser/desktop-dark.png",
+    "bytes": 295076,
+    "sha256": "b67450124728362e39045628004419acca1e800ae37cd557658cd3aa4ced96a7"
+  },
+  {
+    "path": "regression/browser/desktop-timeline.png",
+    "bytes": 134091,
+    "sha256": "c98e050d9e2d62ecabb701d3f25a22b4ff16b6478bd6411cb99b5be6505a685f"
+  },
+  {
+    "path": "regression/browser/gantt-waterfall.png",
+    "bytes": 284990,
+    "sha256": "5ff436c657c9d598237a7bf6370f7312dec8b87e753a6c03bc01d6ff2d9ce825"
+  },
+  {
+    "path": "regression/browser/mobile-board.png",
+    "bytes": 38091,
+    "sha256": "265c86bc168dea5cc555c1456ecd1d833851bdc51c288ecacdf2a79dcf4af402"
+  },
+  {
+    "path": "regression/browser/mobile-conflict.png",
+    "bytes": 181084,
+    "sha256": "352d4c8c11ad3f96dafa0a7d2d00df7032ace726c63035f1a5145969fff72432"
+  },
+  {
+    "path": "regression/planning/calendar-agenda.png",
+    "bytes": 104196,
+    "sha256": "3c4b625fe6ef3e3e862513ceb8a7e080371e40af2e14701572efdf96f04d2519"
+  },
+  {
+    "path": "regression/planning/calendar-dark.png",
+    "bytes": 84063,
+    "sha256": "63760218bf21f6f6f425411b8720e415f7bd0ddab67a21e47164021b570e3cdb"
+  },
+  {
+    "path": "regression/planning/calendar-day.png",
+    "bytes": 73518,
+    "sha256": "a0dab7409202b84f9335ed964d63af34ebbefb851b4b44ca7c84f4b7ae3c52af"
+  },
+  {
+    "path": "regression/planning/calendar-project.png",
+    "bytes": 81253,
+    "sha256": "d2374bab54f96ddbdda121b7c2560559e7c1636dbc707437a67f75d1de366799"
+  },
+  {
+    "path": "regression/planning/gantt-dark.png",
+    "bytes": 132521,
+    "sha256": "10e3dc9db8ef69232996ec3f704deb85b0ac8cf2a8d59e7a1a2c360790586735"
+  },
+  {
+    "path": "regression/planning/gantt-forecast.png",
+    "bytes": 173562,
+    "sha256": "89cadb4e6325df01c1b38a2d6fccd7eeccbaa4454b92650ba8106cec606d1f4e"
+  },
+  {
+    "path": "regression/planning/gantt-narrow.png",
+    "bytes": 104568,
+    "sha256": "249dad2f148e3ab8cd3a48e4254f6a36163fe63b2653c2e2f7cb205a44bdfe12"
+  },
+  {
+    "path": "regression/planning/gantt-project.png",
+    "bytes": 133162,
+    "sha256": "d7444325d870de42cec980d4c074a779bac85844495f8af1af0dc57daa6f48cb"
+  }
+]

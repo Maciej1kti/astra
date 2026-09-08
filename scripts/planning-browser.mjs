@@ -50,6 +50,8 @@ async function hitbox(locator, attempt = 0) {
   }
 }
 const root = resolve(import.meta.dirname, "..");
+const evidenceDir = resolve(root, process.env.ASTRA_EVIDENCE_DIR ?? "progress/screenshots");
+await mkdir(evidenceDir, { recursive: true });
 const binaries = join(
   root,
   "target",
@@ -239,7 +241,7 @@ try {
     })
     .waitFor();
   await page.screenshot({
-    path: join(root, "progress/screenshots/gantt-project.png"),
+    path: join(evidenceDir, "gantt-project.png"),
     fullPage: true,
   });
   const reviewPath = `/api/v1/projects/${plan.project_id}/cards/${review.id}`;
@@ -311,7 +313,7 @@ try {
   assert.deepEqual(cli("get", reviewPath).metadata.depends_on, [build.id]);
   await page.getByLabel("Dependency forecast", { exact: true }).check();
   await page.screenshot({
-    path: join(root, "progress/screenshots/gantt-forecast.png"),
+    path: join(evidenceDir, "gantt-forecast.png"),
     fullPage: true,
   });
   await page.getByLabel("Dependency forecast", { exact: true }).uncheck();
@@ -327,7 +329,7 @@ try {
     });
   await locator().waitFor();
   await page.screenshot({
-    path: join(root, "progress/screenshots/calendar-project.png"),
+    path: join(evidenceDir, "calendar-project.png"),
     fullPage: true,
   });
   const baseline = cli(
@@ -405,7 +407,7 @@ try {
   await page.getByLabel("Go to date", { exact: true }).fill("2026-09-09");
   await locator().waitFor();
   await page.screenshot({
-    path: join(root, "progress/screenshots/calendar-day.png"),
+    path: join(evidenceDir, "calendar-day.png"),
     fullPage: true,
   });
   await page
@@ -413,7 +415,7 @@ try {
     .selectOption("agenda");
   await locator().first().waitFor();
   await page.screenshot({
-    path: join(root, "progress/screenshots/calendar-agenda.png"),
+    path: join(evidenceDir, "calendar-agenda.png"),
     fullPage: true,
   });
   await page.evaluate(() => {
@@ -423,7 +425,7 @@ try {
     .getByLabel("Calendar layout", { exact: true })
     .selectOption("month");
   await page.screenshot({
-    path: join(root, "progress/screenshots/calendar-dark.png"),
+    path: join(evidenceDir, "calendar-dark.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Timeline", exact: true }).click();
@@ -434,7 +436,7 @@ try {
     })
     .waitFor();
   await page.screenshot({
-    path: join(root, "progress/screenshots/gantt-dark.png"),
+    path: join(evidenceDir, "gantt-dark.png"),
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -462,7 +464,7 @@ try {
       ),
   );
   await page.screenshot({
-    path: join(root, "progress/screenshots/gantt-narrow.png"),
+    path: join(evidenceDir, "gantt-narrow.png"),
     fullPage: true,
   });
   assert.deepEqual(errors, []);
@@ -475,7 +477,7 @@ try {
   const activePage = browser?.contexts()[0]?.pages()[0];
   if (activePage) {
     await activePage.screenshot({
-      path: "/tmp/astra-planning-failure.png",
+      path: join(evidenceDir, "planning-failure.png"),
       fullPage: true,
     });
     console.error(await activePage.locator("body").innerText());

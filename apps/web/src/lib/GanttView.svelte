@@ -8,8 +8,8 @@
     type IColumnConfig,
     type IConfig,
   } from "@svar-ui/svelte-gantt";
-  import { api, resourcePath, type Summary } from "./api";
-  import { dayDistance, shiftedSchedule, shiftDate } from "./dates";
+  import { api, ApiError, resourcePath, type Summary } from "./api";
+  import { shiftedSchedule, shiftDate } from "./dates";
   import { exclusiveSchedule, widgetDate, type GanttPage } from "./planning";
   import type { DateProposal } from "./proposals";
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
@@ -34,6 +34,7 @@
   let data = $state<GanttPage | null>(null),
     loading = $state(false),
     error = $state(""),
+    pageNotice = $state(""),
     gesture = $state(false);
   let scale = $state("days"),
     preview = $state(false),
@@ -45,6 +46,7 @@
     widgetApi = $state.raw<IApi | null>(null);
   let chartRoot = $state<HTMLDivElement>();
   let lastNavigation = "";
+  let loadedProject: string | null = null;
   let generation = 0,
     deferred = false;
   const filtered = $derived(
@@ -121,11 +123,15 @@
             { unit: "month", step: 1, format: "%F" },
           ],
   );
-  const columns: IColumnConfig[] = [
-    { id: "text", header: "Card / milestone", width: 230 },
-    { id: "plannedStart", header: "Start", width: 100 },
-    { id: "plannedEnd", header: "End", width: 110 },
-  ];
+  const columns = $derived<IColumnConfig[]>(
+    chartWidth < 650
+      ? [{ id: "text", header: "Card / milestone", width: 170 }]
+      : [
+          { id: "text", header: "Card / milestone", width: 230 },
+          { id: "plannedStart", header: "Start", width: 100 },
+          { id: "plannedEnd", header: "End", width: 110 },
+        ],
+  );
   const axisStart = $derived(
     widgetDate(
       shiftDate(
@@ -165,6 +171,7 @@
     open: (row) => open(row),
     editable,
     link: (row) => {
+      selection = row.id;
       if (predecessor && predecessor !== row.id) {
         successor = row.id;
         dependency(predecessor, row.id);
@@ -172,6 +179,7 @@
     },
     propose: (row, days, operation) => {
       if (preview || !row.schedule || row.availability !== "ready") return;
+      selection = row.id;
       try {
         onpropose({
           path: resourcePath(row),
@@ -184,11 +192,19 @@
     },
   });
   $effect(() => {
-    void project;
+    const nextProject = project;
     void revision;
     untrack(() => {
-      history = [null];
-      void load(null);
+      if (loadedProject !== nextProject) {
+        loadedProject = nextProject;
+        history = [null];
+        data = null;
+        selection = "";
+        predecessor = "";
+        successor = "";
+        pageNotice = "";
+      }
+      void load(history.at(-1) ?? null);
     });
   });
   onMount(() => {
@@ -233,6 +249,18 @@
       }
       data = result;
     } catch (e) {
+      if (
+        current === generation &&
+        cursor &&
+        e instanceof ApiError &&
+        (e.data.error as { code?: string } | undefined)?.code === "CURSOR_STALE"
+      ) {
+        history = [null];
+        pageNotice =
+          "The timeline changed. Showing the first page of the updated plan.";
+        await load(null);
+        return;
+      }
       if (current === generation) error = String(e);
     } finally {
       if (current === generation) loading = false;
@@ -264,6 +292,16 @@
   }
   function name(id: string) {
     return data?.rows.find((r) => r.id === id)?.title ?? id;
+  }
+  function selectCard(id: string) {
+    selection = id;
+    const task = tasks.find((item) => item.id === id);
+    if (!task || !widgetApi) return;
+    widgetApi.exec("select-task", { id });
+    widgetApi.exec("scroll-chart", {
+      left: Math.max(0, Number(widgetApi.getTask(id)?.$x ?? 0) - 48),
+      top: tasks.indexOf(task) * 60,
+    });
   }
   $effect(() => {
     const widget = widgetApi;
@@ -381,12 +419,18 @@
       circle or choose a successor below.
       <button onclick={() => (predecessor = "")}>Cancel connection</button>
     </p>{/if}
-  <p class="hint">
-    {preview
-      ? "Read-only forecast: preserves durations and moves each successor after its predecessors. Saved dates are unchanged."
-      : "Drag a card’s bar or its edges. Click the bar to edit its dates. Alt+←/→ on a handle changes one day; hold Shift for a week."}
-    The amber underline marks one chain determining the forecast finish.
-  </p>
+  {#if preview}<p class="hint">
+      Read-only forecast · Saved dates are unchanged.
+    </p>{/if}
+  <details class="timeline-help">
+    <summary>Timeline shortcuts & editing</summary>
+    <p class="hint">
+      Drag a card’s bar or its edges. Click the bar to edit its dates. Alt+←/→
+      on a handle changes one day; hold Shift for a week. The forecast preserves
+      durations and moves each successor after its predecessors. The amber
+      underline marks one chain determining the finish.
+    </p>
+  </details>
   {#if error}<p role="alert">
       {error}
       <button
@@ -397,6 +441,46 @@
       >
     </p>{/if}
   {#if loading}<p role="status">Loading timeline…</p>{/if}
+  {#if pageNotice}<p class="hint" role="status">{pageNotice}</p>{/if}
+  <div class="selection-bar" aria-label="Timeline selection">
+    <label>
+      Selected card<select
+        aria-label="Selected card"
+        value={selection}
+        onchange={(event) => selectCard(event.currentTarget.value)}
+      >
+        <option value="">Choose a card or milestone</option>
+        {#each filtered as row}<option value={row.id}>{row.title}</option
+          >{/each}
+      </select>
+    </label>
+    <button disabled={!selected} onclick={() => selected && open(selected)}
+      >Open card</button
+    >
+    {#if selected?.schedule}<button
+        onclick={() =>
+          selected &&
+          onpropose({
+            path: resourcePath(selected),
+            version: selected.version,
+            schedule: selected.schedule,
+          })}>Edit planned dates</button
+      >{/if}
+    {#if selected}<div class="selected-summary" aria-live="polite">
+        <strong>{selected.title}</strong>
+        <span
+          >{selected.type === "milestone"
+            ? "Milestone"
+            : (selected.status?.replaceAll("_", " ") ?? "Card")}
+          {selected.schedule
+            ? ` · ${selected.schedule.start} → ${selected.schedule.end}`
+            : " · No recorded plan"}
+          {selected.due
+            ? ` · ◆ ${selected.due.kind} deadline: ${selected.due.date}`
+            : ""}
+        </span>
+      </div>{/if}
+  </div>
   <div class="astra-gantt" aria-label="Project Gantt chart">
     <Willow fonts={false} />
     <div
@@ -422,35 +506,11 @@
             : 160}
         cellHeight={60}
         scaleHeight={32}
-        gridWidth={chartWidth < 650 ? 0 : 230}
+        gridWidth={chartWidth < 650 ? 170 : 230}
         start={axisStart}
         end={axisEnd}
       />
     </div>
-  </div>
-  <div class="toolbar">
-    <label
-      >Selected card<select aria-label="Selected card" bind:value={selection}
-        ><option value="">Choose a card or milestone</option
-        >{#each filtered as row}<option value={row.id}>{row.title}</option
-          >{/each}</select
-      ></label
-    >
-    <button disabled={!selected} onclick={() => selected && open(selected)}
-      >Open card</button
-    >
-    {#if selected?.schedule}<button
-        onclick={() =>
-          selected &&
-          onpropose({
-            path: resourcePath(selected),
-            version: selected.version,
-            schedule: selected.schedule,
-          })}>Edit planned dates</button
-      >{/if}
-    {#if selected?.due}<span
-        >◆ {selected.due.kind} deadline: {selected.due.date}</span
-      >{/if}
   </div>
   <section class="dependencies" aria-label="Connect cards">
     <h3>Connect cards</h3>
@@ -543,9 +603,9 @@
     flex-wrap: wrap;
     border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 16px 20px;
+    padding: 12px 16px;
     background: var(--paper);
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
   small {
     display: block;
@@ -556,6 +616,7 @@
     font-size: 15px;
   }
   .toolbar,
+  .selection-bar,
   form,
   nav {
     display: flex;
@@ -564,10 +625,43 @@
     flex-wrap: wrap;
     margin: 16px 0;
   }
+  .selection-bar {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--paper);
+    margin: 12px 0;
+  }
+  .selection-bar label {
+    flex: 1 1 210px;
+  }
+  .selection-bar select {
+    max-width: 100%;
+    width: 100%;
+  }
+  .selected-summary {
+    flex-basis: 100%;
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .selected-summary span {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .timeline-help {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 8px 0;
+  }
   label {
     display: grid;
     gap: 5px;
     max-width: 100%;
+    min-width: 0;
+    font-size: 12px;
   }
   select {
     max-width: 330px;
@@ -600,6 +694,16 @@
   }
   .compact :global(.wx-resizer) {
     visibility: hidden;
+  }
+  .compact :global(.wx-toggle-placeholder) {
+    display: none;
+  }
+  .compact :global(.wx-cell .wx-text) {
+    white-space: normal;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
   .astra-gantt {
     border: 1px solid var(--line);
@@ -649,7 +753,24 @@
       height: 430px;
     }
     .project-timing {
-      gap: 12px;
+      gap: 10px;
+      padding: 12px;
+    }
+    .project-timing > div {
+      flex: 1 1 140px;
+    }
+    .project-timing strong {
+      font-size: 13px;
+    }
+    .toolbar {
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .selection-bar {
+      gap: 8px;
+    }
+    .selection-bar label {
+      flex-basis: 100%;
     }
     form label {
       width: 100%;

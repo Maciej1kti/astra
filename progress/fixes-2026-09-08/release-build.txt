@@ -1,0 +1,2 @@
+   Compiling projectd v0.1.0 (<repository>/crates/projectd)
+    Finished `release` profile [optimized] target(s) in 3.58s

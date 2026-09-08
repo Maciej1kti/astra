@@ -32,6 +32,8 @@ async function hitbox(locator, attempt = 0) {
   }
 }
 const root = resolve(import.meta.dirname, "..");
+const evidenceDir = resolve(root, process.env.ASTRA_EVIDENCE_DIR ?? "progress/screenshots");
+await mkdir(evidenceDir, { recursive: true });
 const binaries = join(root,"target",process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug");
 const temp = await realpath(
   await mkdtemp(join(await realpath("/tmp"), "lp-browser-")),
@@ -202,7 +204,7 @@ try {
   await page.getByLabel("End", { exact: true }).fill("2026-09-12");
   await page.getByLabel("Due date", { exact: true }).fill("2026-09-15");
   await page
-    .getByLabel("Description Markdown source")
+    .getByLabel(/^Description/)
     .fill('A real browser write.\n\n<script>alert("untrusted")</script>');
   await page.getByRole("button", { name: "Preview Markdown", exact: true }).click();
   assert.equal(await page.locator(".markdown script, .markdown img").count(), 0);
@@ -211,9 +213,9 @@ try {
   await page.getByRole("button", { name: "Board", exact: true }).click();
   await page.getByRole("heading", { name: "Ship the field guide" }).waitFor();
   await page.getByText("Connected to host", { exact: false }).waitFor();
-  await mkdir(join(root, "progress/screenshots"), { recursive: true });
+  await mkdir(evidenceDir, { recursive: true });
   await page.screenshot({
-    path: join(root, "progress/screenshots/desktop-board.png"),
+    path: join(evidenceDir, "desktop-board.png"),
     fullPage: true,
   });
   const cards = cli("get", `/api/v1/projects/${plan.project_id}/cards`).items;
@@ -253,7 +255,7 @@ try {
   );
   assert.equal(cli("get", path).metadata.title, "Ship the revised guide");
   await mobile.screenshot({
-    path: join(root, "progress/screenshots/mobile-conflict.png"),
+    path: join(evidenceDir, "mobile-conflict.png"),
     fullPage: true,
   });
   await mobile.getByRole("button", { name: "Close editor" }).click();
@@ -271,6 +273,8 @@ try {
   assert.equal(cli("get", path).metadata.title, "Ship the field guide");
   await page.getByRole("heading", { name: "Ship the field guide" }).click();
   await page.getByRole("button", { name: "Pin to focus", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Remove from focus", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Close editor", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   assert.equal(
     cli("get", "/api/v1/workspace/focus").items[0].card_id,
@@ -289,6 +293,8 @@ try {
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.getByRole("heading", { name: "Browser report", exact: true }).click();
   await page.getByRole("button", { name: "Mark read", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Mark unread", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Close editor", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.getByLabel("Unread only").check();
   await page.getByRole("heading", { name: "Browser report", exact: true }).waitFor({ state: "hidden" });
@@ -306,8 +312,12 @@ try {
     .getByRole("button", { name: "Save preferences", exact: true })
     .click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
-  await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
+  // Saving preferences retains the current explicit route. A clean entry uses the default.
+  await expect(page.getByRole("button", { name: "Updates", exact: true })).toHaveAttribute("aria-current", "page");
   assert.equal(cli("get", "/api/v1/workspace/preferences").timezone, "UTC");
+  assert.equal(cli("get", "/api/v1/workspace/preferences").preferences.default_view, "list");
+  await page.goto(origin);
+  await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
   await page.reload();
   await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
   const cardFile = join(folder, ".project", "cards", `${cards[0].id}.md`);
@@ -368,7 +378,7 @@ try {
   await page.getByRole("dialog").waitFor({state:"hidden"});
   assert.deepEqual(cli("get",path).metadata.due,beforeGesture.metadata.due);
   assert.equal(cli("get",path).metadata.schedule.start,"2026-09-08");
-  await page.screenshot({path:join(root,"progress/screenshots/desktop-timeline.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "desktop-timeline.png"),fullPage:true});
 
   const resize = page.getByRole("button",{name:"Resize end: External editor update",exact:true});
   const resizeBounds=await hitbox(resize);
@@ -441,13 +451,13 @@ try {
   await page.mouse.move(targetBounds.x+targetBounds.width/2,targetBounds.y+10,{steps:6});
   await expect(page.locator("[data-board-drag-preview]")).toBeVisible();
   await expect(page.locator("[data-board-drop-indicator]")).toBeVisible();
-  await page.screenshot({path:join(root,"progress/screenshots/board-drag-preview.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "board-drag-preview.png"),fullPage:true});
   await page.mouse.up();
   await expect.poll(() => cli("--project",folder,"card","list","--status","planned").items[0].id).toBe(typedId);
   await page.getByRole("dialog").waitFor({state:"hidden"});
   const ordered=cli("--project",folder,"card","list","--status","planned").items;
   assert.equal(ordered[0].id,typedId);
-  await page.screenshot({path:join(root,"progress/screenshots/desktop-board.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "desktop-board.png"),fullPage:true});
   await expect(boardHandle).toBeEnabled();
   await expect(page.locator('[data-board-status="planned"]').first()).toHaveAttribute("data-board-card", typedId);
   await boardHandle.press("Alt+ArrowDown");
@@ -469,10 +479,16 @@ try {
     if (attempts.length === 1) return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:{code:"SERVER_BUSY"}})});
     return route.continue();
   });
+  const targetColumn = page.locator(".astra-column-active [data-kanban-column-cards]");
+  await hitbox(targetColumn);
   const statusSource = await hitbox(boardHandle);
-  const emptyColumn = await page.locator(".astra-column-active [data-kanban-column-cards]").boundingBox();
+  const emptyColumn = await targetColumn.boundingBox();
   await page.mouse.move(statusSource.x+30,statusSource.y+20); await page.mouse.down();
-  await page.mouse.move(emptyColumn.x+60,emptyColumn.y+60,{steps:6}); await page.mouse.up();
+  await page.mouse.move(statusSource.x+40,statusSource.y+20,{steps:2});
+  await expect(page.locator("[data-board-drag-preview]")).toBeVisible();
+  await page.mouse.move(emptyColumn.x+60,emptyColumn.y+60,{steps:6});
+  await expect(page.locator("[data-board-drop-indicator]")).toBeVisible();
+  await page.mouse.up();
   await page.getByRole("button",{name:"Retry same command",exact:true}).waitFor();
   assert.equal(cli("get",typedPath).metadata.status,"planned");
   await page.getByRole("button",{name:"Retry same command",exact:true}).click();
@@ -549,11 +565,11 @@ try {
   await page.getByRole("button",{name:"First page in review",exact:true}).click();
   await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(50);
   await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; window.scrollTo(0,0); });
-  await page.screenshot({path:join(root,"progress/screenshots/desktop-board-dark.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "desktop-board-dark.png"),fullPage:true});
   await page.evaluate(() => document.documentElement.dataset.theme = "light");
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(() => window.scrollTo(0,0));
-  await page.screenshot({path:join(root,"progress/screenshots/mobile-board.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "mobile-board.png"),fullPage:true});
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.setViewportSize({width:1440,height:1000});
 
@@ -606,6 +622,8 @@ try {
   await page.unroute(`**/api/v1/projects/${plan.project_id}/cards`);
 
   // Each project's collapse and first-page scroll survive navigation and reload.
+  // With Cancelled collapsed by default, use a viewport that still overflows after Active is collapsed.
+  await page.setViewportSize({width: 1000, height: 1000});
   await page.locator(".astra-column-active").getByRole("button",{name:"Collapse column",exact:true}).click();
   const savedScroll = await page.evaluate(() => {
     const horizontal=document.querySelector(".astra-board .date-scroll");
@@ -628,7 +646,8 @@ try {
   await assertRestored();
   await page.reload();
   await assertRestored();
-  await page.screenshot({path:join(root,"progress/screenshots/board-remembered-view.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "board-remembered-view.png"),fullPage:true});
+  await page.setViewportSize({width: 1440, height: 1000});
 
   const focusBefore = cli("get","/api/v1/workspace/focus");
   const focusFile = join(temp,"focus.json");
@@ -649,7 +668,7 @@ try {
   await page.getByRole("button",{name:"Calendar",exact:true}).click();
   await page.getByLabel("Calendar layout",{exact:true}).selectOption("week");
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(7);
-  await expect(page.getByLabel("Go to date",{exact:true})).toHaveValue("2026-09-01");
+  await expect(page.getByLabel("Go to date",{exact:true})).toHaveValue((await page.locator(".topbar .date").innerText()).trim());
   await page.getByLabel("Go to date",{exact:true}).fill("2026-09-08");
   await page.getByLabel("Calendar layout",{exact:true}).selectOption("day");
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(1);
@@ -680,7 +699,7 @@ try {
   await page.getByLabel("Dependency forecast",{exact:true}).check();
   await expect(page.getByRole("button",{name:"Move plan: Waterfall successor",exact:true})).toBeDisabled();
   assert.equal(cli("get",waterfallPath).metadata.schedule.start,"2026-09-09");
-  await page.screenshot({path:join(root,"progress/screenshots/gantt-waterfall.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "gantt-waterfall.png"),fullPage:true});
   await page.getByLabel("Dependency forecast",{exact:true}).uncheck();
   await page.getByLabel("Predecessor",{exact:true}).selectOption(waterfall.id);
   await page.getByLabel("Successor",{exact:true}).selectOption(cards[0].id);
@@ -699,7 +718,7 @@ try {
   await page.getByRole("button",{name:"Save planned dates",exact:true}).click();
   await page.getByRole("dialog").waitFor({state:"hidden"});
   assert.equal(cli("get",waterfallPath).metadata.schedule.end,"2026-09-12");
-  await page.screenshot({path:join(root,"progress/screenshots/calendar-week.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "calendar-week.png"),fullPage:true});
   await page.getByLabel("Calendar layout",{exact:true}).selectOption("month");
   await page.getByRole("button",{name:"List",exact:true}).click();
   await page.getByLabel("Search content",{exact:true}).fill("untrusted");
@@ -717,7 +736,7 @@ try {
   await page.getByLabel("Theme",{exact:true}).selectOption("dark");
   assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),"dark");
   await page.getByRole("button",{name:"Close settings",exact:true}).click();
-  await page.screenshot({path:join(root,"progress/screenshots/desktop-dark.png"),fullPage:true});
+  await page.screenshot({path:join(evidenceDir, "desktop-dark.png"),fullPage:true});
   await page.reload();
   await page.getByRole("heading",{name:"List.",exact:true}).waitFor();
   assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),"dark");
@@ -753,6 +772,16 @@ try {
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",
   );
+} catch (error) {
+  if (browser) {
+    for (const [index, context] of browser.contexts().entries()) {
+      const failurePage = context.pages()[0];
+      if (!failurePage) continue;
+      await failurePage.screenshot({path:join(evidenceDir, `failure-${index}.png`),fullPage:false}).catch(() => {});
+      await writeFile(join(evidenceDir, `failure-${index}.txt`),await failurePage.locator("body").innerText().catch(() => "Page unavailable")).catch(() => {});
+    }
+  }
+  throw error;
 } finally {
   await browser?.close();
   daemon.kill("SIGTERM");

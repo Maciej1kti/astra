@@ -1,0 +1,20 @@
+[
+  {
+    "name": "editor-browser-checks",
+    "started": "2026-09-08T07:21:09.553Z",
+    "finished": "2026-09-08T07:21:21.326Z",
+    "exitCode": 0
+  },
+  {
+    "name": "planning-check-runner",
+    "started": "2026-09-08T07:21:21.327Z",
+    "finished": "2026-09-08T07:21:23.077Z",
+    "exitCode": 0
+  },
+  {
+    "name": "board-dialog-browser-checks",
+    "started": "2026-09-08T07:21:23.077Z",
+    "finished": "2026-09-08T07:21:26.315Z",
+    "exitCode": 0
+  }
+]
