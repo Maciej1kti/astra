@@ -255,3 +255,16 @@ even if each satisfies its individual character limit. No format migration,
 background acceptance or new mutation transport is introduced. Workspace tag
 names are separately optional metadata; membership continues to live as exact
 label strings on cards, as detailed in [ADR-028](ADR-028-WORKSPACE-TAGS.md).
+
+## ADR-029 — Bounded report history
+
+Report lists support a validated target type/ID filter pair before pagination,
+avoiding downloads of unrelated project reports. See
+[ADR-029](ADR-029-BOUNDED-REPORT-HISTORY.md) for cursor, source and compatibility
+semantics.
+
+## ADR-030 — Recovery-first service startup
+
+The daemon completes recovery before admission, then serves explicitly marked
+cached/empty projections while a bounded worker reconciles sources. See
+[ADR-030](ADR-030-RECOVERY-FIRST-SERVICE-STARTUP.md).

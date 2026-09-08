@@ -19,6 +19,8 @@ pub struct Claimed {
 pub struct Session {
     pub id: String,
     pub csrf: String,
+    /// Effective idle/absolute deadline for passive consumers; not a wire field.
+    pub expires_at_ms: i64,
     pub view: Value,
 }
 
@@ -167,6 +169,9 @@ impl Auth<'_> {
         };
         tx.execute("UPDATE pairings SET state='claimed',claim_grace_until=?2,last_issued_session_id=?3 WHERE id=?1",params![row.0,grace,id])?;
         tx.commit()?;
+        if row.7.is_some() {
+            self.journal.notify_auth_change();
+        }
         Ok(Claimed {
             session_token,
             view: json!({"id":id,"device_label":row.1,"created_at":created,"last_seen_at":created,"expires_at":expires,"current":true}),
@@ -207,6 +212,10 @@ impl Auth<'_> {
         Ok(Session {
             id: id.clone(),
             csrf: String::from_utf8(csrf).map_err(|_| AppError::State)?,
+            expires_at_ms: chrono::DateTime::parse_from_rfc3339(&expires)
+                .map_err(|_| AppError::State)?
+                .timestamp_millis()
+                .min(created_ms + 90 * DAY),
             view: json!({"id":id,"device_label":label,"created_at":created,"last_seen_at":seen,"expires_at":expires,"current":true}),
         })
     }
@@ -246,6 +255,7 @@ impl Auth<'_> {
             "UPDATE sessions SET revoked_at=?2 WHERE id=?1",
             params![id, instant(now)],
         )?;
+        self.journal.notify_auth_change();
         Ok(view)
     }
 }

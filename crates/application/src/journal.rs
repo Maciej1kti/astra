@@ -60,11 +60,20 @@ pub struct Intent {
 
 pub struct Journal {
     connection: Mutex<Connection>,
+    auth_changes: tokio::sync::watch::Sender<u64>,
     pub epoch: String,
     pub directory: Directory,
     lease: Lease,
 }
 impl Journal {
+    /// Wake passive session consumers after a durable session revocation.
+    pub fn subscribe_auth_changes(&self) -> tokio::sync::watch::Receiver<u64> {
+        self.auth_changes.subscribe()
+    }
+    pub(crate) fn notify_auth_change(&self) {
+        self.auth_changes
+            .send_modify(|revision| *revision = revision.wrapping_add(1));
+    }
     /// Persist definite preflight rejections; transient storage failures remain retryable.
     pub(crate) fn reject_error(
         &self,
@@ -105,6 +114,7 @@ impl Journal {
             tx.commit()?;
         }
         self.epoch = epoch;
+        self.notify_auth_change();
         self.directory.sync()?;
         Ok(())
     }
@@ -156,6 +166,7 @@ impl Journal {
         };
         directory.sync()?;
         Ok(Self {
+            auth_changes: tokio::sync::watch::channel(0).0,
             connection: Mutex::new(connection),
             epoch,
             directory,

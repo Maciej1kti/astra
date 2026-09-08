@@ -38,18 +38,20 @@
     null,
   );
   let error = $state("");
-  $effect(() => {
-    const loading =
-      view === "calendar"
-        ? import("./CalendarView.svelte").then(
-            (m) => (CalendarView = m.default),
-          )
-        : import("./GanttView.svelte").then((m) => (GanttView = m.default));
-    void loading.catch((e) => (error = String(e)));
-  });
+  async function loadView() {
+    const requestedView = view;
+    error = "";
+    try {
+      if (requestedView === "calendar") CalendarView = (await import("./CalendarView.svelte")).default;
+      else GanttView = (await import("./GanttView.svelte")).default;
+    } catch {
+      if (view === requestedView) error = "This planning view could not be loaded. Retry, or reload after preserving any open draft.";
+    }
+  }
+  $effect(() => { void view; void loadView(); });
 </script>
 
-{#if error}<p role="alert">{error}</p>{/if}
+{#if error}<p role="alert">{error} <button onclick={loadView}>Retry planning view</button></p>{/if}
 {#if view === "calendar" && CalendarView}<CalendarView
     {project}
     {calendarDate}
@@ -72,4 +74,4 @@
     {onpropose}
     {oncreate}
   />
-{:else}<p role="status">Loading planning view…</p>{/if}
+{:else if !error}<p role="status">Loading planning view…</p>{/if}

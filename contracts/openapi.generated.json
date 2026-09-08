@@ -122,6 +122,9 @@
         "summary": "createPairing",
         "description": "Same-origin + rate limit; ustawia pending HttpOnly cookie. Nie wymaga zaufanej sesji.",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "201": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -228,6 +231,9 @@
         "summary": "claimPairing",
         "description": "Pending cookie i pending CSRF + Origin; kontrolowany exchange/grace według security spec.",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -266,6 +272,9 @@
         "summary": "approvePairing",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -306,6 +315,9 @@
         "summary": "denyPairing",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -418,6 +430,9 @@
         "summary": "logout",
         "description": "Unieważnia bieżącą sesję i usuwa cookie.",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -536,6 +551,9 @@
         "summary": "planRegistration",
         "description": "Nie modyfikuje repo; plan wygasa po 5 min. Wymaga CSRF.",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -583,6 +601,9 @@
         "summary": "commitRegistration",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "202": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -806,6 +827,9 @@
         "summary": "patchProject",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -1292,6 +1316,9 @@
         "summary": "createCard",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "201": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -1444,6 +1471,9 @@
         "summary": "patchCard",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -1673,6 +1703,9 @@
         "summary": "createMilestone",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "201": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -1825,6 +1858,9 @@
         "summary": "patchMilestone",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -2011,7 +2047,7 @@
           "updates"
         ],
         "summary": "listUpdates",
-        "description": "",
+        "description": "Returns bounded report summaries. Supply target_type and target_id together to select one project's card, milestone or project history before pagination. Invalid pairs return 422 INVALID_TARGET_FILTER; target filters are bound into the cursor.",
         "responses": {
           "200": {
             "description": "Poprawna odpowiedź",
@@ -2036,6 +2072,12 @@
         },
         "parameters": [
           {
+            "$ref": "#/components/parameters/TargetType"
+          },
+          {
+            "$ref": "#/components/parameters/TargetID"
+          },
+          {
             "$ref": "#/components/parameters/project_id"
           },
           {
@@ -2054,6 +2096,9 @@
         "summary": "createUpdate",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "201": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -2246,6 +2291,9 @@
         "summary": "replaceFocus",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -2434,6 +2482,9 @@
           }
         },
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Durable catalog command result",
             "content": {
@@ -2561,6 +2612,9 @@
           }
         },
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Up to 500 reviewed card changes with source versions",
             "content": {
@@ -2631,6 +2685,9 @@
         "summary": "patchPreferences",
         "description": "",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -2767,6 +2824,9 @@
         "summary": "setReadReceipts",
         "description": "Idempotentne ustawienie read; stan w SQLite, jedna transakcja z command result. Nie rozwiązuje raportu.",
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Poprawna odpowiedź",
             "content": {
@@ -3277,6 +3337,12 @@
         },
         "parameters": [
           {
+            "$ref": "#/components/parameters/TargetType"
+          },
+          {
+            "$ref": "#/components/parameters/TargetID"
+          },
+          {
             "$ref": "#/components/parameters/Limit"
           },
           {
@@ -3445,6 +3511,9 @@
           }
         },
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Selection state; selecting prepares a plan without changing project files",
             "content": {
@@ -3483,6 +3552,9 @@
           }
         ],
         "responses": {
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
           "200": {
             "description": "Selection state; selecting prepares a plan without changing project files",
             "content": {
@@ -3508,6 +3580,18 @@
     }
   },
   "components": {
+    "responses": {
+      "RequestTimeout": {
+        "description": "The request body was not fully received within 10 seconds. No domain command was admitted; preserve the original request identity if retrying the same intention.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
     "securitySchemes": {
       "BrowserSession": {
         "type": "apiKey",
@@ -3560,6 +3644,27 @@
           "minimum": 1,
           "maximum": 200,
           "default": 50
+        }
+      },
+      "TargetType": {
+        "name": "target_type",
+        "in": "query",
+        "description": "Report target kind. Must be paired with target_id and is only valid for update collections or views/list with type=update.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "project",
+            "card",
+            "milestone"
+          ]
+        }
+      },
+      "TargetID": {
+        "name": "target_id",
+        "in": "query",
+        "description": "Report target identifier. Must be paired with target_type. Filters apply before pagination; they do not require the current source target to exist.",
+        "schema": {
+          "$ref": "#/components/schemas/UUID"
         }
       },
       "Cursor": {
@@ -6538,6 +6643,13 @@
       "AttentionPage": {
         "type": "object",
         "properties": {
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "maxItems": 100
+          },
           "items": {
             "type": "array",
             "items": {

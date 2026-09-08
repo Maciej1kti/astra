@@ -15,3 +15,6 @@ __pycache__/
 
 # Persistent local manual-test fixtures and credentials
 .manual/
+
+# Reproducible browser output is uploaded by CI; keep concise progress evidence in Git.
+test-results/

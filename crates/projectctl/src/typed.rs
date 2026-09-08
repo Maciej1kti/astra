@@ -1,3 +1,4 @@
+use crate::transport::{Request, checked};
 use clap::{Args, Subcommand};
 use serde_json::{Value, json};
 use std::{
@@ -5,14 +6,6 @@ use std::{
     path::{Path, PathBuf},
 };
 type Error = Box<dyn std::error::Error>;
-pub type Request = (
-    String,
-    String,
-    Option<Value>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-);
 #[derive(Args)]
 pub struct Identity {
     #[arg(long, requires = "epoch")]
@@ -187,7 +180,7 @@ pub enum Tags {
     },
 }
 fn read(path: String) -> Request {
-    ("GET".into(), path, None, None, None, None)
+    Request::read(path)
 }
 fn write(
     method: &str,
@@ -196,14 +189,9 @@ fn write(
     version: Option<String>,
     identity: Identity,
 ) -> Request {
-    (
-        method.into(),
-        path,
-        Some(payload),
-        version,
-        identity.request_id,
-        identity.epoch,
-    )
+    Request::api(method, path, Some(payload))
+        .version(version)
+        .retry(identity.request_id, identity.epoch)
 }
 pub fn file(path: &Path) -> Result<Vec<u8>, Error> {
     let mut bytes = Vec::new();
@@ -243,13 +231,10 @@ impl Action {
             Self::Tags {
                 action: Tags::Preview { source, target },
             } => {
-                return Ok((
-                    "POST".into(),
-                    "/api/v1/workspace/tags/preview".into(),
+                return Ok(Request::api(
+                    "POST",
+                    "/api/v1/workspace/tags/preview",
                     Some(json!({"source":source,"target":target})),
-                    None,
-                    None,
-                    None,
                 ));
             }
             Self::Tags {
@@ -290,13 +275,10 @@ impl Action {
             Self::Sessions => return Ok(read("/api/v1/auth/sessions".into())),
             Self::RevokeSession { id } => {
                 super::uuid4(&id)?;
-                return Ok((
-                    "DELETE".into(),
+                return Ok(Request::api(
+                    "DELETE",
                     format!("/api/v1/auth/sessions/{id}"),
                     Some(json!({})),
-                    None,
-                    None,
-                    None,
                 ));
             }
             Self::CommandStatus { id } => {
@@ -311,13 +293,12 @@ impl Action {
         let path = project
             .ok_or("This command requires --project with an exact registered folder")?
             .canonicalize()?;
-        let response = client
-            .post("http://localhost/local/v1/projects/resolve")
-            .json(&json!({"absolute_path":path}))
-            .send()
-            .await?;
-        let response = response.error_for_status()?;
-        let resolved: Value = response.json().await?;
+        let resolved = checked(
+            client
+                .post("http://localhost/local/v1/projects/resolve")
+                .json(&json!({"absolute_path":path})),
+        )
+        .await?;
         let project = resolved["project_id"]
             .as_str()
             .ok_or("Invalid project resolution")?;
@@ -372,13 +353,8 @@ impl Action {
                     },
             } => {
                 super::uuid4(&id)?;
-                let original: Value = client
-                    .get(format!("http://localhost{root}/updates/{id}"))
-                    .send()
-                    .await?
-                    .error_for_status()?
-                    .json()
-                    .await?;
+                let original =
+                    checked(client.get(format!("http://localhost{root}/updates/{id}"))).await?;
                 write(
                     "POST",
                     format!("{root}/updates"),

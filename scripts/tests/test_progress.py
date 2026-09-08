@@ -35,7 +35,7 @@ class ProgressEvidenceTests(unittest.TestCase):
 
     def test_dependency_directories_are_not_scanned(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(checker, "ROOT", Path(directory)):
-            for name in [".tools", "node_modules", "contracts"]:
+            for name in [".tools", "node_modules", ".manual", "test-results", "contracts"]:
                 child = Path(directory) / name
                 child.mkdir()
                 (child / "test.json").write_text("{}")

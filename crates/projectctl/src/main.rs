@@ -1,7 +1,9 @@
+mod transport;
 mod typed;
 use clap::{Parser, Subcommand};
 use serde_json::{Value, json};
 use std::{path::PathBuf, time::Duration};
+use transport::Request;
 use uuid::Uuid;
 
 #[derive(Parser)]
@@ -111,6 +113,10 @@ async fn main() {
     match run(args).await {
         Ok(code) => std::process::exit(code),
         Err(error) => {
+            if let Some(failure) = error.downcast_ref::<transport::Failure>() {
+                println!("{}", failure.output);
+                std::process::exit(failure.code);
+            }
             let (code, label) = if let Some(network) = error.downcast_ref::<reqwest::Error>() {
                 match network.status().map(|status| status.as_u16()) {
                     Some(404) => (4, "RESOURCE_NOT_FOUND"),
@@ -170,109 +176,34 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
         .no_proxy()
         .timeout(Duration::from_secs(args.timeout))
         .build()?;
-    let (method, path, payload, version, request, epoch) = match args.command {
-        Action::MaintenancePlan { json_file } => (
-            "POST".into(),
-            "/local/v1/maintenance/plans".into(),
+    let request = match args.command {
+        Action::MaintenancePlan { json_file } => Request::local(
+            "POST",
+            "/local/v1/maintenance/plans",
             Some(serde_json::from_slice(&typed::file(&json_file)?)?),
-            None,
-            None,
-            None,
         ),
         Action::MaintenanceApply {
             plan_id,
             request_id,
             epoch,
-        } => {
-            if request_id.is_some() != epoch.is_some() {
-                return Err("Retry requires both --request-id and --epoch".into());
-            }
-            let (request_id, epoch) = if let (Some(id), Some(epoch)) = (request_id, epoch) {
-                (id, epoch)
-            } else {
-                let hello: Value = client
-                    .get("http://localhost/local/v1/hello")
-                    .send()
-                    .await?
-                    .error_for_status()?
-                    .json()
-                    .await?;
-                (
-                    request_id_at(hello["server_time"].as_str().ok_or("Invalid server time")?)?,
-                    hello["command_epoch"]
-                        .as_str()
-                        .ok_or("Invalid hello")?
-                        .to_owned(),
-                )
-            };
-            eprintln!(
-                "{}",
-                json!({"request_id":request_id,"command_epoch":epoch,"plan_id":plan_id})
-            );
-            (
-                "POST".into(),
-                "/local/v1/maintenance/jobs".into(),
-                Some(json!({"plan_id":plan_id,"request_id":request_id,"command_epoch":epoch})),
-                None,
-                None,
-                None,
-            )
-        }
+        } => Request::maintenance(plan_id).retry(request_id, epoch),
         Action::Typed(action) => action.prepare(&client, args.project.as_deref()).await?,
         Action::AddRoot {
             absolute_path,
             label,
-        } => (
-            "POST".into(),
-            "/local/v1/roots".into(),
+        } => Request::local(
+            "POST",
+            "/local/v1/roots",
             Some(json!({"absolute_path":absolute_path,"label":label})),
-            None,
-            None,
-            None,
         ),
         Action::RemoveRoot { id } => {
             uuid4(&id)?;
-            (
-                "DELETE".into(),
-                format!("/local/v1/roots/{id}"),
-                Some(json!({})),
-                None,
-                None,
-                None,
-            )
+            Request::local("DELETE", format!("/local/v1/roots/{id}"), Some(json!({})))
         }
-        Action::Hello => (
-            "GET".into(),
-            "/local/v1/hello".into(),
-            None,
-            None,
-            None,
-            None,
-        ),
-        Action::Doctor => (
-            "GET".into(),
-            "/local/v1/doctor".into(),
-            None,
-            None,
-            None,
-            None,
-        ),
-        Action::Projects => (
-            "GET".into(),
-            "/api/v1/projects".into(),
-            None,
-            None,
-            None,
-            None,
-        ),
-        Action::Pairings => (
-            "GET".into(),
-            "/api/v1/auth/pairings".into(),
-            None,
-            None,
-            None,
-            None,
-        ),
+        Action::Hello => Request::read("/local/v1/hello"),
+        Action::Doctor => Request::read("/local/v1/doctor"),
+        Action::Projects => Request::read("/api/v1/projects"),
+        Action::Pairings => Request::read("/api/v1/auth/pairings"),
         Action::RegistrationPlan {
             absolute_path,
             name,
@@ -282,55 +213,40 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             if let Some(name) = name {
                 value["name"] = json!(name);
             }
-            (
-                "POST".into(),
-                "/local/v1/registration-plans".into(),
-                Some(value),
-                None,
-                None,
-                None,
-            )
+            Request::local("POST", "/local/v1/registration-plans", Some(value))
         }
         Action::Register {
             plan_id,
             request_id,
             epoch,
-        } => (
-            "POST".into(),
-            "/api/v1/registrations".into(),
+        } => Request::api(
+            "POST",
+            "/api/v1/registrations",
             Some(json!({"plan_id":plan_id})),
-            None,
-            request_id,
-            epoch,
-        ),
+        )
+        .retry(request_id, epoch),
         Action::Approve {
             pairing_id,
             challenge,
         } => {
             uuid4(&pairing_id)?;
-            (
-                "POST".into(),
+            Request::local(
+                "POST",
                 format!("/local/v1/pairings/{pairing_id}/approve"),
                 Some(json!({"challenge":challenge})),
-                None,
-                None,
-                None,
             )
         }
         Action::Deny { pairing_id } => {
             uuid4(&pairing_id)?;
-            (
-                "POST".into(),
+            Request::local(
+                "POST",
                 format!("/local/v1/pairings/{pairing_id}/deny"),
                 Some(json!({})),
-                None,
-                None,
-                None,
             )
         }
         Action::Get { path } => {
             api_path(&path)?;
-            ("GET".into(), path, None, None, None, None)
+            Request::read(path)
         }
         Action::Command {
             method,
@@ -341,115 +257,20 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             epoch,
         } => {
             api_path(&path)?;
-            let bytes = typed::file(&json_file)?;
-            if bytes.len() > 1_100_000 {
-                return Err("JSON file too large".into());
-            }
-            (
-                method,
+            Request::api(
+                &method,
                 path,
-                Some(serde_json::from_slice(&bytes)?),
-                if_version,
-                request_id,
-                epoch,
+                Some(serde_json::from_slice(&typed::file(&json_file)?)?),
             )
+            .version(if_version)
+            .retry(request_id, epoch)
         }
     };
-    // Preview uses a body for literal tag names but does not admit a command.
-    let read_only_preview = method == "POST" && path == "/api/v1/workspace/tags/preview";
-    let mutating = method != "GET" && !read_only_preview;
-    let mut identity = payload.as_ref().map(|value| json!({"request_id":value["request_id"],"command_epoch":value["command_epoch"]})).unwrap_or(json!({}));
-    let mut builder = client.request(method.parse()?, format!("http://localhost{path}"));
-    if let Some(payload) = payload {
-        builder = builder.json(&payload);
-    }
-    if let Some(version) = version {
-        builder = builder.header("if-match", format!("\"{version}\""));
-    }
-    if mutating && path.starts_with("/api/") {
-        if request.is_some() != epoch.is_some() {
-            return Err("Retry requires both --request-id and --epoch".into());
-        }
-        let (request_id, epoch) = if let (Some(id), Some(epoch)) = (request, epoch) {
-            (id, epoch)
-        } else {
-            let hello: Value = client
-                .get("http://localhost/local/v1/hello")
-                .send()
-                .await?
-                .error_for_status()?
-                .json()
-                .await?;
-            (
-                request_id_at(hello["server_time"].as_str().ok_or("Invalid server time")?)?,
-                hello["command_epoch"]
-                    .as_str()
-                    .ok_or("Invalid hello")?
-                    .to_owned(),
-            )
-        };
-        eprintln!(
-            "{}",
-            json!({"request_id":request_id,"command_epoch":epoch,"method":method,"path":path})
-        );
-        identity = json!({"request_id":request_id,"command_epoch":epoch});
-        builder = builder
-            .header("x-request-id", request_id)
-            .header("x-command-epoch", epoch);
-    }
-    let mut reply = match builder.send().await {
-        Ok(reply) => reply,
-        Err(error) => {
-            let uncertain =
-                mutating && (path.starts_with("/api/") || path == "/local/v1/maintenance/jobs");
-            println!(
-                "{}",
-                json!({"api_version":"1","ok":false,"error":{"code":if uncertain {"RESULT_UNCERTAIN"} else {"TRANSPORT_UNAVAILABLE"},"message":error.to_string()},"request_id":identity["request_id"],"command_epoch":identity["command_epoch"]})
-            );
-            return Ok(if uncertain { 9 } else { 3 });
-        }
-    };
-    let status = reply.status().as_u16();
-    let body = async {
-        let mut bytes = Vec::new();
-        while let Some(chunk) = reply.chunk().await? {
-            if bytes.len() + chunk.len() > 16 * 1024 * 1024 {
-                return Err("Server response exceeds 16 MiB".into());
-            }
-            bytes.extend_from_slice(&chunk);
-        }
-        if bytes.is_empty() {
-            Ok(Value::Null)
-        } else {
-            Ok::<Value, Box<dyn std::error::Error>>(serde_json::from_slice(&bytes)?)
-        }
-    }
-    .await;
-    let body = match body {
-        Ok(body) => body,
-        Err(error) => {
-            let uncertain =
-                mutating && (path.starts_with("/api/") || path == "/local/v1/maintenance/jobs");
-            println!(
-                "{}",
-                json!({"api_version":"1","ok":false,"error":{"code":if uncertain {"RESULT_UNCERTAIN"} else {"INVALID_RESPONSE"},"message":error.to_string()},"request_id":identity["request_id"],"command_epoch":identity["command_epoch"]})
-            );
-            return Ok(if uncertain { 9 } else { 8 });
-        }
-    };
-    let request_id = body
-        .get("request_id")
-        .or_else(|| body["error"].get("request_id"))
-        .unwrap_or(&identity["request_id"]);
-    let ok = (200..300).contains(&status);
-    let output = if ok {
-        json!({"api_version":"1","ok":true,"data":body,"request_id":request_id,"command_epoch":identity["command_epoch"],"http_status":status})
-    } else {
-        json!({"api_version":"1","ok":false,"error":body["error"],"request_id":request_id,"command_epoch":identity["command_epoch"],"http_status":status})
-    };
-    println!("{}", serde_json::to_string_pretty(&output)?);
-    Ok(exit_code(status, &body))
+    let outcome = transport::execute(&client, request).await?;
+    println!("{}", serde_json::to_string_pretty(&outcome.output)?);
+    Ok(outcome.code)
 }
+
 fn exit_code(status: u16, body: &Value) -> i32 {
     if body["scope"] == "source_documents" && body["valid"] == false {
         return 7;
@@ -500,16 +321,6 @@ fn uuid4(value: &str) -> Result<(), Box<dyn std::error::Error>> {
         return Err("Expected a canonical UUIDv4".into());
     }
     Ok(())
-}
-
-fn request_id_at(time: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let millis = chrono::DateTime::parse_from_rfc3339(time)?.timestamp_millis();
-    if !(0..(1i64 << 48)).contains(&millis) {
-        return Err("Invalid server time".into());
-    }
-    let mut bytes = Uuid::now_v7().into_bytes();
-    bytes[..6].copy_from_slice(&(millis as u64).to_be_bytes()[2..]);
-    Ok(Uuid::from_bytes(bytes).to_string())
 }
 
 #[cfg(test)]

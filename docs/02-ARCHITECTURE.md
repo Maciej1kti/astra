@@ -38,6 +38,13 @@ Serwer ma lock instancji i lease każdego `.project/.local/writer.lock`. Druga i
 
 ## Odczyt i indeks
 
+The daemon opens through `Engine::open_for_service`, completing durable recovery
+before listener admission. Retained projections are explicitly stale until each
+project's bounded startup scan completes; an empty index also reports
+`PROJECTION_RECONCILING`. The watcher reconciles the initial project batch after
+installing watches, including the immediate fallback when native watches fail.
+See [ADR-030](ADR-030-RECOVERY-FIRST-SERVICE-STARTUP.md).
+
 Listy i widoki czytają indeks. Szczegół do edycji potwierdza źródłowy plik i zwraca jego wersję. Mutacja zawsze odczytuje źródło pod lockiem. Indeks nie przywraca skasowanej karty.
 
 Po starcie recovery jest pierwsze. Dopiero potem read/write dla zdrowych projektów. Przy istniejącym indeksie pokazujemy od razu oznaczony stan, podczas gdy skan aktualizuje świeżość. Bez indeksu budujemy go przyrostowo i pokazujemy postęp, nie pustą tablicę udającą brak kart.

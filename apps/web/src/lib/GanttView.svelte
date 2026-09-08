@@ -14,6 +14,9 @@
   import type { DateProposal } from "./proposals";
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
   import GanttTask from "./GanttTask.svelte";
+  import { isAbortError } from "./read-requests";
+  import { projectionNotice } from "./projection-state";
+  import { partitionEdges } from "./gantt-projection";
   let {
     project,
     month,
@@ -35,6 +38,7 @@
     loading = $state(false),
     error = $state(""),
     pageNotice = $state(""),
+    freshness = $state(""),
     gesture = $state(false);
   let scale = $state("days"),
     preview = $state(false),
@@ -47,6 +51,8 @@
   let chartRoot = $state<HTMLDivElement>();
   let lastNavigation = "";
   let loadedProject: string | null = null;
+  let readController: AbortController | undefined;
+  let readKey = "";
   let generation = 0,
     deferred = false;
   const filtered = $derived(
@@ -57,9 +63,10 @@
   const cards = $derived(filtered.filter((r) => r.type === "card"));
   const selected = $derived(data?.rows.find((r) => r.id === selection));
   const analysis = $derived(data?.analysis);
+  const forecasts = $derived(new Map((data?.forecasts ?? []).map((forecast) => [forecast.id, forecast])));
   const tasks = $derived.by(() =>
     filtered.flatMap((row) => {
-      const forecast = data?.forecasts.find((f) => f.id === row.id);
+      const forecast = forecasts.get(row.id);
       const schedule = preview ? forecast?.schedule : row.schedule;
       if (row.type === "milestone" && row.due)
         return [
@@ -88,25 +95,9 @@
       ];
     }),
   );
-  const links = $derived(
-    (data?.edges ?? [])
-      .filter(
-        (e) =>
-          tasks.some((t) => t.id === e.from) &&
-          tasks.some((t) => t.id === e.to),
-      )
-      .map((e) => ({
-        id: `${e.from}:${e.to}`,
-        source: e.from,
-        target: e.to,
-        type: "e2s" as const,
-      })),
-  );
-  const hiddenEdges = $derived(
-    (data?.edges ?? []).filter(
-      (e) => !links.some((l) => l.source === e.from && l.target === e.to),
-    ),
-  );
+  const dependencies = $derived(partitionEdges(data?.edges ?? [], tasks.map((task) => String(task.id))));
+  const links = $derived(dependencies.links);
+  const hiddenEdges = $derived(dependencies.hiddenEdges);
   const scales = $derived<NonNullable<IConfig["scales"]>>(
     scale === "days"
       ? [
@@ -154,7 +145,7 @@
           ...tasks
             .map((t) =>
               preview
-                ? (data?.forecasts.find((f) => f.id === t.id)?.schedule.end ??
+                ? (forecasts.get(String(t.id))?.schedule.end ??
                   t.astra.due?.date)
                 : (t.astra.schedule?.end ?? t.astra.due?.date),
             )
@@ -220,17 +211,23 @@
     window.addEventListener("planning-gesture-ended", end);
     return () => {
       generation++;
+      readController?.abort();
       widgetApi = null;
       window.removeEventListener("planning-gesture-started", start);
       window.removeEventListener("planning-gesture-ended", end);
     };
   });
   async function load(cursor: string | null) {
+    const key = `${project}:${cursor ?? ""}`;
+    if (loading && key === readKey) { deferred = true; return; }
     if (gesture) {
       deferred = true;
       return;
     }
     const current = ++generation;
+    readController?.abort();
+    readController = new AbortController();
+    readKey = key;
     loading = true;
     error = "";
     if (!project) {
@@ -241,6 +238,7 @@
     try {
       const result = await api<GanttPage>(
         `/api/v1/views/gantt?project_id=${project}&limit=200${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+        "GET", undefined, {}, { signal: readController.signal },
       );
       if (current !== generation) return;
       if (gesture) {
@@ -248,6 +246,7 @@
         return;
       }
       data = result;
+      freshness = projectionNotice(result);
     } catch (e) {
       if (
         current === generation &&
@@ -261,9 +260,12 @@
         await load(null);
         return;
       }
-      if (current === generation) error = String(e);
+      if (current === generation && !isAbortError(e)) error = String(e);
     } finally {
-      if (current === generation) loading = false;
+      if (current === generation) {
+        loading = false;
+        if (deferred && !gesture) { deferred = false; void load(history.at(-1) ?? null); }
+      }
     }
   }
   function dependency(from: string, to: string, remove = false) {
@@ -440,6 +442,7 @@
         }}>Reload timeline</button
       >
     </p>{/if}
+  {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
   {#if loading}<p role="status">Loading timeline…</p>{/if}
   {#if pageNotice}<p class="hint" role="status">{pageNotice}</p>{/if}
   <div class="selection-bar" aria-label="Timeline selection">

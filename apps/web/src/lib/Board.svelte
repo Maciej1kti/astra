@@ -2,6 +2,9 @@
   import { onMount, setContext, untrack, tick } from "svelte";
   import { on } from "svelte/events";
   import { readBoardView, writeBoardView } from "./board-view";
+  import { cursorPage } from "./pagination";
+  import { isAbortError } from "./read-requests";
+  import { projectionNotice, type ProjectionState } from "./projection-state";
   import { api, type Summary } from "./api";
   import {
     Kanban,
@@ -82,6 +85,9 @@
     );
     if (current === generation) restoring = false;
   }
+  let readController: AbortController | undefined;
+  let columnCursors: Record<string, string | null> = {};
+  let freshness = $state(""), pageNotice = $state("");
   let generation = 0,
     deferredRefresh = false;
   let gestureActive = $state(false);
@@ -100,6 +106,7 @@
     window.addEventListener("planning-gesture-ended", released);
     return () => {
       generation++;
+      readController?.abort();
       window.removeEventListener("planning-gesture-started", started);
       window.removeEventListener("planning-gesture-ended", released);
     };
@@ -110,44 +117,55 @@
     untrack(() => void load());
   });
   async function load(status?: string, cursor?: string | null) {
+    if (busy && !status) { deferredRefresh = true; return; }
     if (gestureActive) {
       deferredRefresh = true;
       return;
     }
     const current = ++generation;
+    readController?.abort();
+    readController = new AbortController();
+    const signal = readController.signal;
     busy = true;
     error = "";
     try {
-      const result = await api<{ columns: Column[] }>(
-        `/api/v1/views/board?project_id=${project}&limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-      );
+      const requests = status ? [{ status, cursor: cursor ?? null }]
+        : columns.length ? columns.map((column) => ({ status: column.status, cursor: columnCursors[column.status] ?? null }))
+          : [{ status: undefined, cursor: null }];
+      const pages = await Promise.all(requests.map(async (request) => ({ ...request,
+        ...(await cursorPage((page) => api<{ columns: Column[] } & ProjectionState>(
+          `/api/v1/views/board?project_id=${project}&limit=50${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
+          "GET", undefined, {}, { signal },
+        ), request.cursor)),
+      })));
       if (current !== generation) return;
-      if (gestureActive || document.querySelector("[data-dragging]")) {
-        deferredRefresh = true;
-        return;
-      }
+      if (gestureActive || document.querySelector("[data-dragging]")) { deferredRefresh = true; return; }
       const restore = initialView || !!status;
       restoring = restore;
+      const resolved = new Map<string, Column>();
+      for (const page of pages) {
+        for (const column of page.value.columns) {
+          if (page.status && page.status !== column.status) continue;
+          resolved.set(column.status, column);
+          columnCursors[column.status] = page.reset ? null : page.cursor;
+          pageStarts[column.status] = !columnCursors[column.status];
+        }
+      }
+      freshness = [...new Set(pages.map((page) => projectionNotice(page.value)).filter(Boolean))].join(" ");
+      pageNotice = pages.some((page) => page.reset) ? "The board changed. Showing the first page of the updated columns." : "";
       if (status) {
-        pageStarts[status] = !cursor;
         viewState.vertical[status] = 0;
-      } else
-        pageStarts = Object.fromEntries(
-          result.columns.map((column) => [column.status, true]),
-        );
-      columns = status
-        ? columns.map((column) =>
-            column.status === status
-              ? result.columns.find((item) => item.status === status)!
-              : column,
-          )
-        : result.columns;
+        columns = columns.map((column) => resolved.get(column.status) ?? column);
+      } else columns = [...resolved.values()];
       if (restore) await restoreView(current);
       if (current === generation) initialView = false;
     } catch (e) {
-      error = String(e);
+      if (current === generation && !isAbortError(e)) error = String(e);
     } finally {
-      if (current === generation) busy = false;
+      if (current === generation) {
+        busy = false;
+        if (deferredRefresh && !gestureActive) { deferredRefresh = false; void load(); }
+      }
     }
   }
   function propose(
@@ -370,6 +388,8 @@
   }
 </script>
 
+{#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
+{#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
 {#if error}<p role="alert">
     {error}
     <button disabled={busy || gestureActive} onclick={() => load()}

@@ -1,8 +1,13 @@
 //! Bounded projections. SQL applies filters and pagination before materializing output.
-use crate::{AppError, engine::Engine, index::Indexed};
+use crate::{
+    AppError,
+    engine::Engine,
+    index::{Indexed, ProjectionStatus},
+};
 use chrono::Days;
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, params};
 use serde_json::{Value, json};
+use std::collections::{BTreeMap, BTreeSet};
 fn offset(cursor: Option<&str>, scope: &Value) -> Result<u64, AppError> {
     let Some(cursor) = cursor else { return Ok(0) };
     if cursor.len() > 4096 {
@@ -18,8 +23,15 @@ fn offset(cursor: Option<&str>, scope: &Value) -> Result<u64, AppError> {
         .filter(|n| *n <= i64::MAX as u64)
         .ok_or_else(|| AppError::reject(400, "INVALID_CURSOR"))
 }
-fn page(scope: &Value, revision: &str, start: u64, count: usize, more: bool) -> Value {
-    json!({"next_cursor":more.then(||json!([scope,start+count as u64]).to_string()),"snapshot_cursor":revision,"has_more":more,"freshness":"index_snapshot"})
+fn page(
+    scope: &Value,
+    revision: &str,
+    start: u64,
+    count: usize,
+    more: bool,
+    freshness: &str,
+) -> Value {
+    json!({"next_cursor":more.then(||json!([scope,start+count as u64]).to_string()),"snapshot_cursor":revision,"has_more":more,"freshness":freshness})
 }
 fn bounded(limit: u32, max: u32) -> Result<(), AppError> {
     if limit == 0 || limit > max {
@@ -55,6 +67,7 @@ impl Engine {
             .checked_add_days(Days::new(7))
             .ok_or(AppError::State)?;
         self.index.with_snapshot(|db,revision|{
+            let projection = ProjectionStatus::read(db, project)?;
             let scope=json!(["attention",revision,project,today.to_string(),limit]);let start=offset(cursor,&scope)?;
             let sql=format!("WITH candidates AS (
               SELECT project_id,entity_id,entity_type,title,'overdue' reason,json_extract(metadata_json,'$.due.date') date,0 weight FROM documents d WHERE {ACTIVE} AND (?5 IS NULL OR d.project_id=?5) AND json_extract(metadata_json,'$.due.kind')='hard' AND json_extract(metadata_json,'$.due.date')<?1
@@ -75,7 +88,7 @@ impl Engine {
                 item["target"]=serde_json::from_str(&text).map_err(|_|AppError::State)?;
             }}
             let more=items.len()>limit as usize;items.truncate(limit as usize);
-            Ok(json!({"page":page(&scope,revision,start,items.len(),more),"items":items}))
+            Ok(json!({"page":page(&scope,revision,start,items.len(),more,projection.freshness),"items":items,"warnings":projection.warnings}))
         })
     }
     pub fn calendar(
@@ -95,6 +108,7 @@ impl Engine {
             return Err(AppError::reject(400, "INVALID_DATE_RANGE"));
         }
         self.index.with_snapshot(|db,revision|{
+            let projection = ProjectionStatus::read(db, project)?;
             let scope=json!(["calendar",revision,project,from,to,limit]);let start=offset(cursor,&scope)?;
             let mut statement=db.prepare("WITH selected AS(SELECT * FROM documents WHERE (?1 IS NULL OR project_id=?1) AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0), dates AS (
               SELECT project_id,entity_id,source_hash,title,'card_schedule' kind,json_extract(metadata_json,'$.schedule.start') start,json_extract(metadata_json,'$.schedule.end') end,NULL due_kind FROM selected WHERE entity_type='card'
@@ -107,7 +121,7 @@ impl Engine {
                 if let Some(due)=r.get::<_,Option<String>>(7)?{item["due_kind"]=json!(due);}Ok(item)
             })?.collect::<Result<Vec<_>,_>>()?;
             let more=items.len()>limit as usize;items.truncate(limit as usize);
-            Ok(json!({"page":page(&scope,revision,start,items.len(),more),"items":items,"warnings":[]}))
+            Ok(json!({"page":page(&scope,revision,start,items.len(),more,projection.freshness),"items":items,"warnings":projection.warnings}))
         })
     }
     pub fn gantt(
@@ -117,40 +131,36 @@ impl Engine {
         limit: u32,
     ) -> Result<Value, AppError> {
         bounded(limit, 500)?;
-        self.index.with_snapshot(|db,revision|{
-            let scope=json!(["gantt",revision,project,limit]);let start=offset(cursor,&scope)?;
-            let mut rows=self::rows(db,project,None,limit+1,start,true)?;let more=rows.len()>limit as usize;rows.truncate(limit as usize);
-            // Analyze the entire bounded project snapshot, independently of UI pagination.
-            let mut statement=db.prepare("SELECT entity_id,json_extract(metadata_json,'$.schedule'),json_extract(metadata_json,'$.depends_on'),validity FROM documents WHERE project_id=?1 AND entity_type='card' AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0 AND COALESCE(json_extract(metadata_json,'$.status'),'')!='cancelled' ORDER BY entity_id LIMIT 10001")?;
-            let mut cards=statement.query_map([project],|r|Ok((r.get::<_,String>(0)?,r.get::<_,Option<String>>(1)?,r.get::<_,Option<String>>(2)?,r.get::<_,String>(3)?)))?.map(|row|{
-                let (id,schedule,dependencies,validity)=row?;
-                let parse=|text:Option<String>|->Result<Value,AppError>{text.map(|s|serde_json::from_str(&s).map_err(|_|AppError::State)).unwrap_or(Ok(Value::Null))};
-                Ok(json!({"id":id,"schedule":parse(schedule)?,"depends_on":parse(dependencies)?,"x-analysis-invalid":validity!="valid"}))
-            }).collect::<Result<Vec<_>,AppError>>()?;
-            let truncated=cards.len()>10_000;
+        // Own every input and its revision before releasing the index lock.
+        // Parsing and graph analysis below cannot delay unrelated index users.
+        let snapshot = self.index.with_snapshot(|db, revision| {
+            let projection = ProjectionStatus::read(db, Some(project))?;
+            let scope = json!(["gantt", revision, project, limit]);
+            let start = offset(cursor, &scope)?;
+            let mut rows = self::rows(db, project, None, limit + 1, start, true)?;
+            let more = rows.len() > limit as usize;
+            rows.truncate(limit as usize);
+            projection.mark_rows(&mut rows);
+            let mut statement = db.prepare("SELECT entity_id,json_extract(metadata_json,'$.schedule'),json_extract(metadata_json,'$.depends_on'),validity FROM documents WHERE project_id=?1 AND entity_type='card' AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0 AND COALESCE(json_extract(metadata_json,'$.status'),'')!='cancelled' ORDER BY entity_id LIMIT 10001")?;
+            let mut cards = statement.query_map([project], |row| Ok(TimelineCard {
+                id: row.get(0)?, schedule: row.get(1)?, dependencies: row.get(2)?, validity: row.get(3)?,
+            }))?.collect::<Result<Vec<_>, _>>()?;
+            let truncated = cards.len() > 10_000;
             cards.truncate(10_000);
-            let analysis=project_domain::timeline::analyze(&cards,truncated);
-            let forecasts=rows.iter().filter_map(|r|analysis.forecasts.get(&r.id)).collect::<Vec<_>>();
-            let mut edges=Vec::new();
-            let mut warnings=Vec::new();
-            for row in &rows {
-                warnings.extend(project_domain::date_warnings(&row.metadata));
-                for dependency in row.metadata["depends_on"].as_array().into_iter().flatten() {
-                    if let Some(id)=dependency.as_str() {
-                        let predecessor:Option<(Option<String>,String)>=db.query_row("SELECT json_extract(metadata_json,'$.schedule.end'),validity FROM documents WHERE project_id=?1 AND entity_type='card' AND entity_id=?2",params![project,id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
-                        let warning=match predecessor {
-                            None=>Some("DEPENDENCY_MISSING"),
-                            Some((_,validity)) if validity!="valid"=>Some("DEPENDENCY_STALE"),
-                            Some((Some(end),_)) if row.metadata["schedule"]["start"].as_str().is_some_and(|start| start<=end.as_str())=>Some("DEPENDENCY_DATE_CONFLICT"),
-                            _=>None,
-                        };
-                        edges.push(json!({"from":id,"to":row.id,"kind":"finish_to_start","outside_page":!rows.iter().any(|r|r.id==id),"warning":warning}));
-                    }
-                }
-            }
-            Ok(json!({"analysis":analysis,"forecasts":forecasts,"rows":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"edges":edges,"page":page(&scope,revision,start,rows.len(),more),"warnings":warnings.into_iter().take(100).collect::<Vec<_>>()}))
-        })
+            let ids: BTreeSet<&str> = rows.iter().flat_map(|row| row.metadata["depends_on"].as_array().into_iter().flatten().filter_map(Value::as_str)).collect();
+            let predecessors = if ids.is_empty() {
+                BTreeMap::new()
+            } else {
+                // These inputs include archived/cancelled and analysis-bound
+                // predecessors, preserving edge warnings independently of forecasts.
+                let mut statement = db.prepare("SELECT entity_id,json_extract(metadata_json,'$.schedule.end'),validity FROM documents WHERE project_id=?1 AND entity_type='card' AND entity_id IN (SELECT value FROM json_each(?2))")?;
+                statement.query_map(params![project, serde_json::to_string(&ids).map_err(|_| AppError::State)?], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))?.collect::<Result<_, _>>()?
+            };
+            Ok(GanttSnapshot { revision: revision.to_owned(), scope, start, rows, more, cards, truncated, predecessors, projection })
+        })?;
+        snapshot.render()
     }
+
     pub fn board(
         &self,
         project: &str,
@@ -159,17 +169,18 @@ impl Engine {
     ) -> Result<Value, AppError> {
         bounded(limit, 200)?;
         self.index.with_snapshot(|db,revision|{
+            let projection = ProjectionStatus::read(db, Some(project))?;
             let scope=json!(["board",revision,project,limit]);
             let (selected,start)=if let Some(cursor)=cursor{let value:Value=serde_json::from_str(cursor).map_err(|_|AppError::reject(400,"INVALID_CURSOR"))?;if value[0]!=scope{return Err(AppError::reject(409,"PAGE_STALE"));}(value[1].as_str().ok_or(AppError::State)?.to_owned(),value[2].as_u64().filter(|n|*n<=i64::MAX as u64).ok_or(AppError::State)?)}else{(String::new(),0)};
             let mut columns=Vec::new();
             for status in ["planned","active","review","done","cancelled"]{
                 let start=if selected==status{start}else{0};let mut values=rows(db,project,Some(status),limit+1,start,false)?;
-                let more=values.len()>limit as usize;values.truncate(limit as usize);
+                let more=values.len()>limit as usize;values.truncate(limit as usize);projection.mark_rows(&mut values);
                 let total:i64=db.query_row("SELECT count(*) FROM documents WHERE project_id=?1 AND entity_type='card' AND json_extract(metadata_json,'$.status')=?2 AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0",[project,status],|r|r.get(0))?;
-                let mut page=page(&scope,revision,start,values.len(),more);page["next_cursor"]=json!(more.then(||json!([scope,status,start+values.len()as u64]).to_string()));
+                let mut page=page(&scope,revision,start,values.len(),more,projection.freshness);page["next_cursor"]=json!(more.then(||json!([scope,status,start+values.len()as u64]).to_string()));
                 columns.push(json!({"status":status,"items":values.iter().map(Indexed::summary).collect::<Vec<_>>(),"page":page,"total":total}));
             }
-            Ok(json!({"columns":columns,"snapshot_cursor":revision,"warnings":[]}))
+            Ok(json!({"columns":columns,"snapshot_cursor":revision,"warnings":projection.warnings}))
         })
     }
 }
@@ -207,4 +218,73 @@ fn rows(
             })
         })
         .collect()
+}
+
+struct TimelineCard {
+    id: String,
+    schedule: Option<String>,
+    dependencies: Option<String>,
+    validity: String,
+}
+
+struct GanttSnapshot {
+    revision: String,
+    scope: Value,
+    start: u64,
+    rows: Vec<Indexed>,
+    more: bool,
+    cards: Vec<TimelineCard>,
+    truncated: bool,
+    predecessors: BTreeMap<String, (Option<String>, String)>,
+    projection: ProjectionStatus,
+}
+
+impl GanttSnapshot {
+    fn render(self) -> Result<Value, AppError> {
+        let cards = self.cards.into_iter().map(|card| {
+            let parse = |text: Option<String>| -> Result<Value, AppError> {
+                text.map(|text| serde_json::from_str(&text).map_err(|_| AppError::State)).unwrap_or(Ok(Value::Null))
+            };
+            Ok(json!({"id":card.id,"schedule":parse(card.schedule)?,"depends_on":parse(card.dependencies)?,"x-analysis-invalid":card.validity!="valid" || self.projection.freshness=="stale"}))
+        }).collect::<Result<Vec<_>, AppError>>()?;
+        let analysis = project_domain::timeline::analyze(&cards, self.truncated);
+        let forecasts = self
+            .rows
+            .iter()
+            .filter_map(|row| analysis.forecasts.get(&row.id))
+            .collect::<Vec<_>>();
+        let page_ids: BTreeSet<&str> = self.rows.iter().map(|row| row.id.as_str()).collect();
+        let mut edges = Vec::new();
+        let mut warnings = self.projection.warnings;
+        for row in &self.rows {
+            warnings.extend(project_domain::date_warnings(&row.metadata));
+            for id in row.metadata["depends_on"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+            {
+                let warning = match self.predecessors.get(id) {
+                    None => Some("DEPENDENCY_MISSING"),
+                    Some((_, validity))
+                        if validity != "valid" || self.projection.freshness == "stale" =>
+                    {
+                        Some("DEPENDENCY_STALE")
+                    }
+                    Some((Some(end), _))
+                        if row.metadata["schedule"]["start"]
+                            .as_str()
+                            .is_some_and(|start| start <= end.as_str()) =>
+                    {
+                        Some("DEPENDENCY_DATE_CONFLICT")
+                    }
+                    _ => None,
+                };
+                edges.push(json!({"from":id,"to":row.id,"kind":"finish_to_start","outside_page":!page_ids.contains(id),"warning":warning}));
+            }
+        }
+        Ok(
+            json!({"analysis":analysis,"forecasts":forecasts,"rows":self.rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"edges":edges,"page":page(&self.scope,&self.revision,self.start,self.rows.len(),self.more,self.projection.freshness),"warnings":warnings.into_iter().take(100).collect::<Vec<_>>()}),
+        )
+    }
 }

@@ -9,11 +9,13 @@
   import { hasCardUpdateDraft, newCardUpdateDraft } from "./card-update";
   import { addTag, tagValidation } from "./tags";
   import { canUndoDraft, editorCompletion } from "./editor-actions";
+  import { detailSummary } from "./resource-summary";
+  import { mapReads, isAbortError } from "./read-requests";
   import { resourceLabel } from "./resource-presentation";
   import { modal } from "./dialog";
   import {
     api,
-    all,
+    resourcePath,
     command,
     send,
     ApiError,
@@ -80,7 +82,9 @@
   let cardActivity = $state<{ refresh: () => Promise<void> }>();
   const updateDirty = $derived(hasCardUpdateDraft(updateDraft));
   let tagDraft = $state(""), tagError = $state("");
-  let labelOptions = $state<string[]>([]), choicesLoading = $state(false), discoveryError = $state("");
+  let choicesLoading = $state(false), discoveryError = $state("");
+  let relationRead: AbortController | undefined;
+  let relationGeneration = 0;
   let relationIndex = $state<Record<string, Summary>>({});
   let projectName = $state("");
   let statusMessage = $state("");
@@ -161,21 +165,32 @@
   let accessLost = $state(false);
   let locked = $derived(busy || !!pending || accessLost || updateBusy || !!updatePending);
   async function loadProjectChoices() {
+    relationRead?.abort();
+    const controller = new AbortController();
+    relationRead = controller;
+    const current = ++relationGeneration;
     choicesLoading = true;
     discoveryError = "";
+    const references: { type: Summary["type"]; id: string; project_id: string }[] =
+      [...new Set(dependencies)].map((id) => ({ type: "card", id, project_id: project }));
+    if (milestoneId) references.push({ type: "milestone", id: milestoneId, project_id: project });
     try {
-      const [cards, archivedCards, milestones] = await Promise.all([
-        all(`/api/v1/projects/${project}/cards?archived=false`),
-        all(`/api/v1/projects/${project}/cards?archived=true`),
-        all(`/api/v1/projects/${project}/milestones`),
-      ]);
-      const available = [...cards, ...archivedCards, ...milestones];
-      relationIndex = Object.fromEntries(available.map((item) => [item.id, item]));
-      labelOptions = [...new Set(available.flatMap((item) => item.labels ?? []))];
-    } catch {
-      discoveryError = "Project suggestions are unavailable. You can still enter a tag.";
+      const available = await mapReads(references, async (ref) => {
+        try {
+          const detail = await api<Resource>(resourcePath(ref), "GET", undefined, {}, { signal: controller.signal });
+          return detailSummary(detail, project, ref.type);
+        } catch (error) {
+          if (isAbortError(error)) throw error;
+          return null;
+        }
+      }, controller.signal);
+      if (current !== relationGeneration) return;
+      relationIndex = Object.fromEntries(available.filter((item): item is Summary => item !== null).map((item) => [item.id, item]));
+      if (available.some((item) => !item)) discoveryError = "Some related cards or milestones are unavailable.";
+    } catch (error) {
+      if (current === relationGeneration && !isAbortError(error)) discoveryError = "Related card names could not be loaded.";
     } finally {
-      choicesLoading = false;
+      if (current === relationGeneration) choicesLoading = false;
     }
   }
   async function copyDraft() {
@@ -196,6 +211,9 @@
         return;
       }
       accessLost = true;
+      relationGeneration++;
+      relationRead?.abort();
+      relationIndex = {};
       history = [];
       focus = null;
       conflict = null;
@@ -204,10 +222,13 @@
     };
     const restored = () => {
       accessLost = false;
+      if (type === "card") void loadProjectChoices();
     };
     window.addEventListener("session-ended", ended);
     window.addEventListener("session-restored", restored);
     return () => {
+      relationGeneration++;
+      relationRead?.abort();
       window.removeEventListener("session-ended", ended);
       window.removeEventListener("session-restored", restored);
     };
@@ -642,7 +663,7 @@
       {#if preview}<Markdown source={body} />{/if}
       {#if type === "card"}
         <AcceptanceChecklist bind:items={acceptance} bind:draft={acceptanceDraft} bind:error={acceptanceError} disabled={locked} />
-        <TagPicker bind:labels bind:draft={tagDraft} bind:error={tagError} options={labelOptions} disabled={locked} loading={choicesLoading} {discoveryError} onretry={loadProjectChoices} />
+        <TagPicker bind:labels bind:draft={tagDraft} bind:error={tagError} disabled={locked} />
         <h3>Planning</h3><fieldset>
           <legend>Planned work · inclusive dates</legend>
           <div class="row">
@@ -701,6 +722,7 @@
       {#if type === "card"}<fieldset>
           <legend>Connections and blockers</legend>
           <p class="field-title">Milestone</p>
+          {#if discoveryError}<p class="hint">{discoveryError} <button type="button" disabled={locked || choicesLoading} onclick={loadProjectChoices}>Retry related names</button></p>{/if}
           {#if milestoneId}<div class="relation-row"><span>{relationIndex[milestoneId]?.title ?? (choicesLoading ? "Loading milestone…" : "Unavailable milestone")}</span><button type="button" disabled={locked} onclick={() => (milestoneId = "")}>Remove milestone</button></div>
           {:else}<p class="empty-context">No milestone assigned. Find one by its title below.</p>{/if}
           <label

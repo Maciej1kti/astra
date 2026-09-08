@@ -40,6 +40,15 @@ Gdy GUI rozrejestrowuje projekt, zmienia tylko workspace. Nie usuwa plików. Rel
 
 ## Kolekcje i filtrowanie
 
+Report collections support `target_type` and `target_id` as an optional pair.
+Use `/api/v1/projects/{project_id}/updates?target_type=card&target_id={card_id}`
+for a bounded card activity page, or the same pair with
+`/api/v1/views/list?type=update`. The target kind is `project`, `card` or
+`milestone`; the identifier is a canonical UUIDv4. Incomplete/invalid pairs and
+target filters on other resource kinds return 422 `INVALID_TARGET_FILTER`.
+Both fields are applied before pagination and are bound into the cursor identity.
+Report bodies remain detail-only. See [ADR-029](ADR-029-BOUNDED-REPORT-HISTORY.md).
+
 Domyślnie 50 rekordów, max 200 dla list ogólnych. Calendar max 400 dni i 1000 elementów strony; Gantt domyślnie 200 wierszy i max 500. Limit przekroczenia wymaga stronicowania, nie ucięcia bez informacji. Body nie jest na listach.
 
 Filtry: project, status, priority, label, milestone, archived, due range, search. Sort ma określoną stabilność i tie-breaker ID. Opaque cursor wiąże query hash i revision projekcji. Gdy nie da się utrzymać spójności kolejnej strony po zmianie danych, zwróć `CURSOR_STALE` i odśwież, zamiast mieszać rekordy. Nie utrzymuj długich transakcji SQL przez interakcję użytkownika.
@@ -49,6 +58,12 @@ Search używa bezpiecznie związanych parametrów i jawnego składania zapytania
 Calendar zwraca item_id osobny od resource_id, ponieważ karta może mieć plan, deadline i przegląd. Typy: `card_schedule`, `card_due`, `card_review`, `milestone_due`, `project_review`. Każdy marker wskazuje źródło i version. Gest planu nie zmienia markera due. Zależności Gantta referują ID kart; hidden target jest opisany, nie pomijany bez wyjaśnienia.
 
 ## SSE bez zgubionej zmiany
+
+Ordinary request admission is bounded, including body receipt. A body that is not
+fully received within 10 seconds returns 408 `REQUEST_TIMEOUT` before domain
+command admission. Retrying the same intention preserves its request ID, epoch
+and payload. This deadline does not cancel a command after PREPARED or turn an
+uncertain mutation into a rejection.
 
 Strumień `/events` jest jeden na otwartą kartę aplikacji, nie osobny perprojekt. Nie umieszczaj tokenu sesji w query string. Native EventSource używa cookie same-origin. SSE ma semantykę jednostronnego strumienia i Last-Event-ID [S10].
 

@@ -12,10 +12,15 @@ use project_application::{
     engine::Engine,
     now_millis,
 };
-use std::sync::Arc;
-use tokio::{net::UnixListener, sync::Semaphore};
+use std::{sync::Arc, time::Duration};
+use tokio::{
+    net::UnixListener,
+    sync::{OwnedSemaphorePermit, Semaphore, watch},
+};
 use url::Url;
+mod assets;
 mod dispatch;
+mod events;
 mod picker;
 
 #[derive(Clone)]
@@ -26,6 +31,8 @@ pub struct Service {
     host: String,
     slots: Arc<Semaphore>,
     streams: Arc<Semaphore>,
+    shutdown: watch::Sender<bool>,
+    body_timeout: Duration,
 }
 impl Service {
     pub fn new(engine: Engine, public_origin: &str) -> Result<Self, String> {
@@ -51,6 +58,8 @@ impl Service {
             host,
             slots: Arc::new(Semaphore::new(8)),
             streams: Arc::new(Semaphore::new(64)),
+            shutdown: watch::channel(false).0,
+            body_timeout: Duration::from_secs(10),
         })
     }
     pub fn browser_router(&self) -> Router {
@@ -60,6 +69,10 @@ impl Service {
     }
     pub fn local_router(&self) -> Router {
         Router::new().fallback(any(local)).with_state(self.clone())
+    }
+    /// Stop long-lived responses before the listeners finish graceful shutdown.
+    pub fn shutdown(&self) {
+        self.shutdown.send_replace(true);
     }
 }
 #[derive(Clone)]
@@ -76,6 +89,10 @@ struct Input {
     headers: HeaderMap,
     body: serde_json::Value,
     local: bool,
+}
+enum Handled {
+    Response(Response),
+    Events(Input, OwnedSemaphorePermit),
 }
 fn header<'a>(headers: &'a HeaderMap, name: &str) -> &'a str {
     headers
@@ -114,7 +131,9 @@ fn failure(error: AppError) -> Response {
 }
 fn secured(mut response: Response) -> Response {
     let headers = response.headers_mut();
-    headers.insert("cache-control", HeaderValue::from_static("no-store"));
+    headers
+        .entry("cache-control")
+        .or_insert(HeaderValue::from_static("no-store"));
     headers.insert(
         "x-content-type-options",
         HeaderValue::from_static("nosniff"),
@@ -167,40 +186,54 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
     {
         return response(Reply::error(415, "JSON_REQUIRED", ""));
     }
-    let bytes = match to_bytes(body, 1_100_000).await {
-        Ok(bytes) => bytes,
-        Err(_) => return response(Reply::error(413, "BODY_TOO_LARGE", "")),
-    };
-    let body = if bytes.is_empty() && !mutation {
-        serde_json::json!({})
-    } else {
-        match serde_json::from_slice(&bytes) {
-            Ok(value) => value,
-            Err(_) => return response(Reply::error(400, "INVALID_JSON", "")),
-        }
-    };
-    let input = Input {
-        method: parts.method.to_string(),
-        path,
-        query: parts.uri.query().unwrap_or("").into(),
-        headers: parts.headers,
-        body,
-        local,
-    };
-    if input.method == "GET" && input.path == "/api/v1/events" {
-        return events(service, input).await;
-    }
+    // Admission bounds body collectors as well as the blocking worker queue.
     let permit = match service.slots.clone().try_acquire_owned() {
         Ok(permit) => permit,
         Err(_) => return response(Reply::error(503, "SERVER_BUSY", "")),
     };
+    let mut shutdown = service.shutdown.subscribe();
+    if *shutdown.borrow() {
+        return response(Reply::error(503, "SERVICE_UNAVAILABLE", ""));
+    }
+    let bytes = tokio::select! {
+        _ = shutdown.changed() => return response(Reply::error(503, "SERVICE_UNAVAILABLE", "")),
+        result = tokio::time::timeout(service.body_timeout, to_bytes(body, 1_100_000)) => match result {
+            Ok(Ok(bytes)) => bytes,
+            Ok(Err(_)) => return response(Reply::error(413, "BODY_TOO_LARGE", "")),
+            Err(_) => return response(Reply::error(408, "REQUEST_TIMEOUT", "")),
+        },
+    };
+    let mut input = Input {
+        method: parts.method.to_string(),
+        path,
+        query: parts.uri.query().unwrap_or("").into(),
+        headers: parts.headers,
+        body: serde_json::Value::Null,
+        local,
+    };
+    let worker = service.clone();
     match tokio::task::spawn_blocking(move || {
+        // Near-limit JSON parsing must not run on a Tokio event-loop thread.
+        input.body = if bytes.is_empty() && !mutation {
+            serde_json::json!({})
+        } else {
+            match serde_json::from_slice(&bytes) {
+                Ok(value) => value,
+                Err(_) => {
+                    return Handled::Response(response(Reply::error(400, "INVALID_JSON", "")));
+                }
+            }
+        };
+        if input.method == "GET" && input.path == "/api/v1/events" {
+            return Handled::Events(input, permit);
+        }
         let _permit = permit;
-        dispatch(&service, input)
+        Handled::Response(dispatch(&worker, input).unwrap_or_else(failure))
     })
     .await
     {
-        Ok(result) => result.unwrap_or_else(failure),
+        Ok(Handled::Response(response)) => response,
+        Ok(Handled::Events(input, permit)) => events::serve(service, input, permit).await,
         Err(_) => failure(AppError::State),
     }
 }
@@ -212,8 +245,15 @@ fn dispatch(service: &Service, input: Input) -> Result<Response, AppError> {
     if input.method == "GET" && input.path == "/healthz" {
         return Ok(axum::Json(serde_json::json!({"status":"ok"})).into_response());
     }
-    if !input.local && input.method == "GET" && !input.path.starts_with("/api/") {
-        return Ok(static_file(&input.path));
+    if !input.local
+        && matches!(input.method.as_str(), "GET" | "HEAD")
+        && !input.path.starts_with("/api/")
+    {
+        return Ok(assets::serve(
+            &input.path,
+            &input.headers,
+            input.method == "HEAD",
+        ));
     }
     if !input.local {
         match (input.method.as_str(), input.path.as_str()) {
@@ -277,74 +317,198 @@ fn set_cookie(response: &mut Response, name: &str, token: &str, seconds: u32) {
         .expect("generated cookie"),
     );
 }
-include!(concat!(env!("OUT_DIR"), "/assets.rs"));
-fn static_file(path: &str) -> Response {
-    let path = if path == "/" { "/index.html" } else { path };
-    match ASSETS.iter().find(|(name, _, _)| *name == path) {
-        Some((_, mime, bytes)) => ([("content-type", *mime)], *bytes).into_response(),
-        None => response(Reply::error(404, "NOT_FOUND", "")),
-    }
-}
 
-async fn events(service: Service, input: Input) -> Response {
-    use axum::response::sse::{Event, KeepAlive, Sse};
-    let permit = match service.streams.clone().try_acquire_owned() {
-        Ok(permit) => permit,
-        Err(_) => return response(Reply::error(503, "STREAM_LIMIT", "")),
-    };
-    let token = cookie(&input.headers, "__Host-project_session");
-    let mut cursor = header(&input.headers, "last-event-id").to_owned();
-    if cursor.is_empty() {
-        for (key, value) in url::form_urlencoded::parse(input.query.as_bytes()) {
-            if key != "cursor" || !cursor.is_empty() {
-                return response(Reply::error(400, "INVALID_QUERY", ""));
-            }
-            cursor = value.into_owned();
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use std::convert::Infallible;
+
+    fn service() -> (tempfile::TempDir, Service) {
+        let temp = tempfile::tempdir().unwrap();
+        let root = project_store::filesystem::Directory::open(&temp.path().canonicalize().unwrap())
+            .unwrap();
+        let state = root.child("state", true).unwrap();
+        let service =
+            Service::new(Engine::open(state.path()).unwrap(), "https://projects.test").unwrap();
+        (temp, service)
     }
-    if cursor.len() > 120 {
-        return response(Reply::error(400, "INVALID_CURSOR", ""));
+    fn pending_request() -> Request {
+        Request::builder()
+            .method("POST")
+            .uri("/api/v1/auth/pairings")
+            .header("content-type", "application/json")
+            .body(Body::from_stream(async_stream::stream! {
+                let chunk = std::future::pending::<Result<&'static str, Infallible>>().await;
+                yield chunk;
+            }))
+            .unwrap()
     }
-    let engine = service.engine.clone();
-    let credential = token.clone();
-    let local = input.local;
-    let initial = tokio::task::spawn_blocking(move || -> Result<(), AppError> {
-        if !local {
-            Auth {
-                journal: &engine.journal,
-            }
-            .authenticate_passive(&credential, now_millis())?;
-        }
-        Ok(())
-    })
-    .await;
-    match initial {
-        Ok(Ok(())) => {}
-        Ok(Err(error)) => return failure(error),
-        Err(_) => return failure(AppError::State),
+    async fn code(response: Response) -> String {
+        let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+        serde_json::from_slice::<serde_json::Value>(&bytes).unwrap()["error"]["code"]
+            .as_str()
+            .unwrap()
+            .to_owned()
     }
-    let mut notifications = service.engine.index.subscribe();
-    let stream = async_stream::stream! {
-        let _permit = permit;
-        yield Ok::<_, std::convert::Infallible>(Event::default().comment("connected"));
-        loop {
-            let engine = service.engine.clone();
-            let credential = token.clone();
-            let since = cursor.clone();
-            let batch = tokio::task::spawn_blocking(move || -> Result<Vec<serde_json::Value>, AppError> {
-                if !local { Auth { journal: &engine.journal }.authenticate_passive(&credential, now_millis())?; }
-                engine.index.events_since(&since, now_millis())
-            }).await;
-            let Ok(Ok(batch)) = batch else { break; };
-            for value in batch {
-                cursor = value["cursor"].as_str().unwrap_or("").into();
-                let event = Event::default().id(&cursor).event(value["kind"].as_str().unwrap_or("change")).data(value.to_string());
-                yield Ok::<_, std::convert::Infallible>(event);
-            }
-            tokio::select! { _ = notifications.changed() => {}, _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {} }
+    #[tokio::test]
+    async fn admission_bounds_body_collectors_and_releases_cancelled_requests() {
+        let (_temp, service) = service();
+        let mut requests = Vec::new();
+        for _ in 0..8 {
+            let service = service.clone();
+            requests.push(tokio::spawn(handle(service, pending_request(), true)));
         }
-    };
-    Sse::new(stream)
-        .keep_alive(KeepAlive::default())
-        .into_response()
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while service.slots.available_permits() != 0 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        let busy = handle(
+            service.clone(),
+            Request::builder()
+                .uri("/healthz")
+                .body(Body::empty())
+                .unwrap(),
+            true,
+        )
+        .await;
+        assert_eq!(busy.status(), 503);
+        assert_eq!(code(busy).await, "SERVER_BUSY");
+        for request in requests {
+            request.abort();
+            let _ = request.await;
+        }
+        assert_eq!(service.slots.available_permits(), 8);
+        let healthy = handle(
+            service,
+            Request::builder()
+                .uri("/healthz")
+                .body(Body::empty())
+                .unwrap(),
+            true,
+        )
+        .await;
+        assert_eq!(healthy.status(), 200);
+    }
+    #[tokio::test]
+    async fn body_timeout_and_invalid_inputs_release_admission() {
+        let (_temp, mut service) = service();
+        service.body_timeout = Duration::from_millis(20);
+        let timeout = handle(service.clone(), pending_request(), true).await;
+        assert_eq!(timeout.status(), 408);
+        assert_eq!(code(timeout).await, "REQUEST_TIMEOUT");
+        for (body, status, expected) in [
+            ("{".to_owned(), 400, "INVALID_JSON"),
+            ("x".repeat(1_100_001), 413, "BODY_TOO_LARGE"),
+        ] {
+            let request = Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/pairings")
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap();
+            let response = handle(service.clone(), request, true).await;
+            assert_eq!(response.status(), status);
+            assert_eq!(code(response).await, expected);
+            assert_eq!(service.slots.available_permits(), 8);
+        }
+        // Header security checks still take precedence over body processing.
+        assert_eq!(
+            handle(service.clone(), pending_request(), false)
+                .await
+                .status(),
+            403
+        );
+        service.shutdown();
+        assert_eq!(
+            handle(service.clone(), pending_request(), true)
+                .await
+                .status(),
+            503
+        );
+        assert_eq!(service.slots.available_permits(), 8);
+    }
+    #[tokio::test]
+    async fn open_streams_use_their_own_limit_after_admission() {
+        let (_temp, mut service) = service();
+        service.slots = Arc::new(Semaphore::new(1));
+        service.streams = Arc::new(Semaphore::new(2));
+        let request = || {
+            Request::builder()
+                .uri("/api/v1/events")
+                .body(Body::empty())
+                .unwrap()
+        };
+        let first = handle(service.clone(), request(), true).await;
+        let second = handle(service.clone(), request(), true).await;
+        assert_eq!(first.status(), 200);
+        assert_eq!(second.status(), 200);
+        assert_eq!(service.slots.available_permits(), 1);
+        assert_eq!(
+            code(handle(service.clone(), request(), true).await).await,
+            "STREAM_LIMIT"
+        );
+        drop((first, second));
+        assert_eq!(service.streams.available_permits(), 2);
+    }
+    #[tokio::test]
+    async fn browser_stream_expires_without_index_changes() {
+        let (_temp, service) = service();
+        let auth = Auth {
+            journal: &service.engine.journal,
+        };
+        let now = now_millis();
+        let pending = auth
+            .start(
+                &serde_json::json!({"device_label":"Expiry regression"}),
+                now,
+            )
+            .unwrap();
+        auth.decide(
+            pending.view["id"].as_str().unwrap(),
+            pending.view["challenge"].as_str().unwrap(),
+            true,
+            now,
+        )
+        .unwrap();
+        let session = auth
+            .claim(
+                &pending.pending_token,
+                pending.view["pending_csrf_token"].as_str().unwrap(),
+                now,
+            )
+            .unwrap();
+        // Shorten a normally issued fixture session instead of waiting thirty days.
+        service
+            .engine
+            .journal
+            .db()
+            .unwrap()
+            .execute(
+                "UPDATE sessions SET expires_at=?1 WHERE id=?2",
+                rusqlite::params![
+                    project_application::instant(now_millis() + 500),
+                    session.view["id"].as_str().unwrap()
+                ],
+            )
+            .unwrap();
+        let request = Request::builder()
+            .uri("/api/v1/events")
+            .header("host", "projects.test")
+            .header(
+                "cookie",
+                format!("__Host-project_session={}", session.session_token),
+            )
+            .body(Body::empty())
+            .unwrap();
+        let response = handle(service, request, false).await;
+        assert_eq!(response.status(), 200);
+        tokio::time::timeout(Duration::from_secs(2), to_bytes(response.into_body(), 4096))
+            .await
+            .expect("session expiry must wake an otherwise idle stream")
+            .unwrap();
+    }
 }

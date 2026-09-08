@@ -1,3 +1,4 @@
+import { ReadRequests, ReadQueueFullError } from "./read-requests.ts";
 import type {
   CardMetadata,
   MilestoneMetadata,
@@ -19,13 +20,14 @@ export type Summary = {
   title: string;
   status?: string;
   priority?: string;
-  availability: string;
+  availability: "ready" | "stale" | "invalid" | "unavailable" | "recovering";
   schedule?: { start: string; end: string };
   due?: { date: string; kind: string };
   review_on?: string;
   position?: string;
   kind?: string;
   recorded_at?: string;
+  target?: { type: "project" | "card" | "milestone"; id: string };
   blocked?: { reason: string };
   labels?: string[];
   owner?: string;
@@ -51,10 +53,9 @@ export type Pending = {
   epoch: string;
 };
 export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public data: Record<string, unknown>,
-  ) {
+  status: number;
+  data: Record<string, unknown>;
+  constructor(status: number, data: Record<string, unknown>) {
     const code = (data.error as { code?: string })?.code ?? "";
     const messages: Record<string, string> = {
       DEPENDENCY_INVALID: "This dependency would create a cycle or refer to a missing card. Choose a different connection.",
@@ -77,6 +78,8 @@ export class ApiError extends Error {
             `Request failed (${status})`,
         ),
     );
+    this.status = status;
+    this.data = data;
   }
 }
 let bootstrap: Bootstrap;
@@ -85,75 +88,60 @@ export function configure(value: Bootstrap) {
   bootstrap = value;
   clockOffset = Date.parse(value.server_time) - Date.now();
 }
-let activeReads = 0;
-const waitingReads: (() => void)[] = [];
-async function readSlot() {
-  if (activeReads < 3) activeReads++;
-  else {
-    if (waitingReads.length >= 32)
-      throw new ApiError(503, {
-        error: {
-          code: "SERVER_BUSY",
-          message: "Waiting for previous reads to finish.",
-        },
-      });
-    await new Promise<void>((resolve) => waitingReads.push(resolve));
-  }
-  return () => {
-    const next = waitingReads.shift();
-    if (next) next();
-    else activeReads--;
-  };
+const reads = new ReadRequests();
+export type ReadOptions = { signal?: AbortSignal; fresh?: boolean };
+let independentRead = 0;
+export function clearReads() {
+  reads.clear();
+}
+export function apiCode(error: unknown) {
+  return error instanceof ApiError ? (error.data.error as { code?: string })?.code : undefined;
 }
 export async function api<T>(
   path: string,
   method = "GET",
   payload?: unknown,
   headers: Record<string, string> = {},
+  options: ReadOptions = {},
 ): Promise<T> {
+  if (method !== "GET") return request<T>(path, method, payload, headers);
+  const key = JSON.stringify([path, bootstrap?.csrf_token, Object.entries(headers).sort(), options.fresh ? ++independentRead : null]);
+  try {
+    return await reads.run(key, (signal) => request<T>(path, method, payload, headers, signal), options.signal);
+  } catch (error) {
+    if (error instanceof ReadQueueFullError)
+      throw new ApiError(503, { error: { code: "SERVER_BUSY", message: error.message } });
+    throw error;
+  }
+}
+async function request<T>(path: string, method: string, payload: unknown, headers: Record<string, string>, readSignal?: AbortSignal): Promise<T> {
   for (let attempt = 0; ; attempt++) {
-    let release: (() => void) | undefined;
+    // Mutations have their own transport deadline and are never cancelled with a view.
     const controller = new AbortController();
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const timeout = readSignal ? undefined : setTimeout(() => controller.abort(), 15_000);
+    const signal = readSignal ?? controller.signal;
     try {
-      if (method === "GET") release = await readSlot();
-      timeout = setTimeout(() => controller.abort(), 15000);
+      signal.throwIfAborted();
       const response = await fetch(path, {
-        method,
-        credentials: "same-origin",
-        signal: controller.signal,
+        method, credentials: "same-origin", signal,
         headers: {
-          ...(payload !== undefined
-            ? { "Content-Type": "application/json" }
-            : {}),
+          ...(payload !== undefined ? { "Content-Type": "application/json" } : {}),
           ...(bootstrap ? { "X-CSRF-Token": bootstrap.csrf_token } : {}),
           ...headers,
         },
         ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
       });
       const value = response.status === 204 ? null : await response.json();
-      if (response.status === 401)
-        window.dispatchEvent(new Event("session-ended"));
+      if (response.status === 401) window.dispatchEvent(new Event("session-ended"));
       if (!response.ok) throw new ApiError(response.status, value);
       return value as T;
     } catch (error) {
-      // Only retry rejected reads. Mutations retain their original identity and
-      // always require an explicit retry after an uncertain transport result.
-      if (!(
-        method === "GET" &&
-        attempt < 2 &&
-        error instanceof ApiError &&
-        error.status === 503 &&
-        (error.data.error as { code?: string })?.code === "SERVER_BUSY"
-      ))
-        throw error;
+      // Only explicit SERVER_BUSY read rejections are safe to retry automatically.
+      if (!(method === "GET" && attempt < 2 && error instanceof ApiError && error.status === 503 && apiCode(error) === "SERVER_BUSY")) throw error;
     } finally {
       clearTimeout(timeout);
-      release?.();
     }
-    await new Promise((resolve) =>
-      setTimeout(resolve, 100 * (attempt + 1) + Math.random() * 80),
-    );
+    await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1) + Math.random() * 80));
   }
 }
 export function command(
@@ -206,18 +194,21 @@ export async function send(pending: Pending): Promise<{
     );
   return reply;
 }
-export async function all<T = Summary>(path: string): Promise<T[]> {
+export async function all<T = Summary>(path: string, options: ReadOptions & { onPage?: (value: import("./projection-state").ProjectionState) => void } = {}): Promise<T[]> {
   const items: T[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < 100; page++) {
     const value: {
       items: T[];
       next_cursor?: string | null;
-      page?: { next_cursor?: string | null };
+      page?: { next_cursor?: string | null; freshness?: string };
+      warnings?: { code?: string; message?: string }[];
     } = await api(
       `${path}${path.includes("?") ? "&" : "?"}limit=200${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      "GET", undefined, {}, options,
     );
     items.push(...value.items);
+    options.onPage?.(value);
     cursor = value.next_cursor ?? value.page?.next_cursor ?? null;
     if (!cursor) return items;
   }

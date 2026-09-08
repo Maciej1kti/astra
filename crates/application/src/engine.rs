@@ -31,6 +31,17 @@ pub struct Engine {
 }
 impl Engine {
     pub fn open(data: &Path) -> Result<Self, AppError> {
+        Self::open_with_reconciliation(data, true)
+    }
+    /// Recover durable commands before admission; the service reconciles marked
+    /// stale projections after listeners start, using its bounded background worker.
+    pub fn open_for_service(data: &Path) -> Result<Self, AppError> {
+        Self::open_with_reconciliation(data, false)
+    }
+    pub fn startup_projects(&self) -> Result<Vec<String>, AppError> {
+        self.index.pending_projects()
+    }
+    fn open_with_reconciliation(data: &Path, eager: bool) -> Result<Self, AppError> {
         let journal = Journal::open(data)?;
         if journal
             .directory
@@ -101,6 +112,9 @@ impl Engine {
         }
         let (workspace, _) = engine.workspace()?;
         engine.index.retain_registered(&workspace["projects"])?;
+        if !eager {
+            engine.index.begin_reconciliation(&workspace["projects"])?;
+        }
         for registration in workspace["projects"].as_array().ok_or(AppError::State)? {
             let id = registration["project_id"].as_str().ok_or(AppError::State)?;
             let path = registration["path"].as_str().ok_or(AppError::State)?;
@@ -110,7 +124,7 @@ impl Engine {
                     journal: &engine.journal,
                 }
                 .recover(&mut store, id, now_millis());
-                if engine.index.refresh(&store, id, now_millis()).is_err() {
+                if eager && engine.index.refresh(&store, id, now_millis()).is_err() {
                     let _ = engine
                         .index
                         .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis());

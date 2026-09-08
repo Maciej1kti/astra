@@ -9,7 +9,6 @@ publish.workspace = true
 project-store = { path = "../project-store" }
 url.workspace = true
 chrono.workspace = true
-serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 clap.workspace = true

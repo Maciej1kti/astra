@@ -75,6 +75,8 @@ pub(super) fn run(
                     "label",
                     "milestone_id",
                     "archived",
+                    "target_type",
+                    "target_id",
                 ],
             )?;
             let resource_type = parameter(&fields, "type")?;
@@ -90,6 +92,8 @@ pub(super) fn run(
                 priority: fields.get("priority").cloned(),
                 label: fields.get("label").cloned(),
                 milestone_id: fields.get("milestone_id").cloned(),
+                target_type: fields.get("target_type").cloned(),
+                target_id: fields.get("target_id").cloned(),
                 archived: fields
                     .get("archived")
                     .map(|value| {

@@ -1,0 +1,35 @@
+{
+  "node": "v24.11.0",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "nodes": 200,
+  "edges": 14950,
+  "measurements": [
+    {
+      "beforeMs": 406.789167,
+      "afterMs": 1.129665999999986,
+      "equivalent": true
+    },
+    {
+      "beforeMs": 199.835958,
+      "afterMs": 0.3327920000000404,
+      "equivalent": true
+    },
+    {
+      "beforeMs": 199.131708,
+      "afterMs": 1.1775420000000167,
+      "equivalent": true
+    },
+    {
+      "beforeMs": 403.245458,
+      "afterMs": 0.5849580000001424,
+      "equivalent": true
+    },
+    {
+      "beforeMs": 199.9755,
+      "afterMs": 0.3432080000000042,
+      "equivalent": true
+    }
+  ],
+  "scope": "Pure JavaScript projection, not widget rendering or end-to-end browser latency."
+}

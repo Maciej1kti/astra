@@ -34,7 +34,7 @@ COUNTS: dict[str, int] = {}
 DOMAIN: dict[str, Any] = {}
 OAS: dict[str, Any] = {}
 FORMAT = FormatChecker()
-EXCLUDED_DIRECTORIES = {".git", ".tools", ".venv", ".venv-check", "venv", "node_modules", "target", "dist", "__pycache__"}
+EXCLUDED_DIRECTORIES = {".git", ".tools", ".venv", ".venv-check", "venv", "node_modules", "target", "dist", "test-results", ".manual", "__pycache__"}
 
 
 def package_files(pattern: str):

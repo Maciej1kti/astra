@@ -1,6 +1,7 @@
 -- Rebuildable projection only. No sessions/focus/read receipt source here.
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS projection_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
+CREATE TABLE IF NOT EXISTS projection_pending (project_id TEXT PRIMARY KEY) STRICT;
 CREATE TABLE IF NOT EXISTS documents (
   rowid INTEGER PRIMARY KEY,
   project_id TEXT NOT NULL,
@@ -33,3 +34,5 @@ CREATE INDEX IF NOT EXISTS documents_blocked ON documents(project_id,entity_id) 
 CREATE INDEX IF NOT EXISTS documents_in_review ON documents(project_id,entity_id) WHERE entity_type='card' AND json_extract(metadata_json,'$.status')='review';
 CREATE INDEX IF NOT EXISTS documents_decision_needed ON documents(project_id,entity_id) WHERE entity_type='update' AND json_extract(metadata_json,'$.kind')='decision_needed';
 CREATE INDEX IF NOT EXISTS documents_report_kind ON documents(project_id,json_extract(metadata_json,'$.kind')) WHERE entity_type='update';
+-- Card activity seeks its target before sorting/paging unrelated project reports.
+CREATE INDEX IF NOT EXISTS documents_report_target ON documents(project_id,json_extract(metadata_json,'$.target.type'),json_extract(metadata_json,'$.target.id'),json_extract(metadata_json,'$.recorded_at') DESC,entity_id) WHERE entity_type='update';

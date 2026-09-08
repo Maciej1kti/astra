@@ -1,27 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "./api";
-  import type { TagCatalog } from "./tag-management";
+  import { loadTagSuggestions, invalidateTagSuggestions } from "./tag-suggestions";
+  import { isAbortError } from "./read-requests";
   import { addTag, matchingTags, TAG_LIMIT, TAG_LENGTH_LIMIT } from "./tags";
 
   let {
     labels = $bindable<string[]>([]),
     draft = $bindable(""),
     error = $bindable(""),
-    options = [],
     disabled = false,
-    loading = false,
-    discoveryError = "",
-    onretry,
   }: {
     labels?: string[];
     draft?: string;
     error?: string;
-    options?: string[];
     disabled?: boolean;
-    loading?: boolean;
-    discoveryError?: string;
-    onretry?: () => void;
   } = $props();
   const id = $props.id();
   let input = $state<HTMLInputElement>();
@@ -31,22 +23,30 @@
   let workspaceOptions = $state<string[]>([]);
   let catalogError = $state("");
   let catalogLoading = $state(false);
-  const suggestions = $derived(matchingTags([...workspaceOptions, ...options], labels, draft));
+  let generation = 0, accessLost = false;
+  const suggestions = $derived(matchingTags(workspaceOptions, labels, draft));
   async function loadCatalog() {
+    if (accessLost) return;
+    const current = ++generation;
     catalogLoading = true;
     catalogError = "";
     try {
-      const catalog = await api<TagCatalog>("/api/v1/workspace/tags");
+      const catalog = await loadTagSuggestions();
+      if (current !== generation || accessLost) return;
       workspaceOptions = catalog.tags.map((tag) => tag.name);
       if (!catalog.complete) catalogError = "Some project tags are unavailable. Available suggestions are shown.";
-    } catch { catalogError = "Workspace tag suggestions could not be loaded."; }
-    finally { catalogLoading = false; }
+    } catch (error) { if (current === generation && !isAbortError(error)) catalogError = "Workspace tag suggestions could not be loaded."; }
+    finally { if (current === generation) catalogLoading = false; }
   }
   onMount(() => {
     void loadCatalog();
-    const ended = () => (workspaceOptions = []);
+    const ended = () => { generation++; accessLost = true; workspaceOptions = []; catalogLoading = false; invalidateTagSuggestions(false); };
+    const restored = () => { accessLost = false; void loadCatalog(); };
+    const changed = () => { if (expanded) void loadCatalog(); else workspaceOptions = []; };
     window.addEventListener("session-ended", ended);
-    return () => window.removeEventListener("session-ended", ended);
+    window.addEventListener("session-restored", restored);
+    window.addEventListener("tag-suggestions-changed", changed);
+    return () => { generation++; window.removeEventListener("session-ended", ended); window.removeEventListener("session-restored", restored); window.removeEventListener("tag-suggestions-changed", changed); };
   });
   $effect(() => {
     if (error && input) {
@@ -121,7 +121,7 @@
       autocomplete="off"
       {disabled}
       oninput={() => { error = ""; active = -1; expanded = true; }}
-      onfocus={() => (expanded = true)}
+      onfocus={() => { expanded = true; void loadCatalog(); }}
       onblur={() => { expanded = false; active = -1; }}
       onkeydown={keydown}
     />
@@ -137,8 +137,6 @@
     </ul>
   {/if}
   {#if catalogLoading}<p class="hint" role="status">Loading workspace tags…</p>{:else if catalogError}<p class="hint">{catalogError} <button type="button" {disabled} onclick={loadCatalog}>Retry workspace tags</button></p>{/if}
-  {#if loading}<p class="hint" role="status">Loading tags from this project…</p>
-  {:else if discoveryError}<p class="hint">{discoveryError} <button type="button" disabled={disabled} onclick={onretry}>Retry tag suggestions</button></p>{/if}
   <p class="sr-only" role="status" aria-live="polite">{announcement}</p>
 </section>
 

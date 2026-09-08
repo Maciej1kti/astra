@@ -1,10 +1,9 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
 import { chromium, devices, expect } from "@playwright/test";
-import { mkdtemp, mkdir, realpath, readFile, writeFile, rm } from "node:fs/promises";
-import { execFileSync, spawn } from "node:child_process";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHost } from "./browser/host.mjs";
+import { artifactManifest } from "./browser/artifacts.mjs";
 import { join, resolve } from "node:path";
-import https from "node:https";
-import http from "node:http";
 import assert from "node:assert/strict";
 async function hitbox(locator, attempt = 0) {
   try {
@@ -32,105 +31,12 @@ async function hitbox(locator, attempt = 0) {
   }
 }
 const root = resolve(import.meta.dirname, "..");
-const evidenceDir = resolve(root, process.env.ASTRA_EVIDENCE_DIR ?? "progress/screenshots");
+const evidenceDir = resolve(root, process.env.ASTRA_EVIDENCE_DIR ?? "test-results/browser/browser-smoke");
 await mkdir(evidenceDir, { recursive: true });
-const binaries = join(root,"target",process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug");
-const temp = await realpath(
-  await mkdtemp(join(await realpath("/tmp"), "lp-browser-")),
-);
-const state = join(temp, "state"),
-  folder = join(temp, "Field notes");
-await mkdir(state, { mode: 0o700 });
-await mkdir(folder, { mode: 0o700 });
-const socket = join(state, "projectd.sock");
-const cli = (...args) => {
-  let output;
-  try {
-    output = execFileSync(join(binaries,"projectctl"),["--socket",socket,...args],{encoding:"utf8",stdio:["ignore","pipe","pipe"]});
-  } catch (error) {
-    // Registration returns an accepted job; the test explicitly checks its state.
-    if(error.status !== 9) throw error;
-    output = error.stdout;
-  }
-  const envelope = JSON.parse(output);
-  assert.equal(envelope.api_version,"1");
-  assert.equal(envelope.ok,true);
-  return envelope.data;
-};
-execFileSync(
-  "openssl",
-  [
-    "req",
-    "-x509",
-    "-newkey",
-    "rsa:2048",
-    "-nodes",
-    "-keyout",
-    join(temp, "key.pem"),
-    "-out",
-    join(temp, "cert.pem"),
-    "-subj",
-    "/CN=localhost",
-    "-days",
-    "1",
-  ],
-  { stdio: "ignore" },
-);
-const reserve = http.createServer();
-await new Promise((r) => reserve.listen(0, "127.0.0.1", r));
-const port = reserve.address().port;
-await new Promise((r) => reserve.close(r));
-const proxy = https.createServer(
-  {
-    key: await readFile(join(temp, "key.pem")),
-    cert: await readFile(join(temp, "cert.pem")),
-  },
-  (incoming, outgoing) => {
-    const request = http.request(
-      {
-        hostname: "127.0.0.1",
-        port,
-        path: incoming.url,
-        method: incoming.method,
-        headers: incoming.headers,
-      },
-      (response) => {
-        outgoing.writeHead(response.statusCode, response.headers);
-        response.pipe(outgoing);
-      },
-    );
-    request.on("error", () => {
-      outgoing.writeHead(503);
-      outgoing.end();
-    });
-    incoming.pipe(request);
-    outgoing.on("close", () => request.destroy());
-  },
-);
-await new Promise((r) => proxy.listen(0, "127.0.0.1", r));
-const origin = `https://localhost:${proxy.address().port}`;
-const daemon = spawn(
-  join(binaries, "projectd"),
-  ["--data-dir", state, "--public-origin", origin, "--port", String(port)],
-  { stdio: ["ignore", "ignore", "pipe"] },
-);
-let daemonLog = "";
-daemon.stderr.on("data", (data) => (daemonLog += data));
+const host = await createHost();
+const { temp, folder, cli, origin } = host;
 let browser;
 try {
-  let ready = false,
-    lastFailure;
-  for (let attempt = 0; attempt < 100; attempt++) {
-    try {
-      cli("hello");
-      ready = true;
-      break;
-    } catch (error) {
-      lastFailure = error.stderr?.toString() ?? error.message;
-      await new Promise((r) => setTimeout(r, 100));
-    }
-  }
-  assert(ready, daemonLog + lastFailure);
   const plan = cli("registration-plan", folder, "--name", "Field notes");
   cli("register", plan.plan_id);
   browser = await chromium.launch({ headless: true, executablePath: process.env.ASTRA_TEST_CHROMIUM || undefined });
@@ -783,13 +689,6 @@ try {
   }
   throw error;
 } finally {
-  await browser?.close();
-  daemon.kill("SIGTERM");
-  await new Promise((r) => {
-    if (daemon.exitCode !== null) r();
-    else daemon.once("exit", r);
-  });
-  proxy.closeAllConnections();
-  await new Promise((r) => proxy.close(r));
-  await rm(temp, { recursive: true, force: true });
+  try { await browser?.close(); } finally { await host.close(); }
+  await artifactManifest(evidenceDir);
 }

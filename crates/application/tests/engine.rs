@@ -301,6 +301,283 @@ fn invalid_external_source_preserves_stale_projection_without_repairing_files() 
 }
 
 #[test]
+fn invalid_filenames_are_isolated_by_collection_and_publish_health_changes() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Readable neighbor");
+    let id = created.body["result"]["id"].as_str().unwrap();
+    let source = env.root.join(format!("project/.project/cards/{id}.md"));
+    let original = fs::read(&source).unwrap();
+    let malformed = ["cards/foo.md", "milestones/foo.md"];
+    let cursor = engine.index.cursor().unwrap();
+    for relative in malformed {
+        let path = env.root.join("project/.project").join(relative);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, b"Malformed filename, preserved source").unwrap();
+    }
+    engine.refresh_project(&project, None).unwrap();
+    assert_eq!(engine.index.issue_count().unwrap(), 2);
+    let projects = engine.list(Some("project"), &Query::default()).unwrap();
+    assert_eq!(projects["items"][0]["availability"], "ready");
+    let events = engine.index.events_since(&cursor, now_millis()).unwrap();
+    assert!(events.iter().any(|event| event["kind"] == "health_changed"));
+    for event in &events {
+        wire::validate("Event", event).unwrap();
+    }
+    assert_eq!(fs::read(source).unwrap(), original);
+    assert_eq!(
+        engine.get(&project, Kind::Card, id).unwrap()["metadata"]["title"],
+        "Readable neighbor"
+    );
+
+    let unchanged = engine.index.cursor().unwrap();
+    engine.refresh_project(&project, None).unwrap();
+    assert_eq!(engine.index.cursor().unwrap(), unchanged);
+    for relative in malformed {
+        let path = env.root.join("project/.project").join(relative);
+        assert_eq!(
+            fs::read(&path).unwrap(),
+            b"Malformed filename, preserved source"
+        );
+        fs::remove_file(path).unwrap();
+    }
+    engine.refresh_project(&project, None).unwrap();
+    assert_eq!(engine.index.issue_count().unwrap(), 0);
+    assert!(
+        engine
+            .index
+            .events_since(&unchanged, now_millis())
+            .unwrap()
+            .iter()
+            .any(|event| event["kind"] == "health_changed")
+    );
+}
+
+#[test]
+fn invalid_unindexed_target_emits_health_without_changing_other_issues() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let id = Uuid::new_v4().to_string();
+    let cards = env.root.join("project/.project/cards");
+    fs::create_dir_all(&cards).unwrap();
+    fs::write(cards.join("unrelated.md"), b"Preserved unrelated issue").unwrap();
+    engine.refresh_project(&project, None).unwrap();
+    let cursor = engine.index.cursor().unwrap();
+    let source = cards.join(format!("{id}.md"));
+    fs::write(&source, b"Unfinished external document").unwrap();
+    let targets = [(Kind::Card, id.clone()), (Kind::Card, id)];
+    engine.refresh_project(&project, Some(&targets)).unwrap();
+    assert_eq!(engine.index.issue_count().unwrap(), 2);
+    assert!(
+        engine
+            .index
+            .events_since(&cursor, now_millis())
+            .unwrap()
+            .iter()
+            .any(|event| event["kind"] == "health_changed")
+    );
+    let unchanged = engine.index.cursor().unwrap();
+    engine.refresh_project(&project, Some(&targets)).unwrap();
+    assert_eq!(engine.index.cursor().unwrap(), unchanged);
+    fs::remove_file(source).unwrap();
+    engine.refresh_project(&project, Some(&targets)).unwrap();
+    assert_eq!(engine.index.issue_count().unwrap(), 1);
+    assert!(
+        engine
+            .index
+            .events_since(&unchanged, now_millis())
+            .unwrap()
+            .iter()
+            .any(|event| event["kind"] == "health_changed")
+    );
+}
+
+#[test]
+fn service_reopen_marks_cached_and_empty_projections_until_source_reconciliation() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    create(&engine, &project, "Retained projection");
+    {
+        let db = rusqlite::Connection::open(env.root.join("state/index.sqlite")).unwrap();
+        db.execute_batch("CREATE TABLE observed_projection_updates(value INTEGER); CREATE TRIGGER audit_unchanged_projection AFTER UPDATE ON documents BEGIN INSERT INTO observed_projection_updates VALUES(1); END;").unwrap();
+    }
+    let epoch = engine.journal.epoch.clone();
+    drop(engine);
+    for remove_index in [false, true] {
+        if remove_index {
+            fs::remove_file(env.root.join("state/index.sqlite")).unwrap();
+        }
+        let engine = Engine::open_for_service(&env.root.join("state")).unwrap();
+        assert_eq!(engine.journal.epoch, epoch);
+        assert_eq!(engine.startup_projects().unwrap(), vec![project.clone()]);
+        if !remove_index {
+            let db = rusqlite::Connection::open(env.root.join("state/index.sqlite")).unwrap();
+            assert_eq!(
+                db.query_row(
+                    "SELECT count(*) FROM observed_projection_updates",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )
+                .unwrap(),
+                0,
+                "Startup freshness must not rewrite persisted documents or FTS"
+            );
+        }
+        let query = Query {
+            project: Some(project.clone()),
+            ..Default::default()
+        };
+        let page = engine.list(Some("card"), &query).unwrap();
+        wire::validate("SummaryPage", &page).unwrap();
+        assert_eq!(page["page"]["freshness"], "stale");
+        assert!(
+            page["warnings"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|warning| warning["code"] == "PROJECTION_RECONCILING")
+        );
+        assert_eq!(
+            page["items"].as_array().unwrap().len(),
+            usize::from(!remove_index)
+        );
+        if !remove_index {
+            assert_eq!(page["items"][0]["availability"], "stale");
+        }
+        let diagnostics = engine.diagnostics().unwrap();
+        wire::validate("Diagnostics", &diagnostics).unwrap();
+        assert_eq!(diagnostics["index_state"], "building");
+        let attention = engine.attention(None, 50, now_millis()).unwrap();
+        let calendar = engine
+            .calendar(Some(&project), "2026-09-01", "2026-09-30", None, 50)
+            .unwrap();
+        let gantt = engine.gantt(&project, None, 50).unwrap();
+        for page in [&attention, &calendar, &gantt] {
+            assert_eq!(page["page"]["freshness"], "stale");
+            assert!(
+                page["warnings"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|warning| warning["code"] == "PROJECTION_RECONCILING")
+            );
+        }
+        let board = engine.board(&project, None, 50).unwrap();
+        assert!(
+            board["columns"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|column| column["page"]["freshness"] == "stale")
+        );
+        engine.refresh_project(&project, None).unwrap();
+        if !remove_index {
+            let db = rusqlite::Connection::open(env.root.join("state/index.sqlite")).unwrap();
+            assert_eq!(
+                db.query_row(
+                    "SELECT count(*) FROM observed_projection_updates",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )
+                .unwrap(),
+                0,
+                "Unchanged warm reconciliation must retain the equal-hash fast path"
+            );
+        }
+        assert!(engine.startup_projects().unwrap().is_empty());
+        let page = engine.list(Some("card"), &query).unwrap();
+        assert_eq!(page["page"]["freshness"], "index_snapshot");
+        assert_eq!(page["items"][0]["availability"], "ready");
+        assert!(page["warnings"].as_array().unwrap().is_empty());
+    }
+}
+
+#[test]
+fn service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked() {
+    use project_application::{
+        journal::{Command, Journal, Target},
+        writer::{CommitPoint, Writer},
+    };
+    use project_store::{StoreError, filesystem::ProjectStore};
+    for conflicting_external_edit in [false, true] {
+        let env = Environment::new();
+        let engine = env.engine();
+        let project = register(&engine, &env.path());
+        let card = create(&engine, &project, "Before interruption");
+        let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+        let version = card.body["result"]["version"].as_str().unwrap().to_owned();
+        drop(engine);
+        let journal = Journal::open(&env.root.join("state")).unwrap();
+        let mut store = ProjectStore::open(&env.root.join("project"), false).unwrap();
+        let command = Command {
+            request_id: Uuid::now_v7().to_string(),
+            epoch: journal.epoch.clone(),
+            method: "PATCH".into(),
+            target: Target {
+                project_id: project.clone(),
+                kind: Kind::Card,
+                id: id.clone(),
+            },
+            expected: Some(version),
+            payload: json!({"set":{"title":"Recovered source"}}),
+        };
+        let pending = Writer { journal: &journal }
+            .execute_with(
+                &mut store,
+                &command,
+                vec![],
+                now_millis(),
+                |old| {
+                    let mut next = old.unwrap().clone();
+                    next["metadata"]["title"] = json!("Recovered source");
+                    Ok(next)
+                },
+                |point| {
+                    if point == CommitPoint::Prepared {
+                        Err(StoreError::Invalid("TEST_INTERRUPTION"))
+                    } else {
+                        Ok(())
+                    }
+                },
+            )
+            .unwrap();
+        assert_eq!(pending.http_status, 202);
+        let source = env.root.join(format!("project/.project/cards/{id}.md"));
+        if conflicting_external_edit {
+            let before = fs::read_to_string(&source).unwrap();
+            fs::write(
+                &source,
+                before.replace("Before interruption", "External conflicting edit"),
+            )
+            .unwrap();
+        }
+        drop(store);
+        drop(journal);
+        let engine = Engine::open_for_service(&env.root.join("state")).unwrap();
+        let current = engine.get(&project, Kind::Card, &id).unwrap();
+        if conflicting_external_edit {
+            assert_eq!(engine.journal.state(&command).unwrap(), "needs_review");
+            assert_eq!(current["metadata"]["title"], "External conflicting edit");
+            let blocked = patch(
+                &engine,
+                &project,
+                &id,
+                current["version"].as_str().unwrap(),
+                json!({"set":{"title":"Forbidden overwrite"}}),
+            );
+            assert_eq!(blocked.body["error"]["code"], "PROJECT_RECOVERY_REQUIRED");
+        } else {
+            assert_eq!(engine.journal.state(&command).unwrap(), "committed");
+            assert_eq!(current["metadata"]["title"], "Recovered source");
+        }
+        assert_eq!(engine.startup_projects().unwrap(), vec![project]);
+    }
+}
+
+#[test]
 fn browser_roots_reject_escape_symlinks_and_replaced_directories() {
     use std::os::unix::fs::symlink;
     let env = Environment::new();
@@ -1489,6 +1766,84 @@ fn timeline_forecast_uses_other_pages_without_changing_recorded_dates() {
             .unwrap()["schedule"]["start"],
         "2026-09-02"
     );
+}
+
+#[test]
+fn gantt_bulk_predecessors_preserve_archived_cancelled_stale_missing_and_undated_warnings() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let mut predecessors = std::collections::BTreeMap::new();
+    for name in ["archived", "cancelled", "stale", "missing", "undated"] {
+        let created = create(&engine, &project, name);
+        let id = created.body["result"]["id"].as_str().unwrap();
+        let mut set = json!({});
+        if name != "undated" {
+            set["schedule"] = json!({"start":"2026-09-01","end":"2026-09-10"});
+        }
+        if name == "archived" {
+            set["archived"] = json!(true);
+        }
+        if name == "cancelled" {
+            set["status"] = json!("cancelled");
+        }
+        if name != "undated" {
+            let edited = patch(
+                &engine,
+                &project,
+                id,
+                created.body["result"]["version"].as_str().unwrap(),
+                json!({"set":set}),
+            );
+            assert_eq!(edited.http_status, 200);
+        }
+        predecessors.insert(name, id.to_owned());
+    }
+    let target = create(&engine, &project, "Dependent card");
+    let id = target.body["result"]["id"].as_str().unwrap();
+    let edited = patch(
+        &engine,
+        &project,
+        id,
+        target.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"schedule":{"start":"2026-09-02","end":"2026-09-03"},"depends_on":predecessors.values().collect::<Vec<_>>()}}),
+    );
+    assert_eq!(edited.http_status, 200);
+    fs::write(
+        env.root.join(format!(
+            "project/.project/cards/{}.md",
+            predecessors["stale"]
+        )),
+        b"Unfinished external edit",
+    )
+    .unwrap();
+    fs::remove_file(env.root.join(format!(
+        "project/.project/cards/{}.md",
+        predecessors["missing"]
+    )))
+    .unwrap();
+    engine.refresh_project(&project, None).unwrap();
+    let view = engine.gantt(&project, None, 50).unwrap();
+    wire::validate("GanttPage", &view).unwrap();
+    for (name, warning) in [
+        ("archived", Some("DEPENDENCY_DATE_CONFLICT")),
+        ("cancelled", Some("DEPENDENCY_DATE_CONFLICT")),
+        ("stale", Some("DEPENDENCY_STALE")),
+        ("missing", Some("DEPENDENCY_MISSING")),
+        ("undated", None),
+    ] {
+        let edge = view["edges"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|edge| edge["from"] == predecessors[name] && edge["to"] == id)
+            .unwrap();
+        assert_eq!(edge["warning"].as_str(), warning, "{name}");
+        if name == "archived" || name == "missing" {
+            assert_eq!(edge["outside_page"], true);
+        }
+    }
+    assert_eq!(view["analysis"]["complete"], false);
 }
 
 #[test]

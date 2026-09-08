@@ -77,6 +77,52 @@ fn main() {
     let start = Instant::now();
     engine.refresh_all().unwrap();
     let reconciliation = start.elapsed().as_secs_f64() * 1000.0;
+    drop(engine);
+    let start = Instant::now();
+    let engine = Engine::open(state.path()).unwrap();
+    let warm_eager = start.elapsed().as_secs_f64() * 1000.0;
+    drop(engine);
+    let start = Instant::now();
+    let engine = Engine::open_for_service(state.path()).unwrap();
+    let warm_service = start.elapsed().as_secs_f64() * 1000.0;
+    let start = Instant::now();
+    let retained = engine.list(Some("card"), &Query::default()).unwrap();
+    let retained_query = start.elapsed().as_secs_f64() * 1000.0;
+    assert_eq!(retained["page"]["freshness"], "stale");
+    assert!(!retained["items"].as_array().unwrap().is_empty());
+    let start = Instant::now();
+    for project in engine.startup_projects().unwrap() {
+        engine.refresh_project(&project, None).unwrap();
+    }
+    let warm_reconciliation = start.elapsed().as_secs_f64() * 1000.0;
+    drop(engine);
+    // This index belongs only to the temporary synthetic benchmark fixture.
+    fs::remove_file(state.path().join("index.sqlite")).unwrap();
+    let start = Instant::now();
+    let engine = Engine::open_for_service(state.path()).unwrap();
+    let empty_service = start.elapsed().as_secs_f64() * 1000.0;
+    let start = Instant::now();
+    let building = engine.list(Some("card"), &Query::default()).unwrap();
+    let empty_query = start.elapsed().as_secs_f64() * 1000.0;
+    assert_eq!(building["page"]["freshness"], "stale");
+    assert!(building["items"].as_array().unwrap().is_empty());
+    assert_eq!(building["warnings"][0]["code"], "PROJECTION_RECONCILING");
+    let start = Instant::now();
+    for project in engine.startup_projects().unwrap() {
+        engine.refresh_project(&project, None).unwrap();
+    }
+    let empty_reconciliation = start.elapsed().as_secs_f64() * 1000.0;
+    let startup_modes = json!({
+        "fully_indexed_eager_reopen_ms": warm_eager,
+        "fully_indexed_service_reopen_ms": warm_service,
+        "retained_first_query_ms": retained_query,
+        "retained_reconciliation_ms": warm_reconciliation,
+        "empty_index_service_open_ms": empty_service,
+        "empty_first_query_ms": empty_query,
+        "empty_index_rebuild_ms": empty_reconciliation,
+        "samples_per_mode": 1,
+        "limitation": "Engine-level initialization and query timings exclude listener binding, browser rendering and steady-state RSS. Service pages explicitly report reconciliation."
+    });
     let mut query = Vec::new();
     let mut attention = Vec::new();
     let mut writes = Vec::new();
@@ -129,5 +175,5 @@ fn main() {
             writes.push(start.elapsed().as_secs_f64() * 1000.0);
         }
     }
-    println!("{}",serde_json::to_string_pretty(&json!({"profile":{"projects":projects,"cards":cards*projects,"reports":updates*projects},"build":"release","os":std::env::consts::OS,"architecture":std::env::consts::ARCH,"startup_ms":startup,"reconciliation_ms":reconciliation,"query":statistics(query),"attention":statistics(attention),"durable_mutation":statistics(writes),"limitations":"Application-level timings exclude HTTP/VPN and browser rendering. Fixture generation is included in external process peak RSS."})).unwrap());
+    println!("{}",serde_json::to_string_pretty(&json!({"profile":{"projects":projects,"cards":cards*projects,"reports":updates*projects},"build":"release","os":std::env::consts::OS,"architecture":std::env::consts::ARCH,"startup_ms":startup,"reconciliation_ms":reconciliation,"startup_modes":startup_modes,"query":statistics(query),"attention":statistics(attention),"durable_mutation":statistics(writes),"limitations":"Application-level timings exclude HTTP/VPN and browser rendering. Fixture generation is included in external process peak RSS."})).unwrap());
 }

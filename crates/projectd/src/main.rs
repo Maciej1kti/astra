@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Require an explicit owner-only directory; do not chmod a user's existing tree.
     let directory = Directory::open(&args.data_dir)?;
     directory.require_private()?;
-    let mut engine = Engine::open(&args.data_dir)?;
+    let mut engine = Engine::open_for_service(&args.data_dir)?;
     if args.after_restore {
         engine
             .journal
@@ -60,8 +60,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown, signal) = tokio::sync::watch::channel(false);
     let watcher = tokio::spawn(watcher::run(service.engine.clone(), signal.clone()));
     let mut stop = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+    let terminating_service = service.clone();
     let termination = tokio::spawn(async move {
         tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = stop.recv() => {} }
+        terminating_service.shutdown();
         let _ = shutdown.send(true);
     });
     let mut browser_signal = signal.clone();

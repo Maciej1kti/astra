@@ -227,9 +227,18 @@ fn prepare(
             || previous
                 .as_ref()
                 .is_some_and(|old| old["metadata"]["status"] != next["metadata"]["status"]));
+    let validates_dependencies = kind == Kind::Card
+        && (create || payload["set"].get("depends_on").is_some() || payload.get("undo").is_some());
+    // Ordering and graph validation share the same source observations. The
+    // writer still verifies every distinct reference immediately before prepare.
+    let siblings = if reorders || validates_dependencies {
+        collection(store, kind)?
+    } else {
+        Vec::new()
+    };
     if reorders {
-        let mut ordered = collection(store, kind)?
-            .into_iter()
+        let mut ordered = siblings
+            .iter()
             .filter(|(value, _)| {
                 value["metadata"]["id"] != *id
                     && (kind != Kind::Card
@@ -301,12 +310,9 @@ fn prepare(
             version: Some(version),
         });
     }
-    if kind == Kind::Card
-        && (create || payload["set"].get("depends_on").is_some() || payload.get("undo").is_some())
-    {
-        let cards = collection(store, Kind::Card)?;
+    if validates_dependencies {
         let mut graph = BTreeMap::new();
-        for (value, version) in &cards {
+        for (value, version) in &siblings {
             let card = value["metadata"]["id"].as_str().unwrap();
             graph.insert(card.to_owned(), dependencies(&value["metadata"]));
             if card != id {

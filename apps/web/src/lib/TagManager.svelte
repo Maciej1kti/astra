@@ -2,6 +2,7 @@
   import { onMount, tick } from "svelte";
   import { modal } from "./dialog";
   import { api, ApiError, command, send, type Pending } from "./api";
+  import { rememberTagSuggestions } from "./tag-suggestions";
   import { catalogNames, catalogNameError, destinationTag, canFinishTagChange, type TagCatalog, type TagPreview, type TagChangeResult } from "./tag-management";
 
   let { onclose, onchanged, projectNames = {} }: { onclose: () => void; onchanged: () => void; projectNames?: Record<string, string> } = $props();
@@ -34,7 +35,7 @@
 
   onMount(() => {
     void load();
-    const ended = () => { accessLost = true; error = "Your session ended. This review and its command identities are preserved. Reconnect before continuing."; };
+    const ended = () => { generation++; accessLost = true; error = "Your session ended. This review and its command identities are preserved. Reconnect before continuing."; };
     const restored = () => { accessLost = false; };
     const leaving = (event: BeforeUnloadEvent) => { if (protectedDraft || busy) event.preventDefault(); };
     window.addEventListener("session-ended", ended);
@@ -49,8 +50,9 @@
   });
   async function readCatalog() {
     const current = ++generation;
-    const next = await api<TagCatalog>("/api/v1/workspace/tags");
-    if (current === generation) catalog = next;
+    // Management always rereads source usage, independently of suggestion requests.
+    const next = await api<TagCatalog>("/api/v1/workspace/tags", "GET", undefined, {}, { fresh: true });
+    if (current === generation && !accessLost) { catalog = next; rememberTagSuggestions(next); }
   }
   async function load() {
     if (busy || unresolved || accessLost) return;

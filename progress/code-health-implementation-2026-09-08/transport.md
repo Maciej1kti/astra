@@ -1,0 +1,19 @@
+# Transport implementation evidence
+
+## Changes
+
+- Static frontend responses now use `no-cache` for HTML/unhashed files and one-year immutable caching for the build's hashed assets. Private API responses retain `no-store`. The Rust build embeds deterministic `gzip -n -9` variants; the service negotiates `Accept-Encoding`, sends `Vary: Accept-Encoding`, respects an explicit gzip veto, and supports static HEAD responses. Compression adds a build requirement for system gzip, with no new Rust or runtime dependency. Static routing and compression live in `crates/projectd/src/assets.rs`.
+- Eight request permits now cover body collection and blocking work together. Body collection has a ten-second deadline, remains limited to 1,100,000 bytes, and observes shutdown. JSON parsing runs in the admitted blocking worker. The existing Host, Origin, JSON-content-type and local peer-UID checks remain in place. HTTP 408 `REQUEST_TIMEOUT` is a definite pre-dispatch failure.
+- SSE has a separate 64-stream limit. Initial admission/authentication releases the ordinary request permit before the stream remains open. `Service::shutdown()` closes streams when SIGTERM/Ctrl-C initiates graceful shutdown. Index notifications trigger replay reads; durable session-change notifications and the session expiry deadline trigger passive authentication. The previous one-second database polling is removed. Heartbeats remain comments every twenty seconds. SSE logic lives in `crates/projectd/src/events.rs`.
+- The daemon uses the application's recovery-first `Engine::open_for_service()`. The first immediate watcher membership pass installs source watches, unions pending startup projects into the changed paths, and reconciles them sequentially through blocking workers. This also starts reconciliation when native watching is unavailable. Later watch registration still closes the scan-before-watch gap. Filesystem metadata checks run in the membership blocking worker. The existing two-second membership discovery and fifteen-minute reconciliation cadence remain; this change does not claim to remove all watcher polling.
+- Project-scoped update queries and the explicit list-view dispatcher accept the shared `target_type`/`target_id` pair. Application validation owns the allowed target types, canonical ID checks and collection restrictions.
+
+## Verification
+
+`scripts/cargo-local test -p projectd --locked` passed all 14 tests on macOS: six library tests, two watcher tests, one lifecycle test against the real daemon, and five HTTP/Unix transport tests. Socket tests ran outside the filesystem/network sandbox using the approved test-command capability. See `checks/projectd-tests.txt`.
+
+The tests verify bounded concurrent body collection, permit release on cancellation/timeout/invalid input, the separate SSE limit, expiration without index changes, authenticated revocation, static gzip decompression equivalence, caching/negotiation/HEAD headers, target filtering and preconditions/replay. The lifecycle test opens the daemon's real local-UID event stream, sends SIGTERM and requires stream closure plus successful process exit within two seconds. The startup test removes only an owned fixture's disposable index, then requires initial reconciliation within three seconds instead of waiting for a periodic timer.
+
+`scripts/cargo-local clippy -p projectd --all-targets --locked -- -D warnings` passed. See `checks/projectd-clippy.txt`. These are functional regression checks, not a release-scale latency or idle-CPU benchmark.
+
+All test data was synthetic and temporary. No cookies, pairing secrets or session tokens were written to these evidence files. The lifecycle test owns, reaps and cleans up its daemon on success or failure; no transport test server was left running. No source outside `crates/projectd` was deliberately edited by this subtask; one early workspace-wide formatter invocation was disclosed to the integrating agent.

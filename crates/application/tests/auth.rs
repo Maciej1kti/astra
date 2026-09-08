@@ -30,10 +30,14 @@ fn pairing_requires_owner_approval_cookie_and_csrf_and_claim_retry_rotates() {
     wire::validate("Session", &first.view).unwrap();
     let first_session = auth.authenticate(&first.session_token, now).unwrap();
     assert_eq!(first_session.id, first.view["id"]);
+    assert_eq!(first_session.expires_at_ms, now + 30 * 86_400_000);
+    let mut changes = journal.subscribe_auth_changes();
     let retry = auth
         .claim(&start.pending_token, csrf, now + 10_000)
         .unwrap();
     assert_ne!(first.session_token, retry.session_token);
+    assert!(changes.has_changed().unwrap());
+    changes.borrow_and_update();
     assert!(
         auth.authenticate(&first.session_token, now + 10_000)
             .is_err()
@@ -50,6 +54,7 @@ fn pairing_requires_owner_approval_cookie_and_csrf_and_claim_retry_rotates() {
     );
     auth.revoke(&session.id, Some(&session.id), now + 11_000)
         .unwrap();
+    assert!(changes.has_changed().unwrap());
     assert!(
         auth.authenticate(&retry.session_token, now + 11_000)
             .is_err()
@@ -186,6 +191,7 @@ fn state_schema_version_and_explicit_restore_epoch_survive_restart() {
     let path = temp.path().canonicalize().unwrap();
     let mut journal = Journal::open(&path).unwrap();
     let old = journal.epoch.clone();
+    let changes = journal.subscribe_auth_changes();
     assert_eq!(
         journal
             .db()
@@ -195,6 +201,7 @@ fn state_schema_version_and_explicit_restore_epoch_survive_restart() {
         1
     );
     journal.rotate_after_restore(now_millis()).unwrap();
+    assert!(changes.has_changed().unwrap());
     let restored = journal.epoch.clone();
     assert_ne!(old, restored);
     drop(journal);

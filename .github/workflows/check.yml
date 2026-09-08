@@ -34,10 +34,10 @@ jobs:
       - name: Install browser test runtime
         run: npx playwright install --with-deps chromium
       - name: Exercise HTTPS browser and Unix CLI
+        env:
+          ASTRA_TEST_PROFILE: release
         run: |
-          scripts/cargo-local build --workspace --locked
-          node scripts/browser-smoke.mjs
-          node scripts/planning-browser.mjs
+          npm run test:browser
       - name: Build host archive
         run: python scripts/package.py
       - name: Exercise packaged installation and stopped-copy recovery
@@ -46,7 +46,8 @@ jobs:
         if: always()
         with:
           name: evidence-${{ matrix.os }}
+          retention-days: 90
           path: |
             dist/*.tar.gz
             dist/*.sha256
-            progress/screenshots/*.png
+            test-results/browser/

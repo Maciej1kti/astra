@@ -1,0 +1,11 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.98s
+     Running tests/engine.rs (target/debug/deps/engine-afbe62413ea9ac9f)
+
+running 4 tests
+test invalid_unindexed_target_emits_health_without_changing_other_issues ... ok
+test invalid_external_source_preserves_stale_projection_without_repairing_files ... ok
+test invalid_filenames_are_isolated_by_collection_and_publish_health_changes ... ok
+test incremental_projection_preserves_other_sources_and_handles_invalid_delete_recreate ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 30 filtered out; finished in 0.86s

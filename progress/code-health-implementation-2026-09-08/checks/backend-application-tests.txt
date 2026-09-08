@@ -1,0 +1,110 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.18s
+     Running unittests src/lib.rs (target/debug/deps/project_application-4cd1b6debf9a8282)
+
+running 4 tests
+test git::tests::subprocess_output_and_deadline_are_bounded ... ok
+test index::tests::bundled_sqlite_seeks_composite_projection_and_report_target_keys ... ok
+test index::tests::report_target_filter_requires_a_valid_pair_on_update_queries ... ok
+test index::tests::report_target_pagination_is_bounded_amid_more_than_twenty_thousand_unrelated_reports ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.86s
+
+     Running tests/auth.rs (target/debug/deps/auth-d3ffb120ff5dd64d)
+
+running 5 tests
+test passive_stream_checks_do_not_extend_session_idle_lifetime ... ok
+test state_schema_version_and_explicit_restore_epoch_survive_restart ... ok
+test rate_limits_and_expiration_are_enforced ... ok
+test pairing_requires_owner_approval_cookie_and_csrf_and_claim_retry_rotates ... ok
+test session_idle_and_absolute_expiration_survive_restart ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+
+     Running tests/durability.rs (target/debug/deps/durability-83fb21e5f68a61eb)
+
+running 11 tests
+test fault_child ... ok
+test unknown_expired_ids_and_old_epochs_are_never_reexecuted ... ok
+test replacement_symlink_after_prepared_requires_review ... ok
+test missing_precondition_and_invalid_source_never_write ... ok
+test external_edits_after_prepared_are_not_overwritten ... ok
+test recovery_rechecks_dependencies_even_when_target_is_unchanged ... ok
+test invalid_request_ids_produce_valid_errors_and_state_loss_changes_epoch ... ok
+test duplicate_references_preserve_conflicts_and_store_one_recovery_precondition ... ok
+test committed_conflicts_replays_and_noops_follow_the_contract ... ok
+test state_database_can_grow_beyond_document_limits_and_restart ... ok
+test subprocess_crashes_at_every_durability_boundary_recover_once ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.46s
+
+     Running tests/engine.rs (target/debug/deps/engine-afbe62413ea9ac9f)
+
+running 37 tests
+test browser_roots_reject_escape_symlinks_and_replaced_directories ... ok
+test forecast_example_matches_projection_contracts ... ok
+test browser_registration_plan_cannot_outlive_root_revocation ... ok
+test completed_registration_replays_after_restart_with_missing_project_folder ... ok
+test create_retry_without_client_id_returns_the_original_resource ... ok
+test agent_context_includes_complete_card_purpose_or_an_explicit_next_read ... ok
+test card_acceptance_lifecycle_keeps_status_body_and_conflict_history ... ok
+test attention_distinguishes_hard_deadlines_and_reading_from_resolution ... ok
+test attention_project_filter_applies_before_pagination ... ok
+test foreground_project_read_reconciles_external_changes_with_a_bounded_ttl ... ok
+test broken_workspace_keeps_diagnostics_available_without_recreating_sources ... ok
+test agent_context_is_project_scoped_and_counts_utf8_json_overhead ... ok
+test gantt_pages_include_milestones_and_board_stays_card_only ... ok
+test incremental_projection_preserves_other_sources_and_handles_invalid_delete_recreate ... ok
+test invalid_filenames_are_isolated_by_collection_and_publish_health_changes ... ok
+test invalid_unindexed_target_emits_health_without_changing_other_issues ... ok
+test invalid_external_source_preserves_stale_projection_without_repairing_files ... ok
+test index_rebuild_cannot_finish_before_projection_succeeds ... ok
+test gantt_bulk_predecessors_preserve_archived_cancelled_stale_missing_and_undated_warnings ... ok
+test missing_receipt_target_rejection_remains_stable_after_creation ... ok
+test maintenance_plan_rejects_intervening_source_edits_and_relocates_moved_folder ... ok
+test maintenance_normalizes_conditionally_rebalances_and_unregisters_without_deleting_files ... ok
+test read_receipts_are_atomic_shared_and_do_not_modify_reports ... ok
+test git_observer_is_explicit_bounded_and_never_runs_repository_filters ... ok
+test rebalance_rejects_new_collection_members_and_replays_rejection ... ok
+test pagination_detects_staleness_and_stream_snapshots_do_not_lose_changes ... ok
+test registration_is_explicit_preserves_existing_instructions_and_repeats_safely ... ok
+test retention_keeps_retry_window_and_pending_intents ... ok
+test schedule_warning_is_durable_and_never_moves_deadline ... ok
+test real_card_edit_two_clients_search_and_index_rebuild ... ok
+test stale_registration_plan_does_not_overwrite_user_edits ... ok
+test service_reopen_marks_cached_and_empty_projections_until_source_reconciliation ... ok
+test undo_restores_one_change_and_refuses_later_edits ... ok
+test timeline_forecast_uses_other_pages_without_changing_recorded_dates ... ok
+test upgrading_body_only_search_index_preserves_sources_and_indexes_card_content ... ok
+test workspace_writes_replay_and_recover_without_overwriting_external_changes ... ok
+test service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.08s
+
+     Running tests/tag_management.rs (target/debug/deps/tag_management-a6e09b60f666ac20)
+
+running 9 tests
+test invalid_vocabulary_does_not_replace_valid_names ... ok
+test vocabulary_prepared_write_recovers_with_original_identity ... ok
+test preview_merges_exact_tags_without_writes_and_preserves_unrelated_order ... ok
+test preview_preserves_exact_historical_whitespace_destinations ... ok
+test vocabulary_is_optional_versioned_durable_and_does_not_rewrite_card_labels ... ok
+test applying_preview_uses_expected_versions_and_keeps_partial_results_safe ... ok
+test catalog_and_preview_report_invalid_cards_and_unavailable_projects_individually ... ok
+test catalog_reads_all_sources_including_archived_and_beyond_first_page ... ok
+test preview_bounds_affected_cards_and_identifies_archived_project_limits ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.92s
+
+     Running tests/workflow.rs (target/debug/deps/workflow-4a646c577eacfb2d)
+
+running 1 test
+test recovery_rechecks_completed_steps_before_publishing_registration ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+   Doc-tests project_application
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

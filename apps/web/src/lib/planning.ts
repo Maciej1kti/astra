@@ -34,7 +34,7 @@ export type Analysis = {
   complete: boolean;
   driving_path: string[];
 };
-export type GanttPage = {
+export type GanttPage = import("./projection-state").ProjectionState & {
   rows: Summary[];
   edges: Edge[];
   analysis: Analysis;

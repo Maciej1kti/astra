@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { all, api, type Resource, type Summary } from "./api";
+  import { onDestroy } from "svelte";
+  import { api, type Resource, type Summary } from "./api";
+  import { cursorPage, cardActivityPath, type Page } from "./pagination";
+  import { isAbortError } from "./read-requests";
+  import { projectionNotice } from "./projection-state";
   import Markdown from "./Markdown.svelte";
 
   let {
@@ -16,38 +20,55 @@
   let records = $state<Record<string, Resource>>({});
   let reading = $state<string | null>(null);
   let refreshRequested = false;
+  let cursor = $state<string | null>(null);
+  let history = $state<(string | null)[]>([null]);
+  let pageNotice = $state("");
+  let freshness = $state("");
+  let generation = 0;
+  let controller: AbortController | undefined;
+  onDestroy(() => { generation++; controller?.abort(); });
+  $effect(() => {
+    if (disabled) {
+      generation++; controller?.abort(); loading = false;
+      updates = []; records = {}; loaded = false; opened = null;
+      cursor = null; history = [null]; refreshRequested = false;
+    }
+  });
 
   export async function refresh() {
     if (loading) {
       refreshRequested = true;
       return;
     }
-    await load();
+    await load(null, [null]);
   }
 
-  async function load() {
+  async function load(target: string | null = history.at(-1) ?? null, nextHistory = history) {
     if (loading || disabled) return;
+    const current = ++generation;
+    controller?.abort();
+    controller = new AbortController();
+    const signal = controller.signal;
     loading = true;
     error = "";
     try {
-      const items = await all<UpdateSummary>(
-        `/api/v1/projects/${project}/updates`,
-      );
-      updates = items
-        .filter(
-          (item) => item.target?.type === "card" && item.target.id === cardId,
-        )
-        .sort((a, b) =>
-          (b.recorded_at ?? "").localeCompare(a.recorded_at ?? ""),
-        );
+      const result = await cursorPage((page) => api<Page<UpdateSummary>>(cardActivityPath(project, cardId, page), "GET", undefined, {}, { signal }), target);
+      if (current !== generation) return;
+      updates = result.value.items;
+      freshness = projectionNotice(result.value);
+      cursor = result.value.page.next_cursor;
+      history = result.reset ? [null] : nextHistory;
+      pageNotice = result.reset ? "Card activity changed. Showing the first page of the latest updates." : "";
+      opened = null;
+      records = {};
       loaded = true;
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      if (current === generation && !isAbortError(cause)) error = cause instanceof Error ? cause.message : String(cause);
     } finally {
-      loading = false;
-      if (refreshRequested) {
+      if (current === generation) loading = false;
+      if (current === generation && refreshRequested) {
         refreshRequested = false;
-        void load();
+        void load(null, [null]);
       }
     }
   }
@@ -60,14 +81,16 @@
     opened = id;
     if (records[id]) return;
     reading = id;
+    const current = generation;
     error = "";
     try {
       const record = await api<Resource>(
         `/api/v1/projects/${project}/updates/${id}`,
+        "GET", undefined, {}, { signal: controller?.signal },
       );
-      records = { ...records, [id]: record };
+      if (current === generation && !disabled) records = { ...records, [id]: record };
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      if (current === generation && !isAbortError(cause)) error = cause instanceof Error ? cause.message : String(cause);
     } finally {
       reading = null;
     }
@@ -79,11 +102,13 @@
     if (event.currentTarget.open && !loaded) void load();
   }}
 >
-  <summary>Card updates{loaded ? ` · ${updates.length}` : ""}</summary>
+  <summary>Card updates{loaded ? ` · ${updates.length} on this page` : ""}</summary>
   <p class="hint">Results, blockers and decisions recorded for this card.</p>
   {#if loading}<p role="status">Loading card updates…</p>{/if}
   {#if error}<p role="alert">{error}</p>{/if}
-  {#if loaded && !updates.length}<p class="hint">
+  {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
+  {#if freshness}<p role="status" class="hint">{freshness}</p>{/if}
+  {#if loaded && !updates.length && !freshness}<p class="hint">
       No updates recorded for this card yet.
     </p>{/if}
   <ul>
@@ -110,7 +135,9 @@
       </li>
     {/each}
   </ul>
-  <button type="button" disabled={disabled || loading} onclick={load}
+  {#if history.length > 1}<button type="button" disabled={disabled || loading || !!reading} onclick={() => load(history.at(-2) ?? null, history.slice(0, -1))}>Previous updates</button>{/if}
+  {#if cursor}<button type="button" disabled={disabled || loading || !!reading} onclick={() => load(cursor, [...history, cursor])}>Next updates</button>{/if}
+  <button type="button" disabled={disabled || loading || !!reading} onclick={() => load()}
     >{loaded ? "Refresh card updates" : "Load card updates"}</button
   >
 </details>

@@ -7,6 +7,8 @@ its requirements have been implemented and verified.
 ## Toolchains
 
 Use Node 24.11.0 (`.nvmrc`), Rust 1.92.0 (`rust-toolchain.toml`) and Python 3.14.
+The daemon build also uses the system `gzip` executable to precompress static
+assets deterministically; Node remains a build dependency, not a release runtime.
 On this checkout, `scripts/cargo-local` uses the repository-local Rust installation
 under `.tools/`. On a fresh machine, install the pinned Rust toolchain with rustup
 or provide the same local directories. Dependencies are pinned in Cargo.lock,
@@ -56,20 +58,24 @@ CLI commands print the request ID and epoch to stderr before sending. An uncerta
 result must be checked through `/api/v1/commands/REQUEST_ID`; retries must provide
 both `--request-id` and `--epoch` with unchanged input and version.
 
-## Browser integration test
+## Browser integration tests
 
 ```sh
 npx playwright install chromium
 npm run build
-scripts/cargo-local build --workspace --locked
-node scripts/browser-smoke.mjs
+scripts/cargo-local build --workspace --release --locked
+ASTRA_TEST_PROFILE=release npm run test:browser
 ```
 
 This creates temporary synthetic projects, a short-lived self-signed HTTPS proxy
 and an ordinary daemon, pairs Chromium through the real owner approval flow, and
-checks creation and competing edits. It cleans up its processes and temporary
-state. Screenshots and logs are evidence under `progress/`, not user project data.
-Chromium phone emulation is not physical iPhone or Safari validation.
+checks creation, competing edits, planning and the maintained card/tag/editor/dialog
+regressions. Each regression suite owns its fixture and cleans up processes and
+temporary state. Bulk screenshots/logs default to ignored `test-results/browser/`
+and CI artifacts; concise durable summaries belong in `progress/`. See
+[browser suite instructions](scripts/browser/README.md) for selecting a suite and
+the evidence retention policy. Chromium phone emulation is not physical iPhone or
+Safari validation.
 
 ## Typed CLI and date editing
 

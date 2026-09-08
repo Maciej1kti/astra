@@ -12,6 +12,139 @@ fn parsed(output: &Output) -> Value {
         )
     })
 }
+
+#[test]
+fn preliminary_and_final_requests_preserve_structured_server_errors() {
+    let project = "11111111-1111-4111-8111-111111111111";
+    let report = "22222222-2222-4222-8222-222222222222";
+    for phase in ["hello", "resolve", "report", "final"] {
+        let temp = tempfile::tempdir().unwrap();
+        let socket = temp.path().join("server.sock");
+        let listener = UnixListener::bind(&socket).unwrap();
+        let worker = std::thread::spawn(move || {
+            let replies = if phase == "report" {
+                vec![
+                    (200, json!({"project_id":project})),
+                    (
+                        409,
+                        json!({"api_version":"1","error":{"code":"PROJECT_RECOVERY_REQUIRED","message":"Review the interrupted write","details":{"phase":phase}}}),
+                    ),
+                ]
+            } else {
+                vec![(
+                    409,
+                    json!({"api_version":"1","error":{"code":"PROJECT_RECOVERY_REQUIRED","message":"Review the interrupted write","details":{"phase":phase}}}),
+                )]
+            };
+            for (status, body) in replies {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                    .unwrap();
+                let mut request = [0; 8192];
+                assert!(stream.read(&mut request).unwrap() > 0);
+                let body = body.to_string();
+                write!(stream, "HTTP/1.1 {status} Response\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+            }
+        });
+        let mut command = Command::new(env!("CARGO_BIN_EXE_projectctl"));
+        command.args([
+            "--socket",
+            socket.to_str().unwrap(),
+            "--project",
+            temp.path().to_str().unwrap(),
+        ]);
+        match phase {
+            "hello" => {
+                command.args(["maintenance-apply", "example-plan"]);
+            }
+            "resolve" => {
+                command.args(["card", "list"]);
+            }
+            "report" => {
+                command.args(["report", "resolve", report, "--summary", "Resolved"]);
+            }
+            _ => {
+                command.args(["get", "/api/v1/projects"]);
+            }
+        }
+        let output = command.output().unwrap();
+        worker.join().unwrap();
+        let value = parsed(&output);
+        assert_eq!(
+            value["error"]["code"], "PROJECT_RECOVERY_REQUIRED",
+            "{phase}: {value}"
+        );
+        assert_eq!(value["error"]["details"]["phase"], phase);
+        assert_eq!(value["http_status"], 409);
+        assert_eq!(output.status.code(), Some(7), "{phase}: {value}");
+    }
+}
+#[test]
+fn malformed_error_envelopes_never_hide_an_uncertain_command() {
+    for phase in ["hello", "read", "command"] {
+        for body in ["", "{}", "[]", r#"{"error":{"code":"BROKEN"}}"#] {
+            let temp = tempfile::tempdir().unwrap();
+            let socket = temp.path().join("server.sock");
+            let listener = UnixListener::bind(&socket).unwrap();
+            let worker = std::thread::spawn(move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                    .unwrap();
+                let mut request = [0; 8192];
+                assert!(stream.read(&mut request).unwrap() > 0);
+                write!(stream, "HTTP/1.1 502 Bad Gateway\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+            });
+            let mut command = Command::new(env!("CARGO_BIN_EXE_projectctl"));
+            command.args(["--socket", socket.to_str().unwrap()]);
+            match phase {
+                "hello" => {
+                    command.args(["maintenance-apply", "plan"]);
+                }
+                "read" => {
+                    command.args(["get", "/api/v1/projects"]);
+                }
+                _ => {
+                    let payload = temp.path().join("input.json");
+                    std::fs::write(&payload, b"{}").unwrap();
+                    command.args([
+                        "command",
+                        "PATCH",
+                        "/api/v1/example",
+                        "--json-file",
+                        payload.to_str().unwrap(),
+                        "--request-id",
+                        "019913e8-8000-7000-8000-000000000001",
+                        "--epoch",
+                        "example-epoch",
+                    ]);
+                }
+            }
+            let output = command.output().unwrap();
+            worker.join().unwrap();
+            let value = parsed(&output);
+            assert_eq!(
+                value["error"]["code"],
+                if phase == "command" {
+                    "RESULT_UNCERTAIN"
+                } else {
+                    "INVALID_RESPONSE"
+                },
+                "{phase}: {body:?}: {value}"
+            );
+            assert_eq!(
+                output.status.code(),
+                Some(if phase == "command" { 9 } else { 8 })
+            );
+            assert_eq!(value["http_status"], 502);
+            if phase == "command" {
+                assert_eq!(value["request_id"], "019913e8-8000-7000-8000-000000000001");
+                assert_eq!(value["command_epoch"], "example-epoch");
+            }
+        }
+    }
+}
 #[test]
 fn argument_and_transport_failures_are_single_json_with_stable_exits() {
     let output = Command::new(env!("CARGO_BIN_EXE_projectctl"))

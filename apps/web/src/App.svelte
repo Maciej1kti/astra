@@ -1,5 +1,10 @@
 <script lang="ts">
   import { onMount, tick, untrack } from "svelte";
+  import { viewQueryKey, viewSections, loadView, resourcePage as readResourcePage, attentionPage as readAttentionPage, affectedSections, invalidatesTags, invalidationBatch, type Attention, type ViewQuery, type Section } from "./lib/view-queries";
+  import { projectionNotice } from "./lib/projection-state";
+  import { cursorPage } from "./lib/pagination";
+  import { isAbortError } from "./lib/read-requests";
+  import { invalidateTagSuggestions } from "./lib/tag-suggestions";
   import ResourceMetadata from "./lib/ResourceMetadata.svelte";
   import { resourceLabel } from "./lib/resource-presentation";
   import {
@@ -16,11 +21,14 @@
   onMount(() => applyTheme(readTheme()));
   import { modal } from "./lib/dialog";
   let Board = $state<typeof import("./lib/Board.svelte").default | null>(null);
+  let boardLoadError = $state("");
+  async function loadBoard() {
+    boardLoadError = "";
+    try { Board = (await import("./lib/Board.svelte")).default; }
+    catch { boardLoadError = "The board could not be loaded. Retry, or reload after preserving any open draft."; }
+  }
   $effect(() => {
-    if (view === "board" && project)
-      void import("./lib/Board.svelte")
-        .then((module) => (Board = module.default))
-        .catch(message);
+    if (view === "board" && project && !Board) void loadBoard();
   });
   import DateChange from "./lib/DateChange.svelte";
   import MoveChange from "./lib/MoveChange.svelte";
@@ -45,15 +53,18 @@
   >(null);
   let viewRevision = $state(0),
     weekStart = $state("monday");
+  let dateViewLoadError = $state("");
+  async function loadDateViews() {
+    dateViewLoadError = "";
+    try { DateViews = (await import("./lib/DateViews.svelte")).default; }
+    catch { dateViewLoadError = "The planning view could not be loaded. Retry, or reload after preserving any open draft."; }
+  }
   $effect(() => {
-    if (view === "calendar" || view === "gantt")
-      void import("./lib/DateViews.svelte").then(
-        (module) => (DateViews = module.default),
-      );
+    if ((view === "calendar" || view === "gantt") && !DateViews) void loadDateViews();
   });
   import {
     api,
-    all,
+    clearReads,
     configure,
     command,
     send,
@@ -71,14 +82,6 @@
     pending_csrf_token: string;
     device_label: string;
   };
-  type Attention = {
-    id: string;
-    project_id: string;
-    target: { type: "project" | "card" | "milestone"; id: string };
-    reason: string;
-    label: string;
-    date?: string;
-  };
   let registrationPending = $state<Pending | null>(null),
     registrationJob = $state<string | null>(null);
   let attentionRows = $state<Attention[]>([]),
@@ -88,6 +91,14 @@
   let pageCursors = $state<Record<string, string | null>>({});
   let unreadOnly = $state(false);
   let refreshGeneration = 0;
+  let projectsReady = false;
+  let refreshRead: AbortController | undefined;
+  let refreshJob: { key: string; promise: Promise<void> } | undefined;
+  const queuedSections = new Set<Section>();
+  let queryNotice = $state("");
+  let sectionNotices = $state<Partial<Record<Section, string>>>({});
+  const projectionMessage = $derived([...new Set(viewSections(currentQuery()).map((section) => sectionNotices[section]).filter(Boolean))].join(" "));
+  let attentionStart: string | null = null;
   let navigationGeneration = 0;
   let loadedQueryKey = $state("");
   let clockTime = $state(Date.now());
@@ -155,8 +166,13 @@
     { name: string; relative_path: string; registered: boolean }[]
   >([]);
   let month = $state(initialRoute.month);
-  let source: EventSource | undefined,
-    refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  let source: EventSource | undefined;
+  const streamUpdates = invalidationBatch((events) => {
+    if (!boot) return;
+    if (events.some(invalidatesTags)) invalidateTagSuggestions();
+    const sections = [...new Set(events.flatMap((event) => affectedSections(event, currentQuery())))];
+    if (sections.length) void refresh(sections).catch(message);
+  });
   const views = workspaceViews;
   const statuses = ["planned", "active", "review", "done", "cancelled"];
   let today = $derived(
@@ -183,18 +199,10 @@
       (c) => (!project || c.project_id === project) && (!unreadOnly || !c.read),
     ),
   );
-  let queryKey = $derived(
-    JSON.stringify([
-      view,
-      project,
-      search,
-      collection,
-      view === "list" && archived,
-      view === "list" && statusFilter,
-      view === "list" && priorityFilter,
-      view === "list" && labelFilter,
-    ]),
-  );
+  function currentQuery(): ViewQuery {
+    return { view, project, search, collection, archived, status: statusFilter, priority: priorityFilter, label: labelFilter };
+  }
+  let queryKey = $derived(viewQueryKey(currentQuery()));
   let queryReady = $derived(loadedQueryKey === queryKey);
   let selectedProject = $derived(projects.find((p) => p.id === project));
   let visibleFocus = $derived(
@@ -229,7 +237,14 @@
     restoringRoute = false;
     routeReady = false;
     loadedQueryKey = "";
-    clearTimeout(refreshTimer);
+    streamUpdates.cancel();
+    refreshRead?.abort();
+    refreshJob = undefined;
+    queuedSections.clear();
+    projectsReady = false;
+    sectionNotices = {};
+    clearReads();
+    invalidateTagSuggestions(false);
     source?.close();
     boot = null;
     connected = false;
@@ -253,6 +268,7 @@
     error = warnings.map((item) => item.message || item.code).join(" ");
   }
   function message(e: unknown) {
+    if (isAbortError(e)) return;
     error = e instanceof Error ? e.message : String(e);
   }
   async function initialize() {
@@ -299,26 +315,22 @@
     }
   }
 
-  async function attentionPage(cursor?: string | null) {
-    return api<{ items: Attention[]; page: { next_cursor: string | null } }>(
-      `/api/v1/views/attention?limit=200${project ? `&project_id=${project}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-    );
-  }
   async function moreAttention(first = false) {
     if (loadingMore) return;
     loadingMore = true;
     const generation = refreshGeneration;
+    const target = first ? null : attentionCursor;
     try {
-      const result = await attentionPage(first ? null : attentionCursor);
+      const result = await cursorPage((cursor) => readAttentionPage(project, cursor), target);
       if (generation !== refreshGeneration) return;
-      attentionRows = result.items;
-      attentionCursor = result.page.next_cursor;
-      attentionPaged = !first;
-    } catch (e) {
-      message(e);
-    } finally {
-      loadingMore = false;
-    }
+      attentionRows = result.value.items;
+      sectionNotices.attention = projectionNotice(result.value);
+      attentionCursor = result.value.page.next_cursor;
+      attentionStart = result.reset ? null : target;
+      attentionPaged = attentionStart !== null;
+      if (result.reset) queryNotice = "Attention changed. Showing the first page of the latest results.";
+    } catch (e) { message(e); }
+    finally { loadingMore = false; }
   }
   async function foreground() {
     if (document.visibilityState !== "visible" || !boot) return;
@@ -332,117 +344,87 @@
       message(e);
     }
   }
-  async function resourcePage(type: string, cursor?: string | null) {
-    const params = new URLSearchParams({ type, limit: "200" });
-    if (["list", "updates"].includes(view) && search.trim())
-      params.set("q", search.trim());
-    if (project && view !== "projects") params.set("project_id", project);
-    if (
-      view === "list" &&
-      type === (collection === "cards" ? "card" : "milestone")
-    ) {
-      if (statusFilter) params.set("status", statusFilter);
-      if (type === "card") {
-        if (archived) params.set("archived", "true");
-        if (priorityFilter) params.set("priority", priorityFilter);
-        if (labelFilter) params.set("label", labelFilter);
-      }
+  function refresh(sections?: Section[]): Promise<void> {
+    const query = currentQuery();
+    const requestedQuery = viewQueryKey(query);
+    const routeChanged = loadedQueryKey !== requestedQuery;
+    const needed = viewSections(query);
+    const requested = routeChanged ? needed : (sections ?? needed);
+    if (refreshJob?.key === requestedQuery) {
+      for (const section of requested) queuedSections.add(section);
+      return refreshJob.promise;
     }
-    if (cursor) params.set("cursor", cursor);
-    return api<{ items: Summary[]; page: { next_cursor: string | null } }>(
-      `/api/v1/views/list?${params}`,
-    );
-  }
-  async function refresh() {
+    refreshRead?.abort();
+    const controller = new AbortController();
+    refreshRead = controller;
     const generation = ++refreshGeneration;
-    const requestedQuery = queryKey;
-    const [p, f, a, c, m, u] = await Promise.all([
-      all("/api/v1/projects"),
-      api<{ items: typeof focus }>("/api/v1/workspace/focus"),
-      attentionPage(),
-      resourcePage("card"),
-      resourcePage("milestone"),
-      resourcePage("update"),
-    ]);
-    const pinned: Summary[] = [];
-    // Focus is bounded by the workspace contract; do not scan archives to resolve it.
-    for (const ref of f.items) {
-      const cached = c.items.find(
-        (item) => item.id === ref.card_id && item.project_id === ref.project_id,
-      );
-      if (cached) pinned.push(cached);
-      else {
-        try {
-          const resource = await api<Resource>(
-            resourcePath({
-              type: "card",
-              id: ref.card_id,
-              project_id: ref.project_id,
-            }),
-          );
-          pinned.push({
-            ...resource.metadata,
-            type: "card",
-            id: ref.card_id,
-            project_id: ref.project_id,
-            version: resource.version,
-            availability: "available",
-          } as Summary);
-        } catch {
-          pinned.push({
-            type: "card",
-            id: ref.card_id,
-            project_id: ref.project_id,
-            title: "Unavailable pinned card",
-            version: "",
-            availability: "unavailable",
-          });
+    const selected = [...new Set([...requested, ...queuedSections])].filter((section) =>
+      needed.includes(section) && (section !== "projects" || !projectsReady || !routeChanged || sections?.includes("projects") || queuedSections.has("projects")),
+    );
+    queuedSections.clear();
+    const cursors: Record<string, string | null> = routeChanged ? {} : {
+      ...Object.fromEntries(Object.entries(pageHistory).map(([kind, history]) => [kind, history.at(-1) ?? null])),
+      attention: attentionStart,
+    };
+    if (routeChanged) {
+      queryNotice = "";
+      pageHistory = {}; pageCursors = {}; attentionStart = null;
+    }
+    const promise = (async () => {
+      try {
+        const result = await loadView(query, selected, cursors, controller.signal);
+        if (generation !== refreshGeneration || requestedQuery !== queryKey) return;
+        sectionNotices = { ...sectionNotices, ...result.notices };
+        if (result.projects) { projects = result.projects; projectsReady = true; }
+        if (result.focus) { focus = result.focus; focusCards = result.focusCards ?? []; }
+        if (result.attention) {
+          attentionRows = result.attention.value.items;
+          attentionCursor = result.attention.value.page.next_cursor;
+          if (result.attention.reset) { attentionStart = null; queryNotice = "Attention changed. Showing the first page of the latest results."; }
+          attentionPaged = attentionStart !== null;
+        }
+        for (const [kind, page] of Object.entries(result.pages)) {
+          if (kind === "card") cards = page.value.items;
+          else if (kind === "milestone") milestones = page.value.items;
+          else updates = page.value.items;
+          pageCursors[kind] = page.value.page.next_cursor;
+          if (routeChanged || page.reset || !pageHistory[kind]) pageHistory[kind] = [null];
+          if (page.reset) queryNotice = "This collection changed. Showing the first page of the latest results.";
+        }
+        loadedQueryKey = requestedQuery;
+        if (!routeChanged && selected.includes("planning")) viewRevision++;
+      } finally {
+        if (generation === refreshGeneration) {
+          refreshJob = undefined;
+          if (queuedSections.size && boot) {
+            const followup = [...queuedSections]; queuedSections.clear();
+            void refresh(followup).catch(message);
+          }
         }
       }
-    }
-    if (generation !== refreshGeneration) return;
-    loadedQueryKey = requestedQuery;
-    viewRevision++;
-    focusCards = pinned;
-    projects = p;
-    focus = f.items;
-    attentionRows = a.items;
-    attentionCursor = a.page.next_cursor;
-    attentionPaged = false;
-    cards = c.items;
-    milestones = m.items;
-    updates = u.items;
-    pageHistory = { card: [null], milestone: [null], update: [null] };
-    pageCursors = {
-      card: c.page.next_cursor,
-      milestone: m.page.next_cursor,
-      update: u.page.next_cursor,
-    };
+    })();
+    refreshJob = { key: requestedQuery, promise };
+    return promise;
   }
   async function more(type: string, back = false) {
-    if (
-      loadingMore ||
-      (!back && !pageCursors[type]) ||
-      (back && (pageHistory[type]?.length ?? 0) < 2)
-    )
-      return;
+    if (loadingMore || (!back && !pageCursors[type]) || (back && (pageHistory[type]?.length ?? 0) < 2)) return;
     loadingMore = true;
     const generation = refreshGeneration;
+    const query = currentQuery();
     try {
       const history = pageHistory[type] ?? [null];
       const target = back ? history[history.length - 2] : pageCursors[type];
-      const next = await resourcePage(type, target);
-      if (generation !== refreshGeneration) return;
-      pageHistory[type] = back ? history.slice(0, -1) : [...history, target];
-      if (type === "card") cards = next.items;
-      else if (type === "milestone") milestones = next.items;
-      else updates = next.items;
-      pageCursors[type] = next.page.next_cursor;
-    } catch (e) {
-      message(e);
-    } finally {
-      loadingMore = false;
-    }
+      const result = await cursorPage((cursor) => readResourcePage(query, type, cursor), target);
+      if (generation !== refreshGeneration || viewQueryKey(query) !== queryKey) return;
+      pageHistory[type] = result.reset ? [null] : back ? history.slice(0, -1) : [...history, target];
+      if (type === "card") cards = result.value.items;
+      else if (type === "milestone") milestones = result.value.items;
+      else updates = result.value.items;
+      pageCursors[type] = result.value.page.next_cursor;
+      sectionNotices[type as Section] = projectionNotice(result.value);
+      if (result.reset) queryNotice = "This collection changed. Showing the first page of the latest results.";
+    } catch (e) { message(e); }
+    finally { loadingMore = false; }
   }
   function connect() {
     source?.close();
@@ -463,11 +445,9 @@
       "resync_required",
       "workspace_changed",
     ])
-      source.addEventListener(kind, () => {
-        clearTimeout(refreshTimer);
-        refreshTimer = setTimeout(() => {
-          void refresh().catch(message);
-        }, 150);
+      source.addEventListener(kind, (event) => {
+        try { streamUpdates.push({ ...JSON.parse((event as MessageEvent).data), kind }); }
+        catch { streamUpdates.push({ kind: "resync_required" }); }
       });
   }
   async function startPairing() {
@@ -651,8 +631,8 @@
   async function logout() {
     try {
       await api("/api/v1/auth/logout", "POST", {});
-      source?.close();
-      boot = null;
+      sessionEnded();
+      error = "";
       pairing = null;
       connected = false;
     } catch (e) {
@@ -796,6 +776,9 @@
       return;
     untrack(() => {
       refreshGeneration++;
+      refreshRead?.abort();
+      refreshJob = undefined;
+      queuedSections.clear();
       pageCursors = {};
       pageHistory = {};
     });
@@ -845,7 +828,8 @@
       window.removeEventListener("online", foreground);
       document.removeEventListener("visibilitychange", foreground);
       source?.close();
-      clearTimeout(refreshTimer);
+      streamUpdates.cancel();
+      refreshRead?.abort();
     };
   });
 </script>
@@ -919,8 +903,7 @@
               >{item === "gantt"
                 ? "Timeline"
                 : item[0].toUpperCase() + item.slice(1)}</span
-            >{#if item === "updates"}<small>{updates.length}</small
-              >{/if}</button
+            ></button
           >{/each}
       </nav>
       <div class="asidebottom">
@@ -1009,6 +992,8 @@
             Connection is recovering. Drafts remain open; verify the result of
             any interrupted save.
           </div>{/if}
+        {#if projectionMessage}<p role="status" class="notice">{projectionMessage}</p>{/if}
+        {#if queryNotice}<p role="status" class="notice">{queryNotice}</p>{/if}
         <div class="toolbar">
           {#if view !== "projects"}<label class="sr" for="project"
               >Project</label
@@ -1085,7 +1070,7 @@
               >
             </div>{/if}
         </div>
-        {#if !queryReady && ["list", "updates", "projects"].includes(view)}
+        {#if (!queryReady || (projectionMessage && !projects.length)) && ["list", "updates", "projects"].includes(view)}
           <div class="empty" role="status">Loading resources…</div>
         {:else if view === "focus"}
           <div class="stats">
@@ -1203,7 +1188,7 @@
                 {open}
                 onpropose={(proposal) => (moveDraft = proposal)}
                 oncreate={create}
-              />{/key}{:else}<p role="status">Loading board…</p>{/if}
+              />{/key}{:else if boardLoadError}<p role="alert">{boardLoadError} <button onclick={loadBoard}>Retry loading board</button></p>{:else}<p role="status">Loading board…</p>{/if}
         {:else if view === "board"}<p role="status">
             All projects is an overview. Select a project above to drag and
             reorder cards.
@@ -1244,7 +1229,7 @@
               {open}
               onpropose={(proposal) => (dateDraft = proposal)}
               oncreate={(schedule) => create("card", { schedule })}
-            />{:else}<p>Loading date views…</p>{/if}
+            />{:else if dateViewLoadError}<p role="alert">{dateViewLoadError} <button onclick={loadDateViews}>Retry loading planning view</button></p>{:else}<p role="status">Loading date views…</p>{/if}
         {:else if view === "updates"}<div class="updates">
             {#each visibleUpdates as item}<button
                 class="update"
@@ -1764,10 +1749,6 @@
   nav button.chosen .navicon {
     color: var(--green);
   }
-  nav small {
-    margin-left: auto;
-    color: var(--muted);
-  }
   .asidebottom {
     margin-top: auto;
     font-size: 11px;
@@ -2235,9 +2216,6 @@
       flex-shrink: 0;
     }
     .navicon {
-      display: none;
-    }
-    nav small {
       display: none;
     }
     .workspace {

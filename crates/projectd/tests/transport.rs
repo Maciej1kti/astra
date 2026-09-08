@@ -542,6 +542,39 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
             assert_eq!(value["items"].as_array().unwrap().len(), 1);
         }
     }
+    let card = resource["metadata"]["id"].as_str().unwrap();
+    for target in [
+        json!({"type":"card","id":card}),
+        json!({"type":"project","id":project}),
+    ] {
+        let report = app.local("POST", &format!("/api/v1/projects/{project}/updates"))
+            .header("x-request-id", Uuid::now_v7().to_string()).header("x-command-epoch", epoch)
+            .json(&json!({"kind":"note","summary":"Targeted report","target":target,"body":"","author":{"kind":"human","label":"Test"}}))
+            .send().await.unwrap();
+        assert_eq!(report.status(), 200);
+    }
+    for path in [
+        format!("/api/v1/projects/{project}/updates?target_type=card&target_id={card}"),
+        format!(
+            "/api/v1/views/list?type=update&project_id={project}&target_type=card&target_id={card}"
+        ),
+    ] {
+        let response = app.local("GET", &path).send().await.unwrap();
+        assert_eq!(response.status(), 200);
+        let value: Value = response.json().await.unwrap();
+        project_application::wire::validate("SummaryPage", &value).unwrap();
+        assert_eq!(value["items"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            value["items"][0]["target"],
+            json!({"type":"card","id":card})
+        );
+    }
+    for path in [
+        format!("/api/v1/projects/{project}/updates?target_type=card"),
+        format!("/api/v1/views/list?type=card&target_type=card&target_id={card}"),
+    ] {
+        assert_eq!(app.local("GET", &path).send().await.unwrap().status(), 422);
+    }
     let plan: Value = app
         .local("POST", "/local/v1/maintenance/plans")
         .json(&json!({"operation":"index_rebuild","project_id":project}))
@@ -561,4 +594,171 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
     ] {
         assert_eq!(app.local("GET", path).send().await.unwrap().status(), 400);
     }
+}
+
+#[tokio::test]
+async fn static_assets_negotiate_gzip_and_keep_api_responses_private() {
+    let app = Running::new().await;
+    let document = app.browser("GET", "/").send().await.unwrap();
+    assert_eq!(document.headers()["cache-control"], "no-cache");
+    let html = document.text().await.unwrap();
+    let asset = html
+        .split("src=\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    assert!(asset.starts_with("/assets/"));
+    let identity = app.browser("GET", asset).send().await.unwrap();
+    assert_eq!(
+        identity.headers()["cache-control"],
+        "public, max-age=31536000, immutable"
+    );
+    assert_eq!(identity.headers()["vary"], "Accept-Encoding");
+    assert!(identity.headers().get("content-encoding").is_none());
+    let identity = identity.bytes().await.unwrap();
+    let compressed = app
+        .browser("GET", asset)
+        .header("accept-encoding", "gzip")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(compressed.headers()["content-encoding"], "gzip");
+    let compressed = compressed.bytes().await.unwrap();
+    assert!(compressed.len() < identity.len());
+    let file = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(file.path(), &compressed).unwrap();
+    let decoded = std::process::Command::new("gzip")
+        .args(["-d", "-c"])
+        .arg(file.path())
+        .output()
+        .unwrap();
+    assert!(decoded.status.success());
+    assert_eq!(decoded.stdout, identity);
+    let veto = app
+        .browser("GET", asset)
+        .header("accept-encoding", "gzip;q=0, *;q=1")
+        .send()
+        .await
+        .unwrap();
+    assert!(veto.headers().get("content-encoding").is_none());
+    assert_eq!(veto.bytes().await.unwrap(), identity);
+    let head = app
+        .browser("HEAD", asset)
+        .header("accept-encoding", "gzip")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(head.headers()["content-encoding"], "gzip");
+    assert_eq!(
+        head.headers()["content-length"]
+            .to_str()
+            .unwrap()
+            .parse::<usize>()
+            .unwrap(),
+        compressed.len()
+    );
+    assert!(head.bytes().await.unwrap().is_empty());
+    let missing = app
+        .browser("GET", "/assets/obsolete-Abcd1234.js")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(missing.status(), 404);
+    assert_eq!(missing.headers()["cache-control"], "no-store");
+    let api = app
+        .local("GET", "/local/v1/hello")
+        .header("accept-encoding", "gzip")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(api.headers()["cache-control"], "no-store");
+    assert!(api.headers().get("content-encoding").is_none());
+}
+
+#[tokio::test]
+async fn session_revocation_closes_the_browser_event_stream() {
+    let app = Running::new().await;
+    let pending = app
+        .browser("POST", "/api/v1/auth/pairings")
+        .header("origin", "https://projects.test")
+        .json(&json!({"device_label":"Stream regression"}))
+        .send()
+        .await
+        .unwrap();
+    let cookie = pending.headers()["set-cookie"]
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned();
+    let pending: Value = pending.json().await.unwrap();
+    let approved = app
+        .local(
+            "POST",
+            &format!(
+                "/local/v1/pairings/{}/approve",
+                pending["id"].as_str().unwrap()
+            ),
+        )
+        .json(&json!({"challenge":pending["challenge"]}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(approved.status(), 200);
+    let claimed = app
+        .browser("POST", "/api/v1/auth/pairings/claim")
+        .header("origin", "https://projects.test")
+        .header("cookie", cookie)
+        .header(
+            "x-csrf-token",
+            pending["pending_csrf_token"].as_str().unwrap(),
+        )
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(claimed.status(), 200);
+    let cookie = claimed.headers()["set-cookie"]
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned();
+    let session: Value = claimed.json().await.unwrap();
+    let mut stream = app
+        .browser("GET", "/api/v1/events")
+        .header("cookie", &cookie)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(stream.status(), 200);
+    assert!(stream.chunk().await.unwrap().is_some());
+    let revoked = app
+        .local(
+            "DELETE",
+            &format!("/api/v1/auth/sessions/{}", session["id"].as_str().unwrap()),
+        )
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(revoked.status(), 200);
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        while stream.chunk().await.unwrap().is_some() {}
+    })
+    .await
+    .expect("revocation must actively close an existing stream");
+    assert_eq!(
+        app.browser("GET", "/api/v1/bootstrap")
+            .header("cookie", cookie)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
 }

@@ -1,5 +1,5 @@
-use std::{env, fs, path::Path};
-fn collect(root: &Path, directory: &Path, entries: &mut Vec<String>) {
+use std::{env, fs, path::Path, process::Command};
+fn collect(root: &Path, directory: &Path, output: &Path, entries: &mut Vec<String>) {
     let mut paths: Vec<_> = fs::read_dir(directory)
         .expect("Build the frontend with npm run build first")
         .map(|e| e.unwrap().path())
@@ -8,7 +8,7 @@ fn collect(root: &Path, directory: &Path, entries: &mut Vec<String>) {
     for path in paths {
         assert!(!path.is_symlink(), "Frontend assets must not be symlinks");
         if path.is_dir() {
-            collect(root, &path, entries);
+            collect(root, &path, output, entries);
             continue;
         }
         let relative = format!("/{}", path.strip_prefix(root).unwrap().display());
@@ -17,10 +17,25 @@ fn collect(root: &Path, directory: &Path, entries: &mut Vec<String>) {
             Some("js") => "text/javascript; charset=utf-8",
             Some("css") => "text/css; charset=utf-8",
             Some("svg") => "image/svg+xml",
+            Some("txt") => "text/plain; charset=utf-8",
             _ => "application/octet-stream",
         };
+        // Compress once during the build. -n excludes source names and timestamps.
+        let gzip = Command::new("gzip")
+            .args(["-n", "-9", "-c"])
+            .arg(&path)
+            .output()
+            .expect("Install gzip to build the embedded frontend assets");
+        assert!(gzip.status.success(), "Frontend asset compression failed");
+        let compressed = if gzip.stdout.len() < fs::metadata(&path).unwrap().len() as usize {
+            let compressed = output.join(format!("asset-{}.gz", entries.len()));
+            fs::write(&compressed, gzip.stdout).unwrap();
+            format!("Some(include_bytes!({:?}))", compressed.to_str().unwrap())
+        } else {
+            "None".to_owned()
+        };
         entries.push(format!(
-            "({relative:?}, {mime:?}, include_bytes!({:?}))",
+            "Asset {{ path: {relative:?}, mime: {mime:?}, identity: include_bytes!({:?}), gzip: {compressed} }}",
             path.to_str().unwrap()
         ));
     }
@@ -33,13 +48,12 @@ fn main() {
     println!("cargo:rerun-if-changed={}", root.display());
     assert!(root.join("index.html").is_file(), "Frontend index missing");
     let mut entries = Vec::new();
-    collect(&root, &root, &mut entries);
+    let output = env::var("OUT_DIR").unwrap();
+    let output = Path::new(&output);
+    collect(&root, &root, output, &mut entries);
     fs::write(
-        Path::new(&env::var("OUT_DIR").unwrap()).join("assets.rs"),
-        format!(
-            "static ASSETS: &[(&str, &str, &[u8])] = &[{}];",
-            entries.join(",")
-        ),
+        output.join("assets.rs"),
+        format!("static ASSETS: &[Asset] = &[{}];", entries.join(",")),
     )
     .unwrap();
 }

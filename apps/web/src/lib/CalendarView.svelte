@@ -2,6 +2,9 @@
   import { onMount, untrack } from "svelte";
   import { Calendar, DayGrid, List, Interaction } from "@event-calendar/core";
   import "@event-calendar/core/index.css";
+  import { cursorPage, type Page } from "./pagination";
+  import { isAbortError } from "./read-requests";
+  import { projectionNotice } from "./projection-state";
   import { api, resourcePath, type Summary } from "./api";
   import { shiftDate, shiftedSchedule } from "./dates";
   import {
@@ -62,6 +65,14 @@
     cursor = $state<string | null>(null),
     paged = $state(false),
     active = $state(false);
+  let freshness = $state(""), pageNotice = $state("");
+  let readController: AbortController | undefined;
+  let readKey = "", pageStart: string | null = null;
+  let loadedScope = $state("");
+  const queryScope = $derived(`${project}:${range.start}:${range.end}`);
+  // A background read keeps the displayed, versioned projection interactive.
+  // Scope changes still disable old events until their own page arrives.
+  const ready = $derived(loadedScope === queryScope && !error);
   let generation = 0,
     deferred = false,
     cancelled = false,
@@ -128,7 +139,7 @@
     options.firstDay = weekStart === "sunday" ? 0 : 1;
   });
   $effect(() => {
-    options.selectable = !!project;
+    options.selectable = !!project && ready;
   });
   $effect(() => {
     if (active) return;
@@ -140,9 +151,9 @@
         end: shiftDate(item.end, 1),
         allDay: true,
         title: item.title,
-        editable: item.kind === "card_schedule" && !loading && !error,
-        startEditable: item.kind === "card_schedule" && !loading && !error,
-        durationEditable: item.kind === "card_schedule" && !loading && !error,
+        editable: item.kind === "card_schedule" && ready,
+        startEditable: item.kind === "card_schedule" && ready,
+        durationEditable: item.kind === "card_schedule" && ready,
         extendedProps: { astra: item },
         backgroundColor: item.kind.endsWith("due")
           ? "var(--calendar-due-bg)"
@@ -159,32 +170,37 @@
     untrack(() => void load(false));
   });
   async function load(more: boolean) {
-    if (active) {
-      deferred = true;
-      return;
-    }
+    const key = queryScope;
+    if (loading && key === readKey && !more) { deferred = true; return; }
+    if (active) { deferred = true; return; }
     const current = ++generation;
-    loading = true;
-    error = "";
+    const target = more ? cursor : key === readKey ? pageStart : null;
+    readController?.abort();
+    readController = new AbortController();
+    const signal = readController.signal;
+    readKey = key;
+    loading = true; error = "";
     try {
-      const result = await api<{
-        items: CalendarItem[];
-        page: { next_cursor: string | null };
-      }>(
-        `/api/v1/views/calendar?from=${range.start}&to=${range.end}${project ? `&project_id=${project}` : ""}&limit=1000${more && cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-      );
+      const result = await cursorPage((page) => api<Page<CalendarItem>>(
+        `/api/v1/views/calendar?from=${range.start}&to=${range.end}${project ? `&project_id=${project}` : ""}&limit=1000${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
+        "GET", undefined, {}, { signal },
+      ), target);
       if (current !== generation) return;
-      if (active) {
-        deferred = true;
-        return;
-      }
-      items = result.items;
-      cursor = result.page.next_cursor;
-      paged = more;
+      if (active) { deferred = true; return; }
+      items = result.value.items;
+      loadedScope = key;
+      cursor = result.value.page.next_cursor;
+      pageStart = result.reset ? null : target;
+      paged = pageStart !== null;
+      freshness = projectionNotice(result.value);
+      pageNotice = result.reset ? "The calendar changed. Showing the first page of the latest results." : "";
     } catch (e) {
-      if (current === generation) error = String(e);
+      if (current === generation && !isAbortError(e)) error = String(e);
     } finally {
-      if (current === generation) loading = false;
+      if (current === generation) {
+        loading = false;
+        if (deferred && !active) { deferred = false; void load(false); }
+      }
     }
   }
   function change(info: Calendar.EventDropInfo | Calendar.EventResizeInfo) {
@@ -284,7 +300,7 @@
       open(calendarTarget(item));
     }
     if (
-      !loading &&
+      ready &&
       !error &&
       event.altKey &&
       ["ArrowLeft", "ArrowRight"].includes(event.key) &&
@@ -355,6 +371,7 @@
     media.addEventListener("change", update);
     return () => {
       generation++;
+      readController?.abort();
       media.removeEventListener("change", update);
     };
   });
@@ -428,16 +445,19 @@
       Select a project to create a card. Existing items from all projects can be
       edited.
     </p>{/if}
-  {#if error}<p role="alert">
+{#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
+  {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
+    {#if error}<p role="alert">
       {error} <button onclick={() => load(false)}>Reload calendar</button>
     </p>{/if}
-  {#if loading}<p role="status">Loading calendar…</p>{/if}
   <div
     class="calendar-surface"
+    aria-busy={loading}
     class:month={monthGrid}
     class:agenda={monthAgenda || mode === "agenda"}
     use:guard
   >
+    {#if loading}<p class="loading-indicator" role="status">Loading calendar…</p>{/if}
     {#key reset}<Calendar plugins={[DayGrid, List, Interaction]} {options}>
         {#snippet dayCellContent({ date: day })}
           <span
@@ -452,7 +472,8 @@
           </span>
         {/snippet}
         {#snippet eventContent({ event })}
-          {@const item = event.extendedProps.astra as CalendarItem}
+          {@const item = event.extendedProps.astra as CalendarItem | undefined}
+          {#if item}
           <div
             class="calendar-item"
             data-calendar-item={item.item_id}
@@ -467,13 +488,14 @@
               {calendarLabel(item)}</small
             ><strong>{item.title}</strong>
           </div>
+          {/if}
         {/snippet}
       </Calendar>{/key}
   </div>
   {#if cursor}<button disabled={loading} onclick={() => load(true)}
       >Next page of dated resources</button
     >{/if}
-  {#if paged}<button disabled={loading} onclick={() => load(false)}
+  {#if paged}<button disabled={loading} onclick={() => { pageStart = null; void load(false); }}
       >First page</button
     >{/if}
 </section>
@@ -554,10 +576,23 @@
     color: var(--muted);
   }
   .calendar-surface {
+    position: relative;
     overflow: auto;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: var(--paper);
+  }
+  .loading-indicator {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    z-index: 5;
+    margin: 0;
+    padding: 4px 8px;
+    background: var(--paper);
+    color: var(--muted);
+    font-size: 12px;
+    pointer-events: none;
   }
   .calendar-surface :global(.ec) {
     --ec-bg-color: var(--paper);

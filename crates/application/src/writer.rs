@@ -11,6 +11,7 @@ use project_store::{
     filesystem::{ProjectStore, WritePoint},
 };
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommitPoint {
@@ -101,6 +102,10 @@ impl Writer<'_> {
                 &command.request_id,
             ));
         }
+        let references = match distinct_references(references) {
+            Some(references) => references,
+            None => return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id)),
+        };
         if !references_match(store, &references)? {
             return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id));
         }
@@ -247,6 +252,24 @@ impl Writer<'_> {
         }
         Ok(recovered)
     }
+}
+
+/// Different versions of the same reference indicate conflicting observations,
+/// not a duplicate to discard. Preserve that rejection before creating an intent.
+fn distinct_references(references: Vec<Reference>) -> Option<Vec<Reference>> {
+    let mut distinct = BTreeMap::new();
+    for reference in references {
+        let key = (reference.kind.as_str(), reference.id.clone());
+        if let Some(previous) = distinct.get(&key) {
+            let previous: &Reference = previous;
+            if previous.version != reference.version {
+                return None;
+            }
+        } else {
+            distinct.insert(key, reference);
+        }
+    }
+    Some(distinct.into_values().collect())
 }
 
 pub fn references_match(store: &ProjectStore, references: &[Reference]) -> Result<bool, AppError> {

@@ -55,11 +55,16 @@ impl Engine {
         drop(db);
         let count = self.index.issue_count()?;
         let issues = self.index.issues()?;
+        let projection = self
+            .index
+            .with_snapshot(|db, _| crate::index::ProjectionStatus::read(db, None))?;
+        let building = projection.freshness == "stale";
+        warnings.extend(projection.warnings);
         if count > 0 {
             warnings.push(json!({"code":"SOURCE_DIAGNOSTICS","message":"Inspect the listed source paths. Validate documents and use an explicit normalization plan where required; healthy project files remain editable."}));
         }
         Ok(
-            json!({"instance_id":instance,"state":if warnings.is_empty(){"ready"}else{"degraded"},"invalid_documents":count,"pending_commands":pending,"index_state":if count>0 || workspace.is_none(){"degraded"}else{"ready"},"warnings":warnings,"issues":issues,"jobs":jobs,"history":{"entries":entries,"bytes":bytes,"retention_days":30,"byte_budget":1073741824}}),
+            json!({"instance_id":instance,"state":if warnings.is_empty(){"ready"}else{"degraded"},"invalid_documents":count,"pending_commands":pending,"index_state":if count>0 || workspace.is_none(){"degraded"}else if building{"building"}else{"ready"},"warnings":warnings,"issues":issues,"jobs":jobs,"history":{"entries":entries,"bytes":bytes,"retention_days":30,"byte_budget":1073741824}}),
         )
     }
 }

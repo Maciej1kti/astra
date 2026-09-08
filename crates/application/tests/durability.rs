@@ -143,6 +143,61 @@ fn committed_conflicts_replays_and_noops_follow_the_contract() {
 }
 
 #[test]
+fn duplicate_references_preserve_conflicts_and_store_one_recovery_precondition() {
+    let env = Environment::new();
+    let (journal, mut store) = env.open();
+    create(&journal, &mut store);
+    let before = source(&store);
+    let version = document::version(&before);
+    let reference = Reference {
+        kind: Kind::Project,
+        id: PROJECT.into(),
+        version: Some(version.clone()),
+    };
+    let mut changed = reference.clone();
+    changed.version = Some(document::version(b"A different external observation"));
+    let rejected = Writer { journal: &journal }
+        .execute(
+            &mut store,
+            &command(&journal, Some(version.clone())),
+            vec![reference.clone(), changed],
+            now_millis(),
+            rename,
+        )
+        .unwrap();
+    assert_eq!(rejected.body["error"]["code"], "REFERENCE_CHANGED");
+    assert_eq!(source(&store), before);
+    let cmd = command(&journal, Some(version));
+    let pending = Writer { journal: &journal }
+        .execute_with(
+            &mut store,
+            &cmd,
+            vec![reference.clone(), reference],
+            now_millis(),
+            rename,
+            |point| {
+                if point == CommitPoint::Prepared {
+                    Err(StoreError::Invalid("AUDIT_INTERRUPTION"))
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+    assert_eq!(pending.http_status, 202);
+    let intents = journal.pending(PROJECT).unwrap();
+    assert_eq!(intents.len(), 1);
+    assert_eq!(intents[0].references.len(), 1);
+    assert_eq!(
+        Writer { journal: &journal }
+            .recover(&mut store, PROJECT, now_millis())
+            .unwrap(),
+        1
+    );
+    assert_eq!(journal.state(&cmd).unwrap(), "committed");
+}
+
+#[test]
 fn missing_precondition_and_invalid_source_never_write() {
     let env = Environment::new();
     let (journal, mut store) = env.open();

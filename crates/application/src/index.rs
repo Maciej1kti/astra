@@ -10,7 +10,7 @@ use rusqlite::{Connection, OpenFlags, OptionalExtension, params, types::Value as
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     path::Path,
     sync::Mutex,
 };
@@ -24,6 +24,8 @@ pub struct Query {
     pub priority: Option<String>,
     pub label: Option<String>,
     pub milestone_id: Option<String>,
+    pub target_type: Option<String>,
+    pub target_id: Option<String>,
     pub archived: Option<bool>,
     pub search: Option<String>,
     pub cursor: Option<String>,
@@ -148,6 +150,58 @@ fn upgrade_search_projection(connection: &mut Connection) -> Result<(), AppError
     Ok(())
 }
 type ProjectionDocuments = BTreeMap<(String, String), Option<(String, Value)>>;
+type ProjectionKeys = Vec<(String, String)>;
+
+fn relative_path(kind: &str, id: &str) -> String {
+    if kind == "project" {
+        "project.md".to_owned()
+    } else {
+        format!("{kind}s/{id}.md")
+    }
+}
+
+pub(crate) struct ProjectionStatus {
+    pub freshness: &'static str,
+    pub warnings: Vec<Value>,
+    pending_projects: BTreeSet<String>,
+}
+impl ProjectionStatus {
+    pub(crate) fn read(db: &Connection, project: Option<&str>) -> Result<Self, AppError> {
+        let pending_projects: BTreeSet<String> = if let Some(project) = project {
+            db.query_row(
+                "SELECT project_id FROM projection_pending WHERE project_id=?1",
+                [project],
+                |row| row.get(0),
+            )
+            .optional()?
+            .into_iter()
+            .collect()
+        } else {
+            db.prepare("SELECT project_id FROM projection_pending")?
+                .query_map([], |row| row.get(0))?
+                .collect::<Result<_, _>>()?
+        };
+        let pending = !pending_projects.is_empty();
+        Ok(Self {
+            freshness: if pending { "stale" } else { "index_snapshot" },
+            warnings: if pending {
+                vec![
+                    json!({"code":"PROJECTION_RECONCILING","message":"Project sources are being verified. Retained results may be stale, and an empty page does not yet establish that no resources exist."}),
+                ]
+            } else {
+                Vec::new()
+            },
+            pending_projects,
+        })
+    }
+    pub(crate) fn mark_rows(&self, rows: &mut [Indexed]) {
+        for row in rows {
+            if row.validity == "valid" && self.pending_projects.contains(&row.project_id) {
+                row.validity = "stale".into();
+            }
+        }
+    }
+}
 
 pub struct Index {
     connection: Mutex<Connection>,
@@ -156,12 +210,35 @@ pub struct Index {
     events: Mutex<VecDeque<(i64, Value)>>,
 }
 impl Index {
+    pub(crate) fn begin_reconciliation(&self, projects: &Value) -> Result<(), AppError> {
+        let mut db = self.connection.lock().map_err(|_| AppError::State)?;
+        let tx = db.transaction()?;
+        tx.execute("DELETE FROM projection_pending", [])?;
+        for project in projects.as_array().ok_or(AppError::State)? {
+            let id = project["project_id"].as_str().ok_or(AppError::State)?;
+            tx.execute(
+                "INSERT INTO projection_pending(project_id) VALUES(?1)",
+                [id],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+    pub(crate) fn pending_projects(&self) -> Result<Vec<String>, AppError> {
+        let db = self.connection.lock().map_err(|_| AppError::State)?;
+        let mut statement =
+            db.prepare("SELECT project_id FROM projection_pending ORDER BY project_id")?;
+        Ok(statement
+            .query_map([], |row| row.get(0))?
+            .collect::<Result<_, _>>()?)
+    }
     pub fn retain_registered(&self, projects: &Value) -> Result<(), AppError> {
         let mut db = self.connection.lock().map_err(|_| AppError::State)?;
         let tx = db.transaction()?;
         let input = serde_json::to_string(projects).map_err(|_| AppError::State)?;
         tx.execute("DELETE FROM documents WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
         tx.execute("DELETE FROM projection_issues WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
+        tx.execute("DELETE FROM projection_pending WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
         tx.commit()?;
         Ok(())
     }
@@ -170,6 +247,10 @@ impl Index {
             let mut db = self.connection.lock().map_err(|_| AppError::State)?;
             let tx = db.transaction()?;
             tx.execute("DELETE FROM documents WHERE project_id=?1", [project])?;
+            tx.execute(
+                "DELETE FROM projection_pending WHERE project_id=?1",
+                [project],
+            )?;
             tx.execute(
                 "DELETE FROM projection_issues WHERE project_id=?1",
                 [project],
@@ -218,9 +299,13 @@ impl Index {
         let mut db = self.connection.lock().map_err(|_| AppError::State)?;
         let tx = db.transaction()?;
         let changed=tx.execute("UPDATE documents SET validity='unavailable' WHERE project_id=?1 AND validity!='unavailable'",[project_id])?;
+        let ended_reconciliation = tx.execute(
+            "DELETE FROM projection_pending WHERE project_id=?1",
+            [project_id],
+        )?;
         let existing:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM projection_issues WHERE project_id=?1 AND path='project.md' AND code=?2)",params![project_id,code],|r|r.get(0))?;
         tx.execute("INSERT INTO projection_issues(project_id,path,code) VALUES(?1,'project.md',?2) ON CONFLICT(project_id,path) DO UPDATE SET code=excluded.code",params![project_id,code])?;
-        if changed == 0 && existing {
+        if changed == 0 && existing && ended_reconciliation == 0 {
             tx.commit()?;
             return Ok(());
         }
@@ -300,7 +385,10 @@ impl Index {
                     continue;
                 };
                 if Uuid::parse_str(id).is_err() {
-                    issues.push((filename, "INVALID_FILENAME"));
+                    issues.push((
+                        format!("{}/{filename}", kind.directory().unwrap()),
+                        "INVALID_FILENAME",
+                    ));
                     continue;
                 }
                 let parsed = directory
@@ -336,16 +424,17 @@ impl Index {
         let mut documents = BTreeMap::new();
         let mut issues = Vec::new();
         let mut keys = Vec::new();
+        let mut seen = BTreeSet::new();
         for (kind, id) in targets {
             if Uuid::parse_str(id).is_err() {
                 return Err(AppError::State);
             }
-            keys.push(format!("{}:{id}", kind.as_str()));
-            let relative = if *kind == Kind::Project {
-                "project.md".to_owned()
-            } else {
-                format!("{}/{id}.md", kind.directory().unwrap())
-            };
+            let key = (kind.as_str().to_owned(), id.clone());
+            if !seen.insert(key.clone()) {
+                continue;
+            }
+            keys.push(key.clone());
+            let relative = relative_path(kind.as_str(), id);
             let bytes = match store.location(*kind, id, false) {
                 Ok((directory, name)) => directory.read(&name),
                 Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -358,7 +447,6 @@ impl Index {
                 Ok(Some(bytes)) => document::parse(*kind, Some(id), &bytes),
                 Err(error) => Err(error),
             };
-            let key = (kind.as_str().to_owned(), id.clone());
             match parsed {
                 Ok(parsed) => {
                     documents.insert(key, Some((parsed.version.clone(), parsed.value())));
@@ -377,18 +465,52 @@ impl Index {
         project_id: &str,
         documents: ProjectionDocuments,
         issues: Vec<(String, &str)>,
-        keys: Option<Vec<String>>,
+        keys: Option<ProjectionKeys>,
         now: i64,
     ) -> Result<(), AppError> {
-        let selected = keys.map(|keys| serde_json::to_string(&keys).unwrap());
         let mut db = self.connection.lock().map_err(|_| AppError::State)?;
         let tx = db.transaction()?;
-        let previous: BTreeMap<(String, String), (String, String)> = {
-            let mut statement=tx.prepare("SELECT entity_type,entity_id,source_hash,validity FROM documents WHERE project_id=?1 AND (?2 IS NULL OR entity_type||':'||entity_id IN (SELECT value FROM json_each(?2)))")?;
+        let previous: BTreeMap<(String, String), (String, String)> = if let Some(keys) = &keys {
+            let mut statement = tx.prepare("SELECT source_hash,validity FROM documents WHERE project_id=?1 AND entity_type=?2 AND entity_id=?3")?;
+            let mut previous = BTreeMap::new();
+            for (kind, id) in keys {
+                if let Some(value) = statement
+                    .query_row(params![project_id, kind, id], |row| {
+                        Ok((row.get(0)?, row.get(1)?))
+                    })
+                    .optional()?
+                {
+                    previous.insert((kind.clone(), id.clone()), value);
+                }
+            }
+            previous
+        } else {
+            let mut statement=tx.prepare("SELECT entity_type,entity_id,source_hash,validity FROM documents WHERE project_id=?1")?;
             statement
-                .query_map(params![project_id, selected], |r| {
+                .query_map([project_id], |r| {
                     Ok(((r.get(0)?, r.get(1)?), (r.get(2)?, r.get(3)?)))
                 })?
+                .collect::<Result<_, _>>()?
+        };
+        let previous_issues: BTreeMap<String, String> = if let Some(keys) = &keys {
+            let mut statement =
+                tx.prepare("SELECT code FROM projection_issues WHERE project_id=?1 AND path=?2")?;
+            let mut previous = BTreeMap::new();
+            for (kind, id) in keys {
+                let path = relative_path(kind, id);
+                if let Some(code) = statement
+                    .query_row(params![project_id, path], |row| row.get(0))
+                    .optional()?
+                {
+                    previous.insert(path, code);
+                }
+            }
+            previous
+        } else {
+            let mut statement =
+                tx.prepare("SELECT path,code FROM projection_issues WHERE project_id=?1")?;
+            statement
+                .query_map([project_id], |row| Ok((row.get(0)?, row.get(1)?)))?
                 .collect::<Result<_, _>>()?
         };
         let mut changes = Vec::new();
@@ -412,11 +534,7 @@ impl Index {
                 .or_else(|| metadata.get("summary"))
                 .and_then(Value::as_str)
                 .ok_or(AppError::State)?;
-            let relative = if kind == "project" {
-                "project.md".to_owned()
-            } else {
-                format!("{kind}s/{id}.md")
-            };
+            let relative = relative_path(kind, id);
             let body = value["body"].as_str().unwrap();
             tx.execute("INSERT INTO documents(project_id,entity_id,entity_type,relative_path,source_hash,title,body,search_text,metadata_json,observed_at,validity) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'valid') ON CONFLICT(project_id,entity_type,entity_id) DO UPDATE SET source_hash=excluded.source_hash,title=excluded.title,body=excluded.body,search_text=excluded.search_text,metadata_json=excluded.metadata_json,observed_at=excluded.observed_at,validity='valid'",params![project_id,id,kind,relative,version,title,body,search_text(body,metadata),serde_json::to_string(metadata).unwrap(),instant(now)])?;
             changes.push(json!({"kind":"changed","project_id":project_id,"target":{"type":kind,"id":id},"version":version,"reason":"source_changed"}));
@@ -430,15 +548,43 @@ impl Index {
                 changes.push(json!({"kind":"changed","project_id":project_id,"target":{"type":kind,"id":id},"reason":"source_removed"}));
             }
         }
-        tx.execute(
-            "DELETE FROM projection_issues WHERE project_id=?1 AND (?2 IS NULL OR path IN (SELECT CASE WHEN substr(value,1,8)='project:' THEN 'project.md' ELSE substr(value,1,instr(value,':')-1)||'s/'||substr(value,instr(value,':')+1)||'.md' END FROM json_each(?2)))",
-            params![project_id, selected],
-        )?;
-        for (path, code) in issues {
-            tx.execute(
-                "INSERT INTO projection_issues(project_id,path,code) VALUES(?1,?2,?3)",
-                params![project_id, path, code],
-            )?;
+        let issues: BTreeMap<_, _> = issues
+            .into_iter()
+            .map(|(path, code)| (path, code.to_owned()))
+            .collect();
+        let ended_reconciliation = keys.is_none()
+            && tx.execute(
+                "DELETE FROM projection_pending WHERE project_id=?1",
+                [project_id],
+            )? > 0;
+        if issues != previous_issues {
+            for path in previous_issues
+                .keys()
+                .filter(|path| !issues.contains_key(*path))
+            {
+                tx.execute(
+                    "DELETE FROM projection_issues WHERE project_id=?1 AND path=?2",
+                    params![project_id, path],
+                )?;
+            }
+            for (path, code) in &issues {
+                if previous_issues.get(path) != Some(code) {
+                    tx.execute("INSERT INTO projection_issues(project_id,path,code) VALUES(?1,?2,?3) ON CONFLICT(project_id,path) DO UPDATE SET code=excluded.code", params![project_id, path, code])?;
+                }
+            }
+            if !changes
+                .iter()
+                .any(|event| event["kind"] == "health_changed")
+            {
+                changes.push(json!({"kind":"health_changed","project_id":project_id,"reason":"projection_issues_changed"}));
+            }
+        }
+        if ended_reconciliation
+            && !changes
+                .iter()
+                .any(|event| event["kind"] == "health_changed")
+        {
+            changes.push(json!({"kind":"health_changed","project_id":project_id,"reason":"projection_reconciled"}));
         }
         let mut sequence: i64 = tx.query_row(
             "SELECT CAST(value AS INTEGER) FROM projection_meta WHERE key='sequence'",
@@ -518,6 +664,27 @@ impl Index {
         query: &Query,
         max: u32,
     ) -> Result<(Vec<Indexed>, Value), AppError> {
+        self.query_projection(kind, query, max)
+            .map(|(rows, page, _)| (rows, page))
+    }
+    fn query_projection(
+        &self,
+        kind: Option<&str>,
+        query: &Query,
+        max: u32,
+    ) -> Result<(Vec<Indexed>, Value, Vec<Value>), AppError> {
+        match (&query.target_type, &query.target_id) {
+            (None, None) => {}
+            (Some(target_type), Some(target_id))
+                if kind == Some("update")
+                    && matches!(target_type.as_str(), "project" | "card" | "milestone")
+                    && Uuid::parse_str(target_id).is_ok_and(|id| {
+                        id.get_version_num() == 4
+                            && id.get_variant() == uuid::Variant::RFC4122
+                            && id.to_string() == *target_id
+                    }) => {}
+            _ => return Err(AppError::reject(422, "INVALID_TARGET_FILTER")),
+        }
         let limit = query.limit.unwrap_or(50);
         if limit == 0
             || limit > max
@@ -570,6 +737,14 @@ impl Index {
             (
                 "json_extract(metadata_json,'$.milestone_id')",
                 query.milestone_id.as_deref(),
+            ),
+            (
+                "json_extract(metadata_json,'$.target.type')",
+                query.target_type.as_deref(),
+            ),
+            (
+                "json_extract(metadata_json,'$.target.id')",
+                query.target_id.as_deref(),
             ),
         ] {
             if let Some(value) = value {
@@ -624,16 +799,19 @@ impl Index {
             )
             .unwrap()
         });
-        let stale = rows.iter().any(|r| r.validity != "valid");
+        let projection = ProjectionStatus::read(&db, query.project.as_deref())?;
+        projection.mark_rows(&mut rows);
+        let stale = projection.freshness == "stale" || rows.iter().any(|r| r.validity != "valid");
         Ok((
             rows,
             json!({"next_cursor":next,"snapshot_cursor":revision,"has_more":more,"freshness":if stale{"stale"}else{"index_snapshot"}}),
+            projection.warnings,
         ))
     }
     pub fn summary_page(&self, kind: Option<&str>, query: &Query) -> Result<Value, AppError> {
-        let (rows, page) = self.query(kind, query, 200)?;
+        let (rows, page, warnings) = self.query_projection(kind, query, 200)?;
         Ok(
-            json!({"items":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"page":page,"warnings":[]}),
+            json!({"items":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"page":page,"warnings":warnings}),
         )
     }
     pub(crate) fn issues(&self) -> Result<Vec<Value>, AppError> {
@@ -649,5 +827,164 @@ impl Index {
             .lock()
             .map_err(|_| AppError::State)?
             .query_row("SELECT count(*) FROM projection_issues", [], |r| r.get(0))?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn report_target_pagination_is_bounded_amid_more_than_twenty_thousand_unrelated_reports() {
+        let temporary = tempfile::tempdir().unwrap();
+        let directory = Directory::open(&temporary.path().canonicalize().unwrap())
+            .unwrap()
+            .child("index", true)
+            .unwrap();
+        let index = Index::open(directory.path()).unwrap();
+        let project = Uuid::new_v4().to_string();
+        let card = Uuid::new_v4().to_string();
+        let other = Uuid::new_v4().to_string();
+        let mut expected = BTreeSet::new();
+        {
+            let mut db = index.connection.lock().unwrap();
+            let tx = db.transaction().unwrap();
+            {
+                let mut insert = tx.prepare("INSERT INTO documents(project_id,entity_id,entity_type,relative_path,source_hash,title,body,search_text,metadata_json,observed_at,validity) VALUES(?1,?2,'update','','r1.hash','Report','Detail body','',?3,'','valid')").unwrap();
+                for number in 0..20_006 {
+                    let id = Uuid::new_v4().to_string();
+                    let target = if number >= 20_001 {
+                        expected.insert(id.clone());
+                        &card
+                    } else {
+                        &other
+                    };
+                    let metadata = json!({"id":id,"summary":"Report","recorded_at":"2026-09-08T10:00:00Z","target":{"type":"card","id":target}});
+                    insert
+                        .execute(params![project, id, metadata.to_string()])
+                        .unwrap();
+                }
+                // Identical target identifiers in another project or target kind
+                // must not leak into the selected card's report history.
+                for (project_id, target_type) in
+                    [(other.as_str(), "card"), (project.as_str(), "milestone")]
+                {
+                    let id = Uuid::new_v4().to_string();
+                    insert.execute(params![project_id, id, json!({"id":id,"summary":"Report","target":{"type":target_type,"id":card}}).to_string()]).unwrap();
+                }
+            }
+            tx.commit().unwrap();
+        }
+        let mut query = Query {
+            project: Some(project),
+            target_type: Some("card".into()),
+            target_id: Some(card),
+            limit: Some(2),
+            ..Default::default()
+        };
+        let mut received = BTreeSet::new();
+        let mut pages = 0;
+        loop {
+            let result = index.summary_page(Some("update"), &query).unwrap();
+            assert!(result["items"].as_array().unwrap().len() <= 2);
+            for item in result["items"].as_array().unwrap() {
+                assert!(item.get("body").is_none());
+                assert!(received.insert(item["id"].as_str().unwrap().to_owned()));
+            }
+            pages += 1;
+            let Some(cursor) = result["page"]["next_cursor"].as_str() else {
+                break;
+            };
+            query.cursor = Some(cursor.into());
+            let mut different = query.clone();
+            different.target_id = Some(other.clone());
+            assert!(
+                matches!(index.query(Some("update"), &different, 200), Err(AppError::Rejected(reply)) if reply.body["error"]["code"] == "CURSOR_STALE")
+            );
+        }
+        assert_eq!(pages, 3);
+        assert_eq!(received, expected);
+    }
+
+    #[test]
+    fn report_target_filter_requires_a_valid_pair_on_update_queries() {
+        let temporary = tempfile::tempdir().unwrap();
+        let directory = Directory::open(&temporary.path().canonicalize().unwrap())
+            .unwrap()
+            .child("index", true)
+            .unwrap();
+        let index = Index::open(directory.path()).unwrap();
+        let valid = Query {
+            target_type: Some("card".into()),
+            target_id: Some(Uuid::new_v4().to_string()),
+            ..Default::default()
+        };
+        for (kind, query) in [
+            (Some("card"), valid.clone()),
+            (None, valid.clone()),
+            (
+                Some("update"),
+                Query {
+                    target_type: None,
+                    ..valid.clone()
+                },
+            ),
+            (
+                Some("update"),
+                Query {
+                    target_id: None,
+                    ..valid.clone()
+                },
+            ),
+            (
+                Some("update"),
+                Query {
+                    target_type: Some("update".into()),
+                    ..valid.clone()
+                },
+            ),
+            (
+                Some("update"),
+                Query {
+                    target_id: Some(Uuid::now_v7().to_string()),
+                    ..valid.clone()
+                },
+            ),
+        ] {
+            assert!(
+                matches!(index.query(kind, &query, 200), Err(AppError::Rejected(reply)) if reply.body["error"]["code"] == "INVALID_TARGET_FILTER")
+            );
+        }
+        assert!(index.query(Some("update"), &valid, 200).is_ok());
+    }
+
+    #[test]
+    fn bundled_sqlite_seeks_composite_projection_and_report_target_keys() {
+        let temporary = tempfile::tempdir().unwrap();
+        let directory = Directory::open(&temporary.path().canonicalize().unwrap())
+            .unwrap()
+            .child("index", true)
+            .unwrap();
+        let index = Index::open(directory.path()).unwrap();
+        let db = index.connection.lock().unwrap();
+        for (sql, expected) in [
+            (
+                "EXPLAIN QUERY PLAN SELECT source_hash,validity FROM documents WHERE project_id=?1 AND entity_type=?2 AND entity_id=?3",
+                "project_id=? AND entity_type=? AND entity_id=?",
+            ),
+            (
+                "EXPLAIN QUERY PLAN SELECT entity_id FROM documents WHERE project_id=?1 AND entity_type='update' AND json_extract(metadata_json,'$.target.type')=?2 AND json_extract(metadata_json,'$.target.id')=?3",
+                "documents_report_target",
+            ),
+        ] {
+            let mut statement = db.prepare(sql).unwrap();
+            let plan = statement
+                .query_map(["project", "card", "id"], |row| row.get::<_, String>(3))
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap()
+                .join("\n");
+            assert!(plan.contains(expected), "{plan}");
+        }
     }
 }
