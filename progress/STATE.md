@@ -10,6 +10,12 @@ verified; preserve requirements from the temporary handoff until then.
 
 ## Implemented
 
+The 2026-09-08 follow-up adds structured card results, ordered acceptance criteria,
+owner labels, inline card updates, and workspace tag management with versioned
+rename/merge previews. See [stage 2 evidence](stage2-2026-09-08/README.md) for the
+implemented slice, current checks and remaining product scope. This follows the
+[browser-audit repair batch](fixes-2026-09-08/README.md).
+
 - Shared Rust domain and generated TypeScript models; strict document validation.
 - Descriptor-based storage, exclusive project leases and durable conditional writes.
 - SQLite command journal, stable retries, crash recovery and history recording.

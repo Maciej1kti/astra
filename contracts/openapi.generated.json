@@ -2373,6 +2373,217 @@
         }
       }
     },
+    "/api/v1/workspace/tags": {
+      "get": {
+        "operationId": "getTagCatalog",
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Read the workspace vocabulary and exact source usage, including archived cards",
+        "responses": {
+          "200": {
+            "description": "Catalog with explicit incomplete coverage when sources cannot be read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagCatalog"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceTagCatalog",
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Replace saved vocabulary without changing any card labels",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestID"
+          },
+          {
+            "$ref": "#/components/parameters/CommandEpoch"
+          },
+          {
+            "$ref": "#/components/parameters/CSRF"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagsReplace"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Durable catalog command result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Unresolved write; retain the original request ID, epoch and payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandStatus"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflikt domeny/epoki/źródła",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Niezgodna wersja",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Brak precondition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Wygasły wynik lub okno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Błąd walidacji",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Usługa/zasób niedostępny",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "Błąd storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/tags/preview": {
+      "post": {
+        "operationId": "previewTagChange",
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Preview an exact tag rename or merge without writing cards",
+        "description": "Apply reviewed changes through ordinary CardPatch commands, each with its own expected version and durable command identity. This preview is not an atomic batch. Incomplete coverage prevents claiming a global rename is finished.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CSRF"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Up to 500 reviewed card changes with source versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagPreview"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspace/preferences": {
       "get": {
         "operationId": "getPreferences",
@@ -3701,6 +3912,70 @@
           }
         }
       },
+      "AcceptanceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "pattern": "\\S"
+          },
+          "completed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "completed"
+        ],
+        "additionalProperties": false
+      },
+      "ExpectedResult": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000,
+        "pattern": "\\S"
+      },
+      "CardOwner": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120,
+        "pattern": "\\S",
+        "description": "Display label only; does not assign an account or grant access."
+      },
+      "Acceptance": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/AcceptanceItem"
+        },
+        "maxItems": 100,
+        "description": "Ordered items with unique stable IDs. Completion never changes card status."
+      },
+      "AcceptanceProgress": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "total",
+          "completed"
+        ],
+        "additionalProperties": false
+      },
       "CardMetadata": {
         "type": "object",
         "properties": {
@@ -3772,6 +4047,15 @@
             },
             "maxItems": 100,
             "uniqueItems": true
+          },
+          "expected_result": {
+            "$ref": "#/components/schemas/ExpectedResult"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/CardOwner"
+          },
+          "acceptance": {
+            "$ref": "#/components/schemas/Acceptance"
           },
           "labels": {
             "type": "array",
@@ -4181,6 +4465,17 @@
             "maxItems": 100,
             "uniqueItems": true
           },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 48
+            },
+            "maxItems": 500,
+            "uniqueItems": true,
+            "description": "Optional workspace tag names. Card labels remain source-owned strings."
+          },
           "preferences": {
             "$ref": "#/components/schemas/Preferences"
           }
@@ -4479,6 +4774,15 @@
                     "maxItems": 100,
                     "uniqueItems": true
                   },
+                  "expected_result": {
+                    "$ref": "#/components/schemas/ExpectedResult"
+                  },
+                  "owner": {
+                    "$ref": "#/components/schemas/CardOwner"
+                  },
+                  "acceptance": {
+                    "$ref": "#/components/schemas/Acceptance"
+                  },
                   "labels": {
                     "type": "array",
                     "items": {
@@ -4510,7 +4814,10 @@
                     "milestone_id",
                     "blocked",
                     "depends_on",
-                    "labels"
+                    "labels",
+                    "expected_result",
+                    "owner",
+                    "acceptance"
                   ]
                 },
                 "maxItems": 20,
@@ -4617,6 +4924,15 @@
             },
             "maxItems": 20,
             "uniqueItems": true
+          },
+          "expected_result": {
+            "$ref": "#/components/schemas/ExpectedResult"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/CardOwner"
+          },
+          "acceptance": {
+            "$ref": "#/components/schemas/Acceptance"
           },
           "body": {
             "type": "string",
@@ -4963,6 +5279,7 @@
               "update",
               "focus",
               "preferences",
+              "tags",
               "registration",
               "receipt",
               "normalization",
@@ -5233,6 +5550,12 @@
           },
           "milestone_id": {
             "$ref": "#/components/schemas/UUID"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/CardOwner"
+          },
+          "acceptance_progress": {
+            "$ref": "#/components/schemas/AcceptanceProgress"
           },
           "read": {
             "type": "boolean",
@@ -5634,6 +5957,218 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "TagName": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 48,
+        "description": "Exact case-sensitive name. Existing whitespace and Unicode are preserved; newly entered names trim outer whitespace."
+      },
+      "TagsReplace": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tags"
+        ],
+        "properties": {
+          "tags": {
+            "type": "array",
+            "maxItems": 500,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/TagName"
+            }
+          }
+        }
+      },
+      "TagIssue": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "project_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "card_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "TagUsageProject": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "project_name",
+          "count"
+        ],
+        "properties": {
+          "project_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "project_name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "CatalogTag": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "managed",
+          "usage",
+          "projects"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/TagName"
+          },
+          "managed": {
+            "type": "boolean"
+          },
+          "usage": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagUsageProject"
+            }
+          }
+        }
+      },
+      "TagCatalog": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "tags",
+          "complete",
+          "issues"
+        ],
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogTag"
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagIssue"
+            }
+          }
+        }
+      },
+      "TagPreviewRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "target"
+        ],
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/TagName"
+          },
+          "target": {
+            "$ref": "#/components/schemas/TagName"
+          }
+        }
+      },
+      "TagChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "project_name",
+          "card_id",
+          "title",
+          "version",
+          "labels"
+        ],
+        "properties": {
+          "project_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "project_name": {
+            "type": "string"
+          },
+          "card_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "labels": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/TagName"
+            }
+          }
+        }
+      },
+      "TagPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "source",
+          "target",
+          "changes",
+          "complete",
+          "issues"
+        ],
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "source": {
+            "$ref": "#/components/schemas/TagName"
+          },
+          "target": {
+            "$ref": "#/components/schemas/TagName"
+          },
+          "changes": {
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "$ref": "#/components/schemas/TagChange"
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagIssue"
+            }
+          }
+        }
       },
       "PreferencesResource": {
         "type": "object",
@@ -6695,6 +7230,15 @@
           },
           "recorded_at": {
             "$ref": "#/components/schemas/Instant"
+          },
+          "expected_result": {
+            "$ref": "#/components/schemas/ExpectedResult"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/CardOwner"
+          },
+          "acceptance": {
+            "$ref": "#/components/schemas/Acceptance"
           }
         },
         "required": [

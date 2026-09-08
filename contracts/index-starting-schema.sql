@@ -10,19 +10,20 @@ CREATE TABLE IF NOT EXISTS documents (
   source_hash TEXT NOT NULL,
   title TEXT NOT NULL,
   body TEXT NOT NULL,
+  search_text TEXT NOT NULL DEFAULT '',
   metadata_json TEXT NOT NULL,
   observed_at TEXT NOT NULL,
   validity TEXT NOT NULL CHECK(validity IN ('valid','stale','invalid','unavailable')),
   UNIQUE(project_id,entity_type,entity_id)
 ) STRICT;
-CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title,body,content='documents',content_rowid='rowid');
+CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title,search_text,content='documents',content_rowid='rowid');
 -- Application updates FTS in same projection transaction; tests MUST prove it.
 -- Not a complete query schema: status/date/rank columns should be indexed after profiling.
 CREATE INDEX IF NOT EXISTS documents_project_type ON documents(project_id,entity_type);
 
-CREATE TRIGGER IF NOT EXISTS documents_ai AFTER INSERT ON documents BEGIN INSERT INTO documents_fts(rowid,title,body) VALUES(new.rowid,new.title,new.body); END;
-        CREATE TRIGGER IF NOT EXISTS documents_ad AFTER DELETE ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body); END;
-        CREATE TRIGGER IF NOT EXISTS documents_au AFTER UPDATE OF title,body ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body); INSERT INTO documents_fts(rowid,title,body) VALUES(new.rowid,new.title,new.body); END;
+CREATE TRIGGER IF NOT EXISTS documents_ai AFTER INSERT ON documents BEGIN INSERT INTO documents_fts(rowid,title,search_text) VALUES(new.rowid,new.title,new.search_text); END;
+        CREATE TRIGGER IF NOT EXISTS documents_ad AFTER DELETE ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,search_text) VALUES('delete',old.rowid,old.title,old.search_text); END;
+        CREATE TRIGGER IF NOT EXISTS documents_au AFTER UPDATE OF title,search_text ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,search_text) VALUES('delete',old.rowid,old.title,old.search_text); INSERT INTO documents_fts(rowid,title,search_text) VALUES(new.rowid,new.title,new.search_text); END;
         CREATE TABLE IF NOT EXISTS projection_issues(project_id TEXT NOT NULL,path TEXT NOT NULL,code TEXT NOT NULL,PRIMARY KEY(project_id,path)) STRICT;
 
 -- Measured attention queries must seek candidates instead of scanning report bodies.

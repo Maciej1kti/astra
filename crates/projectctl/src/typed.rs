@@ -66,6 +66,11 @@ pub enum Action {
         #[command(subcommand)]
         action: Focus,
     },
+    /// Manage the workspace tag vocabulary and preview versioned card changes.
+    Tags {
+        #[command(subcommand)]
+        action: Tags,
+    },
     CommandStatus {
         id: String,
     },
@@ -160,6 +165,27 @@ pub enum Focus {
         identity: Identity,
     },
 }
+#[derive(Subcommand)]
+pub enum Tags {
+    /// Read exact names and source usage, including archived cards.
+    List,
+    /// Preview only. Apply reviewed rows using card set and their returned versions.
+    Preview {
+        #[arg(long)]
+        source: String,
+        #[arg(long)]
+        target: String,
+    },
+    /// Replace only the vocabulary using a JSON object containing tags.
+    Set {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        if_version: String,
+        #[command(flatten)]
+        identity: Identity,
+    },
+}
 fn read(path: String) -> Request {
     ("GET".into(), path, None, None, None, None)
 }
@@ -211,6 +237,37 @@ impl Action {
         project: Option<&Path>,
     ) -> Result<Request, Error> {
         match self {
+            Self::Tags { action: Tags::List } => {
+                return Ok(read("/api/v1/workspace/tags".into()));
+            }
+            Self::Tags {
+                action: Tags::Preview { source, target },
+            } => {
+                return Ok((
+                    "POST".into(),
+                    "/api/v1/workspace/tags/preview".into(),
+                    Some(json!({"source":source,"target":target})),
+                    None,
+                    None,
+                    None,
+                ));
+            }
+            Self::Tags {
+                action:
+                    Tags::Set {
+                        input,
+                        if_version,
+                        identity,
+                    },
+            } => {
+                return Ok(write(
+                    "PUT",
+                    "/api/v1/workspace/tags".into(),
+                    serde_json::from_slice(&file(&input)?)?,
+                    Some(if_version),
+                    identity,
+                ));
+            }
             Self::Focus { action: Focus::Get } => {
                 return Ok(read("/api/v1/workspace/focus".into()));
             }

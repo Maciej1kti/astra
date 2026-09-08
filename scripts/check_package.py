@@ -304,6 +304,8 @@ def check_api_examples() -> dict:
         "card-move.json": "CardPatch",
         "report-create.json": "UpdateCreate",
         "focus-replace.json": "FocusReplace",
+        "tags-replace.json": "TagsReplace",
+        "tag-preview.json": "TagPreviewRequest",
     }
     for filename, definition in bindings.items():
         schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"#/components/schemas/{definition}", "components": OAS["components"]}

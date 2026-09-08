@@ -84,6 +84,13 @@ pub struct Blocked {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct AcceptanceItem {
+    pub id: String,
+    pub text: String,
+    pub completed: bool,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Target {
     #[serde(rename = "type")]
     pub kind: TargetKind,
@@ -148,6 +155,12 @@ pub struct CardMetadata {
     pub depends_on: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_result: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acceptance: Option<Vec<AcceptanceItem>>,
     #[serde(flatten)]
     pub extensions: Extensions,
 }
@@ -239,4 +252,6 @@ pub struct Workspace {
     pub projects: Vec<ProjectRegistration>,
     pub focus: Vec<FocusRef>,
     pub preferences: Preferences,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }

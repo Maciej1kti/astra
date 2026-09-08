@@ -6,7 +6,7 @@ use project_store::{
     document::{self, Kind},
     filesystem::{Directory, ProjectStore},
 };
-use rusqlite::{Connection, OpenFlags, params, types::Value as SqlValue};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, params, types::Value as SqlValue};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
@@ -58,6 +58,7 @@ impl Indexed {
             "blocked",
             "labels",
             "milestone_id",
+            "owner",
         ] {
             if let Some(value) = m.get(key) {
                 out[key] = value.clone();
@@ -66,8 +67,85 @@ impl Indexed {
         if self.kind == "project" {
             out["status"] = m["state"].clone();
         }
+        if let Some(items) = m.get("acceptance").and_then(Value::as_array) {
+            out["acceptance_progress"] = json!({
+                "total": items.len(),
+                "completed": items.iter().filter(|item| item["completed"] == true).count()
+            });
+        }
         out
     }
+}
+
+/// Search remains a derived projection; source Markdown is never rewritten.
+fn search_text(body: &str, metadata: &Value) -> String {
+    let mut text = body.to_owned();
+    for key in ["expected_result", "owner"] {
+        if let Some(value) = metadata.get(key).and_then(Value::as_str) {
+            text.push('\n');
+            text.push_str(value);
+        }
+    }
+    if let Some(items) = metadata.get("acceptance").and_then(Value::as_array) {
+        for item in items {
+            if let Some(value) = item["text"].as_str() {
+                text.push('\n');
+                text.push_str(value);
+            }
+        }
+    }
+    text
+}
+
+fn upgrade_search_projection(connection: &mut Connection) -> Result<(), AppError> {
+    let version: Option<String> = connection
+        .query_row(
+            "SELECT value FROM projection_meta WHERE key='search_format'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if version.as_deref() == Some("2") {
+        return Ok(());
+    }
+    let tx = connection.transaction()?;
+    let has_column = tx
+        .prepare("PRAGMA table_info(documents)")?
+        .query_map([], |r| r.get::<_, String>(1))?
+        .collect::<Result<Vec<_>, _>>()?
+        .iter()
+        .any(|column| column == "search_text");
+    if !has_column {
+        tx.execute(
+            "ALTER TABLE documents ADD COLUMN search_text TEXT NOT NULL DEFAULT ''",
+            [],
+        )?;
+    }
+    // Disable old trigger definitions before rebuilding the disposable index.
+    tx.execute_batch("DROP TRIGGER IF EXISTS documents_ai; DROP TRIGGER IF EXISTS documents_ad; DROP TRIGGER IF EXISTS documents_au; DROP TABLE IF EXISTS documents_fts;")?;
+    {
+        let mut statement =
+            tx.prepare("SELECT rowid,body,metadata_json FROM documents ORDER BY rowid")?;
+        let mut rows = statement.query([])?;
+        while let Some(row) = rows.next()? {
+            let id: i64 = row.get(0)?;
+            let body: String = row.get(1)?;
+            let metadata: String = row.get(2)?;
+            let metadata: Value = serde_json::from_str(&metadata).map_err(|_| AppError::State)?;
+            tx.execute(
+                "UPDATE documents SET search_text=?2 WHERE rowid=?1",
+                params![id, search_text(&body, &metadata)],
+            )?;
+        }
+    }
+    tx.execute_batch(include_str!("../../../contracts/index-starting-schema.sql"))?;
+    tx.execute(
+        "INSERT INTO documents_fts(documents_fts) VALUES('rebuild')",
+        [],
+    )?;
+    tx.execute("INSERT INTO projection_meta(key,value) VALUES('search_format','2') ON CONFLICT(key) DO UPDATE SET value='2'", [])?;
+    tx.commit()?;
+    Ok(())
 }
 type ProjectionDocuments = BTreeMap<(String, String), Option<(String, Value)>>;
 
@@ -177,12 +255,13 @@ impl Index {
         }
         directory.exists_regular("index.sqlite-wal")?;
         directory.exists_regular("index.sqlite-shm")?;
-        let connection = Connection::open_with_flags(
+        let mut connection = Connection::open_with_flags(
             path.join("index.sqlite"),
             OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
         )?;
         connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;")?;
         connection.execute_batch(include_str!("../../../contracts/index-starting-schema.sql"))?;
+        upgrade_search_projection(&mut connection)?;
         connection.execute_batch("INSERT INTO projection_meta(key,value) VALUES('sequence','0') ON CONFLICT(key) DO UPDATE SET value='0';")?;
         Ok(Self {
             connection: Mutex::new(connection),
@@ -338,7 +417,8 @@ impl Index {
             } else {
                 format!("{kind}s/{id}.md")
             };
-            tx.execute("INSERT INTO documents(project_id,entity_id,entity_type,relative_path,source_hash,title,body,metadata_json,observed_at,validity) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,'valid') ON CONFLICT(project_id,entity_type,entity_id) DO UPDATE SET source_hash=excluded.source_hash,title=excluded.title,body=excluded.body,metadata_json=excluded.metadata_json,observed_at=excluded.observed_at,validity='valid'",params![project_id,id,kind,relative,version,title,value["body"].as_str().unwrap(),serde_json::to_string(metadata).unwrap(),instant(now)])?;
+            let body = value["body"].as_str().unwrap();
+            tx.execute("INSERT INTO documents(project_id,entity_id,entity_type,relative_path,source_hash,title,body,search_text,metadata_json,observed_at,validity) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'valid') ON CONFLICT(project_id,entity_type,entity_id) DO UPDATE SET source_hash=excluded.source_hash,title=excluded.title,body=excluded.body,search_text=excluded.search_text,metadata_json=excluded.metadata_json,observed_at=excluded.observed_at,validity='valid'",params![project_id,id,kind,relative,version,title,body,search_text(body,metadata),serde_json::to_string(metadata).unwrap(),instant(now)])?;
             changes.push(json!({"kind":"changed","project_id":project_id,"target":{"type":kind,"id":id},"version":version,"reason":"source_changed"}));
         }
         for (kind, id) in previous.keys() {

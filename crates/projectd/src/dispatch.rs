@@ -158,7 +158,16 @@ pub(super) fn run(
         ("POST", ["api", "v1", "workspace", "read-receipts"]) => {
             return Ok(response(engine.receipts(&input.body, request_id, epoch)?));
         }
-        ("PUT", ["api", "v1", "workspace", "focus"])
+        ("GET", ["api", "v1", "workspace", "tags"]) => {
+            parameters(&input, &[])?;
+            engine.tag_catalog()?
+        }
+        ("POST", ["api", "v1", "workspace", "tags", "preview"]) => {
+            parameters(&input, &[])?;
+            engine.tag_preview(&input.body)?
+        }
+        ("PUT", ["api", "v1", "workspace", "tags"])
+        | ("PUT", ["api", "v1", "workspace", "focus"])
         | ("PATCH", ["api", "v1", "workspace", "preferences"]) => {
             let expected = expected_version(&input)?;
             return Ok(response(engine.mutate_workspace(
@@ -403,6 +412,14 @@ pub(super) fn run(
     let version = value
         .get("version")
         .and_then(Value::as_str)
+        // Tag views combine source observations with the workspace write version;
+        // that version cannot validate the complete response representation.
+        .filter(|_| {
+            !matches!(
+                input.path.as_str(),
+                "/api/v1/workspace/tags" | "/api/v1/workspace/tags/preview"
+            )
+        })
         .map(str::to_owned);
     let mut reply = axum::Json(value).into_response();
     if let Some(version) = version {

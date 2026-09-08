@@ -37,6 +37,7 @@ impl Engine {
         let definition = match section {
             "focus" => "FocusReplace",
             "preferences" => "PreferencesPatch",
+            "tags" => "TagsReplace",
             _ => return Err(AppError::reject(404, "NOT_FOUND")),
         };
         let command = Command {
@@ -80,6 +81,15 @@ impl Engine {
         if wire::validate(definition, payload).is_err() {
             return reject(422, "VALIDATION_FAILED");
         }
+        if section == "tags"
+            && payload["tags"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|name| name.as_str().unwrap().contains('\0'))
+        {
+            return reject(422, "TAG_NAME_INVALID");
+        }
         let before = self
             .journal
             .directory
@@ -110,6 +120,9 @@ impl Engine {
                 references.push(json!({"project_id":project,"card_id":id,"version":hash,"path":store.directory.path()}));
             }
             workspace["focus"] = payload["items"].clone();
+        } else if section == "tags" {
+            // Vocabulary changes never rewrite labels in project source files.
+            workspace["tags"] = payload["tags"].clone();
         } else {
             if let Some(zone) = payload["timezone"].as_str()
                 && zone.parse::<chrono_tz::Tz>().is_err()

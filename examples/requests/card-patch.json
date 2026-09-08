@@ -3,7 +3,14 @@
     "schedule": {
       "start": "2026-09-14",
       "end": "2026-09-21"
-    }
+    },
+    "acceptance": [
+      {
+        "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "text": "The exported file opens and includes the selected cards.",
+        "completed": true
+      }
+    ]
   },
   "clear": []
 }

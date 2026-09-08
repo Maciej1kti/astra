@@ -172,6 +172,31 @@ async fn browser_pairing_csrf_and_local_uid_transport() {
         .await
         .unwrap();
     project_application::wire::validate("Bootstrap", &bootstrap).unwrap();
+    for (method, path, body) in [
+        (
+            "PUT",
+            "/api/v1/workspace/tags",
+            json!({"tags":["Protected"]}),
+        ),
+        (
+            "POST",
+            "/api/v1/workspace/tags/preview",
+            json!({"source":"Source","target":"Target"}),
+        ),
+    ] {
+        assert_eq!(
+            app.browser(method, path)
+                .header("origin", "https://projects.test")
+                .header("cookie", &session_cookie)
+                .json(&body)
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            403,
+            "tag operations must use the existing authenticated CSRF boundary"
+        );
+    }
     let diagnostics: Value = app
         .local("GET", "/local/v1/doctor")
         .send()
@@ -216,6 +241,175 @@ async fn browser_pairing_csrf_and_local_uid_transport() {
         401
     );
 }
+#[tokio::test]
+async fn workspace_tag_transport_preserves_command_contracts_and_view_versions() {
+    let app = Running::new().await;
+    assert_eq!(
+        app.browser("GET", "/api/v1/workspace/tags")
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401,
+    );
+    assert_eq!(
+        app.browser("POST", "/api/v1/workspace/tags/preview")
+            .header("origin", "https://projects.test")
+            .json(&json!({"source":"Source","target":"Target"}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401,
+    );
+    let hello: Value = app
+        .local("GET", "/local/v1/hello")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let epoch = hello["command_epoch"].as_str().unwrap();
+    let catalog = app
+        .local("GET", "/api/v1/workspace/tags")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(catalog.status(), 200);
+    assert!(!catalog.headers().contains_key("etag"));
+    let catalog: Value = catalog.json().await.unwrap();
+    project_application::wire::validate("TagCatalog", &catalog).unwrap();
+    let request = Uuid::now_v7().to_string();
+    let save = || {
+        app.local("PUT", "/api/v1/workspace/tags")
+            .header("x-request-id", &request)
+            .header("x-command-epoch", epoch)
+            .header(
+                "if-match",
+                format!("\"{}\"", catalog["version"].as_str().unwrap()),
+            )
+            .json(&json!({"tags":["Source","Target"]}))
+    };
+    let saved = save().send().await.unwrap();
+    assert_eq!(saved.status(), 200);
+    let saved: Value = saved.json().await.unwrap();
+    project_application::wire::validate("CommandResponse", &saved).unwrap();
+    assert_eq!(saved["result"]["type"], "tags");
+    let replay: Value = save().send().await.unwrap().json().await.unwrap();
+    project_application::wire::validate("CommandResponse", &replay).unwrap();
+    assert_eq!(replay["replayed"], true);
+    let plan: Value = app
+        .local("POST", "/local/v1/registration-plans")
+        .json(&json!({"absolute_path":app.project,"git_mode":"private"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        app.local("POST", "/api/v1/registrations")
+            .header("x-request-id", Uuid::now_v7().to_string())
+            .header("x-command-epoch", epoch)
+            .json(&json!({"plan_id":plan["plan_id"]}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        202
+    );
+    let path = format!(
+        "/api/v1/projects/{}/cards",
+        plan["project_id"].as_str().unwrap()
+    );
+    let card = app
+        .local("POST", &path)
+        .header("x-request-id", Uuid::now_v7().to_string())
+        .header("x-command-epoch", epoch)
+        .json(&json!({"title":"Rename over real transport","labels":["Source","Other"]}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(card.status(), 200);
+    let card: Value = card.json().await.unwrap();
+    project_application::wire::validate("CommandResponse", &card).unwrap();
+    let catalog_before: Value = app
+        .local("GET", "/api/v1/workspace/tags")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let preview = app
+        .local("POST", "/api/v1/workspace/tags/preview")
+        .json(&json!({"source":"Source","target":"Target"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(preview.status(), 200);
+    assert!(!preview.headers().contains_key("etag"));
+    let preview: Value = preview.json().await.unwrap();
+    project_application::wire::validate("TagPreview", &preview).unwrap();
+    assert_eq!(preview["changes"].as_array().unwrap().len(), 1);
+    let change = &preview["changes"][0];
+    assert_eq!(change["labels"], json!(["Target", "Other"]));
+    assert_eq!(change["version"], card["result"]["version"]);
+    let path = format!("{}/{}", path, change["card_id"].as_str().unwrap());
+    let read = app.local("GET", &path).send().await.unwrap();
+    assert!(
+        read.headers().contains_key("etag"),
+        "ordinary source resources retain strong ETags"
+    );
+    let read: Value = read.json().await.unwrap();
+    assert_eq!(
+        read["metadata"]["labels"],
+        json!(["Source", "Other"]),
+        "preview must not apply any card changes"
+    );
+    let applied = app
+        .local("PATCH", &path)
+        .header("x-request-id", Uuid::now_v7().to_string())
+        .header("x-command-epoch", epoch)
+        .header(
+            "if-match",
+            format!("\"{}\"", change["version"].as_str().unwrap()),
+        )
+        .json(&json!({"set":{"labels":change["labels"]}}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(applied.status(), 200);
+    let applied: Value = applied.json().await.unwrap();
+    project_application::wire::validate("CommandResponse", &applied).unwrap();
+    let after = app
+        .local("GET", "/api/v1/workspace/tags")
+        .send()
+        .await
+        .unwrap();
+    assert!(!after.headers().contains_key("etag"));
+    let after: Value = after.json().await.unwrap();
+    project_application::wire::validate("TagCatalog", &after).unwrap();
+    assert_eq!(
+        after["version"], catalog_before["version"],
+        "card changes do not alter the workspace write version"
+    );
+    assert_ne!(
+        after["tags"], catalog_before["tags"],
+        "source usage changes independently of that version"
+    );
+    assert_eq!(
+        after["tags"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|tag| tag["name"] == "Target")
+            .unwrap()["usage"],
+        1
+    );
+}
+
 #[tokio::test]
 async fn registration_mutation_preconditions_and_replay_over_unix() {
     let app = Running::new().await;

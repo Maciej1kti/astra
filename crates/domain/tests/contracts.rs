@@ -20,6 +20,7 @@ fn examples_roundtrip_without_losing_optional_fields_or_body() {
         "project.json",
         "card-22222222-2222-4222-8222-222222222222.json",
         "card-33333333-3333-4333-8333-333333333333.json",
+        "card-77777777-7777-4777-8777-777777777777.json",
         "milestone.json",
         "update.json",
     ] {
@@ -198,4 +199,81 @@ fn fractional_timestamps_compare_as_instants() {
     assert!(validate_document(value.clone()).is_ok());
     value["metadata"]["created_at"] = json!("2026-09-05T10:00:00.002Z");
     assert!(validate_document(value).is_err());
+}
+
+#[test]
+fn structured_card_content_preserves_identity_order_and_explicit_status() {
+    let mut value = card();
+    value["metadata"]["expected_result"] = json!("A readable export with Polish characters: żółć.");
+    value["metadata"]["owner"] = json!("Project owner");
+    value["metadata"]["acceptance"] = json!([
+        {"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"First criterion","completed":true},
+        {"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","text":"Second criterion","completed":true}
+    ]);
+    let decoded = validate_document(value.clone()).unwrap();
+    assert_eq!(serde_json::to_value(decoded.get()).unwrap(), value);
+    assert_eq!(value["metadata"]["status"], "active");
+
+    let mut duplicate = value.clone();
+    duplicate["metadata"]["acceptance"][1]["id"] =
+        duplicate["metadata"]["acceptance"][0]["id"].clone();
+    assert!(
+        validate_document(duplicate).is_err(),
+        "Different criteria cannot share identity"
+    );
+    for (field, invalid) in [
+        ("expected_result", json!(" ")),
+        ("owner", json!("\t\n")),
+        ("expected_result", json!("ą".repeat(4001))),
+        ("owner", json!("a".repeat(121))),
+        (
+            "acceptance",
+            json!([{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"\u{2003}","completed":false}]),
+        ),
+        (
+            "acceptance",
+            json!([{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"a".repeat(501),"completed":false}]),
+        ),
+        (
+            "acceptance",
+            json!([{"id":"not-an-id","text":"Criterion","completed":false}]),
+        ),
+        (
+            "acceptance",
+            json!([{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"Criterion"}]),
+        ),
+    ] {
+        let mut invalid_card = value.clone();
+        invalid_card["metadata"][field] = invalid;
+        assert!(validate_document(invalid_card).is_err(), "{field}");
+    }
+    let mut empty = value;
+    empty["metadata"]["acceptance"] = json!((0..101).map(|id| json!({"id":format!("00000000-0000-4000-8000-{id:012x}"),"text":"Criterion","completed":false})).collect::<Vec<_>>());
+    assert!(validate_document(empty.clone()).is_err());
+    empty["metadata"]["acceptance"] = json!([]);
+    assert!(validate_document(empty).is_ok());
+}
+
+#[test]
+fn workspace_catalog_is_optional_exact_and_bounded() {
+    let original = read("examples/workspace.json");
+    assert_eq!(
+        serde_json::to_value(validate_workspace(original.clone()).unwrap().get()).unwrap(),
+        original
+    );
+    let mut value = original.clone();
+    value["tags"] = json!(["Research, discovery", "żółć", "Tag", "tag"]);
+    assert_eq!(
+        serde_json::to_value(validate_workspace(value.clone()).unwrap().get()).unwrap(),
+        value
+    );
+    for tags in [
+        json!(["Tag", "Tag"]),
+        json!([""]),
+        json!(["ą".repeat(49)]),
+        json!((0..501).map(|n| format!("tag-{n}")).collect::<Vec<_>>()),
+    ] {
+        value["tags"] = tags;
+        assert!(validate_workspace(value.clone()).is_err());
+    }
 }

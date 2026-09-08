@@ -1,0 +1,30 @@
+{
+  "type": "card",
+  "metadata": {
+    "id": "77777777-7777-4777-8777-777777777777",
+    "title": "A clear export for review",
+    "kind": "outcome",
+    "status": "review",
+    "priority": "normal",
+    "position": "80000000000000000000000000000000",
+    "archived": false,
+    "created_at": "2026-09-08T10:00:00Z",
+    "updated_at": "2026-09-08T10:00:00Z",
+    "expected_result": "The owner can open and review the exported project summary.",
+    "owner": "Project owner",
+    "acceptance": [
+      {
+        "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "text": "The export includes every selected card.",
+        "completed": true
+      },
+      {
+        "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "text": "The owner has reviewed the result.",
+        "completed": false
+      }
+    ],
+    "labels": ["Review", "Research, discovery"]
+  },
+  "body": "## Context\n\nPreserve the original Markdown description independently of structured acceptance.\n"
+}

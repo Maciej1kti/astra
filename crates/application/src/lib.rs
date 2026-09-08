@@ -9,6 +9,7 @@ mod mutation;
 mod receipts;
 mod retention;
 mod roots;
+mod tags;
 mod views;
 mod workspace;
 pub use mutation::Mutation;

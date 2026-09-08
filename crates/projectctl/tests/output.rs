@@ -87,6 +87,109 @@ fn accepted_and_malformed_mutation_replies_preserve_command_identity() {
 }
 
 #[test]
+fn tag_preview_sends_one_read_only_post_and_classifies_failures_as_reads() {
+    for malformed in [false, true] {
+        let temp = tempfile::tempdir().unwrap();
+        let socket = temp.path().join("server.sock");
+        let listener = UnixListener::bind(&socket).unwrap();
+        let worker = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                .unwrap();
+            let mut request = Vec::new();
+            let mut chunk = [0; 4096];
+            loop {
+                let count = stream.read(&mut chunk).unwrap();
+                assert!(count > 0);
+                request.extend_from_slice(&chunk[..count]);
+                assert!(request.len() < 16384);
+                if let Some(end) = request.windows(4).position(|window| window == b"\r\n\r\n") {
+                    let headers = String::from_utf8_lossy(&request[..end]).to_lowercase();
+                    let length: usize = headers
+                        .lines()
+                        .find_map(|line| line.strip_prefix("content-length: "))
+                        .unwrap()
+                        .parse()
+                        .unwrap();
+                    if request.len() >= end + 4 + length {
+                        break;
+                    }
+                }
+            }
+            let end = request
+                .windows(4)
+                .position(|window| window == b"\r\n\r\n")
+                .unwrap();
+            let headers = String::from_utf8_lossy(&request[..end]).to_lowercase();
+            assert!(
+                headers.starts_with("post /api/v1/workspace/tags/preview http/1.1\r\n"),
+                "{headers}"
+            );
+            assert!(!headers.contains("x-request-id:"));
+            assert!(!headers.contains("x-command-epoch:"));
+            let payload: Value = serde_json::from_slice(&request[end + 4..]).unwrap();
+            assert_eq!(
+                payload,
+                json!({"source":"Research, discovery","target":"Reviewed"})
+            );
+            let body = if malformed {
+                "not JSON".into()
+            } else {
+                json!({"version":"w1.example","source":"Research, discovery","target":"Reviewed","complete":true,"issues":[],"changes":[]}).to_string()
+            };
+            write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
+        });
+        let output = Command::new(env!("CARGO_BIN_EXE_projectctl"))
+            .args([
+                "--socket",
+                socket.to_str().unwrap(),
+                "tags",
+                "preview",
+                "--source",
+                "Research, discovery",
+                "--target",
+                "Reviewed",
+            ])
+            .output()
+            .unwrap();
+        worker.join().unwrap();
+        let value = parsed(&output);
+        assert!(value["request_id"].is_null());
+        assert!(value["command_epoch"].is_null());
+        assert!(
+            output.stderr.is_empty(),
+            "Preview must not announce a mutation identity"
+        );
+        if malformed {
+            assert_eq!(output.status.code(), Some(8));
+            assert_eq!(value["error"]["code"], "INVALID_RESPONSE");
+        } else {
+            assert_eq!(output.status.code(), Some(0));
+            assert_eq!(value["data"]["source"], "Research, discovery");
+            assert_eq!(value["data"]["changes"], json!([]));
+        }
+    }
+    let temp = tempfile::tempdir().unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_projectctl"))
+        .args([
+            "--socket",
+            temp.path().join("missing.sock").to_str().unwrap(),
+            "tags",
+            "preview",
+            "--source",
+            "Old",
+            "--target",
+            "New",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(3));
+    assert_eq!(parsed(&output)["error"]["code"], "TRANSPORT_UNAVAILABLE");
+    assert!(parsed(&output)["request_id"].is_null());
+}
+
+#[test]
 fn offline_validation_does_not_initialize_or_modify_the_selected_folder() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path().canonicalize().unwrap();

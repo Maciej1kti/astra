@@ -4,7 +4,7 @@
   let theme = $state<Theme>(readTheme());
   import { modal } from "./dialog";
   import { api, command, send, ApiError, type Pending } from "./api";
-  let { onclose, onsaved }: { onclose: () => void; onsaved: () => void } =
+  let { onclose, onsaved, ontags }: { onclose: () => void; onsaved: () => void; ontags: () => void } =
     $props();
   type Preferences = {
     timezone: string;
@@ -307,6 +307,12 @@
           </details>
         </section>{/if}
     </form>
+    <section class="appearance">
+      <h3>Tags</h3>
+      <p>Create reusable names, inspect usage across projects, and preview renames or merges.</p>
+      <button disabled={dirty || busy || !!pending || accessLost} onclick={ontags}>Manage tags</button>
+      {#if dirty || pending}<p>Save or discard your settings draft before managing tags.</p>{/if}
+    </section>
     <section class="appearance">
       <h3>Appearance</h3>
       <label

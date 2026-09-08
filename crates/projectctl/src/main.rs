@@ -355,6 +355,9 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             )
         }
     };
+    // Preview uses a body for literal tag names but does not admit a command.
+    let read_only_preview = method == "POST" && path == "/api/v1/workspace/tags/preview";
+    let mutating = method != "GET" && !read_only_preview;
     let mut identity = payload.as_ref().map(|value| json!({"request_id":value["request_id"],"command_epoch":value["command_epoch"]})).unwrap_or(json!({}));
     let mut builder = client.request(method.parse()?, format!("http://localhost{path}"));
     if let Some(payload) = payload {
@@ -363,7 +366,7 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
     if let Some(version) = version {
         builder = builder.header("if-match", format!("\"{version}\""));
     }
-    if method != "GET" && path.starts_with("/api/") {
+    if mutating && path.starts_with("/api/") {
         if request.is_some() != epoch.is_some() {
             return Err("Retry requires both --request-id and --epoch".into());
         }
@@ -397,8 +400,8 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
     let mut reply = match builder.send().await {
         Ok(reply) => reply,
         Err(error) => {
-            let uncertain = method != "GET"
-                && (path.starts_with("/api/") || path == "/local/v1/maintenance/jobs");
+            let uncertain =
+                mutating && (path.starts_with("/api/") || path == "/local/v1/maintenance/jobs");
             println!(
                 "{}",
                 json!({"api_version":"1","ok":false,"error":{"code":if uncertain {"RESULT_UNCERTAIN"} else {"TRANSPORT_UNAVAILABLE"},"message":error.to_string()},"request_id":identity["request_id"],"command_epoch":identity["command_epoch"]})
@@ -425,8 +428,8 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
     let body = match body {
         Ok(body) => body,
         Err(error) => {
-            let uncertain = method != "GET"
-                && (path.starts_with("/api/") || path == "/local/v1/maintenance/jobs");
+            let uncertain =
+                mutating && (path.starts_with("/api/") || path == "/local/v1/maintenance/jobs");
             println!(
                 "{}",
                 json!({"api_version":"1","ok":false,"error":{"code":if uncertain {"RESULT_UNCERTAIN"} else {"INVALID_RESPONSE"},"message":error.to_string()},"request_id":identity["request_id"],"command_epoch":identity["command_epoch"]})

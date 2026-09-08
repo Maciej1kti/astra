@@ -28,6 +28,8 @@ export type Summary = {
   recorded_at?: string;
   blocked?: { reason: string };
   labels?: string[];
+  owner?: string;
+  acceptance_progress?: { total: number; completed: number };
   archived?: boolean;
   version: string;
   read?: boolean;

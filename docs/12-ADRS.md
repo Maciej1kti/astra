@@ -217,3 +217,41 @@ viewport avoids that path, with the title grid collapsed on narrow screens.
 Vendor display-mode switches are intercepted; the shared selection/editor
 controls remain available. Only bar content receives overflow styling, so the
 chart itself retains its native scrolling and virtualization.
+
+## ADR-027 — Structured card purpose and acceptance (2026-09-08)
+
+Following the owner-requested next stage after the UI repair batch, add optional
+`expected_result`, `owner` and ordered `acceptance` fields to the shared card
+model. Keep Markdown as authored; do not infer or migrate headings into fields.
+The owner is a display label for a personal planner, without account assignment
+or permissions. Each acceptance item has a stable UUIDv4, bounded nonblank text
+and an explicit completion boolean. Item IDs are unique within each card.
+
+Checklist completion and card lifecycle are independent decisions. UI and API
+never infer done, review or another status from completion percentages. The
+existing versioned card PATCH replaces the checklist atomically with its other
+edits; concurrent edits produce a conflict. `clear` removes any optional field.
+The ordinary journal, conditional writer and Undo snapshots apply unchanged.
+Old cards remain valid and readers do not rewrite them. New optional fields are
+supported by the updated server and clients; older strict readers may reject
+cards that use the expanded schema, so roll back application versions only after
+preserving and explicitly addressing such new content.
+
+List projections include only the owner label and checklist counts, avoiding
+hundreds of criterion objects per page. Full-text search indexes expected result,
+owner and criterion text. A versioned, transactional upgrade reconstructs the
+disposable SQLite search index from its retained source body and metadata. The
+stored source body remains separate from search text. Invalid or unavailable
+source rows keep their availability state, and project source files remain
+untouched. Normal projection refreshes and rebuilds use the same derived text.
+
+Budgeted CLI/API context includes these structured fields intact when the card
+fits. Otherwise the existing omitted count and next-read reference identify the
+card for a direct read. Checklist entries are never silently shortened to fit.
+
+Keep all existing document byte limits, authorization, idempotency and conflict
+rules. The aggregate 64 KiB metadata limit can reject a combination of fields
+even if each satisfies its individual character limit. No format migration,
+background acceptance or new mutation transport is introduced. Workspace tag
+names are separately optional metadata; membership continues to live as exact
+label strings on cards, as detailed in [ADR-028](ADR-028-WORKSPACE-TAGS.md).

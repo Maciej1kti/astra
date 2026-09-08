@@ -375,6 +375,200 @@ fn undo_restores_one_change_and_refuses_later_edits() {
 }
 
 #[test]
+fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let acceptance = json!([
+        {"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"CriterionOne","completed":false},
+        {"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","text":"CriterionTwo","completed":true}
+    ]);
+    let body = "# Context\n\nKeep spacing and UTF-8: żółć.  \n";
+    let created = engine.mutate(Mutation {
+        project_id: project.clone(), kind: Kind::Card, id: None,
+        payload: json!({"title":"Structured card","body":body,"expected_result":"SearchableOutcome","owner":"ResponsiblePerson","acceptance":acceptance}),
+        request_id: Uuid::now_v7().to_string(), epoch:engine.journal.epoch.clone(), expected:None
+    }).unwrap();
+    assert_eq!(created.http_status, 200, "{created:?}");
+    let original = &created.body["result"]["resource"];
+    wire::validate("CardResource", original).unwrap();
+    let id = original["metadata"]["id"].as_str().unwrap();
+    let original_version = original["version"].as_str().unwrap();
+    let mut completed = acceptance.clone();
+    completed[0]["completed"] = json!(true);
+    let edited = patch(
+        &engine,
+        &project,
+        id,
+        original_version,
+        json!({"set":{"acceptance":completed}}),
+    );
+    assert_eq!(edited.http_status, 200, "{edited:?}");
+    let current = &edited.body["result"]["resource"];
+    assert_eq!(
+        current["metadata"]["status"], "planned",
+        "Checklist completion is not card acceptance"
+    );
+    assert_eq!(current["metadata"]["acceptance"], completed);
+    assert_eq!(current["body"], body);
+
+    let stale = patch(
+        &engine,
+        &project,
+        id,
+        original_version,
+        json!({"set":{"acceptance":acceptance}}),
+    );
+    assert_eq!(stale.http_status, 412);
+    let titled = patch(
+        &engine,
+        &project,
+        id,
+        current["version"].as_str().unwrap(),
+        json!({"set":{"title":"Renamed card"}}),
+    );
+    assert_eq!(titled.http_status, 200);
+    assert_eq!(
+        titled.body["result"]["resource"]["metadata"]["acceptance"],
+        completed
+    );
+
+    for term in [
+        "SearchableOutcome",
+        "ResponsiblePerson",
+        "CriterionOne",
+        "CriterionTwo",
+    ] {
+        let page = engine
+            .list(
+                Some("card"),
+                &Query {
+                    project: Some(project.clone()),
+                    search: Some(term.into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        wire::validate("SummaryPage", &page).unwrap();
+        assert_eq!(page["items"].as_array().unwrap().len(), 1, "{term}");
+        assert_eq!(page["items"][0]["owner"], "ResponsiblePerson");
+        assert_eq!(
+            page["items"][0]["acceptance_progress"],
+            json!({"total":2,"completed":2})
+        );
+        assert!(
+            page["items"][0].get("acceptance").is_none(),
+            "Lists must stay compact"
+        );
+    }
+
+    let cleared = patch(
+        &engine,
+        &project,
+        id,
+        titled.body["result"]["version"].as_str().unwrap(),
+        json!({"clear":["expected_result","owner","acceptance"]}),
+    );
+    assert_eq!(cleared.http_status, 200, "{cleared:?}");
+    for field in ["expected_result", "owner", "acceptance"] {
+        assert!(
+            cleared.body["result"]["resource"]["metadata"]
+                .get(field)
+                .is_none()
+        );
+    }
+    let history = engine.history(&project, Kind::Card, id, None, 50).unwrap();
+    let restored = patch(
+        &engine,
+        &project,
+        id,
+        cleared.body["result"]["version"].as_str().unwrap(),
+        json!({"undo":{"history_entry_id":history["items"][0]["id"]}}),
+    );
+    assert_eq!(restored.http_status, 200, "{restored:?}");
+    assert_eq!(
+        restored.body["result"]["resource"]["metadata"]["acceptance"],
+        completed
+    );
+    assert_eq!(
+        restored.body["result"]["resource"]["metadata"]["expected_result"],
+        "SearchableOutcome"
+    );
+    assert_eq!(restored.body["result"]["resource"]["body"], body);
+
+    let mut invalid_items = completed.clone();
+    invalid_items[1]["id"] = invalid_items[0]["id"].clone();
+    let invalid = patch(
+        &engine,
+        &project,
+        id,
+        restored.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"acceptance":invalid_items}}),
+    );
+    assert_eq!(invalid.http_status, 422);
+    assert_eq!(
+        engine.get(&project, Kind::Card, id).unwrap()["metadata"]["acceptance"],
+        completed
+    );
+}
+
+#[test]
+fn upgrading_body_only_search_index_preserves_sources_and_indexes_card_content() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Upgrade fixture");
+    let id = created.body["result"]["id"].as_str().unwrap().to_owned();
+    let edited = patch(
+        &engine,
+        &project,
+        &id,
+        created.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"expected_result":"PreviouslyUnindexed","owner":"CatalogOwner","body":"Original source body\n"}}),
+    );
+    assert_eq!(edited.http_status, 200);
+    let source_path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let bytes = fs::read(&source_path).unwrap();
+    drop(engine);
+
+    // Recreate the prior disposable projection, including its old FTS columns.
+    let db = rusqlite::Connection::open(env.root.join("state/index.sqlite")).unwrap();
+    db.execute_batch("DROP TRIGGER documents_ai; DROP TRIGGER documents_ad; DROP TRIGGER documents_au; DROP TABLE documents_fts; ALTER TABLE documents DROP COLUMN search_text;
+        CREATE VIRTUAL TABLE documents_fts USING fts5(title,body,content='documents',content_rowid='rowid');
+        CREATE TRIGGER documents_ai AFTER INSERT ON documents BEGIN INSERT INTO documents_fts(rowid,title,body) VALUES(new.rowid,new.title,new.body); END;
+        CREATE TRIGGER documents_ad AFTER DELETE ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body); END;
+        CREATE TRIGGER documents_au AFTER UPDATE OF title,body ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body); INSERT INTO documents_fts(rowid,title,body) VALUES(new.rowid,new.title,new.body); END;
+        INSERT INTO documents_fts(documents_fts) VALUES('rebuild'); DELETE FROM projection_meta WHERE key='search_format';").unwrap();
+    drop(db);
+
+    let engine = env.engine();
+    for term in ["PreviouslyUnindexed", "CatalogOwner", "Original"] {
+        let page = engine
+            .list(
+                Some("card"),
+                &Query {
+                    project: Some(project.clone()),
+                    search: Some(term.into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(page["items"][0]["id"], id, "{term}");
+    }
+    assert_eq!(fs::read(source_path).unwrap(), bytes);
+    assert_eq!(
+        engine.get(&project, Kind::Card, &id).unwrap()["body"],
+        "Original source body\n"
+    );
+    drop(engine);
+    let engine = env.engine();
+    assert_eq!(
+        engine.get(&project, Kind::Card, &id).unwrap()["metadata"]["owner"],
+        "CatalogOwner"
+    );
+}
+
+#[test]
 fn workspace_writes_replay_and_recover_without_overwriting_external_changes() {
     use project_application::{AppError, writer::CommitPoint};
     let env = Environment::new();
@@ -580,6 +774,58 @@ fn agent_context_is_project_scoped_and_counts_utf8_json_overhead() {
         assert!(!String::from_utf8(bytes).unwrap().contains("Never export"));
         assert_eq!(context["truncated"], true);
     }
+}
+
+#[test]
+fn agent_context_includes_complete_card_purpose_or_an_explicit_next_read() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Acceptance context");
+    let id = created.body["result"]["id"].as_str().unwrap();
+    let acceptance = json!([
+        {"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"Keep identity and completion","completed":false},
+        {"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","text":"Keep item order","completed":true}
+    ]);
+    let updated = patch(
+        &engine,
+        &project,
+        id,
+        created.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"expected_result":"The owner can review every criterion.","owner":"Project owner","acceptance":acceptance}}),
+    );
+    assert_eq!(updated.http_status, 200);
+    let context = engine.context(&project, 4096).unwrap();
+    wire::validate("Context", &context).unwrap();
+    assert_eq!(context["cards"][0]["acceptance"], acceptance);
+    assert_eq!(
+        context["cards"][0]["expected_result"],
+        "The owner can review every criterion."
+    );
+    assert_eq!(context["cards"][0]["owner"], "Project owner");
+    assert_eq!(context["cards"][0]["truncated"], false);
+
+    let large = "ą".repeat(4000);
+    let updated = patch(
+        &engine,
+        &project,
+        id,
+        updated.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"expected_result":large}}),
+    );
+    assert_eq!(updated.http_status, 200);
+    let narrow = engine.context(&project, 4096).unwrap();
+    wire::validate("Context", &narrow).unwrap();
+    assert!(serde_json::to_vec(&narrow).unwrap().len() <= 4096);
+    assert_eq!(narrow["truncated"], true);
+    assert_eq!(narrow["omitted"]["cards"], 1);
+    assert!(narrow["cards"].as_array().unwrap().is_empty());
+    assert_eq!(narrow["next_reads"][0], json!({"type":"card","id":id}));
+    let full = engine.context(&project, 24576).unwrap();
+    wire::validate("Context", &full).unwrap();
+    assert_eq!(full["cards"][0]["expected_result"], large);
+    assert_eq!(full["cards"][0]["acceptance"], acceptance);
+    assert_eq!(full["omitted"]["cards"], 0);
 }
 
 #[test]

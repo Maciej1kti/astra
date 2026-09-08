@@ -3,6 +3,10 @@
   import Markdown from "./Markdown.svelte";
   import TagPicker from "./TagPicker.svelte";
   import CardActivity from "./CardActivity.svelte";
+  import AcceptanceChecklist from "./AcceptanceChecklist.svelte";
+  import CardUpdateComposer from "./CardUpdateComposer.svelte";
+  import { acceptanceValidation, cardPurposeValidation, type AcceptanceItem } from "./card-work";
+  import { hasCardUpdateDraft, newCardUpdateDraft } from "./card-update";
   import { addTag, tagValidation } from "./tags";
   import { canUndoDraft, editorCompletion } from "./editor-actions";
   import { resourceLabel } from "./resource-presentation";
@@ -67,6 +71,14 @@
   let review = $state(String(metadata?.review_on ?? "")),
     body = $state(untrack(() => resource?.body ?? ""));
   let labels = $state<string[]>([...((metadata?.labels as string[]) ?? [])]);
+  let expectedResult = $state(String(metadata?.expected_result ?? ""));
+  let owner = $state(String(metadata?.owner ?? ""));
+  let acceptance = $state<AcceptanceItem[]>(((metadata?.acceptance as AcceptanceItem[]) ?? []).map((item) => ({ ...item })));
+  let acceptanceDraft = $state(""), acceptanceError = $state("");
+  let updateDraft = $state(newCardUpdateDraft());
+  let updatePending = $state<Pending | null>(null), updateBusy = $state(false);
+  let cardActivity = $state<{ refresh: () => Promise<void> }>();
+  const updateDirty = $derived(hasCardUpdateDraft(updateDraft));
   let tagDraft = $state(""), tagError = $state("");
   let labelOptions = $state<string[]>([]), choicesLoading = $state(false), discoveryError = $state("");
   let relationIndex = $state<Record<string, Summary>>({});
@@ -125,6 +137,10 @@
       review,
       body,
       labels,
+      expectedResult,
+      owner,
+      acceptance,
+      acceptanceDraft,
       tagDraft,
       advanced,
       author,
@@ -140,9 +156,10 @@
     });
   }
   const baseline = untrack(snapshot);
-  let dirty = $derived(snapshot() !== baseline);
+  let cardDirty = $derived(snapshot() !== baseline);
+  let dirty = $derived(cardDirty || updateDirty || !!updatePending);
   let accessLost = $state(false);
-  let locked = $derived(busy || !!pending || accessLost);
+  let locked = $derived(busy || !!pending || accessLost || updateBusy || !!updatePending);
   async function loadProjectChoices() {
     choicesLoading = true;
     discoveryError = "";
@@ -164,7 +181,7 @@
   async function copyDraft() {
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify({ fields: JSON.parse(snapshot()), pending }, null, 2),
+        JSON.stringify({ fields: JSON.parse(snapshot()), pending, card_update: { fields: updateDraft, pending: updatePending } }, null, 2),
       );
       error = "Draft copied.";
     } catch {
@@ -196,12 +213,12 @@
     };
   });
   function close() {
-    if (busy) return;
+    if (busy || updateBusy) return;
     if (dirty || pending) discard = true;
     else onclose();
   }
   export function requestClose() {
-    if (busy) return false;
+    if (busy || updateBusy) return false;
     close();
     return true;
   }
@@ -302,7 +319,7 @@
   }
   async function undo(id: string) {
     if (!resource) return;
-    if (!canUndoDraft(dirty, !!pending, busy) || accessLost) {
+    if (!canUndoDraft(dirty, !!pending, busy || updateBusy) || accessLost) {
       error = "Save or discard your draft before undoing a saved change.";
       return;
     }
@@ -339,6 +356,15 @@
     conflict = null;
     try {
       if (type === "card") {
+        if (updateDirty) throw new Error("Post or discard your update draft before saving the card. Both drafts are preserved.");
+        const purposeError = cardPurposeValidation(expectedResult, owner);
+        if (purposeError) throw new Error(purposeError);
+        if (acceptanceDraft.trim()) {
+          acceptance = [...acceptance, { id: crypto.randomUUID(), text: acceptanceDraft.trim(), completed: false }];
+          acceptanceDraft = "";
+        }
+        acceptanceError = acceptanceValidation(acceptance);
+        if (acceptanceError) return;
         if (tagDraft.trim()) {
           const added = addTag(labels, tagDraft);
           tagError = added.error;
@@ -379,6 +405,12 @@
       }
       if (type === "card") {
         fields.archived = archived;
+        if (expectedResult.trim()) fields.expected_result = expectedResult;
+        else if (metadata?.expected_result !== undefined) clear.push("expected_result");
+        if (owner.trim()) fields.owner = owner;
+        else if (metadata?.owner !== undefined) clear.push("owner");
+        if (acceptance.length) fields.acceptance = acceptance.map((item) => ({ ...item }));
+        else if (metadata?.acceptance !== undefined) clear.push("acceptance");
         if (
           !resource ||
           JSON.stringify(dependencies) !==
@@ -500,7 +532,7 @@
   aria-label={resource ? "Edit resource" : "Create resource"}
   oncancel={(e) => {
     e.preventDefault();
-    if (!busy) close();
+    close();
   }}
 >
   {#if autoCreate && !error && !conflict && !discard}<p role="status">
@@ -517,9 +549,9 @@
               ? title || "Untitled"
               : `Create ${type}`}
         </h2>
-        {#if !readonly}<p class="draft-state" role="status">{busy ? "Saving…" : pending ? "Awaiting command confirmation" : conflict ? "Conflict · draft preserved" : dirty ? "Unsaved changes" : resource ? "Saved version" : "New draft"}</p>{/if}
+        {#if !readonly}<p class="draft-state" role="status">{busy ? "Saving…" : updateBusy ? "Recording card update…" : pending || updatePending ? "Awaiting command confirmation" : conflict ? "Conflict · draft preserved" : dirty ? "Unsaved changes" : resource ? "Saved version" : "New draft"}</p>{/if}
       </div>
-      <button aria-label="Close editor" onclick={close} disabled={busy}
+      <button aria-label="Close editor" onclick={close} disabled={busy || updateBusy}
         >✕</button
       >
     </header>
@@ -531,11 +563,11 @@
     >
       {#if discard}<div role="alert" class="notice">
           <p>
-            {pending
+            {pending || updatePending
               ? "The command result may still be unknown. Keep its request ID before closing."
               : "Discard your unsaved draft?"}
           </p>
-          <button type="button" onclick={onclose}>Discard draft</button><button
+          <button type="button" onclick={onclose} disabled={busy || updateBusy}>Discard draft</button><button
             type="button"
             onclick={keepEditing}>Keep editing</button
           >
@@ -594,8 +626,12 @@
               >{/each}</select
           ></label
         >{/if}
+      {#if type === "card"}
+        <label class="description-label">Expected result <span>What should this card deliver?</span><textarea bind:value={expectedResult} rows="3" disabled={locked}></textarea></label>
+        <label>Owner <span>Optional display name</span><input bind:value={owner} disabled={locked} placeholder="Who is responsible?" /></label>
+      {/if}
       <label class="description-label"
-        >Description <span>{type === "card" ? "Outcome, context and acceptance criteria · Markdown" : "Markdown source"}</span><textarea
+        >Description <span>{type === "card" ? "Context and supporting details · Markdown" : "Markdown source"}</span><textarea
           bind:value={body}
           rows="8"
           disabled={readonly || locked}></textarea></label
@@ -605,6 +641,7 @@
       >
       {#if preview}<Markdown source={body} />{/if}
       {#if type === "card"}
+        <AcceptanceChecklist bind:items={acceptance} bind:draft={acceptanceDraft} bind:error={acceptanceError} disabled={locked} />
         <TagPicker bind:labels bind:draft={tagDraft} bind:error={tagError} options={labelOptions} disabled={locked} loading={choicesLoading} {discoveryError} onretry={loadProjectChoices} />
         <h3>Planning</h3><fieldset>
           <legend>Planned work · inclusive dates</legend>
@@ -732,7 +769,10 @@
               /></label
             >{/if}
         </fieldset>{/if}
-      {#if type === "card" && resource}<CardActivity {project} cardId={resource.metadata.id} disabled={accessLost} />{/if}
+      {#if type === "card" && resource}
+        <CardUpdateComposer {project} cardId={resource.metadata.id} bind:draft={updateDraft} bind:pending={updatePending} bind:busy={updateBusy} disabled={busy || !!pending || accessLost} onposted={() => { void cardActivity?.refresh(); onchanged?.(); }} />
+        <CardActivity bind:this={cardActivity} {project} cardId={resource.metadata.id} disabled={accessLost} />
+      {/if}
       {#if !readonly}<details>
           <summary>Additional fields</summary>
           <p>
@@ -756,7 +796,7 @@
               <p>{entry.changed_fields.join(", ")}</p>
               <button
                 type="button"
-                disabled={!entry.can_undo || !canUndoDraft(dirty, !!pending, busy) || accessLost}
+                disabled={!entry.can_undo || !canUndoDraft(dirty, !!pending, busy || updateBusy) || accessLost}
                 onclick={() => undo(entry.id)}>Undo this change</button
               >
             </div>{/each}{#if historyCursor}<button
@@ -791,13 +831,14 @@
       {#if dirty || pending}<button type="button" onclick={copyDraft}
           >Copy draft</button
         >{/if}
+      {#if updateDirty || updatePending}<p class="empty-context">Post or discard the update draft before saving this card. Copy draft includes both drafts and any unresolved request.</p>{/if}
       <footer>
-        <button type="button" onclick={close} disabled={busy}
+        <button type="button" onclick={close} disabled={busy || updateBusy}
           >{readonly ? "Close" : "Cancel"}</button
         >{#if !readonly}<button
             class="primary"
             type="submit"
-            disabled={busy || !!pending || !!conflict || accessLost}
+            disabled={locked || !!conflict || updateDirty}
             >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</button
           >{/if}
       </footer>

@@ -258,6 +258,14 @@ export interface CardMetadata {
         string,
         string
       ];
+  expected_result?: string;
+  owner?: string;
+  /**
+   * Ordered acceptance items with unique stable IDs. Completion does not change card status.
+   *
+   * @maxItems 100
+   */
+  acceptance?: AcceptanceItem[];
   [k: string]:
     | ExtensionValue
     | UUID
@@ -409,6 +417,7 @@ export interface CardMetadata {
         string,
         string
       ]
+    | AcceptanceItem[]
     | undefined;
 }
 export interface Schedule {
@@ -421,6 +430,11 @@ export interface Due {
 }
 export interface Blocked {
   reason: string;
+}
+export interface AcceptanceItem {
+  id: UUID;
+  text: string;
+  completed: boolean;
 }
 export interface MilestoneDocument {
   type: "milestone";
@@ -466,6 +480,12 @@ export interface Workspace {
    */
   focus: FocusRef[];
   preferences: Preferences;
+  /**
+   * Optional workspace tag names. Card label strings remain their source of truth.
+   *
+   * @maxItems 500
+   */
+  tags?: string[];
 }
 export interface ProjectRegistration {
   project_id: UUID;

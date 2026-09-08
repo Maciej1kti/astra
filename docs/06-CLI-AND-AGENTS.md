@@ -51,6 +51,14 @@ Request ID bez flagi generuje klient przed wysłaniem i zachowuje co najmniej w 
 
 Domyślny budżet 24 KiB, max 128 KiB. Zawiera: cel/fazę, aktywny milestone, wybrane aktywne/review karty, focus odnoszący się do tego projektu, blokady i ostatnie istotne raporty. Podaje version każdego zasobu, generated_at, limity, included/omitted counts oraz `next_reads` wskazujące zasoby do odczytu szczegółu; CLI może przedstawić je jako gotowe polecenia. Nie eksportuje innych projektów ani wszystkich historycznych opisów. API używa `ContextEntry` z jawnym `excerpt` i `truncated`; fragment nie udaje pełnej reprezentacji zasobu. Odczyt pełnego dokumentu jest osobną operacją. Budżet obejmuje również narzut JSON, a zbyt mały limit daje czytelny błąd zamiast niepoprawnego JSON.
 
+Card context entries include optional `expected_result`, `owner` and the ordered
+`acceptance` array with stable item IDs and completion values. Structured content
+is included intact. If it cannot fit the requested JSON byte budget, the card is
+omitted with the existing omission count and `next_reads` reference; a shortened
+checklist is never presented as the complete acceptance criteria. Read that card
+directly, or request a larger context budget. Markdown excerpts keep their
+existing explicit truncation marker.
+
 Budżet jest liczony w bajtach UTF-8 i obiektach, nie fałszywie w „tokenach” bez tokenizera docelowego modelu. Treść ma etykietę project data; nie zastępuje systemowych instrukcji agenta. Utrzymuj oddzielenie instructions/data, aby raport zawierający tekst polecenia nie stawał się automatycznie instrukcją wykonania.
 
 ## Integracja AGENTS.md

@@ -139,6 +139,9 @@ fn entry(document: &Value, version: &str, max: usize) -> Value {
         "blocked",
         "target",
         "recorded_at",
+        "expected_result",
+        "owner",
+        "acceptance",
     ] {
         if let Some(value) = metadata.get(key) {
             out[key] = value.clone();

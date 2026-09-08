@@ -1,0 +1,12 @@
+[
+  {
+    "suite": "card-browser-checks",
+    "exitCode": 0,
+    "milliseconds": 4891
+  },
+  {
+    "suite": "tag-browser-checks",
+    "exitCode": 0,
+    "milliseconds": 4644
+  }
+]

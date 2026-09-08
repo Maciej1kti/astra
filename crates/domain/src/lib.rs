@@ -7,7 +7,7 @@ use chrono::{DateTime, NaiveDate};
 use models::{Document, Workspace};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::sync::LazyLock;
+use std::{collections::HashSet, sync::LazyLock};
 
 pub const MAX_BODY_BYTES: usize = 960 * 1024;
 const SCHEMA: &str = include_str!("../../../contracts/domain.schema.json");
@@ -57,6 +57,25 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
         return Err(DomainError::Invalid("body byte limit or NUL"));
     }
     if let Some(m) = value.get("metadata") {
+        for field in ["expected_result", "owner"] {
+            if m.get(field)
+                .and_then(Value::as_str)
+                .is_some_and(|text| text.trim().is_empty())
+            {
+                return Err(DomainError::Invalid("blank card content"));
+            }
+        }
+        if let Some(items) = m.get("acceptance").and_then(Value::as_array) {
+            let mut ids = HashSet::new();
+            for item in items {
+                if !ids.insert(item["id"].as_str().unwrap()) {
+                    return Err(DomainError::Invalid("duplicate acceptance item ID"));
+                }
+                if item["text"].as_str().unwrap().trim().is_empty() {
+                    return Err(DomainError::Invalid("blank acceptance item"));
+                }
+            }
+        }
         if let Some(schedule) = m.get("schedule") {
             let start = local_date(schedule["start"].as_str().unwrap())?;
             let end = local_date(schedule["end"].as_str().unwrap())?;

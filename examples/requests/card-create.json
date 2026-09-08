@@ -1,5 +1,14 @@
 {
-  "title": "Przygotować demonstrację",
+  "title": "Prepare the demonstration",
   "kind": "outcome",
-  "body": "Rezultat do zaakceptowania przez użytkownika."
+  "body": "Demonstrate the agreed project export.",
+  "expected_result": "The owner can review an export using the agreed sample data.",
+  "owner": "Project owner",
+  "acceptance": [
+    {
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "text": "The exported file opens and includes the selected cards.",
+      "completed": false
+    }
+  ]
 }

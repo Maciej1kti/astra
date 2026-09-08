@@ -265,11 +265,37 @@ Puste katalogi można tworzyć leniwie. Inne pliki są ignorowane z diagnostyką
 | Obiekt | Pola wymagane w poprawnym pliku | Opcjonalne |
 |---|---|---|
 | Project | schema_version, id, name, state, created_at, updated_at | phase, review_on, x-* |
-| Card | id, title, kind, status, priority, position, archived, created_at, updated_at | schedule, due, review_on, milestone_id, blocked, depends_on, labels, x-* |
+| Card | id, title, kind, status, priority, position, archived, created_at, updated_at | schedule, due, review_on, milestone_id, blocked, depends_on, labels, expected_result, owner, acceptance, x-* |
 | Milestone | id, title, status, position, archived, created_at, updated_at | due, x-* |
 | Update | id, kind, target, summary, author, recorded_at | observed_at, supersedes, resolves, evidence, x-* |
 
-Body projektu opisuje cel i kontekst. Body karty/milestone opisuje rezultat i warunki akceptacji; nie wymagamy konkretnych nagłówków do parsowania. Body raportu zawiera szczegóły, nie pełną transkrypcję agenta.
+Project bodies describe the goal and context. Card and milestone bodies retain their Markdown description, including any existing result or acceptance headings. No headings are parsed or converted automatically. Card structured fields are independently optional. Update bodies contain result details, rather than a full agent transcript.
+
+#### Structured card content
+
+`expected_result` is an optional nonblank string of 1–4,000 characters. `owner`
+is an optional nonblank display label of 1–120 characters. It is not a user
+account, authorization rule, notification subscription or team assignment.
+
+`acceptance` is an optional ordered array of at most 100 objects, each containing
+`id` (UUIDv4), `text` (nonblank, 1–500 characters) and `completed` (boolean).
+Item IDs must be unique within the card. Clients retain an item's identity while
+editing, reordering or toggling it; new items receive a new UUIDv4. Completion is
+explicit and independent of card status. A complete checklist never marks a card
+done, and a manually completed card may still contain incomplete criteria.
+
+All three fields use the ordinary versioned card create/patch API. `set` replaces
+the ordered checklist as a whole; `clear` removes an optional field. An empty
+array represents an explicitly empty checklist. Existing cards without these
+fields stay valid and are not rewritten on read. Status changes and unrelated
+edits retain their structured content and Markdown body. History and Undo retain
+the same version/conflict rules as every other card edit.
+
+List summaries expose the optional owner label and, when a checklist exists,
+`acceptance_progress: {total, completed}`. Progress is a compact projection,
+not an acceptance decision. Full-text search includes the result, owner and
+criterion text as well as title and body. The existing aggregate front matter
+limit of 64 KiB still applies even when individual field limits are satisfied.
 
 Tworzenie przez API potrzebuje tylko tytułu karty lub nazwy projektu; pola wymagane w pliku uzupełnia serwer. Czasy są RFC3339 UTC z `Z`. `created_at` jest niezmienne w zwykłych mutacjach; `updated_at` ustala serwer dopiero przy rzeczywistej zmianie. No-op nie zmienia czasu ani wersji. Zwykły zapis nie tworzy updated_at wcześniejszego od created_at; wykryty skok zegara obsługuje polityka admission/recovery zamiast fałszowania chronologii. Zewnętrzna edycja może pozostawić stary czas; świeżość źródła określa też hash i `observed_at` w indeksie, nie tylko nagłówek.
 
@@ -318,6 +344,12 @@ Limit testowy 100 projektów/10k kart/50k raportów nie jest limitem danych. Lis
 ### Profil workspace
 
 W `workspace.json`: format_version, instance_id, timezone, locale, projects (ID, ścieżka, data dodania), focus (referencje w kolejności), preferences. Sekrety i sesje nie są tu przechowywane. `focus` max 100 pozycji, rekomendacja UX 3–5, bez twardej blokady przy czwartej. Nieistniejąca referencja pozostaje oznaczona, dopóki użytkownik jej nie usunie. Root do rejestracji przez WWW jest konfiguracją hosta; nie wynika z dowolnej treści workspace.
+
+The optional `tags` array stores at most 500 distinct reusable workspace tag
+names, each 1–48 characters. Equality is exact, including case, punctuation and
+spacing. Existing source labels remain unchanged; registering a name does not
+rewrite any card. Card label arrays remain the source of truth for membership.
+Older workspaces without a catalog remain valid and are not rewritten on read.
 
 
 *Source file: `docs/03-DATA-FORMAT.md`.*
@@ -544,6 +576,14 @@ Request ID bez flagi generuje klient przed wysłaniem i zachowuje co najmniej w 
 ### Kontekst agenta
 
 Domyślny budżet 24 KiB, max 128 KiB. Zawiera: cel/fazę, aktywny milestone, wybrane aktywne/review karty, focus odnoszący się do tego projektu, blokady i ostatnie istotne raporty. Podaje version każdego zasobu, generated_at, limity, included/omitted counts oraz `next_reads` wskazujące zasoby do odczytu szczegółu; CLI może przedstawić je jako gotowe polecenia. Nie eksportuje innych projektów ani wszystkich historycznych opisów. API używa `ContextEntry` z jawnym `excerpt` i `truncated`; fragment nie udaje pełnej reprezentacji zasobu. Odczyt pełnego dokumentu jest osobną operacją. Budżet obejmuje również narzut JSON, a zbyt mały limit daje czytelny błąd zamiast niepoprawnego JSON.
+
+Card context entries include optional `expected_result`, `owner` and the ordered
+`acceptance` array with stable item IDs and completion values. Structured content
+is included intact. If it cannot fit the requested JSON byte budget, the card is
+omitted with the existing omission count and `next_reads` reference; a shortened
+checklist is never presented as the complete acceptance criteria. Read that card
+directly, or request a larger context budget. Markdown excerpts keep their
+existing explicit truncation marker.
 
 Budżet jest liczony w bajtach UTF-8 i obiektach, nie fałszywie w „tokenach” bez tokenizera docelowego modelu. Treść ma etykietę project data; nie zastępuje systemowych instrukcji agenta. Utrzymuj oddzielenie instructions/data, aby raport zawierający tekst polecenia nie stawał się automatycznie instrukcją wykonania.
 
@@ -1106,6 +1146,44 @@ viewport avoids that path, with the title grid collapsed on narrow screens.
 Vendor display-mode switches are intercepted; the shared selection/editor
 controls remain available. Only bar content receives overflow styling, so the
 chart itself retains its native scrolling and virtualization.
+
+### ADR-027 — Structured card purpose and acceptance (2026-09-08)
+
+Following the owner-requested next stage after the UI repair batch, add optional
+`expected_result`, `owner` and ordered `acceptance` fields to the shared card
+model. Keep Markdown as authored; do not infer or migrate headings into fields.
+The owner is a display label for a personal planner, without account assignment
+or permissions. Each acceptance item has a stable UUIDv4, bounded nonblank text
+and an explicit completion boolean. Item IDs are unique within each card.
+
+Checklist completion and card lifecycle are independent decisions. UI and API
+never infer done, review or another status from completion percentages. The
+existing versioned card PATCH replaces the checklist atomically with its other
+edits; concurrent edits produce a conflict. `clear` removes any optional field.
+The ordinary journal, conditional writer and Undo snapshots apply unchanged.
+Old cards remain valid and readers do not rewrite them. New optional fields are
+supported by the updated server and clients; older strict readers may reject
+cards that use the expanded schema, so roll back application versions only after
+preserving and explicitly addressing such new content.
+
+List projections include only the owner label and checklist counts, avoiding
+hundreds of criterion objects per page. Full-text search indexes expected result,
+owner and criterion text. A versioned, transactional upgrade reconstructs the
+disposable SQLite search index from its retained source body and metadata. The
+stored source body remains separate from search text. Invalid or unavailable
+source rows keep their availability state, and project source files remain
+untouched. Normal projection refreshes and rebuilds use the same derived text.
+
+Budgeted CLI/API context includes these structured fields intact when the card
+fits. Otherwise the existing omitted count and next-read reference identify the
+card for a direct read. Checklist entries are never silently shortened to fit.
+
+Keep all existing document byte limits, authorization, idempotency and conflict
+rules. The aggregate 64 KiB metadata limit can reject a combination of fields
+even if each satisfies its individual character limit. No format migration,
+background acceptance or new mutation transport is introduced. Workspace tag
+names are separately optional metadata; membership continues to live as exact
+label strings on cards, as detailed in [ADR-028](ADR-028-WORKSPACE-TAGS.md).
 
 
 *Source file: `docs/12-ADRS.md`.*

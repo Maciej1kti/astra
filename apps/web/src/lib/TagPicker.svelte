@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { api } from "./api";
+  import type { TagCatalog } from "./tag-management";
   import { addTag, matchingTags, TAG_LIMIT, TAG_LENGTH_LIMIT } from "./tags";
 
   let {
@@ -25,7 +28,26 @@
   let expanded = $state(false);
   let active = $state(-1);
   let announcement = $state("");
-  const suggestions = $derived(matchingTags(options, labels, draft));
+  let workspaceOptions = $state<string[]>([]);
+  let catalogError = $state("");
+  let catalogLoading = $state(false);
+  const suggestions = $derived(matchingTags([...workspaceOptions, ...options], labels, draft));
+  async function loadCatalog() {
+    catalogLoading = true;
+    catalogError = "";
+    try {
+      const catalog = await api<TagCatalog>("/api/v1/workspace/tags");
+      workspaceOptions = catalog.tags.map((tag) => tag.name);
+      if (!catalog.complete) catalogError = "Some project tags are unavailable. Available suggestions are shown.";
+    } catch { catalogError = "Workspace tag suggestions could not be loaded."; }
+    finally { catalogLoading = false; }
+  }
+  onMount(() => {
+    void loadCatalog();
+    const ended = () => (workspaceOptions = []);
+    window.addEventListener("session-ended", ended);
+    return () => window.removeEventListener("session-ended", ended);
+  });
   $effect(() => {
     if (error && input) {
       input.focus();
@@ -108,12 +130,13 @@
   <p id={`${id}-hint`} class="hint">Enter adds one tag. Commas stay in its name. Up to {TAG_LENGTH_LIMIT} characters; names are case-sensitive.</p>
   {#if error}<p id={`${id}-error`} role="alert" class="tag-error">{error}</p>{/if}
   {#if expanded && suggestions.length}
-    <ul id={`${id}-options`} class="suggestions" role="listbox" aria-label="Existing project tags">
+    <ul id={`${id}-options`} class="suggestions" role="listbox" aria-label="Existing tags">
       {#each suggestions as label, index}
         <li role="presentation"><button id={`${id}-option-${index}`} role="option" aria-selected={active === index} type="button" tabindex="-1" {disabled} onpointerdown={(event) => event.preventDefault()} onclick={() => add(label, true)}>{label}</button></li>
       {/each}
     </ul>
   {/if}
+  {#if catalogLoading}<p class="hint" role="status">Loading workspace tags…</p>{:else if catalogError}<p class="hint">{catalogError} <button type="button" {disabled} onclick={loadCatalog}>Retry workspace tags</button></p>{/if}
   {#if loading}<p class="hint" role="status">Loading tags from this project…</p>
   {:else if discoveryError}<p class="hint">{discoveryError} <button type="button" disabled={disabled} onclick={onretry}>Retry tag suggestions</button></p>{/if}
   <p class="sr-only" role="status" aria-live="polite">{announcement}</p>

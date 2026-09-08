@@ -13,7 +13,7 @@ STEPS = [
     [sys.executable, "scripts/check_package.py", "--skip-manifest"],
     [sys.executable, "-m", "openapi_spec_validator", "contracts/openapi.yaml"],
     [sys.executable, "-m", "unittest", "discover", "-s", "scripts/tests"],
-    ["node", "--test", "scripts/tests/markdown.test.mjs", "scripts/tests/dates.test.mjs", "scripts/tests/planning.test.mjs"],
+    ["node", "--test", *[str(path.relative_to(ROOT)) for path in sorted((ROOT / "scripts/tests").glob("*.test.mjs"))]],
     ["npm", "run", "check"],
     ["npm", "run", "build"],
     ["scripts/cargo-local", "fmt", "--all", "--", "--check"],

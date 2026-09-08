@@ -370,6 +370,26 @@
           },
           "maxItems": 20,
           "uniqueItems": true
+        },
+        "expected_result": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "pattern": "\\S"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "\\S"
+        },
+        "acceptance": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AcceptanceItem"
+          },
+          "maxItems": 100,
+          "description": "Ordered acceptance items with unique stable IDs. Completion does not change card status."
         }
       },
       "required": [
@@ -771,6 +791,17 @@
         },
         "preferences": {
           "$ref": "#/$defs/Preferences"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48
+          },
+          "maxItems": 500,
+          "uniqueItems": true,
+          "description": "Optional workspace tag names. Card label strings remain their source of truth."
         }
       },
       "required": [
@@ -781,6 +812,29 @@
         "projects",
         "focus",
         "preferences"
+      ],
+      "additionalProperties": false
+    },
+    "AcceptanceItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "\\S"
+        },
+        "completed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "completed"
       ],
       "additionalProperties": false
     }

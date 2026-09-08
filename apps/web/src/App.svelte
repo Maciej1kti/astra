@@ -29,6 +29,8 @@
     moveDraft = $state<MoveProposal | null>(null);
   import Editor from "./lib/Editor.svelte";
   import Settings from "./lib/Settings.svelte";
+  import TagManager from "./lib/TagManager.svelte";
+  let manageTags = $state(false);
   import NativeProject from "./lib/NativeProject.svelte";
   let nativeAdding = $state(false);
   import FocusOrder from "./lib/FocusOrder.svelte";
@@ -1335,12 +1337,14 @@
   />{/if}
 {#if diagnostics}<Diagnostics onclose={() => (diagnostics = false)} />{/if}
 {#if settings}<Settings
+    ontags={() => { settings = false; manageTags = true; }}
     onclose={() => (settings = false)}
     onsaved={() => {
       settings = false;
       void initialize();
     }}
   />{/if}
+{#if manageTags}<TagManager projectNames={Object.fromEntries(projects.map((item) => [item.id, item.title]))} onclose={() => (manageTags = false)} onchanged={() => void refresh().catch(message)} />{/if}
 {#if editor}{#key editor}<Editor
       {...editor}
       bind:this={editorInstance}
