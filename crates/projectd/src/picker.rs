@@ -41,9 +41,12 @@ impl Picker {
         wire::validate("NativeFolderInput", input)?;
         let id = input["selection_id"]
             .as_str()
-            .ok_or(AppError::State)?
+            .ok_or(AppError::invariant("validated folder selection ID"))?
             .to_owned();
-        let mut jobs = self.jobs.lock().map_err(|_| AppError::State)?;
+        let mut jobs = self
+            .jobs
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("native picker jobs"))?;
         jobs.retain(|_, job| job.created.elapsed() < Duration::from_secs(600));
         if let Some(job) = jobs.get(&id) {
             if job.owner != owner || job.input != *input {
@@ -101,15 +104,22 @@ impl Picker {
         if spawned.is_err() {
             self.jobs
                 .lock()
-                .map_err(|_| AppError::State)?
-                .remove(result["selection_id"].as_str().ok_or(AppError::State)?);
+                .map_err(|_| AppError::LockPoisoned("native picker jobs"))?
+                .remove(
+                    result["selection_id"]
+                        .as_str()
+                        .ok_or(AppError::invariant("folder selection result ID"))?,
+                );
             return Err(AppError::reject(503, "FOLDER_PICKER_UNAVAILABLE"));
         }
         Ok(result)
     }
     pub fn get(&self, owner: &str, id: &str) -> Result<Value, AppError> {
         Uuid::parse_str(id).map_err(|_| AppError::reject(400, "INVALID_SELECTION_ID"))?;
-        let jobs = self.jobs.lock().map_err(|_| AppError::State)?;
+        let jobs = self
+            .jobs
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("native picker jobs"))?;
         let job = jobs
             .get(id)
             .filter(|j| j.owner == owner && j.created.elapsed() < Duration::from_secs(600))

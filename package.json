@@ -20,12 +20,14 @@
     "pair:try": "node scripts/try-pair.mjs",
     "format": "prettier --write apps/web/src apps/web/vite.config.ts apps/web/tsconfig.json \"scripts/**/*.mjs\"",
     "format:check": "prettier --check apps/web/src apps/web/vite.config.ts apps/web/tsconfig.json \"scripts/**/*.mjs\"",
-    "check:bundle": "node scripts/check-bundle.mjs"
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "test:unit": "node --test scripts/tests/*.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "json-schema-to-typescript": "16.0.0",
     "prettier": "3.9.6",
-    "prettier-plugin-svelte": "4.1.1"
+    "prettier-plugin-svelte": "4.1.1",
+    "typescript": "5.9.3"
   }
 }

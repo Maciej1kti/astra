@@ -1,5 +1,8 @@
 # Architecture and quality implementation — 2026-09-08
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/architecture-quality-implementation-2026-09-08/README.md) are preserved in the published checkpoint; see [current status](../STATE.md) for maintained guidance.
+
 Scope: implement all seven findings in the adjacent architecture-quality review.
 Baseline: `9528056132f73e8f3e963dbb25cbf80d219a8ab8`. Existing untracked audit
 material belongs to this task and is preserved. No root `.project` is initialized.
@@ -51,12 +54,12 @@ for the maintained architecture and extension points.
 
 These describe responsibility extraction and formatting, not a reduction in total
 application functionality or a quality score. The remaining long Rust lines are
-string literals. Counts are reproducible with [metrics.py](checks/metrics.py);
+string literals. Counts are reproducible with [metrics.py](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/architecture-quality-implementation-2026-09-08/checks/metrics.py);
 the resulting [metrics.json](checks/metrics.json) also records verification totals.
 
 ## Verification
 
-The [integrated gate](checks/final-gate.txt) runs schema generation, package and
+The [integrated gate](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/architecture-quality-implementation-2026-09-08/checks/final-gate.txt) runs schema generation, package and
 documentation checks, OpenAPI validation, Python and JavaScript tests, Svelte/
 TypeScript checking, formatting, frontend production build and bundle limits,
 rustfmt, Clippy with warnings denied, Rust tests and a workspace release build.
@@ -79,7 +82,7 @@ ASTRA_TEST_PROFILE=release npm run test:browser
 python3 progress/architecture-quality-implementation-2026-09-08/checks/metrics.py
 ```
 
-[Browser evidence](checks/browser-final.txt) includes actual HTTPS transport, source
+[Browser evidence](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/architecture-quality-implementation-2026-09-08/checks/browser-final.txt) includes actual HTTPS transport, source
 writes, lost-response replay, conflicts, independent drafts, Back/Forward guards,
 session revocation, pagination, planning gestures and desktop/mobile layouts.
 The final server diagnostic change additionally has a Rust regression checking
@@ -87,7 +90,7 @@ that private source error text cannot enter diagnostics or public responses.
 
 An intermediate Rust link ran out of disk space. Only generated application/server
 build caches were cleaned, and the complete gate was rerun successfully with
-incremental compilation disabled. See [cache cleanup](checks/build-cache-cleanup.txt).
+incremental compilation disabled. See [cache cleanup](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/architecture-quality-implementation-2026-09-08/checks/build-cache-cleanup.txt).
 
 Stage outputs are retained under `checks/`; bulk browser artifacts use ignored
 `test-results/browser/`. Browser checks use Chromium device emulation, not a

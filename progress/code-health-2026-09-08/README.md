@@ -1,5 +1,8 @@
 # Code health and optimization audit — 2026-09-08
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/README.md) are preserved in the published checkpoint; see [current status](../STATE.md) for maintained guidance.
+
 Revision: `171663744338efe8a3f0d23c10d610d6841086f8`.
 
 The largest opportunities are reducing unnecessary reads, fixing a few bounded
@@ -17,14 +20,14 @@ root `.project/`; none was initialized and no project report was written directl
 
 | Check | Current result | Evidence |
 | --- | --- | --- |
-| Generated contracts, package validation and OpenAPI | Pass | [Initial checks](checks/full-check.txt) |
-| Python validation/installer tests | 4 passed | [Initial checks](checks/full-check.txt) |
-| JavaScript unit tests | 32 passed | [Initial checks](checks/full-check.txt) |
-| Svelte/TypeScript | 0 errors, 0 warnings | [Initial checks](checks/full-check.txt) |
-| Rust formatting and Clippy with warnings denied | Pass | [Initial checks](checks/full-check.txt) |
-| Rust workspace tests | 92 passed | [Rust rerun](checks/rust-tests.txt) |
-| Additional Omarchy helper tests | 8 passed | [Omarchy checks](checks/omarchy-tests.txt) |
-| Release workspace build | Pass | [Build](checks/release-build.txt) |
+| Generated contracts, package validation and OpenAPI | Pass | [Initial checks](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/full-check.txt) |
+| Python validation/installer tests | 4 passed | [Initial checks](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/full-check.txt) |
+| JavaScript unit tests | 32 passed | [Initial checks](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/full-check.txt) |
+| Svelte/TypeScript | 0 errors, 0 warnings | [Initial checks](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/full-check.txt) |
+| Rust formatting and Clippy with warnings denied | Pass | [Initial checks](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/full-check.txt) |
+| Rust workspace tests | 92 passed | [Rust rerun](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/rust-tests.txt) |
+| Additional Omarchy helper tests | 8 passed | [Omarchy checks](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/omarchy-tests.txt) |
+| Release workspace build | Pass | [Build](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/release-build.txt) |
 | Standard application workload | 100 projects, 10,000 cards, 50,000 reports | [Release measurements](checks/benchmark-standard.json) |
 
 The original aggregate check stopped because the sandbox prohibited Unix socket
@@ -42,7 +45,7 @@ after registration, so this startup result is not a measurement of reopening a
 fully reconciled, unchanged large index.
 
 The environment was macOS arm64 with Node 24.11.0 and Cargo 1.92.0;
-[environment details](checks/environment.json) record unavailable CPU/RAM fields.
+[environment details](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/environment.json) record unavailable CPU/RAM fields.
 Application timings exclude HTTP, VPN, browser rendering and measured steady-state
 RSS. The existing benchmark does not cover Gantt, tag discovery, card-history
 loading or concurrent clients. No full browser suite or physical-device test was
@@ -82,7 +85,7 @@ of malformed documents and readable neighboring resources. **Effort: small/mediu
 **Acceptance:** two same-named malformed files yield two separate diagnostics;
 healthy cards remain readable; adding/removing an issue emits the expected health
 event without rewriting source files. Add the regression before the fix.
-[Reproduction and SQL evidence](checks/backend-probes.txt).
+[Reproduction and SQL evidence](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/backend-probes.txt).
 
 ### 2. P1 — A card's history fails when unrelated project reports exceed 20,000
 
@@ -104,7 +107,7 @@ than a client-only workaround. **Effort: medium.**
 
 **Acceptance:** a project with more than 20,000 reports shows the selected card's
 first history page with one bounded query; paging has no missing/duplicate entries.
-[Helper evidence](checks/frontend-bounded-probes.json).
+[Helper evidence](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/frontend-bounded-probes.json).
 
 ### 3. P2 — An event refreshes unrelated views and discards current pagination
 
@@ -169,7 +172,7 @@ lookups instead of repeated `find()`. No new dependency is needed. **Effort: sma
 
 **Acceptance:** preserve edge order, hidden predecessors, undated cards, filters
 and forecast behavior; then measure a rendered dense graph.
-[Reproducible probe](checks/frontend-bounded-probes.mjs).
+[Reproducible probe](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/frontend-bounded-probes.mjs).
 
 ### 6. P2 — Backend Gantt repeats graph work and holds the shared index lock
 
@@ -209,7 +212,7 @@ missing, stale and deleted-target handling. **Effort: small.**
 
 **Acceptance:** verify plans with the application's bundled SQLite and rerun
 incremental projection tests, including create/delete/recreate and invalid sources.
-[Query plans and measurements](checks/backend-probes.txt).
+[Query plans and measurements](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-2026-09-08/checks/backend-probes.txt).
 
 ### 8. P2 — Card creation repeats source scans and dependency references
 

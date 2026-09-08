@@ -1,8 +1,8 @@
 use crate::{
     AppError, Reply,
+    command_state::CommandState,
     engine::Engine,
-    instant,
-    journal::{Command, Journal, Target},
+    journal::{Command, CommandRecord, Journal, Target},
     now_millis,
     source::{pretty, read},
     wire,
@@ -99,7 +99,7 @@ impl Engine {
             .journal
             .directory
             .read("workspace.json")?
-            .ok_or(AppError::State)?;
+            .ok_or(AppError::Unavailable("workspace.json"))?;
         if Some(version(&before).as_str()) != expected {
             return reject(412, "VERSION_CONFLICT");
         }
@@ -193,36 +193,15 @@ impl Engine {
                 return Ok(reply);
             }
             let tx = db.transaction()?;
-            tx.execute(
-                "INSERT INTO commands(epoch,
-    request_id,
-    digest,
-    state,
-    target_kind,
-    project_id,
-    target_id,
-    received_at,
-    expires_at,
-    result_json)
-VALUES (?1,
-    ?2,
-    ?3,
-    'prepared',
-    ?4,
-    'workspace',
-    ?4,
-    ?5,
-    ?6,
-    ?7)",
-                params![
-                    epoch,
-                    request,
-                    command.digest(),
-                    section,
-                    instant(now),
-                    instant(now + 7 * 86_400_000),
-                    serde_json::to_string(&reply).unwrap()
-                ],
+            Journal::insert_command(
+                &tx,
+                CommandRecord {
+                    command: &command,
+                    state: CommandState::Prepared,
+                    target_kind: section,
+                    reply: &reply,
+                    received_at: now,
+                },
             )?;
             tx.execute(
                 "INSERT INTO workspace_intents(epoch,
@@ -265,22 +244,22 @@ VALUES (?1,
             checkpoint(CommitPoint::Committed)?;
             Ok(())
         })();
-        if result.is_err() {
+        if let Err(error) = result {
+            crate::diagnostics::record_failure("workspace_commit", &error, None, Some(request));
             return Ok(Reply {
                 http_status: 202,
                 body: json!({"api_version":"1","request_id":request,"state":"prepared"}),
             });
         }
-        let _ = self.index.invalidate_workspace(now);
+        if let Err(error) = self.index.invalidate_workspace(now) {
+            crate::diagnostics::record_failure("workspace_projection", &error, None, Some(request));
+        }
         Ok(reply)
     }
     fn finish_workspace(&self, epoch: &str, request: &str) -> Result<(), AppError> {
         let mut db = self.journal.db()?;
         let tx = db.transaction()?;
-        tx.execute(
-            "UPDATE commands SET state='committed' WHERE epoch=?1 AND request_id=?2",
-            [epoch, request],
-        )?;
+        Journal::set_command_state(&tx, epoch, request, CommandState::Committed)?;
         tx.execute(
             "UPDATE workspace_intents SET resolved=1 WHERE epoch=?1 AND request_id=?2",
             [epoch, request],
@@ -318,8 +297,12 @@ ORDER BY c.received_at",
         };
         for (epoch, request, before, after, references) in rows {
             let result = (|| -> Result<(), AppError> {
-                let value: Value = serde_json::from_slice(&after).map_err(|_| AppError::State)?;
-                validate_workspace(value).map_err(|_| AppError::State)?;
+                let value: Value = serde_json::from_slice(&after)
+                    .map_err(|source| AppError::stored("workspace recovery candidate", source))?;
+                validate_workspace(value).map_err(|source| AppError::SourceValidation {
+                    context: "workspace recovery candidate",
+                    source,
+                })?;
                 let actual = self.journal.directory.read("workspace.json")?;
                 if actual.as_deref() == Some(after.as_slice()) {
                     self.journal.directory.resync("workspace.json")?;
@@ -328,11 +311,14 @@ ORDER BY c.received_at",
                 if actual.as_deref() != Some(before.as_slice()) {
                     return Err(AppError::reject(409, "WORKSPACE_SOURCE_CHANGED"));
                 }
-                let references: Vec<Value> =
-                    serde_json::from_str(&references).map_err(|_| AppError::State)?;
+                let references: Vec<Value> = serde_json::from_str(&references)
+                    .map_err(|source| AppError::stored("workspace recovery references", source))?;
                 for reference in references {
-                    let handle =
-                        self.store(reference["project_id"].as_str().ok_or(AppError::State)?)?;
+                    let handle = self.store(
+                        reference["project_id"]
+                            .as_str()
+                            .ok_or(AppError::invariant("workspace reference project ID"))?,
+                    )?;
                     let store = handle
                         .lock()
                         .map_err(|_| AppError::LockPoisoned("project store"))?;
@@ -342,7 +328,9 @@ ORDER BY c.received_at",
                     let source = read(
                         &store,
                         Kind::Card,
-                        reference["card_id"].as_str().ok_or(AppError::State)?,
+                        reference["card_id"]
+                            .as_str()
+                            .ok_or(AppError::invariant("workspace reference card ID"))?,
                     )?;
                     if reference["version"] != source.version {
                         return Err(AppError::reject(409, "FOCUS_REFERENCE_CHANGED"));
@@ -356,6 +344,12 @@ ORDER BY c.received_at",
                 self.finish_workspace(&epoch, &request)
             })();
             if let Err(error) = result {
+                crate::diagnostics::record_failure(
+                    "workspace_recovery",
+                    &error,
+                    None,
+                    Some(&request),
+                );
                 let state = if matches!(
                     error,
                     AppError::Rejected(_)
@@ -364,14 +358,12 @@ ORDER BY c.received_at",
                                 | project_store::StoreError::Conflict
                         )
                 ) {
-                    "needs_review"
+                    CommandState::NeedsReview
                 } else {
-                    "blocked"
+                    CommandState::Blocked
                 };
-                self.journal.db()?.execute(
-                    "UPDATE commands SET state=?3 WHERE epoch=?1 AND request_id=?2",
-                    params![epoch, request, state],
-                )?;
+                let db = self.journal.db()?;
+                Journal::set_command_state(&db, &epoch, &request, state)?;
             }
         }
         Ok(())

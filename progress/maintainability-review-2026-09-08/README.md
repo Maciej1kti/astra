@@ -2,6 +2,10 @@
 
 Reviewed on 2026-09-08 at `3057c0f4e20009cb585fbbe82e3bd59c62902c83`.
 
+Implementation after this baseline is tracked in the
+[cleanup record](../maintainability-cleanup-2026-09-08/README.md). Findings below
+describe the reviewed revision, not the subsequently refactored code.
+
 The architecture is worth keeping. The next improvement should make ownership,
 state transitions and contribution paths easier to understand. A rewrite, more
 crates or a general framework would add maintenance work without a demonstrated
@@ -122,13 +126,13 @@ Current component sizes are descriptive, not pass/fail limits:
 | `TagManager.svelte` | 814 | 364 | 183 |
 | `Editor.svelte` | 691 | 386 | 0 |
 
-For example, [Gantt loading](../../apps/web/src/features/planning/GanttView.svelte#L229)
-and [calendar loading](../../apps/web/src/features/planning/CalendarView.svelte#L175)
+For example, [Gantt loading](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/apps/web/src/features/planning/GanttView.svelte#L229)
+and [calendar loading](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/apps/web/src/features/planning/CalendarView.svelte#L175)
 each manage generations, cancellation, deferred refresh, current scope and
 pagination while also integrating a vendor widget and handling interaction.
 The similarity concerns lifecycle mechanics; their pagination semantics differ.
 
-[TagManager](../../apps/web/src/features/tags/TagManager.svelte#L166) combines
+[TagManager](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/apps/web/src/features/tags/TagManager.svelte#L166) combines
 catalog commands, rename/merge preview, per-card command instances, partial
 completion, session loss, draft export and rendering. Its existing helpers and
 shared command controller do not yet own that whole feature lifecycle.
@@ -142,7 +146,7 @@ combinations of flags. Keep access availability separate from command outcome.
 
 Move Gantt task/calendar event mapping into typed vendor adapters. Scope gesture
 notifications through feature context or callbacks: the current
-[global gesture events](../../apps/web/src/features/planning/date-gesture.ts#L42)
+[global gesture events](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/apps/web/src/features/planning/date-gesture.ts#L42)
 and Gantt window listeners create a hidden relationship between instances. This
 is primarily a future composability concern, not proof of a present collision.
 
@@ -158,12 +162,12 @@ events, keyboard alternatives, draft preservation and dialog behavior.
 
 ### 3. Finish typed endpoint boundaries
 
-[resources.ts](../../apps/web/src/lib/api/resources.ts#L17) demonstrates a useful
+[resources.ts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/apps/web/src/lib/api/resources.ts#L17) demonstrates a useful
 typed endpoint layer. However, features still construct paths and choose their
 own response types directly. Examples include calendar/Gantt view requests,
 TagManager catalog reads and App resource loading.
 
-The generic [api<T>()](../../apps/web/src/lib/api/api.ts#L92) ultimately returns
+The generic [api<T>()](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/apps/web/src/lib/api/api.ts#L92) ultimately returns
 `value as T`; its type parameter does not connect a path to the endpoint contract.
 It is acceptable as a low-level transport assertion, but using it throughout
 features means a wrong response type can compile. Some declarations also have
@@ -188,7 +192,7 @@ encoding. Retain unknown extension fields and exact retry payloads.
 ### 4. Give backend decisions explicit types and focused preparation steps
 
 The application now reads validated sources, but
-[mutation prepare](../../crates/application/src/mutation.rs#L143) still handles
+[mutation prepare](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/crates/application/src/mutation.rs#L143) still handles
 creation defaults, set/clear patches, undo, ordering, dependency graphs and report
 references in one function. Dynamic JSON is reasonable for patches and `x-*`
 extensions; it is less helpful for interpreting stable business decisions over
@@ -199,7 +203,7 @@ collecting report references. Pass named inputs/results and retain one clear
 orchestration sequence. The final writer validation and reference/version
 recheck must remain authoritative. Do not distribute locks among these helpers.
 
-[Workflow plans](../../crates/application/src/workflow.rs#L80) use `kind: String`,
+[Workflow plans](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/crates/application/src/workflow.rs#L80) use `kind: String`,
 `view: Value` and `approved_root: Option<Value>`. Startup and maintenance then
 interpret fields such as `display_path` through string lookups. Journal methods
 also accept/return string states. Introduce `WorkflowKind`, command/job state
@@ -227,7 +231,7 @@ The new `StoredData`, `SourceValidation`, `LockPoisoned` and `Invariant` variant
 are a substantial improvement. Nevertheless, application source still contains
 56 occurrences of `AppError::State`. This is a search count, not 56 proven bugs.
 
-Examples include [workflow plan decoding](../../crates/application/src/workflow.rs#L133),
+Examples include [workflow plan decoding](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/crates/application/src/workflow.rs#L133),
 workspace recovery and Gantt stored JSON parsing. Mapping all these to `State`
 loses the operation and sometimes the original cause. The transport intentionally
 sanitizes errors, which is good, but generic internal errors also reduce the
@@ -236,7 +240,7 @@ usefulness of its safe diagnostics.
 Convert stored-data and invariant failures at their source with static operation
 labels and retained causes. Audit ignored results in startup/recovery separately
 from ordinary cleanup. For instance,
-[workflow acceptance](../../crates/application/src/workflow.rs#L270) can correctly
+[workflow acceptance](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/crates/application/src/workflow.rs#L270) can correctly
 return an accepted job while its execution is blocked and recorded in the
 journal; replacing that ignored result with `?` changes protocol meaning.
 Document this distinction and expose a safe diagnostic where a secondary
@@ -261,7 +265,7 @@ explicitly instead of making every helper another Engine method. Existing
 `Writer` and `Workflows` are good precedents. No repository trait, dependency
 injection container or extra crate is justified just to hide concrete SQLite.
 
-[Transport dispatch](../../crates/projectd/src/dispatch.rs#L42) is a 512-line file
+[Transport dispatch](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/crates/projectd/src/dispatch.rs#L42) is a 512-line file
 with one large route match. This is currently comprehensible and lower priority.
 If routes grow, retain a visible route inventory while delegating endpoint
 families to typed handlers. Keep common browser/Unix admission and authorization

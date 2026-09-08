@@ -1,9 +1,13 @@
 <script lang="ts">
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import {
+    commandErrorMessage,
+    isRejectedConflict,
+  } from "../../lib/api/command-result";
   import { onMount } from "svelte";
   import { modal } from "../../lib/ui/dialog";
-  import { api, ApiError, command, type Resource } from "../../lib/api/api";
+  import { api, command, type Resource } from "../../lib/api/api";
   import { untrack } from "svelte";
 
   const operation = commandOperation(() => !accessLost);
@@ -30,7 +34,7 @@
   let pending = $derived(operation.pending);
   let error = $state("");
   let busy = $derived(operation.busy);
-  let conflict = $state<Resource | null>(null);
+  let conflict = $state<{ current: Resource | null } | null>(null);
   let accessLost = $state(false);
   onMount(() => {
     const lost = () => {
@@ -66,20 +70,24 @@
     }
   }
   async function transmit() {
+    await runCommand("submit");
+  }
+  async function status() {
+    await runCommand("status");
+  }
+  async function runCommand(action: "submit" | "status") {
     if (!pending || accessLost || busy) return;
     error = "";
     try {
-      await operation.commit();
+      if (action === "status") await operation.confirm();
+      else await operation.commit();
       onsaved();
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
-      if (
-        operation.phase === "rejected" &&
-        cause instanceof ApiError &&
-        [409, 412].includes(cause.status)
-      ) {
+      error = commandErrorMessage(cause);
+      if (isRejectedConflict(operation.phase, cause)) {
+        conflict = { current: null };
         try {
-          conflict = await api<Resource>(path);
+          conflict = { current: await api<Resource>(path) };
         } catch {
           error +=
             " The current resource is unavailable; your proposed dates remain here.";
@@ -88,7 +96,7 @@
     }
   }
   async function save() {
-    if (accessLost) return;
+    if (accessLost || busy || pending || conflict) return;
     operation.prepare(
       command(
         path,
@@ -102,15 +110,6 @@
       ),
     );
     await transmit();
-  }
-  async function status() {
-    if (!pending || accessLost || busy) return;
-    try {
-      await operation.confirm();
-      onsaved();
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
-    }
   }
 </script>
 
@@ -155,15 +154,17 @@
       >
     {/if}
     {#if error}<p role="alert">{error}</p>{/if}
-    {#if conflict && dependencies}<p>
+    {#if conflict?.current && dependencies}<p>
         Current dependencies: {JSON.stringify(
-          "depends_on" in conflict.metadata ? conflict.metadata.depends_on : [],
+          "depends_on" in conflict.current.metadata
+            ? conflict.current.metadata.depends_on
+            : [],
         )}. Your proposed connection is kept. Reopen the card to reconcile the
         changes.
       </p>
-    {:else if conflict}<p>
+    {:else if conflict?.current}<p>
         Current saved schedule: {JSON.stringify(
-          conflict.metadata.schedule ?? null,
+          conflict.current.metadata.schedule ?? null,
         )}. Your proposed dates remain above. Reopen the card to start a new
         edit.
       </p>{/if}

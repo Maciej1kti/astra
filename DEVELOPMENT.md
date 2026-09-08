@@ -99,6 +99,9 @@ small JSON summary in `progress/` and keep bulk artifacts in `test-results/`.
 
 ## Typed CLI and date editing
 
+The [CLI guide](CLI.md) documents the implemented command tree, stdin input,
+optional text output and explicit socket configuration.
+
 Project commands require an exact registered folder; no parent or Git lookup occurs.
 
 ```sh

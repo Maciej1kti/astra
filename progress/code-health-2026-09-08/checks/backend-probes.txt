@@ -1,7 +1,0 @@
-SQL microprobe, SQLite 3.53.2
-{"query": "current", "plan": [[3, 0, 62, "SEARCH documents USING INDEX documents_project_type (project_id=?)"], [14, 0, 0, "LIST SUBQUERY 1"], [17, 14, 0, "SCAN json_each VIRTUAL TABLE INDEX 1:"], [26, 14, 0, "CREATE BLOOM FILTER"]], "rows_in_project": 50000, "returned_rows": 1, "samples": 25, "median_ms": 4.152334}
-{"query": "tuple_lookup", "plan": [[3, 0, 39, "SEARCH documents USING INDEX sqlite_autoindex_documents_1 (project_id=? AND entity_type=? AND entity_id=?)"]], "rows_in_project": 50000, "returned_rows": 1, "samples": 25, "median_ms": 0.001542}
-Rust application library: target/debug/deps/libproject_application-57d44bb84148c001.rlib
-One malformed filename: refresh succeeds, issue_count=1, cursor_changed=false, events=[]
-Same malformed basename in cards and milestones: Err(Database(SqliteFailure(Error { code: ConstraintViolation, extended_code: 1555 }, Some("UNIQUE constraint failed: projection_issues.project_id, projection_issues.path"))))
-After failed refresh, healthy project summary availability: "unavailable"

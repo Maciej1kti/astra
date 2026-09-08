@@ -9,4 +9,5 @@ export type GanttContext = {
   ) => void;
   link: (row: Summary) => void;
   editable: () => boolean;
+  gesture: (active: boolean) => void;
 };

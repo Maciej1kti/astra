@@ -5,8 +5,8 @@ Environment: macOS 27.0 (26A5425a), arm64; Node v24.11.0; npm 11.6.1.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| `npm run check` | PASS; generated API contracts current; Svelte 0 errors / 0 warnings | [npm-check.txt](npm-check.txt) |
-| `node --test scripts/tests/*.test.mjs` | PASS; 7 tests, 0 failures, 0 skipped | [node-tests.txt](node-tests.txt) |
+| `npm run check` | PASS; generated API contracts current; Svelte 0 errors / 0 warnings | [npm-check.txt](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/audit-2026-09-08/checks/npm-check.txt) |
+| `node --test scripts/tests/*.test.mjs` | PASS; 7 tests, 0 failures, 0 skipped | [node-tests.txt](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/audit-2026-09-08/checks/node-tests.txt) |
 
 The Node suite checks board preference isolation and storage failure tolerance, date-only moves across leap days/months/years/DST, resize range validity, Markdown script/remote-image suppression, timezone-independent inclusive widget dates, and rejection of reversed or empty widget ranges.
 

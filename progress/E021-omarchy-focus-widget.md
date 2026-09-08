@@ -1,5 +1,8 @@
 # Omarchy Focus widget — 2026-09-07
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/E021-omarchy-focus-widget.md) are preserved in the published checkpoint; see [current status](STATE.md) for maintained guidance.
+
 Implemented and installed a native Omarchy bar widget while retaining the
 existing browser WebUI. Desktop application packaging remains deferred for this
 iteration. No application protocol, persistence rules, Focus selection, or

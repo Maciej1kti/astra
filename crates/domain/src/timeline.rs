@@ -2,8 +2,16 @@
 use crate::{local_date, models::Schedule};
 use chrono::{Days, NaiveDate};
 use serde::Serialize;
-use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
+/// Typed snapshot input. Unreliable projections block forecasts for their descendants.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TimelineInput {
+    pub id: String,
+    pub schedule: Option<Schedule>,
+    pub depends_on: Vec<String>,
+    pub reliable: bool,
+}
 
 #[derive(Debug, Serialize)]
 pub struct Forecast {
@@ -30,21 +38,19 @@ pub struct Analysis {
 /// Inputs are non-archived, non-cancelled card metadata from one index snapshot.
 /// Recorded starts are lower bounds, durations include both dates and weekends.
 /// Unknown predecessors block their descendants; cycles never yield fake dates.
-pub fn analyze(cards: &[Value], truncated: bool) -> Analysis {
-    let by_id: BTreeMap<&str, &Value> = cards
-        .iter()
-        .filter_map(|v| Some((v["id"].as_str()?, v)))
-        .collect();
+pub fn analyze(cards: &[TimelineInput], truncated: bool) -> Analysis {
+    let by_id: BTreeMap<&str, &TimelineInput> =
+        cards.iter().map(|card| (card.id.as_str(), card)).collect();
     let mut indegree = BTreeMap::new();
     let mut children: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     let mut ranges = BTreeMap::new();
     let mut unknown = BTreeSet::new();
     let mut unscheduled = 0;
     for (&id, card) in &by_id {
-        let range = card["schedule"]["start"]
-            .as_str()
-            .zip(card["schedule"]["end"].as_str())
-            .and_then(|(s, e)| Some((local_date(s).ok()?, local_date(e).ok()?)))
+        let range = card
+            .schedule
+            .as_ref()
+            .and_then(|range| Some((local_date(&range.start).ok()?, local_date(&range.end).ok()?)))
             .filter(|(s, e)| s <= e);
         if let Some(range) = range {
             ranges.insert(id, range);
@@ -52,15 +58,10 @@ pub fn analyze(cards: &[Value], truncated: bool) -> Analysis {
             unscheduled += 1;
             unknown.insert(id);
         }
-        if card["x-analysis-invalid"] == true {
+        if !card.reliable {
             unknown.insert(id);
         }
-        let deps: BTreeSet<&str> = card["depends_on"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-            .collect();
+        let deps: BTreeSet<&str> = card.depends_on.iter().map(String::as_str).collect();
         indegree.insert(id, deps.len());
         for dep in deps {
             if !by_id.contains_key(dep) {
@@ -82,12 +83,7 @@ pub fn analyze(cards: &[Value], truncated: bool) -> Analysis {
         if !unknown.contains(id) {
             let (recorded_start, recorded_end) = ranges[id];
             let mut start = recorded_start;
-            for dep in by_id[id]["depends_on"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-            {
+            for dep in by_id[id].depends_on.iter().map(String::as_str) {
                 match ends.get(dep).and_then(|e| e.checked_add_days(Days::new(1))) {
                     Some(next) if next >= start => {
                         start = next;
@@ -171,9 +167,16 @@ pub fn analyze(cards: &[Value], truncated: bool) -> Analysis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
-    fn card(id: &str, start: &str, end: &str, deps: Vec<&str>) -> Value {
-        json!({"id":id,"schedule":{"start":start,"end":end},"depends_on":deps})
+    fn card(id: &str, start: &str, end: &str, deps: Vec<&str>) -> TimelineInput {
+        TimelineInput {
+            id: id.into(),
+            schedule: Some(Schedule {
+                start: start.into(),
+                end: end.into(),
+            }),
+            depends_on: deps.into_iter().map(str::to_owned).collect(),
+            reliable: true,
+        }
     }
     #[test]
     fn waterfall_preserves_durations_and_dates_without_mutating_input() {
@@ -210,7 +213,12 @@ mod tests {
     fn unknown_missing_and_cyclic_paths_are_incomplete() {
         let result = analyze(
             &[
-                json!({"id":"a"}),
+                TimelineInput {
+                    id: "a".into(),
+                    schedule: None,
+                    depends_on: vec![],
+                    reliable: true,
+                },
                 card("b", "2026-09-01", "2026-09-02", vec!["a"]),
                 card("c", "2026-09-01", "2026-09-02", vec!["missing"]),
                 card("d", "2026-09-01", "2026-09-02", vec!["e"]),
@@ -243,8 +251,34 @@ mod tests {
         assert!(!analyze(&[], true).complete);
     }
     #[test]
+    fn unreliable_inputs_block_descendants_without_discarding_recorded_dates() {
+        let mut stale = card("a", "2026-09-01", "2026-09-03", vec![]);
+        stale.reliable = false;
+        let input = vec![stale, card("b", "2026-09-02", "2026-09-04", vec!["a"])];
+        let result = analyze(&input, false);
+        assert_eq!(result.scheduled_cards, 2);
+        assert_eq!(result.unresolved_cards, 2);
+        assert_eq!(result.planned_end.as_deref(), Some("2026-09-04"));
+        assert!(result.forecasts.is_empty());
+        assert!(!result.complete);
+    }
+    #[test]
     fn ten_thousand_card_chain_is_iterative_and_bounded() {
-        let cards=(0..10_000).map(|i|json!({"id":format!("{i:05}"),"schedule":{"start":"2000-01-01","end":"2000-01-01"},"depends_on":if i==0 {vec![]}else{vec![format!("{:05}",i-1)]}})).collect::<Vec<_>>();
+        let cards = (0..10_000)
+            .map(|i| TimelineInput {
+                id: format!("{i:05}"),
+                schedule: Some(Schedule {
+                    start: "2000-01-01".into(),
+                    end: "2000-01-01".into(),
+                }),
+                depends_on: if i == 0 {
+                    vec![]
+                } else {
+                    vec![format!("{:05}", i - 1)]
+                },
+                reliable: true,
+            })
+            .collect::<Vec<_>>();
         let start = std::time::Instant::now();
         let result = analyze(&cards, false);
         eprintln!(

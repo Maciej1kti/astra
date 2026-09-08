@@ -48,7 +48,7 @@ earlier false positive.
 The final run recorded no page exceptions, console errors, CSP violations,
 failed requests or HTTP errors. Calendar reload and Back/Forward assertions
 passed. Workspace Today remained September 8 while the Honolulu browser date
-was September 7. See [results.json](planning-browser/results.json).
+was September 7. See [results.json](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/planning-browser/results.json).
 
 The agenda full-page capture places the sticky navigation midway down the
 document because the preceding unobscured-click assertion had scrolled the outer

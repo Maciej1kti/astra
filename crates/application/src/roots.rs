@@ -9,8 +9,8 @@ impl Engine {
         match self.journal.directory.read("roots.json")? {
             None => Ok((vec![], None)),
             Some(bytes) => {
-                let items: Vec<Value> =
-                    serde_json::from_slice(&bytes).map_err(|_| AppError::State)?;
+                let items: Vec<Value> = serde_json::from_slice(&bytes)
+                    .map_err(|source| AppError::stored("approved roots", source))?;
                 Ok((items, Some(version(&bytes))))
             }
         }
@@ -75,7 +75,9 @@ impl Engine {
             .find(|item| item["id"] == id)
             .ok_or_else(|| AppError::reject(404, "ROOT_NOT_FOUND"))?;
         let mut directory = Directory::open(Path::new(
-            root["display_path"].as_str().ok_or(AppError::State)?,
+            root["display_path"]
+                .as_str()
+                .ok_or(AppError::invariant("approved root display path"))?,
         ))?;
         if json!(directory.identity()?) != root["identity"] {
             return Err(AppError::reject(409, "ROOT_CHANGED"));
@@ -142,23 +144,39 @@ impl Engine {
             input["relative_path"].as_str().unwrap(),
         )?;
         let view = self.registration_plan(
-            directory.path().to_str().ok_or(AppError::State)?,
+            directory
+                .path()
+                .to_str()
+                .ok_or(AppError::invariant("registered directory UTF-8 path"))?,
             input["name"].as_str(),
             input["git_mode"] != "tracked",
         )?;
         let workflows = crate::workflow::Workflows {
             journal: &self.journal,
         };
-        let id = view["plan_id"].as_str().ok_or(AppError::State)?;
+        let id = view["plan_id"]
+            .as_str()
+            .ok_or(AppError::invariant("registration plan ID"))?;
         let mut plan = workflows.plan(id)?;
-        plan.approved_root = Some(
-            json!({"root_id":input["root_id"],"relative_path":input["relative_path"],"identity":directory.identity()?}),
-        );
+        plan.approved_root = Some(crate::workflow::ApprovedRoot::new(
+            input["root_id"]
+                .as_str()
+                .ok_or(AppError::invariant("validated registration root ID"))?
+                .into(),
+            input["relative_path"]
+                .as_str()
+                .ok_or(AppError::invariant("validated registration relative path"))?
+                .into(),
+            directory.identity()?,
+        ));
         self.journal.db()?.execute(
             "UPDATE workflow_plans SET plan_json=?2 WHERE id=?1",
             rusqlite::params![
                 id,
-                serde_json::to_string(&plan).map_err(|_| AppError::State)?
+                serde_json::to_string(&plan).map_err(|source| AppError::stored(
+                    "approved-root registration plan",
+                    source
+                ))?
             ],
         )?;
         Ok(view)

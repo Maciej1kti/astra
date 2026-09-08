@@ -1,5 +1,8 @@
 # E023 — React Kanban Kit review
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/E023-react-kanban-kit-review.md) are preserved in the published checkpoint; see [current status](STATE.md) for maintained guidance.
+
 Date: 2026-09-07. Review requested after the SVAR integration.
 Reviewed source commit: `8a6aeaeb2c16a23999c20f0d10aefdbb7d201f1b`.
 No upstream scripts were executed and no dependency was installed.

@@ -47,7 +47,7 @@ pub(super) async fn serve(
         result = initial => match result {
             Ok(Ok(expiry)) => expiry,
             Ok(Err(error)) => return failure(error),
-            Err(_) => return failure(AppError::State),
+            Err(_) => return failure(AppError::Unavailable("event stream worker")),
         },
     };
     let stream = async_stream::stream! {

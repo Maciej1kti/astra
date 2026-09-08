@@ -84,7 +84,10 @@ FROM json_each(?2))",
                     .query_map(
                         params![
                             project,
-                            serde_json::to_string(&ids).map_err(|_| AppError::State)?
+                            serde_json::to_string(&ids).map_err(|source| AppError::stored(
+                                "timeline predecessor IDs",
+                                source
+                            ))?
                         ],
                         |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))),
                     )?
@@ -112,6 +115,34 @@ struct TimelineCard {
     validity: String,
 }
 
+impl TimelineCard {
+    fn analysis_input(
+        self,
+        snapshot_reliable: bool,
+    ) -> Result<project_domain::timeline::TimelineInput, AppError> {
+        Ok(project_domain::timeline::TimelineInput {
+            id: self.id,
+            schedule: self
+                .schedule
+                .map(|text| {
+                    serde_json::from_str(&text)
+                        .map_err(|source| AppError::stored("timeline projection schedule", source))
+                })
+                .transpose()?,
+            depends_on: self
+                .dependencies
+                .map(|text| {
+                    serde_json::from_str(&text).map_err(|source| {
+                        AppError::stored("timeline projection dependencies", source)
+                    })
+                })
+                .transpose()?
+                .unwrap_or_default(),
+            reliable: self.validity == "valid" && snapshot_reliable,
+        })
+    }
+}
+
 struct GanttSnapshot {
     revision: String,
     scope: Value,
@@ -126,17 +157,11 @@ struct GanttSnapshot {
 
 impl GanttSnapshot {
     fn render(self) -> Result<Value, AppError> {
-        let cards = self.cards.into_iter().map(|card| {
-            let parse = |text: Option<String>| -> Result<Value, AppError> {
-                text.map(|text| serde_json::from_str(&text).map_err(|_| AppError::State)).unwrap_or(Ok(Value::Null))
-            };
-            Ok(json!({
-                "id": card.id,
-                "schedule": parse(card.schedule)?,
-                "depends_on": parse(card.dependencies)?,
-                "x-analysis-invalid": card.validity!="valid" || self.projection.freshness=="stale",
-            }))
-        }).collect::<Result<Vec<_>, AppError>>()?;
+        let cards = self
+            .cards
+            .into_iter()
+            .map(|card| card.analysis_input(self.projection.freshness != "stale"))
+            .collect::<Result<Vec<_>, AppError>>()?;
         let analysis = project_domain::timeline::analyze(&cards, self.truncated);
         let forecasts = self
             .rows

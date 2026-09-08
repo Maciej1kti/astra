@@ -1,5 +1,11 @@
 # 06. CLI, lokalne IPC i współpraca z agentami
 
+For implemented commands and runnable examples, use the maintained
+[CLI guide](../CLI.md). The catalogue below retains projected aliases and
+outstanding requirements; scope deferrals still apply. See
+[ADR-032](ADR-032-EXPLICIT-CLI-OPERATIONS.md) for explicit operation semantics and
+backward-compatible CLI ergonomics.
+
 ## Cel i transport
 
 CLI jest pierwszorzędnym klientem, nie skryptem do bezpośredniego sklejania YAML. Normalne komendy idą do `projectd` przez HTTP/1.1 nad Unix-domain socket. Ten sam dispatcher i modele co dla HTTP, ale principal powstaje z peer UID, nie z dowolnego nagłówka. UDS jest w prywatnym katalogu runtime, socket 0600, akceptowany ten sam UID. TCP nigdy nie montuje routingu `/local/v1` i nie ufa `X-Local-User`.

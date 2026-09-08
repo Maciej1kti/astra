@@ -41,7 +41,8 @@ impl Index {
             .lock()
             .map_err(|_| AppError::LockPoisoned("database connection"))?;
         let tx = db.transaction()?;
-        let input = serde_json::to_string(projects).map_err(|_| AppError::State)?;
+        let input = serde_json::to_string(projects)
+            .map_err(|source| AppError::stored("reconciliation project registry", source))?;
         tx.execute(
             "DELETE
 FROM documents

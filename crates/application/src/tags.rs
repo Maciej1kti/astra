@@ -150,8 +150,12 @@ WHERE validity!='valid')", [], |row|row.get(0))?;
     /// There is no implicit apply, cross-project transaction, or migration.
     pub fn tag_preview(&self, payload: &Value) -> Result<Value, AppError> {
         wire::validate("TagPreviewRequest", payload)?;
-        let source = payload["source"].as_str().ok_or(AppError::State)?;
-        let target = payload["target"].as_str().ok_or(AppError::State)?;
+        let source = payload["source"]
+            .as_str()
+            .ok_or(AppError::invariant("validated tag source"))?;
+        let target = payload["target"]
+            .as_str()
+            .ok_or(AppError::invariant("validated tag target"))?;
         if source == target {
             return Err(AppError::reject(422, "TAG_NAMES_IDENTICAL"));
         }

@@ -16,6 +16,7 @@ STEPS = [
     [sys.executable, "-m", "unittest", "discover", "-s", "integrations/omarchy", "-p", "test_*.py"],
     ["node", "--test", *[str(path.relative_to(ROOT)) for path in sorted((ROOT / "scripts/tests").glob("*.test.mjs"))]],
     ["npm", "run", "check"],
+    ["node", "scripts/check-boundaries.mjs"],
     ["npm", "run", "format:check"],
     ["npm", "run", "build"],
     ["npm", "run", "check:bundle"],

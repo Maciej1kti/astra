@@ -10,7 +10,6 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS = sorted((ROOT / "docs").glob("[0-9][0-9]-*.md"))
 ANNEXES = [
-    ("Astra kickoff instructions", ROOT / "ASTRA-KICKOFF.md"),
     ("Implementation plan and gates", ROOT / "delivery/PLAN.md"),
     ("Work coordination and integration", ROOT / "delivery/AGENT-ROLES.md"),
     ("Implementation backlog", ROOT / "delivery/BACKLOG.md"),
@@ -66,7 +65,8 @@ tooling are deferred beyond v1. All other outstanding requirements remain.
 
 The central contract remains unchanged: `.project/` is the source of truth;
 one server coordinates normal writes; the CLI and browser share the domain.
-SQLite is a derived index. A forecast is not a persisted schedule change.
+The search index is derived; operational SQLite contains durable state.
+A forecast is not a persisted schedule change.
 
 ## Contents
 
@@ -81,7 +81,7 @@ SQLite is a derived index. A forecast is not a persisted schedule change.
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=ROOT / "docs/MASTER-SPEC.md")
+    parser.add_argument("--output", type=Path, default=ROOT / "test-results/docs/MASTER-SPEC.md")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     text = assemble()

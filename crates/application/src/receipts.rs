@@ -1,8 +1,9 @@
 use crate::{
     AppError, Reply,
+    command_state::CommandState,
     engine::Engine,
     instant,
-    journal::{Command, Journal, Target},
+    journal::{Command, CommandRecord, Journal, Target},
     now_millis,
     source::read,
     wire,
@@ -101,35 +102,15 @@ VALUES (?1,
                 "replayed": false,
             }),
         };
-        tx.execute(
-            "INSERT INTO commands(epoch,
-    request_id,
-    digest,
-    state,
-    target_kind,
-    project_id,
-    target_id,
-    received_at,
-    expires_at,
-    result_json)
-VALUES (?1,
-    ?2,
-    ?3,
-    'committed',
-    'receipt',
-    'workspace',
-    'receipts',
-    ?4,
-    ?5,
-    ?6)",
-            params![
-                epoch,
-                request,
-                command.digest(),
-                instant(now),
-                instant(now + 7 * 86_400_000),
-                serde_json::to_string(&reply).unwrap()
-            ],
+        Journal::insert_command(
+            &tx,
+            CommandRecord {
+                command: &command,
+                state: CommandState::Committed,
+                target_kind: "receipt",
+                reply: &reply,
+                received_at: now,
+            },
         )?;
         tx.commit()?;
         drop(db);

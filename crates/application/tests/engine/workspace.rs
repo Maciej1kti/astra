@@ -23,7 +23,7 @@ fn workspace_writes_replay_and_recover_without_overwriting_external_changes() {
             Some(&version),
             |point| {
                 if point == CommitPoint::Renamed {
-                    Err(AppError::State)
+                    Err(AppError::invariant("injected test failure"))
                 } else {
                     Ok(())
                 }
@@ -55,7 +55,7 @@ fn workspace_writes_replay_and_recover_without_overwriting_external_changes() {
             Some(&current),
             |point| {
                 if point == CommitPoint::Prepared {
-                    Err(AppError::State)
+                    Err(AppError::invariant("injected test failure"))
                 } else {
                     Ok(())
                 }

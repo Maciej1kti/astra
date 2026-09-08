@@ -1,17 +1,18 @@
 <script lang="ts">
   import type { WorkspaceRoute } from "./navigation";
+  import type { RouteFilters } from "./navigation-state.svelte";
   import type { Summary } from "../../lib/api/api";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
 
   let {
-    route = $bindable(),
+    route,
     projects,
-    onprojectchange,
+    onchange,
     changeMonth,
   }: {
-    route: WorkspaceRoute;
+    route: Readonly<WorkspaceRoute>;
     projects: Summary[];
-    onprojectchange: () => void;
+    onchange: (patch: Partial<RouteFilters>) => void;
     changeMonth: (delta: number) => void;
   } = $props();
   const statuses = ["planned", "active", "review", "done", "cancelled"];
@@ -19,7 +20,10 @@
 
 <div class="toolbar">
   {#if route.view !== "projects"}<label class="sr" for="project">Project</label
-    ><select id="project" bind:value={route.project} onchange={onprojectchange}
+    ><select
+      id="project"
+      value={route.project}
+      onchange={(event) => onchange({ project: event.currentTarget.value })}
       ><option value="">All projects</option>{#each projects as item}<option
           value={item.id}>{item.title}</option
         >{/each}</select
@@ -28,20 +32,33 @@
     aria-label={["list", "updates"].includes(route.view)
       ? "Search content"
       : "Filter loaded titles"}
-    bind:value={route.search}
+    value={route.search}
+    oninput={(event) => onchange({ search: event.currentTarget.value })}
     placeholder={["list", "updates"].includes(route.view)
       ? "Search content…"
       : "Filter loaded titles…"}
   />{#if route.view === "updates"}<label
-      ><input type="checkbox" bind:checked={route.unreadOnly} /> Unread only</label
+      ><input
+        type="checkbox"
+        checked={route.unreadOnly}
+        onchange={(event) =>
+          onchange({ unreadOnly: event.currentTarget.checked })}
+      /> Unread only</label
     >{/if}{#if route.view === "list"}<select
       aria-label="Resource type"
-      bind:value={route.collection}
-      onchange={() => (route.status = "")}
+      value={route.collection}
+      onchange={(event) =>
+        onchange({
+          collection: event.currentTarget.value as RouteFilters["collection"],
+        })}
       ><option value="cards">Cards</option><option value="milestones"
         >Milestones</option
       ></select
-    ><select aria-label="Status filter" bind:value={route.status}>
+    ><select
+      aria-label="Status filter"
+      value={route.status}
+      onchange={(event) => onchange({ status: event.currentTarget.value })}
+    >
       <option value="">All statuses</option>
       {#each route.collection === "cards" ? statuses : ["planned", "active", "achieved", "cancelled"] as status}<option
           value={status}>{resourceLabel(status)}</option
@@ -49,12 +66,18 @@
     </select>
     {#if route.collection === "cards"}<select
         aria-label="Card visibility"
-        bind:value={route.archived}
+        value={String(route.archived)}
+        onchange={(event) =>
+          onchange({ archived: event.currentTarget.value === "true" })}
       >
-        <option value={false}>Active cards</option><option value={true}
+        <option value="false">Active cards</option><option value="true"
           >Archived cards</option
         >
-      </select><select aria-label="Priority filter" bind:value={route.priority}>
+      </select><select
+        aria-label="Priority filter"
+        value={route.priority}
+        onchange={(event) => onchange({ priority: event.currentTarget.value })}
+      >
         <option value="">All priorities</option
         >{#each ["urgent", "high", "normal", "low"] as priority}<option
             value={priority}>{resourceLabel(priority)}</option
@@ -62,22 +85,23 @@
       </select><input
         aria-label="Tag filter"
         placeholder="Exact tag…"
-        bind:value={route.label}
+        value={route.label}
+        oninput={(event) => onchange({ label: event.currentTarget.value })}
       />{/if}
     {#if route.status || route.priority || route.label || route.archived}<button
-        onclick={() => {
-          route.status = "";
-          route.priority = "";
-          route.label = "";
-          route.archived = false;
-        }}>Clear filters</button
+        onclick={() =>
+          onchange({ status: "", priority: "", label: "", archived: false })}
+        >Clear filters</button
       >{/if}
   {/if}{#if route.view === "gantt"}<div class="month">
       <button onclick={() => changeMonth(-1)} aria-label="Previous month"
         >←</button
-      ><input type="month" aria-label="Month" bind:value={route.month} /><button
-        onclick={() => changeMonth(1)}
-        aria-label="Next month">→</button
+      ><input
+        type="month"
+        aria-label="Month"
+        value={route.month}
+        onchange={(event) => onchange({ month: event.currentTarget.value })}
+      /><button onclick={() => changeMonth(1)} aria-label="Next month">→</button
       >
     </div>{/if}
 </div>

@@ -409,7 +409,10 @@ fn service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked
         let engine = Engine::open_for_service(&env.root.join("state")).unwrap();
         let current = engine.get(&project, Kind::Card, &id).unwrap();
         if conflicting_external_edit {
-            assert_eq!(engine.journal.state(&command).unwrap(), "needs_review");
+            assert_eq!(
+                engine.journal.state(&command).unwrap(),
+                crate::command_state::CommandState::NeedsReview
+            );
             assert_eq!(current["metadata"]["title"], "External conflicting edit");
             let blocked = patch(
                 &engine,
@@ -420,7 +423,10 @@ fn service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked
             );
             assert_eq!(blocked.body["error"]["code"], "PROJECT_RECOVERY_REQUIRED");
         } else {
-            assert_eq!(engine.journal.state(&command).unwrap(), "committed");
+            assert_eq!(
+                engine.journal.state(&command).unwrap(),
+                crate::command_state::CommandState::Committed
+            );
             assert_eq!(current["metadata"]["title"], "Recovered source");
         }
         assert_eq!(engine.startup_projects().unwrap(), vec![project]);

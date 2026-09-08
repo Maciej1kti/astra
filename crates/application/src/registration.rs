@@ -1,11 +1,12 @@
 //! Registration plans retain source bytes and commit through recoverable workflows.
+use crate::workflow_kind::WorkflowKind;
 use crate::{
     AppError, Reply,
     engine::Engine,
     instant, now_millis,
     source::pretty,
     wire,
-    workflow::{Plan, Step, Workflows},
+    workflow::{Plan, PlanLocation, Step, Workflows},
 };
 use project_domain::{models::ProjectRegistration, validate_document, validate_workspace};
 use project_store::{
@@ -159,28 +160,29 @@ impl Engine {
             "before_hash": step.before.as_ref().map(|bytes|document::version(bytes)),
             "description": "Prepare project planning data and preserve existing content",
         })).collect::<Vec<_>>();
-        let view = json!({
+        let presentation = json!({
             "plan_id": plan_id,
             "project_id": id,
             "expires_at": instant(now+300_000),
-            "display_path": path,
             "changes": changes,
             "warnings": [],
         });
+        let plan = Plan {
+            approved_root: None,
+            collection_guard: None,
+            id: plan_id,
+            kind: WorkflowKind::Registration,
+            project_id: id,
+            expires_at: now + 300_000,
+            steps,
+            location: PlanLocation::registration(path, presentation)?,
+        };
+        let view = plan.presentation()?;
         wire::validate("RegistrationPlan", &view)?;
         (Workflows {
             journal: &self.journal,
         })
-        .save(&Plan {
-            approved_root: None,
-            collection_guard: None,
-            id: plan_id,
-            kind: "registration".into(),
-            project_id: id,
-            expires_at: now + 300_000,
-            steps,
-            view: view.clone(),
-        })?;
+        .save(&plan)?;
         Ok(view)
     }
     pub fn commit_registration(
@@ -206,19 +208,16 @@ impl Engine {
         if self.journal.has_pending("workspace")? {
             return Err(AppError::reject(409, "WORKSPACE_RECOVERY_REQUIRED"));
         }
-        if plan.kind != "registration" {
+        if plan.kind != WorkflowKind::Registration {
             return Err(AppError::reject(422, "PLAN_KIND_MISMATCH"));
         }
         if let Some(approval) = &plan.approved_root {
             let permitted = self
-                .allowed_directory(
-                    approval["root_id"].as_str().ok_or(AppError::State)?,
-                    approval["relative_path"].as_str().ok_or(AppError::State)?,
-                )
+                .allowed_directory(&approval.root_id, &approval.relative_path)
                 .is_ok_and(|directory| {
                     directory
                         .identity()
-                        .is_ok_and(|identity| json!(identity) == approval["identity"])
+                        .is_ok_and(|identity| identity == approval.identity)
                 });
             if !permitted {
                 let command = plan.command(request_id, epoch);
@@ -229,10 +228,7 @@ impl Engine {
                     .unwrap_or(reply));
             }
         }
-        let handle = self.store_path(
-            plan.view["display_path"].as_str().ok_or(AppError::State)?,
-            true,
-        )?;
+        let handle = self.store_path(plan.location.destination.as_str(), true)?;
         let store = handle
             .lock()
             .map_err(|_| AppError::LockPoisoned("project store"))?;

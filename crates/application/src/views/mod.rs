@@ -92,7 +92,8 @@ fn rows(
                 kind,
                 id,
                 version,
-                metadata: serde_json::from_str(&metadata).map_err(|_| AppError::State)?,
+                metadata: serde_json::from_str(&metadata)
+                    .map_err(|source| AppError::stored("view row metadata", source))?,
                 validity,
             })
         })

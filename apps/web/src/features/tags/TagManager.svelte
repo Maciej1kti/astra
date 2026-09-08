@@ -1,25 +1,7 @@
 <script lang="ts">
-  import { patchCard } from "../../lib/api/resources";
-  import { subscribeSession } from "../../lib/api/session-events";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
-  import { CommandController } from "../../lib/api/command-controller";
   import { onMount, tick } from "svelte";
   import { modal } from "../../lib/ui/dialog";
-  import { api, ApiError, command } from "../../lib/api/api";
-  import { rememberTagSuggestions } from "./tag-suggestions";
-  import {
-    catalogNames,
-    catalogNameError,
-    destinationTag,
-    canFinishTagChange,
-    type TagCatalog,
-    type TagPreview,
-    type TagChangeResult,
-  } from "./tag-management";
-
-  const operation = commandOperation(() => !accessLost);
-  const rowOperations = new Map<string, CommandController>();
-
+  import { tagReview } from "./tag-review.svelte";
   let {
     onclose,
     onchanged,
@@ -29,98 +11,43 @@
     onchanged: () => void;
     projectNames?: Record<string, string>;
   } = $props();
-  let catalog = $state<TagCatalog | null>(null);
+  const review = tagReview(() => onchanged());
   let query = $state("");
   let displayLimit = $state(100);
-  let newName = $state("");
-  let source = $state<string | null>(null);
-  let target = $state("");
-  let preview = $state<TagPreview | null>(null);
-  let results = $state<TagChangeResult[]>([]);
-  let pending = $derived(operation.pending);
-  let pendingPurpose = $state("");
-  let busy = $state(false);
-  let accessLost = $state(false);
-  let error = $state("");
-  let info = $state("");
   let confirmClose = $state(false);
-  let operationFinished = $state(false);
-  let generation = 0;
   let searchInput = $state<HTMLInputElement>();
-  const unresolved = $derived(
-    !!pending || results.some((row) => !!row.pending),
-  );
-  const protectedDraft = $derived(!!newName || source !== null || unresolved);
   const matching = $derived(
-    catalog?.tags.filter((tag) =>
+    review.catalog?.tags.filter((tag) =>
       tag.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
     ) ?? [],
   );
   const visible = $derived(matching.slice(0, displayLimit));
+  const ready = $derived(
+    review.results.filter((row) => row.state === "ready").length,
+  );
+  const saved = $derived(
+    review.results.filter((row) => row.state === "saved").length,
+  );
   $effect(() => {
     query;
     displayLimit = 100;
   });
-  const ready = $derived(results.filter((row) => row.state === "ready").length);
-  const saved = $derived(results.filter((row) => row.state === "saved").length);
-  const canFinish = $derived(canFinishTagChange(catalog, preview, results));
-
   onMount(() => {
-    void load();
-    const ended = () => {
-      generation++;
-      accessLost = true;
-      error =
-        "Your session ended. This review and its command identities are preserved. Reconnect before continuing.";
-    };
-    const restored = () => {
-      accessLost = false;
-    };
+    const disconnect = review.connect();
     const leaving = (event: BeforeUnloadEvent) => {
-      if (protectedDraft || busy) event.preventDefault();
+      if (review.protectedDraft || review.busy) event.preventDefault();
     };
-    const unsubscribeSession = subscribeSession({
-      ended: ended,
-      restored: restored,
-    });
-
     window.addEventListener("beforeunload", leaving);
     return () => {
-      generation++;
-      unsubscribeSession();
-
+      disconnect();
       window.removeEventListener("beforeunload", leaving);
     };
   });
-  async function readCatalog() {
-    const current = ++generation;
-    // Management always rereads source usage, independently of suggestion requests.
-    const next = await api<TagCatalog>(
-      "/api/v1/workspace/tags",
-      "GET",
-      undefined,
-      {},
-      { fresh: true },
-    );
-    if (current === generation && !accessLost) {
-      catalog = next;
-      rememberTagSuggestions(next);
-    }
-  }
-  async function load() {
-    if (busy || unresolved || accessLost) return;
-    busy = true;
-    error = "";
-    try {
-      await readCatalog();
-    } catch (e) {
-      fail(e);
-    } finally {
-      busy = false;
-    }
-  }
-  function fail(e: unknown) {
-    error = e instanceof Error ? e.message : String(e);
+  async function back() {
+    if (review.busy || review.unresolved) return;
+    await review.back();
+    await tick();
+    searchInput?.focus();
   }
   function focusButton(node: HTMLButtonElement) {
     node.focus();
@@ -136,8 +63,8 @@
       .join(" · ");
   }
   function close() {
-    if (busy) return;
-    if (protectedDraft) confirmClose = true;
+    if (review.busy) return;
+    if (review.protectedDraft) confirmClose = true;
     else onclose();
   }
   async function copyReview() {
@@ -145,222 +72,23 @@
       await navigator.clipboard.writeText(
         JSON.stringify(
           {
-            newName,
-            source,
-            target,
-            preview,
-            results,
-            pending,
-            pendingPurpose,
+            newName: review.newName,
+            source: review.source,
+            target: review.target,
+            preview: review.preview,
+            results: review.results,
+            pending: review.pending,
+            pendingPurpose: review.pendingPurpose,
           },
           null,
           2,
         ),
       );
-      info = "Tag review and command identities copied.";
+      review.info = "Tag review and command identities copied.";
     } catch {
-      error =
+      review.error =
         "Clipboard access is unavailable. Keep this review open until commands are resolved.";
     }
-  }
-  async function saveCatalog(names: string[], purpose: string) {
-    if (!catalog || busy || unresolved || accessLost) return;
-    if (names.length > 500) {
-      error = "The catalog can contain up to 500 tags.";
-      return;
-    }
-    pendingPurpose = purpose;
-    operation.prepare(
-      command(
-        "/api/v1/workspace/tags",
-        "PUT",
-        { tags: names },
-        catalog.version,
-      ),
-    );
-    await transmitCatalog();
-  }
-  async function transmitCatalog() {
-    if (!pending || busy || accessLost) return;
-    busy = true;
-    error = "";
-    try {
-      await operation.commit();
-      info = pendingPurpose;
-      newName = "";
-      onchanged();
-      await readCatalog();
-      if (preview) {
-        operationFinished =
-          canFinishTagChange(catalog, preview, results) &&
-          !!catalog?.tags.some(
-            (tag) => tag.name === preview!.target && tag.managed,
-          );
-        if (!operationFinished)
-          info +=
-            " Refreshed usage needs another review before this rename can be considered complete.";
-      }
-    } catch (e) {
-      fail(e);
-      if (operation.phase === "rejected" && e instanceof ApiError) {
-        if (e.status === 412)
-          error =
-            "The workspace changed. Refresh the catalog and review your change again; your draft is preserved.";
-      }
-    } finally {
-      busy = false;
-    }
-  }
-  async function add() {
-    if (!catalog) return;
-    const name = newName.trim();
-    error = catalogNameError(name, catalogNames(catalog));
-    if (!error)
-      await saveCatalog(
-        [...catalogNames(catalog), name],
-        `Added “${name}” to the catalog.`,
-      );
-  }
-  function choose(name: string) {
-    if (busy || unresolved) return;
-    source = name;
-    target = "";
-    preview = null;
-    results = [];
-    rowOperations.clear();
-    operationFinished = false;
-    error = "";
-    info = "";
-  }
-  async function inspect() {
-    if (!catalog || source === null || busy || unresolved || accessLost) return;
-    target = destinationTag(target, catalog);
-    error = catalog.tags.some((tag) => tag.name === target)
-      ? ""
-      : catalogNameError(target);
-    if (source === target) error = "Choose a different name.";
-    if (error) return;
-    busy = true;
-    info = "";
-    try {
-      const next = await api<TagPreview>(
-        "/api/v1/workspace/tags/preview",
-        "POST",
-        { source, target },
-      );
-      preview = next;
-      rowOperations.clear();
-      results = next.changes.map((change) => ({
-        change,
-        state: "ready",
-        message: "Ready to apply",
-      }));
-      operationFinished = false;
-    } catch (e) {
-      fail(e);
-    } finally {
-      busy = false;
-    }
-  }
-  async function transmitRow(index: number) {
-    const row = results[index];
-    const key = `${row.change.project_id}:${row.change.card_id}`;
-    let rowOperation = rowOperations.get(key);
-    if (!rowOperation) {
-      rowOperation = new CommandController({ allowed: () => !accessLost });
-      rowOperations.set(key, rowOperation);
-    }
-    const intention =
-      row.pending ??
-      patchCard(
-        row.change.project_id,
-        row.change.card_id,
-        { set: { labels: row.change.labels } },
-        row.change.version,
-      );
-    if (!rowOperation.pending) rowOperation.prepare(intention);
-    results[index] = {
-      ...row,
-      pending: intention,
-      state: "uncertain",
-      message: "Saving…",
-    };
-    try {
-      await rowOperation.commit();
-      results[index] = {
-        ...row,
-        pending: undefined,
-        state: "saved",
-        message: "Saved",
-      };
-      onchanged();
-      return true;
-    } catch (e) {
-      const definitive = rowOperation.state.phase === "rejected";
-      results[index] = {
-        ...row,
-        pending: definitive ? undefined : intention,
-        state: definitive
-          ? e instanceof ApiError && e.status === 412
-            ? "conflict"
-            : "failed"
-          : "uncertain",
-        message:
-          e instanceof ApiError && e.status === 412
-            ? "Card changed since preview. Review a new preview before retrying."
-            : e instanceof Error
-              ? e.message
-              : String(e),
-      };
-      return definitive;
-    }
-  }
-  async function apply(retryIndex?: number) {
-    if (busy || accessLost || pending) return;
-    if (retryIndex === undefined && unresolved) return;
-    busy = true;
-    error = "";
-    try {
-      if (retryIndex !== undefined) await transmitRow(retryIndex);
-      else
-        for (let index = 0; index < results.length; index++) {
-          if (accessLost) break;
-          if (results[index].state === "ready" && !(await transmitRow(index)))
-            break;
-        }
-      await readCatalog();
-      info =
-        "Card results are listed below. Each saved card has its own history entry.";
-    } catch (e) {
-      fail(e);
-    } finally {
-      busy = false;
-    }
-  }
-  async function finish() {
-    if (!catalog || !preview || !canFinish) return;
-    const reviewed = preview;
-    const names = [
-      ...new Set([
-        ...catalogNames(catalog).filter((name) => name !== reviewed.source),
-        reviewed.target,
-      ]),
-    ];
-    await saveCatalog(
-      names,
-      `Finished: “${reviewed.target}” is in the catalog; the unused source name was removed.`,
-    );
-  }
-  async function back() {
-    if (busy || unresolved) return;
-    source = null;
-    target = "";
-    preview = null;
-    results = [];
-    rowOperations.clear();
-    operationFinished = false;
-    await tick();
-    searchInput?.focus();
   }
 </script>
 
@@ -378,14 +106,16 @@
       <h2>Manage tags</h2>
       <p>One vocabulary across your projects.</p>
     </div>
-    <button aria-label="Close tag manager" disabled={busy} onclick={close}
-      >✕</button
+    <button
+      aria-label="Close tag manager"
+      disabled={review.busy}
+      onclick={close}>✕</button
     >
   </header>
   <div class="dialog-body">
     {#if confirmClose}<section class="notice" role="alert">
         <p>
-          {unresolved
+          {review.unresolved
             ? "A write may still complete. Closing does not cancel it. Copy this review to preserve its command identities."
             : "Close this tag review? Already saved cards will keep their changes."}
         </p>
@@ -395,35 +125,40 @@
           ><button onclick={onclose}>Close review</button>
         </div>
       </section>{/if}
-    {#if error}<p class="notice" role="alert">{error}</p>{/if}
-    {#if info}<p class="notice" role="status">{info}</p>{/if}
-    {#if pending}<button disabled={busy || accessLost} onclick={transmitCatalog}
-        >Retry catalog command</button
+    {#if review.error}<p class="notice" role="alert">{review.error}</p>{/if}
+    {#if review.info}<p class="notice" role="status">{review.info}</p>{/if}
+    {#if review.pending}<button
+        disabled={review.busy || review.accessLost}
+        onclick={review.transmitCatalog}>Retry catalog command</button
       >{/if}
-    {#if !catalog}<p role="status">
-        {busy ? "Loading tags…" : "The catalog could not be loaded."}
+    {#if !review.catalog}<p role="status">
+        {review.busy
+          ? "Loading tags…"
+          : "The review.catalog could not be loaded."}
       </p>
-      <button disabled={busy || accessLost} onclick={load}
+      <button disabled={review.busy || review.accessLost} onclick={review.load}
         >Reload catalog</button
       >
-    {:else if source === null}
+    {:else if review.source === null}
       <form
         class="create"
         onsubmit={(event) => {
           event.preventDefault();
-          void add();
+          void review.add();
         }}
       >
         <label
           >New catalog tag<input
-            bind:value={newName}
-            disabled={busy || unresolved || accessLost}
+            bind:value={review.newName}
+            disabled={review.busy || review.unresolved || review.accessLost}
             placeholder="e.g. Research"
           /></label
         ><button
           class="primary"
-          disabled={busy || unresolved || accessLost || !newName.trim()}
-          >Create tag</button
+          disabled={review.busy ||
+            review.unresolved ||
+            review.accessLost ||
+            !review.newName.trim()}>Create tag</button
         >
       </form>
       <p class="hint">
@@ -438,18 +173,19 @@
             bind:value={query}
             type="search"
           /></label
-        ><button disabled={busy || unresolved || accessLost} onclick={load}
-          >Refresh catalog</button
+        ><button
+          disabled={review.busy || review.unresolved || review.accessLost}
+          onclick={review.load}>Refresh catalog</button
         >
       </div>
-      {#if !catalog.complete}<p class="notice" role="status">
+      {#if !review.catalog.complete}<p class="notice" role="status">
           Some sources could not be counted. Usage below is a lower bound.
         </p>{/if}
       <ul class="tag-list" aria-label="Workspace tags">
         {#each visible as tag (tag.name)}<li>
             <div class="tag-detail">
               <strong>{tag.name}</strong><small
-                >{tag.managed ? "In catalog" : "Used on cards"} · {tag.usage}
+                >{tag.managed ? "In review.catalog" : "Used on cards"} · {tag.usage}
                 {tag.usage === 1 ? "card" : "cards"}</small
               >{#if tag.projects.length}<details>
                   <summary
@@ -464,27 +200,23 @@
             </div>
             <div class="tag-actions">
               <button
-                disabled={busy || unresolved || accessLost}
+                disabled={review.busy || review.unresolved || review.accessLost}
                 aria-label={`Rename or merge tag ${tag.name}`}
-                onclick={() => choose(tag.name)}>Rename / merge</button
+                onclick={() => review.choose(tag.name)}>Rename / merge</button
               >{#if !tag.managed}<button
-                  disabled={busy || unresolved || accessLost}
+                  disabled={review.busy ||
+                    review.unresolved ||
+                    review.accessLost}
                   aria-label={`Add ${tag.name} to catalog`}
-                  onclick={() =>
-                    saveCatalog(
-                      [...catalogNames(catalog!), tag.name],
-                      `Added “${tag.name}” to the catalog.`,
-                    )}>Add to catalog</button
-                >{:else if tag.usage === 0 && catalog.complete}<button
-                  disabled={busy || unresolved || accessLost}
+                  onclick={() => review.include(tag.name)}
+                  >Add to catalog</button
+                >{:else if tag.usage === 0 && review.catalog.complete}<button
+                  disabled={review.busy ||
+                    review.unresolved ||
+                    review.accessLost}
                   aria-label={`Remove unused tag ${tag.name}`}
-                  onclick={() =>
-                    saveCatalog(
-                      catalogNames(catalog!).filter(
-                        (name) => name !== tag.name,
-                      ),
-                      `Removed unused catalog tag “${tag.name}”.`,
-                    )}>Remove unused</button
+                  onclick={() => review.removeUnused(tag.name)}
+                  >Remove unused</button
                 >{/if}
             </div>
           </li>{:else}<li class="empty">
@@ -497,22 +229,25 @@
           onclick={() => (displayLimit += 100)}
           >Show more tags ({visible.length} of {matching.length})</button
         >{/if}
-      {#if catalog.issues.length}<details>
+      {#if review.catalog.issues.length}<details>
           <summary
-            >Sources that need attention ({catalog.issues.length})</summary
-          >{#each catalog.issues as issue}<p>
+            >Sources that need attention ({review.catalog.issues
+              .length})</summary
+          >{#each review.catalog.issues as issue}<p>
               {#if issue.project_id}<strong>{issueContext(issue)}</strong><br
                 />{/if}{issue.message}
             </p>{/each}
         </details>{/if}
     {:else}
       <div class="actions">
-        <button disabled={busy || unresolved} onclick={back}>← All tags</button
-        ><button disabled={busy || unresolved || accessLost} onclick={load}
-          >Refresh catalog</button
+        <button disabled={review.busy || review.unresolved} onclick={back}
+          >← All tags</button
+        ><button
+          disabled={review.busy || review.unresolved || review.accessLost}
+          onclick={review.load}>Refresh catalog</button
         >
       </div>
-      <h3>Rename or merge <span class="literal">{source}</span></h3>
+      <h3>Rename or merge <span class="literal">{review.source}</span></h3>
       <p class="hint">
         Choosing an existing name merges the two tags. Archived cards are
         included. Unrelated labels stay as they are.
@@ -521,49 +256,50 @@
         class="create"
         onsubmit={(event) => {
           event.preventDefault();
-          void inspect();
+          void review.inspect();
         }}
       >
         <label
           >Destination tag<input
-            bind:value={target}
+            bind:value={review.target}
             list="tag-destinations"
-            disabled={busy || unresolved || !!preview}
+            disabled={review.busy || review.unresolved || !!review.preview}
           /></label
         ><datalist id="tag-destinations"
-          >{#each catalog.tags.filter((tag) => tag.name !== source) as tag}<option
+          >{#each review.catalog.tags.filter((tag) => tag.name !== review.source) as tag}<option
               value={tag.name}
             ></option>{/each}</datalist
         ><button
-          disabled={busy ||
-            unresolved ||
-            accessLost ||
-            !target.trim() ||
-            !!preview}>Preview changes</button
+          disabled={review.busy ||
+            review.unresolved ||
+            review.accessLost ||
+            !review.target.trim() ||
+            !!review.preview}>Preview changes</button
         >
       </form>
-      {#if preview}
+      {#if review.preview}
         <section aria-label="Tag change preview">
           <h3>
-            {preview.changes.length} affected {preview.changes.length === 1
+            {review.preview.changes.length} affected {review.preview.changes
+              .length === 1
               ? "card"
               : "cards"}
           </h3>
           <p>
-            {saved} saved · {ready} ready · {results.filter(
+            {saved} saved · {ready} ready · {review.results.filter(
               (row) => row.state === "conflict" || row.state === "failed",
             ).length} need review
           </p>
-          {#if !preview.complete}<p class="notice">
+          {#if !review.preview.complete}<p class="notice">
               Coverage is incomplete. Only the listed cards can be reviewed
               here; the source catalog name will be retained.
             </p>{/if}
-          {#each preview.issues as issue}<p class="notice">
+          {#each review.preview.issues as issue}<p class="notice">
               {#if issue.project_id}<strong>{issueContext(issue)}</strong><br
                 />{/if}{issue.message}
             </p>{/each}
           <ul class="results">
-            {#each results as row, index}<li>
+            {#each review.results as row, index}<li>
                 <div>
                   <strong>{row.change.title}</strong><small
                     >{row.change.project_name}</small
@@ -575,37 +311,35 @@
                   </p>
                 </div>
                 {#if row.pending}<button
-                    disabled={busy || accessLost}
-                    onclick={() => apply(index)}>Retry same card command</button
+                    disabled={review.busy || review.accessLost}
+                    onclick={() => review.apply(index)}
+                    >Retry same card command</button
                   >{/if}
               </li>{/each}
           </ul>
-          {#if operationFinished}<p class="notice" role="status">
+          {#if review.operationFinished}<p class="notice" role="status">
               Tag change complete.
             </p>
           {:else}<div class="actions">
               {#if ready}<button
                   class="primary"
-                  disabled={busy || unresolved || accessLost}
-                  onclick={() => apply()}
+                  disabled={review.busy ||
+                    review.unresolved ||
+                    review.accessLost}
+                  onclick={() => review.apply()}
                   >Apply to {ready} {ready === 1 ? "card" : "cards"}</button
-                >{/if}{#if canFinish}<button
+                >{/if}{#if review.canFinish}<button
                   class="primary"
-                  disabled={busy || unresolved || accessLost}
-                  onclick={finish}>Finish catalog change</button
+                  disabled={review.busy ||
+                    review.unresolved ||
+                    review.accessLost}
+                  onclick={review.finish}>Finish catalog change</button
                 >{/if}<button
-                disabled={busy || unresolved || accessLost}
-                onclick={() => {
-                  preview = null;
-                  results = [];
-                  rowOperations.clear();
-                  error = "";
-                  info =
-                    "Previously saved changes remain. Review a new preview before applying more changes.";
-                }}>Review new preview</button
+                disabled={review.busy || review.unresolved || review.accessLost}
+                onclick={review.restart}>Review new preview</button
               >
             </div>{/if}
-          {#if !canFinish && !operationFinished}<p class="hint">
+          {#if !review.canFinish && !review.operationFinished}<p class="hint">
               The source name stays in the catalog until all source cards have
               been counted and changed. Resolve unavailable sources or
               conflicts, then review a new preview.
@@ -616,13 +350,13 @@
   </div>
   <footer>
     <span aria-live="polite"
-      >{busy
+      >{review.busy
         ? "Working…"
-        : unresolved
+        : review.unresolved
           ? "Command outcome needs checking"
           : "Changes use each card’s reviewed version"}</span
     ><button onclick={copyReview}>Copy review</button><button
-      disabled={busy}
+      disabled={review.busy}
       onclick={close}>Close</button
     >
   </footer>

@@ -1,6 +1,9 @@
+mod input;
+mod output;
+mod queries;
 mod transport;
 mod typed;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde_json::{Value, json};
 use std::{path::PathBuf, time::Duration};
 use transport::Request;
@@ -9,11 +12,13 @@ use uuid::Uuid;
 #[derive(Parser)]
 #[command(
     version,
-    about = "Local Projects client. All writes go through the authenticated Unix socket."
+    about = "Astra client. Read, plan and update projects through the local daemon."
 )]
 struct Arguments {
-    #[arg(long)]
+    /// Daemon socket. Overrides ASTRA_SOCKET; no instance is selected implicitly.
+    #[arg(long, global = true)]
     socket: Option<PathBuf>,
+    /// Exact registered project folder; never searches parent folders.
     #[arg(long, global = true)]
     project: Option<PathBuf>,
     #[arg(long, global=true, default_value_t=30, value_parser=clap::value_parser!(u64).range(1..=300))]
@@ -21,8 +26,22 @@ struct Arguments {
     /// JSON is the default output format; this flag makes the choice explicit.
     #[arg(long, global = true)]
     json: bool,
+    /// Select readable text or the default machine-readable JSON envelope.
+    #[arg(
+        long,
+        global = true,
+        value_enum,
+        default_value = "json",
+        conflicts_with = "json"
+    )]
+    output: OutputFormat,
     #[command(subcommand)]
     command: Action,
+}
+#[derive(Clone, Copy, ValueEnum)]
+enum OutputFormat {
+    Json,
+    Text,
 }
 #[derive(Subcommand)]
 enum Action {
@@ -41,17 +60,23 @@ enum Action {
     },
     #[command(flatten)]
     Typed(typed::Action),
+    #[command(flatten)]
+    Queries(queries::Action),
+    /// Allow browser registration within an explicitly selected directory.
     AddRoot {
         absolute_path: PathBuf,
         #[arg(long)]
         label: String,
     },
-    RemoveRoot {
-        id: String,
-    },
+    /// Revoke a browser registration root without deleting project files.
+    RemoveRoot { id: String },
+    /// Read instance identity, command epoch and server time.
     Hello,
+    /// Inspect storage, index and recovery diagnostics.
     Doctor,
+    /// List the first page of registered projects and their availability.
     Projects,
+    /// Preview registration of an exact local folder without applying it.
     RegistrationPlan {
         absolute_path: PathBuf,
         #[arg(long)]
@@ -59,6 +84,7 @@ enum Action {
         #[arg(long)]
         tracked: bool,
     },
+    /// Apply a reviewed registration plan; use job to inspect accepted work.
     Register {
         plan_id: String,
         #[arg(long)]
@@ -66,19 +92,18 @@ enum Action {
         #[arg(long)]
         epoch: Option<String>,
     },
+    /// List pending browser access requests.
     Pairings,
+    /// Approve one browser after comparing its challenge.
     Approve {
         pairing_id: String,
         #[arg(long)]
         challenge: String,
     },
-    Deny {
-        pairing_id: String,
-    },
+    /// Reject a pending browser access request.
+    Deny { pairing_id: String },
     /// Read an API resource. Paths must start with /api/v1/.
-    Get {
-        path: String,
-    },
+    Get { path: String },
     /// Send a JSON command. Keep the printed request ID, epoch and payload when retrying.
     Command {
         #[arg(value_parser = ["POST", "PATCH", "PUT", "DELETE"])]
@@ -110,11 +135,15 @@ async fn main() {
             std::process::exit(2);
         }
     };
+    let format = args.output;
     match run(args).await {
-        Ok(code) => std::process::exit(code),
+        Ok(outcome) => {
+            print_output(&outcome.output, format);
+            std::process::exit(outcome.code);
+        }
         Err(error) => {
             if let Some(failure) = error.downcast_ref::<transport::Failure>() {
-                println!("{}", failure.output);
+                print_output(&failure.output, format);
                 std::process::exit(failure.code);
             }
             let (code, label) = if let Some(network) = error.downcast_ref::<reqwest::Error>() {
@@ -138,16 +167,26 @@ async fn main() {
             } else {
                 (2, "CLIENT_ERROR")
             };
-            println!(
-                "{}",
-                json!({"api_version":"1","ok":false,"error":{"code":label,"message":error.to_string()},"request_id":null})
+            print_output(
+                &json!({"api_version":"1","ok":false,"error":{"code":label,"message":error.to_string()},"request_id":null}),
+                format,
             );
             std::process::exit(code);
         }
     }
 }
 
-async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
+fn print_output(value: &Value, format: OutputFormat) {
+    match format {
+        OutputFormat::Json => println!(
+            "{}",
+            serde_json::to_string_pretty(value).expect("JSON value")
+        ),
+        OutputFormat::Text => println!("{}", output::render(value)),
+    }
+}
+
+async fn run(args: Arguments) -> Result<transport::Outcome, Box<dyn std::error::Error>> {
     if matches!(
         args.command,
         Action::Typed(typed::Action::Validate { offline: true })
@@ -165,14 +204,18 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             project_store::filesystem::Directory::open(&path)?.child(".project", false)?;
         let data = project_store::validation::report(&directory)?;
         let valid = data["valid"] == true;
-        println!(
-            "{}",
-            json!({"api_version":"1","ok":true,"data":data,"request_id":null})
-        );
-        return Ok(if valid { 0 } else { 7 });
+        return Ok(transport::Outcome {
+            code: if valid { 0 } else { 7 },
+            output: json!({"api_version":"1","ok":true,"data":data,"request_id":null}),
+        });
     }
+    let socket = args.socket.or_else(|| {
+        std::env::var_os("ASTRA_SOCKET")
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from)
+    });
     let client = reqwest::Client::builder()
-        .unix_socket(args.socket.ok_or("This command requires --socket")?)
+        .unix_socket(socket.ok_or("Provide --socket or set ASTRA_SOCKET to the daemon socket")?)
         .no_proxy()
         .timeout(Duration::from_secs(args.timeout))
         .build()?;
@@ -180,7 +223,7 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
         Action::MaintenancePlan { json_file } => Request::local(
             "POST",
             "/local/v1/maintenance/plans",
-            Some(serde_json::from_slice(&typed::file(&json_file)?)?),
+            Some(input::json(&json_file)?),
         ),
         Action::MaintenanceApply {
             plan_id,
@@ -188,6 +231,7 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             epoch,
         } => Request::maintenance(plan_id).retry(request_id, epoch),
         Action::Typed(action) => action.prepare(&client, args.project.as_deref()).await?,
+        Action::Queries(action) => action.prepare(&client, args.project.as_deref()).await?,
         Action::AddRoot {
             absolute_path,
             label,
@@ -219,7 +263,7 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             plan_id,
             request_id,
             epoch,
-        } => Request::api(
+        } => Request::workflow(
             "POST",
             "/api/v1/registrations",
             Some(json!({"plan_id":plan_id})),
@@ -257,18 +301,12 @@ async fn run(args: Arguments) -> Result<i32, Box<dyn std::error::Error>> {
             epoch,
         } => {
             api_path(&path)?;
-            Request::api(
-                &method,
-                path,
-                Some(serde_json::from_slice(&typed::file(&json_file)?)?),
-            )
-            .version(if_version)
-            .retry(request_id, epoch)
+            Request::api(&method, path, Some(input::json(&json_file)?))
+                .version(if_version)
+                .retry(request_id, epoch)
         }
     };
-    let outcome = transport::execute(&client, request).await?;
-    println!("{}", serde_json::to_string_pretty(&outcome.output)?);
-    Ok(outcome.code)
+    transport::execute(&client, request).await
 }
 
 fn exit_code(status: u16, body: &Value) -> i32 {
@@ -327,14 +365,9 @@ fn uuid4(value: &str) -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use clap::CommandFactory;
-    #[tokio::test]
-    async fn command_tree_is_valid_and_requires_socket_except_for_offline_validation() {
+    #[test]
+    fn command_tree_accepts_explicit_connection_and_offline_validation() {
         Arguments::command().debug_assert();
-        assert!(
-            run(Arguments::try_parse_from(["projectctl", "hello"]).unwrap())
-                .await
-                .is_err()
-        );
         assert!(
             Arguments::try_parse_from(["projectctl", "--project", ".", "validate", "--offline"])
                 .is_ok()

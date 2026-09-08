@@ -43,7 +43,7 @@ Today labels are an array of strings. The editor joins them into one comma-separ
 
 ## Browser-confirmed tag behavior
 
-The subsequent real-browser audit reproduced two concrete defects: **A02** changes the valid single label `Research, discovery` into two labels when only the card title is edited; **A10** rejects duplicate input `qa, qa` with a generic message about dates/additional fields. See [main report](README.md) and [followup.json](checks/followup.json), checks 32/33. These results strengthen TAG-01 beyond a product-design preference. Fix preservation of existing label values before adding new tag capabilities.
+The subsequent real-browser audit reproduced two concrete defects: **A02** changes the valid single label `Research, discovery` into two labels when only the card title is edited; **A10** rejects duplicate input `qa, qa` with a generic message about dates/additional fields. See [main report](README.md) and [followup.json](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/audit-2026-09-08/checks/followup.json), checks 32/33. These results strengthen TAG-01 beyond a product-design preference. Fix preservation of existing label values before adding new tag capabilities.
 
 ## Delivery placement and acceptance
 

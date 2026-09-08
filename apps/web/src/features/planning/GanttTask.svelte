@@ -58,6 +58,7 @@
       aria-label={`Resize start: ${row.title}`}
       title="Resize start · Alt+←/→"
       use:dateGesture={{
+        active: actions.gesture,
         delta: (x, _y, sx) => Math.round((x - sx) / unit),
         commit: (days) => actions.propose(row, days, "start"),
         operation: "start",
@@ -71,6 +72,7 @@
       aria-label={`Move plan: ${row.title}`}
       title={`${row.title} · Alt+←/→ to move; Shift for a week`}
       use:dateGesture={{
+        active: actions.gesture,
         delta: (x, _y, sx) => Math.round((x - sx) / unit),
         commit: (days) => actions.propose(row, days, "move"),
         operation: "move",
@@ -84,6 +86,7 @@
       aria-label={`Resize end: ${row.title}`}
       title="Resize end · Alt+←/→"
       use:dateGesture={{
+        active: actions.gesture,
         delta: (x, _y, sx) => Math.round((x - sx) / unit),
         commit: (days) => actions.propose(row, days, "end"),
         operation: "end",

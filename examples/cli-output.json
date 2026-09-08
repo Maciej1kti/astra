@@ -2,9 +2,11 @@
   "api_version": "1",
   "ok": true,
   "data": {
+    "api_version": "1",
+    "request_id": "019913e8-8000-7000-8000-000000000001",
     "state": "prepared"
   },
   "request_id": "019913e8-8000-7000-8000-000000000001",
-  "command_epoch": "example-epoch",
+  "command_epoch": "11111111-1111-4111-8111-111111111111",
   "http_status": 202
 }

@@ -17,6 +17,10 @@
   import "../../styles/editor.css";
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import {
+    commandErrorMessage,
+    isRejectedConflict,
+  } from "../../lib/api/command-result";
   import { untrack, onMount } from "svelte";
   import Markdown from "../../lib/ui/Markdown.svelte";
 
@@ -39,13 +43,7 @@
 
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { modal } from "../../lib/ui/dialog";
-  import {
-    api,
-    command,
-    ApiError,
-    type Resource,
-    type Pending,
-  } from "../../lib/api/api";
+  import { api, command, type Resource, type Pending } from "../../lib/api/api";
 
   const operation = commandOperation(() => !accessLost);
 
@@ -85,7 +83,7 @@
   let error = $state("");
   let busy = $derived(operation.busy);
   let pending = $derived(operation.pending);
-  let conflict = $state<Resource | null>(null);
+  let conflict = $state<{ current: Resource | null } | null>(null);
 
   let preview = $state(false);
   let discard = $state(false);
@@ -280,10 +278,9 @@
       : `${root}/${draft.type === "card" ? "cards" : draft.type === "milestone" ? "milestones" : "updates"}${resource ? `/${resource.metadata.id}` : ""}`;
   }
   async function save() {
-    if (locked || readonly) return;
+    if (locked || readonly || conflict) return;
     error = "";
     statusMessage = "";
-    conflict = null;
     try {
       if (draft.type === "card") {
         if (updateDirty)
@@ -334,37 +331,36 @@
     }
   }
   async function transmit() {
+    await runCommand("submit");
+  }
+  async function resolve() {
+    await runCommand("status");
+  }
+  async function runCommand(action: "submit" | "status") {
     if (!pending || accessLost || busy) return;
     const submitted = intent;
     error = "";
     try {
-      await operation.commit();
+      if (action === "status") await operation.confirm();
+      else await operation.commit();
       await completeCommand(submitted);
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
-      if (cause instanceof ApiError && [409, 412].includes(cause.status)) {
+      const reason = commandErrorMessage(cause);
+      error = reason;
+      if (isRejectedConflict(operation.phase, cause)) {
         if (submitted.kind === "focus") {
+          focus = null;
           await loadFocus();
-          error =
-            "Focus changed elsewhere. Your draft is preserved. Review the current pin state before trying again.";
+          error = `${reason} Focus changed elsewhere. Your draft is preserved. Review the current pin state before trying again.`;
         } else if (submitted.kind === "resource") {
+          conflict = { current: null };
           try {
-            conflict = await api<Resource>(path());
+            conflict = { current: await api<Resource>(path()) };
           } catch {
-            /* Keep the draft if the current source is unavailable. */
+            // A failed refresh must not allow a new write from the stale draft.
           }
         }
       }
-    }
-  }
-  async function resolve() {
-    if (!pending || busy || accessLost) return;
-    const submitted = intent;
-    try {
-      await operation.confirm();
-      await completeCommand(submitted);
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
     }
   }
   async function completeCommand(submitted: EditorIntent) {
@@ -647,14 +643,19 @@
       {#if error}<div bind:this={notice} class="notice" role="alert">
           {error}
         </div>{/if}
-      {#if conflict}<details open>
-          <summary>Current saved version · your draft stays above</summary>
-          <pre>{JSON.stringify(
-              conflict.metadata,
-              null,
-              2,
-            )}{"\n"}{conflict.body}</pre>
-        </details>
+      {#if conflict}
+        {#if conflict.current}<details open>
+            <summary>Current saved version · your draft stays above</summary>
+            <pre>{JSON.stringify(
+                conflict.current.metadata,
+                null,
+                2,
+              )}{"\n"}{conflict.current.body}</pre>
+          </details>
+        {:else}<p>
+            The current saved version is unavailable. Your draft is preserved
+            above.
+          </p>{/if}
         <p>
           Close and reopen to edit the current version. Copy any draft changes
           you want to keep first.

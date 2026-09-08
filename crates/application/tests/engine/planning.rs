@@ -350,3 +350,48 @@ fn forecast_example_matches_projection_contracts() {
         wire::validate("TimelineForecast", forecast).unwrap();
     }
 }
+
+#[test]
+fn malformed_timeline_projection_inputs_are_reported_instead_of_silently_ignored() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Typed forecast input");
+    let id = created.body["result"]["id"].as_str().unwrap();
+    patch(
+        &engine,
+        &project,
+        id,
+        created.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"schedule":{"start":"2026-09-01","end":"2026-09-02"}}}),
+    );
+    let metadata: String = engine
+        .index
+        .with_snapshot(|db, _| {
+            Ok(db.query_row(
+                "SELECT metadata_json FROM documents WHERE entity_id=?1",
+                [id],
+                |row| row.get(0),
+            )?)
+        })
+        .unwrap();
+    for invalid in [
+        json!({"depends_on":[17]}),
+        json!({"schedule":{"start":false}}),
+    ] {
+        engine
+            .index
+            .with_snapshot(|db, _| {
+                db.execute(
+                    "UPDATE documents SET metadata_json=json_patch(?1,?2) WHERE entity_id=?3",
+                    rusqlite::params![metadata, invalid.to_string(), id],
+                )?;
+                Ok(())
+            })
+            .unwrap();
+        assert!(matches!(
+            engine.gantt(&project, None, 50).unwrap_err(),
+            crate::AppError::StoredData { .. }
+        ));
+    }
+}

@@ -1,9 +1,0 @@
-   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.56s
-     Running tests/engine.rs (target/debug/deps/engine-afbe62413ea9ac9f)
-
-running 2 tests
-test service_reopen_marks_cached_and_empty_projections_until_source_reconciliation ... ok
-test service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked ... ok
-
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 35 filtered out; finished in 0.98s

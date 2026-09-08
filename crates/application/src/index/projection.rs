@@ -72,7 +72,7 @@ impl Index {
         let mut seen = BTreeSet::new();
         for (kind, id) in targets {
             if Uuid::parse_str(id).is_err() {
-                return Err(AppError::State);
+                return Err(AppError::invariant("projection target UUID"));
             }
             let key = (kind.as_str().to_owned(), id.clone());
             if !seen.insert(key.clone()) {
@@ -215,7 +215,7 @@ AND entity_id=?2",
                     .as_deref()
                     .map(serde_json::from_str::<Value>)
                     .transpose()
-                    .map_err(|_| AppError::State)?
+                    .map_err(|source| AppError::stored("projected workspace tags", source))?
                     .unwrap_or(serde_json::json!([]))
                     != metadata
                         .get("labels")
@@ -229,7 +229,7 @@ AND entity_id=?2",
                 .or_else(|| metadata.get("name"))
                 .or_else(|| metadata.get("summary"))
                 .and_then(Value::as_str)
-                .ok_or(AppError::State)?;
+                .ok_or(AppError::invariant("projected document title"))?;
             let relative = relative_path(kind, id);
             let body = value["body"].as_str().unwrap();
             tx.execute(

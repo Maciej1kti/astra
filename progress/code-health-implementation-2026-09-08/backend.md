@@ -32,7 +32,7 @@ blocked. ADR-030 documents this lifecycle.
 ## Release observations
 
 The final standard workload uses 100 projects, 10,000 cards and 50,000 reports,
-20 warmups and 200 measured operations. See [final measurements](checks/backend-final.json)
+20 warmups and 200 measured operations. See [final measurements](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/backend-final.json)
 and the [audit baseline](../code-health-2026-09-08/checks/benchmark-standard.json).
 
 | Operation | Baseline p95 | Final p95 |
@@ -50,7 +50,7 @@ These startup modes each have one sample and measure the engine, not process-to-
 listener or complete browser readiness. The old audit startup initialized a largely
 unpopulated index and is not a comparable fully indexed restart measurement.
 
-A separate [single-project workload](checks/backend-single-project.json) with
+A separate [single-project workload](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/backend-single-project.json) with
 1,000 cards and 500 reports exposes remaining scaling cost: mutation p50 28.58 ms,
 p95 478.30 ms. This mixes creation and editing and does not isolate each operation.
 Large-collection mutation preparation/source preconditions remain a profiling

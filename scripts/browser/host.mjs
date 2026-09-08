@@ -19,27 +19,41 @@ export const profile =
   process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug";
 export const binaries = join(root, "target", profile);
 
-export function localClient(socket) {
+export function localClient(
+  socket,
+  { binary = join(binaries, "projectctl") } = {},
+) {
   return (...args) => {
     let output;
+    let code = 0;
     try {
-      output = execFileSync(
-        join(binaries, "projectctl"),
-        ["--socket", socket, ...args],
-        {
-          encoding: "utf8",
-          stdio: ["ignore", "pipe", "pipe"],
-          timeout: 30000,
-          maxBuffer: 16 * 1024 * 1024,
-        },
-      );
+      output = execFileSync(binary, ["--socket", socket, ...args], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 30000,
+        maxBuffer: 16 * 1024 * 1024,
+      });
     } catch (error) {
-      if (!error.stdout) throw error;
+      if (!Number.isInteger(error.status) || error.signal) throw error;
+      code = error.status;
       output = error.stdout;
     }
+    // Registration may return an accepted workflow; ordinary checks require success.
+    const accepted = args[0] === "register" && code === 9;
+    assert(code === 0 || accepted, `projectctl ${args[0]} exited ${code}`);
     const envelope = JSON.parse(output);
     assert.equal(envelope.api_version, "1");
     assert.equal(envelope.ok, true, JSON.stringify(envelope.error));
+    assert(Object.hasOwn(envelope, "data"), "CLI success must contain data");
+    if (accepted) {
+      assert.equal(envelope.http_status, 202);
+      assert.equal(envelope.data.status, "running");
+      assert.equal(typeof envelope.data.job_id, "string");
+      assert(
+        envelope.data.job_id,
+        "Accepted registration must identify its job",
+      );
+    }
     return envelope.data;
   };
 }
@@ -177,12 +191,20 @@ export async function createHost() {
 }
 
 /** Pair a test browser through the same challenge/owner approval as normal clients. */
-export async function pair(page, host) {
+export async function pair(
+  page,
+  host,
+  { deviceName, requireRequest = false } = {},
+) {
   await page.goto(host.origin);
   const request = page.getByRole("button", { name: /^Request access/ });
   const project = page.getByLabel("Project", { exact: true });
   await request.or(project).waitFor();
+  if (requireRequest)
+    assert(await request.isVisible(), "Expected a fresh unpaired browser");
   if (await request.isVisible()) {
+    if (deviceName)
+      await page.getByLabel("Device name", { exact: true }).fill(deviceName);
     await request.click();
     await page
       .getByText("Compare this challenge on the host machine:")

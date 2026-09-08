@@ -4,19 +4,20 @@
     Gantt,
     Willow,
     type IApi,
-    type ITask,
     type IColumnConfig,
     type IConfig,
   } from "@svar-ui/svelte-gantt";
-  import { api, resourcePath, type Summary } from "../../lib/api/api";
+  import { resourcePath, type Summary } from "../../lib/api/api";
   import { shiftedSchedule, shiftDate } from "./dates";
-  import { exclusiveSchedule, widgetDate, type GanttPage } from "./planning";
+  import { widgetDate, type GanttPage } from "./planning";
   import type { DateProposal } from "./proposals";
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
   import GanttTask from "./GanttTask.svelte";
-  import { isStalePage } from "../../lib/api/pagination";
-  import { isAbortError } from "../../lib/api/read-requests";
+  import { cursorPage } from "../../lib/api/pagination";
+  import { getGantt } from "../../lib/api/planning";
+  import { PlanningRead } from "./planning-read";
   import { projectionNotice } from "../../lib/api/projection-state";
+  import { ganttTasks } from "./gantt-tasks";
   import { partitionEdges } from "./gantt-projection";
 
   let {
@@ -53,10 +54,9 @@
   let chartRoot = $state<HTMLDivElement>();
   let lastNavigation = "";
   let loadedProject: string | null = null;
-  let readController: AbortController | undefined;
-  let readKey = "";
-  let generation = 0;
-  let deferred = false;
+  const reads = new PlanningRead((value) => {
+    loading = value;
+  });
   const filtered = $derived(
     (data?.rows ?? []).filter((r) =>
       r.title.toLowerCase().includes(search.toLowerCase()),
@@ -68,37 +68,7 @@
   const forecasts = $derived(
     new Map((data?.forecasts ?? []).map((forecast) => [forecast.id, forecast])),
   );
-  const tasks = $derived.by(() =>
-    filtered.flatMap((row) => {
-      const forecast = forecasts.get(row.id);
-      const schedule = preview ? forecast?.schedule : row.schedule;
-      if (row.type === "milestone" && row.due)
-        return [
-          {
-            id: row.id,
-            text: row.title,
-            type: "milestone",
-            start: widgetDate(row.due.date),
-            duration: 0,
-            astra: row,
-            astraDriving: false,
-          } as ITask,
-        ];
-      if (!schedule) return [];
-      return [
-        {
-          id: row.id,
-          text: row.title,
-          type: "task",
-          ...exclusiveSchedule(schedule),
-          plannedStart: schedule.start,
-          plannedEnd: schedule.end,
-          astra: row,
-          astraDriving: forecast?.drives_finish ?? false,
-        } as ITask,
-      ];
-    }),
-  );
+  const tasks = $derived(ganttTasks(filtered, forecasts, preview));
   const dependencies = $derived(
     partitionEdges(
       data?.edges ?? [],
@@ -139,7 +109,7 @@
           `${month}-01`,
           ...tasks
             .map((t) => t.astra.schedule?.start ?? t.astra.due?.date)
-            .filter(Boolean),
+            .filter((value): value is string => !!value),
         ].sort()[0],
         -2,
       ),
@@ -158,7 +128,7 @@
                   t.astra.due?.date)
                 : (t.astra.schedule?.end ?? t.astra.due?.date),
             )
-            .filter(Boolean),
+            .filter((value): value is string => !!value),
         ]
           .sort()
           .at(-1)!,
@@ -170,6 +140,10 @@
   setContext<GanttContext>(GANTT_CONTEXT, {
     open: (row) => open(row),
     editable,
+    gesture: (active) => {
+      gesture = active;
+      reads.pause(active);
+    },
     link: (row) => {
       selection = row.id;
       if (predecessor && predecessor !== row.id) {
@@ -207,79 +181,32 @@
       void load(history.at(-1) ?? null);
     });
   });
-  onMount(() => {
-    const start = () => (gesture = true);
-    const end = () => {
-      gesture = false;
-      if (deferred) {
-        deferred = false;
-        void load(history.at(-1) ?? null);
-      }
-    };
-    window.addEventListener("planning-gesture-started", start);
-    window.addEventListener("planning-gesture-ended", end);
-    return () => {
-      generation++;
-      readController?.abort();
-      widgetApi = null;
-      window.removeEventListener("planning-gesture-started", start);
-      window.removeEventListener("planning-gesture-ended", end);
-    };
+  onMount(() => () => {
+    reads.dispose();
+    widgetApi = null;
   });
   async function load(cursor: string | null) {
-    const key = `${project}:${cursor ?? ""}`;
-    if (loading && key === readKey) {
-      deferred = true;
-      return;
-    }
-    if (gesture) {
-      deferred = true;
-      return;
-    }
-    const current = ++generation;
-    readController?.abort();
-    readController = new AbortController();
-    readKey = key;
-    loading = true;
+    const scope = project;
     error = "";
-    if (!project) {
-      data = null;
-      loading = false;
-      return;
-    }
-    try {
-      const result = await api<GanttPage>(
-        `/api/v1/views/gantt?project_id=${project}&limit=200${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-        "GET",
-        undefined,
-        {},
-        { signal: readController.signal },
-      );
-      if (current !== generation) return;
-      if (gesture) {
-        deferred = true;
-        return;
-      }
-      data = result;
-      freshness = projectionNotice(result);
-    } catch (e) {
-      if (current === generation && cursor && isStalePage(e)) {
-        history = [null];
-        pageNotice =
-          "The timeline changed. Showing the first page of the updated plan.";
-        await load(null);
-        return;
-      }
-      if (current === generation && !isAbortError(e)) error = String(e);
-    } finally {
-      if (current === generation) {
-        loading = false;
-        if (deferred && !gesture) {
-          deferred = false;
-          void load(history.at(-1) ?? null);
+    await reads.run<{ value: GanttPage | null; reset: boolean }>({
+      key: `${scope}:${cursor ?? ""}`,
+      read: (signal) =>
+        scope
+          ? cursorPage((page) => getGantt(scope, page, { signal }), cursor)
+          : Promise.resolve({ value: null, reset: false }),
+      apply: (result) => {
+        if (result.reset) {
+          history = [null];
+          pageNotice =
+            "The timeline changed. Showing the first page of the updated plan.";
         }
-      }
-    }
+        data = result.value;
+        freshness = result.value ? projectionNotice(result.value) : "";
+      },
+      failed: (cause) => {
+        error = String(cause);
+      },
+    });
   }
   function dependency(from: string, to: string, remove = false) {
     const row = data?.rows.find((r) => r.id === to);

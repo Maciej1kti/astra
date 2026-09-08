@@ -1,8 +1,9 @@
 //! Explicit resumable file workflows. Each step has an approved directory
 //! identity and before/after bytes. The entire tree is never described as atomic.
 use crate::{
-    AppError, Reply, instant,
-    journal::{Command, Journal, Target},
+    AppError, Reply,
+    command_state::CommandState,
+    journal::{Command, CommandRecord, Journal, Target},
 };
 use project_store::{
     StoreError,
@@ -14,6 +15,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::path::Path;
 use uuid::Uuid;
+mod model;
+pub(crate) use model::{ApprovedRoot, Plan, PlanLocation};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Step {
@@ -26,7 +29,11 @@ pub struct Step {
 impl Step {
     pub fn plan(root: &Directory, path: &[&str], after: Vec<u8>) -> Result<Self, AppError> {
         let mut step = Self {
-            root: root.path().to_str().ok_or(AppError::State)?.into(),
+            root: root
+                .path()
+                .to_str()
+                .ok_or(AppError::invariant("workflow root UTF-8 path"))?
+                .into(),
             identity: root.identity()?,
             path: path.iter().map(|s| (*s).into()).collect(),
             before: None,
@@ -40,7 +47,10 @@ impl Step {
         if directory.identity()? != self.identity {
             return Err(AppError::reject(409, "APPROVED_DIRECTORY_CHANGED"));
         }
-        let (name, parents) = self.path.split_last().ok_or(AppError::State)?;
+        let (name, parents) = self
+            .path
+            .split_last()
+            .ok_or(AppError::invariant("workflow step path"))?;
         for part in parents {
             directory = directory.child(part, create)?;
         }
@@ -76,19 +86,6 @@ impl Step {
         Ok(())
     }
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Plan {
-    pub id: String,
-    pub kind: String,
-    pub project_id: String,
-    pub expires_at: i64,
-    pub steps: Vec<Step>,
-    pub view: Value,
-    #[serde(default)]
-    pub approved_root: Option<Value>,
-    #[serde(default)]
-    pub collection_guard: Option<(String, Vec<String>)>,
-}
 impl Plan {
     fn collection_matches(&self) -> Result<bool, AppError> {
         let Some((path, expected)) = &self.collection_guard else {
@@ -105,7 +102,7 @@ impl Plan {
         Command {
             request_id: request_id.into(),
             epoch: epoch.into(),
-            method: format!("WORKFLOW:{}", self.kind),
+            method: format!("WORKFLOW:{}", self.kind.as_str()),
             target: Target {
                 project_id: self.project_id.clone(),
                 kind: Kind::Project,
@@ -125,7 +122,8 @@ impl Workflows<'_> {
             "INSERT INTO workflow_plans(id,plan_json) VALUES(?1,?2)",
             params![
                 plan.id,
-                serde_json::to_string(plan).map_err(|_| AppError::State)?
+                serde_json::to_string(plan)
+                    .map_err(|source| AppError::stored("workflow plan serialization", source))?
             ],
         )?;
         Ok(())
@@ -141,7 +139,8 @@ impl Workflows<'_> {
             )
             .optional()?
             .ok_or_else(|| AppError::reject(404, "PLAN_NOT_FOUND"))?;
-        serde_json::from_str(&text).map_err(|_| AppError::State)
+        serde_json::from_str(&text)
+            .map_err(|source| AppError::stored("stored workflow plan", source))
     }
     /// Caller holds the maintenance gate and relevant project lease throughout.
     pub fn commit(
@@ -218,37 +217,15 @@ impl Workflows<'_> {
                 return reject("PLAN_ALREADY_COMMITTED");
             }
             let tx = db.transaction()?;
-            tx.execute(
-                "INSERT INTO commands(epoch,
-    request_id,
-    digest,
-    state,
-    target_kind,
-    project_id,
-    target_id,
-    received_at,
-    expires_at,
-    result_json)
-VALUES (?1,
-    ?2,
-    ?3,
-    'prepared',
-    ?4,
-    ?5,
-    ?5,
-    ?6,
-    ?7,
-    ?8)",
-                params![
-                    epoch,
-                    request_id,
-                    command.digest(),
-                    plan.kind,
-                    plan.project_id,
-                    instant(now),
-                    instant(now + 7 * 86_400_000),
-                    serde_json::to_string(&reply).unwrap()
-                ],
+            Journal::insert_command(
+                &tx,
+                CommandRecord {
+                    command: &command,
+                    state: CommandState::Prepared,
+                    target_kind: plan.kind.as_str(),
+                    reply: &reply,
+                    received_at: now,
+                },
             )?;
             tx.execute(
                 "INSERT INTO workflow_jobs(id,
@@ -265,8 +242,8 @@ VALUES (?1,
             )?;
             tx.commit()?;
         }
-        // The original acceptance result always identifies the same durable job.
-        // A failed attempt leaves the job available for diagnostics/recovery.
+        // Acceptance is durable. Execution may be blocked; clients inspect the saved job
+        // and command state rather than treating a failed execution attempt as rejection.
         let _ = self.resume_with_completion(&job_id, checkpoint, completion);
         Ok(reply)
     }
@@ -300,7 +277,7 @@ VALUES (?1,
         }
         let plan = self.plan(&plan_id)?;
         if next < 0 || next as usize > plan.steps.len() {
-            return Err(AppError::State);
+            return Err(AppError::invariant("workflow next step outside plan"));
         }
         for (index, step) in plan.steps.iter().enumerate() {
             let outcome = if index < next as usize {
@@ -328,17 +305,15 @@ VALUES (?1,
                         [id],
                     )?;
                 }
-                tx.execute(
-                    "UPDATE commands SET state=?3 WHERE epoch=?1 AND request_id=?2",
-                    params![
-                        epoch,
-                        request_id,
-                        if needs_review {
-                            "needs_review"
-                        } else {
-                            "blocked"
-                        }
-                    ],
+                Journal::set_command_state(
+                    &tx,
+                    &epoch,
+                    &request_id,
+                    if needs_review {
+                        CommandState::NeedsReview
+                    } else {
+                        CommandState::Blocked
+                    },
                 )?;
                 tx.commit()?;
                 return Err(error);
@@ -353,19 +328,18 @@ VALUES (?1,
             )?;
         }
         if let Err(error) = completion() {
-            self.journal.db()?.execute(
-                "UPDATE commands SET state='blocked' WHERE epoch=?1 AND request_id=?2",
-                params![epoch, request_id],
+            Journal::set_command_state(
+                &*self.journal.db()?,
+                &epoch,
+                &request_id,
+                CommandState::Blocked,
             )?;
             return Err(error);
         }
         let mut db = self.journal.db()?;
         let tx = db.transaction()?;
         tx.execute("UPDATE workflow_jobs SET state='done' WHERE id=?1", [id])?;
-        tx.execute(
-            "UPDATE commands SET state='committed' WHERE epoch=?1 AND request_id=?2",
-            params![epoch, request_id],
-        )?;
+        Journal::set_command_state(&tx, &epoch, &request_id, CommandState::Committed)?;
         tx.commit()?;
         Ok(())
     }
@@ -385,7 +359,8 @@ ORDER BY j.rowid",
                 let (id, text) = r?;
                 Ok((
                     id,
-                    serde_json::from_str(&text).map_err(|_| AppError::State)?,
+                    serde_json::from_str(&text)
+                        .map_err(|source| AppError::stored("stored workflow plan", source))?,
                 ))
             })
             .collect()

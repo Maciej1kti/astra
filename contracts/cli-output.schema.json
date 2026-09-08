@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "CLI result envelope",
+  "description": "Default projectctl stdout envelope, also selected by --json or --output json. Optional --output text is human presentation and does not use this JSON schema. Exit codes and command identity semantics are unchanged by presentation.",
   "type": "object",
   "properties": {
     "api_version": {

@@ -11,18 +11,26 @@ ASTRA_TEST_PROFILE=release npm run test:browser
 The two primary suites exercise broad workflows and planning widgets. The portable
 regression runner adds card acceptance/activity, workspace tags, editor draft
 safety, board/settings/focus dialogs, planning navigation, bounded view/activity
-reads and real stale-page recovery in all five paged views:
+reads, real stale-page recovery in all five paged views, and direct/status command
+outcomes with preserved drafts and unavailable conflict details:
 
 ```sh
 ASTRA_TEST_PROFILE=release npm run test:browser:regressions
 ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs card tags
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs command-outcomes
 ```
 
 Each regression suite gets a fresh synthetic fixture, temporary owner-only state,
 local HTTPS proxy and ordinary daemon. Browser access uses normal challenge/owner
 approval. No existing `.manual/` connection, user project or authentication bypass
 is used. Temporary credentials and source files are removed at teardown, including
-failed setup. The old dated progress entry points delegate here for compatibility.
+failed setup. Historical dated entry points have been retired; use these maintained commands.
+
+`host.mjs` owns CLI validation and ordinary pairing. `runtime.mjs` owns explicit
+runtime selection and browser/host lifecycle boundaries; suites own assertions
+and artifacts. Invoke individual suites through the runner above. A direct suite
+invocation requires both `ASTRA_AUDIT_RUNTIME` and `ASTRA_EVIDENCE_DIR` and never
+falls back to a manual workspace.
 
 Node 24, OpenSSL and installed Playwright Chromium are required. Set
 `ASTRA_TEST_CHROMIUM` to an explicit installed Chromium executable if needed.
@@ -36,6 +44,5 @@ this directory for 90 days. Keep short result summaries and reproducible command
 in `progress/`; promote specific evidence to durable storage before its retention
 expires when a release acceptance decision depends on it.
 
-Historical tracked screenshots remain until their acceptance references can be
-replaced with equally durable evidence. This policy prevents new routine screenshot
-bloat without silently invalidating existing evidence or rewriting Git history.
+Historical screenshots and logs are preserved at the immutable checkpoint linked
+from `progress/README.md`; concise local records retain their original limitations.

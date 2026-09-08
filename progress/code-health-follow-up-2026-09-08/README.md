@@ -1,5 +1,8 @@
 # Repository optimization and code health follow-up — 2026-09-08
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-follow-up-2026-09-08/README.md) are preserved in the published checkpoint; see [current status](../STATE.md) for maintained guidance.
+
 Audited revision: `a71b282c8b95cdb6185943ab9a8edb27f3097128`.
 
 The next investment should be correctness at API boundaries, source-read costs in
@@ -35,11 +38,11 @@ local release builds and temporary synthetic datasets. See
 | Release browser regressions | `code-health` and `planning` passed |
 | Additional analysis probes | Confirmed the pagination, search and command-status findings below |
 
-[Integrated output](checks/full-check.txt),
-[browser output](checks/browser-regressions.txt),
-[backend probes](checks/backend-probes.json),
-[frontend probes](checks/frontend-probes.json),
-[real daemon contract probe](checks/transport-probes.json).
+[Integrated output](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-follow-up-2026-09-08/checks/full-check.txt),
+[browser output](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-follow-up-2026-09-08/checks/browser-regressions.txt),
+[backend probes](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-follow-up-2026-09-08/checks/backend-probes.json),
+[frontend probes](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-follow-up-2026-09-08/checks/frontend-probes.json),
+[real daemon contract probe](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-follow-up-2026-09-08/checks/transport-probes.json).
 
 The browser run used normal pairing on temporary HTTPS hosts and included desktop
 and phone-sized Chromium views. Other browser suites, physical iPhone/Safari,
@@ -69,7 +72,7 @@ overlapped the small browser/transport checks near its end and is retained as
 shared-load evidence only. The reported standard numbers are from the separate
 rerun after those checks finished. Startup mode values have one sample each and
 are not startup p95 measurements. The report's links and package consistency also
-[passed validation](checks/report-validation.txt).
+[passed validation](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-follow-up-2026-09-08/checks/report-validation.txt).
 
 ## Prioritized findings
 
@@ -302,7 +305,7 @@ calendar/Gantt/Kanban would remove product features and is not justified by this
 
 **Evidence:** [check.py](../../scripts/check.py), [CI](../../.github/workflows/check.yml),
 [view query tests](../../scripts/tests/view-queries.test.mjs),
-[format probe](checks/frontend-format-check.txt).
+[format probe](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-follow-up-2026-09-08/checks/frontend-format-check.txt).
 
 The maintained gates are substantial and pass. Their blind spot is coverage of
 real protocol boundaries: mocked stale-cursor tests exercise only the code the

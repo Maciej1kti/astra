@@ -1,3 +1,4 @@
+use crate::workflow_kind::WorkflowKind;
 use crate::{
     AppError,
     index::{Index, Query},
@@ -20,6 +21,9 @@ use std::{
 };
 use uuid::Uuid;
 
+mod projection_repairs;
+use projection_repairs::ProjectionRepairs;
+
 pub(crate) type StoreHandle = Arc<Mutex<ProjectStore>>;
 /// Lock order: workspace gate, store registry, project store, journal, index.
 /// Release journal transactions before publishing index notifications. Never
@@ -30,6 +34,7 @@ pub struct Engine {
     pub(crate) gate: RwLock<()>,
     stores: Mutex<HashMap<String, StoreHandle>>,
     pub(crate) reconciled: Mutex<HashMap<String, std::time::Instant>>,
+    projection_repairs: Mutex<ProjectionRepairs>,
 }
 impl Engine {
     pub fn open(data: &Path) -> Result<Self, AppError> {
@@ -68,7 +73,10 @@ impl Engine {
                         "default_view": "focus",
                     },
                 });
-                validate_workspace(value.clone()).map_err(|_| AppError::State)?;
+                validate_workspace(value.clone()).map_err(|source| AppError::SourceValidation {
+                    context: "initial workspace",
+                    source,
+                })?;
                 journal
                     .directory
                     .replace("workspace.json", &pretty(&value), None)?;
@@ -84,14 +92,15 @@ impl Engine {
             gate: RwLock::new(()),
             stores: Mutex::new(HashMap::new()),
             reconciled: Mutex::new(HashMap::new()),
+            projection_repairs: Mutex::new(ProjectionRepairs::default()),
         };
-        let Ok(Versioned {
-            value: initial_workspace,
-            ..
-        }) = engine.workspace()
-        else {
-            // Keep authenticated diagnostics available; never reconstruct a lost registry.
-            return Ok(engine);
+        let initial_workspace = match engine.workspace() {
+            Ok(workspace) => workspace.value,
+            Err(error) => {
+                crate::diagnostics::record_failure("startup_workspace", &error, None, None);
+                // Keep authenticated diagnostics available; never reconstruct a lost registry.
+                return Ok(engine);
+            }
         };
         engine.journal.db()?.execute(
             "INSERT INTO meta(key,
@@ -108,33 +117,56 @@ SET value=excluded.value",
         })
         .pending()?
         {
-            if plan.kind == "unregister" {
-                let _ = (Workflows {
+            if plan.kind == WorkflowKind::Unregister {
+                if let Err(error) = (Workflows {
                     journal: &engine.journal,
                 })
-                .resume(&job);
+                .resume(&job)
+                {
+                    crate::diagnostics::record_failure(
+                        "startup_workflow_recovery",
+                        &error,
+                        Some(&plan.project_id),
+                        None,
+                    );
+                }
                 continue;
             }
-            let path = plan.view["display_path"].as_str().ok_or(AppError::State)?;
-            if let Ok(handle) = engine.store_path(path, true) {
-                let store = handle
-                    .lock()
-                    .map_err(|_| AppError::LockPoisoned("project store"))?;
-                let _ = (Workflows {
-                    journal: &engine.journal,
-                })
-                .resume_with_completion(
-                    &job,
-                    |_| Ok(()),
-                    || {
-                        if plan.kind == "index_rebuild" {
-                            engine
-                                .index
-                                .refresh(&store, &plan.project_id, now_millis())?;
-                        }
-                        Ok(())
-                    },
-                );
+            let path = plan.location.destination.as_str();
+            match engine.store_path(path, true) {
+                Ok(handle) => {
+                    let store = handle
+                        .lock()
+                        .map_err(|_| AppError::LockPoisoned("project store"))?;
+                    if let Err(error) = (Workflows {
+                        journal: &engine.journal,
+                    })
+                    .resume_with_completion(
+                        &job,
+                        |_| Ok(()),
+                        || {
+                            if plan.kind == WorkflowKind::IndexRebuild {
+                                engine
+                                    .index
+                                    .refresh(&store, &plan.project_id, now_millis())?;
+                            }
+                            Ok(())
+                        },
+                    ) {
+                        crate::diagnostics::record_failure(
+                            "startup_workflow_recovery",
+                            &error,
+                            Some(&plan.project_id),
+                            None,
+                        );
+                    }
+                }
+                Err(error) => crate::diagnostics::record_failure(
+                    "startup_workflow_store",
+                    &error,
+                    Some(&plan.project_id),
+                    None,
+                ),
             }
         }
         let crate::Versioned {
@@ -148,23 +180,45 @@ SET value=excluded.value",
         for registration in &workspace.projects {
             let id = &registration.project_id;
             let path = &registration.path;
-            if let Ok(handle) = engine.store_path(path, false) {
-                let mut store = handle
-                    .lock()
-                    .map_err(|_| AppError::LockPoisoned("project store"))?;
-                let _ = Writer {
-                    journal: &engine.journal,
+            let result = match engine.store_path(path, false) {
+                Ok(handle) => {
+                    let mut store = handle
+                        .lock()
+                        .map_err(|_| AppError::LockPoisoned("project store"))?;
+                    if let Err(error) = (Writer {
+                        journal: &engine.journal,
+                    })
+                    .recover(&mut store, id, now_millis())
+                    {
+                        crate::diagnostics::record_failure(
+                            "startup_source_recovery",
+                            &error,
+                            Some(id),
+                            None,
+                        );
+                    }
+                    if eager {
+                        engine.index.refresh(&store, id, now_millis())
+                    } else {
+                        Ok(())
+                    }
                 }
-                .recover(&mut store, id, now_millis());
-                if eager && engine.index.refresh(&store, id, now_millis()).is_err() {
-                    let _ = engine
+                Err(error) => Err(error),
+            };
+            if let Err(error) = result {
+                crate::diagnostics::record_failure("startup_projection", &error, Some(id), None);
+                if let Err(error) =
+                    engine
                         .index
-                        .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis());
+                        .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis())
+                {
+                    crate::diagnostics::record_failure(
+                        "startup_projection_unavailable",
+                        &error,
+                        Some(id),
+                        None,
+                    );
                 }
-            } else {
-                let _ = engine
-                    .index
-                    .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis());
             }
         }
         Ok(engine)
@@ -266,7 +320,10 @@ SET value=excluded.value",
     }
     pub fn list(&self, kind: Option<&str>, query: &Query) -> Result<Value, AppError> {
         let mut page = self.index.summary_page(kind, query)?;
-        for item in page["items"].as_array_mut().ok_or(AppError::State)? {
+        for item in page["items"]
+            .as_array_mut()
+            .ok_or(AppError::invariant("summary page items"))?
+        {
             if item["type"] == "update" {
                 item["read"] = json!(self.receipt(
                     item["project_id"].as_str().unwrap(),
@@ -338,19 +395,33 @@ SET value=excluded.value",
         } = self.workspace()?;
         for item in &workspace.projects {
             let id = &item.project_id;
-            if let Ok(handle) = self.store(id) {
-                let store = handle
-                    .lock()
-                    .map_err(|_| AppError::LockPoisoned("project store"))?;
-                if self.index.refresh(&store, id, now_millis()).is_err() {
-                    let _ = self
-                        .index
-                        .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis());
+            let result = match self.store(id) {
+                Ok(handle) => {
+                    let store = handle
+                        .lock()
+                        .map_err(|_| AppError::LockPoisoned("project store"))?;
+                    self.index.refresh(&store, id, now_millis())
                 }
-            } else {
-                let _ = self
-                    .index
-                    .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis());
+                Err(error) => Err(error),
+            };
+            if let Err(error) = result {
+                crate::diagnostics::record_failure(
+                    "refresh_all_projection",
+                    &error,
+                    Some(id),
+                    None,
+                );
+                if let Err(error) =
+                    self.index
+                        .mark_unavailable(id, "PROJECT_UNAVAILABLE", now_millis())
+                {
+                    crate::diagnostics::record_failure(
+                        "refresh_all_projection_unavailable",
+                        &error,
+                        Some(id),
+                        None,
+                    );
+                }
             }
         }
         Ok(())

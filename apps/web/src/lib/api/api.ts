@@ -5,13 +5,18 @@ import type {
   Summary,
   CommandStatus,
   CommandResponse,
+  ProjectResource,
+  CardResource,
+  MilestoneResource,
+  UpdateResource,
 } from "../contracts/api.generated";
 export type {
   Bootstrap,
   Summary,
   CommandStatus,
 } from "../contracts/api.generated";
-export type Resource = NonNullable<CommandResponse["result"]["resource"]>;
+export type Resource =
+  ProjectResource | CardResource | MilestoneResource | UpdateResource;
 export type Metadata = Resource["metadata"];
 export type Pending = Readonly<{
   path: string;

@@ -1,6 +1,8 @@
 pub mod auth;
+mod command_state;
 mod context;
 mod diagnostics;
+pub use diagnostics::{record_failure, record_worker_failure};
 pub mod engine;
 mod git;
 mod history;
@@ -11,6 +13,7 @@ mod retention;
 mod roots;
 mod tags;
 mod views;
+mod workflow_kind;
 mod workspace;
 pub use index::Query;
 pub use mutation::Mutation;
@@ -31,14 +34,12 @@ pub enum AppError {
     Store(#[from] project_store::StoreError),
     #[error("state database error: {0}")]
     Database(#[from] rusqlite::Error),
-    #[error("invalid operational state")]
-    State,
     #[error("lock poisoned: {0}")]
     LockPoisoned(&'static str),
     #[error("stored data invalid ({context}): {source}")]
     StoredData {
         context: &'static str,
-        source: serde_json::Error,
+        source: Box<dyn std::error::Error + Send + Sync>,
     },
     #[error("source validation failed ({context}): {source}")]
     SourceValidation {
@@ -51,8 +52,14 @@ pub enum AppError {
     Invariant(&'static str),
 }
 impl AppError {
-    pub fn stored(context: &'static str, source: serde_json::Error) -> Self {
-        Self::StoredData { context, source }
+    pub fn stored(
+        context: &'static str,
+        source: impl Into<Box<dyn std::error::Error + Send + Sync>>,
+    ) -> Self {
+        Self::StoredData {
+            context,
+            source: source.into(),
+        }
     }
     pub fn invariant(context: &'static str) -> Self {
         Self::Invariant(context)

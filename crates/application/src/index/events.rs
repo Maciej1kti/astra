@@ -67,7 +67,8 @@ RETURNING CAST(value AS INTEGER)",
                 json!({"kind":"resync_required","cursor":current,"reason":"stream_epoch_changed"}),
             ]);
         };
-        let current_sequence = sequence(&current).ok_or(AppError::State)?;
+        let current_sequence =
+            sequence(&current).ok_or(AppError::invariant("event cursor sequence"))?;
         let events = self
             .events
             .lock()

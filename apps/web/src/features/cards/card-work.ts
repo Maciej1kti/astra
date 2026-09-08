@@ -39,13 +39,6 @@ export function moveAcceptance(
   return result;
 }
 
-export function acceptanceProgress(items: AcceptanceItem[]) {
-  return {
-    total: items.length,
-    completed: items.filter((item) => item.completed).length,
-  };
-}
-
 export function cardPurposeValidation(expectedResult: string, owner: string) {
   if ([...expectedResult].length > 4000)
     return "Expected result must use 4,000 characters or fewer.";

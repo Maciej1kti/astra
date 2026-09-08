@@ -1,3 +1,4 @@
+use crate::command_state::CommandState;
 use crate::{AppError, Reply, instant};
 use project_store::{
     document::{self, Kind},
@@ -12,6 +13,12 @@ use std::{
     time::Duration,
 };
 use uuid::Uuid;
+
+mod records;
+pub(crate) use records::CommandRecord;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Target {
@@ -194,6 +201,32 @@ WHERE state IN ('pending',
             .lock()
             .map_err(|_| AppError::LockPoisoned("database connection"))
     }
+    pub(crate) fn command_target(
+        &self,
+        epoch: &str,
+        request: &str,
+    ) -> Result<Option<String>, AppError> {
+        Ok(self
+            .db()?
+            .query_row(
+                "SELECT target_id FROM commands WHERE epoch=?1 AND request_id=?2",
+                params![epoch, request],
+                |row| row.get(0),
+            )
+            .optional()?)
+    }
+
+    /// Enrich a committed reply with projection warnings without changing its outcome.
+    pub(crate) fn update_result(&self, command: &Command, reply: &Reply) -> Result<(), AppError> {
+        let result = serde_json::to_string(reply)
+            .map_err(|source| AppError::stored("command result serialization", source))?;
+        self.db()?.execute(
+            "UPDATE commands SET result_json=?3 WHERE epoch=?1 AND request_id=?2",
+            params![command.epoch, command.request_id, result],
+        )?;
+        Ok(())
+    }
+
     pub(crate) fn known(db: &Connection, command: &Command) -> Result<Option<Reply>, AppError> {
         let row: Option<(String, String, Option<String>, Option<String>)> = db
             .query_row(
@@ -218,12 +251,17 @@ AND request_id=?2",
                 &command.request_id,
             )));
         }
-        if state == "committed" || state == "rejected" {
-            let text = if state == "committed" { result } else { error }
-                .ok_or_else(|| AppError::invariant("terminal command reply"))?;
+        let state = CommandState::parse(&state)?;
+        if matches!(state, CommandState::Committed | CommandState::Rejected) {
+            let text = if state == CommandState::Committed {
+                result
+            } else {
+                error
+            }
+            .ok_or_else(|| AppError::invariant("terminal command reply"))?;
             return Ok(Some(
                 serde_json::from_str::<Reply>(&text)
-                    .map_err(|_| AppError::State)?
+                    .map_err(|source| AppError::stored("terminal command reply", source))?
                     .replay(),
             ));
         }
@@ -270,7 +308,7 @@ AND request_id=?2",
             .optional()?
             .unwrap_or_else(|| "0".into())
             .parse()
-            .map_err(|_| AppError::State)?;
+            .map_err(|source| AppError::stored("journal clock floor", source))?;
         if now < floor - 300_000 {
             return Ok(Some(Reply::error(
                 503,
@@ -374,49 +412,21 @@ AND state IN ('prepared',
         }
         let tx = db.transaction()?;
         let state = if rejected {
-            "rejected"
+            CommandState::Rejected
         } else if intent.is_some() {
-            "prepared"
+            CommandState::Prepared
         } else {
-            "committed"
+            CommandState::Committed
         };
-        let result_json = serde_json::to_string(reply).map_err(|_| AppError::State)?;
-        tx.execute(
-            "INSERT INTO commands(epoch,
-    request_id,
-    digest,
-    state,
-    target_kind,
-    project_id,
-    target_id,
-    received_at,
-    expires_at,
-    result_json,
-    error_json)
-VALUES (?1,
-    ?2,
-    ?3,
-    ?4,
-    ?5,
-    ?6,
-    ?7,
-    ?8,
-    ?9,
-    ?10,
-    ?11)",
-            params![
-                command.epoch,
-                command.request_id,
-                command.digest(),
+        Self::insert_command(
+            &tx,
+            CommandRecord {
+                command,
                 state,
-                command.target.kind.as_str(),
-                command.target.project_id,
-                command.target.id,
-                instant(now),
-                instant(now + 7 * 86_400_000),
-                if rejected { None } else { Some(&result_json) },
-                if rejected { Some(&result_json) } else { None }
-            ],
+                target_kind: command.target.kind.as_str(),
+                reply,
+                received_at: now,
+            },
         )?;
         if let Some(intent) = intent {
             let relative = command.target.kind.directory().map_or_else(
@@ -484,9 +494,11 @@ VALUES (?1,
         let mut db = self.db()?;
         let tx = db.transaction()?;
         let command = &intent.command;
-        tx.execute(
-            "UPDATE commands SET state='committed' WHERE epoch=?1 AND request_id=?2",
-            params![command.epoch, command.request_id],
+        Self::set_command_state(
+            &tx,
+            &command.epoch,
+            &command.request_id,
+            CommandState::Committed,
         )?;
         tx.execute(
             "UPDATE write_intents SET resolved=1 WHERE epoch=?1 AND request_id=?2",
@@ -532,18 +544,16 @@ VALUES (?1,
         tx.commit()?;
         Ok(())
     }
-    pub fn mark(&self, command: &Command, state: &str) -> Result<(), AppError> {
-        self.db()?.execute(
-            "UPDATE commands SET state=?3 WHERE epoch=?1 AND request_id=?2",
-            params![command.epoch, command.request_id, state],
-        )?;
-        Ok(())
+    pub fn mark(&self, command: &Command, state: CommandState) -> Result<(), AppError> {
+        let db = self.db()?;
+        Self::set_command_state(&db, &command.epoch, &command.request_id, state)
     }
-    pub fn state(&self, command: &Command) -> Result<String, AppError> {
-        Ok(self.db()?.query_row(
+    pub fn state(&self, command: &Command) -> Result<CommandState, AppError> {
+        let state: String = self.db()?.query_row(
             "SELECT state FROM commands WHERE epoch=?1 AND request_id=?2",
             params![command.epoch, command.request_id],
             |r| r.get(0),
-        )?)
+        )?;
+        CommandState::parse(&state)
     }
 }

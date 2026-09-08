@@ -1,6 +1,6 @@
-# Local Projects
+# Astra
 
-A local planner tied to explicitly selected folders. Project content lives in
+Astra is a local planner tied to explicitly selected folders. Project content lives in
 Markdown/YAML under `.project/`; a Rust daemon coordinates conditional, durable
 writes. A Svelte browser interface and a Unix-socket CLI use the same application
 engine. SQLite provides a rebuildable search index and separate operational state
@@ -22,10 +22,17 @@ and keyboard alternatives. Planning widgets are pinned MIT dependencies; see
 [planning implementation and verification](progress/E026-planning-widgets.md).
 Browser access requires pairing; the CLI requires the server's Unix socket. No write command falls back to editing files directly.
 
-## Try it locally
+## Start here
 
-Run `npm run try`, then follow [manual testing](MANUAL-TESTING.md) for browser pairing
-and a short test walkthrough. This uses persistent synthetic data in `.manual/`.
+- [Run from source](DEVELOPMENT.md) for setup and toolchains.
+- [Try the interface](MANUAL-TESTING.md) for pairing and a guided walkthrough.
+- [Install a built package](ops/PACKAGE.md) for daemon and CLI installation.
+- [Contribute](CONTRIBUTING.md) for code ownership, checks and change conventions.
+- [Documentation](docs/README.md) for architecture, contracts and retained requirements.
+
+After completing development setup, run `npm run try`. It uses persistent
+synthetic data under ignored `.manual/`. The binaries retain their existing names:
+`projectd` is the daemon and `projectctl` is the command-line client.
 
 ## Run and package
 
@@ -43,6 +50,9 @@ private HTTPS proxy before using the browser. The installer does not enable a
 service or change network settings automatically.
 
 ## CLI
+
+See the [CLI guide](CLI.md) for named commands, readable text output, stdin input
+and safe retries. `--socket` can be supplied once through `ASTRA_SOCKET`.
 
 Select a registered folder explicitly; parent folders are never searched:
 
@@ -71,3 +81,10 @@ creating project metadata or requiring a running server.
 All new repository content is English. Fixtures and screenshots contain synthetic
 projects; user project data, credentials, runtime state and local dependencies are
 excluded from version control.
+
+## Project status and licensing
+
+Astra is being prepared for a supported open-source release. The project license
+will be selected by the owner before that release; no license choice is implied
+by this documentation. See the [release checklist](delivery/RELEASE-CHECKLIST.md)
+for outstanding acceptance and publication decisions.

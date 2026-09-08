@@ -1,5 +1,8 @@
 # Implementation evidence
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/EVIDENCE.md) are preserved in the published checkpoint; see [current status](STATE.md) for maintained guidance.
+
 ## Code health follow-up fixes — 2026-09-08
 
 See [implementation and checks](code-health-fixes-2026-09-08/README.md) for
@@ -43,7 +46,7 @@ rollback, state loss/new epoch, replaced source symlinks, changed references,
 invalid source preservation, and state databases larger than document limits.
 Success/error/pending response bodies are validated against OpenAPI.
 
-Full local checks passed: [journal log](checks/journal.txt). Total Rust tests: 27
+Full local checks passed: [journal log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/checks/journal.txt). Total Rust tests: 27
 (including the subprocess harness entry). These are controlled process-failure
 tests on macOS, not physical power-loss or full fault-matrix certification.
 Pending work includes command retention/maintenance, registration workflows,
@@ -67,7 +70,7 @@ complete durable command implementation.
 Validation: 17 Rust integration tests passed (7 domain, 5 document, 5 filesystem),
 including all 6 parser vectors and body/comment/UTF-8/symlink/race scenarios.
 Full local fmt/clippy/tests/release/Svelte/OpenAPI sequence passed:
-[store check log](checks/store.txt). Environment matches E001. No physical power
+[store check log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/checks/store.txt). Environment matches E001. No physical power
 loss, Linux/ext4, phone or server test is claimed.
 
 Owner decisions: public GitHub repository `Maciej1kti/astra`, English for all new
@@ -91,7 +94,7 @@ Nie testowano przeglądarek ani urządzenia mobilnego.
 | `npm install` | 0 znanych vulnerabilities według npm podczas tej instalacji; nie pełny audyt Rust/licencji. |
 | `.venv-check/bin/python scripts/check.py` | PASS pełnej lokalnej sekwencji. |
 
-Artefakty: [baseline](checks/baseline.json), [pełny log G0](checks/g0.txt).
+Artefakty: [baseline](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/checks/baseline.json), [pełny log G0](checks/g0.txt).
 
 Scenariusze A14/A16/A51 mają częściowe podstawy, lecz nie zostały zaliczone:
 A14 wymaga parsera i zmiany pliku, A16 adapterów wszystkich widoków, A51 całego

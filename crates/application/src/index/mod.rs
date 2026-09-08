@@ -140,7 +140,8 @@ fn upgrade_search_projection(connection: &mut Connection) -> Result<(), AppError
             let id: i64 = row.get(0)?;
             let body: String = row.get(1)?;
             let metadata: String = row.get(2)?;
-            let metadata: Value = serde_json::from_str(&metadata).map_err(|_| AppError::State)?;
+            let metadata: Value = serde_json::from_str(&metadata)
+                .map_err(|source| AppError::stored("index document metadata", source))?;
             tx.execute(
                 "UPDATE documents SET search_text=?2 WHERE rowid=?1",
                 params![id, search_text(&body, &metadata)],
@@ -199,7 +200,10 @@ pub(crate) fn page_revision(
         )
         .optional()?
         .unwrap_or(0);
-    let epoch = global.rsplit_once(':').ok_or(AppError::State)?.0;
+    let epoch = global
+        .rsplit_once(':')
+        .ok_or(AppError::invariant("index cursor epoch"))?
+        .0;
     Ok(format!("{epoch}:{workspace}:{local}"))
 }
 

@@ -2,10 +2,12 @@
   import { onMount, untrack } from "svelte";
   import { Calendar, DayGrid, List, Interaction } from "@event-calendar/core";
   import "@event-calendar/core/index.css";
-  import { cursorPage, type Page } from "../../lib/api/pagination";
-  import { isAbortError } from "../../lib/api/read-requests";
+  import { cursorPage } from "../../lib/api/pagination";
+  import { calendarEvents } from "./calendar-events";
+  import { getCalendar } from "../../lib/api/planning";
+  import { PlanningRead } from "./planning-read";
   import { projectionNotice } from "../../lib/api/projection-state";
-  import { api, resourcePath, type Summary } from "../../lib/api/api";
+  import { resourcePath, type Summary } from "../../lib/api/api";
   import { shiftDate, shiftedSchedule } from "./dates";
   import {
     calendarTarget,
@@ -68,7 +70,6 @@
   let active = $state(false);
   let freshness = $state("");
   let pageNotice = $state("");
-  let readController: AbortController | undefined;
   let readKey = "";
   let pageStart: string | null = null;
   let loadedScope = $state("");
@@ -76,8 +77,9 @@
   // A background read keeps the displayed, versioned projection interactive.
   // Scope changes still disable old events until their own page arrives.
   const ready = $derived(loadedScope === queryScope && !error);
-  let generation = 0;
-  let deferred = false;
+  const reads = new PlanningRead((value) => {
+    loading = value;
+  });
   let cancelled = false;
   let pointer: number | null = null;
   let reset = $state(0);
@@ -146,25 +148,7 @@
   });
   $effect(() => {
     if (active) return;
-    options.events = items
-      .filter((item) => item.title.toLowerCase().includes(search.toLowerCase()))
-      .map((item) => ({
-        id: `${item.project_id}:${item.item_id}`,
-        start: item.start,
-        end: shiftDate(item.end, 1),
-        allDay: true,
-        title: item.title,
-        editable: item.kind === "card_schedule" && ready,
-        startEditable: item.kind === "card_schedule" && ready,
-        durationEditable: item.kind === "card_schedule" && ready,
-        extendedProps: { astra: item },
-        backgroundColor: item.kind.endsWith("due")
-          ? "var(--calendar-due-bg)"
-          : item.kind.endsWith("review")
-            ? "var(--calendar-review-bg)"
-            : "var(--calendar-plan-bg)",
-        textColor: "var(--ink)",
-      }));
+    options.events = calendarEvents(items, search, ready);
   });
   $effect(() => {
     void project;
@@ -174,59 +158,29 @@
   });
   async function load(more: boolean) {
     const key = queryScope;
-    if (loading && key === readKey && !more) {
-      deferred = true;
-      return;
-    }
-    if (active) {
-      deferred = true;
-      return;
-    }
-    const current = ++generation;
+    const scope = { project, from: range.start, to: range.end };
     const target = more ? cursor : key === readKey ? pageStart : null;
-    readController?.abort();
-    readController = new AbortController();
-    const signal = readController.signal;
     readKey = key;
-    loading = true;
     error = "";
-    try {
-      const result = await cursorPage(
-        (page) =>
-          api<Page<CalendarItem>>(
-            `/api/v1/views/calendar?from=${range.start}&to=${range.end}${project ? `&project_id=${project}` : ""}&limit=1000${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
-            "GET",
-            undefined,
-            {},
-            { signal },
-          ),
-        target,
-      );
-      if (current !== generation) return;
-      if (active) {
-        deferred = true;
-        return;
-      }
-      items = result.value.items;
-      loadedScope = key;
-      cursor = result.value.page.next_cursor;
-      pageStart = result.reset ? null : target;
-      paged = pageStart !== null;
-      freshness = projectionNotice(result.value);
-      pageNotice = result.reset
-        ? "The calendar changed. Showing the first page of the latest results."
-        : "";
-    } catch (e) {
-      if (current === generation && !isAbortError(e)) error = String(e);
-    } finally {
-      if (current === generation) {
-        loading = false;
-        if (deferred && !active) {
-          deferred = false;
-          void load(false);
-        }
-      }
-    }
+    await reads.run({
+      key: `${key}:${target ?? ""}`,
+      read: (signal) =>
+        cursorPage((page) => getCalendar(scope, page, { signal }), target),
+      apply: (result) => {
+        items = result.value.items;
+        loadedScope = key;
+        cursor = result.value.page.next_cursor;
+        pageStart = result.reset ? null : target;
+        paged = pageStart !== null;
+        freshness = projectionNotice(result.value);
+        pageNotice = result.reset
+          ? "The calendar changed. Showing the first page of the latest results."
+          : "";
+      },
+      failed: (cause) => {
+        error = String(cause);
+      },
+    });
   }
   function change(info: Calendar.EventDropInfo | Calendar.EventResizeInfo) {
     const item = info.oldEvent.extendedProps.astra as CalendarItem;
@@ -354,15 +308,13 @@
       pointer = event.pointerId;
       cancelled = false;
       active = true;
+      reads.pause(true);
     };
     const release = () => {
       queueMicrotask(() => {
         pointer = null;
         active = false;
-        if (deferred) {
-          deferred = false;
-          void load(false);
-        }
+        reads.pause(false);
       });
     };
     const cancel = () => {
@@ -395,8 +347,7 @@
     update();
     media.addEventListener("change", update);
     return () => {
-      generation++;
-      readController?.abort();
+      reads.dispose();
       media.removeEventListener("change", update);
     };
   });

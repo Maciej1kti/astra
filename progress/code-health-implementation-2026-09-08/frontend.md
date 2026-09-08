@@ -46,7 +46,7 @@ Fifteen new targeted tests pass in `scripts/tests/view-projections.test.mjs`,
 GET sharing/cancellation/queue pressure/session cleanup, query scope and request
 count, cursor invalidation, SSE maximum wait, tag TTL/late completions, and mutation
 identity after a lost response. The projection regression was introduced before
-the summary adapter. [Recorded run](checks/frontend-unit.txt).
+the summary adapter. [Recorded run](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/frontend-unit.txt).
 
 The frontend `svelte-check` run completed with zero errors and zero warnings.
 Integrated browser verification is recorded in the implementation README; these

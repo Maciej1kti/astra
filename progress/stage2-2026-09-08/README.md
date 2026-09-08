@@ -1,5 +1,8 @@
 # Stage 2: structured cards and workspace tags
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/README.md) are preserved in the published checkpoint; see [current status](../STATE.md) for maintained guidance.
+
 This stage follows the verified UI repair batch at `52c40f4`. It addresses the
 next portions of CARD-01 and TAG-01 from the browser audit. The implemented slice
 and verified boundaries are recorded below.
@@ -60,17 +63,17 @@ already committed changes remain after a later conflict or a closed review.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Domain/OpenAPI/examples and specification checks | Pass | [Integrated log](checks/integrated.log) |
+| Domain/OpenAPI/examples and specification checks | Pass | [Integrated log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/integrated.log) |
 | Python helper tests | 4 passed | Integrated log |
 | JavaScript helper tests | 32 passed | Integrated log |
 | Rust tests, including crash/recovery, context, legacy index upgrade, tag limits and transport | 92 passed | Integrated log |
 | Rust formatting and Clippy with warnings denied | Pass | Integrated log |
-| Final Svelte/TypeScript check | 0 errors, 0 warnings | [UI log](checks/final-ui.log) |
-| Final production web and release daemon builds | Pass | [Web build](checks/final-web-build.log), [Rust build](checks/final-release-build.log) |
-| New card browser scenarios | 9/9 passed | [Results](card-browser/results.json), [log](checks/card-browser-checks.log) |
-| New tag browser scenarios | 6/6 passed | [Results](tag-browser/results.json), [log](checks/tag-browser-checks.log) |
-| Maintained browser smoke | Pass, exit 0 | [Log](checks/browser-smoke.log) |
-| Maintained planning regression | Pass, exit 0 | [Log](checks/planning-browser.log) |
+| Final Svelte/TypeScript check | 0 errors, 0 warnings | [UI log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/final-ui.log) |
+| Final production web and release daemon builds | Pass | [Web build](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/final-web-build.log), [Rust build](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/final-release-build.log) |
+| New card browser scenarios | 9/9 passed | [Results](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/card-browser/results.json), [log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/card-browser-checks.log) |
+| New tag browser scenarios | 6/6 passed | [Results](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/tag-browser/results.json), [log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/tag-browser-checks.log) |
+| Maintained browser smoke | Pass, exit 0 | [Log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/browser-smoke.log) |
+| Maintained planning regression | Pass, exit 0 | [Log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/planning-browser.log) |
 
 The final stage-specific run used Chromium 153.0.8010.12 on macOS Apple Silicon.
 It reported no JavaScript page errors; the card suite also checked for CSP
@@ -82,8 +85,8 @@ checklist move targets. This is browser viewport testing, not a physical phone.
 
 The initial card run found an ambiguous accessible label on the update-kind
 select. An explicit field name fixed it and the complete card suite then passed.
-The [initial log](checks/card-browser-checks.initial.log) and
-[failure screenshot](card-browser/C04-update-failure.png) are retained as
+The [initial log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/checks/card-browser-checks.initial.log) and
+[failure screenshot](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/stage2-2026-09-08/card-browser/C04-update-failure.png) are retained as
 superseded evidence. The first backend run also corrected a test assertion:
 replayed error responses intentionally remain identical to the original error
 and do not acquire a success-only `replayed` field. No write semantics changed

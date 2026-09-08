@@ -14,7 +14,9 @@ static VALIDATORS: LazyLock<Mutex<HashMap<&'static str, Arc<jsonschema::Validato
 
 pub fn validate(definition: &'static str, value: &Value) -> Result<(), AppError> {
     let validator = {
-        let mut cache = VALIDATORS.lock().map_err(|_| AppError::State)?;
+        let mut cache = VALIDATORS
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("API validator cache"))?;
         cache
             .entry(definition)
             .or_insert_with(|| {

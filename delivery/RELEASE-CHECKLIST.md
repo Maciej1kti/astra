@@ -1,24 +1,30 @@
-# Kryteria wydania v1
+# v1 release checklist
 
-> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
+[Owner scope decisions](../progress/SCOPE.md) take precedence. Built-in backup
+archives and source-format migration frameworks are deferred beyond v1. Their
+remaining stopped-copy recovery and operational-state obligations still apply.
 
-Każdy punkt potrzebuje wskazania testu/artefaktu. Wszystkie pola na starcie są niezaliczone.
+Each item needs revision-specific test evidence or an explicit owner decision.
+Unchecked items are not claims that the implementation is absent; they indicate
+that full release acceptance has not been established.
 
-- [ ] Wymagania R01–R36 pokryte wdrożonym zakresem; żaden widok v1 nie został usunięty bez decyzji właściciela.
-- [ ] Normalny zapis wyłącznie przez koordynatora; ETag, request retry, epoch i uncertain flow przechodzą testy.
-- [ ] Fault matrix uruchomiona; brak nierozstrzygniętej klasy utraty danych.
-- [ ] Rejestracja nie nadpisuje AGENTS ani .project, respektuje dokładny folder i allowlist z WWW.
-- [ ] Telefon ma pełną edycję i realnie przetestowane touch move/resize/scroll; desktop iPhone widzą te same źródła.
-- [ ] Kanban/calendar/Gantt/list/focus/projects/updates działają na realnym serwerze.
-- [ ] Backend prywatny, HTTPS/VPN sprawdzony, parowanie i revoke oraz CSRF/Origin/Host działają.
-- [ ] Markdown, path/backup parser i Git observer mają testy nadużyć.
-- [ ] Backup odtworzony, epoch zmienione, sesje odwołane, focus i źródła odzyskane.
-- [ ] Usunięcie indeksu nie usuwa trwałego stanu.
-- [ ] Release performance raportuje cały koszt serwera i klienta; targety spełnione lub jawnie zaakceptowane odstępstwa.
-- [ ] macOS ARM64 i Arch/Omarchy instalują się bez Node/Docker/root; wersje środowiska zapisane.
-- [ ] Upgrade i old-client flow nie gubią szkicu ani nie zapisują niezgodnego kontraktu.
-- [ ] Brak tokenów/prywatnych danych w logach, fixture i paczce wydania.
-- [ ] Lockfiles, checksums, notices i lista licencji obecne; brak niezaakceptowanej płatnej zależności.
-- [ ] Instrukcje użytkownika i agenta działają po wykonaniu krok po kroku.
-- [ ] Lista znanych ograniczeń oddziela produkt od braków dowodów.
-- [ ] Właściciel zatwierdził ewentualną publiczną publikację/licencję; domyślnie tylko przekazanie lokalnego wydania.
+- [ ] Requirements R01–R36 are covered; no required view was removed without an owner decision.
+- [ ] Normal writes use the coordinator; versions, retry identity, epochs and uncertain outcomes are verified.
+- [ ] The fault matrix is exercised with no unresolved class of data loss.
+- [ ] Registration preserves existing AGENTS and `.project` content, exact-folder selection and browser root authority.
+- [ ] Physical iPhone editing, touch move/resize/scroll and shared desktop/phone sources are verified.
+- [ ] Board, calendar, Gantt, list, focus, projects and updates work against the real server.
+- [ ] Private HTTPS access, pairing/revocation and CSRF/Origin/Host protections are verified.
+- [ ] Markdown, path/source parsing and Git observation have abuse coverage; archive parsing applies only when that deferred feature exists.
+- [ ] Stopped-server copy/recovery restores sources, workspace and focus, rotates the epoch and revokes old sessions. Built-in archive tooling remains deferred.
+- [ ] Deleting/rebuilding the index preserves durable operational state.
+- [ ] Release performance includes server/client costs; targets pass or deviations are explicitly accepted.
+- [ ] macOS ARM64 and Arch/Omarchy installation works without runtime Node, Docker or root; environments are recorded.
+- [ ] Upgrade and old-client flows preserve drafts and reject incompatible contracts.
+- [ ] Logs, fixtures and release packages contain no private data or tokens.
+- [ ] Lockfiles, package checksums, third-party notices and a dependency license inventory are present; paid dependencies require approval.
+- [ ] User and agent instructions have been followed successfully from a fresh setup.
+- [ ] Known product limitations are distinguished from missing verification evidence.
+- [ ] The owner has chosen the project license and approved the supported release. A public source checkpoint alone is not a supported release.
+- [ ] A private security-reporting channel and supported-version policy are documented.
+- [ ] README, contribution guide and maintained architecture describe the shipped version; obsolete handoff instructions are removed or clearly historical.

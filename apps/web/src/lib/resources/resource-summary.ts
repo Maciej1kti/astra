@@ -1,11 +1,11 @@
 import type { Resource, Summary } from "../api/api";
 import type {
+  AcceptanceItem,
   CardMetadata,
   MilestoneMetadata,
   ProjectMetadata,
   UpdateMetadata,
 } from "../contracts/domain.generated";
-import { acceptanceProgress } from "../../features/cards/card-work.ts";
 
 /** Project only summary fields; do not retain bodies, extensions or edit state. */
 export function detailSummary(
@@ -55,4 +55,11 @@ export function detailSummary(
     }
   }
   return result;
+}
+
+export function acceptanceProgress(items: AcceptanceItem[]) {
+  return {
+    total: items.length,
+    completed: items.filter((item) => item.completed).length,
+  };
 }

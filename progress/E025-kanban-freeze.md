@@ -1,5 +1,8 @@
 # E025 — Final Kanban polish and feature freeze
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/E025-kanban-freeze.md) are preserved in the published checkpoint; see [current status](STATE.md) for maintained guidance.
+
 Date: 2026-09-07. The owner requested finishing useful additions and freezing
 Kanban feature work after E024's whole-card dragging.
 

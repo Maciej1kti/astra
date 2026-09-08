@@ -1,5 +1,8 @@
 # Transport and connected UI verification
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/E005-transport-ui.md) are preserved in the published checkpoint; see [current status](STATE.md) for maintained guidance.
+
 Date: 2026-09-05. Host: macOS 27.0 ARM64. This is an implementation slice,
 not completion of G1/G2/G4 or the v1 acceptance matrix.
 

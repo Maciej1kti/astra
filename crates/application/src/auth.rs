@@ -26,7 +26,8 @@ pub struct Session {
 
 pub fn secret() -> Result<String, AppError> {
     let mut bytes = [0; 32];
-    getrandom::fill(&mut bytes).map_err(|_| AppError::State)?;
+    getrandom::fill(&mut bytes)
+        .map_err(|_| AppError::Unavailable("system random number generator"))?;
     Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
 }
 fn hash(secret: &str) -> Vec<u8> {
@@ -226,7 +227,8 @@ WHERE id=?1",
         let tx = db.transaction()?;
         let row = Self::by_secret(&tx, token)?;
         if !csrf_matches(
-            std::str::from_utf8(&row.5).map_err(|_| AppError::State)?,
+            std::str::from_utf8(&row.5)
+                .map_err(|source| AppError::stored("pairing CSRF token", source))?,
             csrf,
         ) {
             return Err(AppError::reject(403, "CSRF_MISMATCH"));
@@ -339,13 +341,13 @@ AND expires_at>?2",
         let (id, csrf, label, created, last, mut expires) =
             row.ok_or_else(|| AppError::reject(401, "SESSION_REQUIRED"))?;
         let created_ms = chrono::DateTime::parse_from_rfc3339(&created)
-            .map_err(|_| AppError::State)?
+            .map_err(|source| AppError::stored("session creation timestamp", source))?
             .timestamp_millis();
         if now >= created_ms + 90 * DAY {
             return Err(AppError::reject(401, "SESSION_EXPIRED"));
         }
         let last_ms = chrono::DateTime::parse_from_rfc3339(&last)
-            .map_err(|_| AppError::State)?
+            .map_err(|source| AppError::stored("session last-seen timestamp", source))?
             .timestamp_millis();
         let mut seen = last;
         if active && now - last_ms >= 60_000 {
@@ -358,9 +360,10 @@ AND expires_at>?2",
         }
         Ok(Session {
             id: id.clone(),
-            csrf: String::from_utf8(csrf).map_err(|_| AppError::State)?,
+            csrf: String::from_utf8(csrf)
+                .map_err(|source| AppError::stored("session CSRF token", source))?,
             expires_at_ms: chrono::DateTime::parse_from_rfc3339(&expires)
-                .map_err(|_| AppError::State)?
+                .map_err(|source| AppError::stored("session expiry timestamp", source))?
                 .timestamp_millis()
                 .min(created_ms + 90 * DAY),
             view: json!({"id":id,"device_label":label,"created_at":created,"last_seen_at":seen,"expires_at":expires,"current":true}),

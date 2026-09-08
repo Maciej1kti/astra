@@ -1,5 +1,8 @@
 # Audit repair batch — 2026-09-08
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/README.md) are preserved in the published checkpoint; see [current status](../STATE.md) for maintained guidance.
+
 This batch implements the confirmed findings in the [browser audit](../audit-2026-09-08/README.md) and its immediate UI consistency work. The owner requested implementation in a broad batch, followed by integrated verification. Historical audit evidence is retained unchanged.
 
 ## Implemented scope
@@ -29,14 +32,14 @@ The repair batch passed integrated verification on the release build in Chromium
 
 | Check | Final result | Evidence |
 | --- | --- | --- |
-| Contracts and Svelte/TypeScript | 0 errors, 0 warnings | [Static check](static-check.txt) |
-| Frontend and embedded release binaries | Passed | [Frontend](frontend-build.txt), [release](release-build.txt) |
+| Contracts and Svelte/TypeScript | 0 errors, 0 warnings | [Static check](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/static-check.txt) |
+| Frontend and embedded release binaries | Passed | [Frontend](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/frontend-build.txt), [release](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/release-build.txt) |
 | Node regression helpers | 25/25 passed | [Helper test inventory](verification.md) |
-| Editor, tags, archive, filters and navigation | 15/15 passed, no page errors | [Results](editor-browser/results.json) |
-| Calendar and timeline repair checks | Passed; 7 checkpoints, no page errors or CSP violations | [Results](planning-browser/results.json) |
-| Board, Settings, Focus and mobile sign-out | 6/6 passed, no page errors | [Results](board-dialog-browser/results.json) |
-| Maintained end-to-end browser regression | Passed | [Log](browser-smoke.txt) |
-| Maintained planning/gesture regression | Passed | [Log](planning-smoke.txt) |
+| Editor, tags, archive, filters and navigation | 15/15 passed, no page errors | [Results](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/editor-browser/results.json) |
+| Calendar and timeline repair checks | Passed; 7 checkpoints, no page errors or CSP violations | [Results](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/planning-browser/results.json) |
+| Board, Settings, Focus and mobile sign-out | 6/6 passed, no page errors | [Results](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/board-dialog-browser/results.json) |
+| Maintained end-to-end browser regression | Passed | [Log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/browser-smoke.txt) |
+| Maintained planning/gesture regression | Passed | [Log](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/planning-smoke.txt) |
 
 The final checks include a genuinely committed focus command with its response lost, stale-version conflicts, dirty and clean Undo, dirty Back followed by Save, delayed resource responses after changing view/project, exact tags with commas and outer spaces, archive restoration, keyboard ordering, touch scrolling, gesture cancellation, source-file updates, pagination and session revocation with preserved drafts. Test-only 401 pairing probes and deliberately injected 503 responses are expected; they are not unexplained application errors.
 
@@ -49,7 +52,7 @@ Implementation and visual records:
 - [Calendar and timeline](planning-implementation.md), [visual verification](planning-visual-review.md)
 - [Settings and Focus dialogs](board-settings-focus-dialogs.md), [visual verification](board-visual-verification.md)
 - [Test scope and corrected harness assumptions](verification.md)
-- [Screenshot inventory and hashes](screenshots.json)
+- [Screenshot inventory and hashes](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/screenshots.json)
 
 ## Remaining product work
 

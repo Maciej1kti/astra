@@ -2,6 +2,11 @@
   import WorkspaceNavigation from "./features/workspace/WorkspaceNavigation.svelte";
   import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
   import WorkspaceFilters from "./features/workspace/WorkspaceFilters.svelte";
+  import FocusScreen from "./features/workspace/screens/FocusScreen.svelte";
+  import ProjectsScreen from "./features/workspace/screens/ProjectsScreen.svelte";
+  import BoardOverview from "./features/workspace/screens/BoardOverview.svelte";
+  import UpdatesScreen from "./features/workspace/screens/UpdatesScreen.svelte";
+  import ResourceListScreen from "./features/workspace/screens/ResourceListScreen.svelte";
   import "./styles/workspace.css";
   import {
     editTarget,
@@ -20,14 +25,11 @@
     viewSections,
     affectedSections,
     invalidatesTags,
-    type Attention,
     type ViewQuery,
   } from "./features/workspace/view-queries";
 
   import { isAbortError } from "./lib/api/read-requests";
   import { invalidateTagSuggestions } from "./features/tags/tag-suggestions";
-  import ResourceMetadata from "./lib/ui/ResourceMetadata.svelte";
-  import { resourceLabel } from "./lib/resources/resource-presentation";
   import { readRoute, primaryResource } from "./features/workspace/navigation";
 
   import { applyTheme, readTheme } from "./features/settings/appearance";
@@ -45,12 +47,8 @@
   import FocusOrder from "./features/workspace/FocusOrder.svelte";
   import GitObservation from "./features/host/GitObservation.svelte";
   import Diagnostics from "./features/host/Diagnostics.svelte";
-  import {
-    api,
-    resourcePath,
-    type Summary,
-    type Resource,
-  } from "./lib/api/api";
+  import type { Summary } from "./lib/api/api";
+  import { getResource, getProject } from "./lib/api/resources";
 
   const routing = navigationState(
     readRoute(
@@ -77,13 +75,11 @@
         editor = null;
       },
       loadResource: (target) =>
-        api<Resource>(
-          resourcePath({
-            project_id: target.project,
-            type: target.type as Summary["type"],
-            id: target.id,
-          }),
-        ),
+        getResource({
+          project_id: target.project,
+          type: target.type as Summary["type"],
+          id: target.id,
+        }),
       showResource: (target, resource) => {
         editor = editTarget(target.project, resource);
       },
@@ -102,8 +98,7 @@
     error: message,
     ended: sessionEnded,
     foreground: async () => {
-      if (routing.current.project)
-        await api(`/api/v1/projects/${routing.current.project}`);
+      if (routing.current.project) await getProject(routing.current.project);
       await refresh();
     },
     changes: (events) => {
@@ -255,7 +250,6 @@
   let editor = $state<EditorTarget | null>(null);
   let adding = $state(false);
 
-  const statuses = ["planned", "active", "review", "done", "cancelled"];
   let today = $derived(
     boot
       ? new Intl.DateTimeFormat("en-CA", {
@@ -265,28 +259,6 @@
           day: "2-digit",
         }).format(clockTime)
       : "",
-  );
-  let filtered = $derived(
-    cards.filter(
-      (c) =>
-        (!routing.current.project ||
-          c.project_id === routing.current.project) &&
-        (routing.current.view === "list"
-          ? !!c.archived === routing.current.archived
-          : !c.archived) &&
-        (routing.current.view === "list" ||
-          c.title
-            .toLowerCase()
-            .includes(routing.current.search.trim().toLowerCase())),
-    ),
-  );
-  let visibleUpdates = $derived(
-    updates.filter(
-      (c) =>
-        (!routing.current.project ||
-          c.project_id === routing.current.project) &&
-        (!routing.current.unreadOnly || !c.read),
-    ),
   );
   function currentQuery(): ViewQuery {
     return {
@@ -305,37 +277,6 @@
   let selectedProject = $derived(
     projects.find((p) => p.id === routing.current.project),
   );
-  let visibleFocus = $derived(
-    focusCards.filter(
-      (item) =>
-        (!routing.current.project ||
-          item.project_id === routing.current.project) &&
-        !item.archived &&
-        item.title
-          .toLowerCase()
-          .includes(routing.current.search.trim().toLowerCase()),
-    ),
-  );
-  let attention = $derived.by(() => {
-    const grouped = new Map<string, Attention & { reasons: string[] }>();
-    for (const item of attentionRows) {
-      if (
-        (routing.current.project &&
-          item.project_id !== routing.current.project) ||
-        !item.label
-          .toLowerCase()
-          .includes(routing.current.search.trim().toLowerCase())
-      )
-        continue;
-      const key = `${item.project_id}:${item.target.type}:${item.target.id}`;
-      const existing = grouped.get(key);
-      if (existing) {
-        if (!existing.reasons.includes(item.reason))
-          existing.reasons.push(item.reason);
-      } else grouped.set(key, { ...item, reasons: [item.reason] });
-    }
-    return [...grouped.values()];
-  });
   function sessionEnded() {
     invalidateTagSuggestions(false);
     routing.reset();
@@ -356,28 +297,14 @@
   }
 
   async function open(item: Pick<Summary, "type" | "id" | "project_id">) {
-    const generation = ++routing.generation;
-    const requestedView = routing.current.view,
-      requestedProject = routing.current.project;
     error = "";
-    try {
-      const resource = await api<Resource>(resourcePath(item));
-      if (
-        generation !== routing.generation ||
-        routing.current.view !== requestedView ||
-        routing.current.project !== requestedProject
-      )
-        return;
-      editor = editTarget(item.project_id, resource);
-    } catch (e) {
-      if (
-        generation === routing.generation &&
-        routing.current.view === requestedView &&
-        routing.current.project === requestedProject
-      )
-        message(e);
-    }
+    await routing.openResource({
+      project: item.project_id,
+      type: item.type,
+      id: item.id,
+    });
   }
+
   function create(
     type: CreateType,
     initialMetadata: Partial<CardCreate> = {},
@@ -387,7 +314,7 @@
       error = "Select a project before creating a resource.";
       return;
     }
-    routing.generation++;
+    routing.startDraft();
     editor = createTarget(
       routing.current.project,
       type,
@@ -402,16 +329,6 @@
   }
   function addProject() {
     nativeAdding = true;
-  }
-
-  function projectLabel(id: string) {
-    return projects.find((p) => p.id === id)?.title ?? "Unavailable project";
-  }
-  function changeMonth(delta: number) {
-    const [year, m] = routing.current.month.split("-").map(Number);
-    routing.current.month = new Date(Date.UTC(year, m - 1 + delta, 1))
-      .toISOString()
-      .slice(0, 7);
   }
 
   function closeEditor() {
@@ -484,10 +401,10 @@
 {:else}
   <div class="app">
     <WorkspaceNavigation
-      bind:view={routing.current.view}
+      view={routing.current.view}
       {connected}
       {logout}
-      onchange={() => routing.generation++}
+      onchange={routing.selectView}
     />
     <div class="workspace">
       <WorkspaceHeader
@@ -561,125 +478,38 @@
           </p>{/if}
         {#if queryNotice}<p role="status" class="notice">{queryNotice}</p>{/if}
         <WorkspaceFilters
-          bind:route={routing.current}
+          route={routing.current}
           {projects}
-          onprojectchange={() => routing.generation++}
-          {changeMonth}
+          onchange={routing.changeFilters}
+          changeMonth={routing.changeMonth}
         />
         {#if (!queryReady || (projectionMessage && !projects.length)) && ["list", "updates", "projects"].includes(routing.current.view)}
           <div class="empty" role="status">Loading resources…</div>
         {:else if routing.current.view === "focus"}
-          <div class="stats">
-            <div>
-              <span>IN MOTION</span><strong
-                >{filtered.filter((c) => c.status === "active").length}</strong
-              >
-              <p>Loaded active cards</p>
-            </div>
-            <div>
-              <span>NEEDS A LOOK</span><strong>{attention.length}</strong>
-              <p>Blocked, overdue or up for review</p>
-            </div>
-            <div>
-              <span>ON THE HORIZON</span><strong
-                >{milestones.filter(
-                  (m) => !["achieved", "cancelled"].includes(m.status ?? ""),
-                ).length}</strong
-              >
-              <p>Loaded open milestones</p>
-            </div>
-          </div>
-          <div class="sectiontitle">
-            <h2>In focus</h2>
-            <span
-              >{visibleFocus.length} pinned{routing.current.project ||
-              routing.current.search
-                ? " in selection"
-                : ""}</span
-            >
-            {#if focus.length > 1}<button onclick={() => (arrangeFocus = true)}
-                >Arrange focus</button
-              >{/if}
-          </div>
-          <div class="grid">
-            {#each visibleFocus as item}{#if item}<button
-                  class="card"
-                  onclick={() => open(item)}
-                  ><small>{projectLabel(item.project_id)}</small>
-                  <h3>{item.title}</h3>
-                  <ResourceMetadata {item} showStatus /></button
-                >{/if}{:else}<div class="empty">
-                {routing.current.project || routing.current.search
-                  ? "No pinned cards match this selection. Change the project or clear the title filter."
-                  : "No pinned cards yet. Open a card and pin it to keep it here."}
-              </div>{/each}
-          </div>
-          <div class="sectiontitle">
-            <h2>Needs your attention</h2>
-            <span>{attention.length} items</span>
-          </div>
-          {#each attention as item}<button
-              class="listrow"
-              onclick={() =>
-                open({
-                  project_id: item.project_id,
-                  type: item.target.type,
-                  id: item.target.id,
-                })}
-              ><span class="priority"></span>
-              <div>
-                <strong>{item.label}</strong><small
-                  >{projectLabel(item.project_id)}</small
-                >
-              </div>
-              <span class="attention-reasons"
-                >{#each item.reasons as reason}<span class="badge"
-                    >{resourceLabel(reason)}</span
-                  >{/each}</span
-              ><span aria-hidden="true">↗</span></button
-            >{:else}<div class="empty">
-              <strong>A little breathing room.</strong>
-              <p>No blocked, overdue or review items in this selection.</p>
-            </div>{/each}
-          {#if attentionCursor}<button
-              disabled={loadingMore}
-              onclick={() => moreAttention()}>Next attention page</button
-            >{/if}
-          {#if attentionPaged}<button
-              disabled={loadingMore}
-              onclick={() => moreAttention(true)}>First attention page</button
-            >{/if}
-        {:else if routing.current.view === "projects"}<div class="grid">
-            {#each projects.filter((p) => p.title
-                .toLowerCase()
-                .includes(routing.current.search
-                    .trim()
-                    .toLowerCase())) as item}<button
-                class="card projectcard"
-                onclick={() => open(item)}
-                ><div class="projectinitial">
-                  {item.title.slice(0, 2).toUpperCase()}
-                </div>
-                <span class="badge">{item.status}</span>
-                <h2>{item.title}</h2>
-                <p>
-                  {cards.filter(
-                    (c) =>
-                      c.project_id === item.id &&
-                      !["done", "cancelled"].includes(c.status ?? ""),
-                  ).length} loaded open cards · {updates.filter(
-                    (c) => c.project_id === item.id,
-                  ).length} updates
-                </p>
-                <footer>
-                  <span>{item.availability}</span><span>Open project ↗</span>
-                </footer></button
-              >{:else}<div class="empty">
-                <strong>Start with a folder.</strong>
-                <p>Add a project from an approved directory to begin.</p>
-                <button onclick={addProject}>Add your first project</button>
-              </div>{/each}
-          </div>
+          <FocusScreen
+            route={routing.current}
+            {projects}
+            {cards}
+            {milestones}
+            {focusCards}
+            focusCount={focus.length}
+            {attentionRows}
+            {attentionCursor}
+            {attentionPaged}
+            {loadingMore}
+            {open}
+            onarrange={() => (arrangeFocus = true)}
+            {moreAttention}
+          />
+        {:else if routing.current.view === "projects"}
+          <ProjectsScreen
+            route={routing.current}
+            {projects}
+            {cards}
+            {updates}
+            {open}
+            {addProject}
+          />
         {:else if routing.current.view === "board" && routing.current.project}{#if Board}{#key routing.current.project}<Board
                 project={routing.current.project}
                 search={routing.current.search}
@@ -691,29 +521,8 @@
               {boardLoadError}
               <button onclick={loadBoard}>Retry loading board</button>
             </p>{:else}<p role="status">Loading board…</p>{/if}
-        {:else if routing.current.view === "board"}<p role="status">
-            All projects is an overview. Select a project above to drag and
-            reorder cards.
-          </p>
-          <div class="board">
-            {#each statuses as status}<section class="column">
-                <div class="sectiontitle">
-                  <h2>{status}</h2>
-                  <span
-                    >{filtered.filter((c) => c.status === status).length}</span
-                  >
-                </div>
-                {#each filtered
-                  .filter((c) => c.status === status)
-                  .sort( (a, b) => (a.position ?? "").localeCompare(b.position ?? "") ) as item}<button
-                    class="card"
-                    onclick={() => open(item)}
-                    ><small>{projectLabel(item.project_id)}</small>
-                    <h3>{item.title}</h3>
-                    <ResourceMetadata {item} compact /></button
-                  >{:else}<p class="columnempty">Nothing here yet</p>{/each}
-              </section>{/each}
-          </div>
+        {:else if routing.current.view === "board"}
+          <BoardOverview route={routing.current} {projects} {cards} {open} />
         {:else if routing.current.view === "calendar" || routing.current.view === "gantt"}{#if DateViews}<DateViews
               project={routing.current.project}
               month={routing.current.month}
@@ -723,10 +532,7 @@
               calendarDate={routing.current.calendarDate}
               calendarLayout={routing.current.calendarLayout}
               workspaceToday={today}
-              onCalendarNavigate={(date, layout) => {
-                routing.current.calendarDate = date;
-                routing.current.calendarLayout = layout;
-              }}
+              onCalendarNavigate={routing.navigateCalendar}
               search={routing.current.search}
               {open}
               onpropose={(proposal) => (dateDraft = proposal)}
@@ -737,50 +543,17 @@
                 >Retry loading planning view</button
               >
             </p>{:else}<p role="status">Loading date views…</p>{/if}
-        {:else if routing.current.view === "updates"}<div class="updates">
-            {#each visibleUpdates as item}<button
-                class="update"
-                onclick={() => open(item)}
-                ><span class="updateicon">↗</span>
-                <div>
-                  <small
-                    >{projectLabel(item.project_id)} · {item.recorded_at?.slice(
-                      0,
-                      10,
-                    )}</small
-                  >
-                  <h3>{item.title}</h3>
-                  <span class="badge"
-                    >{resourceLabel(item.kind ?? "update")}</span
-                  >
-                  <span class="badge">{item.read ? "Read" : "Unread"}</span>
-                </div></button
-              >{:else}<div class="empty">
-                No updates yet. Record a result, blocker or decision.
-              </div>{/each}
-          </div>
-        {:else}<div class="table">
-            <div class="tablehead">
-              <span>Title / project</span><span>Card details</span>
-            </div>
-            {#each routing.current.collection === "cards" ? filtered : milestones.filter((m) => !routing.current.project || m.project_id === routing.current.project) as item}<button
-                class="listrow"
-                onclick={() => open(item)}
-                ><div>
-                  <strong>{item.title}</strong><small
-                    >{projectLabel(item.project_id)}</small
-                  >
-                </div>
-                <div class="row-metadata">
-                  <ResourceMetadata {item} showStatus compact />
-                </div></button
-              >{:else}<div class="empty">
-                {routing.current.archived &&
-                routing.current.collection === "cards"
-                  ? "No archived cards match this selection. Clear filters to see more archived cards."
-                  : "No items match this selection. Try another project or clear the filters."}
-              </div>{/each}
-          </div>{/if}
+        {:else if routing.current.view === "updates"}
+          <UpdatesScreen route={routing.current} {projects} {updates} {open} />
+        {:else}
+          <ResourceListScreen
+            route={routing.current}
+            {projects}
+            {cards}
+            {milestones}
+            {open}
+          />
+        {/if}
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =
             routing.current.view === "updates"
               ? "update"
@@ -862,9 +635,7 @@
 <RegistrationBrowser
   bind:open={adding}
   onregistered={async (id) => {
-    routing.current.project = id;
-    routing.current.view = "board";
-    routing.current.search = "";
+    routing.showProject(id);
     await refresh().catch(message);
   }}
 />
@@ -886,9 +657,7 @@
     }}
     onadded={(id) => {
       nativeAdding = false;
-      routing.current.project = id;
-      routing.current.view = "board";
-      routing.current.search = "";
+      routing.showProject(id);
       void refresh().catch(message);
     }}
   />{/if}

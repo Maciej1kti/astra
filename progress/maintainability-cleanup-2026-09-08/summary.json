@@ -1,0 +1,32 @@
+{
+  "baseline": "2a5530a8bb83eec0c3f6f289cac8587aa9d66898",
+  "removed_files": 433,
+  "removed_bytes": 31302513,
+  "removed_progress_files": 428,
+  "source_components": {
+    "App.svelte": {
+      "before_total": 894,
+      "after_total": 887,
+      "before_script": 463,
+      "after_script": 456
+    },
+    "features/planning/CalendarView.svelte": {
+      "before_total": 763,
+      "after_total": 714,
+      "before_script": 402,
+      "after_script": 353
+    },
+    "features/planning/GanttView.svelte": {
+      "before_total": 801,
+      "after_total": 728,
+      "before_script": 380,
+      "after_script": 307
+    },
+    "features/tags/TagManager.svelte": {
+      "before_total": 814,
+      "after_total": 548,
+      "before_script": 364,
+      "after_script": 92
+    }
+  }
+}

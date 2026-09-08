@@ -4,10 +4,23 @@ import {
   writeRoute,
   searchOnlyNavigation,
   type WorkspaceRoute,
+  type View,
 } from "./navigation";
 import type { Resource } from "../../lib/api/api";
 
 type ResourceRoute = NonNullable<WorkspaceRoute["resource"]>;
+export type RouteFilters = Pick<
+  WorkspaceRoute,
+  | "project"
+  | "search"
+  | "collection"
+  | "archived"
+  | "status"
+  | "priority"
+  | "label"
+  | "unreadOnly"
+  | "month"
+>;
 type NavigationHooks = {
   today: () => string;
   hasEditor: () => boolean;
@@ -53,6 +66,7 @@ export function navigationState(
       await hooks.refresh();
       if (requested !== generation) return;
       await tick();
+      if (requested !== generation) return;
       lastUrl = location.pathname + location.search;
       ready = false;
     } catch (cause) {
@@ -91,8 +105,39 @@ export function navigationState(
     ready = true;
     lastUrl = url;
   }
+  function invalidateResourceRead() {
+    generation++;
+    pending = null;
+    restoring = false;
+  }
+  function assign(route: WorkspaceRoute) {
+    invalidateResourceRead();
+    current = route;
+  }
+  function changeFilters(patch: Partial<RouteFilters>) {
+    if (patch.project !== undefined && patch.project !== current.project)
+      invalidateResourceRead();
+    current = {
+      ...current,
+      ...patch,
+      ...(patch.collection !== undefined &&
+      patch.collection !== current.collection
+        ? { status: "" }
+        : {}),
+    };
+  }
+  async function openResource(target: ResourceRoute) {
+    invalidateResourceRead();
+    const requested = generation;
+    try {
+      const resource = await hooks.loadResource(target);
+      if (requested === generation) hooks.showResource(target, resource);
+    } catch (cause) {
+      if (requested === generation) hooks.error(cause);
+    }
+  }
   return {
-    get current() {
+    get current(): Readonly<WorkspaceRoute> {
       return current;
     },
     get pending() {
@@ -101,22 +146,37 @@ export function navigationState(
     get restoring() {
       return restoring;
     },
-    get generation() {
-      return generation;
+    selectView(view: View) {
+      if (view !== current.view) assign({ ...current, view });
     },
-    set generation(value: number) {
-      generation = value;
+    showProject(project: string) {
+      assign({ ...current, project, view: "board", search: "" });
     },
-    assign(route: WorkspaceRoute) {
-      current = route;
+    startDraft() {
+      invalidateResourceRead();
+    },
+    changeMonth(delta: number) {
+      const [year, month] = current.month.split("-").map(Number);
+      changeFilters({
+        month: new Date(Date.UTC(year, month - 1 + delta, 1))
+          .toISOString()
+          .slice(0, 7),
+      });
+    },
+    navigateCalendar(
+      calendarDate: string,
+      calendarLayout: WorkspaceRoute["calendarLayout"],
+    ) {
+      current = { ...current, calendarDate, calendarLayout };
     },
     reset() {
-      generation++;
-      pending = null;
-      restoring = false;
+      invalidateResourceRead();
       ready = false;
     },
     restore,
+    assign,
+    changeFilters,
+    openResource,
     keepEditing,
     fromHistory,
     sync,

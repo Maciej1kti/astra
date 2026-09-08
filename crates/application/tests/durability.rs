@@ -209,7 +209,10 @@ fn duplicate_references_preserve_conflicts_and_store_one_recovery_precondition()
             .unwrap(),
         1
     );
-    assert_eq!(journal.state(&cmd).unwrap(), "committed");
+    assert_eq!(
+        journal.state(&cmd).unwrap(),
+        crate::command_state::CommandState::Committed
+    );
 }
 
 #[test]
@@ -383,7 +386,10 @@ fn external_edits_after_prepared_are_not_overwritten() {
             .unwrap(),
         0
     );
-    assert_eq!(journal.state(&cmd).unwrap(), "needs_review");
+    assert_eq!(
+        journal.state(&cmd).unwrap(),
+        crate::command_state::CommandState::NeedsReview
+    );
     assert_eq!(source(&store), b"external edit must survive");
 }
 
@@ -429,7 +435,10 @@ fn recovery_rechecks_dependencies_even_when_target_is_unchanged() {
             .unwrap(),
         0
     );
-    assert_eq!(journal.state(&cmd).unwrap(), "needs_review");
+    assert_eq!(
+        journal.state(&cmd).unwrap(),
+        crate::command_state::CommandState::NeedsReview
+    );
     assert_eq!(source(&store), original);
 }
 
@@ -505,6 +514,9 @@ fn replacement_symlink_after_prepared_requires_review() {
             .unwrap(),
         0
     );
-    assert_eq!(journal.state(&cmd).unwrap(), "needs_review");
+    assert_eq!(
+        journal.state(&cmd).unwrap(),
+        crate::command_state::CommandState::NeedsReview
+    );
     assert_eq!(fs::read(env.root.join("outside")).unwrap(), b"untouchable");
 }

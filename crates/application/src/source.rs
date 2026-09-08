@@ -42,10 +42,11 @@ pub(crate) fn collection(
     store: &ProjectStore,
     kind: Kind,
 ) -> Result<Vec<document::ParsedDocument>, AppError> {
-    let directory = match store
-        .directory
-        .child(kind.directory().ok_or(AppError::State)?, false)
-    {
+    let directory = match store.directory.child(
+        kind.directory()
+            .ok_or(AppError::invariant("source collection kind"))?,
+        false,
+    ) {
         Ok(directory) => directory,
         Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
             return Ok(vec![]);

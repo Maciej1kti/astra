@@ -1,8 +1,8 @@
+import { acceptanceProgress } from "../../apps/web/src/lib/resources/resource-summary.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   acceptanceValidation,
-  acceptanceProgress,
   moveAcceptance,
   cardPurposeValidation,
 } from "../../apps/web/src/features/cards/card-work.ts";

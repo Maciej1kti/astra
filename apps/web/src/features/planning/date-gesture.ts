@@ -1,6 +1,7 @@
 type Options = {
   delta: (x: number, y: number, startX: number, startY: number) => number;
   commit: (days: number) => void;
+  active: (value: boolean) => void;
   operation?: "move" | "start" | "end";
 };
 /** Gesture previews never write data. Only pointerup proposes a versioned edit. */
@@ -38,8 +39,7 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     node.removeAttribute("data-dragging");
     if (captured !== null && node.hasPointerCapture(captured))
       node.releasePointerCapture(captured);
-    if (captured !== null)
-      window.dispatchEvent(new Event("planning-gesture-ended"));
+    if (captured !== null) options.active(false);
   }
   function paint() {
     frame = 0;
@@ -74,7 +74,7 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     startY = event.clientY;
     node.setPointerCapture(pointer);
     node.setAttribute("data-dragging", "true");
-    window.dispatchEvent(new Event("planning-gesture-started"));
+    options.active(true);
     event.preventDefault();
   }
   function move(event: PointerEvent) {

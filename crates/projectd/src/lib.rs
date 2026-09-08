@@ -137,7 +137,6 @@ fn failure_diagnostic(error: &AppError) -> String {
         AppError::Invariant(context) => format!("broken invariant ({context})"),
         AppError::Store(_) => "source storage error".into(),
         AppError::Database(_) => "state database error".into(),
-        AppError::State => "invalid operational state".into(),
         AppError::Rejected(_) => "request rejected".into(),
     }
 }
@@ -246,7 +245,7 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
     {
         Ok(Handled::Response(response)) => response,
         Ok(Handled::Events(input, permit)) => events::serve(service, input, permit).await,
-        Err(_) => failure(AppError::State),
+        Err(_) => failure(AppError::Unavailable("application worker")),
     }
 }
 fn dispatch(service: &Service, input: Input) -> Result<Response, AppError> {

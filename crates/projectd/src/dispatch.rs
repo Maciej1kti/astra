@@ -426,7 +426,7 @@ pub(super) fn run(
             "etag",
             format!("\"{version}\"")
                 .parse()
-                .map_err(|_| AppError::State)?,
+                .map_err(|_| AppError::invariant("resource ETag header"))?,
         );
     }
     Ok(reply)

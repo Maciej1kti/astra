@@ -1,9 +1,8 @@
 /** Real paired browser and synthetic audit-host source files. No authentication bypass. */
-import { chromium, expect } from "@playwright/test";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { execFileSync } from "node:child_process";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { expect } from "@playwright/test";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { isMain, runBrowserSuite } from "../runtime.mjs";
 import assert from "node:assert/strict";
 
 export async function runEditorChecks({
@@ -918,110 +917,44 @@ export async function runEditorChecks({
   return { results, errors };
 }
 
-async function main() {
-  const root = resolve(import.meta.dirname, "../../..");
-  const runtimeDir = resolve(
-    root,
-    process.env.ASTRA_AUDIT_RUNTIME ?? ".manual/audit-2026-09-08",
-  );
-  const evidenceDir = resolve(
-    root,
-    process.env.ASTRA_EVIDENCE_DIR ?? "test-results/browser/regressions/editor",
-  );
-  const config = JSON.parse(
-    await readFile(join(runtimeDir, "connection.json"), "utf8"),
-  );
-  const cli = (...args) => {
-    let output;
-    try {
-      output = execFileSync(
-        join(
-          root,
-          "target",
-          process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug",
-          "projectctl",
-        ),
-        ["--socket", config.socket, ...args],
-        { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-      );
-    } catch (error) {
-      if (error.status !== 9) throw error;
-      output = error.stdout;
-    }
-    const envelope = JSON.parse(output);
-    assert.equal(envelope.ok, true, JSON.stringify(envelope.error));
-    return envelope.data;
-  };
-  let storageState;
-  try {
-    storageState = JSON.parse(
-      await readFile(join(runtimeDir, "browser-state.json"), "utf8"),
-    );
-  } catch {}
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath: process.env.ASTRA_TEST_CHROMIUM || undefined,
-  });
-  try {
-    const context = await browser.newContext({
-      ignoreHTTPSErrors: true,
-      storageState,
-      viewport: { width: 1440, height: 1000 },
-    });
-    const page = await context.newPage();
-    await page.goto(config.origin);
-    const requestAccess = page.getByRole("button", { name: "Request access" });
-    await requestAccess
-      .or(page.getByLabel("Project", { exact: true }))
-      .waitFor();
-    if (await requestAccess.isVisible()) {
-      await requestAccess.click();
-      await page
-        .getByText("Compare this challenge on the host machine:")
-        .waitFor();
-      const visible = await page.locator("body").innerText();
-      const matching = cli("pairings").items.filter((item) =>
-        visible.includes(item.challenge),
-      );
-      assert.equal(matching.length, 1);
-      cli("approve", matching[0].id, "--challenge", matching[0].challenge);
-      await page
-        .getByRole("button", { name: "I approved this browser", exact: true })
-        .click();
-    }
-    await page.getByLabel("Project", { exact: true }).waitFor();
-    await context.storageState({
-      path: join(runtimeDir, "browser-state.json"),
-    });
-    const outcome = await runEditorChecks({
-      page,
+if (isMain(import.meta.url))
+  await runBrowserSuite(
+    async ({
       config,
       cli,
-      evidenceDir,
-      runtimeDir,
-    });
-    if (
-      outcome.results.some((result) => result.status !== "pass") ||
-      outcome.errors.length
-    )
-      process.exitCode = 1;
-    console.log(
-      JSON.stringify({
-        passed: outcome.results.filter((result) => result.status === "pass")
-          .length,
-        total: outcome.results.length,
-        errors: outcome.errors,
-        browser: browser.version(),
+      runtime: runtimeDir,
+      evidence: evidenceDir,
+      browser,
+      newContext,
+      pair,
+    }) => {
+      const context = await newContext();
+      const page = await context.newPage();
+      await pair(page);
+      await context.storageState({
+        path: join(runtimeDir, "browser-state.json"),
+      });
+      const outcome = await runEditorChecks({
+        page,
+        config,
+        cli,
         evidenceDir,
-      }),
-    );
-  } finally {
-    await browser.close();
-  }
-}
-
-if (
-  process.argv[1] &&
-  pathToFileURL(resolve(process.argv[1])).href === import.meta.url
-)
-  await main();
+        runtimeDir,
+      });
+      if (
+        outcome.results.some((result) => result.status !== "pass") ||
+        outcome.errors.length
+      )
+        process.exitCode = 1;
+      console.log(
+        JSON.stringify({
+          passed: outcome.results.filter((result) => result.status === "pass")
+            .length,
+          total: outcome.results.length,
+          errors: outcome.errors,
+          browser: browser.version(),
+          evidenceDir,
+        }),
+      );
+    },
+  );

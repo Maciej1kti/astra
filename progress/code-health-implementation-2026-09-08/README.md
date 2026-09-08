@@ -1,5 +1,8 @@
 # Code health implementation — 2026-09-08
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/README.md) are preserved in the published checkpoint; see [current status](../STATE.md) for maintained guidance.
+
 Implemented the owner-authorized follow-up to the [repository audit](../code-health-2026-09-08/README.md),
 starting from `171663744338efe8a3f0d23c10d610d6841086f8`. The application keeps its
 existing features, source authority, authenticated server writes, expected versions,
@@ -47,7 +50,7 @@ The final implementation's fully indexed eager initialization took 4,952 ms vers
 Required source verification still took 4,994 ms afterward. Startup modes have one
 sample each and exclude listener binding/browser rendering. The graph measurement
 compares the original expression with the actual extracted function, not widget
-rendering. See [backend evidence](backend.md), [raw final workload](checks/backend-final.json)
+rendering. See [backend evidence](backend.md), [raw final workload](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/backend-final.json)
 and [graph measurements](checks/gantt-benchmark.json).
 
 The initial JS/CSS gzip estimate is about 119 KiB, versus 115.5 KiB at the baseline,
@@ -59,19 +62,19 @@ dependency was added, and two unused direct dependencies were removed.
 
 The integrated check covers generated contracts/examples, package links, OpenAPI,
 112 Rust tests, 47 JavaScript tests, 12 Python tests, zero Svelte errors/warnings,
-formatting, strict Clippy and the release build. See the [full integrated output](checks/full-check.txt)
-and [final verification capture](checks/final-check.txt).
+formatting, strict Clippy and the release build. See the [full integrated output](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/full-check.txt)
+and [final verification capture](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/final-check.txt).
 
 The release browser command runs the broad workflow and planning suites plus card,
 tags, editor, dialogs, planning navigation and code-health regressions. It uses real
 HTTPS, normal pairing, Unix CLI writes and synthetic files. Bulk output remains in
-`test-results/browser/`; all eight suites passed. See the [result summary](checks/browser-results.json)
-and [complete browser output](checks/browser-release.txt). Expected authentication
+`test-results/browser/`; all eight suites passed. See the [result summary](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/browser-results.json)
+and [complete browser output](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/browser-release.txt). Expected authentication
 and deliberately injected service errors in the log are exercised recovery cases;
 there were no unhandled page errors or CSP violations.
 The packaged archive also passed checksum verification, repeat temporary installation,
 stop/restart, copied-state recovery, index rebuild and old-epoch rejection.
-[Packaged release check](checks/package-release.txt).
+[Packaged release check](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-implementation-2026-09-08/checks/package-release.txt).
 
 ```sh
 .venv-check/bin/python scripts/check.py

@@ -10,7 +10,6 @@ use crate::{
 };
 use project_domain::ordering::{Position, validate_dependencies};
 use project_store::{document::Kind, filesystem::ProjectStore};
-use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use uuid::Uuid;
@@ -50,15 +49,7 @@ impl Engine {
             (Kind::Project, false) => "ProjectPatch",
             _ => return Err(AppError::reject(405, "METHOD_NOT_ALLOWED")),
         };
-        let known_id: Option<String> = self
-            .journal
-            .db()?
-            .query_row(
-                "SELECT target_id FROM commands WHERE epoch=?1 AND request_id=?2",
-                params![epoch, request_id],
-                |r| r.get(0),
-            )
-            .optional()?;
+        let known_id = self.journal.command_target(&epoch, &request_id)?;
         let id = id
             .or_else(|| payload["id"].as_str().map(str::to_owned))
             .or(known_id)
@@ -123,12 +114,9 @@ impl Engine {
             let _ = self
                 .index
                 .mark_unavailable(&project_id, "PROJECTION_DEGRADED", now);
-            if let Ok(db) = self.journal.db() {
-                let _ = db.execute(
-                    "UPDATE commands SET result_json=?3 WHERE epoch=?1 AND request_id=?2",
-                    params![epoch, request_id, serde_json::to_string(&reply).unwrap()],
-                );
-            }
+            // The source is already committed. Failure to enrich the replay warning
+            // must not turn this successful write into a rejected command.
+            let _ = self.journal.update_result(&command, &reply);
         }
         Ok(reply)
     }
@@ -173,73 +161,9 @@ fn prepare(
         }
         Some(source)
     };
-    let mut next = if create {
-        let mut metadata = payload.clone();
-        let body = metadata
-            .as_object_mut()
-            .unwrap()
-            .remove("body")
-            .unwrap_or(json!(""));
-        metadata["id"] = json!(id);
-        if kind == Kind::Update {
-            metadata["recorded_at"] = json!(instant(now));
-        } else {
-            metadata["created_at"] = json!(instant(now));
-            metadata["updated_at"] = json!(instant(now));
-            metadata
-                .as_object_mut()
-                .unwrap()
-                .entry("status")
-                .or_insert(json!("planned"));
-            metadata
-                .as_object_mut()
-                .unwrap()
-                .entry("archived")
-                .or_insert(json!(false));
-            if kind == Kind::Card {
-                metadata
-                    .as_object_mut()
-                    .unwrap()
-                    .entry("kind")
-                    .or_insert(json!("outcome"));
-                metadata
-                    .as_object_mut()
-                    .unwrap()
-                    .entry("priority")
-                    .or_insert(json!("normal"));
-            }
-        }
-        json!({"type":kind.as_str(),"metadata":metadata,"body":body})
-    } else {
-        let mut next = previous.as_ref().unwrap().value();
-        if let Some(undo) = payload.get("undo") {
-            let current = &previous.as_ref().unwrap().version;
-            next = crate::history::undo_document(
-                journal,
-                command,
-                undo["history_entry_id"].as_str().ok_or(AppError::State)?,
-                current,
-            )?;
-        }
-        if let Some(set) = payload["set"].as_object() {
-            for (key, value) in set {
-                if key == "body" {
-                    next["body"] = value.clone();
-                } else {
-                    next["metadata"][key] = value.clone();
-                }
-            }
-        }
-        if let Some(clear) = payload["clear"].as_array() {
-            for key in clear {
-                let key = key.as_str().unwrap();
-                if payload["set"].get(key).is_some() {
-                    return Err(AppError::reject(422, "SET_CLEAR_OVERLAP"));
-                }
-                next["metadata"].as_object_mut().unwrap().remove(key);
-            }
-        }
-        next
+    let mut next = match &previous {
+        None => create_document(command, now),
+        Some(previous) => patch_document(journal, command, previous)?,
     };
     let reorders = matches!(kind, Kind::Card | Kind::Milestone)
         && (create
@@ -257,72 +181,9 @@ fn prepare(
         Vec::new()
     };
     if reorders {
-        let mut ordered = siblings
-            .iter()
-            .filter(|source| {
-                let document = source.document.get();
-                document.id() != id
-                    && (kind != Kind::Card
-                        || document.status() == next["metadata"]["status"].as_str())
-            })
-            .collect::<Vec<_>>();
-        ordered.sort_by(|a, b| {
-            let a = a.document.get();
-            let b = b.document.get();
-            a.position().cmp(&b.position()).then(a.id().cmp(b.id()))
-        });
-        let ids = ordered
-            .iter()
-            .map(|source| source.document.get().id())
-            .collect::<Vec<_>>();
-        let slot = if let Some(placement) = payload.get("placement") {
-            let after = placement["after_id"].as_str();
-            let before = placement["before_id"].as_str();
-            let slot = match after {
-                None => 0,
-                Some(id) => ids
-                    .iter()
-                    .position(|item| *item == id)
-                    .map(|p| p + 1)
-                    .ok_or_else(|| AppError::reject(409, "ORDER_CHANGED"))?,
-            };
-            if ids.get(slot).copied() != before {
-                return Err(AppError::reject(409, "ORDER_CHANGED"));
-            }
-            slot
-        } else {
-            ordered.len()
-        };
-        let position = |slot: usize| -> Result<Position, AppError> {
-            Position::parse(
-                ordered[slot]
-                    .document
-                    .get()
-                    .position()
-                    .ok_or_else(|| AppError::invariant("ordered document position"))?,
-            )
-            .map_err(|_| AppError::reject(409, "ORDER_REBALANCE_REQUIRED"))
-        };
-        let low = if slot == 0 {
-            None
-        } else {
-            Some(position(slot - 1)?)
-        };
-        let high = if slot == ordered.len() {
-            None
-        } else {
-            Some(position(slot)?)
-        };
-        next["metadata"]["position"] = json!(
-            Position::between(low, high)
-                .map_err(|_| AppError::reject(409, "ORDER_REBALANCE_REQUIRED"))?
-                .to_string()
-        );
-        references.extend(ordered.iter().map(|source| Reference {
-            kind,
-            id: source.document.get().id().into(),
-            version: Some(source.version.clone()),
-        }));
+        let placement = resolve_placement(kind, id, payload, &next, &siblings)?;
+        next["metadata"]["position"] = json!(placement.position.to_string());
+        references.extend(placement.references);
     }
     if let Some(milestone) = next["metadata"]["milestone_id"].as_str() {
         let version = read(store, Kind::Milestone, milestone)?.version;
@@ -350,32 +211,7 @@ fn prepare(
         validate_dependencies(&graph).map_err(|_| AppError::reject(422, "DEPENDENCY_INVALID"))?;
     }
     if kind == Kind::Update {
-        let target = &next["metadata"]["target"];
-        let target_kind: Kind = serde_json::from_value(target["type"].clone())
-            .map_err(|_| AppError::reject(422, "INVALID_TARGET"))?;
-        let target_id = target["id"].as_str().unwrap();
-        let version = read(store, target_kind, target_id)?.version;
-        references.push(Reference {
-            kind: target_kind,
-            id: target_id.into(),
-            version: Some(version),
-        });
-        let mut updates = next["metadata"]["resolves"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default();
-        if let Some(id) = next["metadata"].get("supersedes") {
-            updates.push(id.clone());
-        }
-        for update in updates {
-            let id = update.as_str().unwrap();
-            let version = read(store, Kind::Update, id)?.version;
-            references.push(Reference {
-                kind: Kind::Update,
-                id: id.into(),
-                version: Some(version),
-            });
-        }
+        references.extend(report_references(store, &next)?);
     }
     Ok(PreparedMutation {
         draft: next,
@@ -392,4 +228,204 @@ fn dependencies(metadata: &Value) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn create_document(command: &Command, now: i64) -> Value {
+    let kind = command.target.kind;
+    let id = &command.target.id;
+    let payload = &command.payload;
+
+    let mut metadata = payload.clone();
+    let body = metadata
+        .as_object_mut()
+        .unwrap()
+        .remove("body")
+        .unwrap_or(json!(""));
+    metadata["id"] = json!(id);
+    if kind == Kind::Update {
+        metadata["recorded_at"] = json!(instant(now));
+    } else {
+        metadata["created_at"] = json!(instant(now));
+        metadata["updated_at"] = json!(instant(now));
+        metadata
+            .as_object_mut()
+            .unwrap()
+            .entry("status")
+            .or_insert(json!("planned"));
+        metadata
+            .as_object_mut()
+            .unwrap()
+            .entry("archived")
+            .or_insert(json!(false));
+        if kind == Kind::Card {
+            metadata
+                .as_object_mut()
+                .unwrap()
+                .entry("kind")
+                .or_insert(json!("outcome"));
+            metadata
+                .as_object_mut()
+                .unwrap()
+                .entry("priority")
+                .or_insert(json!("normal"));
+        }
+    }
+    json!({"type":kind.as_str(),"metadata":metadata,"body":body})
+}
+
+fn patch_document(
+    journal: &crate::journal::Journal,
+    command: &Command,
+    previous: &project_store::document::ParsedDocument,
+) -> Result<Value, AppError> {
+    let payload = &command.payload;
+    let mut next = previous.value();
+
+    if let Some(undo) = payload.get("undo") {
+        let current = &previous.version;
+        next = crate::history::undo_document(
+            journal,
+            command,
+            undo["history_entry_id"]
+                .as_str()
+                .ok_or(AppError::invariant("validated undo history entry ID"))?,
+            current,
+        )?;
+    }
+    if let Some(set) = payload["set"].as_object() {
+        for (key, value) in set {
+            if key == "body" {
+                next["body"] = value.clone();
+            } else {
+                next["metadata"][key] = value.clone();
+            }
+        }
+    }
+    if let Some(clear) = payload["clear"].as_array() {
+        for key in clear {
+            let key = key.as_str().unwrap();
+            if payload["set"].get(key).is_some() {
+                return Err(AppError::reject(422, "SET_CLEAR_OVERLAP"));
+            }
+            next["metadata"].as_object_mut().unwrap().remove(key);
+        }
+    }
+    Ok(next)
+}
+
+fn report_references(store: &ProjectStore, next: &Value) -> Result<Vec<Reference>, AppError> {
+    let mut references = Vec::new();
+
+    let target = &next["metadata"]["target"];
+    let target_kind: Kind = serde_json::from_value(target["type"].clone())
+        .map_err(|_| AppError::reject(422, "INVALID_TARGET"))?;
+    let target_id = target["id"].as_str().unwrap();
+    let version = read(store, target_kind, target_id)?.version;
+    references.push(Reference {
+        kind: target_kind,
+        id: target_id.into(),
+        version: Some(version),
+    });
+    let mut updates = next["metadata"]["resolves"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    if let Some(id) = next["metadata"].get("supersedes") {
+        updates.push(id.clone());
+    }
+    for update in updates {
+        let id = update.as_str().unwrap();
+        let version = read(store, Kind::Update, id)?.version;
+        references.push(Reference {
+            kind: Kind::Update,
+            id: id.into(),
+            version: Some(version),
+        });
+    }
+
+    Ok(references)
+}
+
+struct Placement {
+    position: Position,
+    references: Vec<Reference>,
+}
+
+fn resolve_placement(
+    kind: Kind,
+    id: &str,
+    payload: &Value,
+    next: &Value,
+    siblings: &[project_store::document::ParsedDocument],
+) -> Result<Placement, AppError> {
+    let mut ordered = siblings
+        .iter()
+        .filter(|source| {
+            let document = source.document.get();
+            document.id() != id
+                && (kind != Kind::Card || document.status() == next["metadata"]["status"].as_str())
+        })
+        .collect::<Vec<_>>();
+    ordered.sort_by(|a, b| {
+        let a = a.document.get();
+        let b = b.document.get();
+        a.position().cmp(&b.position()).then(a.id().cmp(b.id()))
+    });
+    let ids = ordered
+        .iter()
+        .map(|source| source.document.get().id())
+        .collect::<Vec<_>>();
+    let slot = if let Some(placement) = payload.get("placement") {
+        let after = placement["after_id"].as_str();
+        let before = placement["before_id"].as_str();
+        let slot = match after {
+            None => 0,
+            Some(id) => ids
+                .iter()
+                .position(|item| *item == id)
+                .map(|p| p + 1)
+                .ok_or_else(|| AppError::reject(409, "ORDER_CHANGED"))?,
+        };
+        if ids.get(slot).copied() != before {
+            return Err(AppError::reject(409, "ORDER_CHANGED"));
+        }
+        slot
+    } else {
+        ordered.len()
+    };
+    let position = |slot: usize| -> Result<Position, AppError> {
+        Position::parse(
+            ordered[slot]
+                .document
+                .get()
+                .position()
+                .ok_or_else(|| AppError::invariant("ordered document position"))?,
+        )
+        .map_err(|_| AppError::reject(409, "ORDER_REBALANCE_REQUIRED"))
+    };
+    let low = if slot == 0 {
+        None
+    } else {
+        Some(position(slot - 1)?)
+    };
+    let high = if slot == ordered.len() {
+        None
+    } else {
+        Some(position(slot)?)
+    };
+    let position = Position::between(low, high)
+        .map_err(|_| AppError::reject(409, "ORDER_REBALANCE_REQUIRED"))?;
+    let references = ordered
+        .iter()
+        .map(|source| Reference {
+            kind,
+            id: source.document.get().id().into(),
+            version: Some(source.version.clone()),
+        })
+        .collect();
+
+    Ok(Placement {
+        position,
+        references,
+    })
 }

@@ -1,8 +1,0 @@
-{"checkpoint":"desktop-calendar-month","calendarHeight":742,"documentWidth":1440}
-{"checkpoint":"desktop-calendar-overflow","calendarHeight":742,"documentWidth":1440}
-{"checkpoint":"desktop-calendar-workspace-today","calendarHeight":676,"documentWidth":1440}
-{"checkpoint":"mobile-390-calendar-agenda","calendarHeight":606,"documentWidth":390}
-{"checkpoint":"mobile-390-calendar-grid","calendarHeight":742,"documentWidth":390}
-{"checkpoint":"mobile-390-timeline-selection","documentWidth":390}
-{"checkpoint":"desktop-timeline-selection","documentWidth":1440}
-{"status":"pass","screenshots":7,"pageErrors":0,"cspViolations":0}

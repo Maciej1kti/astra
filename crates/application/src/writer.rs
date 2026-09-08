@@ -1,5 +1,6 @@
 //! One project lock surrounds this whole operation; the journal's DB mutex is
 //! held only for state transactions, never across source filesystem writes.
+use crate::command_state::CommandState;
 use crate::{
     AppError, Reply, instant,
     journal::{Command, Intent, Journal, Reference},
@@ -208,7 +209,13 @@ impl Writer<'_> {
             checkpoint(CommitPoint::Committed)?;
             Ok(())
         })();
-        if write.is_err() {
+        if let Err(error) = write {
+            crate::diagnostics::record_failure(
+                "source_commit",
+                &error,
+                Some(&command.target.project_id),
+                Some(&command.request_id),
+            );
             return Ok(Reply {
                 http_status: 202,
                 body: json!({"api_version":"1","request_id":command.request_id,"state":"prepared"}),
@@ -225,11 +232,12 @@ impl Writer<'_> {
     ) -> Result<usize, AppError> {
         let mut recovered = 0;
         for intent in self.journal.pending(project_id)? {
-            if self.journal.state(&intent.command)? == "needs_review" {
+            if self.journal.state(&intent.command)? == CommandState::NeedsReview {
                 break;
             }
             if intent.source_root != store.directory.path().to_str().unwrap() {
-                self.journal.mark(&intent.command, "needs_review")?;
+                self.journal
+                    .mark(&intent.command, CommandState::NeedsReview)?;
                 break;
             }
             let attempt = (|| -> Result<bool, AppError> {
@@ -253,15 +261,26 @@ impl Writer<'_> {
             match attempt {
                 Ok(true) => recovered += 1,
                 Ok(false) => {
-                    self.journal.mark(&intent.command, "needs_review")?;
+                    self.journal
+                        .mark(&intent.command, CommandState::NeedsReview)?;
                     break;
                 }
-                Err(AppError::Store(StoreError::Invalid(_) | StoreError::Conflict)) => {
-                    self.journal.mark(&intent.command, "needs_review")?;
-                    break;
-                }
-                Err(_) => {
-                    self.journal.mark(&intent.command, "blocked")?;
+                Err(error) => {
+                    crate::diagnostics::record_failure(
+                        "source_recovery",
+                        &error,
+                        Some(project_id),
+                        Some(&intent.command.request_id),
+                    );
+                    let state = if matches!(
+                        error,
+                        AppError::Store(StoreError::Invalid(_) | StoreError::Conflict)
+                    ) {
+                        CommandState::NeedsReview
+                    } else {
+                        CommandState::Blocked
+                    };
+                    self.journal.mark(&intent.command, state)?;
                     break;
                 }
             }

@@ -1,8 +1,8 @@
 <script lang="ts">
+  import { acceptanceProgress } from "../../lib/resources/resource-summary";
   import {
     ACCEPTANCE_LIMIT,
     ACCEPTANCE_TEXT_LIMIT,
-    acceptanceProgress,
     moveAcceptance,
     type AcceptanceItem,
   } from "./card-work";

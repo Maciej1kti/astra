@@ -1,3 +1,0 @@
-
-> contracts
-> node scripts/generate-contracts.mjs

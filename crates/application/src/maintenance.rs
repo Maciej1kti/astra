@@ -1,10 +1,11 @@
 //! Explicit local maintenance plans reuse durable, conditional workflow steps.
+use crate::workflow_kind::WorkflowKind;
 use crate::{
     AppError, Reply,
     engine::Engine,
     instant, now_millis,
     source::{collection, pretty, read},
-    workflow::{Plan, Step, Workflows},
+    workflow::{Plan, PlanLocation, Step, Workflows},
 };
 use project_domain::validate_document;
 use project_store::{
@@ -120,14 +121,20 @@ impl Engine {
                 let store = handle
                     .lock()
                     .map_err(|_| AppError::LockPoisoned("project store"))?;
-                let directory = store
-                    .directory
-                    .child(kind.directory().ok_or(AppError::State)?, false)?;
+                let directory = store.directory.child(
+                    kind.directory()
+                        .ok_or(AppError::invariant("rebalanced collection kind"))?,
+                    false,
+                )?;
                 let mut names = directory.names()?;
                 names.retain(|name| name.ends_with(".md"));
                 names.sort();
                 collection_guard = Some((
-                    directory.path().to_str().ok_or(AppError::State)?.to_owned(),
+                    directory
+                        .path()
+                        .to_str()
+                        .ok_or(AppError::invariant("rebalanced collection UTF-8 path"))?
+                        .to_owned(),
                     names,
                 ));
                 let mut values = collection(&store, kind)?;
@@ -144,13 +151,19 @@ impl Engine {
                     let id = source.document.get().id().to_owned();
                     let mut value = source.value();
                     let (directory, name) = store.location(kind, &id, false)?;
-                    let before = directory.read(&name)?.ok_or(AppError::State)?;
+                    let before = directory
+                        .read(&name)?
+                        .ok_or(AppError::Unavailable("rebalance source"))?;
                     if document::parse(kind, Some(&id), &before)?.normalization_required {
                         return Err(AppError::reject(409, "NORMALIZATION_REQUIRED"));
                     }
                     value["metadata"]["position"] =
                         json!(format!("{:032x}", spacing * (n as u128 + 1)));
-                    let validated = validate_document(value).map_err(|_| AppError::State)?;
+                    let validated =
+                        validate_document(value).map_err(|source| AppError::SourceValidation {
+                            context: "rebalance candidate",
+                            source,
+                        })?;
                     steps.push(Step::plan(
                         &directory,
                         &[&name],
@@ -199,7 +212,9 @@ impl Engine {
                 read(&store, Kind::Project, &project)?;
                 let directory = Directory::open(Path::new(&new_absolute_path))?;
                 let (source, name) = store.location(Kind::Project, &project, false)?;
-                let bytes = source.read(&name)?.ok_or(AppError::State)?;
+                let bytes = source
+                    .read(&name)?
+                    .ok_or(AppError::Unavailable("relocation project source"))?;
                 steps.push(Step::plan(&directory, &[".project", "project.md"], bytes)?);
                 workspace
                     .projects
@@ -227,29 +242,29 @@ impl Engine {
         }
         let id = Uuid::new_v4().to_string();
         let expires = now_millis() + 300_000;
-        let view = json!({
+        let presentation = json!({
             "plan_id": id,
             "kind": kind,
             "project_id": project,
-            "display_path": path,
-            "previous_path": old_path,
             "steps": steps.iter().map(|step| step_preview(step, kind == "normalize")).collect::<Vec<_>>(),
             "warnings": warnings,
             "expires_at": instant(expires),
         });
-        (Workflows {
-            journal: &self.journal,
-        })
-        .save(&Plan {
+        let plan = Plan {
             id,
-            kind: kind.into(),
+            kind: WorkflowKind::parse(kind)?,
             project_id: project,
             expires_at: expires,
             steps,
-            view: view.clone(),
+            location: PlanLocation::maintenance(&path, &old_path, presentation)?,
             approved_root: None,
             collection_guard,
-        })?;
+        };
+        let view = plan.presentation()?;
+        (Workflows {
+            journal: &self.journal,
+        })
+        .save(&plan)?;
         Ok(view)
     }
     pub fn commit_maintenance(
@@ -266,15 +281,7 @@ impl Engine {
             journal: &self.journal,
         };
         let plan = workflows.plan(plan_id)?;
-        if ![
-            "normalize",
-            "rebalance",
-            "unregister",
-            "relocate",
-            "index_rebuild",
-        ]
-        .contains(&plan.kind.as_str())
-        {
+        if plan.kind == WorkflowKind::Registration {
             return Err(AppError::reject(422, "PLAN_KIND_MISMATCH"));
         }
         if let Some(reply) = self
@@ -286,13 +293,10 @@ impl Engine {
         if self.journal.has_pending("workspace")? {
             return Err(AppError::reject(409, "WORKSPACE_RECOVERY_REQUIRED"));
         }
-        let handle = if plan.kind == "unregister" {
+        let handle = if plan.kind == WorkflowKind::Unregister {
             None
         } else {
-            Some(self.store_path(
-                plan.view["display_path"].as_str().ok_or(AppError::State)?,
-                false,
-            )?)
+            Some(self.store_path(plan.location.destination.as_str(), false)?)
         };
         let store = handle
             .as_ref()
@@ -309,9 +313,11 @@ impl Engine {
             now_millis(),
             |_| Ok(()),
             || {
-                if plan.kind == "index_rebuild" {
+                if plan.kind == WorkflowKind::IndexRebuild {
                     self.index.refresh(
-                        store.as_ref().ok_or(AppError::State)?,
+                        store
+                            .as_ref()
+                            .ok_or(AppError::invariant("index rebuild project store"))?,
                         &plan.project_id,
                         now_millis(),
                     )?;
@@ -319,23 +325,43 @@ impl Engine {
                 Ok(())
             },
         )?;
-        if let Some(job) = reply.body["job_id"].as_str()
-            && workflows.job(job)?["state"] == "done"
-        {
-            if plan.kind == "unregister" {
-                self.reconciled
-                    .lock()
-                    .map_err(|_| AppError::LockPoisoned("reconciliation schedule"))?
-                    .remove(&plan.project_id);
-                self.index.forget_project(&plan.project_id, now_millis())?;
-            } else if let Some(store) = &store {
-                self.index.refresh(store, &plan.project_id, now_millis())?;
-            }
-            self.index.invalidate_workspace(now_millis())?;
-            if matches!(plan.kind.as_str(), "unregister" | "relocate") {
-                self.release_store_path(
-                    plan.view["previous_path"].as_str().ok_or(AppError::State)?,
-                )?;
+        drop(store);
+        drop(handle);
+        if let Some(job) = reply.body["job_id"].as_str() {
+            match workflows.job(job) {
+                Ok(job) if job["state"] == "done" => {
+                    // The journal already owns the outcome. Cleanup and disposable
+                    // projection failures must not replace its durable Accepted reply.
+                    if matches!(plan.kind, WorkflowKind::Unregister | WorkflowKind::Relocate)
+                        && let Err(error) = plan
+                            .location
+                            .previous_path()
+                            .and_then(|path| self.release_store_path(path))
+                    {
+                        crate::diagnostics::record_failure(
+                            "maintenance_store_release",
+                            &error,
+                            Some(&plan.project_id),
+                            Some(request),
+                        );
+                    }
+                    if let Err(error) = self.repair_completed_projection(&plan.project_id, request)
+                    {
+                        crate::diagnostics::record_failure(
+                            "maintenance_projection_schedule",
+                            &error,
+                            Some(&plan.project_id),
+                            Some(request),
+                        );
+                    }
+                }
+                Err(error) => crate::diagnostics::record_failure(
+                    "maintenance_completion_lookup",
+                    &error,
+                    Some(&plan.project_id),
+                    Some(request),
+                ),
+                Ok(_) => {}
             }
         }
         Ok(reply)

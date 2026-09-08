@@ -257,7 +257,7 @@ fn vocabulary_prepared_write_recovers_with_original_identity() {
             Some(&version),
             |point| {
                 if point == CommitPoint::Prepared {
-                    Err(AppError::State)
+                    Err(AppError::invariant("injected test failure"))
                 } else {
                     Ok(())
                 }

@@ -1,76 +1,75 @@
-# Implementation state
+# Current implementation state
 
-> Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
+Updated 2026-09-08. The application is implemented and under verification;
+full release acceptance remains open. See [scope decisions](SCOPE.md) and the
+[release checklist](../delivery/RELEASE-CHECKLIST.md).
 
-Updated: 2026-09-08. Status: **ready for owner manual testing; full release acceptance remains open**.
+## Current work and verification
 
-Public repository: https://github.com/Maciej1kti/astra. New repository content,
-UI text and commits are English. Continue until the v1 scope is implemented and
-verified; preserve requirements from the temporary handoff until then.
+This checkpoint includes the completed
+[maintainability cleanup](maintainability-cleanup-2026-09-08/README.md), CLI work
+and important audit fixes. The owner authorized committing and pushing the
+verified work to `origin/main` on 2026-09-08. The earlier safety checkpoint
+`2a5530a8bb83eec0c3f6f289cac8587aa9d66898` preserves historical artifacts removed
+during cleanup. No service deployment is included. Use `git log` and `git status`
+to inspect revision and local change state.
 
-## Implemented
+The [CLI improvements](cli-improvements-2026-09-08/README.md) are complete:
+explicit confirmation semantics, named search/planning
+reads, conditional editing/undo, bounded stdin and optional terminal output.
+The [CLI guide](../CLI.md) documents the implemented command tree and safe retries.
 
-The [code-health follow-up fixes](code-health-fixes-2026-09-08/README.md) correct
-stale-page recovery, original-epoch command status and typed relation search;
-add indexed tag suggestions and project page revisions; extract registration and
-editor responsibilities; and enforce formatting/API-type/bundle checks. Automated,
-browser and packaged-release verification passed. Its performance measurements
-and remaining large-project limits are recorded in the linked evidence.
+The [important audit fixes](audit-fixes-2026-09-08/README.md) are complete.
+Q02–Q07 address conflict outcomes, journal ownership, typed saved
+plans, safe failure diagnostics, maintenance projection repair and workspace
+screen/navigation ownership. Q08's typed timeline and Q09's shared browser runtime
+are complete; additional named frontend endpoints, smoke scenario separation and
+Q10's vendor assumptions remain follow-up work. See
+[ADR-033](../docs/ADR-033-AUDIT-OWNERSHIP-AND-RECOVERY.md).
 
-The [code-health implementation](code-health-implementation-2026-09-08/README.md)
-adds scoped/cancelled reads, bounded card history, indexed and graph optimizations,
-recovery-first startup, static gzip/cache policy, bounded HTTP admission, SSE
-shutdown and portable regression suites. Its release measurements and remaining
-large-project/device limits are recorded separately from product acceptance.
+The current local gate passes 174 Rust, 82 JavaScript and 12 Python tests,
+contracts/examples, frontend typing, import boundaries, formatters, Clippy and
+release builds. Release HTTPS/CLI smoke, planning tests and all eight browser
+regression suites pass, including 14 new direct/status conflict cases. The audit
+fix record contains current commands, results and artifact locations. Dedicated
+CLI workflows passed in the preceding CLI task. A packaged installation/restart/
+stopped-copy recovery smoke passed for the preceding cleanup on this macOS ARM64
+host; see its record. Remote CI results are not claimed by this local record.
 
-The 2026-09-08 follow-up adds structured card results, ordered acceptance criteria,
-owner labels, inline card updates, and workspace tag management with versioned
-rename/merge previews. See [stage 2 evidence](stage2-2026-09-08/README.md) for the
-implemented slice, current checks and remaining product scope. This follows the
-[browser-audit repair batch](fixes-2026-09-08/README.md).
+The cleanup removes obsolete artifacts while preserving immutable historical
+proof and all delivery requirements. Planning reads, vendor adapters and tag
+review have explicit owners; application mutations have named preparation steps,
+typed command/workflow identities and useful diagnostic errors. Documentation now
+has a maintained user/contributor entry point. The owner deferred licensing.
 
-- Shared Rust domain and generated TypeScript models; strict document validation.
-- Descriptor-based storage, exclusive project leases and durable conditional writes.
-- SQLite command journal, stable retries, crash recovery and history recording.
-- Resumable registration plans, pairing and sessions, FTS projections and cursors.
-- HTTP/Unix service, authenticated browser/UID transports and CLI (integration work).
-- Initial seven-view Svelte UI and common editor connected to real API resources.
-- Approved directory browsing and SSE invalidations.
-- Durable focus/preferences, conditional undo, history and browser settings.
+## Implemented product
 
-Latest planning slice: [E026](E026-planning-widgets.md), implementing the owner's
-2026-09-07 Gantt and calendar request. The preceding Kanban freeze is recorded
-in E025 and remains in place. E026 records current Arch Linux checks and the
-remaining physical-device and rendering-performance limits.
-Workspace/history verification is recorded in E006; use `git status` for the exact
-working tree. The current source supersedes historical implementation claims in
-older evidence entries.
+- Shared Rust domain, strict source parsing and generated browser contracts.
+- Conditional durable writes, stable retries, recovery and resource history.
+- Explicit folder registration, host-native selection, pairing and sessions.
+- Shared HTTP/Unix application engine, CLI and rebuildable search projections.
+- Projects, focus, board, calendar, Gantt, lists and reports against real sources.
+- Structured card results/acceptance, relations, targeted updates and workspace tags.
+- Versioned settings/focus, read receipts, undo, diagnostics and Git observation.
+- Maintenance workflows, packaging and documented stopped-server copy recovery.
 
-## Current handoff
+Use [Development](../DEVELOPMENT.md) for setup and [Manual testing](../MANUAL-TESTING.md)
+for `npm run try`, pairing and the walkthrough. Existing manual runtime data is
+not modified by the cleanup or isolated verification fixtures.
 
-Owner steering prioritizes manual feedback over further pre-release hardening.
-Run `npm run try`; see `MANUAL-TESTING.md`. The current local automated checks and
-HTTPS smoke pass. CI run 33984427678 passed Ubuntu and macOS for 00bb2bd.
+## Outstanding release obligations
 
-## Outstanding after manual feedback
+Remaining product/acceptance work is governed by the release checklist, not old
+implementation narratives. Physical iPhone/Safari, Arch/ext4, physical power-loss,
+login-start and complete performance/reliability acceptance are not established
+by this local run. Chromium phone emulation is not a physical-device test.
 
-Finish remaining UI forms and release ergonomics,
-remaining performance/security/fault coverage, CI/platform verification and final
-English documentation cleanup. Gate and acceptance completion remain unclaimed.
+The owner must choose the project license and the supported-release security
+reporting channel. Retained requirement chapters remain until unresolved
+obligations can be retired. Built-in backup archives and source-file migration
+frameworks stay deferred; stopped-copy recovery and operational compatibility
+remain required. Preserve the Kanban feature freeze from the scope decisions.
 
-## Environment
-
-The code-health batch was verified on macOS arm64 with pinned Rust 1.92.0,
-Node 24.11.0 and Chromium 153.0.8010.12. Earlier Arch Linux planning verification
-with system Rust 1.98.0 and Chromium 151.0.7922.173 is retained in E026.
-Neither batch establishes physical iPhone/Safari acceptance.
-Physical power-loss acceptance also remains open.
-The HTTPS browser test uses temporary self-signed TLS and the normal pairing
-flow, with temporary synthetic projects; it does not change the user's network.
-
-Read `progress/PLAN.md` and the newest evidence entry, then continue the next
-unfinished slice. Full checks: `.venv-check/bin/python scripts/check.py`.
-Build the frontend and release Rust workspace, install Playwright Chromium, then
-run all browser coverage with `ASTRA_TEST_PROFILE=release npm run test:browser`.
-See [portable browser suites](../scripts/browser/README.md) for isolated fixtures
-and the artifact-retention policy.
+[Historical evidence](README.md) applies to its recorded revisions. Older CI or
+benchmark results are not automatically evidence for this working tree. No
+acceptance scenario was marked passed by this cleanup.

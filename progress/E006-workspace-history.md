@@ -1,5 +1,8 @@
 # Workspace and history verification
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/E006-workspace-history.md) are preserved in the published checkpoint; see [current status](STATE.md) for maintained guidance.
+
 Date: 2026-09-05. Platform: macOS ARM64.
 
 Workspace focus/preferences changes use conditional durable replacement with a

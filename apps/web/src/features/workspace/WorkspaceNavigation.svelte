@@ -3,7 +3,7 @@
   import { workspaceViews as views, type View } from "./navigation";
 
   let {
-    view = $bindable(),
+    view,
     connected,
     logout,
     onchange,
@@ -11,7 +11,7 @@
     view: View;
     connected: boolean;
     logout: () => void;
-    onchange: () => void;
+    onchange: (view: View) => void;
   } = $props();
   let navElement = $state<HTMLElement>();
   $effect(() => {
@@ -53,10 +53,7 @@
         data-view={item}
         aria-current={view === item ? "page" : undefined}
         class:chosen={view === item}
-        onclick={() => {
-          if (view !== item) onchange();
-          view = item;
-        }}
+        onclick={() => onchange(item)}
         ><span class="navicon" aria-hidden="true"
           >{["◉", "▦", "▥", "▦", "≋", "☷", "◷"][i]}</span
         ><span

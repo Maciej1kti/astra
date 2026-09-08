@@ -1,5 +1,8 @@
 # Code health fixes — 2026-09-08
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-fixes-2026-09-08/README.md) are preserved in the published checkpoint; see [current status](../STATE.md) for maintained guidance.
+
 The owner authorized implementation after the [follow-up audit](../code-health-follow-up-2026-09-08/README.md).
 The baseline is `a71b282c8b95cdb6185943ab9a8edb27f3097128`. This is a verified
 maintenance batch, not a claim that all release or performance acceptance is complete.
@@ -42,22 +45,22 @@ schemas, examples and transport tests in the same batch.
 
 ## Verification
 
-The [standard gate](checks/full-check.txt) passed 119 Rust tests, 54 JavaScript
+The [standard gate](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-fixes-2026-09-08/checks/full-check.txt) passed 119 Rust tests, 54 JavaScript
 tests and 12 Python tests, schema/example validation, type checking, formatting,
 Clippy and a release build. New tests cover original command identity, immutable
 payloads, source conflicts, dependency edits/deletions, scoped pages, exact tag
 names and safe filesystem lookups.
 
-The [focused browser run](checks/browser-protocol.txt) passed all five paged
+The [focused browser run](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-fixes-2026-09-08/checks/browser-protocol.txt) passed all five paged
 views against actual server stale-page responses, including successful advancement
 after recovery. It also passed relation search with 55 competing reports and
 verified lazy, bounded card history and reused tag suggestions.
 
-The [packaged release smoke](checks/package.txt) passed archive checks, repeated
+The [packaged release smoke](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-fixes-2026-09-08/checks/package.txt) passed archive checks, repeated
 temporary installation, daemon/CLI operation, restart/copy recovery, index
 rebuilding and rejection of an old epoch. This created no persistent service.
 
-The [complete browser run](checks/browser-all.txt) passed the main HTTPS/CLI smoke,
+The [complete browser run](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-fixes-2026-09-08/checks/browser-all.txt) passed the main HTTPS/CLI smoke,
 planning gesture suite and all seven maintained regression suites (card, tags,
 editor, dialogs, planning, code health and protocol). This includes registration
 after component extraction, lost replies, identical retries, competing edits,
@@ -65,7 +68,7 @@ session revocation with preserved drafts, tag renames, keyboard/touch interactio
 and mobile viewport checks. The 401/503 console responses in the log belong to
 intentional revocation and transport-failure scenarios.
 
-After the final workspace snapshot guard, the [tag and protocol suites](checks/browser-final.txt)
+After the final workspace snapshot guard, the [tag and protocol suites](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/code-health-fixes-2026-09-08/checks/browser-final.txt)
 and packaged smoke passed again against the rebuilt release daemon.
 
 The bundle gate reports 121,406 gzip bytes (118.56 KiB) against 307,200 bytes

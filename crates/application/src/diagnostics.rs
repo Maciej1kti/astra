@@ -2,6 +2,9 @@
 use crate::{AppError, engine::Engine, now_millis};
 use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
+mod failure;
+pub use failure::{record_failure, record_worker_failure};
+
 impl Engine {
     pub fn diagnostics(&self) -> Result<Value, AppError> {
         let workspace = self.workspace().ok().map(|source| source.value);

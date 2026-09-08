@@ -1,2 +1,0 @@
-   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
-    Finished `release` profile [optimized] target(s) in 4.96s

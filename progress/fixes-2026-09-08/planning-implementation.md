@@ -4,7 +4,7 @@ Status: implemented and verified in the final integrated browser phase requested
 by the owner. No build, unit suite or browser test was run during the initial
 implementation batch. The final custom planning run passed all its assertions
 and produced seven screenshots; see
-[browser results](planning-browser/results.json) and
+[browser results](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/fixes-2026-09-08/planning-browser/results.json) and
 [visual review](planning-visual-review.md). The previous audit's screenshots and
 failures remain the baseline evidence.
 

@@ -48,38 +48,47 @@ pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
         tokio::select! {
             _ = shutdown.changed() => break,
             _ = membership.tick() => {
-                // Read the small registry and directory identities, never document bodies.
+                // Read registry/directory identities and retry a bounded batch of due
+                // maintenance projection repairs, which may scan document bodies.
                 let worker = engine.clone();
                 let initial = reconcile_startup;
-                if let Ok(Ok((registered, desired, pending))) = tokio::task::spawn_blocking(move || membership_paths(&worker, initial)).await {
-                    reconcile_startup = false;
-                    projects = registered;
-                    let mut changed: BTreeSet<_> = projects.iter().filter(|(_, id)| pending.contains(*id)).map(|(root, _)| root.clone()).collect();
-                    if let Some(watcher) = &mut watcher {
-                        for (path, identity) in &watched {
-                            if desired.get(path) != Some(identity) { let _ = watcher.unwatch(path); changed.insert(path.clone()); }
-                        }
-                        watched.retain(|path, identity| desired.get(path) == Some(identity));
-                        for (path, identity) in &desired {
-                            if watched.contains_key(path) { continue; }
-                            if watcher.watch(path, RecursiveMode::NonRecursive).is_ok() {
-                                watched.insert(path.clone(), *identity);
-                                // Close the scan-before-watch gap, including replaced directories.
-                                changed.insert(path.clone());
-                            } else if retry_refresh.elapsed() >= Duration::from_secs(30) {
-                                eprintln!("Source watch registration failed; reconciling affected sources");
-                                overflow.store(true, Ordering::Relaxed);
+                match tokio::task::spawn_blocking(move || membership_paths(&worker, initial)).await {
+                    Ok(Ok((registered, desired, pending))) => {
+                        reconcile_startup = false;
+                        projects = registered;
+                        let mut changed: BTreeSet<_> = projects.iter().filter(|(_, id)| pending.contains(*id)).map(|(root, _)| root.clone()).collect();
+                        if let Some(watcher) = &mut watcher {
+                            for (path, identity) in &watched {
+                                if desired.get(path) != Some(identity) { let _ = watcher.unwatch(path); changed.insert(path.clone()); }
+                            }
+                            watched.retain(|path, identity| desired.get(path) == Some(identity));
+                            for (path, identity) in &desired {
+                                if watched.contains_key(path) { continue; }
+                                if watcher.watch(path, RecursiveMode::NonRecursive).is_ok() {
+                                    watched.insert(path.clone(), *identity);
+                                    // Close the scan-before-watch gap, including replaced directories.
+                                    changed.insert(path.clone());
+                                } else if retry_refresh.elapsed() >= Duration::from_secs(30) {
+                                    eprintln!("Source watch registration failed; reconciling affected sources");
+                                    overflow.store(true, Ordering::Relaxed);
+                                }
                             }
                         }
+                        if !changed.is_empty() { refresh(&engine, &projects, Some(&changed), &mut shutdown).await; }
                     }
-                    if !changed.is_empty() { refresh(&engine, &projects, Some(&changed), &mut shutdown).await; }
+                    Ok(Err(error)) => project_application::record_failure("watcher_membership", &error, None, None),
+                    Err(error) => project_application::record_worker_failure("watcher_membership", &error, None),
                 }
                 if overflow.swap(false,Ordering::Relaxed) { refresh(&engine, &projects, None, &mut shutdown).await; retry_refresh = tokio::time::Instant::now(); }
             },
             _ = reconcile.tick() => {
                 refresh(&engine, &projects, None, &mut shutdown).await;
                 let worker=engine.clone();
-                let _=tokio::task::spawn_blocking(move || worker.retain_history(project_application::now_millis())).await;
+                match tokio::task::spawn_blocking(move || worker.retain_history(project_application::now_millis())).await {
+                    Ok(Ok(_)) => {}
+                    Ok(Err(error)) => project_application::record_failure("watcher_retention", &error, None, None),
+                    Err(error) => project_application::record_worker_failure("watcher_retention", &error, None),
+                }
             },
             event = receiver.recv(), if watcher.is_some() => {
                 let Some(event) = event else { break; };
@@ -110,6 +119,7 @@ fn membership_paths(
     engine: &Engine,
     initial: bool,
 ) -> Result<(Projects, DirectoryIdentities, Vec<String>), project_application::AppError> {
+    engine.retry_projection_repairs()?;
     let project_application::Versioned {
         value: workspace,
         version: _,
@@ -213,16 +223,22 @@ async fn refresh(
             continue;
         }
         let engine = engine.clone();
-        let id = id.clone();
+        let project = id.clone();
         let worker = tokio::task::spawn_blocking(move || {
-            engine.refresh_project(&id, if full { None } else { Some(&targets) })
+            engine.refresh_project(&project, if full { None } else { Some(&targets) })
         });
         let result = tokio::select! {
             _ = shutdown.changed() => return,
             result = worker => result,
         };
-        if !matches!(result, Ok(Ok(()))) {
-            eprintln!("Source refresh failed; project diagnostics are degraded");
+        match result {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => {
+                project_application::record_failure("watcher_refresh", &error, Some(id), None)
+            }
+            Err(error) => {
+                project_application::record_worker_failure("watcher_refresh", &error, Some(id))
+            }
         }
         tokio::task::yield_now().await;
     }

@@ -1,6 +1,10 @@
 <script lang="ts">
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import {
+    commandErrorMessage,
+    isRejectedConflict,
+  } from "../../lib/api/command-result";
   import { onMount } from "svelte";
   import { untrack } from "svelte";
   import { modal } from "../../lib/ui/dialog";
@@ -66,18 +70,25 @@
     }
   }
   async function transmit() {
+    await runCommand("submit");
+  }
+  async function check() {
+    await runCommand("status");
+  }
+  async function runCommand(action: "submit" | "status") {
     if (!pending || accessLost || busy) return;
     error = "";
     try {
-      await operation.commit();
+      if (action === "status") await operation.confirm();
+      else await operation.commit();
       onsaved();
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
-      conflict = operation.phase === "rejected";
+      error = commandErrorMessage(cause);
+      conflict = isRejectedConflict(operation.phase, cause);
     }
   }
   async function save() {
-    if (accessLost) return;
+    if (accessLost || busy || pending || conflict) return;
     const index = neighbors.findIndex((row) => row.id === before);
     const chosen = before
       ? { before_id: before, after_id: neighbors[index - 1]?.id ?? null }
@@ -93,15 +104,6 @@
       ),
     );
     await transmit();
-  }
-  async function check() {
-    if (!pending || accessLost || busy) return;
-    try {
-      await operation.confirm();
-      onsaved();
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
-    }
   }
 </script>
 

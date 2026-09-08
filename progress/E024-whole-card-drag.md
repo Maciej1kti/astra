@@ -1,5 +1,8 @@
 # E024 — Whole-card dragging and clean cards
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/E024-whole-card-drag.md) are preserved in the published checkpoint; see [current status](STATE.md) for maintained guidance.
+
 Date: 2026-09-07. Supersedes E022's handle, on-card actions and manual drop
 confirmation. The owner requested Trello-style card interaction, with no drag
 arrows or status controls on the card.

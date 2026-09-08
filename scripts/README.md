@@ -1,18 +1,23 @@
-# Narzędzia kontroli handoffu
+# Development tools
 
-`check_package.py` sprawdza JSON, schema, lokalne referencje OpenAPI, parametry ścieżek, przykłady żądań i dokumentów, powiązania demo, 33 referencyjne wektory, pełność identyfikatorów requirement → test → task i acykliczność backlogu. Wykonuje początkowy SQL na pustych bazach w pamięci oraz parsuje TOML/plist. Nie instaluje usług i nie wysyła żądań sieciowych.
+`check.py` runs the complete local gate in dependency order: contracts and package
+references, Python/JavaScript tests, frontend checks/build, formatting, Clippy,
+Rust tests and the release build. It does not establish device or browser coverage.
 
-Parser w tym skrypcie jest niewielką implementacją referencyjną do dostarczonych fixtures, nie kompletnym parserem produkcyjnym. Nie używać go jako biblioteki backendu. Walidacja negatywnych danych nie jest fuzzingiem, a przejście powiązań testów nie dowodzi ich jakości.
+`check_package.py` validates contracts, examples, requirement/test/task references,
+Markdown links, SQLite initialization and deployment template syntax. Its small
+fixture parser is not the production source parser. It does not start services.
 
-`assemble_spec.py` składa rozdziały i materiały wykonawcze w `docs/MASTER-SPEC.md`. Nie ma zależności zewnętrznych.
+`generate_api_schema.py` and `generate-contracts.mjs` generate schema-derived
+representations; their check modes catch drift. `assemble_spec.py` combines
+retained requirement chapters into ignored `test-results/docs/MASTER-SPEC.md`.
 
-Plik `requirements-validation.txt` przypina wersje użyte podczas przygotowania pakietu. Nie jest lockfile'em aplikacji ani gwarancją dostępności w przyszłości. W środowisku docelowym sprawdź politykę i utrzymanie tych zależności przed instalacją.
+`try.mjs` starts a manual synthetic fixture; `try-pair.mjs` approves an exact
+owner-provided pairing challenge. [Browser tests](browser/README.md) use temporary
+fixtures and the real pairing/transport flow.
 
-## Host packaging and continuous integration
+`package.py` builds a host archive from release binaries under ignored `dist/`.
+`release-smoke.py` verifies a package in a temporary prefix. Neither publishes a
+GitHub release nor installs a persistent service on the development host.
 
-`python3 scripts/package.py` assembles tested release binaries into a host archive
-under ignored `dist/`. It does not create a GitHub release or start a service.
-The generated installer is tested in a temporary prefix, including paths with spaces.
-`.github/workflows/check.yml` runs the same checks and HTTPS browser smoke on
-Ubuntu 24.04 and macOS 15. CI results are evidence only after a successful run;
-Chromium mobile emulation never substitutes for a physical iPhone test.
+See [Contributing](../CONTRIBUTING.md) for focused checks and evidence policy.

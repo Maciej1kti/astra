@@ -1,5 +1,8 @@
 # E026 — Gantt dependencies and calendar widgets
 
+> Historical evidence. Commands and bare artifact paths describe the original run.
+> [Original record and artifacts](https://github.com/Maciej1kti/astra/blob/2a5530a8bb83eec0c3f6f289cac8587aa9d66898/progress/E026-planning-widgets.md) are preserved in the published checkpoint; see [current status](STATE.md) for maintained guidance.
+
 Owner request: 2026-09-07. Verification continued on 2026-09-08.
 
 The owner requested implementation after reviewing the existing Kanban work:

@@ -1,6 +1,5 @@
 //! Application facade for transports. Storage and lock ownership stay here.
-use crate::{AppError, Reply, auth::Auth, engine::Engine, workflow::Workflows};
-use rusqlite::OptionalExtension;
+use crate::{AppError, auth::Auth, engine::Engine, workflow::Workflows};
 use serde_json::{Value, json};
 
 impl Engine {
@@ -50,20 +49,12 @@ impl Engine {
         if original_epoch != self.journal.epoch {
             return Err(AppError::reject(409, "EPOCH_CHANGED"));
         }
-        let row: Option<(String, Option<String>)> = self
+        let (state, reply) = self
             .journal
-            .db()?
-            .query_row(
-                "SELECT state,result_json FROM commands WHERE epoch=?1 AND request_id=?2",
-                [original_epoch, id],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )
-            .optional()?;
-        let (state, result) = row.ok_or_else(|| AppError::reject(404, "COMMAND_NOT_FOUND"))?;
+            .command_status(original_epoch, id)?
+            .ok_or_else(|| AppError::reject(404, "COMMAND_NOT_FOUND"))?;
         let mut value = json!({"api_version":"1","request_id":id,"state":state});
-        if let Some(result) = result {
-            let reply: Reply = serde_json::from_str(&result)
-                .map_err(|source| AppError::stored("command status reply", source))?;
+        if let Some(reply) = reply {
             if reply.body.get("result").is_some() {
                 value["result"] = reply.body;
             } else if let Some(error) = reply.body.get("error") {

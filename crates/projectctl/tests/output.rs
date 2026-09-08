@@ -227,7 +227,7 @@ fn accepted_and_malformed_mutation_replies_preserve_command_identity() {
             let body = if malformed {
                 "not JSON".into()
             } else {
-                json!({"request_id":request,"state":"prepared"}).to_string()
+                json!({"api_version":"1","request_id":request,"state":"prepared"}).to_string()
             };
             write!(stream,"HTTP/1.1 202 Accepted\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
         });

@@ -107,7 +107,7 @@ LIMIT ?5",
             for document in [&previous, &after].into_iter().flatten() {
                 for key in document["metadata"]
                     .as_object()
-                    .ok_or(AppError::State)?
+                    .ok_or(AppError::invariant("history document metadata"))?
                     .keys()
                 {
                     if key != "updated_at"
