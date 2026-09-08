@@ -1,12 +1,25 @@
 import type { Resource, Summary } from "./api";
-import type { CardMetadata, MilestoneMetadata, ProjectMetadata, UpdateMetadata } from "./domain.generated";
+import type {
+  CardMetadata,
+  MilestoneMetadata,
+  ProjectMetadata,
+  UpdateMetadata,
+} from "./domain.generated";
 import { acceptanceProgress } from "./card-work.ts";
 
 /** Project only summary fields; do not retain bodies, extensions or edit state. */
-export function detailSummary(resource: Resource, project: string, type: Summary["type"]): Summary {
+export function detailSummary(
+  resource: Resource,
+  project: string,
+  type: Summary["type"],
+): Summary {
   const result: Summary = {
-    id: resource.metadata.id, project_id: project, type,
-    title: "", version: resource.version, availability: "ready",
+    id: resource.metadata.id,
+    project_id: project,
+    type,
+    title: "",
+    version: resource.version,
+    availability: "ready",
   };
   if (type === "project") {
     const m = resource.metadata as ProjectMetadata;
@@ -19,7 +32,8 @@ export function detailSummary(resource: Resource, project: string, type: Summary
     result.kind = m.kind;
     result.target = m.target;
     if (m.recorded_at !== undefined) result.recorded_at = m.recorded_at;
-    if (resource.read !== undefined) result.read = resource.read;
+    if (resource.type === "update" && resource.read !== undefined)
+      result.read = resource.read;
   } else {
     const m = resource.metadata as CardMetadata | MilestoneMetadata;
     result.title = m.title;
@@ -36,7 +50,8 @@ export function detailSummary(resource: Resource, project: string, type: Summary
       if (card.blocked !== undefined) result.blocked = card.blocked;
       if (card.labels !== undefined) result.labels = [...card.labels];
       if (card.owner !== undefined) result.owner = card.owner;
-      if (card.acceptance !== undefined) result.acceptance_progress = acceptanceProgress(card.acceptance);
+      if (card.acceptance !== undefined)
+        result.acceptance_progress = acceptanceProgress(card.acceptance);
     }
   }
   return result;

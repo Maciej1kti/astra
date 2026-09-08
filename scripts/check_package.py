@@ -310,6 +310,9 @@ def check_api_examples() -> dict:
     for filename, definition in bindings.items():
         schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"#/components/schemas/{definition}", "components": OAS["components"]}
         Draft202012Validator(schema, format_checker=FORMAT).validate(load_json(f"examples/requests/{filename}"))
+    for filename, definition in {"tag-suggestions.json": "TagSuggestions", "command-status.json": "CommandStatus"}.items():
+        schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"#/components/schemas/{definition}", "components": OAS["components"]}
+        Draft202012Validator(schema, format_checker=FORMAT).validate(load_json(f"examples/{filename}"))
     COUNTS["request_examples"] = len(bindings)
     return {"examples": len(bindings)}
 

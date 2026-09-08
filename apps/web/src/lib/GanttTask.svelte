@@ -171,6 +171,5 @@
     .edge {
       min-width: 44px;
     }
-
   }
 </style>

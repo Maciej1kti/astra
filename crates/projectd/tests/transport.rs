@@ -12,6 +12,100 @@ struct Running {
     tasks: Vec<tokio::task::JoinHandle<()>>,
     project: String,
 }
+
+#[tokio::test]
+async fn command_status_requires_the_original_epoch_and_validates_its_response() {
+    let app = Running::new().await;
+    let hello: Value = app
+        .local("GET", "/local/v1/hello")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let epoch = hello["command_epoch"].as_str().unwrap();
+    let catalog: Value = app
+        .local("GET", "/api/v1/workspace/tags")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let id = Uuid::now_v7().to_string();
+    let saved = app
+        .local("PUT", "/api/v1/workspace/tags")
+        .header("x-request-id", &id)
+        .header("x-command-epoch", epoch)
+        .header(
+            "if-match",
+            format!("\"{}\"", catalog["version"].as_str().unwrap()),
+        )
+        .json(&json!({"tags":["Epoch test"]}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(saved.status(), 200);
+    let path = format!("/api/v1/commands/{id}");
+    for (query, status, code) in [
+        (String::new(), 400, "MISSING_QUERY_PARAMETER"),
+        ("?epoch=invalid".into(), 400, "INVALID_EPOCH"),
+        (format!("?epoch={}", Uuid::new_v4()), 409, "EPOCH_CHANGED"),
+        (
+            format!("?epoch={epoch}&epoch={epoch}"),
+            400,
+            "INVALID_QUERY",
+        ),
+    ] {
+        let response = app
+            .local("GET", &format!("{path}{query}"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status, "{query}");
+        let value: Value = response.json().await.unwrap();
+        assert_eq!(value["error"]["code"], code);
+        project_application::wire::validate("Error", &value).unwrap();
+    }
+    let value: Value = app
+        .local("GET", &format!("{path}?epoch={epoch}"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    project_application::wire::validate("CommandStatus", &value).unwrap();
+    assert_eq!(value["state"], "committed");
+    let rejected_id = Uuid::now_v7().to_string();
+    let rejected = app
+        .local("PUT", "/api/v1/workspace/tags")
+        .header("x-request-id", &rejected_id)
+        .header("x-command-epoch", epoch)
+        .header(
+            "if-match",
+            format!("\"{}\"", catalog["version"].as_str().unwrap()),
+        )
+        .json(&json!({"tags":[]}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(rejected.status(), 412);
+    let status: Value = app
+        .local(
+            "GET",
+            &format!("/api/v1/commands/{rejected_id}?epoch={epoch}"),
+        )
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(status["state"], "rejected");
+    project_application::wire::validate("CommandStatus", &status).unwrap();
+}
 impl Drop for Running {
     fn drop(&mut self) {
         for task in &self.tasks {

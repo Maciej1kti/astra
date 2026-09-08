@@ -1,0 +1,6 @@
+# Use the original epoch printed when the command was submitted.
+GET /api/v1/commands/019913e8-8000-7000-8000-000000000001?epoch=22222222-2222-4222-8222-222222222222 HTTP/1.1
+Host: projects.example
+
+# A different operational epoch returns 409 EPOCH_CHANGED.
+# COMMAND_NOT_FOUND never proves that an uncertain write did not commit.

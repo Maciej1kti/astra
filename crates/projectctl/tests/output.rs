@@ -14,6 +14,52 @@ fn parsed(output: &Output) -> Value {
 }
 
 #[test]
+fn command_status_requires_and_transmits_the_original_epoch_without_a_hello() {
+    let request_id = "019913e8-8000-7000-8000-000000000001";
+    let epoch = "11111111-1111-4111-8111-111111111111";
+    let missing = Command::new(env!("CARGO_BIN_EXE_projectctl"))
+        .args(["command-status", request_id])
+        .output()
+        .unwrap();
+    assert_eq!(missing.status.code(), Some(2));
+    assert_eq!(parsed(&missing)["ok"], false);
+
+    let temp = tempfile::tempdir().unwrap();
+    let socket = temp.path().join("server.sock");
+    let listener = UnixListener::bind(&socket).unwrap();
+    let worker = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        stream
+            .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+            .unwrap();
+        let mut request = [0; 8192];
+        let length = stream.read(&mut request).unwrap();
+        assert!(
+            String::from_utf8_lossy(&request[..length]).starts_with(&format!(
+                "GET /api/v1/commands/{request_id}?epoch={epoch} HTTP/1.1\r\n"
+            ))
+        );
+        let body =
+            json!({"api_version":"1","request_id":request_id,"state":"committed"}).to_string();
+        write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+    });
+    let result = Command::new(env!("CARGO_BIN_EXE_projectctl"))
+        .args([
+            "--socket",
+            socket.to_str().unwrap(),
+            "command-status",
+            request_id,
+            "--epoch",
+            epoch,
+        ])
+        .output()
+        .unwrap();
+    worker.join().unwrap();
+    assert_eq!(result.status.code(), Some(0));
+    assert_eq!(parsed(&result)["data"]["state"], "committed");
+}
+
+#[test]
 fn preliminary_and_final_requests_preserve_structured_server_errors() {
     let project = "11111111-1111-4111-8111-111111111111";
     let report = "22222222-2222-4222-8222-222222222222";

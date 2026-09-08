@@ -1,0 +1,14 @@
+Checking formatting...
+[warn] apps/web/src/lib/api.ts
+[warn] apps/web/src/lib/domain.generated.ts
+[warn] apps/web/src/lib/gantt-projection.ts
+[warn] apps/web/src/lib/pagination.ts
+[warn] apps/web/src/lib/projection-state.ts
+[warn] apps/web/src/lib/read-requests.ts
+[warn] apps/web/src/lib/resource-summary.ts
+[warn] apps/web/src/lib/tag-management.ts
+[warn] apps/web/src/lib/tag-suggestions.ts
+[warn] apps/web/src/lib/tags.ts
+[warn] apps/web/src/lib/view-queries.ts
+[warn] apps/web/src/main.ts
+[warn] Code style issues found in 12 files. Run Prettier with --write to fix.

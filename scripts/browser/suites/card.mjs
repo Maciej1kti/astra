@@ -577,7 +577,7 @@ export async function runCardChecks({
             1,
           );
           assert.equal(
-            cli("get", `/api/v1/commands/${requests[0].requestId}`).state,
+            cli("get", `/api/v1/commands/${requests[0].requestId}?epoch=${requests[0].epoch}`).state,
             "committed",
           );
           await expect(title()).toBeDisabled();

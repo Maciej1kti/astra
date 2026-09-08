@@ -10,7 +10,8 @@ ASTRA_TEST_PROFILE=release npm run test:browser
 
 The two primary suites exercise broad workflows and planning widgets. The portable
 regression runner adds card acceptance/activity, workspace tags, editor draft
-safety, board/settings/focus dialogs, planning navigation and bounded view/activity reads:
+safety, board/settings/focus dialogs, planning navigation, bounded view/activity
+reads and real stale-page recovery in all five paged views:
 
 ```sh
 ASTRA_TEST_PROFILE=release npm run test:browser:regressions

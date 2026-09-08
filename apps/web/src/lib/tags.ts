@@ -35,7 +35,10 @@ export function matchingTags(
 ) {
   const needle = query.trim().toLocaleLowerCase();
   return [...new Set(options)]
-    .filter((label) => !selected.includes(label) && label.toLocaleLowerCase().includes(needle))
+    .filter(
+      (label) =>
+        !selected.includes(label) && label.toLocaleLowerCase().includes(needle),
+    )
     .sort((a, b) => a.localeCompare(b))
     .slice(0, limit);
 }

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mock } from "node:test";
-import { viewSections, viewQueryKey, affectedSections, resourceListPath, invalidationBatch, loadView } from "../../apps/web/src/lib/view-queries.ts";
+import { viewSections, viewQueryKey, affectedSections, invalidatesTags, resourceListPath, invalidationBatch, loadView } from "../../apps/web/src/lib/view-queries.ts";
 import { api, ApiError, configure, clearReads, command, send } from "../../apps/web/src/lib/api.ts";
 import { cursorPage, cardActivityPath } from "../../apps/web/src/lib/pagination.ts";
 import { TagSuggestions } from "../../apps/web/src/lib/tag-suggestions.ts";
@@ -17,6 +17,9 @@ test("planning routes only load shared project context; list and reports fetch t
 });
 
 test("SSE changes invalidate only affected visible data, with conservative recovery for gaps", () => {
+  assert.equal(invalidatesTags({ kind:"changed",target:{type:"card"},tags_changed:false }),false);
+  assert.equal(invalidatesTags({ kind:"changed",target:{type:"card"},tags_changed:true }),true);
+  assert.equal(invalidatesTags({ kind:"changed",target:{type:"card"} }),true);
   assert.deepEqual(affectedSections({ kind: "changed", project_id: "other", target: { type: "card" } }, query), []);
   assert.deepEqual(affectedSections({ kind: "changed", project_id: "p", target: { type: "update" } }, query), []);
   assert.deepEqual(affectedSections({ kind: "changed", project_id: "p", target: { type: "card" } }, query), ["card"]);
@@ -76,7 +79,7 @@ test("one active card-list load makes exactly one request and leaves unrelated a
 
 test("tag suggestions deduplicate in-flight reads, expire, and reject late cache repopulation after session cleanup", async () => {
   let time = 100, calls = 0, finish;
-  const catalog = { tags: [], version: "v", complete: true, issues: [] };
+  const catalog = { names: [], complete: true };
   const suggestions = new TagSuggestions(async () => { calls++; return catalog; }, () => time);
   assert.deepEqual(await Promise.all([suggestions.load(), suggestions.load()]), [catalog, catalog]);
   await suggestions.load();

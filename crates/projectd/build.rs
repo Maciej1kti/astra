@@ -6,6 +6,10 @@ fn collect(root: &Path, directory: &Path, output: &Path, entries: &mut Vec<Strin
         .collect();
     paths.sort();
     for path in paths {
+        // Build metadata is used by the bundle gate, never served to browsers.
+        if path.file_name().is_some_and(|name| name == ".vite") {
+            continue;
+        }
         assert!(!path.is_symlink(), "Frontend assets must not be symlinks");
         if path.is_dir() {
             collect(root, &path, output, entries);

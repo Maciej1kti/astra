@@ -8,12 +8,13 @@
     type IColumnConfig,
     type IConfig,
   } from "@svar-ui/svelte-gantt";
-  import { api, ApiError, resourcePath, type Summary } from "./api";
+  import { api, resourcePath, type Summary } from "./api";
   import { shiftedSchedule, shiftDate } from "./dates";
   import { exclusiveSchedule, widgetDate, type GanttPage } from "./planning";
   import type { DateProposal } from "./proposals";
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
   import GanttTask from "./GanttTask.svelte";
+  import { isStalePage } from "./pagination";
   import { isAbortError } from "./read-requests";
   import { projectionNotice } from "./projection-state";
   import { partitionEdges } from "./gantt-projection";
@@ -63,7 +64,9 @@
   const cards = $derived(filtered.filter((r) => r.type === "card"));
   const selected = $derived(data?.rows.find((r) => r.id === selection));
   const analysis = $derived(data?.analysis);
-  const forecasts = $derived(new Map((data?.forecasts ?? []).map((forecast) => [forecast.id, forecast])));
+  const forecasts = $derived(
+    new Map((data?.forecasts ?? []).map((forecast) => [forecast.id, forecast])),
+  );
   const tasks = $derived.by(() =>
     filtered.flatMap((row) => {
       const forecast = forecasts.get(row.id);
@@ -95,7 +98,12 @@
       ];
     }),
   );
-  const dependencies = $derived(partitionEdges(data?.edges ?? [], tasks.map((task) => String(task.id))));
+  const dependencies = $derived(
+    partitionEdges(
+      data?.edges ?? [],
+      tasks.map((task) => String(task.id)),
+    ),
+  );
   const links = $derived(dependencies.links);
   const hiddenEdges = $derived(dependencies.hiddenEdges);
   const scales = $derived<NonNullable<IConfig["scales"]>>(
@@ -219,7 +227,10 @@
   });
   async function load(cursor: string | null) {
     const key = `${project}:${cursor ?? ""}`;
-    if (loading && key === readKey) { deferred = true; return; }
+    if (loading && key === readKey) {
+      deferred = true;
+      return;
+    }
     if (gesture) {
       deferred = true;
       return;
@@ -238,7 +249,10 @@
     try {
       const result = await api<GanttPage>(
         `/api/v1/views/gantt?project_id=${project}&limit=200${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-        "GET", undefined, {}, { signal: readController.signal },
+        "GET",
+        undefined,
+        {},
+        { signal: readController.signal },
       );
       if (current !== generation) return;
       if (gesture) {
@@ -248,12 +262,7 @@
       data = result;
       freshness = projectionNotice(result);
     } catch (e) {
-      if (
-        current === generation &&
-        cursor &&
-        e instanceof ApiError &&
-        (e.data.error as { code?: string } | undefined)?.code === "CURSOR_STALE"
-      ) {
+      if (current === generation && cursor && isStalePage(e)) {
         history = [null];
         pageNotice =
           "The timeline changed. Showing the first page of the updated plan.";
@@ -264,7 +273,10 @@
     } finally {
       if (current === generation) {
         loading = false;
-        if (deferred && !gesture) { deferred = false; void load(history.at(-1) ?? null); }
+        if (deferred && !gesture) {
+          deferred = false;
+          void load(history.at(-1) ?? null);
+        }
       }
     }
   }

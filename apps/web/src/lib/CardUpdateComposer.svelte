@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { api, command, send, ApiError, type Pending } from "./api";
+  import {
+    commandStatus,
+    isDefinitiveRejection,
+    command,
+    send,
+    type Pending,
+  } from "./api";
   import { resourceLabel } from "./resource-presentation";
   import {
     cardUpdatePayload,
@@ -69,12 +75,7 @@
       else completed();
     } catch (cause) {
       error = cause instanceof Error ? cause.message : String(cause);
-      if (
-        cause instanceof ApiError &&
-        cause.status < 500 &&
-        ![401, 403, 429].includes(cause.status)
-      )
-        pending = null;
+      if (isDefinitiveRejection(cause)) pending = null;
     } finally {
       busy = false;
     }
@@ -85,9 +86,7 @@
     busy = true;
     error = "";
     try {
-      const result = await api<{ state: string }>(
-        `/api/v1/commands/${pending.requestId}`,
-      );
+      const result = await commandStatus(pending);
       if (result.state === "committed") completed();
       else
         error = `Update command status: ${result.state}. Your update draft and request identity are preserved.`;
@@ -127,7 +126,10 @@
       inspector.
     </p>
     <label
-      >Update kind<select aria-label="Update kind" bind:value={draft.kind} disabled={locked}
+      >Update kind<select
+        aria-label="Update kind"
+        bind:value={draft.kind}
+        disabled={locked}
         >{#each ["result", "blocker", "decision_needed", "note"] as kind}<option
             value={kind}>{resourceLabel(kind)}</option
           >{/each}</select

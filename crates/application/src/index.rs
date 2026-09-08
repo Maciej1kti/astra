@@ -160,6 +160,37 @@ fn relative_path(kind: &str, id: &str) -> String {
     }
 }
 
+/// Opaque page identity. Public snapshot cursors retain the global SSE sequence.
+pub(crate) fn page_revision(
+    db: &Connection,
+    global: &str,
+    project: Option<&str>,
+) -> Result<String, AppError> {
+    let Some(project) = project else {
+        return Ok(global.to_owned());
+    };
+    let workspace: String = db.query_row(
+        "SELECT value FROM projection_meta WHERE key='workspace_sequence'",
+        [],
+        |row| row.get(0),
+    )?;
+    let local: i64 = db
+        .query_row(
+            "SELECT sequence FROM projection_revisions WHERE project_id=?1",
+            [project],
+            |row| row.get(0),
+        )
+        .optional()?
+        .unwrap_or(0);
+    let epoch = global.rsplit_once(':').ok_or(AppError::State)?.0;
+    Ok(format!("{epoch}:{workspace}:{local}"))
+}
+
+fn record_project_revision(db: &Connection, project: &str, sequence: i64) -> Result<(), AppError> {
+    db.execute("INSERT INTO projection_revisions(project_id,sequence) VALUES(?1,?2) ON CONFLICT(project_id) DO UPDATE SET sequence=excluded.sequence", params![project,sequence])?;
+    Ok(())
+}
+
 pub(crate) struct ProjectionStatus {
     pub freshness: &'static str,
     pub warnings: Vec<Value>,
@@ -239,6 +270,7 @@ impl Index {
         tx.execute("DELETE FROM documents WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
         tx.execute("DELETE FROM projection_issues WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
         tx.execute("DELETE FROM projection_pending WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
+        tx.execute("DELETE FROM projection_revisions WHERE project_id NOT IN (SELECT json_extract(value,'$.project_id') FROM json_each(?1))",[&input])?;
         tx.commit()?;
         Ok(())
     }
@@ -247,6 +279,10 @@ impl Index {
             let mut db = self.connection.lock().map_err(|_| AppError::State)?;
             let tx = db.transaction()?;
             tx.execute("DELETE FROM documents WHERE project_id=?1", [project])?;
+            tx.execute(
+                "DELETE FROM projection_revisions WHERE project_id=?1",
+                [project],
+            )?;
             tx.execute(
                 "DELETE FROM projection_pending WHERE project_id=?1",
                 [project],
@@ -280,8 +316,14 @@ impl Index {
     }
 
     pub fn invalidate_workspace(&self, now: i64) -> Result<(), AppError> {
-        let db = self.connection.lock().map_err(|_| AppError::State)?;
-        let sequence:i64=db.query_row("UPDATE projection_meta SET value=CAST(value AS INTEGER)+1 WHERE key='sequence' RETURNING CAST(value AS INTEGER)",[],|r|r.get(0))?;
+        let mut db = self.connection.lock().map_err(|_| AppError::State)?;
+        let tx = db.transaction()?;
+        let sequence:i64=tx.query_row("UPDATE projection_meta SET value=CAST(value AS INTEGER)+1 WHERE key='sequence' RETURNING CAST(value AS INTEGER)",[],|r|r.get(0))?;
+        tx.execute(
+            "UPDATE projection_meta SET value=?1 WHERE key='workspace_sequence'",
+            [sequence.to_string()],
+        )?;
+        tx.commit()?;
         let mut events = self.events.lock().map_err(|_| AppError::State)?;
         events.push_back((now,json!({"kind":"resync_required","cursor":format!("{}:{sequence}",self.epoch),"reason":"workspace_changed"})));
         while events.len() > 10_000
@@ -315,6 +357,7 @@ impl Index {
             |r| r.get(0),
         )?;
         let sequence = sequence + 1;
+        record_project_revision(&tx, project_id, sequence)?;
         tx.execute(
             "UPDATE projection_meta SET value=?1 WHERE key='sequence'",
             [sequence.to_string()],
@@ -347,7 +390,7 @@ impl Index {
         connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;")?;
         connection.execute_batch(include_str!("../../../contracts/index-starting-schema.sql"))?;
         upgrade_search_projection(&mut connection)?;
-        connection.execute_batch("INSERT INTO projection_meta(key,value) VALUES('sequence','0') ON CONFLICT(key) DO UPDATE SET value='0';")?;
+        connection.execute_batch("INSERT INTO projection_meta(key,value) VALUES('sequence','0'),('workspace_sequence','0') ON CONFLICT(key) DO UPDATE SET value='0'; DELETE FROM projection_revisions;")?;
         Ok(Self {
             connection: Mutex::new(connection),
             epoch: Uuid::new_v4().to_string(),
@@ -528,6 +571,21 @@ impl Index {
                 continue;
             }
             let metadata = &value["metadata"];
+            let tags_changed = if kind == "card" {
+                let previous: Option<String> = tx.query_row("SELECT COALESCE(json_extract(metadata_json,'$.labels'),'[]') FROM documents WHERE project_id=?1 AND entity_type='card' AND entity_id=?2", params![project_id,id], |row|row.get(0)).optional()?;
+                previous
+                    .as_deref()
+                    .map(serde_json::from_str::<Value>)
+                    .transpose()
+                    .map_err(|_| AppError::State)?
+                    .unwrap_or(serde_json::json!([]))
+                    != metadata
+                        .get("labels")
+                        .cloned()
+                        .unwrap_or(serde_json::json!([]))
+            } else {
+                false
+            };
             let title = metadata
                 .get("title")
                 .or_else(|| metadata.get("name"))
@@ -537,7 +595,11 @@ impl Index {
             let relative = relative_path(kind, id);
             let body = value["body"].as_str().unwrap();
             tx.execute("INSERT INTO documents(project_id,entity_id,entity_type,relative_path,source_hash,title,body,search_text,metadata_json,observed_at,validity) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'valid') ON CONFLICT(project_id,entity_type,entity_id) DO UPDATE SET source_hash=excluded.source_hash,title=excluded.title,body=excluded.body,search_text=excluded.search_text,metadata_json=excluded.metadata_json,observed_at=excluded.observed_at,validity='valid'",params![project_id,id,kind,relative,version,title,body,search_text(body,metadata),serde_json::to_string(metadata).unwrap(),instant(now)])?;
-            changes.push(json!({"kind":"changed","project_id":project_id,"target":{"type":kind,"id":id},"version":version,"reason":"source_changed"}));
+            let mut event = json!({"kind":"changed","project_id":project_id,"target":{"type":kind,"id":id},"version":version,"reason":"source_changed"});
+            if kind == "card" {
+                event["tags_changed"] = json!(tags_changed);
+            }
+            changes.push(event);
         }
         for (kind, id) in previous.keys() {
             if !documents.contains_key(&(kind.clone(), id.clone())) {
@@ -594,6 +656,9 @@ impl Index {
         for event in &mut changes {
             sequence += 1;
             event["cursor"] = json!(format!("{}:{sequence}", self.epoch));
+        }
+        if !changes.is_empty() {
+            record_project_revision(&tx, project_id, sequence)?;
         }
         tx.execute(
             "UPDATE projection_meta SET value=?1 WHERE key='sequence'",
@@ -705,13 +770,14 @@ impl Index {
             |r| r.get(0),
         )?;
         let revision = format!("{}:{sequence}", self.epoch);
+        let cursor_revision = page_revision(&db, &revision, query.project.as_deref())?;
         let offset = if let Some(cursor) = &query.cursor {
             if cursor.len() > 4096 {
                 return Err(AppError::reject(422, "INVALID_CURSOR"));
             }
             let cursor: Value = serde_json::from_str(cursor)
                 .map_err(|_| AppError::reject(422, "INVALID_CURSOR"))?;
-            if cursor["revision"] != revision || cursor["query"] != query_hash {
+            if cursor["revision"] != cursor_revision || cursor["query"] != query_hash {
                 return Err(AppError::reject(409, "CURSOR_STALE"));
             }
             cursor["offset"]
@@ -795,7 +861,7 @@ impl Index {
         rows.truncate(limit as usize);
         let next = more.then(|| {
             serde_json::to_string(
-                &json!({"revision":revision,"query":query_hash,"offset":offset+limit as i64}),
+                &json!({"revision":cursor_revision,"query":query_hash,"offset":offset+limit as i64}),
             )
             .unwrap()
         });

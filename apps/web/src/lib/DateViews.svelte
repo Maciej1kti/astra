@@ -42,16 +42,24 @@
     const requestedView = view;
     error = "";
     try {
-      if (requestedView === "calendar") CalendarView = (await import("./CalendarView.svelte")).default;
+      if (requestedView === "calendar")
+        CalendarView = (await import("./CalendarView.svelte")).default;
       else GanttView = (await import("./GanttView.svelte")).default;
     } catch {
-      if (view === requestedView) error = "This planning view could not be loaded. Retry, or reload after preserving any open draft.";
+      if (view === requestedView)
+        error =
+          "This planning view could not be loaded. Retry, or reload after preserving any open draft.";
     }
   }
-  $effect(() => { void view; void loadView(); });
+  $effect(() => {
+    void view;
+    void loadView();
+  });
 </script>
 
-{#if error}<p role="alert">{error} <button onclick={loadView}>Retry planning view</button></p>{/if}
+{#if error}<p role="alert">
+    {error} <button onclick={loadView}>Retry planning view</button>
+  </p>{/if}
 {#if view === "calendar" && CalendarView}<CalendarView
     {project}
     {calendarDate}

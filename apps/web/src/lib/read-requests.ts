@@ -6,7 +6,12 @@ export function isAbortError(error: unknown) {
 }
 export class ReadQueueFullError extends Error {}
 
-type Entry = { controller: AbortController; users: number; settled: boolean; promise: Promise<unknown> };
+type Entry = {
+  controller: AbortController;
+  users: number;
+  settled: boolean;
+  promise: Promise<unknown>;
+};
 type Waiting = { start: () => void; cancel: () => void };
 
 /** Only GETs enter this pool. Each subscriber owns its cancellation separately. */
@@ -46,23 +51,43 @@ export class ReadRequests {
       if (signal.aborted) return cancel();
       if (this.active < this.concurrency) return start();
       if (this.waiting.length >= this.maxQueued)
-        return reject(new ReadQueueFullError("Waiting for previous reads to finish."));
+        return reject(
+          new ReadQueueFullError("Waiting for previous reads to finish."),
+        );
       signal.addEventListener("abort", cancel, { once: true });
       this.waiting.push(waiting);
     });
   }
 
-  run<T>(key: string, operation: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  run<T>(
+    key: string,
+    operation: (signal: AbortSignal) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
     if (signal?.aborted) return Promise.reject(abortError());
     let entry = this.entries.get(key);
     if (!entry) {
       const controller = new AbortController();
-      entry = { controller, users: 0, settled: false, promise: Promise.resolve() };
+      entry = {
+        controller,
+        users: 0,
+        settled: false,
+        promise: Promise.resolve(),
+      };
       const created = entry;
       this.entries.set(key, created);
       created.promise = (async () => {
         // The deadline includes queue time; obsolete reads cannot wait indefinitely.
-        const timer = setTimeout(() => controller.abort(new DOMException("The read timed out. Try again.", "TimeoutError")), this.timeoutMs);
+        const timer = setTimeout(
+          () =>
+            controller.abort(
+              new DOMException(
+                "The read timed out. Try again.",
+                "TimeoutError",
+              ),
+            ),
+          this.timeoutMs,
+        );
         let release: (() => void) | undefined;
         try {
           release = await this.slot(controller.signal);
@@ -91,11 +116,17 @@ export class ReadRequests {
         }
         return true;
       };
-      const cancel = () => { if (finish()) reject(abortError()); };
+      const cancel = () => {
+        if (finish()) reject(abortError());
+      };
       signal?.addEventListener("abort", cancel, { once: true });
       current.promise.then(
-        (value) => { if (finish()) resolve(value as T); },
-        (error) => { if (finish()) reject(error); },
+        (value) => {
+          if (finish()) resolve(value as T);
+        },
+        (error) => {
+          if (finish()) reject(error);
+        },
       );
     });
   }
@@ -107,15 +138,21 @@ export class ReadRequests {
 }
 
 /** Bound both active work and queued promises for collections of known IDs. */
-export async function mapReads<T, R>(items: readonly T[], read: (item: T) => Promise<R>, signal?: AbortSignal): Promise<R[]> {
+export async function mapReads<T, R>(
+  items: readonly T[],
+  read: (item: T) => Promise<R>,
+  signal?: AbortSignal,
+): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let index = 0;
-  await Promise.all(Array.from({ length: Math.min(3, items.length) }, async () => {
-    while (index < items.length) {
-      signal?.throwIfAborted();
-      const current = index++;
-      results[current] = await read(items[current]);
-    }
-  }));
+  await Promise.all(
+    Array.from({ length: Math.min(3, items.length) }, async () => {
+      while (index < items.length) {
+        signal?.throwIfAborted();
+        const current = index++;
+        results[current] = await read(items[current]);
+      }
+    }),
+  );
   return results;
 }

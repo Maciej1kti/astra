@@ -5,12 +5,18 @@
   import CardActivity from "./CardActivity.svelte";
   import AcceptanceChecklist from "./AcceptanceChecklist.svelte";
   import CardUpdateComposer from "./CardUpdateComposer.svelte";
-  import { acceptanceValidation, cardPurposeValidation, type AcceptanceItem } from "./card-work";
+  import {
+    acceptanceValidation,
+    cardPurposeValidation,
+    type AcceptanceItem,
+  } from "./card-work";
   import { hasCardUpdateDraft, newCardUpdateDraft } from "./card-update";
   import { addTag, tagValidation } from "./tags";
   import { canUndoDraft, editorCompletion } from "./editor-actions";
+  import { editorPayload } from "./editor-draft";
   import { detailSummary } from "./resource-summary";
   import { mapReads, isAbortError } from "./read-requests";
+  import { searchRelations } from "./relation-search";
   import { resourceLabel } from "./resource-presentation";
   import { modal } from "./dialog";
   import {
@@ -18,6 +24,8 @@
     resourcePath,
     command,
     send,
+    commandStatus,
+    isDefinitiveRejection,
     ApiError,
     type Resource,
     type Summary,
@@ -75,20 +83,32 @@
   let labels = $state<string[]>([...((metadata?.labels as string[]) ?? [])]);
   let expectedResult = $state(String(metadata?.expected_result ?? ""));
   let owner = $state(String(metadata?.owner ?? ""));
-  let acceptance = $state<AcceptanceItem[]>(((metadata?.acceptance as AcceptanceItem[]) ?? []).map((item) => ({ ...item })));
-  let acceptanceDraft = $state(""), acceptanceError = $state("");
+  let acceptance = $state<AcceptanceItem[]>(
+    ((metadata?.acceptance as AcceptanceItem[]) ?? []).map((item) => ({
+      ...item,
+    })),
+  );
+  let acceptanceDraft = $state(""),
+    acceptanceError = $state("");
   let updateDraft = $state(newCardUpdateDraft());
-  let updatePending = $state<Pending | null>(null), updateBusy = $state(false);
+  let updatePending = $state<Pending | null>(null),
+    updateBusy = $state(false);
   let cardActivity = $state<{ refresh: () => Promise<void> }>();
   const updateDirty = $derived(hasCardUpdateDraft(updateDraft));
-  let tagDraft = $state(""), tagError = $state("");
-  let choicesLoading = $state(false), discoveryError = $state("");
+  let tagDraft = $state(""),
+    tagError = $state("");
+  let choicesLoading = $state(false),
+    discoveryError = $state("");
   let relationRead: AbortController | undefined;
   let relationGeneration = 0;
   let relationIndex = $state<Record<string, Summary>>({});
   let projectName = $state("");
   let statusMessage = $state("");
-  let read = $state(untrack(() => resource?.read ?? false));
+  let read = $state(
+    untrack(() =>
+      resource?.type === "update" ? (resource.read ?? false) : false,
+    ),
+  );
   let author = $state("Owner"),
     advanced = $state("{}"),
     error = $state(""),
@@ -116,16 +136,32 @@
   let choices = $state<Summary[]>([]),
     choiceSearch = $state("");
   let choiceKind = $state("card");
+  let searchRead: AbortController | undefined;
+  let searchGeneration = 0;
   async function searchChoices() {
+    searchRead?.abort();
+    const controller = new AbortController();
+    searchRead = controller;
+    const generation = ++searchGeneration;
+    const selectedKind = choiceKind,
+      text = choiceSearch;
     try {
-      const page = await api<{ items: Summary[] }>(
-        `/api/v1/search?q=${encodeURIComponent(choiceSearch)}&project_id=${project}&limit=50`,
+      const found = await searchRelations(
+        project,
+        selectedKind,
+        text,
+        resource?.metadata.id,
+        controller.signal,
       );
-      choices = page.items.filter(
-        (item) => item.type === choiceKind && item.id !== resource?.metadata.id,
-      );
+      if (
+        generation === searchGeneration &&
+        selectedKind === choiceKind &&
+        text === choiceSearch
+      )
+        choices = found;
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      if (generation === searchGeneration && !isAbortError(e))
+        error = e instanceof Error ? e.message : String(e);
     }
   }
   function snapshot() {
@@ -163,7 +199,9 @@
   let cardDirty = $derived(snapshot() !== baseline);
   let dirty = $derived(cardDirty || updateDirty || !!updatePending);
   let accessLost = $state(false);
-  let locked = $derived(busy || !!pending || accessLost || updateBusy || !!updatePending);
+  let locked = $derived(
+    busy || !!pending || accessLost || updateBusy || !!updatePending,
+  );
   async function loadProjectChoices() {
     relationRead?.abort();
     const controller = new AbortController();
@@ -171,24 +209,52 @@
     const current = ++relationGeneration;
     choicesLoading = true;
     discoveryError = "";
-    const references: { type: Summary["type"]; id: string; project_id: string }[] =
-      [...new Set(dependencies)].map((id) => ({ type: "card", id, project_id: project }));
-    if (milestoneId) references.push({ type: "milestone", id: milestoneId, project_id: project });
+    const references: {
+      type: Summary["type"];
+      id: string;
+      project_id: string;
+    }[] = [...new Set(dependencies)].map((id) => ({
+      type: "card",
+      id,
+      project_id: project,
+    }));
+    if (milestoneId)
+      references.push({
+        type: "milestone",
+        id: milestoneId,
+        project_id: project,
+      });
     try {
-      const available = await mapReads(references, async (ref) => {
-        try {
-          const detail = await api<Resource>(resourcePath(ref), "GET", undefined, {}, { signal: controller.signal });
-          return detailSummary(detail, project, ref.type);
-        } catch (error) {
-          if (isAbortError(error)) throw error;
-          return null;
-        }
-      }, controller.signal);
+      const available = await mapReads(
+        references,
+        async (ref) => {
+          try {
+            const detail = await api<Resource>(
+              resourcePath(ref),
+              "GET",
+              undefined,
+              {},
+              { signal: controller.signal },
+            );
+            return detailSummary(detail, project, ref.type);
+          } catch (error) {
+            if (isAbortError(error)) throw error;
+            return null;
+          }
+        },
+        controller.signal,
+      );
       if (current !== relationGeneration) return;
-      relationIndex = Object.fromEntries(available.filter((item): item is Summary => item !== null).map((item) => [item.id, item]));
-      if (available.some((item) => !item)) discoveryError = "Some related cards or milestones are unavailable.";
+      relationIndex = Object.fromEntries(
+        available
+          .filter((item): item is Summary => item !== null)
+          .map((item) => [item.id, item]),
+      );
+      if (available.some((item) => !item))
+        discoveryError = "Some related cards or milestones are unavailable.";
     } catch (error) {
-      if (current === relationGeneration && !isAbortError(error)) discoveryError = "Related card names could not be loaded.";
+      if (current === relationGeneration && !isAbortError(error))
+        discoveryError = "Related card names could not be loaded.";
     } finally {
       if (current === relationGeneration) choicesLoading = false;
     }
@@ -196,7 +262,15 @@
   async function copyDraft() {
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify({ fields: JSON.parse(snapshot()), pending, card_update: { fields: updateDraft, pending: updatePending } }, null, 2),
+        JSON.stringify(
+          {
+            fields: JSON.parse(snapshot()),
+            pending,
+            card_update: { fields: updateDraft, pending: updatePending },
+          },
+          null,
+          2,
+        ),
       );
       error = "Draft copied.";
     } catch {
@@ -213,6 +287,8 @@
       accessLost = true;
       relationGeneration++;
       relationRead?.abort();
+      searchGeneration++;
+      searchRead?.abort();
       relationIndex = {};
       history = [];
       focus = null;
@@ -229,6 +305,8 @@
     return () => {
       relationGeneration++;
       relationRead?.abort();
+      searchGeneration++;
+      searchRead?.abort();
       window.removeEventListener("session-ended", ended);
       window.removeEventListener("session-restored", restored);
     };
@@ -281,7 +359,12 @@
     }
     if (type !== "project")
       void api<Resource>(`/api/v1/projects/${project}`)
-        .then((value) => (projectName = String((value.metadata as Record<string, unknown>).name ?? "")))
+        .then(
+          (value) =>
+            (projectName = String(
+              (value.metadata as Record<string, unknown>).name ?? "",
+            )),
+        )
         .catch(() => {});
   });
   async function loadFocus() {
@@ -377,11 +460,21 @@
     conflict = null;
     try {
       if (type === "card") {
-        if (updateDirty) throw new Error("Post or discard your update draft before saving the card. Both drafts are preserved.");
+        if (updateDirty)
+          throw new Error(
+            "Post or discard your update draft before saving the card. Both drafts are preserved.",
+          );
         const purposeError = cardPurposeValidation(expectedResult, owner);
         if (purposeError) throw new Error(purposeError);
         if (acceptanceDraft.trim()) {
-          acceptance = [...acceptance, { id: crypto.randomUUID(), text: acceptanceDraft.trim(), completed: false }];
+          acceptance = [
+            ...acceptance,
+            {
+              id: crypto.randomUUID(),
+              text: acceptanceDraft.trim(),
+              completed: false,
+            },
+          ];
           acceptanceDraft = "";
         }
         acceptanceError = acceptanceValidation(acceptance);
@@ -396,72 +489,33 @@
         tagError = tagValidation(labels);
         if (tagError) return;
       }
-      const extra = JSON.parse(advanced);
-      if (!extra || Array.isArray(extra) || typeof extra !== "object")
-        throw new Error("Additional fields must be a JSON object.");
-      const fields: Record<string, unknown> = { ...extra, body };
-      const clear: string[] = [];
-      if (type === "project") {
-        fields.name = title;
-        fields.state = status;
-        if (phase) fields.phase = phase;
-        else if (metadata?.phase) clear.push("phase");
-      } else if (type === "update") {
-        fields.summary = title;
-        fields.kind = kind;
-        fields.author = { kind: "human", label: author };
-        fields.target = extra.target ?? {
-          type: targetType,
-          id: targetType === "project" ? project : targetId,
-        };
-        if (kind === "resolution")
-          fields.resolves = resolves
-            .split(",")
-            .map((id) => id.trim())
-            .filter(Boolean);
-        if (kind === "correction") fields.supersedes = supersedes.trim();
-      } else {
-        fields.title = title;
-        fields.status = status;
-      }
-      if (type === "card") {
-        fields.archived = archived;
-        if (expectedResult.trim()) fields.expected_result = expectedResult;
-        else if (metadata?.expected_result !== undefined) clear.push("expected_result");
-        if (owner.trim()) fields.owner = owner;
-        else if (metadata?.owner !== undefined) clear.push("owner");
-        if (acceptance.length) fields.acceptance = acceptance.map((item) => ({ ...item }));
-        else if (metadata?.acceptance !== undefined) clear.push("acceptance");
-        if (
-          !resource ||
-          JSON.stringify(dependencies) !==
-            JSON.stringify(metadata?.depends_on ?? [])
-        )
-          fields.depends_on = dependencies;
-        if (milestoneId) fields.milestone_id = milestoneId;
-        else if (metadata?.milestone_id) clear.push("milestone_id");
-        if (blockedReason.trim())
-          fields.blocked = { reason: blockedReason.trim() };
-        else if (metadata?.blocked) clear.push("blocked");
-        fields.priority = priority;
-        fields.kind = kind;
-        fields.labels = [...labels];
-        if (start && end) fields.schedule = { start, end };
-        else if (start || end)
-          throw new Error("A schedule needs both start and end dates.");
-        else if (metadata?.schedule) clear.push("schedule");
-      }
-      if (type === "card" || type === "milestone") {
-        if (due) fields.due = { date: due, kind: dueKind };
-        else if (metadata?.due) clear.push("due");
-      }
-      if (type === "card" || type === "project") {
-        if (review) fields.review_on = review;
-        else if (metadata?.review_on) clear.push("review_on");
-      }
-      const payload = resource
-        ? { set: fields, ...(clear.length ? { clear } : {}) }
-        : fields;
+      const payload = editorPayload(type, project, !!resource, metadata, {
+        title,
+        status,
+        priority,
+        kind,
+        start,
+        end,
+        due,
+        dueKind,
+        review,
+        body,
+        labels,
+        expectedResult,
+        owner,
+        acceptance,
+        advanced,
+        author,
+        phase,
+        archived,
+        milestoneId,
+        blockedReason,
+        dependencies,
+        targetType,
+        targetId,
+        resolves,
+        supersedes,
+      });
       pending = command(
         path(),
         resource ? "PATCH" : "POST",
@@ -491,7 +545,8 @@
         if (e.status === 412 || e.status === 409) {
           if (editorCompletion(submitted) === "focus") {
             await loadFocus();
-            error = "Focus changed elsewhere. Your draft is preserved. Review the current pin state before trying again.";
+            error =
+              "Focus changed elsewhere. Your draft is preserved. Review the current pin state before trying again.";
           } else if (editorCompletion(submitted) === "resource") {
             try {
               conflict = await api<Resource>(path());
@@ -500,8 +555,7 @@
             }
           }
         }
-        if (e.status < 500 && ![401, 403, 429].includes(e.status))
-          pending = null;
+        if (isDefinitiveRejection(e)) pending = null;
       }
     } finally {
       busy = false;
@@ -512,9 +566,7 @@
     const submitted = pending;
     busy = true;
     try {
-      const result = await api<{ state: string }>(
-        `/api/v1/commands/${submitted.requestId}`,
-      );
+      const result = await commandStatus(submitted);
       if (result.state === "committed") {
         await completeCommand(submitted);
       } else
@@ -533,13 +585,23 @@
       return;
     }
     if (effect === "focus") {
-      const items = (submitted.payload as { items: { project_id: string; card_id: string }[] }).items;
-      const nowPinned = items.some((item) => item.project_id === project && item.card_id === resource?.metadata.id);
-      statusMessage = nowPinned ? "Pinned to focus. Your draft is preserved." : "Removed from focus. Your draft is preserved.";
+      const items = (
+        submitted.payload as {
+          items: { project_id: string; card_id: string }[];
+        }
+      ).items;
+      const nowPinned = items.some(
+        (item) =>
+          item.project_id === project && item.card_id === resource?.metadata.id,
+      );
+      statusMessage = nowPinned
+        ? "Pinned to focus. Your draft is preserved."
+        : "Removed from focus. Your draft is preserved.";
       focus = null;
       await loadFocus();
     } else {
-      read = (submitted.payload as { items: { read: boolean }[] }).items[0].read;
+      read = (submitted.payload as { items: { read: boolean }[] }).items[0]
+        .read;
       statusMessage = read ? "Marked as read." : "Marked as unread.";
     }
     onchanged?.();
@@ -562,7 +624,11 @@
   <div class:quick-pending={autoCreate && !error && !conflict && !discard}>
     <header>
       <div>
-        <p class="eyebrow">{projectName ? `${projectName} · ` : ""}{type} · {resource ? "Details" : "New"}</p>
+        <p class="eyebrow">
+          {projectName ? `${projectName} · ` : ""}{type} · {resource
+            ? "Details"
+            : "New"}
+        </p>
         <h2>
           {readonly
             ? title || "Update record"
@@ -570,10 +636,26 @@
               ? title || "Untitled"
               : `Create ${type}`}
         </h2>
-        {#if !readonly}<p class="draft-state" role="status">{busy ? "Saving…" : updateBusy ? "Recording card update…" : pending || updatePending ? "Awaiting command confirmation" : conflict ? "Conflict · draft preserved" : dirty ? "Unsaved changes" : resource ? "Saved version" : "New draft"}</p>{/if}
+        {#if !readonly}<p class="draft-state" role="status">
+            {busy
+              ? "Saving…"
+              : updateBusy
+                ? "Recording card update…"
+                : pending || updatePending
+                  ? "Awaiting command confirmation"
+                  : conflict
+                    ? "Conflict · draft preserved"
+                    : dirty
+                      ? "Unsaved changes"
+                      : resource
+                        ? "Saved version"
+                        : "New draft"}
+          </p>{/if}
       </div>
-      <button aria-label="Close editor" onclick={close} disabled={busy || updateBusy}
-        >✕</button
+      <button
+        aria-label="Close editor"
+        onclick={close}
+        disabled={busy || updateBusy}>✕</button
       >
     </header>
     <form
@@ -588,15 +670,11 @@
               ? "The command result may still be unknown. Keep its request ID before closing."
               : "Discard your unsaved draft?"}
           </p>
-          <button type="button" onclick={onclose} disabled={busy || updateBusy}>Discard draft</button><button
-            type="button"
-            onclick={keepEditing}>Keep editing</button
-          >
+          <button type="button" onclick={onclose} disabled={busy || updateBusy}
+            >Discard draft</button
+          ><button type="button" onclick={keepEditing}>Keep editing</button>
         </div>{/if}
-      {#if readonly}<button
-          type="button"
-          onclick={toggleRead}
-          disabled={locked}
+      {#if readonly}<button type="button" onclick={toggleRead} disabled={locked}
           >{read ? "Mark unread" : "Mark read"}</button
         >{/if}
       {#if type === "card" && resource}<button
@@ -604,8 +682,14 @@
           onclick={toggleFocus}
           disabled={!focus || locked}
           >{pinned ? "Remove from focus" : "Pin to focus"}</button
-        >{#if !focus && !busy}<button type="button" onclick={loadFocus} disabled={locked}>Refresh focus state</button>{/if}{/if}
-      {#if statusMessage}<p class="action-status" role="status">{statusMessage}</p>{/if}
+        >{#if !focus && !busy}<button
+            type="button"
+            onclick={loadFocus}
+            disabled={locked}>Refresh focus state</button
+          >{/if}{/if}
+      {#if statusMessage}<p class="action-status" role="status">
+          {statusMessage}
+        </p>{/if}
       <label
         >{type === "project"
           ? "Name"
@@ -624,15 +708,17 @@
               aria-label="Status"
               bind:value={status}
               disabled={locked}
-              >{#each statuses as item}<option value={item}>{resourceLabel(item)}</option>{/each}</select
+              >{#each statuses as item}<option value={item}
+                  >{resourceLabel(item)}</option
+                >{/each}</select
             ></label
           >{#if type === "card"}<label
               >Priority<select
                 aria-label="Priority"
                 bind:value={priority}
                 disabled={locked}
-                >{#each ["low", "normal", "high", "urgent"] as item}<option value={item}
-                    >{resourceLabel(item)}</option
+                >{#each ["low", "normal", "high", "urgent"] as item}<option
+                    value={item}>{resourceLabel(item)}</option
                   >{/each}</select
               ></label
             >{/if}
@@ -642,29 +728,53 @@
             aria-label="Kind"
             bind:value={kind}
             disabled={readonly || locked}
-            >{#each type === "card" ? ["outcome", "decision"] : ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option value={item}
-                >{resourceLabel(item)}</option
+            >{#each type === "card" ? ["outcome", "decision"] : ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
+                value={item}>{resourceLabel(item)}</option
               >{/each}</select
           ></label
         >{/if}
       {#if type === "card"}
-        <label class="description-label">Expected result <span>What should this card deliver?</span><textarea bind:value={expectedResult} rows="3" disabled={locked}></textarea></label>
-        <label>Owner <span>Optional display name</span><input bind:value={owner} disabled={locked} placeholder="Who is responsible?" /></label>
+        <label class="description-label"
+          >Expected result <span>What should this card deliver?</span><textarea
+            bind:value={expectedResult}
+            rows="3"
+            disabled={locked}></textarea></label
+        >
+        <label
+          >Owner <span>Optional display name</span><input
+            bind:value={owner}
+            disabled={locked}
+            placeholder="Who is responsible?"
+          /></label
+        >
       {/if}
       <label class="description-label"
-        >Description <span>{type === "card" ? "Context and supporting details · Markdown" : "Markdown source"}</span><textarea
-          bind:value={body}
-          rows="8"
-          disabled={readonly || locked}></textarea></label
+        >Description <span
+          >{type === "card"
+            ? "Context and supporting details · Markdown"
+            : "Markdown source"}</span
+        ><textarea bind:value={body} rows="8" disabled={readonly || locked}
+        ></textarea></label
       >
       <button type="button" onclick={() => (preview = !preview)}
         >{preview ? "Hide preview" : "Preview Markdown"}</button
       >
       {#if preview}<Markdown source={body} />{/if}
       {#if type === "card"}
-        <AcceptanceChecklist bind:items={acceptance} bind:draft={acceptanceDraft} bind:error={acceptanceError} disabled={locked} />
-        <TagPicker bind:labels bind:draft={tagDraft} bind:error={tagError} disabled={locked} />
-        <h3>Planning</h3><fieldset>
+        <AcceptanceChecklist
+          bind:items={acceptance}
+          bind:draft={acceptanceDraft}
+          bind:error={acceptanceError}
+          disabled={locked}
+        />
+        <TagPicker
+          bind:labels
+          bind:draft={tagDraft}
+          bind:error={tagError}
+          disabled={locked}
+        />
+        <h3>Planning</h3>
+        <fieldset>
           <legend>Planned work · inclusive dates</legend>
           <div class="row">
             <label
@@ -722,17 +832,43 @@
       {#if type === "card"}<fieldset>
           <legend>Connections and blockers</legend>
           <p class="field-title">Milestone</p>
-          {#if discoveryError}<p class="hint">{discoveryError} <button type="button" disabled={locked || choicesLoading} onclick={loadProjectChoices}>Retry related names</button></p>{/if}
-          {#if milestoneId}<div class="relation-row"><span>{relationIndex[milestoneId]?.title ?? (choicesLoading ? "Loading milestone…" : "Unavailable milestone")}</span><button type="button" disabled={locked} onclick={() => (milestoneId = "")}>Remove milestone</button></div>
-          {:else}<p class="empty-context">No milestone assigned. Find one by its title below.</p>{/if}
+          {#if discoveryError}<p class="hint">
+              {discoveryError}
+              <button
+                type="button"
+                disabled={locked || choicesLoading}
+                onclick={loadProjectChoices}>Retry related names</button
+              >
+            </p>{/if}
+          {#if milestoneId}<div class="relation-row">
+              <span
+                >{relationIndex[milestoneId]?.title ??
+                  (choicesLoading
+                    ? "Loading milestone…"
+                    : "Unavailable milestone")}</span
+              ><button
+                type="button"
+                disabled={locked}
+                onclick={() => (milestoneId = "")}>Remove milestone</button
+              >
+            </div>
+          {:else}<p class="empty-context">
+              No milestone assigned. Find one by its title below.
+            </p>{/if}
           <label
-            >Blocked reason<textarea bind:value={blockedReason} disabled={locked}
-            ></textarea></label
+            >Blocked reason<textarea
+              bind:value={blockedReason}
+              disabled={locked}></textarea></label
           >
           <p class="field-title">Dependencies · must finish first</p>
-          {#if !dependencies.length}<p class="empty-context">No predecessor cards.</p>{/if}
+          {#if !dependencies.length}<p class="empty-context">
+              No predecessor cards.
+            </p>{/if}
           {#each dependencies as id}<div class="relation-row">
-              <span>{relationIndex[id]?.title ?? (choicesLoading ? "Loading card…" : "Unavailable card")}</span><button
+              <span
+                >{relationIndex[id]?.title ??
+                  (choicesLoading ? "Loading card…" : "Unavailable card")}</span
+              ><button
                 type="button"
                 onclick={() =>
                   (dependencies = dependencies.filter((value) => value !== id))}
@@ -747,14 +883,22 @@
               ></select
             ></label
           >
-          <label>Find by title<input bind:value={choiceSearch} disabled={locked} /></label><button
+          <label
+            >Find by title<input
+              bind:value={choiceSearch}
+              disabled={locked}
+            /></label
+          ><button
             type="button"
             onclick={searchChoices}
             disabled={!choiceSearch.trim() || locked}>Find resources</button
           >
           {#each choices as item}<button
               type="button"
-              disabled={locked || (item.type === "milestone" ? milestoneId === item.id : dependencies.includes(item.id))}
+              disabled={locked ||
+                (item.type === "milestone"
+                  ? milestoneId === item.id
+                  : dependencies.includes(item.id))}
               onclick={() => {
                 relationIndex = { ...relationIndex, [item.id]: item };
                 if (item.type === "milestone") milestoneId = item.id;
@@ -762,9 +906,26 @@
                   dependencies = [...dependencies, item.id];
               }}>{item.title}</button
             >{/each}
-          <details><summary>Connection identifiers</summary><p class="empty-context">Technical identifiers for source-file inspection.</p><p>Milestone: <code>{milestoneId || "None"}</code></p>{#each dependencies as id}<p>Dependency: <code>{id}</code></p>{/each}</details>
+          <details>
+            <summary>Connection identifiers</summary>
+            <p class="empty-context">
+              Technical identifiers for source-file inspection.
+            </p>
+            <p>Milestone: <code>{milestoneId || "None"}</code></p>
+            {#each dependencies as id}<p>
+                Dependency: <code>{id}</code>
+              </p>{/each}
+          </details>
         </fieldset>
-        <details><summary>Card lifecycle</summary><label><input type="checkbox" bind:checked={archived} disabled={locked} /> Archived</label><p class="empty-context">Archived cards remain in the project and can be restored from the archive filter.</p></details>
+        <details>
+          <summary>Card lifecycle</summary><label
+            ><input type="checkbox" bind:checked={archived} disabled={locked} /> Archived</label
+          >
+          <p class="empty-context">
+            Archived cards remain in the project and can be restored from the
+            archive filter.
+          </p>
+        </details>
       {/if}
       {#if type === "update"}<fieldset disabled={readonly || locked}>
           <legend>Report details</legend>
@@ -792,8 +953,24 @@
             >{/if}
         </fieldset>{/if}
       {#if type === "card" && resource}
-        <CardUpdateComposer {project} cardId={resource.metadata.id} bind:draft={updateDraft} bind:pending={updatePending} bind:busy={updateBusy} disabled={busy || !!pending || accessLost} onposted={() => { void cardActivity?.refresh(); onchanged?.(); }} />
-        <CardActivity bind:this={cardActivity} {project} cardId={resource.metadata.id} disabled={accessLost} />
+        <CardUpdateComposer
+          {project}
+          cardId={resource.metadata.id}
+          bind:draft={updateDraft}
+          bind:pending={updatePending}
+          bind:busy={updateBusy}
+          disabled={busy || !!pending || accessLost}
+          onposted={() => {
+            void cardActivity?.refresh();
+            onchanged?.();
+          }}
+        />
+        <CardActivity
+          bind:this={cardActivity}
+          {project}
+          cardId={resource.metadata.id}
+          disabled={accessLost}
+        />
       {/if}
       {#if !readonly}<details>
           <summary>Additional fields</summary>
@@ -813,12 +990,16 @@
             type="button"
             onclick={() => loadHistory()}
             disabled={busy || accessLost}>First history page</button
-          >{#if dirty}<p class="empty-context">Save or discard your draft before undoing a saved change.</p>{/if}{#each history as entry}<div class="historyentry">
+          >{#if dirty}<p class="empty-context">
+              Save or discard your draft before undoing a saved change.
+            </p>{/if}{#each history as entry}<div class="historyentry">
               <small>{entry.recorded_at}</small>
               <p>{entry.changed_fields.join(", ")}</p>
               <button
                 type="button"
-                disabled={!entry.can_undo || !canUndoDraft(dirty, !!pending, busy || updateBusy) || accessLost}
+                disabled={!entry.can_undo ||
+                  !canUndoDraft(dirty, !!pending, busy || updateBusy) ||
+                  accessLost}
                 onclick={() => undo(entry.id)}>Undo this change</button
               >
             </div>{/each}{#if historyCursor}<button
@@ -846,14 +1027,19 @@
         <div class="row">
           <button type="button" onclick={resolve} disabled={busy || accessLost}
             >Check status</button
-          ><button type="button" onclick={transmit} disabled={busy || accessLost}
-            >Retry same command</button
+          ><button
+            type="button"
+            onclick={transmit}
+            disabled={busy || accessLost}>Retry same command</button
           >
         </div>{/if}
       {#if dirty || pending}<button type="button" onclick={copyDraft}
           >Copy draft</button
         >{/if}
-      {#if updateDirty || updatePending}<p class="empty-context">Post or discard the update draft before saving this card. Copy draft includes both drafts and any unresolved request.</p>{/if}
+      {#if updateDirty || updatePending}<p class="empty-context">
+          Post or discard the update draft before saving this card. Copy draft
+          includes both drafts and any unresolved request.
+        </p>{/if}
       <footer>
         <button type="button" onclick={close} disabled={busy || updateBusy}
           >{readonly ? "Close" : "Cancel"}</button
@@ -913,16 +1099,53 @@
     margin-bottom: 12px;
     border-bottom: 1px solid var(--line);
   }
-  header > div { min-width: 0; }
-  header .eyebrow { overflow-wrap: anywhere; margin: 0 0 4px; }
-  .draft-state, .action-status, .empty-context { color: var(--muted); font-size: 12px; line-height: 1.5; }
-  .draft-state { margin: 6px 0 0; }
-  .action-status { padding: 8px 10px; background: var(--bg); border-radius: 6px; }
-  h3 { font-size: 15px; margin: 28px 0 12px; }
-  .field-title { font-size: 13px; font-weight: 600; margin: 16px 0 8px; }
-  .relation-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding: 8px 0; font-size: 13px; }
-  .relation-row span { min-width: 0; overflow-wrap: anywhere; }
-  .relation-row button { flex-shrink: 0; }
+  header > div {
+    min-width: 0;
+  }
+  header .eyebrow {
+    overflow-wrap: anywhere;
+    margin: 0 0 4px;
+  }
+  .draft-state,
+  .action-status,
+  .empty-context {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .draft-state {
+    margin: 6px 0 0;
+  }
+  .action-status {
+    padding: 8px 10px;
+    background: var(--bg);
+    border-radius: 6px;
+  }
+  h3 {
+    font-size: 15px;
+    margin: 28px 0 12px;
+  }
+  .field-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 16px 0 8px;
+  }
+  .relation-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .relation-row span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .relation-row button {
+    flex-shrink: 0;
+  }
   header button {
     font-size: 20px;
   }
@@ -947,7 +1170,10 @@
     box-sizing: border-box;
     margin-top: 8px;
   }
-  input[type="checkbox"] { width: auto; margin: 0 8px 0 0; }
+  input[type="checkbox"] {
+    width: auto;
+    margin: 0 8px 0 0;
+  }
   textarea {
     resize: vertical;
     font-family: inherit;
@@ -1001,10 +1227,22 @@
     overflow: hidden;
   }
   @media (max-width: 520px) {
-    .editor { padding: 16px; }
-    header { top: -16px; }
-    footer { bottom: -16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-    .row { gap: 10px; }
-    .relation-row { align-items: flex-start; flex-wrap: wrap; }
+    .editor {
+      padding: 16px;
+    }
+    header {
+      top: -16px;
+    }
+    footer {
+      bottom: -16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    .row {
+      gap: 10px;
+    }
+    .relation-row {
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
   }
 </style>

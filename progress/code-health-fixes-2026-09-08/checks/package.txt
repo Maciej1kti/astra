@@ -1,0 +1,3 @@
+/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/dist/local-projects-0.1.0-darwin-arm64.tar.gz
+PASS: archive checksum, repeat installation with spaces, no auto-start, packaged daemon/CLI, graceful stop/restart, quiescent copy recovery, index rebuild and old-epoch rejection.
+Temporary fixture only; no service enablement, private-network setup or physical power-loss claim.

@@ -77,6 +77,26 @@ and CI artifacts; concise durable summaries belong in `progress/`. See
 the evidence retention policy. Chromium phone emulation is not physical iPhone or
 Safari validation.
 
+Frontend changes use `npm run format`; `npm run format:check` is part of the local
+and CI gate. Generated domain/API types remain owned by `npm run contracts`.
+After building, `npm run check:bundle` enforces the 300 KiB gzip budget for initial
+JavaScript and CSS, following static imports and excluding lazy planning chunks.
+The build manifest is not embedded in the daemon's public assets.
+
+Run release benchmarks separately from builds/browser tests, for example:
+
+```sh
+scripts/cargo-local build -p project-application --example benchmark --release --locked
+target/release/examples/benchmark 1 1000 500
+target/release/examples/benchmark 100 100 500
+```
+
+Each profile has 20 warmups and 200 measured mutations (40 creates, 160 title
+patches), plus indexed reads. Tag catalog timings use one warmup and ten samples;
+they describe a different, more expensive source-management operation than tag
+suggestions. Application timings exclude HTTP, VPN and rendering. Preserve a
+small JSON summary in `progress/` and keep bulk artifacts in `test-results/`.
+
 ## Typed CLI and date editing
 
 Project commands require an exact registered folder; no parent or Git lookup occurs.
@@ -87,7 +107,7 @@ projectctl --socket "$SOCKET" --project . card list --limit 50
 projectctl --socket "$SOCKET" --project . card create --title 'Write the guide'
 projectctl --socket "$SOCKET" --project . card set CARD_ID --patch-file patch.json --if-version VERSION
 projectctl --socket "$SOCKET" --project . report add --kind result --target project:PROJECT_ID --summary 'Guide reviewed'
-projectctl --socket "$SOCKET" command-status REQUEST_ID
+projectctl --socket "$SOCKET" command-status REQUEST_ID --epoch ORIGINAL_EPOCH
 ```
 
 Mutating typed commands accept `--request-id` together with `--epoch` for an

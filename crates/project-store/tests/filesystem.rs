@@ -68,6 +68,33 @@ fn detached_directory_cannot_receive_a_write() {
 }
 
 #[test]
+fn every_resource_lookup_rejects_replaced_lease_or_project_directory() {
+    let id = "11111111-1111-4111-8111-111111111111";
+    for kind in [Kind::Project, Kind::Card, Kind::Milestone, Kind::Update] {
+        for replace_project in [false, true] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = temp.path().canonicalize().unwrap();
+            let store = ProjectStore::open(&root, true).unwrap();
+            store.location(kind, id, true).unwrap();
+            if replace_project {
+                fs::rename(root.join(".project"), root.join("detached")).unwrap();
+                fs::create_dir_all(root.join(".project/.local")).unwrap();
+                fs::write(root.join(".project/.local/writer.lock"), b"replacement").unwrap();
+            } else {
+                fs::remove_file(root.join(".project/.local/writer.lock")).unwrap();
+                fs::write(root.join(".project/.local/writer.lock"), b"replacement").unwrap();
+            }
+            assert!(store.location(kind, id, true).is_err());
+            if let Some(collection) = kind.directory()
+                && replace_project
+            {
+                assert!(!root.join(".project").join(collection).exists());
+            }
+        }
+    }
+}
+
+#[test]
 fn failure_after_rename_keeps_the_new_source_for_recovery() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path().canonicalize().unwrap();

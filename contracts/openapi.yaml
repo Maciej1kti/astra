@@ -1245,6 +1245,23 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/workspace/tag-suggestions:
+    get:
+      operationId: getTagSuggestions
+      tags: [workspace]
+      summary: Bounded tag names from the index and managed vocabulary
+      description: Indexed suggestions may lag external source edits. This endpoint does not authorize renames or establish complete source coverage. Use the fresh catalog and preview for management. See ADR-032.
+      responses:
+        '200':
+          description: At most 10,000 exact tag names with explicit projection freshness
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TagSuggestions'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
   /api/v1/workspace/tags/preview:
     post:
       operationId: previewTagChange
@@ -1560,7 +1577,7 @@ paths:
       tags:
       - commands
       summary: getCommandStatus
-      description: ''
+      description: Status of the original request_id and epoch. Missing epoch returns 400 MISSING_QUERY_PARAMETER; malformed epoch returns 400 INVALID_EPOCH; duplicate or unknown parameters return 400 INVALID_QUERY. A different epoch returns 409 EPOCH_CHANGED. Only a missing request in the matching epoch returns 404 COMMAND_NOT_FOUND; this does not establish that an uncertain write failed. See ADR-031.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -3490,6 +3507,22 @@ components:
         projects:
           type: array
           items: {$ref: '#/components/schemas/TagUsageProject'}
+    TagSuggestions:
+      type: object
+      properties:
+        names:
+          type: array
+          maxItems: 10000
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/TagName'}
+        complete: {type: boolean}
+        freshness: {type: string, enum: [index_snapshot, stale]}
+        snapshot_cursor: {type: string, minLength: 1, maxLength: 120}
+        warnings:
+          type: array
+          items: {$ref: '#/components/schemas/Warning'}
+      required: [names, complete, freshness, snapshot_cursor, warnings]
+      additionalProperties: false
     TagCatalog:
       type: object
       additionalProperties: false
@@ -4194,6 +4227,9 @@ components:
     Event:
       type: object
       properties:
+        tags_changed:
+          type: boolean
+          description: On card changes, false means indexed tag names did not change. Missing means clients must conservatively invalidate suggestions.
         kind:
           type: string
           enum:

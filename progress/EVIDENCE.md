@@ -1,5 +1,11 @@
 # Implementation evidence
 
+## Code health follow-up fixes — 2026-09-08
+
+See [implementation and checks](code-health-fixes-2026-09-08/README.md) for
+command identity, pagination, scoped index revisions, tag suggestions, component
+extraction, generated API types, quality gates and release performance evidence.
+
 ## E026 — planning widgets, 2026-09-08
 
 See [E026](E026-planning-widgets.md) for SVAR Gantt, EventCalendar, versioned

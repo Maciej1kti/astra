@@ -66,6 +66,9 @@ pub enum Action {
     },
     CommandStatus {
         id: String,
+        /// Original epoch printed when the command was submitted.
+        #[arg(long)]
+        epoch: String,
     },
     Sessions,
     RevokeSession {
@@ -281,12 +284,13 @@ impl Action {
                     Some(json!({})),
                 ));
             }
-            Self::CommandStatus { id } => {
+            Self::CommandStatus { id, epoch } => {
                 let uuid = uuid::Uuid::parse_str(&id)?;
                 if uuid.get_version_num() != 7 {
                     return Err("Expected UUIDv7 request ID".into());
                 }
-                return Ok(read(format!("/api/v1/commands/{id}")));
+                super::uuid4(&epoch)?;
+                return Ok(read(format!("/api/v1/commands/{id}?epoch={epoch}")));
             }
             _ => {}
         }

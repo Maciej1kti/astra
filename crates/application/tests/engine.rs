@@ -79,6 +79,183 @@ fn patch(engine: &Engine, project_id: &str, id: &str, expected: &str, payload: V
 }
 
 #[test]
+fn scoped_pages_survive_other_projects_but_reject_relevant_changes() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let a = register(&engine, &env.path());
+    let other = env.root.join("other");
+    fs::create_dir(&other).unwrap();
+    let b = register(&engine, other.to_str().unwrap());
+    let mut cards = Vec::new();
+    for title in ["First", "Second", "Third"] {
+        let created = create(&engine, &a, title);
+        cards.push(patch(&engine, &a, created.body["result"]["id"].as_str().unwrap(), created.body["result"]["version"].as_str().unwrap(),
+            json!({"set":{"blocked":{"reason":"Waiting"},"schedule":{"start":"2026-09-08","end":"2026-09-09"}}})));
+    }
+    let query = Query {
+        project: Some(a.clone()),
+        limit: Some(1),
+        ..Default::default()
+    };
+    let list = engine.list(Some("card"), &query).unwrap();
+    let attention = engine
+        .attention_project(Some(&a), None, 1, now_millis())
+        .unwrap();
+    let calendar = engine
+        .calendar(Some(&a), "2026-09-01", "2026-09-30", None, 1)
+        .unwrap();
+    let board = engine.board(&a, None, 1).unwrap();
+    let gantt = engine.gantt(&a, None, 1).unwrap();
+    let cursor = |value: &Value| value["page"]["next_cursor"].as_str().unwrap().to_owned();
+    let list_cursor = cursor(&list);
+    let attention_cursor = cursor(&attention);
+    let calendar_cursor = cursor(&calendar);
+    let board_cursor = cursor(&board["columns"][0]);
+    let gantt_cursor = cursor(&gantt);
+    create(&engine, &b, "Unrelated write");
+    let read_pages = || {
+        vec![
+            engine.list(
+                Some("card"),
+                &Query {
+                    cursor: Some(list_cursor.clone()),
+                    ..query.clone()
+                },
+            ),
+            engine.attention_project(Some(&a), Some(&attention_cursor), 1, now_millis()),
+            engine.calendar(
+                Some(&a),
+                "2026-09-01",
+                "2026-09-30",
+                Some(&calendar_cursor),
+                1,
+            ),
+            engine.board(&a, Some(&board_cursor), 1),
+            engine.gantt(&a, Some(&gantt_cursor), 1),
+        ]
+    };
+    for page in read_pages() {
+        assert!(
+            page.is_ok(),
+            "unrelated project must preserve scoped pages: {page:?}"
+        );
+    }
+    create(&engine, &a, "Relevant write");
+    for page in read_pages() {
+        assert!(
+            matches!(page, Err(project_application::AppError::Rejected(reply)) if reply.http_status == 409)
+        );
+    }
+    let page = engine.list(Some("card"), &query).unwrap();
+    engine.index.invalidate_workspace(now_millis()).unwrap();
+    assert!(
+        engine
+            .list(
+                Some("card"),
+                &Query {
+                    cursor: Some(cursor(&page)),
+                    ..query
+                }
+            )
+            .is_err()
+    );
+}
+
+#[test]
+fn stale_target_rejection_precedes_unrelated_collection_validation_and_replays() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let first = create(&engine, &project, "Before");
+    let id = first.body["result"]["id"].as_str().unwrap();
+    let version = first.body["result"]["version"].as_str().unwrap();
+    assert_eq!(
+        patch(
+            &engine,
+            &project,
+            id,
+            version,
+            json!({"set":{"title":"After"}})
+        )
+        .http_status,
+        200
+    );
+    fs::write(
+        env.root
+            .join(format!("project/.project/cards/{}.md", Uuid::new_v4())),
+        "invalid sibling",
+    )
+    .unwrap();
+    let input = Mutation {
+        project_id: project,
+        kind: Kind::Card,
+        id: Some(id.into()),
+        payload: json!({"set":{"status":"active"}}),
+        request_id: Uuid::now_v7().to_string(),
+        epoch: engine.journal.epoch.clone(),
+        expected: Some(version.into()),
+    };
+    let reply = engine.mutate(input.clone()).unwrap();
+    assert_eq!(reply.body["error"]["code"], "VERSION_CONFLICT");
+    let replay = engine.mutate(input).unwrap();
+    assert_eq!(reply.body, replay.body);
+}
+
+#[test]
+fn dependency_validation_rereads_external_edits_and_deleted_cards() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let first = create(&engine, &project, "First");
+    let second = create(&engine, &project, "Second");
+    create(&engine, &project, "Observe the initial source graph");
+    let a = first.body["result"]["id"].as_str().unwrap();
+    let b = second.body["result"]["id"].as_str().unwrap();
+    let mut changed = first.body["result"]["resource"].clone();
+    changed.as_object_mut().unwrap().remove("version");
+    changed["metadata"]["depends_on"] = json!([b]);
+    let bytes =
+        project_store::document::serialize(&project_domain::validate_document(changed).unwrap())
+            .unwrap();
+    let source = env.root.join(format!("project/.project/cards/{a}.md"));
+    fs::write(&source, bytes).unwrap();
+    let cycle = patch(
+        &engine,
+        &project,
+        b,
+        second.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"depends_on":[a]}}),
+    );
+    assert_eq!(cycle.body["error"]["code"], "DEPENDENCY_INVALID");
+    fs::remove_file(source).unwrap();
+    let missing = patch(
+        &engine,
+        &project,
+        b,
+        second.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"depends_on":[a]}}),
+    );
+    assert_eq!(missing.body["error"]["code"], "DEPENDENCY_INVALID");
+    let cursor = engine.index.cursor().unwrap();
+    let fresh = engine.get(&project, Kind::Card, b).unwrap();
+    assert_eq!(
+        patch(
+            &engine,
+            &project,
+            b,
+            fresh["version"].as_str().unwrap(),
+            json!({"set":{"title":"Renamed"}})
+        )
+        .http_status,
+        200
+    );
+    for event in engine.index.events_since(&cursor, now_millis()).unwrap() {
+        wire::validate("Event", &event).unwrap();
+        assert_eq!(event["tags_changed"], false);
+    }
+}
+
+#[test]
 fn registration_is_explicit_preserves_existing_instructions_and_repeats_safely() {
     let env = Environment::new();
     let engine = env.engine();

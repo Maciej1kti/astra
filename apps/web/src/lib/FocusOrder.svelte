@@ -5,7 +5,7 @@
     api,
     command,
     send,
-    ApiError,
+    isDefinitiveRejection,
     type Pending,
     type Summary,
   } from "./api";
@@ -167,11 +167,7 @@
       onsaved();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
-      if (
-        e instanceof ApiError &&
-        e.status < 500 &&
-        ![401, 403, 429].includes(e.status)
-      ) {
+      if (isDefinitiveRejection(e)) {
         pending = null;
         conflict = true;
       }

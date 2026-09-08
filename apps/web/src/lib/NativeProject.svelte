@@ -1,7 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { modal } from "./dialog";
-  import { api, command, send, ApiError, type Pending } from "./api";
+  import {
+    api,
+    command,
+    send,
+    isDefinitiveRejection,
+    ApiError,
+    type Pending,
+  } from "./api";
   let {
     onclose,
     onadded,
@@ -112,11 +119,7 @@
     } catch (e) {
       choosing = false;
       error = e instanceof Error ? e.message : String(e);
-      if (
-        e instanceof ApiError &&
-        e.status < 500 &&
-        ![401, 403, 429].includes(e.status)
-      ) {
+      if (isDefinitiveRejection(e)) {
         error = explain((e.data.error as { code?: string })?.code ?? error);
         selection = null;
       }
@@ -148,12 +151,7 @@
       onadded(plan.project_id);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
-      if (
-        !job &&
-        e instanceof ApiError &&
-        e.status < 500 &&
-        ![401, 403, 429].includes(e.status)
-      ) {
+      if (!job && isDefinitiveRejection(e)) {
         pending = null;
         plan = null;
       }

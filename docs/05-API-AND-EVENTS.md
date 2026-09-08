@@ -6,7 +6,10 @@ A mutation that durably reached PREPARED but has no confirmed outcome returns
 HTTP 202 with `CommandStatus` (`api_version: "1"`, `request_id`, `state`).
 The state is `prepared`, `blocked`, or `needs_review` as observed in the journal.
 It does not return `CommandResponse.status=committed` or a new job ID. Poll the
-command status with the original request ID and epoch. A workflow returning
+command status with the original request ID and epoch using
+`GET /api/v1/commands/{request_id}?epoch={original_epoch}`. A different epoch
+returns `EPOCH_CHANGED`; a missing command is never proof of a failed write.
+See [ADR-031](ADR-031-COMMAND-IDENTITY-AND-PAGE-RECOVERY.md). A workflow returning
 `Accepted` with a job ID remains a separate contract. See ADR-014 and
 `examples/requests/command-pending-response.json`.
 

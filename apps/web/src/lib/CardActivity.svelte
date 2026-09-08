@@ -26,12 +26,22 @@
   let freshness = $state("");
   let generation = 0;
   let controller: AbortController | undefined;
-  onDestroy(() => { generation++; controller?.abort(); });
+  onDestroy(() => {
+    generation++;
+    controller?.abort();
+  });
   $effect(() => {
     if (disabled) {
-      generation++; controller?.abort(); loading = false;
-      updates = []; records = {}; loaded = false; opened = null;
-      cursor = null; history = [null]; refreshRequested = false;
+      generation++;
+      controller?.abort();
+      loading = false;
+      updates = [];
+      records = {};
+      loaded = false;
+      opened = null;
+      cursor = null;
+      history = [null];
+      refreshRequested = false;
     }
   });
 
@@ -43,7 +53,10 @@
     await load(null, [null]);
   }
 
-  async function load(target: string | null = history.at(-1) ?? null, nextHistory = history) {
+  async function load(
+    target: string | null = history.at(-1) ?? null,
+    nextHistory = history,
+  ) {
     if (loading || disabled) return;
     const current = ++generation;
     controller?.abort();
@@ -52,18 +65,31 @@
     loading = true;
     error = "";
     try {
-      const result = await cursorPage((page) => api<Page<UpdateSummary>>(cardActivityPath(project, cardId, page), "GET", undefined, {}, { signal }), target);
+      const result = await cursorPage(
+        (page) =>
+          api<Page<UpdateSummary>>(
+            cardActivityPath(project, cardId, page),
+            "GET",
+            undefined,
+            {},
+            { signal },
+          ),
+        target,
+      );
       if (current !== generation) return;
       updates = result.value.items;
       freshness = projectionNotice(result.value);
       cursor = result.value.page.next_cursor;
       history = result.reset ? [null] : nextHistory;
-      pageNotice = result.reset ? "Card activity changed. Showing the first page of the latest updates." : "";
+      pageNotice = result.reset
+        ? "Card activity changed. Showing the first page of the latest updates."
+        : "";
       opened = null;
       records = {};
       loaded = true;
     } catch (cause) {
-      if (current === generation && !isAbortError(cause)) error = cause instanceof Error ? cause.message : String(cause);
+      if (current === generation && !isAbortError(cause))
+        error = cause instanceof Error ? cause.message : String(cause);
     } finally {
       if (current === generation) loading = false;
       if (current === generation && refreshRequested) {
@@ -86,11 +112,16 @@
     try {
       const record = await api<Resource>(
         `/api/v1/projects/${project}/updates/${id}`,
-        "GET", undefined, {}, { signal: controller?.signal },
+        "GET",
+        undefined,
+        {},
+        { signal: controller?.signal },
       );
-      if (current === generation && !disabled) records = { ...records, [id]: record };
+      if (current === generation && !disabled)
+        records = { ...records, [id]: record };
     } catch (cause) {
-      if (current === generation && !isAbortError(cause)) error = cause instanceof Error ? cause.message : String(cause);
+      if (current === generation && !isAbortError(cause))
+        error = cause instanceof Error ? cause.message : String(cause);
     } finally {
       reading = null;
     }
@@ -102,7 +133,9 @@
     if (event.currentTarget.open && !loaded) void load();
   }}
 >
-  <summary>Card updates{loaded ? ` · ${updates.length} on this page` : ""}</summary>
+  <summary
+    >Card updates{loaded ? ` · ${updates.length} on this page` : ""}</summary
+  >
   <p class="hint">Results, blockers and decisions recorded for this card.</p>
   {#if loading}<p role="status">Loading card updates…</p>{/if}
   {#if error}<p role="alert">{error}</p>{/if}
@@ -135,9 +168,21 @@
       </li>
     {/each}
   </ul>
-  {#if history.length > 1}<button type="button" disabled={disabled || loading || !!reading} onclick={() => load(history.at(-2) ?? null, history.slice(0, -1))}>Previous updates</button>{/if}
-  {#if cursor}<button type="button" disabled={disabled || loading || !!reading} onclick={() => load(cursor, [...history, cursor])}>Next updates</button>{/if}
-  <button type="button" disabled={disabled || loading || !!reading} onclick={() => load()}
+  {#if history.length > 1}<button
+      type="button"
+      disabled={disabled || loading || !!reading}
+      onclick={() => load(history.at(-2) ?? null, history.slice(0, -1))}
+      >Previous updates</button
+    >{/if}
+  {#if cursor}<button
+      type="button"
+      disabled={disabled || loading || !!reading}
+      onclick={() => load(cursor, [...history, cursor])}>Next updates</button
+    >{/if}
+  <button
+    type="button"
+    disabled={disabled || loading || !!reading}
+    onclick={() => load()}
     >{loaded ? "Refresh card updates" : "Load card updates"}</button
   >
 </details>

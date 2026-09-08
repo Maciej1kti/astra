@@ -65,9 +65,11 @@
     cursor = $state<string | null>(null),
     paged = $state(false),
     active = $state(false);
-  let freshness = $state(""), pageNotice = $state("");
+  let freshness = $state(""),
+    pageNotice = $state("");
   let readController: AbortController | undefined;
-  let readKey = "", pageStart: string | null = null;
+  let readKey = "",
+    pageStart: string | null = null;
   let loadedScope = $state("");
   const queryScope = $derived(`${project}:${range.start}:${range.end}`);
   // A background read keeps the displayed, versioned projection interactive.
@@ -171,35 +173,57 @@
   });
   async function load(more: boolean) {
     const key = queryScope;
-    if (loading && key === readKey && !more) { deferred = true; return; }
-    if (active) { deferred = true; return; }
+    if (loading && key === readKey && !more) {
+      deferred = true;
+      return;
+    }
+    if (active) {
+      deferred = true;
+      return;
+    }
     const current = ++generation;
     const target = more ? cursor : key === readKey ? pageStart : null;
     readController?.abort();
     readController = new AbortController();
     const signal = readController.signal;
     readKey = key;
-    loading = true; error = "";
+    loading = true;
+    error = "";
     try {
-      const result = await cursorPage((page) => api<Page<CalendarItem>>(
-        `/api/v1/views/calendar?from=${range.start}&to=${range.end}${project ? `&project_id=${project}` : ""}&limit=1000${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
-        "GET", undefined, {}, { signal },
-      ), target);
+      const result = await cursorPage(
+        (page) =>
+          api<Page<CalendarItem>>(
+            `/api/v1/views/calendar?from=${range.start}&to=${range.end}${project ? `&project_id=${project}` : ""}&limit=1000${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
+            "GET",
+            undefined,
+            {},
+            { signal },
+          ),
+        target,
+      );
       if (current !== generation) return;
-      if (active) { deferred = true; return; }
+      if (active) {
+        deferred = true;
+        return;
+      }
       items = result.value.items;
       loadedScope = key;
       cursor = result.value.page.next_cursor;
       pageStart = result.reset ? null : target;
       paged = pageStart !== null;
       freshness = projectionNotice(result.value);
-      pageNotice = result.reset ? "The calendar changed. Showing the first page of the latest results." : "";
+      pageNotice = result.reset
+        ? "The calendar changed. Showing the first page of the latest results."
+        : "";
     } catch (e) {
       if (current === generation && !isAbortError(e)) error = String(e);
     } finally {
       if (current === generation) {
         loading = false;
-        if (deferred && !active) { deferred = false; void load(false); }
+        if (deferred && !active) {
+          deferred = false;
+          void load(false);
+        }
       }
     }
   }
@@ -445,9 +469,9 @@
       Select a project to create a card. Existing items from all projects can be
       edited.
     </p>{/if}
-{#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
+  {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
   {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
-    {#if error}<p role="alert">
+  {#if error}<p role="alert">
       {error} <button onclick={() => load(false)}>Reload calendar</button>
     </p>{/if}
   <div
@@ -457,7 +481,9 @@
     class:agenda={monthAgenda || mode === "agenda"}
     use:guard
   >
-    {#if loading}<p class="loading-indicator" role="status">Loading calendar…</p>{/if}
+    {#if loading}<p class="loading-indicator" role="status">
+        Loading calendar…
+      </p>{/if}
     {#key reset}<Calendar plugins={[DayGrid, List, Interaction]} {options}>
         {#snippet dayCellContent({ date: day })}
           <span
@@ -474,20 +500,20 @@
         {#snippet eventContent({ event })}
           {@const item = event.extendedProps.astra as CalendarItem | undefined}
           {#if item}
-          <div
-            class="calendar-item"
-            data-calendar-item={item.item_id}
-            use:eventAccess={item}
-          >
-            <small
-              >{item.kind.endsWith("due")
-                ? "◆"
-                : item.kind.endsWith("review")
-                  ? "◉"
-                  : "▬"}
-              {calendarLabel(item)}</small
-            ><strong>{item.title}</strong>
-          </div>
+            <div
+              class="calendar-item"
+              data-calendar-item={item.item_id}
+              use:eventAccess={item}
+            >
+              <small
+                >{item.kind.endsWith("due")
+                  ? "◆"
+                  : item.kind.endsWith("review")
+                    ? "◉"
+                    : "▬"}
+                {calendarLabel(item)}</small
+              ><strong>{item.title}</strong>
+            </div>
           {/if}
         {/snippet}
       </Calendar>{/key}
@@ -495,8 +521,12 @@
   {#if cursor}<button disabled={loading} onclick={() => load(true)}
       >Next page of dated resources</button
     >{/if}
-  {#if paged}<button disabled={loading} onclick={() => { pageStart = null; void load(false); }}
-      >First page</button
+  {#if paged}<button
+      disabled={loading}
+      onclick={() => {
+        pageStart = null;
+        void load(false);
+      }}>First page</button
     >{/if}
 </section>
 

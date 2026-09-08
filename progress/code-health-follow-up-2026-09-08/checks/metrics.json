@@ -1,0 +1,235 @@
+{
+  "revision": "a71b282c8b95cdb6185943ab9a8edb27f3097128",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "cpu": "Apple M4",
+  "memory_bytes": 17179869184,
+  "logical_cpus": 10,
+  "node": "v24.11.0",
+  "tracked_files": 690,
+  "tracked_bytes": 33395067,
+  "tracked_bytes_by_root": {
+    "progress": 31198701,
+    "crates": 578865,
+    "apps": 391474,
+    "contracts": 347825,
+    "scripts": 277934,
+    "docs": 258170,
+    "delivery": 98178,
+    "package-lock.json": 72307,
+    "Cargo.lock": 62284,
+    "integrations": 20146,
+    "examples": 18709,
+    "tests": 14703,
+    "ops": 12436,
+    "MANIFEST.sha256": 7909,
+    "MANUAL-TESTING.md": 6318,
+    "DEVELOPMENT.md": 5125,
+    "START_HERE.md": 4618,
+    "AGENTS.md": 4456,
+    "templates": 4216,
+    "README.md": 3667,
+    "ASTRA-KICKOFF.md": 2788,
+    ".github": 1650,
+    "Cargo.toml": 1216,
+    "package.json": 938,
+    ".gitignore": 340,
+    "rust-toolchain.toml": 86,
+    ".nvmrc": 8
+  },
+  "largest_sources": [
+    {
+      "path": "apps/web/src/App.svelte",
+      "lines": 2407,
+      "script_lines": 834,
+      "style_lines": 929
+    },
+    {
+      "path": "crates/application/tests/engine.rs",
+      "lines": 1857
+    },
+    {
+      "path": "apps/web/src/lib/Editor.svelte",
+      "lines": 1010,
+      "script_lines": 546,
+      "style_lines": 139
+    },
+    {
+      "path": "crates/application/src/index.rs",
+      "lines": 990
+    },
+    {
+      "path": "scripts/browser/suites/card.mjs",
+      "lines": 887
+    },
+    {
+      "path": "apps/web/src/lib/GanttView.svelte",
+      "lines": 788,
+      "script_lines": 367,
+      "style_lines": 186
+    },
+    {
+      "path": "crates/projectd/tests/transport.rs",
+      "lines": 764
+    },
+    {
+      "path": "apps/web/src/lib/CalendarView.svelte",
+      "lines": 732,
+      "script_lines": 377,
+      "style_lines": 229
+    },
+    {
+      "path": "scripts/browser-smoke.mjs",
+      "lines": 694
+    },
+    {
+      "path": "crates/application/tests/tag_management.rs",
+      "lines": 602
+    },
+    {
+      "path": "apps/web/src/lib/Board.svelte",
+      "lines": 595,
+      "script_lines": 388,
+      "style_lines": 111
+    },
+    {
+      "path": "apps/web/src/lib/Settings.svelte",
+      "lines": 589,
+      "script_lines": 216,
+      "style_lines": 156
+    },
+    {
+      "path": "crates/application/src/engine.rs",
+      "lines": 529
+    },
+    {
+      "path": "scripts/browser/suites/dialogs.mjs",
+      "lines": 521
+    },
+    {
+      "path": "crates/projectd/src/dispatch.rs",
+      "lines": 517
+    },
+    {
+      "path": "crates/projectd/src/lib.rs",
+      "lines": 514
+    },
+    {
+      "path": "scripts/browser/suites/editor.mjs",
+      "lines": 510
+    },
+    {
+      "path": "apps/web/src/lib/domain.generated.ts",
+      "lines": 502
+    },
+    {
+      "path": "crates/application/tests/durability.rs",
+      "lines": 495
+    },
+    {
+      "path": "scripts/check_package.py",
+      "lines": 448
+    },
+    {
+      "path": "apps/web/src/lib/FocusOrder.svelte",
+      "lines": 439,
+      "script_lines": 186,
+      "style_lines": 123
+    },
+    {
+      "path": "scripts/planning-browser.mjs",
+      "lines": 436
+    },
+    {
+      "path": "crates/projectctl/src/typed.rs",
+      "lines": 431
+    },
+    {
+      "path": "crates/application/src/mutation.rs",
+      "lines": 369
+    },
+    {
+      "path": "crates/projectctl/tests/output.rs",
+      "lines": 362
+    },
+    {
+      "path": "crates/application/src/workflow.rs",
+      "lines": 359
+    },
+    {
+      "path": "crates/application/src/journal.rs",
+      "lines": 357
+    },
+    {
+      "path": "crates/projectctl/src/main.rs",
+      "lines": 347
+    },
+    {
+      "path": "apps/web/src/lib/NativeProject.svelte",
+      "lines": 331,
+      "script_lines": 194,
+      "style_lines": 40
+    },
+    {
+      "path": "crates/application/src/maintenance.rs",
+      "lines": 329
+    }
+  ],
+  "assets": [
+    {
+      "path": "apps/web/dist/assets/index-CvRVTeDz.js",
+      "bytes": 321262,
+      "gzip_bytes": 113724
+    },
+    {
+      "path": "apps/web/dist/assets/Board-DLgdT0rQ.css",
+      "bytes": 55447,
+      "gzip_bytes": 7715
+    },
+    {
+      "path": "apps/web/dist/assets/Board-BHXoQp-8.js",
+      "bytes": 79220,
+      "gzip_bytes": 25978
+    },
+    {
+      "path": "apps/web/dist/assets/CalendarView-B8_iOjTR.css",
+      "bytes": 33689,
+      "gzip_bytes": 4215
+    },
+    {
+      "path": "apps/web/dist/assets/CalendarView-tZcslBLf.js",
+      "bytes": 67180,
+      "gzip_bytes": 23239
+    },
+    {
+      "path": "apps/web/dist/assets/index-DfdFsMGU.css",
+      "bytes": 36210,
+      "gzip_bytes": 6709
+    },
+    {
+      "path": "apps/web/dist/assets/dist-BDZzlQHt.js",
+      "bytes": 6056,
+      "gzip_bytes": 2481
+    },
+    {
+      "path": "apps/web/dist/assets/events-A2UtL6vN.js",
+      "bytes": 28,
+      "gzip_bytes": 48
+    },
+    {
+      "path": "apps/web/dist/assets/DateViews-CxwEqTE4.js",
+      "bytes": 2228,
+      "gzip_bytes": 976
+    },
+    {
+      "path": "apps/web/dist/assets/GanttView-CcNbIhsM.js",
+      "bytes": 268181,
+      "gzip_bytes": 86384
+    },
+    {
+      "path": "apps/web/dist/assets/GanttView-pobotIn2.css",
+      "bytes": 135632,
+      "gzip_bytes": 17343
+    }
+  ],
+  "rust_passed": 112
+}

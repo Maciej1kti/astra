@@ -1,0 +1,42 @@
+{
+  "architecture": "aarch64",
+  "attention": {
+    "p50_ms": 29.917334,
+    "p95_ms": 30.44725,
+    "p99_ms": 30.634874999999997,
+    "samples": 200
+  },
+  "build": "release",
+  "durable_mutation": {
+    "p50_ms": 27.994083,
+    "p95_ms": 71.989166,
+    "p99_ms": 76.161334,
+    "samples": 200
+  },
+  "limitations": "Application-level timings exclude HTTP/VPN and browser rendering. Fixture generation is included in external process peak RSS.",
+  "os": "macos",
+  "profile": {
+    "cards": 10000,
+    "projects": 100,
+    "reports": 50000
+  },
+  "query": {
+    "p50_ms": 20.165375,
+    "p95_ms": 20.918667,
+    "p99_ms": 21.368291000000003,
+    "samples": 200
+  },
+  "reconciliation_ms": 5008.395292,
+  "startup_modes": {
+    "empty_first_query_ms": 0.06483299999999999,
+    "empty_index_rebuild_ms": 8643.72025,
+    "empty_index_service_open_ms": 77.983125,
+    "fully_indexed_eager_reopen_ms": 5069.516458,
+    "fully_indexed_service_reopen_ms": 51.66775,
+    "limitation": "Engine-level initialization and query timings exclude listener binding, browser rendering and steady-state RSS. Service pages explicitly report reconciliation.",
+    "retained_first_query_ms": 10.241083,
+    "retained_reconciliation_ms": 4923.113292,
+    "samples_per_mode": 1
+  },
+  "startup_ms": 13013.524207999999
+}

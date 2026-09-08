@@ -6,7 +6,8 @@
     api,
     command,
     send,
-    ApiError,
+    commandStatus,
+    isDefinitiveRejection,
     resourcePath,
     type Summary,
     type Pending,
@@ -78,11 +79,7 @@
       onsaved();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
-      if (
-        e instanceof ApiError &&
-        e.status < 500 &&
-        ![401, 403, 429].includes(e.status)
-      ) {
+      if (isDefinitiveRejection(e)) {
         pending = null;
         conflict = true;
       }
@@ -110,9 +107,7 @@
     if (!pending || accessLost) return;
     busy = true;
     try {
-      const result = await api<{ state: string }>(
-        `/api/v1/commands/${pending.requestId}`,
-      );
+      const result = await commandStatus(pending);
       if (result.state === "committed") onsaved();
       else error = `Command state: ${result.state}`;
     } catch (e) {

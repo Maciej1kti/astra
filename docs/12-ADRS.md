@@ -268,3 +268,17 @@ semantics.
 The daemon completes recovery before admission, then serves explicitly marked
 cached/empty projections while a bounded worker reconciles sources. See
 [ADR-030](ADR-030-RECOVERY-FIRST-SERVICE-STARTUP.md).
+
+## ADR-031 — Original command identity and explicit page recovery
+
+Status queries preserve the original epoch, retries own immutable JSON inputs,
+and paged views recover from both documented stale-page codes. Typed relation
+search applies its resource type before the limit. See
+[ADR-031](ADR-031-COMMAND-IDENTITY-AND-PAGE-RECOVERY.md).
+
+## ADR-032 — Scoped page identity and indexed tag suggestions
+
+Project pages use local projection revisions while SSE keeps its global cursor.
+Indexed tag names serve bounded suggestions; rename previews still read current
+sources. Optional event metadata avoids unnecessary suggestion invalidations.
+See [ADR-032](ADR-032-SCOPED-PAGES-AND-TAG-SUGGESTIONS.md).

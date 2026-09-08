@@ -1,0 +1,10 @@
+{
+  "commandStatusEpoch": {
+    "missing": "committed",
+    "matching": "committed",
+    "different": "committed",
+    "malformed": "committed",
+    "conclusion": "The required OpenAPI epoch query parameter is ignored by the handler. All reads use the current journal epoch."
+  },
+  "limitations": "Real release daemon and Unix CLI; synthetic project only. No historical epoch restoration or browser status UI was exercised."
+}

@@ -61,6 +61,26 @@ struct SourceCard<'a> {
 }
 
 impl Engine {
+    /// Lightweight suggestions use explicitly indexed observations, never rename authority.
+    pub fn tag_suggestions(&self) -> Result<Value, AppError> {
+        let _gate = self.gate.read().map_err(|_| AppError::State)?;
+        let (workspace, _) = self.workspace()?;
+        self.index.with_snapshot(|db, revision| {
+            let projection = crate::index::ProjectionStatus::read(db, None)?;
+            let mut names: BTreeSet<String> = workspace["tags"].as_array().into_iter().flatten()
+                .filter_map(Value::as_str).map(str::to_owned).collect();
+            let mut statement = db.prepare("SELECT DISTINCT label.value FROM documents d, json_each(d.metadata_json,'$.labels') label WHERE d.entity_type='card' AND label.type='text' ORDER BY label.value LIMIT 10001")?;
+            names.extend(statement.query_map([], |row| row.get::<_,String>(0))?.collect::<Result<Vec<_>,_>>()?);
+            let limited = names.len() > MAX_CATALOG_NAMES;
+            let unhealthy: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM projection_issues) OR EXISTS(SELECT 1 FROM documents WHERE validity!='valid')", [], |row|row.get(0))?;
+            let complete = !limited && !unhealthy && projection.freshness == "index_snapshot";
+            let mut warnings = projection.warnings;
+            if limited { warnings.push(json!({"code":"TAG_SUGGESTION_LIMIT","message":"Only the first 10,000 indexed tag names are shown."})); }
+            if unhealthy { warnings.push(json!({"code":"TAG_SUGGESTIONS_STALE","message":"Some tag names come from unavailable or invalid project sources."})); }
+            Ok(json!({"names":names.into_iter().take(MAX_CATALOG_NAMES).collect::<Vec<_>>(),"complete":complete,"freshness":if complete {"index_snapshot"} else {"stale"},"snapshot_cursor":revision,"warnings":warnings}))
+        })
+    }
+
     /// Counts validated source cards, including archived cards and projects.
     /// The version belongs to workspace.json, not to the observed usage counts.
     pub fn tag_catalog(&self) -> Result<Value, AppError> {

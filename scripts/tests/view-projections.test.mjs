@@ -37,8 +37,8 @@ test("Focus detail fallback has the same source-derived badges as an indexed car
 });
 
 test("detail summaries map project/update names and preserve read receipt state", () => {
-  assert.equal(detailSummary({ metadata: { id: "p", name: "Project", state: "paused" }, version: "v", body: "" }, "p", "project").status, "paused");
-  const update = detailSummary({ metadata: { id: "u", summary: "Result", kind: "result", target: { type: "card", id: "c" } }, version: "v", body: "", read: false }, "p", "update");
+  assert.equal(detailSummary({ type: "project", metadata: { id: "p", name: "Project", state: "paused" }, version: "v", body: "" }, "p", "project").status, "paused");
+  const update = detailSummary({ type: "update", metadata: { id: "u", summary: "Result", kind: "result", target: { type: "card", id: "c" } }, version: "v", body: "", read: false }, "p", "update");
   assert.equal(update.title, "Result");
   assert.deepEqual(update.target, { type: "card", id: "c" });
   assert.equal(update.read, false);

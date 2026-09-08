@@ -452,7 +452,10 @@ A mutation that durably reached PREPARED but has no confirmed outcome returns
 HTTP 202 with `CommandStatus` (`api_version: "1"`, `request_id`, `state`).
 The state is `prepared`, `blocked`, or `needs_review` as observed in the journal.
 It does not return `CommandResponse.status=committed` or a new job ID. Poll the
-command status with the original request ID and epoch. A workflow returning
+command status with the original request ID and epoch using
+`GET /api/v1/commands/{request_id}?epoch={original_epoch}`. A different epoch
+returns `EPOCH_CHANGED`; a missing command is never proof of a failed write.
+See [ADR-031](ADR-031-COMMAND-IDENTITY-AND-PAGE-RECOVERY.md). A workflow returning
 `Accepted` with a job ID remains a separate contract. See ADR-014 and
 `examples/requests/command-pending-response.json`.
 
@@ -1219,6 +1222,20 @@ semantics.
 The daemon completes recovery before admission, then serves explicitly marked
 cached/empty projections while a bounded worker reconciles sources. See
 [ADR-030](ADR-030-RECOVERY-FIRST-SERVICE-STARTUP.md).
+
+### ADR-031 — Original command identity and explicit page recovery
+
+Status queries preserve the original epoch, retries own immutable JSON inputs,
+and paged views recover from both documented stale-page codes. Typed relation
+search applies its resource type before the limit. See
+[ADR-031](ADR-031-COMMAND-IDENTITY-AND-PAGE-RECOVERY.md).
+
+### ADR-032 — Scoped page identity and indexed tag suggestions
+
+Project pages use local projection revisions while SSE keeps its global cursor.
+Indexed tag names serve bounded suggestions; rename previews still read current
+sources. Optional event metadata avoids unnecessary suggestion invalidations.
+See [ADR-032](ADR-032-SCOPED-PAGES-AND-TAG-SUGGESTIONS.md).
 
 
 *Source file: `docs/12-ADRS.md`.*

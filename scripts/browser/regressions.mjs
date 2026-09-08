@@ -8,7 +8,7 @@ import { createHost, pair, root, writeRuntime } from "./host.mjs";
 import { seed } from "./fixture.mjs";
 import { artifactManifest } from "./artifacts.mjs";
 
-const suites = ["card", "tags", "editor", "dialogs", "planning", "code-health"];
+const suites = ["card", "tags", "editor", "dialogs", "planning", "code-health", "protocol"];
 
 export async function runSuites(selected = suites) {
   if (selected.some((suite) => !suites.includes(suite))) throw new Error(`Choose browser suites: ${suites.join(", ")}`);

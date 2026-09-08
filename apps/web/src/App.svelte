@@ -1,6 +1,18 @@
 <script lang="ts">
   import { onMount, tick, untrack } from "svelte";
-  import { viewQueryKey, viewSections, loadView, resourcePage as readResourcePage, attentionPage as readAttentionPage, affectedSections, invalidatesTags, invalidationBatch, type Attention, type ViewQuery, type Section } from "./lib/view-queries";
+  import {
+    viewQueryKey,
+    viewSections,
+    loadView,
+    resourcePage as readResourcePage,
+    attentionPage as readAttentionPage,
+    affectedSections,
+    invalidatesTags,
+    invalidationBatch,
+    type Attention,
+    type ViewQuery,
+    type Section,
+  } from "./lib/view-queries";
   import { projectionNotice } from "./lib/projection-state";
   import { cursorPage } from "./lib/pagination";
   import { isAbortError } from "./lib/read-requests";
@@ -19,13 +31,17 @@
   import type { CalendarLayout } from "./lib/planning-navigation";
   import { applyTheme, readTheme } from "./lib/appearance";
   onMount(() => applyTheme(readTheme()));
-  import { modal } from "./lib/dialog";
+  import RegistrationBrowser from "./lib/RegistrationBrowser.svelte";
   let Board = $state<typeof import("./lib/Board.svelte").default | null>(null);
   let boardLoadError = $state("");
   async function loadBoard() {
     boardLoadError = "";
-    try { Board = (await import("./lib/Board.svelte")).default; }
-    catch { boardLoadError = "The board could not be loaded. Retry, or reload after preserving any open draft."; }
+    try {
+      Board = (await import("./lib/Board.svelte")).default;
+    } catch {
+      boardLoadError =
+        "The board could not be loaded. Retry, or reload after preserving any open draft.";
+    }
   }
   $effect(() => {
     if (view === "board" && project && !Board) void loadBoard();
@@ -56,24 +72,26 @@
   let dateViewLoadError = $state("");
   async function loadDateViews() {
     dateViewLoadError = "";
-    try { DateViews = (await import("./lib/DateViews.svelte")).default; }
-    catch { dateViewLoadError = "The planning view could not be loaded. Retry, or reload after preserving any open draft."; }
+    try {
+      DateViews = (await import("./lib/DateViews.svelte")).default;
+    } catch {
+      dateViewLoadError =
+        "The planning view could not be loaded. Retry, or reload after preserving any open draft.";
+    }
   }
   $effect(() => {
-    if ((view === "calendar" || view === "gantt") && !DateViews) void loadDateViews();
+    if ((view === "calendar" || view === "gantt") && !DateViews)
+      void loadDateViews();
   });
   import {
     api,
     clearReads,
     configure,
-    command,
-    send,
     resourcePath,
     ApiError,
     type Bootstrap,
     type Summary,
     type Resource,
-    type Pending,
   } from "./lib/api";
   type Pairing = {
     id: string;
@@ -82,8 +100,6 @@
     pending_csrf_token: string;
     device_label: string;
   };
-  let registrationPending = $state<Pending | null>(null),
-    registrationJob = $state<string | null>(null);
   let attentionRows = $state<Attention[]>([]),
     attentionCursor = $state<string | null>(null),
     attentionPaged = $state(false);
@@ -97,14 +113,21 @@
   const queuedSections = new Set<Section>();
   let queryNotice = $state("");
   let sectionNotices = $state<Partial<Record<Section, string>>>({});
-  const projectionMessage = $derived([...new Set(viewSections(currentQuery()).map((section) => sectionNotices[section]).filter(Boolean))].join(" "));
+  const projectionMessage = $derived(
+    [
+      ...new Set(
+        viewSections(currentQuery())
+          .map((section) => sectionNotices[section])
+          .filter(Boolean),
+      ),
+    ].join(" "),
+  );
   let attentionStart: string | null = null;
   let navigationGeneration = 0;
   let loadedQueryKey = $state("");
   let clockTime = $state(Date.now());
   let loadingMore = $state(false);
   let focusCards = $state<Summary[]>([]);
-  type Root = { id: string; label: string; display_path: string };
   let boot = $state<Bootstrap | null>(null),
     pairing = $state<Pairing | null>(null),
     device = $state("My browser");
@@ -144,33 +167,17 @@
       initialMetadata?: Record<string, unknown>;
       autoCreate?: boolean;
     } | null>(null),
-    adding = $state(false),
-    roots = $state<Root[]>([]),
-    root = $state(""),
-    relative = $state(""),
-    projectName = $state(""),
-    tracked = $state(false),
-    plan = $state<{
-      plan_id: string;
-      project_id: string;
-      display_path: string;
-      changes: { path: string; action: string; description: string }[];
-      warnings: { message: string }[];
-    } | null>(null);
-  let browsing = $state(false),
-    directoryReady = $state(false),
-    directoryCursor = $state<string | null>(null),
-    directoryPaged = $state(false);
-  let browseGeneration = 0;
-  let directories = $state<
-    { name: string; relative_path: string; registered: boolean }[]
-  >([]);
+    adding = $state(false);
   let month = $state(initialRoute.month);
   let source: EventSource | undefined;
   const streamUpdates = invalidationBatch((events) => {
     if (!boot) return;
     if (events.some(invalidatesTags)) invalidateTagSuggestions();
-    const sections = [...new Set(events.flatMap((event) => affectedSections(event, currentQuery())))];
+    const sections = [
+      ...new Set(
+        events.flatMap((event) => affectedSections(event, currentQuery())),
+      ),
+    ];
     if (sections.length) void refresh(sections).catch(message);
   });
   const views = workspaceViews;
@@ -200,7 +207,16 @@
     ),
   );
   function currentQuery(): ViewQuery {
-    return { view, project, search, collection, archived, status: statusFilter, priority: priorityFilter, label: labelFilter };
+    return {
+      view,
+      project,
+      search,
+      collection,
+      archived,
+      status: statusFilter,
+      priority: priorityFilter,
+      label: labelFilter,
+    };
   }
   let queryKey = $derived(viewQueryKey(currentQuery()));
   let queryReady = $derived(loadedQueryKey === queryKey);
@@ -255,10 +271,6 @@
     focus = [];
     focusCards = [];
     attentionRows = [];
-    roots = [];
-    directories = [];
-    browseGeneration++;
-    directoryReady = false;
     adding = false;
     error = "Your session ended. Reconnect this browser to continue.";
   }
@@ -321,16 +333,24 @@
     const generation = refreshGeneration;
     const target = first ? null : attentionCursor;
     try {
-      const result = await cursorPage((cursor) => readAttentionPage(project, cursor), target);
+      const result = await cursorPage(
+        (cursor) => readAttentionPage(project, cursor),
+        target,
+      );
       if (generation !== refreshGeneration) return;
       attentionRows = result.value.items;
       sectionNotices.attention = projectionNotice(result.value);
       attentionCursor = result.value.page.next_cursor;
       attentionStart = result.reset ? null : target;
       attentionPaged = attentionStart !== null;
-      if (result.reset) queryNotice = "Attention changed. Showing the first page of the latest results.";
-    } catch (e) { message(e); }
-    finally { loadingMore = false; }
+      if (result.reset)
+        queryNotice =
+          "Attention changed. Showing the first page of the latest results.";
+    } catch (e) {
+      message(e);
+    } finally {
+      loadingMore = false;
+    }
   }
   async function foreground() {
     if (document.visibilityState !== "visible" || !boot) return;
@@ -358,29 +378,60 @@
     const controller = new AbortController();
     refreshRead = controller;
     const generation = ++refreshGeneration;
-    const selected = [...new Set([...requested, ...queuedSections])].filter((section) =>
-      needed.includes(section) && (section !== "projects" || !projectsReady || !routeChanged || sections?.includes("projects") || queuedSections.has("projects")),
+    const selected = [...new Set([...requested, ...queuedSections])].filter(
+      (section) =>
+        needed.includes(section) &&
+        (section !== "projects" ||
+          !projectsReady ||
+          !routeChanged ||
+          sections?.includes("projects") ||
+          queuedSections.has("projects")),
     );
     queuedSections.clear();
-    const cursors: Record<string, string | null> = routeChanged ? {} : {
-      ...Object.fromEntries(Object.entries(pageHistory).map(([kind, history]) => [kind, history.at(-1) ?? null])),
-      attention: attentionStart,
-    };
+    const cursors: Record<string, string | null> = routeChanged
+      ? {}
+      : {
+          ...Object.fromEntries(
+            Object.entries(pageHistory).map(([kind, history]) => [
+              kind,
+              history.at(-1) ?? null,
+            ]),
+          ),
+          attention: attentionStart,
+        };
     if (routeChanged) {
       queryNotice = "";
-      pageHistory = {}; pageCursors = {}; attentionStart = null;
+      pageHistory = {};
+      pageCursors = {};
+      attentionStart = null;
     }
     const promise = (async () => {
       try {
-        const result = await loadView(query, selected, cursors, controller.signal);
-        if (generation !== refreshGeneration || requestedQuery !== queryKey) return;
+        const result = await loadView(
+          query,
+          selected,
+          cursors,
+          controller.signal,
+        );
+        if (generation !== refreshGeneration || requestedQuery !== queryKey)
+          return;
         sectionNotices = { ...sectionNotices, ...result.notices };
-        if (result.projects) { projects = result.projects; projectsReady = true; }
-        if (result.focus) { focus = result.focus; focusCards = result.focusCards ?? []; }
+        if (result.projects) {
+          projects = result.projects;
+          projectsReady = true;
+        }
+        if (result.focus) {
+          focus = result.focus;
+          focusCards = result.focusCards ?? [];
+        }
         if (result.attention) {
           attentionRows = result.attention.value.items;
           attentionCursor = result.attention.value.page.next_cursor;
-          if (result.attention.reset) { attentionStart = null; queryNotice = "Attention changed. Showing the first page of the latest results."; }
+          if (result.attention.reset) {
+            attentionStart = null;
+            queryNotice =
+              "Attention changed. Showing the first page of the latest results.";
+          }
           attentionPaged = attentionStart !== null;
         }
         for (const [kind, page] of Object.entries(result.pages)) {
@@ -388,8 +439,11 @@
           else if (kind === "milestone") milestones = page.value.items;
           else updates = page.value.items;
           pageCursors[kind] = page.value.page.next_cursor;
-          if (routeChanged || page.reset || !pageHistory[kind]) pageHistory[kind] = [null];
-          if (page.reset) queryNotice = "This collection changed. Showing the first page of the latest results.";
+          if (routeChanged || page.reset || !pageHistory[kind])
+            pageHistory[kind] = [null];
+          if (page.reset)
+            queryNotice =
+              "This collection changed. Showing the first page of the latest results.";
         }
         loadedQueryKey = requestedQuery;
         if (!routeChanged && selected.includes("planning")) viewRevision++;
@@ -397,7 +451,8 @@
         if (generation === refreshGeneration) {
           refreshJob = undefined;
           if (queuedSections.size && boot) {
-            const followup = [...queuedSections]; queuedSections.clear();
+            const followup = [...queuedSections];
+            queuedSections.clear();
             void refresh(followup).catch(message);
           }
         }
@@ -407,24 +462,42 @@
     return promise;
   }
   async function more(type: string, back = false) {
-    if (loadingMore || (!back && !pageCursors[type]) || (back && (pageHistory[type]?.length ?? 0) < 2)) return;
+    if (
+      loadingMore ||
+      (!back && !pageCursors[type]) ||
+      (back && (pageHistory[type]?.length ?? 0) < 2)
+    )
+      return;
     loadingMore = true;
     const generation = refreshGeneration;
     const query = currentQuery();
     try {
       const history = pageHistory[type] ?? [null];
       const target = back ? history[history.length - 2] : pageCursors[type];
-      const result = await cursorPage((cursor) => readResourcePage(query, type, cursor), target);
-      if (generation !== refreshGeneration || viewQueryKey(query) !== queryKey) return;
-      pageHistory[type] = result.reset ? [null] : back ? history.slice(0, -1) : [...history, target];
+      const result = await cursorPage(
+        (cursor) => readResourcePage(query, type, cursor),
+        target,
+      );
+      if (generation !== refreshGeneration || viewQueryKey(query) !== queryKey)
+        return;
+      pageHistory[type] = result.reset
+        ? [null]
+        : back
+          ? history.slice(0, -1)
+          : [...history, target];
       if (type === "card") cards = result.value.items;
       else if (type === "milestone") milestones = result.value.items;
       else updates = result.value.items;
       pageCursors[type] = result.value.page.next_cursor;
       sectionNotices[type as Section] = projectionNotice(result.value);
-      if (result.reset) queryNotice = "This collection changed. Showing the first page of the latest results.";
-    } catch (e) { message(e); }
-    finally { loadingMore = false; }
+      if (result.reset)
+        queryNotice =
+          "This collection changed. Showing the first page of the latest results.";
+    } catch (e) {
+      message(e);
+    } finally {
+      loadingMore = false;
+    }
   }
   function connect() {
     source?.close();
@@ -446,8 +519,14 @@
       "workspace_changed",
     ])
       source.addEventListener(kind, (event) => {
-        try { streamUpdates.push({ ...JSON.parse((event as MessageEvent).data), kind }); }
-        catch { streamUpdates.push({ kind: "resync_required" }); }
+        try {
+          streamUpdates.push({
+            ...JSON.parse((event as MessageEvent).data),
+            kind,
+          });
+        } catch {
+          streamUpdates.push({ kind: "resync_required" });
+        }
       });
   }
   async function startPairing() {
@@ -502,7 +581,12 @@
         resource,
       };
     } catch (e) {
-      if (generation === navigationGeneration && view === requestedView && project === requestedProject) message(e);
+      if (
+        generation === navigationGeneration &&
+        view === requestedView &&
+        project === requestedProject
+      )
+        message(e);
     }
   }
   function create(
@@ -524,109 +608,6 @@
   }
   function addProject() {
     nativeAdding = true;
-  }
-  async function browseProjects() {
-    adding = true;
-    if (registrationPending) {
-      try {
-        roots = (await api<{ items: Root[] }>("/api/v1/roots")).items;
-      } catch (e) {
-        message(e);
-      }
-      return;
-    }
-    plan = null;
-    projectName = "";
-    directoryReady = false;
-    error = "";
-    try {
-      roots = (await api<{ items: Root[] }>("/api/v1/roots")).items;
-      root = roots[0]?.id ?? "";
-      relative = "";
-      if (root) await browse("");
-    } catch (e) {
-      message(e);
-    }
-  }
-  async function browse(path: string, cursor: string | null = null) {
-    if (registrationPending || busy) return;
-    const generation = ++browseGeneration,
-      selectedRoot = root;
-    relative = path;
-    plan = null;
-    directoryReady = false;
-    browsing = true;
-    directories = [];
-    error = "";
-    try {
-      const page = await api<{
-        items: typeof directories;
-        next_cursor: string | null;
-      }>(
-        `/api/v1/roots/${selectedRoot}/directories?relative_path=${encodeURIComponent(path)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-      );
-      if (generation !== browseGeneration) return;
-      directories = page.items;
-      directoryCursor = page.next_cursor;
-      directoryPaged = !!cursor;
-      directoryReady = true;
-    } catch (e) {
-      if (generation === browseGeneration) message(e);
-    } finally {
-      if (generation === browseGeneration) browsing = false;
-    }
-  }
-  async function preview() {
-    if (!directoryReady || browsing || registrationPending) return;
-    busy = true;
-    error = "";
-    try {
-      plan = await api("/api/v1/registration-plans", "POST", {
-        root_id: root,
-        relative_path: relative || ".",
-        ...(projectName ? { name: projectName } : {}),
-        git_mode: tracked ? "tracked" : "private",
-      });
-    } catch (e) {
-      message(e);
-    } finally {
-      busy = false;
-    }
-  }
-  async function register() {
-    if (!plan) return;
-    busy = true;
-    try {
-      if (!registrationJob) {
-        registrationPending ??= command("/api/v1/registrations", "POST", {
-          plan_id: plan.plan_id,
-        });
-        const result = await send(registrationPending);
-        registrationJob = result.job_id ?? null;
-        if (!registrationJob)
-          throw new Error(
-            "Registration result is pending. Retry the same request.",
-          );
-      }
-      const job = await api<{ state: string }>(
-        `/api/v1/jobs/${registrationJob}`,
-      );
-      if (job.state !== "done")
-        throw new Error(
-          `Registration is ${job.state}. Job: ${registrationJob}`,
-        );
-      project = plan.project_id;
-      view = "board";
-      search = "";
-      adding = false;
-      registrationPending = null;
-      registrationJob = null;
-      await refresh();
-    } catch (e) {
-      message(e);
-    } finally {
-      busy = false;
-    }
   }
   async function logout() {
     try {
@@ -992,7 +973,9 @@
             Connection is recovering. Drafts remain open; verify the result of
             any interrupted save.
           </div>{/if}
-        {#if projectionMessage}<p role="status" class="notice">{projectionMessage}</p>{/if}
+        {#if projectionMessage}<p role="status" class="notice">
+            {projectionMessage}
+          </p>{/if}
         {#if queryNotice}<p role="status" class="notice">{queryNotice}</p>{/if}
         <div class="toolbar">
           {#if view !== "projects"}<label class="sr" for="project"
@@ -1188,7 +1171,10 @@
                 {open}
                 onpropose={(proposal) => (moveDraft = proposal)}
                 oncreate={create}
-              />{/key}{:else if boardLoadError}<p role="alert">{boardLoadError} <button onclick={loadBoard}>Retry loading board</button></p>{:else}<p role="status">Loading board…</p>{/if}
+              />{/key}{:else if boardLoadError}<p role="alert">
+              {boardLoadError}
+              <button onclick={loadBoard}>Retry loading board</button>
+            </p>{:else}<p role="status">Loading board…</p>{/if}
         {:else if view === "board"}<p role="status">
             All projects is an overview. Select a project above to drag and
             reorder cards.
@@ -1229,7 +1215,12 @@
               {open}
               onpropose={(proposal) => (dateDraft = proposal)}
               oncreate={(schedule) => create("card", { schedule })}
-            />{:else if dateViewLoadError}<p role="alert">{dateViewLoadError} <button onclick={loadDateViews}>Retry loading planning view</button></p>{:else}<p role="status">Loading date views…</p>{/if}
+            />{:else if dateViewLoadError}<p role="alert">
+              {dateViewLoadError}
+              <button onclick={loadDateViews}
+                >Retry loading planning view</button
+              >
+            </p>{:else}<p role="status">Loading date views…</p>{/if}
         {:else if view === "updates"}<div class="updates">
             {#each visibleUpdates as item}<button
                 class="update"
@@ -1322,14 +1313,23 @@
   />{/if}
 {#if diagnostics}<Diagnostics onclose={() => (diagnostics = false)} />{/if}
 {#if settings}<Settings
-    ontags={() => { settings = false; manageTags = true; }}
+    ontags={() => {
+      settings = false;
+      manageTags = true;
+    }}
     onclose={() => (settings = false)}
     onsaved={() => {
       settings = false;
       void initialize();
     }}
   />{/if}
-{#if manageTags}<TagManager projectNames={Object.fromEntries(projects.map((item) => [item.id, item.title]))} onclose={() => (manageTags = false)} onchanged={() => void refresh().catch(message)} />{/if}
+{#if manageTags}<TagManager
+    projectNames={Object.fromEntries(
+      projects.map((item) => [item.id, item.title]),
+    )}
+    onclose={() => (manageTags = false)}
+    onchanged={() => void refresh().catch(message)}
+  />{/if}
 {#if editor}{#key editor}<Editor
       {...editor}
       bind:this={editorInstance}
@@ -1340,116 +1340,16 @@
       onchanged={() => refresh().catch(message)}
       onsaved={() => void saved()}
     />{/key}{/if}
-{#if adding}<div class="modalshade">
-    <dialog
-      use:modal
-      class="modal"
-      aria-label="Add project"
-      oncancel={(e) => {
-        e.preventDefault();
-        if (!busy) adding = false;
-      }}
-    >
-      <header>
-        <h2>Add a project</h2>
-        <button
-          onclick={() => (adding = false)}
-          aria-label="Close"
-          disabled={busy}>✕</button
-        >
-      </header>
-      <p>Choose the project folder on this host. Files stay in that folder.</p>
-      {#if !roots.length}<p>
-          No directories have been approved yet. On the host, run:
-        </p>
-        <code
-          >projectctl --socket /path/to/projectd.sock add-root /absolute/path
-          --label "Projects"</code
-        >{:else}<label
-          >Project folders<select
-            bind:value={root}
-            disabled={!!registrationPending || busy}
-            onchange={() => browse("")}
-            >{#each roots as r}<option value={r.id}>{r.label}</option
-              >{/each}</select
-          ></label
-        >
-        <p class="breadcrumb">
-          {roots.find((r) => r.id === root)?.display_path}/{relative}
-        </p>
-        <button
-          disabled={!relative || busy || !!registrationPending || browsing}
-          onclick={() => browse(relative.split("/").slice(0, -1).join("/"))}
-          >↑ Parent directory</button
-        >
-        <div class="directories">
-          {#if browsing}<p role="status">Loading folders…</p>{/if}
-          {#each directories as directory}<button
-              disabled={busy || !!registrationPending || browsing}
-              aria-label={`Open folder: ${directory.name}`}
-              onclick={() => browse(directory.relative_path)}
-              >▱ {directory.name}{directory.registered ? " · registered" : ""}
-              <span>→</span></button
-            >{:else}{#if directoryReady}<p>
-                No subfolders here. You can select this folder.
-              </p>{/if}{/each}
-        </div>
-        {#if directoryPaged}<button
-            disabled={busy || browsing || !!registrationPending}
-            onclick={() => browse(relative)}>First folder page</button
-          >{/if}
-        {#if directoryCursor}<button
-            disabled={busy || browsing || !!registrationPending}
-            onclick={() => browse(relative, directoryCursor)}
-            >More folders</button
-          >{/if}
-        <label
-          >Project name<input
-            bind:value={projectName}
-            disabled={!!registrationPending || busy}
-            oninput={() => (plan = null)}
-            placeholder="Use folder name"
-          /></label
-        ><label class="check"
-          ><input
-            type="checkbox"
-            disabled={!!registrationPending || busy}
-            bind:checked={tracked}
-            onchange={() => (plan = null)}
-          /> Track .project files in the project’s Git repository</label
-        >{#if plan}<section class="notice">
-            <strong>Selected folder</strong>
-            <p class="breadcrumb">{plan.display_path}</p>
-            <p>
-              Add planning files in .project and project instructions in
-              AGENTS.md. Existing content is preserved.
-            </p>
-            {#each plan.warnings as warning}<p>{warning.message}</p>{/each}
-            <details>
-              <summary>Files to update</summary>
-              {#each plan.changes.filter((change) => change.action !== "no_change") as change}<p
-                  class="breadcrumb"
-                >
-                  {change.path}
-                </p>{/each}
-            </details>
-          </section>
-          <button class="primary" onclick={register} disabled={busy}
-            >{registrationJob
-              ? "Check registration"
-              : registrationPending
-                ? "Retry same registration"
-                : "Add selected project"}</button
-          >{#if registrationPending}<p>
-              Request: {registrationPending.requestId}
-            </p>{/if}{:else}<button
-            class="primary"
-            onclick={preview}
-            disabled={busy || browsing || !directoryReady}
-            >Choose this folder</button
-          >{/if}{/if}{#if error}<p class="notice">{error}</p>{/if}
-    </dialog>
-  </div>{/if}
+<!-- Keep the registration identity alive while its dialog is closed. -->
+<RegistrationBrowser
+  bind:open={adding}
+  onregistered={async (id) => {
+    project = id;
+    view = "board";
+    search = "";
+    await refresh().catch(message);
+  }}
+/>
 
 {#if arrangeFocus}<FocusOrder
     cards={focusCards}
@@ -1464,7 +1364,7 @@
     onclose={() => (nativeAdding = false)}
     onbrowse={() => {
       nativeAdding = false;
-      void browseProjects();
+      adding = true;
     }}
     onadded={(id) => {
       nativeAdding = false;
@@ -1695,8 +1595,7 @@
     text-align: center;
     font-family: monospace;
   }
-  .pairbox code,
-  .modal code {
+  .pairbox code {
     display: block;
     font-size: 11px;
     overflow-wrap: anywhere;
@@ -2093,71 +1992,6 @@
     border-radius: 8px;
     margin-bottom: 16px;
   }
-  .modalshade {
-    position: fixed;
-    inset: 0;
-    z-index: 25;
-    background: #152d2860;
-    display: grid;
-    place-items: center;
-    padding: 20px;
-  }
-  .modal {
-    border: 1px solid var(--line);
-    color: var(--ink);
-    background: var(--paper);
-    border-radius: 16px;
-    padding: 28px;
-    width: min(100%, 580px);
-    max-height: 90vh;
-    overflow: auto;
-  }
-  .modal header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .modal h2 {
-    font:
-      28px Georgia,
-      serif;
-  }
-  .modal label {
-    display: block;
-    font-size: 12px;
-    margin: 16px 0;
-  }
-  .modal input:not([type="checkbox"]),
-  .modal select {
-    display: block;
-    width: 100%;
-    margin-top: 8px;
-  }
-  .modal .check {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .directories {
-    max-height: 180px;
-    overflow: auto;
-    margin: 10px 0;
-  }
-  .directories button {
-    display: flex;
-    width: 100%;
-    text-align: left;
-    justify-content: space-between;
-    margin: 4px 0;
-  }
-  .breadcrumb {
-    font-size: 12px;
-    overflow-wrap: anywhere;
-    color: var(--muted);
-  }
-  .modal details {
-    margin: 20px 0;
-  }
   @media (max-width: 1100px) {
     aside {
       width: 180px;
@@ -2303,12 +2137,6 @@
     }
     .welcome > .eyebrow {
       margin-top: 40px;
-    }
-    .modalshade {
-      padding: 10px;
-    }
-    .modal {
-      padding: 20px;
     }
     .listrow {
       padding: 16px 12px;

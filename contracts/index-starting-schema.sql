@@ -2,6 +2,8 @@
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS projection_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
 CREATE TABLE IF NOT EXISTS projection_pending (project_id TEXT PRIMARY KEY) STRICT;
+-- Local page identity is separate from the globally ordered SSE cursor.
+CREATE TABLE IF NOT EXISTS projection_revisions (project_id TEXT PRIMARY KEY, sequence INTEGER NOT NULL) STRICT;
 CREATE TABLE IF NOT EXISTS documents (
   rowid INTEGER PRIMARY KEY,
   project_id TEXT NOT NULL,

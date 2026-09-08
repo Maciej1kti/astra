@@ -1,5 +1,13 @@
 # Decyzje podczas wykonania
 
+## ADR-031 and ADR-032 — Code health follow-up
+
+2026-09-08. Owner-authorized corrections: preserve original command identity,
+recover stale pages explicitly, scope project cursors, and serve tag suggestions
+from bounded index observations. See [ADR-031](../docs/ADR-031-COMMAND-IDENTITY-AND-PAGE-RECOVERY.md)
+and [ADR-032](../docs/ADR-032-SCOPED-PAGES-AND-TAG-SUGGESTIONS.md).
+Protocol examples, generated types and regression tests accompany the changes.
+
 ## ADR-014 — bounded YAML adapter and unresolved-command responses
 
 2026-09-05, T04/T06–T09/T13. Status: adopted.

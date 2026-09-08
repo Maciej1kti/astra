@@ -49,7 +49,7 @@ try {
   await row.click();
   const dialog = page.getByRole("dialog", { name: "Edit resource", exact: true });
   await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(card.title);
-  await expect.poll(() => requests.slice(start).filter((path) => path === "/api/v1/workspace/tags").length).toBe(1);
+  await expect.poll(() => requests.slice(start).filter((path) => path === "/api/v1/workspace/tag-suggestions").length).toBe(1);
   const history = dialog.locator("details").filter({ has: page.locator("summary", { hasText: /^Card updates/ }) });
   assert.equal(requests.slice(start).filter((path) => path.startsWith(`${base}/updates`)).length, 0, "History must stay lazy until expanded");
   assert.equal(requests.slice(start).filter((path) => new RegExp(`^${base}/(cards|milestones)(\\?|$)`).test(path)).length, 0, "Editor must not enumerate relation collections");
@@ -75,15 +75,20 @@ try {
     assert.equal(params.get("limit"), "50");
   }
   results.push({ check: "Card history uses bounded target pages and lazy bodies", pageSizes: [first.length, second.length], uniqueReports: 55, requests: activity });
+  await dialog.getByLabel("Find by title", { exact: true }).fill("History");
+  await dialog.getByRole("button", { name: "Find resources", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "History probe", exact: true })).toBeVisible();
+  assert(requests.some((path) => path.startsWith("/api/v1/views/list?") && path.includes("type=card") && path.includes("q=History")));
+  results.push({ check: "Relation search finds a card behind more than 50 matching reports" });
   await dialog.getByRole("button", { name: "Close editor", exact: true }).click();
   await dialog.waitFor({ state: "hidden" });
-  const tagReads = requests.filter((path) => path === "/api/v1/workspace/tags").length;
+  const tagReads = requests.filter((path) => path === "/api/v1/workspace/tag-suggestions").length;
   await row.click();
   await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(card.title);
   await dialog.getByRole("combobox", { name: "Labels", exact: true }).focus();
   await expect(dialog.getByRole("option", { name: "frontend", exact: true })).toBeVisible();
   await expect(dialog.getByText("Loading workspace tags…", { exact: true })).toHaveCount(0);
-  assert.equal(requests.filter((path) => path === "/api/v1/workspace/tags").length, tagReads);
+  assert.equal(requests.filter((path) => path === "/api/v1/workspace/tag-suggestions").length, tagReads);
   results.push({ check: "Reopening editor reuses fresh workspace tag suggestions", tagReads });
   assert.deepEqual(errors, []);
 } catch (error) {

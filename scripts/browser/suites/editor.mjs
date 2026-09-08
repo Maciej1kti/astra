@@ -101,12 +101,13 @@ export async function runEditorChecks({ page, config, cli, evidenceDir, runtimeD
     const card = await create({ title: "Repair focus recovery probe" });
     await open(card.id);
     await title().fill("Unsaved after focus response loss");
-    let writes = 0, requestId, interceptionError;
+    let writes = 0, requestId, epoch, interceptionError;
     const matcher = "**/api/v1/workspace/focus";
     await page.route(matcher, async (intercept) => {
       if (intercept.request().method() !== "PUT") return intercept.continue();
       writes++;
       requestId = intercept.request().headers()["x-request-id"];
+      epoch = intercept.request().headers()["x-command-epoch"];
       try {
         const committed = await intercept.fetch();
         assert.equal(committed.ok(), true);
@@ -131,7 +132,7 @@ export async function runEditorChecks({ page, config, cli, evidenceDir, runtimeD
       await expect(title()).toBeEnabled();
       await expect(title()).toHaveValue("Unsaved after focus response loss");
       assert.equal(writes, 1);
-      assert.equal(cli("get", `/api/v1/commands/${requestId}`).state, "committed");
+      assert.equal(cli("get", `/api/v1/commands/${requestId}?epoch=${epoch}`).state, "committed");
       assert.equal(get(card.id).metadata.title, "Repair focus recovery probe");
       await screenshot("A01-recovered-focus-draft");
       return { committedBeforeLostResponse: true, writes, requestId };

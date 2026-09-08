@@ -386,16 +386,32 @@ pub(super) fn run(
             let (workspace, version) = engine.workspace()?;
             json!({"timezone":workspace["timezone"],"locale":workspace["locale"],"preferences":workspace["preferences"],"version":version})
         }
+        ("GET", ["api", "v1", "workspace", "tag-suggestions"]) => {
+            parameters(&input, &[])?;
+            engine.tag_suggestions()?
+        }
         ("GET", ["api", "v1", "commands", id]) => {
             if !project_application::valid_request_id(id) {
                 return Err(AppError::reject(400, "INVALID_REQUEST_ID"));
+            }
+            let fields = parameters(&input, &["epoch"])?;
+            let original_epoch = parameter(&fields, "epoch")?;
+            if !uuid::Uuid::parse_str(original_epoch).is_ok_and(|value| {
+                value.get_version_num() == 4
+                    && value.get_variant() == uuid::Variant::RFC4122
+                    && value.to_string() == original_epoch
+            }) {
+                return Err(AppError::reject(400, "INVALID_EPOCH"));
+            }
+            if original_epoch != engine.journal.epoch {
+                return Err(AppError::reject(409, "EPOCH_CHANGED"));
             }
             let row: Option<(String, Option<String>)> = engine
                 .journal
                 .db()?
                 .query_row(
                     "SELECT state,result_json FROM commands WHERE epoch=?1 AND request_id=?2",
-                    [engine.journal.epoch.as_str(), id],
+                    [original_epoch, id],
                     |r| Ok((r.get(0)?, r.get(1)?)),
                 )
                 .optional()?;
@@ -406,7 +422,7 @@ pub(super) fn run(
                 if reply.body.get("result").is_some() {
                     value["result"] = reply.body;
                 } else if let Some(error) = reply.body.get("error") {
-                    value["error"] = error.clone();
+                    value["error"] = json!({"api_version":"1","error":error});
                 }
             }
             value

@@ -87,7 +87,8 @@
   }
   let readController: AbortController | undefined;
   let columnCursors: Record<string, string | null> = {};
-  let freshness = $state(""), pageNotice = $state("");
+  let freshness = $state(""),
+    pageNotice = $state("");
   let generation = 0,
     deferredRefresh = false;
   let gestureActive = $state(false);
@@ -117,7 +118,10 @@
     untrack(() => void load());
   });
   async function load(status?: string, cursor?: string | null) {
-    if (busy && !status) { deferredRefresh = true; return; }
+    if (busy && !status) {
+      deferredRefresh = true;
+      return;
+    }
     if (gestureActive) {
       deferredRefresh = true;
       return;
@@ -129,17 +133,35 @@
     busy = true;
     error = "";
     try {
-      const requests = status ? [{ status, cursor: cursor ?? null }]
-        : columns.length ? columns.map((column) => ({ status: column.status, cursor: columnCursors[column.status] ?? null }))
+      const requests = status
+        ? [{ status, cursor: cursor ?? null }]
+        : columns.length
+          ? columns.map((column) => ({
+              status: column.status,
+              cursor: columnCursors[column.status] ?? null,
+            }))
           : [{ status: undefined, cursor: null }];
-      const pages = await Promise.all(requests.map(async (request) => ({ ...request,
-        ...(await cursorPage((page) => api<{ columns: Column[] } & ProjectionState>(
-          `/api/v1/views/board?project_id=${project}&limit=50${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
-          "GET", undefined, {}, { signal },
-        ), request.cursor)),
-      })));
+      const pages = await Promise.all(
+        requests.map(async (request) => ({
+          ...request,
+          ...(await cursorPage(
+            (page) =>
+              api<{ columns: Column[] } & ProjectionState>(
+                `/api/v1/views/board?project_id=${project}&limit=50${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
+                "GET",
+                undefined,
+                {},
+                { signal },
+              ),
+            request.cursor,
+          )),
+        })),
+      );
       if (current !== generation) return;
-      if (gestureActive || document.querySelector("[data-dragging]")) { deferredRefresh = true; return; }
+      if (gestureActive || document.querySelector("[data-dragging]")) {
+        deferredRefresh = true;
+        return;
+      }
       const restore = initialView || !!status;
       restoring = restore;
       const resolved = new Map<string, Column>();
@@ -151,11 +173,19 @@
           pageStarts[column.status] = !columnCursors[column.status];
         }
       }
-      freshness = [...new Set(pages.map((page) => projectionNotice(page.value)).filter(Boolean))].join(" ");
-      pageNotice = pages.some((page) => page.reset) ? "The board changed. Showing the first page of the updated columns." : "";
+      freshness = [
+        ...new Set(
+          pages.map((page) => projectionNotice(page.value)).filter(Boolean),
+        ),
+      ].join(" ");
+      pageNotice = pages.some((page) => page.reset)
+        ? "The board changed. Showing the first page of the updated columns."
+        : "";
       if (status) {
         viewState.vertical[status] = 0;
-        columns = columns.map((column) => resolved.get(column.status) ?? column);
+        columns = columns.map(
+          (column) => resolved.get(column.status) ?? column,
+        );
       } else columns = [...resolved.values()];
       if (restore) await restoreView(current);
       if (current === generation) initialView = false;
@@ -164,7 +194,10 @@
     } finally {
       if (current === generation) {
         busy = false;
-        if (deferredRefresh && !gestureActive) { deferredRefresh = false; void load(); }
+        if (deferredRefresh && !gestureActive) {
+          deferredRefresh = false;
+          void load();
+        }
       }
     }
   }

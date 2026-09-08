@@ -2,7 +2,7 @@
 use crate::{
     AppError,
     engine::Engine,
-    index::{Indexed, ProjectionStatus},
+    index::{Indexed, ProjectionStatus, page_revision},
 };
 use chrono::Days;
 use rusqlite::{Connection, params};
@@ -68,7 +68,7 @@ impl Engine {
             .ok_or(AppError::State)?;
         self.index.with_snapshot(|db,revision|{
             let projection = ProjectionStatus::read(db, project)?;
-            let scope=json!(["attention",revision,project,today.to_string(),limit]);let start=offset(cursor,&scope)?;
+            let scope=json!(["attention",page_revision(db, revision, project)?,project,today.to_string(),limit]);let start=offset(cursor,&scope)?;
             let sql=format!("WITH candidates AS (
               SELECT project_id,entity_id,entity_type,title,'overdue' reason,json_extract(metadata_json,'$.due.date') date,0 weight FROM documents d WHERE {ACTIVE} AND (?5 IS NULL OR d.project_id=?5) AND json_extract(metadata_json,'$.due.kind')='hard' AND json_extract(metadata_json,'$.due.date')<?1
               UNION ALL SELECT project_id,entity_id,entity_type,title,'due_soon',json_extract(metadata_json,'$.due.date'),3 FROM documents d WHERE {ACTIVE} AND (?5 IS NULL OR d.project_id=?5) AND json_extract(metadata_json,'$.due.kind')='hard' AND json_extract(metadata_json,'$.due.date') BETWEEN ?1 AND ?2
@@ -109,7 +109,7 @@ impl Engine {
         }
         self.index.with_snapshot(|db,revision|{
             let projection = ProjectionStatus::read(db, project)?;
-            let scope=json!(["calendar",revision,project,from,to,limit]);let start=offset(cursor,&scope)?;
+            let scope=json!(["calendar",page_revision(db, revision, project)?,project,from,to,limit]);let start=offset(cursor,&scope)?;
             let mut statement=db.prepare("WITH selected AS(SELECT * FROM documents WHERE (?1 IS NULL OR project_id=?1) AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0), dates AS (
               SELECT project_id,entity_id,source_hash,title,'card_schedule' kind,json_extract(metadata_json,'$.schedule.start') start,json_extract(metadata_json,'$.schedule.end') end,NULL due_kind FROM selected WHERE entity_type='card'
               UNION ALL SELECT project_id,entity_id,source_hash,title,'card_due',json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.kind') FROM selected WHERE entity_type='card'
@@ -135,7 +135,7 @@ impl Engine {
         // Parsing and graph analysis below cannot delay unrelated index users.
         let snapshot = self.index.with_snapshot(|db, revision| {
             let projection = ProjectionStatus::read(db, Some(project))?;
-            let scope = json!(["gantt", revision, project, limit]);
+            let scope = json!(["gantt", page_revision(db, revision, Some(project))?, project, limit]);
             let start = offset(cursor, &scope)?;
             let mut rows = self::rows(db, project, None, limit + 1, start, true)?;
             let more = rows.len() > limit as usize;
@@ -170,7 +170,7 @@ impl Engine {
         bounded(limit, 200)?;
         self.index.with_snapshot(|db,revision|{
             let projection = ProjectionStatus::read(db, Some(project))?;
-            let scope=json!(["board",revision,project,limit]);
+            let scope=json!(["board",page_revision(db, revision, Some(project))?,project,limit]);
             let (selected,start)=if let Some(cursor)=cursor{let value:Value=serde_json::from_str(cursor).map_err(|_|AppError::reject(400,"INVALID_CURSOR"))?;if value[0]!=scope{return Err(AppError::reject(409,"PAGE_STALE"));}(value[1].as_str().ok_or(AppError::State)?.to_owned(),value[2].as_u64().filter(|n|*n<=i64::MAX as u64).ok_or(AppError::State)?)}else{(String::new(),0)};
             let mut columns=Vec::new();
             for status in ["planned","active","review","done","cancelled"]{

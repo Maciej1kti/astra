@@ -126,6 +126,9 @@ fn main() {
     let mut query = Vec::new();
     let mut attention = Vec::new();
     let mut writes = Vec::new();
+    let mut creates = Vec::new();
+    let mut patches = Vec::new();
+    let mut tags = Vec::new();
     for n in 0..220 {
         let (project, id) = &targets[n % targets.len()];
         let start = Instant::now();
@@ -147,6 +150,11 @@ fn main() {
         engine.attention(None, 50, now_millis()).unwrap();
         if n >= 20 {
             attention.push(start.elapsed().as_secs_f64() * 1000.0);
+        }
+        let start = Instant::now();
+        engine.tag_suggestions().unwrap();
+        if n >= 20 {
+            tags.push(start.elapsed().as_secs_f64() * 1000.0);
         }
         let resource = engine.get(project, Kind::Card, id).unwrap();
         let start = Instant::now();
@@ -172,8 +180,22 @@ fn main() {
             .unwrap();
         assert_eq!(reply.http_status, 200, "{}", reply.body);
         if n >= 20 {
-            writes.push(start.elapsed().as_secs_f64() * 1000.0);
+            let duration = start.elapsed().as_secs_f64() * 1000.0;
+            writes.push(duration);
+            if create {
+                creates.push(duration);
+            } else {
+                patches.push(duration);
+            }
         }
     }
-    println!("{}",serde_json::to_string_pretty(&json!({"profile":{"projects":projects,"cards":cards*projects,"reports":updates*projects},"build":"release","os":std::env::consts::OS,"architecture":std::env::consts::ARCH,"startup_ms":startup,"reconciliation_ms":reconciliation,"startup_modes":startup_modes,"query":statistics(query),"attention":statistics(attention),"durable_mutation":statistics(writes),"limitations":"Application-level timings exclude HTTP/VPN and browser rendering. Fixture generation is included in external process peak RSS."})).unwrap());
+    let mut catalog = Vec::new();
+    for n in 0..11 {
+        let start = Instant::now();
+        engine.tag_catalog().unwrap();
+        if n > 0 {
+            catalog.push(start.elapsed().as_secs_f64() * 1000.0);
+        }
+    }
+    println!("{}",serde_json::to_string_pretty(&json!({"profile":{"projects":projects,"cards":cards*projects,"reports":updates*projects},"build":"release","os":std::env::consts::OS,"architecture":std::env::consts::ARCH,"startup_ms":startup,"reconciliation_ms":reconciliation,"startup_modes":startup_modes,"query":statistics(query),"attention":statistics(attention),"durable_mutation":statistics(writes),"card_create":statistics(creates),"card_patch_title":statistics(patches),"tag_suggestions":statistics(tags),"tag_catalog":statistics(catalog),"limitations":"Application-level timings exclude HTTP/VPN and browser rendering. Fixture generation is included in external process peak RSS."})).unwrap());
 }

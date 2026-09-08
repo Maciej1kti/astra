@@ -10,6 +10,13 @@ verified; preserve requirements from the temporary handoff until then.
 
 ## Implemented
 
+The [code-health follow-up fixes](code-health-fixes-2026-09-08/README.md) correct
+stale-page recovery, original-epoch command status and typed relation search;
+add indexed tag suggestions and project page revisions; extract registration and
+editor responsibilities; and enforce formatting/API-type/bundle checks. Automated,
+browser and packaged-release verification passed. Its performance measurements
+and remaining large-project limits are recorded in the linked evidence.
+
 The [code-health implementation](code-health-implementation-2026-09-08/README.md)
 adds scoped/cancelled reads, bounded card history, indexed and graph optimizations,
 recovery-first startup, static gzip/cache policy, bounded HTTP admission, SSE

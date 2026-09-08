@@ -1,0 +1,24 @@
+{
+  "CURSOR_STALE": {
+    "calls": [
+      "old cursor",
+      null
+    ],
+    "reset": true
+  },
+  "PAGE_STALE": {
+    "calls": [
+      "old cursor"
+    ],
+    "error": "PAGE_STALE",
+    "reset": false
+  },
+  "unrelatedCardEvent": {
+    "activeViewSections": [],
+    "invalidatesTagSuggestions": true
+  },
+  "pendingPayloadAliasing": {
+    "bodiesEqual": false,
+    "requestIdRetained": true
+  }
+}

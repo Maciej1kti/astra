@@ -1,0 +1,24 @@
+   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.35s
+     Running tests/transport.rs (target/debug/deps/transport-499b3c1a767e2241)
+
+running 1 test
+test command_status_requires_the_original_epoch_and_validates_its_response ... FAILED
+
+failures:
+
+---- command_status_requires_the_original_epoch_and_validates_its_response stdout ----
+
+thread 'command_status_requires_the_original_epoch_and_validates_its_response' (8927936) panicked at crates/projectd/tests/transport.rs:36:9:
+assertion `left == right` failed:
+  left: 200
+ right: 400
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    command_status_requires_the_original_epoch_and_validates_its_response
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.18s
+
+error: test failed, to rerun pass `-p projectd --test transport`

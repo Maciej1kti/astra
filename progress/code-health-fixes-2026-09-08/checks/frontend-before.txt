@@ -1,0 +1,43 @@
+✖ both server stale-page codes restart once, while unrelated failures retain their meaning (0.741625ms)
+✖ pending commands own an immutable payload and status always uses their original epoch (2.884125ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 72.991917
+
+✖ failing tests:
+
+test at scripts/tests/command-lifecycle.test.mjs:6:1
+✖ both server stale-page codes restart once, while unrelated failures retain their meaning (0.741625ms)
+  Error: Request failed (409)
+      at file:///Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/scripts/tests/command-lifecycle.test.mjs:11:25
+      at cursorPage (file:///Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web/src/lib/pagination.ts:7:31)
+      at TestContext.<anonymous> (file:///Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/scripts/tests/command-lifecycle.test.mjs:9:26)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    status: 409,
+    data: { error: { code: 'PAGE_STALE' } }
+  }
+
+test at scripts/tests/command-lifecycle.test.mjs:24:1
+✖ pending commands own an immutable payload and status always uses their original epoch (2.884125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + '{"set":{"labels":["original"]}}'
+  - '{"set":{"labels":["original","later caller edit"]}}'
+
+      at TestContext.<anonymous> (file:///Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/scripts/tests/command-lifecycle.test.mjs:40:12)
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '{"set":{"labels":["original"]}}',
+    expected: '{"set":{"labels":["original","later caller edit"]}}',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

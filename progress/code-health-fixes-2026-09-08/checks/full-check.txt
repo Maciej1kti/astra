@@ -1,0 +1,438 @@
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python scripts/generate_api_schema.py --check
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python scripts/check_package.py --skip-manifest
+PASS JSON files
+PASS JSON Schema and all local references
+PASS Domain examples
+PASS Markdown/JSON roundtrip and cross-references
+PASS Reference validation vectors
+PASS OpenAPI structure
+PASS HTTP request examples
+PASS Requirements/tests/tasks traceability
+PASS SQLite starting schemas
+PASS Deployment template syntax
+PASS Markdown relative links
+{"status": "passed", "counts": {"json_files": 84, "domain_definitions": 26, "openapi_schemas": 101, "domain_examples": 7, "markdown_domain_examples": 5, "reference_vectors": 33, "openapi_paths": 47, "openapi_operations": 58, "request_examples": 7, "requirements": 36, "acceptance_scenarios": 60, "tasks": 42, "fault_scenarios": 16}}
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python -m openapi_spec_validator contracts/openapi.yaml
+contracts/openapi.yaml: OK
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python -m unittest discover -s scripts/tests
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.004s
+
+OK
+
+RUN /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/.venv-check/bin/python -m unittest discover -s integrations/omarchy -p test_*.py
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.000s
+
+OK
+
+RUN node --test scripts/tests/board-view.test.mjs scripts/tests/bundle.test.mjs scripts/tests/card-work.test.mjs scripts/tests/command-lifecycle.test.mjs scripts/tests/dates.test.mjs scripts/tests/editor-actions.test.mjs scripts/tests/editor-draft.test.mjs scripts/tests/markdown.test.mjs scripts/tests/navigation.test.mjs scripts/tests/planning-navigation.test.mjs scripts/tests/planning.test.mjs scripts/tests/read-requests.test.mjs scripts/tests/resource-presentation.test.mjs scripts/tests/tag-management.test.mjs scripts/tests/view-projections.test.mjs scripts/tests/view-queries.test.mjs
+✔ board preferences isolate projects and never persist card data or cursors (0.466208ms)
+✔ untrusted or unavailable browser storage cannot break the board (0.147542ms)
+✔ cancelled starts collapsed and preserves an explicit expansion (0.074708ms)
+✔ initial bundle measurement follows static imports, deduplicates CSS and excludes lazy views (1.749041ms)
+✔ checklist reordering retains source items and stable identities (0.579875ms)
+✔ invalid acceptance drafts have specific feedback without normalizing saved text (1.910875ms)
+✔ card update payload is independently targeted and cannot include card mutations (1.244959ms)
+✔ relation search filters resource type on the server before its bounded page (3.252375ms)
+✔ both server stale-page codes restart once, while unrelated failures retain their meaning (0.449042ms)
+✔ pending commands own an immutable payload and status always uses their original epoch (5.612583ms)
+✔ date-only moves preserve duration across leap days, month/year changes and DST (4.1055ms)
+✔ resize changes only its boundary and never produces a reversed range (0.994833ms)
+✔ focus and read receipt commits preserve the editor session, including status recovery (0.327209ms)
+✔ Undo is rejected while a draft or unresolved command exists (0.070792ms)
+✔ editing unrelated fields does not split, trim or normalize source tags (0.714708ms)
+✔ duplicate, empty and over-limit additions retain the original tags with field feedback (0.150375ms)
+✔ source suggestions preserve exact spelling and omit selected tags (8.368208ms)
+✔ an unrelated card edit preserves exact tags, extensions and dependency intent (1.44175ms)
+✔ clearing populated optional fields is explicit and does not clear unknown extensions (0.307917ms)
+✔ create and report payloads retain their domain-specific fields (0.386375ms)
+✔ Markdown renders formatting while disabling executable HTML and remote images (5.862917ms)
+✔ calendar deep links retain day and layout through reload and browser history (2.636542ms)
+✔ legacy month links and invalid dates resolve deterministically (0.121709ms)
+✔ opening a resource from All projects retains the workspace filter (0.115292ms)
+✔ archive and exact tag filters survive links, including literal commas (0.085625ms)
+✔ typed search replaces an entry while semantic navigation creates one (0.10175ms)
+✔ list collection cannot contaminate create actions in other views (0.062916ms)
+✔ calendar navigation preserves its period across month, year and leap boundaries (1.35575ms)
+✔ invalid date input cannot enter calendar navigation or scheduled creation (0.13725ms)
+✔ a compact month shows the whole month agenda and retains explicit grid access (0.060292ms)
+✔ calendar navigation uses whole-day inputs without a browser-timezone shift (2.50225ms)
+✔ widget boundaries round-trip inclusive dates in different client timezones (5.425084ms)
+✔ empty or reversed widget ranges never become a persisted schedule (0.16ms)
+✔ concurrent readers share a GET while cancellation belongs to the subscriber (2.549166ms)
+✔ cancelled queued work never reaches the network or prevents a newer read (0.791583ms)
+✔ session cleanup aborts active reads and prevents queued operations (1.023917ms)
+✔ known-ID resolution preserves source order and bounds outstanding operations (3.389125ms)
+✔ card summaries retain the distinct meanings of deadline, plan and review (0.593042ms)
+✔ a target date never claims to be a hard deadline or substitutes a plan date (0.078208ms)
+✔ finishing a tag change requires complete source coverage and every reviewed card saved (0.361ms)
+✔ catalog replacements retain managed exact names and do not silently promote all observed labels (0.331416ms)
+✔ new names validate Unicode code points, case-sensitive identity and explicit whitespace (0.090208ms)
+✔ choosing a historical padded destination preserves its exact identity (0.052208ms)
+✔ Gantt partition retains edge order and identifies hidden or undated predecessors (0.911208ms)
+✔ Focus detail fallback has the same source-derived badges as an indexed card summary (0.175834ms)
+✔ detail summaries map project/update names and preserve read receipt state (0.0745ms)
+✔ planning routes only load shared project context; list and reports fetch their own collection (0.600333ms)
+✔ SSE changes invalidate only affected visible data, with conservative recovery for gaps (0.123625ms)
+✔ loaded-title filters retain queries and pagination, while server filters remain scoped and exact (0.159875ms)
+✔ continuous invalidations flush at the deadline and teardown cancels queued work (0.3225ms)
+✔ page refresh preserves a valid cursor and restarts only on explicit CURSOR_STALE (0.332708ms)
+✔ one active card-list load makes exactly one request and leaves unrelated arrays absent (0.445334ms)
+✔ tag suggestions deduplicate in-flight reads, expire, and reject late cache repopulation after session cleanup (0.14975ms)
+✔ mutations bypass GET sharing and retry retains original identity, epoch and payload (1.848417ms)
+ℹ tests 54
+ℹ suites 0
+ℹ pass 54
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 199.034542
+
+RUN npm run check
+
+> check
+> npm run contracts:check && npm run check --workspace apps/web
+
+
+> contracts:check
+> node scripts/generate-contracts.mjs --check
+
+
+> @local-projects/web@0.1.0 check
+> svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+
+RUN npm run format:check
+
+> format:check
+> prettier --check apps/web/src apps/web/vite.config.ts scripts/generate-contracts.mjs scripts/check-bundle.mjs
+
+Checking formatting...
+All matched files use Prettier code style!
+
+RUN npm run build
+
+> build
+> npm run build --workspace apps/web
+
+
+> @local-projects/web@0.1.0 build
+> vite build
+
+1:22:53 PM [vite-plugin-svelte] no Svelte config found at /Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/apps/web - using default configuration.
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 1013 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                          0.39 kB │ gzip:   0.27 kB
+dist/.vite/manifest.json                 1.81 kB │ gzip:   0.42 kB
+dist/assets/CalendarView-B8_iOjTR.css   33.68 kB │ gzip:   4.29 kB
+dist/assets/index-5UbZVyaO.css          36.30 kB │ gzip:   6.80 kB
+dist/assets/Board-DLgdT0rQ.css          55.44 kB │ gzip:   7.82 kB
+dist/assets/GanttView-pobotIn2.css     135.63 kB │ gzip:  17.63 kB
+dist/assets/events-BLpFneMP.js           0.02 kB │ gzip:   0.04 kB
+dist/assets/DateViews-DVmtKdcI.js        2.22 kB │ gzip:   0.97 kB
+dist/assets/dist-DQoNPRkZ.js             6.05 kB │ gzip:   2.48 kB
+dist/assets/CalendarView-Ch3cEf8E.js    67.18 kB │ gzip:  23.58 kB
+dist/assets/Board-BodtoX7y.js           79.22 kB │ gzip:  26.30 kB
+dist/assets/GanttView-Jy-kRZaE.js      268.13 kB │ gzip:  87.27 kB
+dist/assets/index-D42AKPN_.js          322.43 kB │ gzip: 115.86 kB
+
+✓ built in 1.05s
+
+RUN npm run check:bundle
+
+> check:bundle
+> node scripts/check-bundle.mjs
+
+{
+  "assets": [
+    {
+      "file": "assets/index-5UbZVyaO.css",
+      "gzipBytes": 6733
+    },
+    {
+      "file": "assets/index-D42AKPN_.js",
+      "gzipBytes": 114673
+    }
+  ],
+  "gzipBytes": 121406,
+  "limitBytes": 307200
+}
+
+RUN scripts/cargo-local fmt --all -- --check
+
+RUN scripts/cargo-local clippy --workspace --all-targets --locked -- -D warnings
+    Checking project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.22s
+
+RUN scripts/cargo-local test --workspace --locked
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.68s
+     Running unittests src/lib.rs (target/debug/deps/project_application-cc31742abf85b77b)
+
+running 4 tests
+test git::tests::subprocess_output_and_deadline_are_bounded ... ok
+test index::tests::bundled_sqlite_seeks_composite_projection_and_report_target_keys ... ok
+test index::tests::report_target_filter_requires_a_valid_pair_on_update_queries ... ok
+test index::tests::report_target_pagination_is_bounded_amid_more_than_twenty_thousand_unrelated_reports ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.64s
+
+     Running tests/auth.rs (target/debug/deps/auth-a2d4ec6bc8294186)
+
+running 5 tests
+test state_schema_version_and_explicit_restore_epoch_survive_restart ... ok
+test passive_stream_checks_do_not_extend_session_idle_lifetime ... ok
+test pairing_requires_owner_approval_cookie_and_csrf_and_claim_retry_rotates ... ok
+test rate_limits_and_expiration_are_enforced ... ok
+test session_idle_and_absolute_expiration_survive_restart ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/durability.rs (target/debug/deps/durability-060cac3a2855a41c)
+
+running 11 tests
+test fault_child ... ok
+test unknown_expired_ids_and_old_epochs_are_never_reexecuted ... ok
+test missing_precondition_and_invalid_source_never_write ... ok
+test external_edits_after_prepared_are_not_overwritten ... ok
+test replacement_symlink_after_prepared_requires_review ... ok
+test duplicate_references_preserve_conflicts_and_store_one_recovery_precondition ... ok
+test invalid_request_ids_produce_valid_errors_and_state_loss_changes_epoch ... ok
+test recovery_rechecks_dependencies_even_when_target_is_unchanged ... ok
+test committed_conflicts_replays_and_noops_follow_the_contract ... ok
+test state_database_can_grow_beyond_document_limits_and_restart ... ok
+test subprocess_crashes_at_every_durability_boundary_recover_once ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.48s
+
+     Running tests/engine.rs (target/debug/deps/engine-97468c55f7d7500d)
+
+running 40 tests
+test browser_roots_reject_escape_symlinks_and_replaced_directories ... ok
+test browser_registration_plan_cannot_outlive_root_revocation ... ok
+test forecast_example_matches_projection_contracts ... ok
+test completed_registration_replays_after_restart_with_missing_project_folder ... ok
+test create_retry_without_client_id_returns_the_original_resource ... ok
+test agent_context_includes_complete_card_purpose_or_an_explicit_next_read ... ok
+test card_acceptance_lifecycle_keeps_status_body_and_conflict_history ... ok
+test attention_distinguishes_hard_deadlines_and_reading_from_resolution ... ok
+test attention_project_filter_applies_before_pagination ... ok
+test foreground_project_read_reconciles_external_changes_with_a_bounded_ttl ... ok
+test agent_context_is_project_scoped_and_counts_utf8_json_overhead ... ok
+test broken_workspace_keeps_diagnostics_available_without_recreating_sources ... ok
+test dependency_validation_rereads_external_edits_and_deleted_cards ... ok
+test gantt_pages_include_milestones_and_board_stays_card_only ... ok
+test invalid_external_source_preserves_stale_projection_without_repairing_files ... ok
+test incremental_projection_preserves_other_sources_and_handles_invalid_delete_recreate ... ok
+test invalid_unindexed_target_emits_health_without_changing_other_issues ... ok
+test invalid_filenames_are_isolated_by_collection_and_publish_health_changes ... ok
+test index_rebuild_cannot_finish_before_projection_succeeds ... ok
+test gantt_bulk_predecessors_preserve_archived_cancelled_stale_missing_and_undated_warnings ... ok
+test maintenance_plan_rejects_intervening_source_edits_and_relocates_moved_folder ... ok
+test missing_receipt_target_rejection_remains_stable_after_creation ... ok
+test maintenance_normalizes_conditionally_rebalances_and_unregisters_without_deleting_files ... ok
+test read_receipts_are_atomic_shared_and_do_not_modify_reports ... ok
+test pagination_detects_staleness_and_stream_snapshots_do_not_lose_changes ... ok
+test registration_is_explicit_preserves_existing_instructions_and_repeats_safely ... ok
+test rebalance_rejects_new_collection_members_and_replays_rejection ... ok
+test git_observer_is_explicit_bounded_and_never_runs_repository_filters ... ok
+test schedule_warning_is_durable_and_never_moves_deadline ... ok
+test retention_keeps_retry_window_and_pending_intents ... ok
+test real_card_edit_two_clients_search_and_index_rebuild ... ok
+test stale_registration_plan_does_not_overwrite_user_edits ... ok
+test stale_target_rejection_precedes_unrelated_collection_validation_and_replays ... ok
+test timeline_forecast_uses_other_pages_without_changing_recorded_dates ... ok
+test undo_restores_one_change_and_refuses_later_edits ... ok
+test service_reopen_marks_cached_and_empty_projections_until_source_reconciliation ... ok
+test scoped_pages_survive_other_projects_but_reject_relevant_changes ... ok
+test upgrading_body_only_search_index_preserves_sources_and_indexes_card_content ... ok
+test workspace_writes_replay_and_recover_without_overwriting_external_changes ... ok
+test service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked ... ok
+
+test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.14s
+
+     Running tests/tag_management.rs (target/debug/deps/tag_management-b47d7f98cb9f2bc6)
+
+running 10 tests
+test invalid_vocabulary_does_not_replace_valid_names ... ok
+test vocabulary_prepared_write_recovers_with_original_identity ... ok
+test preview_merges_exact_tags_without_writes_and_preserves_unrelated_order ... ok
+test preview_preserves_exact_historical_whitespace_destinations ... ok
+test suggestions_use_indexed_names_while_management_still_reads_current_sources ... ok
+test vocabulary_is_optional_versioned_durable_and_does_not_rewrite_card_labels ... ok
+test applying_preview_uses_expected_versions_and_keeps_partial_results_safe ... ok
+test catalog_and_preview_report_invalid_cards_and_unavailable_projects_individually ... ok
+test catalog_reads_all_sources_including_archived_and_beyond_first_page ... ok
+test preview_bounds_affected_cards_and_identifies_archived_project_limits ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.07s
+
+     Running tests/workflow.rs (target/debug/deps/workflow-7286d5d881ec96ed)
+
+running 1 test
+test recovery_rechecks_completed_steps_before_publishing_registration ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src/lib.rs (target/debug/deps/project_domain-ec4ecd93b59d82f1)
+
+running 5 tests
+test timeline::tests::unknown_missing_and_cyclic_paths_are_incomplete ... ok
+test timeline::tests::parallel_paths_wait_for_latest_predecessor_and_preserve_later_start ... ok
+test timeline::tests::leap_day_dst_and_supported_date_boundary ... ok
+test timeline::tests::waterfall_preserves_durations_and_dates_without_mutating_input ... ok
+test timeline::tests::ten_thousand_card_chain_is_iterative_and_bounded ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/contracts.rs (target/debug/deps/contracts-99d5cc2140ceafcd)
+
+running 9 tests
+test handoff_calendar_vectors ... ok
+test handoff_rank_vectors_and_exhaustion ... ok
+test fractional_timestamps_compare_as_instants ... ok
+test workspace_catalog_is_optional_exact_and_bounded ... ok
+test examples_roundtrip_without_losing_optional_fields_or_body ... ok
+test handoff_document_vectors ... ok
+test structured_card_content_preserves_identity_order_and_explicit_status ... ok
+test validation_enforces_bytes_depth_and_safe_extensions ... ok
+test handoff_graph_vectors_and_long_chain ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running unittests src/lib.rs (target/debug/deps/project_store-a0bbf280b80e4614)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/documents.rs (target/debug/deps/documents-9c773eb10238b299)
+
+running 5 tests
+test rejects_yaml_abuse_and_invalid_source_identity ... ok
+test metadata_edits_preserve_body_and_extensions_byte_for_byte ... ok
+test comments_and_encoding_require_explicit_normalization ... ok
+test hashes_inside_scalars_are_content_including_unicode_and_blocks ... ok
+test all_handoff_parser_vectors ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/filesystem.rs (target/debug/deps/filesystem-3750dbe48053d69f)
+
+running 6 tests
+test detached_directory_cannot_receive_a_write ... ok
+test project_directory_must_not_be_a_symlink ... ok
+test symlinks_hardlinks_traversal_and_replaced_leases_are_rejected ... ok
+test failure_after_rename_keeps_the_new_source_for_recovery ... ok
+test conditional_create_replace_and_exclusive_lease ... ok
+test every_resource_lookup_rejects_replaced_lease_or_project_directory ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running unittests src/main.rs (target/debug/deps/projectctl-5d6b46a40a7120fc)
+
+running 1 test
+test tests::command_tree_is_valid_and_requires_socket_except_for_offline_validation ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/output.rs (target/debug/deps/output-1a8d676739c2cefc)
+
+running 7 tests
+test argument_and_transport_failures_are_single_json_with_stable_exits ... ok
+test command_status_requires_and_transmits_the_original_epoch_without_a_hello ... ok
+test offline_validation_does_not_initialize_or_modify_the_selected_folder ... ok
+test accepted_and_malformed_mutation_replies_preserve_command_identity ... ok
+test tag_preview_sends_one_read_only_post_and_classifies_failures_as_reads ... ok
+test preliminary_and_final_requests_preserve_structured_server_errors ... ok
+test malformed_error_envelopes_never_hide_an_uncertain_command ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+
+     Running unittests src/lib.rs (target/debug/deps/projectd-6f74532ff020ebc0)
+
+running 6 tests
+test assets::tests::encoding_quality_respects_explicit_veto_and_multiple_headers ... ok
+test tests::open_streams_use_their_own_limit_after_admission ... ok
+test tests::admission_bounds_body_collectors_and_releases_cancelled_requests ... ok
+test tests::browser_stream_expires_without_index_changes ... ok
+test tests::body_timeout_and_invalid_inputs_release_admission ... ok
+test picker::tests::native_selection_is_session_bound_and_only_prepares_a_plan ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running unittests src/main.rs (target/debug/deps/projectd-32a54fba1107e01d)
+
+running 2 tests
+test watcher::tests::source_events_ignore_private_state_temporary_files_and_unrelated_code ... ok
+test watcher::tests::initial_membership_reconciles_an_empty_index_without_waiting_for_the_timer ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+
+     Running tests/lifecycle.rs (target/debug/deps/lifecycle-46ef775887c78747)
+
+running 1 test
+test sigterm_closes_an_open_local_event_stream_and_exits ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+
+     Running tests/transport.rs (target/debug/deps/transport-499b3c1a767e2241)
+
+running 6 tests
+test static_assets_negotiate_gzip_and_keep_api_responses_private ... ok
+test session_revocation_closes_the_browser_event_stream ... ok
+test browser_pairing_csrf_and_local_uid_transport ... ok
+test command_status_requires_the_original_epoch_and_validates_its_response ... ok
+test workspace_tag_transport_preserves_command_contracts_and_view_versions ... ok
+test registration_mutation_preconditions_and_replay_over_unix ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.85s
+
+   Doc-tests project_application
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests project_domain
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests project_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests projectd
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+RUN scripts/cargo-local build --workspace --release --locked
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
+    Finished `release` profile [optimized] target(s) in 8.51s
+
+PASS local automated checks. See progress evidence for coverage and platform limitations.

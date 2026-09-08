@@ -1,0 +1,22 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.71s
+     Running tests/engine.rs (target/debug/deps/engine-afbe62413ea9ac9f)
+
+running 1 test
+test scoped_pages_survive_other_projects_but_reject_relevant_changes ... FAILED
+
+failures:
+
+---- scoped_pages_survive_other_projects_but_reject_relevant_changes stdout ----
+
+thread 'scoped_pages_survive_other_projects_but_reject_relevant_changes' (8939586) panicked at crates/application/tests/engine.rs:115:32:
+unrelated project must preserve scoped pages: Err(Rejected(Reply { http_status: 409, body: Object {"api_version": String("1"), "error": Object {"code": String("CURSOR_STALE"), "message": String("CURSOR_STALE")}} }))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    scoped_pages_survive_other_projects_but_reject_relevant_changes
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 38 filtered out; finished in 0.70s
+
+error: test failed, to rerun pass `-p project-application --test engine`

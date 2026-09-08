@@ -312,14 +312,17 @@ impl ProjectStore {
         create: bool,
     ) -> Result<(Directory, String), StoreError> {
         self.lease.verify()?;
-        self.directory.verify()?;
         let uuid = Uuid::parse_str(id).map_err(|_| StoreError::Invalid("INVALID_ID"))?;
         if uuid.get_version_num() != 4 || uuid.to_string() != id {
             return Err(StoreError::Invalid("INVALID_ID"));
         }
         match kind.directory() {
+            // child() verifies this directory before opening the collection.
             Some(name) => Ok((self.directory.child(name, create)?, format!("{id}.md"))),
-            None => Ok((Directory::open(self.directory.path())?, "project.md".into())),
+            None => {
+                self.directory.verify()?;
+                Ok((Directory::open(self.directory.path())?, "project.md".into()))
+            }
         }
     }
 }

@@ -1,0 +1,23 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running tests/engine.rs (target/debug/deps/engine-afbe62413ea9ac9f)
+
+running 1 test
+test stale_target_rejection_precedes_unrelated_collection_validation_and_replays ... FAILED
+
+failures:
+
+---- stale_target_rejection_precedes_unrelated_collection_validation_and_replays stdout ----
+
+thread 'stale_target_rejection_precedes_unrelated_collection_validation_and_replays' (8941710) panicked at crates/application/tests/engine.rs:137:5:
+assertion `left == right` failed
+  left: String("DOCUMENT_INVALID")
+ right: "VERSION_CONFLICT"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    stale_target_rejection_precedes_unrelated_collection_validation_and_replays
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 38 filtered out; finished in 0.37s
+
+error: test failed, to rerun pass `-p project-application --test engine`

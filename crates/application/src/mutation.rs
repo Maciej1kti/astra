@@ -151,7 +151,11 @@ fn prepare(
     let previous = if create {
         None
     } else {
-        Some(read(store, kind, id)?.0)
+        let (value, version) = read(store, kind, id)?;
+        if command.expected.as_deref() != Some(&version) {
+            return Err(AppError::reject(412, "VERSION_CONFLICT"));
+        }
+        Some(value)
     };
     let mut next = if create {
         let mut metadata = payload.clone();
