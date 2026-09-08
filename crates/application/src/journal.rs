@@ -53,7 +53,6 @@ pub struct Intent {
     pub command: Command,
     pub before: Option<Vec<u8>>,
     pub after: Vec<u8>,
-    pub reply: Reply,
     pub references: Vec<Reference>,
     pub source_root: String,
 }
@@ -98,7 +97,15 @@ impl Journal {
         {
             let mut db = self.db()?;
             let tx = db.transaction()?;
-            let pending:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM commands WHERE state IN ('prepared','blocked','needs_review'))",[],|r|r.get(0))?;
+            let pending: bool = tx.query_row(
+                "SELECT EXISTS(SELECT 1
+FROM commands
+WHERE state IN ('prepared',
+    'blocked',
+    'needs_review'))",
+                [],
+                |r| r.get(0),
+            )?;
             if pending {
                 return Err(AppError::reject(409, "RECOVERY_REQUIRED"));
             }
@@ -110,7 +117,14 @@ impl Journal {
                 "UPDATE sessions SET revoked_at=?1 WHERE revoked_at IS NULL",
                 [instant(now)],
             )?;
-            tx.execute("UPDATE pairings SET state='denied' WHERE state IN ('pending','approved','claimed')",[])?;
+            tx.execute(
+                "UPDATE pairings
+SET state='denied'
+WHERE state IN ('pending',
+    'approved',
+    'claimed')",
+                [],
+            )?;
             tx.commit()?;
         }
         self.epoch = epoch;
@@ -152,7 +166,7 @@ impl Journal {
             .optional()?;
         let epoch = match epoch {
             Some(epoch) => {
-                Uuid::parse_str(&epoch).map_err(|_| AppError::State)?;
+                Uuid::parse_str(&epoch).map_err(|_| AppError::invariant("stored command epoch"))?;
                 epoch
             }
             None => {
@@ -176,12 +190,24 @@ impl Journal {
     pub fn db(&self) -> Result<MutexGuard<'_, Connection>, AppError> {
         self.lease.verify()?;
         self.directory.verify()?;
-        self.connection.lock().map_err(|_| AppError::State)
+        self.connection
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("database connection"))
     }
     pub(crate) fn known(db: &Connection, command: &Command) -> Result<Option<Reply>, AppError> {
-        let row: Option<(String, String, Option<String>, Option<String>)> = db.query_row(
-            "SELECT digest,state,result_json,error_json FROM commands WHERE epoch=?1 AND request_id=?2",
-            params![command.epoch, command.request_id], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
+        let row: Option<(String, String, Option<String>, Option<String>)> = db
+            .query_row(
+                "SELECT digest,
+    state,
+    result_json,
+    error_json
+FROM commands
+WHERE epoch=?1
+AND request_id=?2",
+                params![command.epoch, command.request_id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .optional()?;
         let Some((digest, state, result, error)) = row else {
             return Ok(None);
         };
@@ -193,7 +219,8 @@ impl Journal {
             )));
         }
         if state == "committed" || state == "rejected" {
-            let text = if state == "committed" { result } else { error }.ok_or(AppError::State)?;
+            let text = if state == "committed" { result } else { error }
+                .ok_or_else(|| AppError::invariant("terminal command reply"))?;
             return Ok(Some(
                 serde_json::from_str::<Reply>(&text)
                     .map_err(|_| AppError::State)?
@@ -229,7 +256,10 @@ impl Journal {
                 )));
             }
         };
-        let (seconds, nanos) = id.get_timestamp().ok_or(AppError::State)?.to_unix();
+        let (seconds, nanos) = id
+            .get_timestamp()
+            .ok_or_else(|| AppError::invariant("validated v7 request timestamp"))?
+            .to_unix();
         let request_time = seconds as i64 * 1000 + nanos as i64 / 1_000_000;
         let floor: i64 = db
             .query_row(
@@ -258,13 +288,39 @@ impl Journal {
             )));
         }
         let transaction = db.transaction()?;
-        transaction.execute("INSERT INTO meta(key,value) VALUES('admission_floor',?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [admission.to_string()])?;
+        transaction.execute(
+            "INSERT INTO meta(key,
+    value)
+VALUES ('admission_floor',
+    ?1)
+ON CONFLICT (key) DO UPDATE
+SET value=excluded.value",
+            [admission.to_string()],
+        )?;
         transaction.commit()?;
         Ok(None)
     }
     pub fn pending(&self, project_id: &str) -> Result<Vec<Intent>, AppError> {
         let db = self.db()?;
-        let mut statement = db.prepare("SELECT c.command_json,w.before_bytes,w.after_bytes,m.result_json,c.references_json,w.approved_root FROM commands m JOIN write_intents w USING(epoch,request_id) JOIN intent_context c USING(epoch,request_id) WHERE m.project_id=?1 AND m.state IN ('prepared','blocked','needs_review') ORDER BY m.rowid,w.step")?;
+        let mut statement = db.prepare(
+            "SELECT c.command_json,
+    w.before_bytes,
+    w.after_bytes,
+    m.result_json,
+    c.references_json,
+    w.approved_root
+FROM commands m
+JOIN write_intents w USING(epoch,
+    request_id)
+JOIN intent_context c USING(epoch,
+    request_id)
+WHERE m.project_id=?1
+AND m.state IN ('prepared',
+    'blocked',
+    'needs_review')
+ORDER BY m.rowid,
+    w.step",
+        )?;
         let rows = statement.query_map([project_id], |r| {
             Ok((
                 r.get::<_, String>(0)?,
@@ -277,19 +333,32 @@ impl Journal {
         })?;
         rows.map(|row| {
             let (command, before, after, reply, references, source_root) = row?;
+            // Recovery still verifies the persisted replay envelope before writing.
+            serde_json::from_str::<Reply>(&reply)
+                .map_err(|source| AppError::stored("journal intent reply", source))?;
             Ok(Intent {
-                command: serde_json::from_str(&command).map_err(|_| AppError::State)?,
+                command: serde_json::from_str(&command)
+                    .map_err(|source| AppError::stored("journal intent command", source))?,
                 before,
                 after,
-                reply: serde_json::from_str(&reply).map_err(|_| AppError::State)?,
-                references: serde_json::from_str(&references).map_err(|_| AppError::State)?,
+                references: serde_json::from_str(&references)
+                    .map_err(|source| AppError::stored("journal intent references", source))?,
                 source_root,
             })
         })
         .collect()
     }
     pub fn has_pending(&self, project_id: &str) -> Result<bool, AppError> {
-        Ok(self.db()?.query_row("SELECT EXISTS(SELECT 1 FROM commands WHERE project_id=?1 AND state IN ('prepared','blocked','needs_review'))", [project_id], |r| r.get(0))?)
+        Ok(self.db()?.query_row(
+            "SELECT EXISTS(SELECT 1
+FROM commands
+WHERE project_id=?1
+AND state IN ('prepared',
+    'blocked',
+    'needs_review'))",
+            [project_id],
+            |r| r.get(0),
+        )?)
     }
     pub fn record(
         &self,
@@ -312,14 +381,101 @@ impl Journal {
             "committed"
         };
         let result_json = serde_json::to_string(reply).map_err(|_| AppError::State)?;
-        tx.execute("INSERT INTO commands(epoch,request_id,digest,state,target_kind,project_id,target_id,received_at,expires_at,result_json,error_json) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)", params![command.epoch,command.request_id,command.digest(),state,command.target.kind.as_str(),command.target.project_id,command.target.id,instant(now),instant(now+7*86_400_000),if rejected {None} else {Some(&result_json)},if rejected {Some(&result_json)} else {None}])?;
+        tx.execute(
+            "INSERT INTO commands(epoch,
+    request_id,
+    digest,
+    state,
+    target_kind,
+    project_id,
+    target_id,
+    received_at,
+    expires_at,
+    result_json,
+    error_json)
+VALUES (?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5,
+    ?6,
+    ?7,
+    ?8,
+    ?9,
+    ?10,
+    ?11)",
+            params![
+                command.epoch,
+                command.request_id,
+                command.digest(),
+                state,
+                command.target.kind.as_str(),
+                command.target.project_id,
+                command.target.id,
+                instant(now),
+                instant(now + 7 * 86_400_000),
+                if rejected { None } else { Some(&result_json) },
+                if rejected { Some(&result_json) } else { None }
+            ],
+        )?;
         if let Some(intent) = intent {
             let relative = command.target.kind.directory().map_or_else(
                 || "project.md".to_owned(),
                 |directory| format!("{directory}/{}.md", command.target.id),
             );
-            tx.execute("INSERT INTO write_intents(epoch,request_id,step,approved_root,relative_path,before_hash,after_hash,before_bytes,after_bytes,intent_kind) VALUES(?1,?2,0,?3,?4,?5,?6,?7,?8,?9)",params![command.epoch,command.request_id,intent.source_root,relative,intent.before.as_ref().map(|b|document::version(b)),document::version(&intent.after),intent.before,intent.after,if intent.before.is_some(){"replace"}else{"create"}])?;
-            tx.execute("INSERT INTO intent_context(epoch,request_id,command_json,references_json) VALUES(?1,?2,?3,?4)",params![command.epoch,command.request_id,serde_json::to_string(command).unwrap(),serde_json::to_string(&intent.references).unwrap()])?;
+            tx.execute(
+                "INSERT INTO write_intents(epoch,
+    request_id,
+    step,
+    approved_root,
+    relative_path,
+    before_hash,
+    after_hash,
+    before_bytes,
+    after_bytes,
+    intent_kind)
+VALUES (?1,
+    ?2,
+    0,
+    ?3,
+    ?4,
+    ?5,
+    ?6,
+    ?7,
+    ?8,
+    ?9)",
+                params![
+                    command.epoch,
+                    command.request_id,
+                    intent.source_root,
+                    relative,
+                    intent.before.as_ref().map(|b| document::version(b)),
+                    document::version(&intent.after),
+                    intent.before,
+                    intent.after,
+                    if intent.before.is_some() {
+                        "replace"
+                    } else {
+                        "create"
+                    }
+                ],
+            )?;
+            tx.execute(
+                "INSERT INTO intent_context(epoch,
+    request_id,
+    command_json,
+    references_json)
+VALUES (?1,
+    ?2,
+    ?3,
+    ?4)",
+                params![
+                    command.epoch,
+                    command.request_id,
+                    serde_json::to_string(command).unwrap(),
+                    serde_json::to_string(&intent.references).unwrap()
+                ],
+            )?;
         }
         tx.commit()?;
         Ok(None)
@@ -336,7 +492,43 @@ impl Journal {
             "UPDATE write_intents SET resolved=1 WHERE epoch=?1 AND request_id=?2",
             params![command.epoch, command.request_id],
         )?;
-        tx.execute("INSERT INTO history(id,project_id,target_kind,target_id,epoch,request_id,before_hash,after_hash,before_bytes,after_bytes,recorded_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",params![Uuid::new_v4().to_string(),command.target.project_id,command.target.kind.as_str(),command.target.id,command.epoch,command.request_id,intent.before.as_ref().map(|b| document::version(b)),document::version(&intent.after),intent.before,intent.after,instant(now)])?;
+        tx.execute(
+            "INSERT INTO history(id,
+    project_id,
+    target_kind,
+    target_id,
+    epoch,
+    request_id,
+    before_hash,
+    after_hash,
+    before_bytes,
+    after_bytes,
+    recorded_at)
+VALUES (?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5,
+    ?6,
+    ?7,
+    ?8,
+    ?9,
+    ?10,
+    ?11)",
+            params![
+                Uuid::new_v4().to_string(),
+                command.target.project_id,
+                command.target.kind.as_str(),
+                command.target.id,
+                command.epoch,
+                command.request_id,
+                intent.before.as_ref().map(|b| document::version(b)),
+                document::version(&intent.after),
+                intent.before,
+                intent.after,
+                instant(now)
+            ],
+        )?;
         tx.commit()?;
         Ok(())
     }

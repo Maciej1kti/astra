@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 const DAY: i64 = 86_400_000;
 pub struct Auth<'a> {
-    pub journal: &'a Journal,
+    pub(crate) journal: &'a Journal,
 }
 pub struct PairingStarted {
     pub view: Value,
@@ -54,7 +54,13 @@ type PairingRow = (
 );
 fn pairing_view(row: &PairingRow, now: i64, include_csrf: bool) -> Value {
     let expired = instant(now) >= row.4 && row.3 != "claimed";
-    let mut view = json!({"id":row.0,"device_label":row.1,"challenge":row.2,"state":if expired{"expired"}else{&row.3},"expires_at":row.4});
+    let mut view = json!({
+        "id": row.0,
+        "device_label": row.1,
+        "challenge": row.2,
+        "state": if expired{"expired"}else{&row.3},
+        "expires_at": row.4,
+    });
     if include_csrf {
         view["pending_csrf_token"] = json!(String::from_utf8_lossy(&row.5));
     }
@@ -66,7 +72,11 @@ impl Auth<'_> {
         let mut db = self.journal.db()?;
         let tx = db.transaction()?;
         let active: i64 = tx.query_row(
-            "SELECT count(*) FROM pairings WHERE state IN ('pending','approved') AND expires_at>?1",
+            "SELECT count(*)
+FROM pairings
+WHERE state IN ('pending',
+    'approved')
+AND expires_at>?1",
             [instant(now)],
             |r| r.get(0),
         )?;
@@ -84,10 +94,40 @@ impl Auth<'_> {
         let random = secret()?;
         let challenge = format!("{} {} {}", &random[..4], &random[4..8], &random[8..12]);
         let expires = instant(now + 300_000);
-        tx.execute("INSERT INTO pairings(id,pending_secret_hash,pending_csrf_secret,challenge,device_label,state,expires_at) VALUES(?1,?2,?3,?4,?5,'pending',?6)",params![id,hash(&pending_token),csrf.as_bytes(),challenge,input["device_label"].as_str().unwrap(),expires])?;
+        tx.execute(
+            "INSERT INTO pairings(id,
+    pending_secret_hash,
+    pending_csrf_secret,
+    challenge,
+    device_label,
+    state,
+    expires_at)
+VALUES (?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5,
+    'pending',
+    ?6)",
+            params![
+                id,
+                hash(&pending_token),
+                csrf.as_bytes(),
+                challenge,
+                input["device_label"].as_str().unwrap(),
+                expires
+            ],
+        )?;
         tx.commit()?;
         Ok(PairingStarted {
-            view: json!({"id":id,"device_label":input["device_label"],"challenge":challenge,"state":"pending","expires_at":expires,"pending_csrf_token":csrf}),
+            view: json!({
+                "id": id,
+                "device_label": input["device_label"],
+                "challenge": challenge,
+                "state": "pending",
+                "expires_at": expires,
+                "pending_csrf_token": csrf,
+            }),
             pending_token,
         })
     }
@@ -95,7 +135,33 @@ impl Auth<'_> {
         if token.len() != 64 {
             return Err(AppError::reject(401, "PAIRING_COOKIE_REQUIRED"));
         }
-        db.query_row("SELECT id,device_label,challenge,state,expires_at,pending_csrf_secret,claim_grace_until,last_issued_session_id FROM pairings WHERE pending_secret_hash=?1",[hash(token)],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?))).optional()?.ok_or_else(||AppError::reject(401,"PAIRING_COOKIE_REQUIRED"))
+        db.query_row(
+            "SELECT id,
+    device_label,
+    challenge,
+    state,
+    expires_at,
+    pending_csrf_secret,
+    claim_grace_until,
+    last_issued_session_id
+FROM pairings
+WHERE pending_secret_hash=?1",
+            [hash(token)],
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                    r.get(6)?,
+                    r.get(7)?,
+                ))
+            },
+        )
+        .optional()?
+        .ok_or_else(|| AppError::reject(401, "PAIRING_COOKIE_REQUIRED"))
     }
     pub fn current(&self, token: &str, now: i64) -> Result<Value, AppError> {
         let db = self.journal.db()?;
@@ -112,7 +178,34 @@ impl Auth<'_> {
         now: i64,
     ) -> Result<Value, AppError> {
         let db = self.journal.db()?;
-        let row:PairingRow=db.query_row("SELECT id,device_label,challenge,state,expires_at,pending_csrf_secret,claim_grace_until,last_issued_session_id FROM pairings WHERE id=?1",[id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?))).optional()?.ok_or_else(||AppError::reject(404,"PAIRING_NOT_FOUND"))?;
+        let row: PairingRow = db
+            .query_row(
+                "SELECT id,
+    device_label,
+    challenge,
+    state,
+    expires_at,
+    pending_csrf_secret,
+    claim_grace_until,
+    last_issued_session_id
+FROM pairings
+WHERE id=?1",
+                [id],
+                |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                        r.get(6)?,
+                        r.get(7)?,
+                    ))
+                },
+            )
+            .optional()?
+            .ok_or_else(|| AppError::reject(404, "PAIRING_NOT_FOUND"))?;
         if row.4 <= instant(now) || !matches!(row.3.as_str(), "pending" | "approved") {
             return Err(AppError::reject(409, "PAIRING_NOT_PENDING"));
         }
@@ -161,13 +254,43 @@ impl Auth<'_> {
         let session_csrf = secret()?;
         let expires = instant(now + 30 * DAY);
         let created = instant(now);
-        tx.execute("INSERT INTO sessions(id,token_hash,csrf_secret,device_label,created_at,last_seen_at,expires_at) VALUES(?1,?2,?3,?4,?5,?5,?6)",params![id,hash(&session_token),session_csrf.as_bytes(),row.1,created,expires])?;
+        tx.execute(
+            "INSERT INTO sessions(id,
+    token_hash,
+    csrf_secret,
+    device_label,
+    created_at,
+    last_seen_at,
+    expires_at)
+VALUES (?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5,
+    ?5,
+    ?6)",
+            params![
+                id,
+                hash(&session_token),
+                session_csrf.as_bytes(),
+                row.1,
+                created,
+                expires
+            ],
+        )?;
         let grace = if retry {
             row.6.unwrap()
         } else {
             instant(now + 60_000)
         };
-        tx.execute("UPDATE pairings SET state='claimed',claim_grace_until=?2,last_issued_session_id=?3 WHERE id=?1",params![row.0,grace,id])?;
+        tx.execute(
+            "UPDATE pairings
+SET state='claimed',
+    claim_grace_until=?2,
+    last_issued_session_id=?3
+WHERE id=?1",
+            params![row.0, grace, id],
+        )?;
         tx.commit()?;
         if row.7.is_some() {
             self.journal.notify_auth_change();
@@ -188,7 +311,31 @@ impl Auth<'_> {
             return Err(AppError::reject(401, "SESSION_REQUIRED"));
         }
         let db = self.journal.db()?;
-        let row:Option<(String,Vec<u8>,String,String,String,String)>=db.query_row("SELECT id,csrf_secret,device_label,created_at,last_seen_at,expires_at FROM sessions WHERE token_hash=?1 AND revoked_at IS NULL AND expires_at>?2",params![hash(token),instant(now)],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?))).optional()?;
+        let row: Option<(String, Vec<u8>, String, String, String, String)> = db
+            .query_row(
+                "SELECT id,
+    csrf_secret,
+    device_label,
+    created_at,
+    last_seen_at,
+    expires_at
+FROM sessions
+WHERE token_hash=?1
+AND revoked_at IS NULL
+AND expires_at>?2",
+                params![hash(token), instant(now)],
+                |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                    ))
+                },
+            )
+            .optional()?;
         let (id, csrf, label, created, last, mut expires) =
             row.ok_or_else(|| AppError::reject(401, "SESSION_REQUIRED"))?;
         let created_ms = chrono::DateTime::parse_from_rfc3339(&created)
@@ -221,7 +368,22 @@ impl Auth<'_> {
     }
     pub fn pairings(&self, now: i64) -> Result<Value, AppError> {
         let db = self.journal.db()?;
-        let mut statement=db.prepare("SELECT id,device_label,challenge,state,expires_at,pending_csrf_secret,claim_grace_until,last_issued_session_id FROM pairings WHERE state IN ('pending','approved') AND expires_at>?1 ORDER BY expires_at DESC LIMIT 10")?;
+        let mut statement = db.prepare(
+            "SELECT id,
+    device_label,
+    challenge,
+    state,
+    expires_at,
+    pending_csrf_secret,
+    claim_grace_until,
+    last_issued_session_id
+FROM pairings
+WHERE state IN ('pending',
+    'approved')
+AND expires_at>?1
+ORDER BY expires_at DESC
+LIMIT 10",
+        )?;
         let items = statement
             .query_map([instant(now)], |r| {
                 Ok((
@@ -241,16 +403,57 @@ impl Auth<'_> {
     }
     pub fn sessions(&self, current: Option<&str>, now: i64) -> Result<Value, AppError> {
         let db = self.journal.db()?;
-        let mut statement=db.prepare("SELECT id,device_label,created_at,last_seen_at,expires_at FROM sessions WHERE revoked_at IS NULL AND expires_at>?1 ORDER BY last_seen_at DESC LIMIT 100")?;
-        let items=statement.query_map([instant(now)],|r| {
-            let id:String=r.get(0)?;
-            Ok(json!({"current":current==Some(&id),"id":id,"device_label":r.get::<_,String>(1)?,"created_at":r.get::<_,String>(2)?,"last_seen_at":r.get::<_,String>(3)?,"expires_at":r.get::<_,String>(4)?}))
-        })?.collect::<Result<Vec<_>,_>>()?;
+        let mut statement = db.prepare(
+            "SELECT id,
+    device_label,
+    created_at,
+    last_seen_at,
+    expires_at
+FROM sessions
+WHERE revoked_at IS NULL
+AND expires_at>?1
+ORDER BY last_seen_at DESC
+LIMIT 100",
+        )?;
+        let items = statement
+            .query_map([instant(now)], |r| {
+                let id: String = r.get(0)?;
+                Ok(json!({
+                    "current": current==Some(&id),
+                    "id": id,
+                    "device_label": r.get::<_,String>(1)?,
+                    "created_at": r.get::<_,String>(2)?,
+                    "last_seen_at": r.get::<_,String>(3)?,
+                    "expires_at": r.get::<_,String>(4)?,
+                }))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(json!({"items":items}))
     }
     pub fn revoke(&self, id: &str, current: Option<&str>, now: i64) -> Result<Value, AppError> {
         let db = self.journal.db()?;
-        let view:Value=db.query_row("SELECT device_label,created_at,last_seen_at,expires_at FROM sessions WHERE id=?1",[id],|r|Ok(json!({"id":id,"current":current==Some(id),"device_label":r.get::<_,String>(0)?,"created_at":r.get::<_,String>(1)?,"last_seen_at":r.get::<_,String>(2)?,"expires_at":r.get::<_,String>(3)?}))).optional()?.ok_or_else(||AppError::reject(404,"SESSION_NOT_FOUND"))?;
+        let view: Value = db
+            .query_row(
+                "SELECT device_label,
+    created_at,
+    last_seen_at,
+    expires_at
+FROM sessions
+WHERE id=?1",
+                [id],
+                |r| {
+                    Ok(json!({
+                        "id": id,
+                        "current": current==Some(id),
+                        "device_label": r.get::<_,String>(0)?,
+                        "created_at": r.get::<_,String>(1)?,
+                        "last_seen_at": r.get::<_,String>(2)?,
+                        "expires_at": r.get::<_,String>(3)?,
+                    }))
+                },
+            )
+            .optional()?
+            .ok_or_else(|| AppError::reject(404, "SESSION_NOT_FOUND"))?;
         db.execute(
             "UPDATE sessions SET revoked_at=?2 WHERE id=?1",
             params![id, instant(now)],

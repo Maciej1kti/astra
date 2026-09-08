@@ -46,13 +46,20 @@ impl Environment {
         let id = Uuid::new_v4().to_string();
         let timestamp = project_application::instant(project_application::now_millis() - 10_000);
         let value = json!({
-            "type":"card",
-            "metadata":{
-                "id":id,"title":title,"kind":"outcome","status":"planned",
-                "priority":"normal","position":"80000000000000000000000000000000","archived":archived,
-                "created_at":timestamp,"updated_at":timestamp,"labels":labels
+            "type": "card",
+            "metadata": {
+                "id": id,
+                "title": title,
+                "kind": "outcome",
+                "status": "planned",
+                "priority": "normal",
+                "position": "80000000000000000000000000000000",
+                "archived": archived,
+                "created_at": timestamp,
+                "updated_at": timestamp,
+                "labels": labels,
             },
-            "body":"Preserve this description."
+            "body": "Preserve this description.",
         });
         let bytes =
             document::serialize(&project_domain::validate_document(value).unwrap()).unwrap();
@@ -164,7 +171,11 @@ fn vocabulary_is_optional_versioned_durable_and_does_not_rewrite_card_labels() {
         false,
     );
     let before = env.card_bytes("One", &card);
-    let (workspace, version) = engine.workspace().unwrap();
+    let project_application::Versioned {
+        value: workspace,
+        version,
+    } = engine.workspace().unwrap();
+    let workspace = json!(workspace);
     assert!(
         workspace.get("tags").is_none(),
         "opening old workspaces must not migrate them"
@@ -205,7 +216,7 @@ fn vocabulary_is_optional_versioned_durable_and_does_not_rewrite_card_labels() {
     );
     drop(engine);
     let engine = env.engine();
-    assert_eq!(engine.workspace().unwrap().0["tags"], tags);
+    assert_eq!(json!(engine.workspace().unwrap().value)["tags"], tags);
     assert_eq!(env.card_bytes("One", &card), before);
 }
 
@@ -213,7 +224,7 @@ fn vocabulary_is_optional_versioned_durable_and_does_not_rewrite_card_labels() {
 fn invalid_vocabulary_does_not_replace_valid_names() {
     let env = Environment::new();
     let engine = env.engine();
-    let (_, version) = engine.workspace().unwrap();
+    let project_application::Versioned { value: _, version } = engine.workspace().unwrap();
     let before = fs::read(env.root.join("state/workspace.json")).unwrap();
     for tags in [
         json!(["QA", "QA"]),
@@ -235,7 +246,7 @@ fn invalid_vocabulary_does_not_replace_valid_names() {
 fn vocabulary_prepared_write_recovers_with_original_identity() {
     let env = Environment::new();
     let engine = env.engine();
-    let (_, version) = engine.workspace().unwrap();
+    let project_application::Versioned { value: _, version } = engine.workspace().unwrap();
     let request = Uuid::now_v7().to_string();
     let reply = engine
         .mutate_workspace_with(
@@ -254,11 +265,15 @@ fn vocabulary_prepared_write_recovers_with_original_identity() {
         )
         .unwrap();
     assert_eq!(reply.http_status, 202);
-    assert!(engine.workspace().unwrap().0.get("tags").is_none());
+    assert!(
+        json!(engine.workspace().unwrap().value)
+            .get("tags")
+            .is_none()
+    );
     drop(engine);
     let engine = env.engine();
     assert_eq!(
-        engine.workspace().unwrap().0["tags"],
+        json!(engine.workspace().unwrap().value)["tags"],
         json!(["After recovery"])
     );
     let replay = replace_tags(&engine, json!(["After recovery"]), Some(&version), &request);
@@ -306,7 +321,7 @@ fn catalog_reads_all_sources_including_archived_and_beyond_first_page() {
             .http_status,
         200
     );
-    let (_, version) = engine.workspace().unwrap();
+    let project_application::Versioned { value: _, version } = engine.workspace().unwrap();
     replace_tags(
         &engine,
         json!(["Common", "Unused"]),
@@ -501,7 +516,7 @@ fn preview_preserves_exact_historical_whitespace_destinations() {
             .unwrap()["labels"],
         json!([" Target ", "Second"])
     );
-    let (_, version) = engine.workspace().unwrap();
+    let project_application::Versioned { value: _, version } = engine.workspace().unwrap();
     replace_tags(
         &engine,
         json!(["Catalog only ", "  "]),

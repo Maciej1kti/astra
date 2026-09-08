@@ -1,0 +1,387 @@
+{
+  "revision": "9528056132f73e8f3e963dbb25cbf80d219a8ab8",
+  "scope": "Tracked application source; generated TypeScript excluded from web searches; trailing cfg(test) excluded from Rust long-line counts. Line metrics include comments and blanks and do not establish complexity or bugs.",
+  "svelte_components": [
+    {
+      "file": "apps/web/src/App.svelte",
+      "total_lines": 2235,
+      "script_content_lines": 814,
+      "style_content_lines": 856,
+      "state_call_occurrences": 54
+    },
+    {
+      "file": "apps/web/src/lib/Editor.svelte",
+      "total_lines": 1248,
+      "script_content_lines": 607,
+      "style_content_lines": 190,
+      "state_call_occurrences": 53
+    },
+    {
+      "file": "apps/web/src/lib/TagManager.svelte",
+      "total_lines": 815,
+      "script_content_lines": 363,
+      "style_content_lines": 185,
+      "state_call_occurrences": 17
+    },
+    {
+      "file": "apps/web/src/lib/GanttView.svelte",
+      "total_lines": 800,
+      "script_content_lines": 378,
+      "style_content_lines": 185,
+      "state_call_occurrences": 15
+    },
+    {
+      "file": "apps/web/src/lib/CalendarView.svelte",
+      "total_lines": 762,
+      "script_content_lines": 400,
+      "style_content_lines": 228,
+      "state_call_occurrences": 14
+    },
+    {
+      "file": "apps/web/src/lib/Board.svelte",
+      "total_lines": 628,
+      "script_content_lines": 420,
+      "style_content_lines": 110,
+      "state_call_occurrences": 9
+    },
+    {
+      "file": "apps/web/src/lib/Settings.svelte",
+      "total_lines": 602,
+      "script_content_lines": 220,
+      "style_content_lines": 155,
+      "state_call_occurrences": 14
+    },
+    {
+      "file": "apps/web/src/lib/FocusOrder.svelte",
+      "total_lines": 435,
+      "script_content_lines": 181,
+      "style_content_lines": 122,
+      "state_call_occurrences": 11
+    },
+    {
+      "file": "apps/web/src/lib/RegistrationBrowser.svelte",
+      "total_lines": 354,
+      "script_content_lines": 159,
+      "style_content_lines": 79,
+      "state_call_occurrences": 15
+    },
+    {
+      "file": "apps/web/src/lib/TagPicker.svelte",
+      "total_lines": 333,
+      "script_content_lines": 129,
+      "style_content_lines": 100,
+      "state_call_occurrences": 7
+    },
+    {
+      "file": "apps/web/src/lib/NativeProject.svelte",
+      "total_lines": 329,
+      "script_content_lines": 191,
+      "style_content_lines": 39,
+      "state_call_occurrences": 11
+    },
+    {
+      "file": "apps/web/src/lib/CardUpdateComposer.svelte",
+      "total_lines": 293,
+      "script_content_lines": 103,
+      "style_content_lines": 82,
+      "state_call_occurrences": 4
+    },
+    {
+      "file": "apps/web/src/lib/AcceptanceChecklist.svelte",
+      "total_lines": 282,
+      "script_content_lines": 62,
+      "style_content_lines": 109,
+      "state_call_occurrences": 3
+    },
+    {
+      "file": "apps/web/src/lib/DateChange.svelte",
+      "total_lines": 232,
+      "script_content_lines": 122,
+      "style_content_lines": 26,
+      "state_call_occurrences": 7
+    },
+    {
+      "file": "apps/web/src/lib/CardActivity.svelte",
+      "total_lines": 217,
+      "script_content_lines": 127,
+      "style_content_lines": 26,
+      "state_call_occurrences": 11
+    },
+    {
+      "file": "apps/web/src/lib/MoveChange.svelte",
+      "total_lines": 196,
+      "script_content_lines": 117,
+      "style_content_lines": 17,
+      "state_call_occurrences": 6
+    },
+    {
+      "file": "apps/web/src/lib/ResourceMetadata.svelte",
+      "total_lines": 190,
+      "script_content_lines": 20,
+      "style_content_lines": 97,
+      "state_call_occurrences": 0
+    },
+    {
+      "file": "apps/web/src/lib/GanttTask.svelte",
+      "total_lines": 175,
+      "script_content_lines": 36,
+      "style_content_lines": 71,
+      "state_call_occurrences": 0
+    },
+    {
+      "file": "apps/web/src/lib/Diagnostics.svelte",
+      "total_lines": 121,
+      "script_content_lines": 45,
+      "style_content_lines": 22,
+      "state_call_occurrences": 3
+    },
+    {
+      "file": "apps/web/src/lib/GitObservation.svelte",
+      "total_lines": 114,
+      "script_content_lines": 47,
+      "style_content_lines": 26,
+      "state_call_occurrences": 3
+    },
+    {
+      "file": "apps/web/src/lib/BoardCard.svelte",
+      "total_lines": 97,
+      "script_content_lines": 34,
+      "style_content_lines": 30,
+      "state_call_occurrences": 0
+    },
+    {
+      "file": "apps/web/src/lib/DateViews.svelte",
+      "total_lines": 85,
+      "script_content_lines": 56,
+      "style_content_lines": 0,
+      "state_call_occurrences": 3
+    },
+    {
+      "file": "apps/web/src/lib/Markdown.svelte",
+      "total_lines": 32,
+      "script_content_lines": 3,
+      "style_content_lines": 22,
+      "state_call_occurrences": 0
+    }
+  ],
+  "engine_impl_modules": [
+    "crates/application/src/context.rs",
+    "crates/application/src/diagnostics.rs",
+    "crates/application/src/engine.rs",
+    "crates/application/src/git.rs",
+    "crates/application/src/history.rs",
+    "crates/application/src/maintenance.rs",
+    "crates/application/src/mutation.rs",
+    "crates/application/src/receipts.rs",
+    "crates/application/src/roots.rs",
+    "crates/application/src/tags.rs",
+    "crates/application/src/views.rs",
+    "crates/application/src/workspace.rs"
+  ],
+  "rust_long_lines": [
+    {
+      "file": "crates/application/src/views.rs",
+      "lines_over_180_characters": 26,
+      "longest_line": [
+        78,
+        633
+      ]
+    },
+    {
+      "file": "crates/application/src/index.rs",
+      "lines_over_180_characters": 11,
+      "longest_line": [
+        597,
+        604
+      ]
+    },
+    {
+      "file": "crates/application/src/auth.rs",
+      "lines_over_180_characters": 9,
+      "longest_line": [
+        253,
+        390
+      ]
+    },
+    {
+      "file": "crates/application/src/diagnostics.rs",
+      "lines_over_180_characters": 8,
+      "longest_line": [
+        67,
+        391
+      ]
+    },
+    {
+      "file": "crates/application/src/retention.rs",
+      "lines_over_180_characters": 6,
+      "longest_line": [
+        11,
+        560
+      ]
+    },
+    {
+      "file": "crates/application/src/journal.rs",
+      "lines_over_180_characters": 5,
+      "longest_line": [
+        339,
+        468
+      ]
+    },
+    {
+      "file": "crates/application/src/engine.rs",
+      "lines_over_180_characters": 4,
+      "longest_line": [
+        313,
+        409
+      ]
+    },
+    {
+      "file": "crates/application/src/history.rs",
+      "lines_over_180_characters": 4,
+      "longest_line": [
+        106,
+        316
+      ]
+    },
+    {
+      "file": "crates/application/src/workspace.rs",
+      "lines_over_180_characters": 4,
+      "longest_line": [
+        167,
+        328
+      ]
+    },
+    {
+      "file": "crates/application/src/context.rs",
+      "lines_over_180_characters": 3,
+      "longest_line": [
+        32,
+        412
+      ]
+    },
+    {
+      "file": "crates/application/src/tags.rs",
+      "lines_over_180_characters": 2,
+      "longest_line": [
+        72,
+        219
+      ]
+    },
+    {
+      "file": "crates/application/src/git.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        225,
+        270
+      ]
+    },
+    {
+      "file": "crates/application/src/maintenance.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        232,
+        595
+      ]
+    },
+    {
+      "file": "crates/application/src/receipts.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        79,
+        332
+      ]
+    },
+    {
+      "file": "crates/application/src/workflow.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        221,
+        340
+      ]
+    },
+    {
+      "file": "crates/application/src/writer.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        152,
+        427
+      ]
+    },
+    {
+      "file": "crates/project-store/src/validation.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        76,
+        228
+      ]
+    },
+    {
+      "file": "crates/projectctl/src/transport.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        121,
+        186
+      ]
+    },
+    {
+      "file": "crates/projectctl/src/typed.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        365,
+        192
+      ]
+    },
+    {
+      "file": "crates/projectd/src/dispatch.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        303,
+        474
+      ]
+    },
+    {
+      "file": "crates/projectd/src/lib.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        142,
+        234
+      ]
+    },
+    {
+      "file": "crates/projectd/src/picker.rs",
+      "lines_over_180_characters": 1,
+      "longest_line": [
+        129,
+        187
+      ]
+    }
+  ],
+  "session_ended_event_files": [
+    "apps/web/src/App.svelte",
+    "apps/web/src/lib/DateChange.svelte",
+    "apps/web/src/lib/Diagnostics.svelte",
+    "apps/web/src/lib/Editor.svelte",
+    "apps/web/src/lib/FocusOrder.svelte",
+    "apps/web/src/lib/GitObservation.svelte",
+    "apps/web/src/lib/MoveChange.svelte",
+    "apps/web/src/lib/NativeProject.svelte",
+    "apps/web/src/lib/RegistrationBrowser.svelte",
+    "apps/web/src/lib/Settings.svelte",
+    "apps/web/src/lib/TagManager.svelte",
+    "apps/web/src/lib/TagPicker.svelte",
+    "apps/web/src/lib/api.ts",
+    "apps/web/src/lib/board-gesture.ts"
+  ],
+  "component_command_status_files": [
+    "apps/web/src/lib/CardUpdateComposer.svelte",
+    "apps/web/src/lib/DateChange.svelte",
+    "apps/web/src/lib/Editor.svelte",
+    "apps/web/src/lib/MoveChange.svelte"
+  ],
+  "checks": {
+    "rust_passed": 119,
+    "javascript_passed": 54,
+    "python_passed": 12,
+    "integrated_gate_passed": true
+  }
+}

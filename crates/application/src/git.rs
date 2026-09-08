@@ -214,15 +214,26 @@ fn inspect(path: &Path) -> Result<Value, &'static str> {
 }
 impl Engine {
     pub fn git_observation(&self, project: &str) -> Result<Value, AppError> {
-        let workspace = self.workspace()?.0;
-        let path = workspace["projects"]
-            .as_array()
-            .ok_or(AppError::State)?
+        let workspace = self.workspace()?.value;
+        let path = workspace
+            .projects
             .iter()
-            .find(|item| item["project_id"] == project)
-            .and_then(|item| item["path"].as_str())
+            .find(|item| item.project_id == project)
+            .map(|item| item.path.as_str())
             .ok_or_else(|| AppError::reject(404, "PROJECT_NOT_REGISTERED"))?;
-        let mut result = json!({"project_id":project,"observed_at":instant(now_millis()),"scope":"head_and_index","stale":false,"error":null,"untracked_checked":false,"working_tree_checked":false,"branch":null,"commit":null,"conflicted_paths":null,"staged_paths":null});
+        let mut result = json!({
+            "project_id": project,
+            "observed_at": instant(now_millis()),
+            "scope": "head_and_index",
+            "stale": false,
+            "error": null,
+            "untracked_checked": false,
+            "working_tree_checked": false,
+            "branch": null,
+            "commit": null,
+            "conflicted_paths": null,
+            "staged_paths": null,
+        });
         let observed = match SLOTS.try_acquire() {
             Ok(_slot) => inspect(Path::new(path)),
             Err(_) => Err("GIT_BUSY"),

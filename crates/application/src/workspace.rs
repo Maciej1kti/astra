@@ -1,9 +1,11 @@
 use crate::{
     AppError, Reply,
-    engine::{Engine, pretty, read},
+    engine::Engine,
     instant,
     journal::{Command, Journal, Target},
-    now_millis, wire,
+    now_millis,
+    source::{pretty, read},
+    wire,
     writer::CommitPoint,
 };
 use project_domain::validate_workspace;
@@ -33,7 +35,10 @@ impl Engine {
         expected: Option<&str>,
         mut checkpoint: impl FnMut(CommitPoint) -> Result<(), AppError>,
     ) -> Result<Reply, AppError> {
-        let _gate = self.gate.write().map_err(|_| AppError::State)?;
+        let _gate = self
+            .gate
+            .write()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
         let definition = match section {
             "focus" => "FocusReplace",
             "preferences" => "PreferencesPatch",
@@ -98,50 +103,64 @@ impl Engine {
         if Some(version(&before).as_str()) != expected {
             return reject(412, "VERSION_CONFLICT");
         }
-        let mut workspace: Value = serde_json::from_slice(&before).map_err(|_| AppError::State)?;
-        validate_workspace(workspace.clone()).map_err(|_| AppError::State)?;
+        let old = validate_workspace(
+            serde_json::from_slice(&before).map_err(|_| AppError::invariant("workspace JSON"))?,
+        )
+        .map_err(|_| AppError::invariant("workspace schema"))?
+        .into_inner();
+        let mut workspace = old.clone();
         let mut references = Vec::new();
-        if section == "focus" {
-            for item in payload["items"].as_array().unwrap() {
-                let project = item["project_id"].as_str().unwrap();
-                let id = item["card_id"].as_str().unwrap();
-                let handle = match self.store(project) {
-                    Ok(handle) => handle,
-                    Err(error) => return self.journal.reject_error(&command, error, now),
-                };
-                let store = handle.lock().map_err(|_| AppError::State)?;
-                let (card, hash) = match read(&store, Kind::Card, id) {
-                    Ok(value) => value,
-                    Err(error) => return self.journal.reject_error(&command, error, now),
-                };
-                if card["metadata"]["archived"] == true {
-                    return reject(409, "FOCUS_TARGET_ARCHIVED");
-                }
-                references.push(json!({"project_id":project,"card_id":id,"version":hash,"path":store.directory.path()}));
-            }
-            workspace["focus"] = payload["items"].clone();
-        } else if section == "tags" {
-            // Vocabulary changes never rewrite labels in project source files.
-            workspace["tags"] = payload["tags"].clone();
-        } else {
-            if let Some(zone) = payload["timezone"].as_str()
-                && zone.parse::<chrono_tz::Tz>().is_err()
-            {
-                return reject(422, "INVALID_TIMEZONE");
-            }
-            for (key, value) in payload.as_object().unwrap() {
-                if key == "preferences" {
-                    for (k, v) in value.as_object().unwrap() {
-                        workspace[key][k] = v.clone();
+        match WorkspaceChange::decode(section, payload)? {
+            WorkspaceChange::Focus(items) => {
+                for item in &items {
+                    let project = item.project_id.as_str();
+                    let id = item.card_id.as_str();
+                    let handle = match self.store(project) {
+                        Ok(handle) => handle,
+                        Err(error) => return self.journal.reject_error(&command, error, now),
+                    };
+                    let store = handle
+                        .lock()
+                        .map_err(|_| AppError::invariant("project store lock"))?;
+                    let card = match read(&store, Kind::Card, id) {
+                        Ok(card) => card,
+                        Err(error) => return self.journal.reject_error(&command, error, now),
+                    };
+                    let project_domain::models::Document::Card { metadata, .. } =
+                        card.document.get()
+                    else {
+                        return Err(AppError::invariant("focus source kind"));
+                    };
+                    if metadata.archived {
+                        return reject(409, "FOCUS_TARGET_ARCHIVED");
                     }
-                } else {
-                    workspace[key] = value.clone();
+                    references.push(json!({"project_id":project,"card_id":id,"version":card.version,"path":store.directory.path()}));
+                }
+                workspace.focus = items;
+            }
+            WorkspaceChange::Tags(tags) => workspace.tags = Some(tags),
+            WorkspaceChange::Preferences(patch) => {
+                if let Some(zone) = patch.timezone {
+                    if zone.parse::<chrono_tz::Tz>().is_err() {
+                        return reject(422, "INVALID_TIMEZONE");
+                    }
+                    workspace.timezone = zone;
+                }
+                if let Some(locale) = patch.locale {
+                    workspace.locale = locale;
+                }
+                if let Some(preferences) = patch.preferences {
+                    if let Some(day) = preferences.week_start {
+                        workspace.preferences.week_start = Some(day);
+                    }
+                    if let Some(view) = preferences.default_view {
+                        workspace.preferences.default_view = Some(view);
+                    }
                 }
             }
         }
-        validate_workspace(workspace.clone())
+        validate_workspace(json!(workspace))
             .map_err(|_| AppError::reject(422, "VALIDATION_FAILED"))?;
-        let old: Value = serde_json::from_slice(&before).map_err(|_| AppError::State)?;
         let noop = old == workspace;
         let after = if noop {
             before.clone()
@@ -150,7 +169,17 @@ impl Engine {
         };
         let reply = Reply {
             http_status: 200,
-            body: json!({"api_version":"1","request_id":request,"status":if noop{"noop"}else{"committed"},"result":{"type":section,"version":version(&after)},"warnings":[],"replayed":false}),
+            body: json!({
+                "api_version": "1",
+                "request_id": request,
+                "status": if noop{"noop"}else{"committed"},
+                "result": {
+                    "type": section,
+                    "version": version(&after),
+                },
+                "warnings": [],
+                "replayed": false,
+            }),
         };
         if noop {
             return Ok(self
@@ -164,8 +193,59 @@ impl Engine {
                 return Ok(reply);
             }
             let tx = db.transaction()?;
-            tx.execute("INSERT INTO commands(epoch,request_id,digest,state,target_kind,project_id,target_id,received_at,expires_at,result_json) VALUES(?1,?2,?3,'prepared',?4,'workspace',?4,?5,?6,?7)",params![epoch,request,command.digest(),section,instant(now),instant(now+7*86_400_000),serde_json::to_string(&reply).unwrap()])?;
-            tx.execute("INSERT INTO workspace_intents(epoch,request_id,before_bytes,after_bytes,references_json,result_json) VALUES(?1,?2,?3,?4,?5,?6)",params![epoch,request,before,after,serde_json::to_string(&references).unwrap(),serde_json::to_string(&reply).unwrap()])?;
+            tx.execute(
+                "INSERT INTO commands(epoch,
+    request_id,
+    digest,
+    state,
+    target_kind,
+    project_id,
+    target_id,
+    received_at,
+    expires_at,
+    result_json)
+VALUES (?1,
+    ?2,
+    ?3,
+    'prepared',
+    ?4,
+    'workspace',
+    ?4,
+    ?5,
+    ?6,
+    ?7)",
+                params![
+                    epoch,
+                    request,
+                    command.digest(),
+                    section,
+                    instant(now),
+                    instant(now + 7 * 86_400_000),
+                    serde_json::to_string(&reply).unwrap()
+                ],
+            )?;
+            tx.execute(
+                "INSERT INTO workspace_intents(epoch,
+    request_id,
+    before_bytes,
+    after_bytes,
+    references_json,
+    result_json)
+VALUES (?1,
+    ?2,
+    ?3,
+    ?4,
+    ?5,
+    ?6)",
+                params![
+                    epoch,
+                    request,
+                    before,
+                    after,
+                    serde_json::to_string(&references).unwrap(),
+                    serde_json::to_string(&reply).unwrap()
+                ],
+            )?;
             tx.commit()?;
         }
         let result = (|| -> Result<(), AppError> {
@@ -211,7 +291,19 @@ impl Engine {
     pub(crate) fn recover_workspace(&self) -> Result<(), AppError> {
         let rows = {
             let db = self.journal.db()?;
-            let mut statement=db.prepare("SELECT w.epoch,w.request_id,w.before_bytes,w.after_bytes,w.references_json FROM workspace_intents w JOIN commands c USING(epoch,request_id) WHERE w.resolved=0 AND c.state!='needs_review' ORDER BY c.received_at")?;
+            let mut statement = db.prepare(
+                "SELECT w.epoch,
+    w.request_id,
+    w.before_bytes,
+    w.after_bytes,
+    w.references_json
+FROM workspace_intents w
+JOIN commands c USING(epoch,
+    request_id)
+WHERE w.resolved=0
+AND c.state!='needs_review'
+ORDER BY c.received_at",
+            )?;
             statement
                 .query_map([], |r| {
                     Ok((
@@ -241,16 +333,18 @@ impl Engine {
                 for reference in references {
                     let handle =
                         self.store(reference["project_id"].as_str().ok_or(AppError::State)?)?;
-                    let store = handle.lock().map_err(|_| AppError::State)?;
+                    let store = handle
+                        .lock()
+                        .map_err(|_| AppError::LockPoisoned("project store"))?;
                     if reference["path"].as_str() != store.directory.path().to_str() {
                         return Err(AppError::reject(409, "FOCUS_REFERENCE_CHANGED"));
                     }
-                    let (_, hash) = read(
+                    let source = read(
                         &store,
                         Kind::Card,
                         reference["card_id"].as_str().ok_or(AppError::State)?,
                     )?;
-                    if reference["version"] != hash {
+                    if reference["version"] != source.version {
                         return Err(AppError::reject(409, "FOCUS_REFERENCE_CHANGED"));
                     }
                 }
@@ -281,5 +375,29 @@ impl Engine {
             }
         }
         Ok(())
+    }
+}
+
+/// Decoded only after wire validation; a retained command keeps its original JSON.
+enum WorkspaceChange {
+    Focus(Vec<project_domain::models::FocusRef>),
+    Tags(Vec<String>),
+    Preferences(PreferencesPatch),
+}
+#[derive(serde::Deserialize)]
+struct PreferencesPatch {
+    timezone: Option<String>,
+    locale: Option<project_domain::models::Locale>,
+    preferences: Option<project_domain::models::Preferences>,
+}
+impl WorkspaceChange {
+    fn decode(section: &str, payload: &Value) -> Result<Self, AppError> {
+        match section {
+            "focus" => serde_json::from_value(payload["items"].clone()).map(Self::Focus),
+            "tags" => serde_json::from_value(payload["tags"].clone()).map(Self::Tags),
+            "preferences" => serde_json::from_value(payload.clone()).map(Self::Preferences),
+            _ => return Err(AppError::invariant("validated workspace section")),
+        }
+        .map_err(|_| AppError::invariant("validated workspace payload"))
     }
 }

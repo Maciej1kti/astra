@@ -1,0 +1,59 @@
+    Checking project-domain v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/domain)
+   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
+    Checking project-store v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/project-store)
+    Checking project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Checking projectctl v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectctl)
+error: the `version:` in this pattern is redundant
+   --> crates/application/src/tags.rs:112:13
+    |
+112 |             version: version,
+    |             ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+    |
+    = note: `-D non-shorthand-field-patterns` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(non_shorthand_field_patterns)]`
+
+error: the `version:` in this pattern is redundant
+   --> crates/application/src/tags.rs:167:13
+    |
+167 |             version: version,
+    |             ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+error: could not compile `project-application` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: the `version:` in this pattern is redundant
+    --> crates/application/src/../tests/engine.rs:1081:9
+     |
+1081 |         version: version,
+     |         ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+error: the `version:` in this pattern is redundant
+   --> crates/application/src/../tests/tag_management.rs:176:9
+    |
+176 |         version: version,
+    |         ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+error: the `version:` in this pattern is redundant
+   --> crates/application/src/../tests/tag_management.rs:229:9
+    |
+229 |         version: version,
+    |         ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+error: the `version:` in this pattern is redundant
+   --> crates/application/src/../tests/tag_management.rs:254:9
+    |
+254 |         version: version,
+    |         ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+error: the `version:` in this pattern is redundant
+   --> crates/application/src/../tests/tag_management.rs:332:9
+    |
+332 |         version: version,
+    |         ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+error: the `version:` in this pattern is redundant
+   --> crates/application/src/../tests/tag_management.rs:530:9
+    |
+530 |         version: version,
+    |         ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+error: could not compile `project-application` (lib test) due to 8 previous errors

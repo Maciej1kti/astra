@@ -5,7 +5,7 @@ const root = new URL("../", import.meta.url);
 const schema = JSON.parse(
   await readFile(new URL("contracts/domain.schema.json", root), "utf8"),
 );
-const output = new URL("apps/web/src/lib/domain.generated.ts", root);
+const output = new URL("apps/web/src/lib/contracts/domain.generated.ts", root);
 const text = await compile(schema, "DomainContract", {
   bannerComment:
     "/* Generated from contracts/domain.schema.json. Run npm run contracts. Types do not replace server validation. */",
@@ -24,15 +24,7 @@ if (process.argv.includes("--check")) {
 const openapi = JSON.parse(
   await readFile(new URL("contracts/openapi.generated.json", root), "utf8"),
 );
-const names = [
-  "Bootstrap",
-  "Summary",
-  "CommandResponse",
-  "CommandStatus",
-  "Accepted",
-  "TagSuggestions",
-  "Error",
-];
+const names = Object.keys(openapi.components.schemas);
 const apiSchema = {
   type: "object",
   additionalProperties: false,
@@ -53,12 +45,17 @@ function typeOnly(value) {
     );
   return value;
 }
-const apiText = await compile(typeOnly(apiSchema), "ApiContracts", {
+let apiText = await compile(typeOnly(apiSchema), "ApiContracts", {
   bannerComment:
     "/* Generated from contracts/openapi.generated.json. Run npm run contracts. */",
   maxItems: 0,
 });
-const apiOutput = new URL("apps/web/src/lib/api.generated.ts", root);
+// Union schemas may be inlined by the compiler; expose every named endpoint contract.
+for (const name of names) {
+  if (!new RegExp(`export (?:type|interface) ${name}\\b`).test(apiText))
+    apiText += `\nexport type ${name} = ApiContracts["${name}"];\n`;
+}
+const apiOutput = new URL("apps/web/src/lib/contracts/api.generated.ts", root);
 if (process.argv.includes("--check")) {
   if ((await readFile(apiOutput, "utf8").catch(() => "")) !== apiText)
     throw new Error("API types are stale. Run npm run contracts.");

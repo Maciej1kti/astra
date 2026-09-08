@@ -1,14 +1,7 @@
 use super::{Input, Service, header, response, set_cookie};
 use axum::response::{IntoResponse, Response};
-use project_application::{
-    AppError, Mutation, Reply,
-    auth::{Auth, Session},
-    index::Query,
-    instant, now_millis, wire,
-    workflow::Workflows,
-};
+use project_application::{AppError, Mutation, Query, auth::Session, instant, now_millis, wire};
 use project_store::document::Kind;
-use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 fn text<'a>(value: &'a Value, key: &str) -> Result<&'a str, AppError> {
     value[key]
@@ -52,9 +45,7 @@ pub(super) fn run(
     session: Option<Session>,
 ) -> Result<Response, AppError> {
     let engine = &service.engine;
-    let auth = Auth {
-        journal: &engine.journal,
-    };
+    let auth = engine.auth();
     let now = now_millis();
     let parts: Vec<_> = input.path.trim_start_matches('/').split('/').collect();
     let request_id = header(&input.headers, "x-request-id");
@@ -263,8 +254,11 @@ pub(super) fn run(
             json!({"project_id":engine.resolve_path(path)?})
         }
         ("GET", ["local", "v1", "hello"]) if input.local => {
-            let (workspace, _) = engine.workspace()?;
-            json!({"api_version":"1","instance_id":workspace["instance_id"],"command_epoch":engine.journal.epoch,"server_time":instant(now)})
+            let project_application::Versioned {
+                value: workspace,
+                version: _,
+            } = engine.workspace()?;
+            json!({"api_version":"1","instance_id":workspace.instance_id,"command_epoch":engine.command_epoch(),"server_time":instant(now)})
         }
         ("POST", ["local", "v1", "registration-plans"]) if input.local => {
             let allowed = ["absolute_path", "name", "git_mode"];
@@ -299,8 +293,23 @@ pub(super) fn run(
             )?
         }
         ("GET", ["api", "v1", "bootstrap"]) => {
-            let (workspace, _) = engine.workspace()?;
-            json!({"api_version":"1","build_id":env!("CARGO_PKG_VERSION"),"instance_id":workspace["instance_id"],"instance_name":"Local Projects","command_epoch":engine.journal.epoch,"server_time":instant(now),"timezone":workspace["timezone"],"locale":workspace["locale"],"csrf_token":session.as_ref().map(|s|s.csrf.as_str()).unwrap_or("local-uid"),"snapshot_cursor":engine.index.cursor()?,"capabilities":["projects","cards","milestones","updates","registration","search"]})
+            let project_application::Versioned {
+                value: workspace,
+                version: _,
+            } = engine.workspace()?;
+            json!({
+                "api_version": "1",
+                "build_id": env!("CARGO_PKG_VERSION"),
+                "instance_id": workspace.instance_id,
+                "instance_name": "Local Projects",
+                "command_epoch": engine.command_epoch(),
+                "server_time": instant(now),
+                "timezone": workspace.timezone,
+                "locale": workspace.locale,
+                "csrf_token": session.as_ref().map(|s|s.csrf.as_str()).unwrap_or("local-uid"),
+                "snapshot_cursor": engine.snapshot_cursor()?,
+                "capabilities": ["projects","cards","milestones","updates","registration","search"],
+            })
         }
         ("GET", ["api", "v1", "diagnostics"]) | ("GET", ["local", "v1", "doctor"]) => {
             engine.diagnostics()?
@@ -333,10 +342,7 @@ pub(super) fn run(
                 epoch,
             )?));
         }
-        ("GET", ["api", "v1", "jobs", id]) => Workflows {
-            journal: &engine.journal,
-        }
-        .job(id)?,
+        ("GET", ["api", "v1", "jobs", id]) => engine.job(id)?,
         ("GET", ["api", "v1", "projects"]) => engine.list(Some("project"), &query(&input)?)?,
         ("GET", ["api", "v1", "search"]) => {
             let fields = parameters(&input, &["q", "project_id", "limit", "cursor"])?;
@@ -379,53 +385,26 @@ pub(super) fn run(
             return mutate(engine, &input, project, kind(collection)?, Some(id));
         }
         ("GET", ["api", "v1", "workspace", "focus"]) => {
-            let (workspace, version) = engine.workspace()?;
-            json!({"items":workspace["focus"],"version":version})
+            let project_application::Versioned {
+                value: workspace,
+                version,
+            } = engine.workspace()?;
+            json!({"items":workspace.focus,"version":version})
         }
         ("GET", ["api", "v1", "workspace", "preferences"]) => {
-            let (workspace, version) = engine.workspace()?;
-            json!({"timezone":workspace["timezone"],"locale":workspace["locale"],"preferences":workspace["preferences"],"version":version})
+            let project_application::Versioned {
+                value: workspace,
+                version,
+            } = engine.workspace()?;
+            json!({"timezone":workspace.timezone,"locale":workspace.locale,"preferences":workspace.preferences,"version":version})
         }
         ("GET", ["api", "v1", "workspace", "tag-suggestions"]) => {
             parameters(&input, &[])?;
             engine.tag_suggestions()?
         }
         ("GET", ["api", "v1", "commands", id]) => {
-            if !project_application::valid_request_id(id) {
-                return Err(AppError::reject(400, "INVALID_REQUEST_ID"));
-            }
             let fields = parameters(&input, &["epoch"])?;
-            let original_epoch = parameter(&fields, "epoch")?;
-            if !uuid::Uuid::parse_str(original_epoch).is_ok_and(|value| {
-                value.get_version_num() == 4
-                    && value.get_variant() == uuid::Variant::RFC4122
-                    && value.to_string() == original_epoch
-            }) {
-                return Err(AppError::reject(400, "INVALID_EPOCH"));
-            }
-            if original_epoch != engine.journal.epoch {
-                return Err(AppError::reject(409, "EPOCH_CHANGED"));
-            }
-            let row: Option<(String, Option<String>)> = engine
-                .journal
-                .db()?
-                .query_row(
-                    "SELECT state,result_json FROM commands WHERE epoch=?1 AND request_id=?2",
-                    [original_epoch, id],
-                    |r| Ok((r.get(0)?, r.get(1)?)),
-                )
-                .optional()?;
-            let (state, result) = row.ok_or_else(|| AppError::reject(404, "COMMAND_NOT_FOUND"))?;
-            let mut value = json!({"api_version":"1","request_id":id,"state":state});
-            if let Some(result) = result {
-                let reply: Reply = serde_json::from_str(&result).map_err(|_| AppError::State)?;
-                if reply.body.get("result").is_some() {
-                    value["result"] = reply.body;
-                } else if let Some(error) = reply.body.get("error") {
-                    value["error"] = json!({"api_version":"1","error":error});
-                }
-            }
-            value
+            engine.command_status(id, parameter(&fields, "epoch")?)?
         }
         _ => return Err(AppError::reject(404, "NOT_FOUND")),
     };

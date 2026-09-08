@@ -1,0 +1,12 @@
+PASS JSON files
+PASS JSON Schema and all local references
+PASS Domain examples
+PASS Markdown/JSON roundtrip and cross-references
+PASS Reference validation vectors
+PASS OpenAPI structure
+PASS HTTP request examples
+PASS Requirements/tests/tasks traceability
+PASS SQLite starting schemas
+PASS Deployment template syntax
+PASS Markdown relative links
+{"status": "passed", "counts": {"json_files": 86, "domain_definitions": 26, "openapi_schemas": 101, "domain_examples": 7, "markdown_domain_examples": 5, "reference_vectors": 33, "openapi_paths": 47, "openapi_operations": 58, "request_examples": 7, "requirements": 36, "acceptance_scenarios": 60, "tasks": 42, "fault_scenarios": 16}}

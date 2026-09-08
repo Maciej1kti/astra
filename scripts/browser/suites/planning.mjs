@@ -8,8 +8,14 @@ import assert from "node:assert/strict";
 import { verifyPlanningFixes } from "./planning-checks.mjs";
 
 const root = resolve(import.meta.dirname, "../../..");
-const runtime = resolve(root, process.env.ASTRA_AUDIT_RUNTIME ?? ".manual/audit-2026-09-08");
-const output = resolve(root, process.env.ASTRA_EVIDENCE_DIR ?? "test-results/browser/regressions/planning");
+const runtime = resolve(
+  root,
+  process.env.ASTRA_AUDIT_RUNTIME ?? ".manual/audit-2026-09-08",
+);
+const output = resolve(
+  root,
+  process.env.ASTRA_EVIDENCE_DIR ?? "test-results/browser/regressions/planning",
+);
 const config = JSON.parse(
   await readFile(join(runtime, "connection.json"), "utf8"),
 );
@@ -19,7 +25,12 @@ function cli(...args) {
   let output;
   try {
     output = execFileSync(
-      join(root, "target", process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug", "projectctl"),
+      join(
+        root,
+        "target",
+        process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug",
+        "projectctl",
+      ),
       ["--socket", config.socket, ...args],
       { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -39,7 +50,10 @@ try {
   );
 } catch {}
 
-const browser = await chromium.launch({ headless: true, executablePath: process.env.ASTRA_TEST_CHROMIUM || undefined });
+const browser = await chromium.launch({
+  headless: true,
+  executablePath: process.env.ASTRA_TEST_CHROMIUM || undefined,
+});
 const context = await browser.newContext({
   ignoreHTTPSErrors: true,
   timezoneId: "Pacific/Honolulu",

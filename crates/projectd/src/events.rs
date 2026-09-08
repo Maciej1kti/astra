@@ -1,7 +1,7 @@
 //! One invalidation stream per client, woken by changes, revocation or shutdown.
 use super::{Input, Service, cookie, failure, header, response};
 use axum::response::{IntoResponse, Response};
-use project_application::{AppError, Reply, auth::Auth, engine::Engine, now_millis};
+use project_application::{AppError, Reply, engine::Engine, now_millis};
 use std::time::Duration;
 use tokio::sync::OwnedSemaphorePermit;
 
@@ -30,8 +30,8 @@ pub(super) async fn serve(
     }
     // Subscribe before authentication/snapshot reads so a concurrent change is replayed.
     let mut shutdown = service.shutdown.subscribe();
-    let mut auth_changes = service.engine.journal.subscribe_auth_changes();
-    let mut notifications = service.engine.index.subscribe();
+    let mut auth_changes = service.engine.subscribe_auth_changes();
+    let mut notifications = service.engine.subscribe_changes();
     if *shutdown.borrow() {
         return response(Reply::error(503, "SERVICE_UNAVAILABLE", ""));
     }
@@ -73,7 +73,7 @@ pub(super) async fn serve(
                 notifications.borrow_and_update();
                 let engine = service.engine.clone();
                 let since = cursor.clone();
-                let batch = tokio::task::spawn_blocking(move || engine.index.events_since(&since, now_millis()));
+                let batch = tokio::task::spawn_blocking(move || engine.events_since(&since, now_millis()));
                 let batch = tokio::select! {
                     _ = shutdown.changed() => break,
                     result = batch => match result { Ok(Ok(batch)) => batch, _ => break },
@@ -107,10 +107,9 @@ fn session_expiry(engine: &Engine, token: &str, local: bool) -> Result<Option<i6
         return Ok(None);
     }
     Ok(Some(
-        Auth {
-            journal: &engine.journal,
-        }
-        .authenticate_passive(token, now_millis())?
-        .expires_at_ms,
+        engine
+            .auth()
+            .authenticate_passive(token, now_millis())?
+            .expires_at_ms,
     ))
 }

@@ -5,12 +5,12 @@ import {
   acceptanceProgress,
   moveAcceptance,
   cardPurposeValidation,
-} from "../../apps/web/src/lib/card-work.ts";
+} from "../../apps/web/src/features/cards/card-work.ts";
 import {
   cardUpdatePayload,
   hasCardUpdateDraft,
   newCardUpdateDraft,
-} from "../../apps/web/src/lib/card-update.ts";
+} from "../../apps/web/src/features/cards/card-update.ts";
 
 const first = {
   id: "11111111-1111-4111-8111-111111111111",

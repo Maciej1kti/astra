@@ -5,7 +5,7 @@ import {
   dateOnly,
   exclusiveSchedule,
   inclusiveSchedule,
-} from "../../apps/web/src/lib/planning.ts";
+} from "../../apps/web/src/features/planning/planning.ts";
 
 test("widget boundaries round-trip inclusive dates in different client timezones", () => {
   const previous = process.env.TZ;

@@ -1,10 +1,6 @@
 //! Workspace vocabulary augments literal card labels; it never replaces their
 //! meaning or authority. Preview reads source versions and performs no writes.
-use crate::{
-    AppError,
-    engine::{Engine, read},
-    wire,
-};
+use crate::{AppError, engine::Engine, source::read, wire};
 use project_store::{StoreError, document::Kind};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
@@ -63,34 +59,61 @@ struct SourceCard<'a> {
 impl Engine {
     /// Lightweight suggestions use explicitly indexed observations, never rename authority.
     pub fn tag_suggestions(&self) -> Result<Value, AppError> {
-        let _gate = self.gate.read().map_err(|_| AppError::State)?;
-        let (workspace, _) = self.workspace()?;
+        let _gate = self
+            .gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let crate::Versioned {
+            value: workspace,
+            version: _,
+        } = self.workspace()?;
         self.index.with_snapshot(|db, revision| {
             let projection = crate::index::ProjectionStatus::read(db, None)?;
-            let mut names: BTreeSet<String> = workspace["tags"].as_array().into_iter().flatten()
-                .filter_map(Value::as_str).map(str::to_owned).collect();
-            let mut statement = db.prepare("SELECT DISTINCT label.value FROM documents d, json_each(d.metadata_json,'$.labels') label WHERE d.entity_type='card' AND label.type='text' ORDER BY label.value LIMIT 10001")?;
+            let mut names: BTreeSet<String> = workspace.tags.iter().flatten()
+                .cloned().collect();
+            let mut statement = db.prepare("SELECT DISTINCT label.value
+FROM documents d,
+    json_each(d.metadata_json,
+    '$.labels') label
+WHERE d.entity_type='card'
+AND label.type='text'
+ORDER BY label.value
+LIMIT 10001")?;
             names.extend(statement.query_map([], |row| row.get::<_,String>(0))?.collect::<Result<Vec<_>,_>>()?);
             let limited = names.len() > MAX_CATALOG_NAMES;
-            let unhealthy: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM projection_issues) OR EXISTS(SELECT 1 FROM documents WHERE validity!='valid')", [], |row|row.get(0))?;
+            let unhealthy: bool = db.query_row("SELECT EXISTS(SELECT 1
+FROM projection_issues)
+OR EXISTS(SELECT 1
+FROM documents
+WHERE validity!='valid')", [], |row|row.get(0))?;
             let complete = !limited && !unhealthy && projection.freshness == "index_snapshot";
             let mut warnings = projection.warnings;
             if limited { warnings.push(json!({"code":"TAG_SUGGESTION_LIMIT","message":"Only the first 10,000 indexed tag names are shown."})); }
             if unhealthy { warnings.push(json!({"code":"TAG_SUGGESTIONS_STALE","message":"Some tag names come from unavailable or invalid project sources."})); }
-            Ok(json!({"names":names.into_iter().take(MAX_CATALOG_NAMES).collect::<Vec<_>>(),"complete":complete,"freshness":if complete {"index_snapshot"} else {"stale"},"snapshot_cursor":revision,"warnings":warnings}))
+            Ok(json!({
+                "names": names.into_iter().take(MAX_CATALOG_NAMES).collect::<Vec<_>>(),
+                "complete": complete,
+                "freshness": if complete {"index_snapshot"} else {"stale"},
+                "snapshot_cursor": revision,
+                "warnings": warnings,
+            }))
         })
     }
 
     /// Counts validated source cards, including archived cards and projects.
     /// The version belongs to workspace.json, not to the observed usage counts.
     pub fn tag_catalog(&self) -> Result<Value, AppError> {
-        let _gate = self.gate.read().map_err(|_| AppError::State)?;
-        let (workspace, version) = self.workspace()?;
+        let _gate = self
+            .gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let crate::Versioned {
+            value: workspace,
+            version,
+        } = self.workspace()?;
         let mut tags = BTreeMap::<String, TagUsage>::new();
-        for name in workspace["tags"].as_array().into_iter().flatten() {
-            tags.entry(name.as_str().ok_or(AppError::State)?.to_owned())
-                .or_default()
-                .managed = true;
+        for name in workspace.tags.iter().flatten() {
+            tags.entry(name.clone()).or_default().managed = true;
         }
         let mut catalog_limited = false;
         let mut issues = self.scan_tag_cards(&workspace, |card| {
@@ -135,13 +158,15 @@ impl Engine {
         if target.contains('\0') {
             return Err(AppError::reject(422, "TAG_NAME_INVALID"));
         }
-        let _gate = self.gate.read().map_err(|_| AppError::State)?;
-        let (workspace, version) = self.workspace()?;
-        let mut target_known = workspace["tags"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .any(|name| name == target);
+        let _gate = self
+            .gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let crate::Versioned {
+            value: workspace,
+            version,
+        } = self.workspace()?;
+        let mut target_known = workspace.tags.iter().flatten().any(|name| name == target);
         let mut changes = Vec::new();
         let mut limited = false;
         let mut archived_projects = BTreeSet::new();
@@ -172,8 +197,12 @@ impl Engine {
                 })
                 .collect::<Vec<_>>();
             changes.push(json!({
-                "project_id":card.project_id,"project_name":card.project_name,
-                "card_id":card.card_id,"title":card.title,"version":card.version,"labels":labels
+                "project_id": card.project_id,
+                "project_name": card.project_name,
+                "card_id": card.card_id,
+                "title": card.title,
+                "version": card.version,
+                "labels": labels,
             }));
         })?;
         if !target_known && (target.trim() != target || target.trim().is_empty()) {
@@ -186,28 +215,29 @@ impl Engine {
             issues.add(Some(&project), None, "This project is archived. Its cards are included, but restore the project before applying their tag changes.");
         }
         let issues = issues.finish();
-        Ok(
-            json!({"version":version,"source":source,"target":target,"complete":issues.is_empty(),"issues":issues,"changes":changes}),
-        )
+        Ok(json!({
+            "version": version,
+            "source": source,
+            "target": target,
+            "complete": issues.is_empty(),
+            "issues": issues,
+            "changes": changes,
+        }))
     }
 
     /// Caller holds the workspace gate. Each project lock protects its own read,
     /// and every observed card carries a version for subsequent mutation checks.
     fn scan_tag_cards(
         &self,
-        workspace: &Value,
+        workspace: &project_domain::models::Workspace,
         mut visit: impl FnMut(SourceCard<'_>),
     ) -> Result<Issues, AppError> {
         let mut issues = Issues::default();
         let mut scanned = 0;
-        let mut projects = workspace["projects"]
-            .as_array()
-            .ok_or(AppError::State)?
-            .iter()
-            .collect::<Vec<_>>();
-        projects.sort_by_key(|project| project["project_id"].as_str());
+        let mut projects = workspace.projects.iter().collect::<Vec<_>>();
+        projects.sort_by_key(|project| project.project_id.as_str());
         for registration in projects {
-            let project_id = registration["project_id"].as_str().ok_or(AppError::State)?;
+            let project_id = registration.project_id.as_str();
             let handle = match self.store(project_id) {
                 Ok(handle) => handle,
                 Err(_) => {
@@ -219,18 +249,22 @@ impl Engine {
                     continue;
                 }
             };
-            let store = handle.lock().map_err(|_| AppError::State)?;
+            let store = handle
+                .lock()
+                .map_err(|_| AppError::LockPoisoned("project store"))?;
             let project = match read(&store, Kind::Project, project_id) {
-                Ok((project, _)) => project,
+                Ok(project) => project,
                 Err(_) => {
                     issues.add(Some(project_id), None, "This project's source is invalid or unavailable; its tag usage could not be read.");
                     continue;
                 }
             };
-            let project_name = project["metadata"]["name"]
-                .as_str()
-                .ok_or(AppError::State)?;
-            let project_archived = project["metadata"]["state"] == "archived";
+            let project_domain::models::Document::Project { metadata, .. } = project.document.get()
+            else {
+                return Err(AppError::invariant("project source kind"));
+            };
+            let project_name = metadata.name.as_str();
+            let project_archived = metadata.state == project_domain::models::ProjectState::Archived;
             let directory = match store.directory.child("cards", false) {
                 Ok(directory) => directory,
                 Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -273,7 +307,7 @@ impl Engine {
                     );
                     continue;
                 }
-                let (card, version) = match read(&store, Kind::Card, card_id) {
+                let card = match read(&store, Kind::Card, card_id) {
                     Ok(card) => card,
                     Err(_) => {
                         issues.add(
@@ -284,20 +318,18 @@ impl Engine {
                         continue;
                     }
                 };
-                let labels = card["metadata"]["labels"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .map(|label| label.as_str().ok_or(AppError::State).map(str::to_owned))
-                    .collect::<Result<Vec<_>, _>>()?;
+                let project_domain::models::Document::Card { metadata, .. } = card.document.get()
+                else {
+                    return Err(AppError::invariant("card source kind"));
+                };
                 visit(SourceCard {
                     project_id,
                     project_name,
                     project_archived,
                     card_id,
-                    title: card["metadata"]["title"].as_str().ok_or(AppError::State)?,
-                    version: &version,
-                    labels,
+                    title: &metadata.title,
+                    version: &card.version,
+                    labels: metadata.labels.clone().unwrap_or_default(),
                 });
             }
         }

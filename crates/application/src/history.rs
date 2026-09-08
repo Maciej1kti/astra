@@ -1,7 +1,8 @@
 use crate::{
     AppError,
-    engine::{Engine, read},
+    engine::Engine,
     journal::{Command, Journal},
+    source::read,
 };
 use project_store::document::{self, Kind};
 use rusqlite::{OptionalExtension, params};
@@ -19,12 +20,27 @@ impl Engine {
         if limit == 0 || limit > 200 {
             return Err(AppError::reject(400, "INVALID_LIMIT"));
         }
-        let _gate = self.gate.read().map_err(|_| AppError::State)?;
+        let _gate = self
+            .gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
         let handle = self.store(project)?;
-        let store = handle.lock().map_err(|_| AppError::State)?;
-        let (_, current) = read(&store, kind, id)?;
+        let store = handle
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let current = read(&store, kind, id)?.version;
         let db = self.journal.db()?;
-        let (newest,count):(i64,i64)=db.query_row("SELECT COALESCE(MAX(rowid),0),count(*) FROM history WHERE project_id=?1 AND target_kind=?2 AND target_id=?3",params![project,kind.as_str(),id],|r|Ok((r.get(0)?,r.get(1)?)))?;
+        let (newest, count): (i64, i64) = db.query_row(
+            "SELECT COALESCE(MAX(rowid),
+    0),
+    count(*)
+FROM history
+WHERE project_id=?1
+AND target_kind=?2
+AND target_id=?3",
+            params![project, kind.as_str(), id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?;
         let revision = json!([project, kind.as_str(), id, current, newest, count]);
         let before = if let Some(cursor) = cursor {
             let value: Value = serde_json::from_str(cursor)
@@ -38,7 +54,23 @@ impl Engine {
         } else {
             i64::MAX
         };
-        let mut statement=db.prepare("SELECT rowid,id,request_id,recorded_at,before_hash,after_hash,before_bytes,after_bytes FROM history WHERE project_id=?1 AND target_kind=?2 AND target_id=?3 AND rowid<?4 ORDER BY rowid DESC LIMIT ?5")?;
+        let mut statement = db.prepare(
+            "SELECT rowid,
+    id,
+    request_id,
+    recorded_at,
+    before_hash,
+    after_hash,
+    before_bytes,
+    after_bytes
+FROM history
+WHERE project_id=?1
+AND target_kind=?2
+AND target_id=?3
+AND rowid<?4
+ORDER BY rowid DESC
+LIMIT ?5",
+        )?;
         let rows = statement
             .query_map(
                 params![project, kind.as_str(), id, before, limit + 1],
@@ -89,12 +121,26 @@ impl Engine {
             if previous.as_ref().map(|p| &p["body"]) != after.as_ref().map(|p| &p["body"]) {
                 fields.insert("body".into());
             }
-            items.push(json!({"id":id,"request_id":request,"recorded_at":time,"before_version":before_hash,"after_version":after_hash,"changed_fields":fields.into_iter().take(100).collect::<Vec<_>>(),"can_undo":previous.is_some()&&kind!=Kind::Update&&after_hash==current}));
+            items.push(json!({
+                "id": id,
+                "request_id": request,
+                "recorded_at": time,
+                "before_version": before_hash,
+                "after_version": after_hash,
+                "changed_fields": fields.into_iter().take(100).collect::<Vec<_>>(),
+                "can_undo": previous.is_some()&&kind!=Kind::Update&&after_hash==current,
+            }));
         }
         let next = more.then(|| json!([revision, last]).to_string());
-        Ok(
-            json!({"items":items,"page":{"next_cursor":next,"snapshot_cursor":self.index.cursor()?,"has_more":more,"freshness":"verified"}}),
-        )
+        Ok(json!({
+            "items": items,
+            "page": {
+                "next_cursor": next,
+                "snapshot_cursor": self.index.cursor()?,
+                "has_more": more,
+                "freshness": "verified",
+            },
+        }))
     }
 }
 pub(crate) fn undo_document(
@@ -103,7 +149,25 @@ pub(crate) fn undo_document(
     history_id: &str,
     current: &str,
 ) -> Result<Value, AppError> {
-    let row:Option<(Option<Vec<u8>>,String)>=journal.db()?.query_row("SELECT before_bytes,after_hash FROM history WHERE id=?1 AND project_id=?2 AND target_kind=?3 AND target_id=?4",params![history_id,command.target.project_id,command.target.kind.as_str(),command.target.id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+    let row: Option<(Option<Vec<u8>>, String)> = journal
+        .db()?
+        .query_row(
+            "SELECT before_bytes,
+    after_hash
+FROM history
+WHERE id=?1
+AND project_id=?2
+AND target_kind=?3
+AND target_id=?4",
+            params![
+                history_id,
+                command.target.project_id,
+                command.target.kind.as_str(),
+                command.target.id
+            ],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
     let (before, after) = row.ok_or_else(|| AppError::reject(404, "HISTORY_NOT_FOUND"))?;
     if after != current {
         return Err(AppError::reject(409, "UNDO_TARGET_CHANGED"));

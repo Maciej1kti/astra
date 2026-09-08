@@ -218,8 +218,51 @@ impl Workflows<'_> {
                 return reject("PLAN_ALREADY_COMMITTED");
             }
             let tx = db.transaction()?;
-            tx.execute("INSERT INTO commands(epoch,request_id,digest,state,target_kind,project_id,target_id,received_at,expires_at,result_json) VALUES(?1,?2,?3,'prepared',?4,?5,?5,?6,?7,?8)",params![epoch,request_id,command.digest(),plan.kind,plan.project_id,instant(now),instant(now+7*86_400_000),serde_json::to_string(&reply).unwrap()])?;
-            tx.execute("INSERT INTO workflow_jobs(id,plan_id,epoch,request_id,state) VALUES(?1,?2,?3,?4,'running')",params![job_id,plan_id,epoch,request_id])?;
+            tx.execute(
+                "INSERT INTO commands(epoch,
+    request_id,
+    digest,
+    state,
+    target_kind,
+    project_id,
+    target_id,
+    received_at,
+    expires_at,
+    result_json)
+VALUES (?1,
+    ?2,
+    ?3,
+    'prepared',
+    ?4,
+    ?5,
+    ?5,
+    ?6,
+    ?7,
+    ?8)",
+                params![
+                    epoch,
+                    request_id,
+                    command.digest(),
+                    plan.kind,
+                    plan.project_id,
+                    instant(now),
+                    instant(now + 7 * 86_400_000),
+                    serde_json::to_string(&reply).unwrap()
+                ],
+            )?;
+            tx.execute(
+                "INSERT INTO workflow_jobs(id,
+    plan_id,
+    epoch,
+    request_id,
+    state)
+VALUES (?1,
+    ?2,
+    ?3,
+    ?4,
+    'running')",
+                params![job_id, plan_id, epoch, request_id],
+            )?;
             tx.commit()?;
         }
         // The original acceptance result always identifies the same durable job.
@@ -328,7 +371,14 @@ impl Workflows<'_> {
     }
     pub fn pending(&self) -> Result<Vec<(String, Plan)>, AppError> {
         let db = self.journal.db()?;
-        let mut statement=db.prepare("SELECT j.id,p.plan_json FROM workflow_jobs j JOIN workflow_plans p ON p.id=j.plan_id WHERE j.state='running' ORDER BY j.rowid")?;
+        let mut statement = db.prepare(
+            "SELECT j.id,
+    p.plan_json
+FROM workflow_jobs j
+JOIN workflow_plans p ON p.id=j.plan_id
+WHERE j.state='running'
+ORDER BY j.rowid",
+        )?;
         statement
             .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
             .map(|r| {

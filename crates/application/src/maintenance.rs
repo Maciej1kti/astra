@@ -1,8 +1,9 @@
 //! Explicit local maintenance plans reuse durable, conditional workflow steps.
 use crate::{
     AppError, Reply,
-    engine::{Engine, collection, pretty, read},
+    engine::Engine,
     instant, now_millis,
+    source::{collection, pretty, read},
     workflow::{Plan, Step, Workflows},
 };
 use project_domain::validate_document;
@@ -45,8 +46,14 @@ impl Engine {
     pub fn maintenance_plan(&self, input: &Value) -> Result<Value, AppError> {
         let request: Maintenance = serde_json::from_value(input.clone())
             .map_err(|_| AppError::reject(422, "INVALID_MAINTENANCE_INPUT"))?;
-        let _gate = self.gate.write().map_err(|_| AppError::State)?;
-        let (mut workspace, workspace_version) = self.workspace()?;
+        let _gate = self
+            .gate
+            .write()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let crate::Versioned {
+            value: mut workspace,
+            version: workspace_version,
+        } = self.workspace()?;
         let project = match &request {
             Maintenance::Normalize { project_id, .. }
             | Maintenance::Rebalance { project_id, .. }
@@ -54,16 +61,12 @@ impl Engine {
             | Maintenance::Relocate { project_id, .. }
             | Maintenance::IndexRebuild { project_id } => project_id.clone(),
         };
-        let registration = workspace["projects"]
-            .as_array()
-            .unwrap()
+        let registration = workspace
+            .projects
             .iter()
-            .find(|p| p["project_id"] == project)
+            .find(|p| p.project_id == project)
             .ok_or_else(|| AppError::reject(404, "PROJECT_NOT_REGISTERED"))?;
-        let mut path = registration["path"]
-            .as_str()
-            .ok_or(AppError::State)?
-            .to_owned();
+        let mut path = registration.path.clone();
         if self.journal.has_pending(&project)? || self.journal.has_pending("workspace")? {
             return Err(AppError::reject(409, "RECOVERY_REQUIRED"));
         }
@@ -79,7 +82,9 @@ impl Engine {
                 ..
             } => {
                 let handle = self.store(&project)?;
-                let store = handle.lock().map_err(|_| AppError::State)?;
+                let store = handle
+                    .lock()
+                    .map_err(|_| AppError::LockPoisoned("project store"))?;
                 let (directory, name) = store.location(kind, &id, false)?;
                 let before = directory
                     .read(&name)?
@@ -88,14 +93,16 @@ impl Engine {
                     return Err(AppError::reject(412, "VERSION_CONFLICT"));
                 }
                 let parsed = document::parse(kind, Some(&id), &before)?;
-                let validated = validate_document(parsed.value())
-                    .map_err(|_| AppError::reject(422, "DOCUMENT_INVALID"))?;
+                let validated = parsed.document;
                 steps.push(Step::plan(
                     &directory,
                     &[&name],
                     document::serialize(&validated)?,
                 )?);
-                warnings.push(json!({"code":"NORMALIZATION","message":"Canonical formatting replaces YAML comments and whitespace. Original bytes are retained in this plan."}));
+                warnings.push(json!({
+                    "code": "NORMALIZATION",
+                    "message": "Canonical formatting replaces YAML comments and whitespace. Original bytes are retained in this plan.",
+                }));
                 "normalize"
             }
             Maintenance::Rebalance {
@@ -110,7 +117,9 @@ impl Engine {
                     return Err(AppError::reject(409, "PAGE_STALE"));
                 }
                 let handle = self.store(&project)?;
-                let store = handle.lock().map_err(|_| AppError::State)?;
+                let store = handle
+                    .lock()
+                    .map_err(|_| AppError::LockPoisoned("project store"))?;
                 let directory = store
                     .directory
                     .child(kind.directory().ok_or(AppError::State)?, false)?;
@@ -123,23 +132,17 @@ impl Engine {
                 ));
                 let mut values = collection(&store, kind)?;
                 values.sort_by(|a, b| {
-                    a.0["metadata"]["status"]
-                        .as_str()
-                        .cmp(&b.0["metadata"]["status"].as_str())
-                        .then(
-                            a.0["metadata"]["position"]
-                                .as_str()
-                                .cmp(&b.0["metadata"]["position"].as_str()),
-                        )
-                        .then(
-                            a.0["metadata"]["id"]
-                                .as_str()
-                                .cmp(&b.0["metadata"]["id"].as_str()),
-                        )
+                    let a = a.document.get();
+                    let b = b.document.get();
+                    a.status()
+                        .cmp(&b.status())
+                        .then(a.position().cmp(&b.position()))
+                        .then(a.id().cmp(b.id()))
                 });
                 let spacing = u128::MAX / (values.len() as u128 + 1);
-                for (n, (mut value, _)) in values.into_iter().enumerate() {
-                    let id = value["metadata"]["id"].as_str().unwrap().to_owned();
+                for (n, source) in values.into_iter().enumerate() {
+                    let id = source.document.get().id().to_owned();
+                    let mut value = source.value();
                     let (directory, name) = store.location(kind, &id, false)?;
                     let before = directory.read(&name)?.ok_or(AppError::State)?;
                     if document::parse(kind, Some(&id), &before)?.normalization_required {
@@ -163,14 +166,8 @@ impl Engine {
                 if workspace_version != expected_workspace_version {
                     return Err(AppError::reject(412, "VERSION_CONFLICT"));
                 }
-                workspace["projects"]
-                    .as_array_mut()
-                    .unwrap()
-                    .retain(|p| p["project_id"] != project);
-                workspace["focus"]
-                    .as_array_mut()
-                    .unwrap()
-                    .retain(|p| p["project_id"] != project);
+                workspace.projects.retain(|p| p.project_id != project);
+                workspace.focus.retain(|p| p.project_id != project);
                 steps.push(Step::plan(
                     &self.journal.directory,
                     &["workspace.json"],
@@ -187,28 +184,29 @@ impl Engine {
                 if workspace_version != expected_workspace_version {
                     return Err(AppError::reject(412, "VERSION_CONFLICT"));
                 }
-                if workspace["projects"]
-                    .as_array()
-                    .unwrap()
+                if workspace
+                    .projects
                     .iter()
-                    .any(|p| p["path"] == new_absolute_path)
+                    .any(|p| p.path == new_absolute_path)
                 {
                     return Err(AppError::reject(409, "PATH_ALREADY_REGISTERED"));
                 }
                 self.release_store_path(&path)?;
                 let handle = self.store_path(&new_absolute_path, false)?;
-                let store = handle.lock().map_err(|_| AppError::State)?;
+                let store = handle
+                    .lock()
+                    .map_err(|_| AppError::LockPoisoned("project store"))?;
                 read(&store, Kind::Project, &project)?;
                 let directory = Directory::open(Path::new(&new_absolute_path))?;
                 let (source, name) = store.location(Kind::Project, &project, false)?;
                 let bytes = source.read(&name)?.ok_or(AppError::State)?;
                 steps.push(Step::plan(&directory, &[".project", "project.md"], bytes)?);
-                workspace["projects"]
-                    .as_array_mut()
-                    .unwrap()
+                workspace
+                    .projects
                     .iter_mut()
-                    .find(|p| p["project_id"] == project)
-                    .unwrap()["path"] = json!(new_absolute_path);
+                    .find(|p| p.project_id == project)
+                    .unwrap()
+                    .path = new_absolute_path.clone();
                 steps.push(Step::plan(
                     &self.journal.directory,
                     &["workspace.json"],
@@ -229,7 +227,16 @@ impl Engine {
         }
         let id = Uuid::new_v4().to_string();
         let expires = now_millis() + 300_000;
-        let view = json!({"plan_id":id,"kind":kind,"project_id":project,"display_path":path,"previous_path":old_path,"steps":steps.iter().map(|step|json!({"path":step.path.join("/"),"before_hash":step.before.as_ref().map(|bytes|document::version(bytes)),"after_hash":document::version(&step.after),"before_preview":if kind=="normalize"{step.before.as_ref().map(|b|String::from_utf8_lossy(b).into_owned())}else{None},"after_preview":if kind=="normalize"{Some(String::from_utf8_lossy(&step.after).into_owned())}else{None}})).collect::<Vec<_>>(),"warnings":warnings,"expires_at":instant(expires)});
+        let view = json!({
+            "plan_id": id,
+            "kind": kind,
+            "project_id": project,
+            "display_path": path,
+            "previous_path": old_path,
+            "steps": steps.iter().map(|step| step_preview(step, kind == "normalize")).collect::<Vec<_>>(),
+            "warnings": warnings,
+            "expires_at": instant(expires),
+        });
         (Workflows {
             journal: &self.journal,
         })
@@ -251,7 +258,10 @@ impl Engine {
         request: &str,
         epoch: &str,
     ) -> Result<Reply, AppError> {
-        let _gate = self.gate.write().map_err(|_| AppError::State)?;
+        let _gate = self
+            .gate
+            .write()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
         let workflows = Workflows {
             journal: &self.journal,
         };
@@ -286,7 +296,11 @@ impl Engine {
         };
         let store = handle
             .as_ref()
-            .map(|handle| handle.lock().map_err(|_| AppError::State))
+            .map(|handle| {
+                handle
+                    .lock()
+                    .map_err(|_| AppError::LockPoisoned("project store"))
+            })
             .transpose()?;
         let reply = workflows.commit_with_completion(
             plan_id,
@@ -311,7 +325,7 @@ impl Engine {
             if plan.kind == "unregister" {
                 self.reconciled
                     .lock()
-                    .map_err(|_| AppError::State)?
+                    .map_err(|_| AppError::LockPoisoned("reconciliation schedule"))?
                     .remove(&plan.project_id);
                 self.index.forget_project(&plan.project_id, now_millis())?;
             } else if let Some(store) = &store {
@@ -326,4 +340,21 @@ impl Engine {
         }
         Ok(reply)
     }
+}
+
+fn step_preview(step: &Step, include_preview: bool) -> Value {
+    let before_hash = step.before.as_ref().map(|bytes| document::version(bytes));
+    let before_preview = if include_preview {
+        step.before
+            .as_ref()
+            .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
+    } else {
+        None
+    };
+    let after_preview = include_preview.then(|| String::from_utf8_lossy(&step.after).into_owned());
+    json!({
+        "path": step.path.join("/"), "before_hash": before_hash,
+        "after_hash": document::version(&step.after),
+        "before_preview": before_preview, "after_preview": after_preview,
+    })
 }

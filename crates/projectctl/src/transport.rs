@@ -118,7 +118,16 @@ impl Outcome {
     fn failed(code: &str, exit: i32, error: impl fmt::Display, identity: &Value) -> Self {
         Self {
             code: exit,
-            output: json!({"api_version":"1","ok":false,"error":{"code":code,"message":error.to_string()},"request_id":identity["request_id"],"command_epoch":identity["command_epoch"]}),
+            output: json!({
+                "api_version": "1",
+                "ok": false,
+                "error": {
+                    "code": code,
+                    "message": error.to_string(),
+                },
+                "request_id": identity["request_id"],
+                "command_epoch": identity["command_epoch"],
+            }),
         }
     }
 }

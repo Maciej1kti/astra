@@ -12,12 +12,13 @@ mod roots;
 mod tags;
 mod views;
 mod workspace;
+pub use index::Query;
 pub use mutation::Mutation;
-pub mod index;
-pub mod journal;
+mod index;
+mod journal;
 pub mod wire;
-pub mod workflow;
-pub mod writer;
+mod workflow;
+mod writer;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -32,8 +33,31 @@ pub enum AppError {
     Database(#[from] rusqlite::Error),
     #[error("invalid operational state")]
     State,
+    #[error("lock poisoned: {0}")]
+    LockPoisoned(&'static str),
+    #[error("stored data invalid ({context}): {source}")]
+    StoredData {
+        context: &'static str,
+        source: serde_json::Error,
+    },
+    #[error("source validation failed ({context}): {source}")]
+    SourceValidation {
+        context: &'static str,
+        source: project_domain::DomainError,
+    },
+    #[error("required operational source is unavailable: {0}")]
+    Unavailable(&'static str),
+    #[error("application invariant failed: {0}")]
+    Invariant(&'static str),
 }
 impl AppError {
+    pub fn stored(context: &'static str, source: serde_json::Error) -> Self {
+        Self::StoredData { context, source }
+    }
+    pub fn invariant(context: &'static str) -> Self {
+        Self::Invariant(context)
+    }
+
     pub fn reject(status: u16, code: &str) -> Self {
         Self::Rejected(Reply::error(status, code, ""))
     }
@@ -85,3 +109,27 @@ pub fn instant(millis: i64) -> String {
         .expect("bounded timestamp")
         .to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
+
+mod registration;
+mod service;
+mod source;
+pub use source::Versioned;
+
+// White-box durability fixtures stay within the crate, without production accessors.
+#[cfg(test)]
+extern crate self as project_application;
+#[cfg(test)]
+#[path = "../tests/auth.rs"]
+mod auth_tests;
+#[cfg(test)]
+#[path = "../tests/durability.rs"]
+mod durability_tests;
+#[cfg(test)]
+#[path = "../tests/engine.rs"]
+mod engine_tests;
+#[cfg(test)]
+#[path = "../tests/tag_management.rs"]
+mod tag_management_tests;
+#[cfg(test)]
+#[path = "../tests/workflow.rs"]
+mod workflow_tests;

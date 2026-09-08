@@ -1,0 +1,636 @@
+.app .brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  line-height: 1.5;
+}
+.app .brandmark {
+  background: var(--green);
+  color: var(--accent);
+  font-family: Georgia, serif;
+  font-size: 28px;
+  line-height: 42px;
+  width: 42px;
+  text-align: center;
+  border-radius: 12px;
+  letter-spacing: -3px;
+  padding-right: 3px;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+.app aside {
+  width: 218px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  padding: 30px 20px;
+  position: fixed;
+  inset: 0 auto 0 0;
+  background: var(--soft);
+  display: flex;
+  flex-direction: column;
+}
+.app .navlabel {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  margin: 48px 14px 14px;
+}
+.app nav {
+  display: grid;
+  gap: 6px;
+}
+.app nav button {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  border-color: transparent;
+  background: transparent;
+  font-size: 13px;
+  gap: 14px;
+  padding: 12px;
+}
+.app .navicon {
+  font-size: 19px;
+  width: 20px;
+  color: #7e8d7d;
+}
+.app nav button.chosen {
+  background: var(--accent);
+  font-weight: 650;
+}
+.app nav button.chosen .navicon {
+  color: var(--green);
+}
+.app .asidebottom {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+.app .asidebottom button {
+  display: block;
+  font-size: 11px;
+  padding-left: 0;
+}
+.app .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 7px;
+  background: #bd8745;
+}
+.app .dot.live {
+  background: #638653;
+}
+.app .workspace {
+  margin-left: 218px;
+  width: calc(100% - 218px);
+}
+.app .topbar {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 0 24px;
+  font-size: 12px;
+}
+.app .topbar > div {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.app .slash {
+  color: #a7afa4;
+  margin: 0 14px;
+}
+.app .topbar .date {
+  color: var(--muted);
+}
+.app .content {
+  max-width: 1500px;
+  padding: 24px 24px 20px;
+  margin: auto;
+}
+.app .heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.app h1 {
+  font:
+    650 26px/1.25 Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.5px;
+  margin: 10px 0;
+}
+.app .heading p:not(.eyebrow) {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.app .toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.app .toolbar select {
+  min-width: 170px;
+}
+.app .search {
+  margin-left: auto;
+  width: 220px;
+}
+.app .stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  margin-bottom: 22px;
+}
+.app .stats > div {
+  padding: 16px 20px;
+  border-right: 1px solid var(--line);
+}
+.app .stats > div:last-child {
+  border: 0;
+}
+.app .stats span {
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  color: var(--muted);
+  display: block;
+}
+.app .stats strong {
+  display: block;
+  font:
+    600 30px ui-sans-serif,
+    system-ui,
+    sans-serif;
+  margin: 8px 0 6px;
+}
+.app .stats p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+.app .sectiontitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0 14px;
+}
+.app .sectiontitle h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.app .sectiontitle > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.app .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: 18px;
+}
+.app .card {
+  padding: 16px;
+  text-align: left;
+  border-radius: 12px;
+  width: 100%;
+}
+.app .card small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.app .card h3 {
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 600;
+  margin: 8px 0 12px;
+}
+.app .attention-reasons > .badge,
+.app .projectcard > .badge,
+.app .update > div > .badge {
+  font-size: 10px;
+  background: var(--soft);
+  padding: 5px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.app .card footer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 10px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.app .card footer > span:last-child {
+  margin-left: auto;
+}
+.app .projectinitial {
+  background: var(--accent);
+  color: var(--ink);
+  padding: 12px;
+  border-radius: 10px;
+  display: inline-block;
+  font-family: Georgia, serif;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+.app .projectcard > .badge {
+  float: right;
+}
+.app .projectcard h2 {
+  font:
+    23px Georgia,
+    serif;
+}
+.app .projectcard p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.app .listrow {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  padding: 18px 20px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+}
+.app .listrow > div {
+  flex: 1;
+  min-width: 0;
+}
+.app .listrow strong {
+  font-size: 13px;
+  font-weight: 550;
+}
+.app .listrow small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.app .listrow > span:last-child {
+  font-size: 12px;
+}
+.app .listrow > .priority {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b2c495;
+  flex-shrink: 0;
+}
+.app .empty {
+  background: var(--soft);
+  border: 1px dashed var(--line);
+  padding: 30px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  grid-column: 1/-1;
+}
+.app .empty strong {
+  font:
+    22px Georgia,
+    serif;
+  color: var(--ink);
+}
+.app .pagefooter {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #92998e;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 28px;
+}
+.app .board {
+  display: flex;
+  gap: 16px;
+  overflow: auto;
+  padding-bottom: 20px;
+}
+.app .column {
+  min-width: 230px;
+  flex: 1;
+}
+.app .column .sectiontitle h2 {
+  text-transform: capitalize;
+  font-size: 12px;
+}
+.app .column .card {
+  margin-bottom: 12px;
+  padding: 18px;
+}
+.app .columnempty {
+  padding: 24px 10px;
+  border: 1px dashed var(--line);
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  border-radius: 10px;
+}
+.app .month {
+  display: flex;
+  gap: 6px;
+}
+.app .month input {
+  width: 160px;
+}
+.app .table {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.app .table .listrow {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+}
+.app .tablehead {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 16px 20px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.app .updates {
+  max-width: 850px;
+}
+.app .update {
+  display: flex;
+  text-align: left;
+  width: 100%;
+  gap: 20px;
+  margin-bottom: 12px;
+  padding: 24px;
+  border-radius: 12px;
+}
+.app .updateicon {
+  background: var(--soft);
+  align-self: flex-start;
+  flex-shrink: 0;
+  border-radius: 50%;
+  padding: 12px;
+  color: var(--green);
+}
+.app .update small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.app .update h3 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.app .connection {
+  padding: 12px;
+  font-size: 12px;
+  background: var(--notice-bg);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+@media (max-width: 1100px) {
+  .app aside {
+    width: 180px;
+    padding: 26px 12px;
+  }
+  .app .workspace {
+    margin-left: 180px;
+    width: calc(100% - 180px);
+  }
+  .app .content {
+    padding: 28px 24px;
+  }
+  .app .topbar {
+    padding: 0 24px;
+  }
+  .app h1 {
+    font-size: 26px;
+  }
+}
+@media (max-width: 700px) {
+  .app aside {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    width: 100%;
+    padding: 12px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .app {
+    display: block;
+  }
+  .app aside .brand,
+  .app aside .navlabel,
+  .app .asidebottom {
+    display: none;
+  }
+  .app nav {
+    display: flex;
+    overflow: auto;
+    gap: 4px;
+  }
+  .app nav button {
+    font-size: 11px;
+    padding: 9px;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .app .navicon {
+    display: none;
+  }
+  .app .workspace {
+    width: 100%;
+    margin: 0;
+  }
+  .app .topbar {
+    min-height: 50px;
+    padding: 0 18px;
+    font-size: 10px;
+  }
+  .app .topbar .date {
+    display: none;
+  }
+  .app .content {
+    padding: 18px 14px;
+  }
+  .app .heading {
+    display: block;
+    margin-bottom: 22px;
+  }
+  .app .heading .primary {
+    margin-top: 4px;
+  }
+  .app .heading h1 {
+    font-size: 24px;
+  }
+  .app .heading .eyebrow {
+    font-size: 8px;
+  }
+  .app .toolbar {
+    gap: 8px;
+  }
+  .app .toolbar select {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1;
+  }
+  .app .search {
+    width: 120px;
+    flex: 1;
+    margin: 0;
+  }
+  .app .stats > div {
+    padding: 12px 10px;
+  }
+  .app .stats span {
+    font-size: 7px;
+  }
+  .app .stats strong {
+    font-size: 26px;
+  }
+  .app .stats p {
+    font-size: 10px;
+    line-height: 1.5;
+  }
+  .app .grid {
+    grid-template-columns: 1fr;
+  }
+  .app .pagefooter span {
+    display: none;
+  }
+  .app .month {
+    width: 100%;
+  }
+  .app .month input {
+    flex: 1;
+  }
+  .app .tablehead {
+    grid-template-columns: 1fr;
+  }
+  .app .table .listrow {
+    gap: 8px;
+    padding: 14px 12px;
+  }
+
+  .app .listrow {
+    padding: 16px 12px;
+  }
+  .app .listrow strong {
+    font-size: 12px;
+  }
+}
+.app .heading .eyebrow {
+  display: none;
+}
+.app .workspace-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app .topbar {
+  gap: 12px;
+}
+.app .mobile-signout {
+  display: none;
+}
+.app .attention-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  max-width: 45%;
+}
+.app .row-metadata {
+  max-width: 50%;
+}
+.app .card,
+.app .update,
+.app .listrow {
+  overflow-wrap: anywhere;
+}
+.app .grid .card {
+  align-self: start;
+}
+.app .toolbar > input {
+  max-width: 100%;
+}
+@media (max-width: 700px) {
+  .app .mobile-signout {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px;
+    font-size: 11px;
+  }
+  .app .topbar {
+    padding: 0 12px;
+    gap: 4px;
+  }
+  .app .topbar > div {
+    gap: 0;
+  }
+  .app .topbar button {
+    padding: 8px;
+    min-width: 34px;
+  }
+  .app .topbar .slash {
+    margin: 0 4px;
+  }
+  .app .workspace-label {
+    font-size: 11px;
+  }
+  .app .table .listrow {
+    display: block;
+  }
+  .app .row-metadata {
+    max-width: none;
+    margin-top: 10px;
+  }
+  .app .tablehead span:last-child {
+    display: none;
+  }
+  .app .attention-reasons {
+    max-width: 38%;
+  }
+  .app .attention-reasons > .badge,
+  .app .projectcard > .badge,
+  .app .update > div > .badge {
+    white-space: normal;
+  }
+  .app .toolbar > input[aria-label="Tag filter"] {
+    flex: 1 1 140px;
+    width: 140px;
+  }
+  .app .heading p {
+    margin: 6px 0;
+  }
+  .app .heading {
+    margin-bottom: 16px;
+  }
+}

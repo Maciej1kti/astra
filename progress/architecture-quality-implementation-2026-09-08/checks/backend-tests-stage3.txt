@@ -1,0 +1,95 @@
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.96s
+     Running unittests src/lib.rs (target/debug/deps/project_application-cc31742abf85b77b)
+
+running 71 tests
+test durability_tests::fault_child ... ok
+test auth_tests::passive_stream_checks_do_not_extend_session_idle_lifetime ... ok
+test auth_tests::pairing_requires_owner_approval_cookie_and_csrf_and_claim_retry_rotates ... ok
+test auth_tests::rate_limits_and_expiration_are_enforced ... ok
+test auth_tests::state_schema_version_and_explicit_restore_epoch_survive_restart ... ok
+test auth_tests::session_idle_and_absolute_expiration_survive_restart ... ok
+test durability_tests::external_edits_after_prepared_are_not_overwritten ... ok
+test durability_tests::missing_precondition_and_invalid_source_never_write ... ok
+test durability_tests::duplicate_references_preserve_conflicts_and_store_one_recovery_precondition ... ok
+test durability_tests::invalid_request_ids_produce_valid_errors_and_state_loss_changes_epoch ... ok
+test durability_tests::committed_conflicts_replays_and_noops_follow_the_contract ... ok
+test durability_tests::subprocess_crashes_at_every_durability_boundary_recover_once ... FAILED
+test durability_tests::recovery_rechecks_dependencies_even_when_target_is_unchanged ... ok
+test durability_tests::replacement_symlink_after_prepared_requires_review ... ok
+test durability_tests::unknown_expired_ids_and_old_epochs_are_never_reexecuted ... ok
+test engine_tests::browser_roots_reject_escape_symlinks_and_replaced_directories ... ok
+test engine_tests::browser_registration_plan_cannot_outlive_root_revocation ... ok
+test engine_tests::agent_context_includes_complete_card_purpose_or_an_explicit_next_read ... ok
+test engine_tests::completed_registration_replays_after_restart_with_missing_project_folder ... ok
+test engine_tests::forecast_example_matches_projection_contracts ... ok
+test engine_tests::attention_distinguishes_hard_deadlines_and_reading_from_resolution ... ok
+test engine_tests::attention_project_filter_applies_before_pagination ... ok
+test engine_tests::card_acceptance_lifecycle_keeps_status_body_and_conflict_history ... ok
+test engine_tests::create_retry_without_client_id_returns_the_original_resource ... ok
+test engine_tests::agent_context_is_project_scoped_and_counts_utf8_json_overhead ... ok
+test durability_tests::state_database_can_grow_beyond_document_limits_and_restart ... ok
+test engine_tests::broken_workspace_keeps_diagnostics_available_without_recreating_sources ... ok
+test engine_tests::foreground_project_read_reconciles_external_changes_with_a_bounded_ttl ... ok
+test engine_tests::dependency_validation_rereads_external_edits_and_deleted_cards ... ok
+test engine_tests::gantt_pages_include_milestones_and_board_stays_card_only ... ok
+test engine_tests::invalid_external_source_preserves_stale_projection_without_repairing_files ... ok
+test engine_tests::invalid_unindexed_target_emits_health_without_changing_other_issues ... ok
+test engine_tests::incremental_projection_preserves_other_sources_and_handles_invalid_delete_recreate ... ok
+test engine_tests::index_rebuild_cannot_finish_before_projection_succeeds ... ok
+test engine_tests::invalid_filenames_are_isolated_by_collection_and_publish_health_changes ... ok
+test engine_tests::gantt_bulk_predecessors_preserve_archived_cancelled_stale_missing_and_undated_warnings ... ok
+test engine_tests::maintenance_plan_rejects_intervening_source_edits_and_relocates_moved_folder ... ok
+test engine_tests::maintenance_normalizes_conditionally_rebalances_and_unregisters_without_deleting_files ... ok
+test engine_tests::missing_receipt_target_rejection_remains_stable_after_creation ... ok
+test engine_tests::read_receipts_are_atomic_shared_and_do_not_modify_reports ... ok
+test engine_tests::registration_is_explicit_preserves_existing_instructions_and_repeats_safely ... ok
+test engine_tests::rebalance_rejects_new_collection_members_and_replays_rejection ... ok
+test engine_tests::pagination_detects_staleness_and_stream_snapshots_do_not_lose_changes ... ok
+test engine_tests::git_observer_is_explicit_bounded_and_never_runs_repository_filters ... ok
+test engine_tests::real_card_edit_two_clients_search_and_index_rebuild ... ok
+test engine_tests::retention_keeps_retry_window_and_pending_intents ... ok
+test engine_tests::schedule_warning_is_durable_and_never_moves_deadline ... ok
+test git::tests::subprocess_output_and_deadline_are_bounded ... ok
+test engine_tests::stale_registration_plan_does_not_overwrite_user_edits ... ok
+test index::tests::bundled_sqlite_seeks_composite_projection_and_report_target_keys ... ok
+test index::tests::report_target_filter_requires_a_valid_pair_on_update_queries ... ok
+test engine_tests::stale_target_rejection_precedes_unrelated_collection_validation_and_replays ... ok
+test engine_tests::timeline_forecast_uses_other_pages_without_changing_recorded_dates ... ok
+test engine_tests::service_reopen_marks_cached_and_empty_projections_until_source_reconciliation ... ok
+test engine_tests::undo_restores_one_change_and_refuses_later_edits ... ok
+test engine_tests::scoped_pages_survive_other_projects_but_reject_relevant_changes ... ok
+test engine_tests::workspace_writes_replay_and_recover_without_overwriting_external_changes ... ok
+test engine_tests::upgrading_body_only_search_index_preserves_sources_and_indexes_card_content ... ok
+test tag_management_tests::invalid_vocabulary_does_not_replace_valid_names ... ok
+test tag_management_tests::applying_preview_uses_expected_versions_and_keeps_partial_results_safe ... ok
+test engine_tests::service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked ... ok
+test tag_management_tests::catalog_and_preview_report_invalid_cards_and_unavailable_projects_individually ... ok
+test workflow_tests::recovery_rechecks_completed_steps_before_publishing_registration ... ok
+test tag_management_tests::preview_merges_exact_tags_without_writes_and_preserves_unrelated_order ... ok
+test tag_management_tests::preview_preserves_exact_historical_whitespace_destinations ... ok
+test tag_management_tests::suggestions_use_indexed_names_while_management_still_reads_current_sources ... ok
+test tag_management_tests::vocabulary_prepared_write_recovers_with_original_identity ... ok
+test tag_management_tests::vocabulary_is_optional_versioned_durable_and_does_not_rewrite_card_labels ... ok
+test tag_management_tests::catalog_reads_all_sources_including_archived_and_beyond_first_page ... ok
+test index::tests::report_target_pagination_is_bounded_amid_more_than_twenty_thousand_unrelated_reports ... ok
+test tag_management_tests::preview_bounds_affected_cards_and_identifies_archived_project_limits ... ok
+
+failures:
+
+---- durability_tests::subprocess_crashes_at_every_durability_boundary_recover_once stdout ----
+
+thread 'durability_tests::subprocess_crashes_at_every_durability_boundary_recover_once' (9140753) panicked at crates/application/src/../tests/durability.rs:293:9:
+assertion `left == right` failed: Prepared
+  left: Some(0)
+ right: Some(77)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    durability_tests::subprocess_crashes_at_every_durability_boundary_recover_once
+
+test result: FAILED. 70 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.55s
+
+error: test failed, to rerun pass `-p project-application --lib`

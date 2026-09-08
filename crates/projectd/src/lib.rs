@@ -6,12 +6,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::any,
 };
-use project_application::{
-    AppError, Reply,
-    auth::{Auth, csrf_matches},
-    engine::Engine,
-    now_millis,
-};
+use project_application::{AppError, Reply, auth::csrf_matches, engine::Engine, now_millis};
 use std::{sync::Arc, time::Duration};
 use tokio::{
     net::UnixListener,
@@ -126,8 +121,25 @@ fn response(reply: Reply) -> Response {
 fn failure(error: AppError) -> Response {
     response(match error {
         AppError::Rejected(reply) => reply,
-        _ => Reply::error(503, "SERVICE_UNAVAILABLE", ""),
+        error => {
+            eprintln!("Application request failed: {}", failure_diagnostic(&error));
+            Reply::error(503, "SERVICE_UNAVAILABLE", "")
+        }
     })
+}
+fn failure_diagnostic(error: &AppError) -> String {
+    // Only static operation labels are safe here; source errors can contain user data.
+    match error {
+        AppError::LockPoisoned(context) => format!("poisoned lock ({context})"),
+        AppError::StoredData { context, .. } => format!("invalid stored data ({context})"),
+        AppError::SourceValidation { context, .. } => format!("invalid source ({context})"),
+        AppError::Unavailable(context) => format!("unavailable source ({context})"),
+        AppError::Invariant(context) => format!("broken invariant ({context})"),
+        AppError::Store(_) => "source storage error".into(),
+        AppError::Database(_) => "state database error".into(),
+        AppError::State => "invalid operational state".into(),
+        AppError::Rejected(_) => "request rejected".into(),
+    }
 }
 fn secured(mut response: Response) -> Response {
     let headers = response.headers_mut();
@@ -238,9 +250,7 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
     }
 }
 fn dispatch(service: &Service, input: Input) -> Result<Response, AppError> {
-    let auth = Auth {
-        journal: &service.engine.journal,
-    };
+    let auth = service.engine.auth();
     let now = now_millis();
     if input.method == "GET" && input.path == "/healthz" {
         return Ok(axum::Json(serde_json::json!({"status":"ok"})).into_response());
@@ -352,6 +362,28 @@ mod tests {
             .to_owned()
     }
     #[tokio::test]
+    async fn internal_failures_keep_diagnostics_and_public_responses_free_of_source_data() {
+        let error = AppError::Database(rusqlite::Error::InvalidParameterName(
+            "private-user-content".into(),
+        ));
+        assert!(error.to_string().contains("private-user-content"));
+        assert_eq!(failure_diagnostic(&error), "state database error");
+        let response = failure(error);
+        assert_eq!(response.status(), 503);
+        let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&bytes).unwrap(),
+            Reply::error(503, "SERVICE_UNAVAILABLE", "").body,
+        );
+        assert_eq!(
+            failure_diagnostic(&AppError::LockPoisoned("workspace operation gate")),
+            "poisoned lock (workspace operation gate)",
+        );
+        let rejected = failure(AppError::reject(412, "VERSION_CONFLICT"));
+        assert_eq!(rejected.status(), 412);
+        assert_eq!(code(rejected).await, "VERSION_CONFLICT");
+    }
+    #[tokio::test]
     async fn admission_bounds_body_collectors_and_releases_cancelled_requests() {
         let (_temp, service) = service();
         let mut requests = Vec::new();
@@ -457,9 +489,7 @@ mod tests {
     #[tokio::test]
     async fn browser_stream_expires_without_index_changes() {
         let (_temp, service) = service();
-        let auth = Auth {
-            journal: &service.engine.journal,
-        };
+        let auth = service.engine.auth();
         let now = now_millis();
         let pending = auth
             .start(
@@ -482,10 +512,7 @@ mod tests {
             )
             .unwrap();
         // Shorten a normally issued fixture session instead of waiting thirty days.
-        service
-            .engine
-            .journal
-            .db()
+        rusqlite::Connection::open(_temp.path().join("state/state.sqlite"))
             .unwrap()
             .execute(
                 "UPDATE sessions SET expires_at=?1 WHERE id=?2",

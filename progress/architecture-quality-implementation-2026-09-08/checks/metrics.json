@@ -1,0 +1,111 @@
+{
+  "baseline_revision": "9528056132f73e8f3e963dbb25cbf80d219a8ab8",
+  "before": {
+    "components": [
+      {
+        "file": "apps/web/src/App.svelte",
+        "total_lines": 2235,
+        "script_content_lines": 814,
+        "style_content_lines": 856,
+        "state_call_occurrences": 54
+      },
+      {
+        "file": "apps/web/src/lib/Editor.svelte",
+        "total_lines": 1248,
+        "script_content_lines": 607,
+        "style_content_lines": 190,
+        "state_call_occurrences": 53
+      }
+    ],
+    "rust_lines_over_180": 93
+  },
+  "after": {
+    "components": [
+      {
+        "file": "apps/web/src/App.svelte",
+        "total_lines": 894,
+        "script_content_lines": 462,
+        "state_call_occurrences": 18
+      },
+      {
+        "file": "apps/web/src/features/editor/Editor.svelte",
+        "total_lines": 691,
+        "script_content_lines": 385,
+        "state_call_occurrences": 19
+      }
+    ],
+    "rust_lines_over_180": 3,
+    "long_lines": [
+      {
+        "file": "crates/application/src/diagnostics.rs",
+        "line": 44,
+        "length": 187
+      },
+      {
+        "file": "crates/projectd/src/lib.rs",
+        "line": 154,
+        "length": 234
+      },
+      {
+        "file": "crates/projectd/src/picker.rs",
+        "line": 129,
+        "length": 187
+      }
+    ],
+    "feature_directories": [
+      "board",
+      "cards",
+      "editor",
+      "host",
+      "planning",
+      "registration",
+      "session",
+      "settings",
+      "tags",
+      "workspace"
+    ]
+  },
+  "verification": {
+    "integrated_gate_passed": true,
+    "rust_tests_passed": 120,
+    "javascript_tests_passed": 62,
+    "python_tests_passed": 12,
+    "browser_regressions": [
+      {
+        "suite": "card",
+        "code": 0,
+        "milliseconds": 7421
+      },
+      {
+        "suite": "tags",
+        "code": 0,
+        "milliseconds": 7221
+      },
+      {
+        "suite": "editor",
+        "code": 0,
+        "milliseconds": 14246
+      },
+      {
+        "suite": "dialogs",
+        "code": 0,
+        "milliseconds": 5940
+      },
+      {
+        "suite": "planning",
+        "code": 0,
+        "milliseconds": 5568
+      },
+      {
+        "suite": "code-health",
+        "code": 0,
+        "milliseconds": 18780
+      },
+      {
+        "suite": "protocol",
+        "code": 0,
+        "milliseconds": 9751
+      }
+    ]
+  }
+}

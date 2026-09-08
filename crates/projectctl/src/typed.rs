@@ -362,7 +362,17 @@ impl Action {
                 write(
                     "POST",
                     format!("{root}/updates"),
-                    json!({"kind":"resolution","summary":summary,"target":original["metadata"]["target"],"resolves":[id],"body":body(body_file)?,"author":{"kind":"human","label":"CLI user"}}),
+                    json!({
+                        "kind": "resolution",
+                        "summary": summary,
+                        "target": original["metadata"]["target"],
+                        "resolves": [id],
+                        "body": body(body_file)?,
+                        "author": {
+                            "kind": "human",
+                            "label": "CLI user",
+                        },
+                    }),
                     None,
                     identity,
                 )

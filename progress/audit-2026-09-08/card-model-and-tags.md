@@ -8,7 +8,7 @@ Added on 2026-09-08 following explicit owner feedback. These are two separate, i
 
 The current model already stores identity, title, outcome/decision kind, status, priority, manual order, archive state, dates, blockers, milestone membership, dependencies, labels and Markdown body. Reports and history also exist. However, the shared editor primarily presents these as a long metadata form. A mature card needs a coherent definition of its purpose, content, relationships, actions and lifecycle, with the same behavior wherever it is opened.
 
-Evidence: [card contract](../../docs/03-DATA-FORMAT.md), [editor](../../apps/web/src/lib/Editor.svelte), [board card](../../apps/web/src/lib/BoardCard.svelte). The absence of native structured acceptance/checklist fields is a model gap; raw relationship IDs, disconnected reports and inconsistent actions are experience gaps. Changing the card's appearance alone does not resolve them.
+Evidence: [card contract](../../docs/03-DATA-FORMAT.md), [editor](../../apps/web/src/features/editor/Editor.svelte), [board card](../../apps/web/src/features/board/BoardCard.svelte). The absence of native structured acceptance/checklist fields is a model gap; raw relationship IDs, disconnected reports and inconsistent actions are experience gaps. Changing the card's appearance alone does not resolve them.
 
 | Area | Proposed product contract |
 |---|---|

@@ -18,7 +18,10 @@ const runtime = resolve(
 const config = JSON.parse(
   await readFile(join(runtime, "connection.json"), "utf8"),
 );
-const evidence = resolve(root, process.env.ASTRA_EVIDENCE_DIR ?? "test-results/browser/regressions/dialogs");
+const evidence = resolve(
+  root,
+  process.env.ASTRA_EVIDENCE_DIR ?? "test-results/browser/regressions/dialogs",
+);
 const mode = process.argv[2] ?? "all";
 const resultsFile = join(
   evidence,
@@ -29,7 +32,12 @@ const cli = (...args) => {
   let output;
   try {
     output = execFileSync(
-      join(root, "target", process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug", "projectctl"),
+      join(
+        root,
+        "target",
+        process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug",
+        "projectctl",
+      ),
       ["--socket", config.socket, ...args],
       { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -386,8 +394,12 @@ try {
         .getByRole("navigation", { name: "Workspace views" })
         .getByRole("button", { name: "Updates", exact: true });
       await expect(selected).toHaveAttribute("aria-current", "page");
-      await expect(page.locator(".asidebottom")).toContainText("Connected to host");
-      await expect(page.getByText("Loading resources…", { exact: true })).toBeHidden();
+      await expect(page.locator(".asidebottom")).toContainText(
+        "Connected to host",
+      );
+      await expect(
+        page.getByText("Loading resources…", { exact: true }),
+      ).toBeHidden();
       await snapshot("mobile-direct-updates");
       await expect(selected).toBeInViewport({ ratio: 1 });
       return selected.boundingBox();

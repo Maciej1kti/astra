@@ -255,3 +255,53 @@ pub struct Workspace {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
 }
+
+impl Document {
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Project { metadata, .. } => &metadata.id,
+            Self::Card { metadata, .. } => &metadata.id,
+            Self::Milestone { metadata, .. } => &metadata.id,
+            Self::Update { metadata, .. } => &metadata.id,
+        }
+    }
+
+    pub fn position(&self) -> Option<&str> {
+        match self {
+            Self::Card { metadata, .. } => Some(&metadata.position),
+            Self::Milestone { metadata, .. } => Some(&metadata.position),
+            _ => None,
+        }
+    }
+
+    pub fn status(&self) -> Option<&'static str> {
+        match self {
+            Self::Project { metadata, .. } => Some(match metadata.state {
+                ProjectState::Active => "active",
+                ProjectState::Paused => "paused",
+                ProjectState::Archived => "archived",
+            }),
+            Self::Card { metadata, .. } => Some(match metadata.status {
+                CardStatus::Planned => "planned",
+                CardStatus::Active => "active",
+                CardStatus::Review => "review",
+                CardStatus::Done => "done",
+                CardStatus::Cancelled => "cancelled",
+            }),
+            Self::Milestone { metadata, .. } => Some(match metadata.status {
+                MilestoneStatus::Planned => "planned",
+                MilestoneStatus::Active => "active",
+                MilestoneStatus::Achieved => "achieved",
+                MilestoneStatus::Cancelled => "cancelled",
+            }),
+            Self::Update { .. } => None,
+        }
+    }
+
+    pub fn dependencies(&self) -> &[String] {
+        match self {
+            Self::Card { metadata, .. } => metadata.depends_on.as_deref().unwrap_or_default(),
+            _ => &[],
+        }
+    }
+}

@@ -577,7 +577,10 @@ export async function runCardChecks({
             1,
           );
           assert.equal(
-            cli("get", `/api/v1/commands/${requests[0].requestId}?epoch=${requests[0].epoch}`).state,
+            cli(
+              "get",
+              `/api/v1/commands/${requests[0].requestId}?epoch=${requests[0].epoch}`,
+            ).state,
             "committed",
           );
           await expect(title()).toBeDisabled();
@@ -798,7 +801,12 @@ async function main() {
     let output;
     try {
       output = execFileSync(
-        join(root, "target", process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug", "projectctl"),
+        join(
+          root,
+          "target",
+          process.env.ASTRA_TEST_PROFILE === "release" ? "release" : "debug",
+          "projectctl",
+        ),
         ["--socket", config.socket, ...args],
         { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
       );

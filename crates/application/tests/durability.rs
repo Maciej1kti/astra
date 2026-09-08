@@ -57,7 +57,18 @@ fn command(journal: &Journal, expected: Option<String>) -> Command {
     }
 }
 fn project(now: i64) -> Value {
-    json!({"type":"project","metadata":{"schema_version":1,"id":PROJECT,"name":"Initial","state":"active","created_at":instant(now-10_000),"updated_at":instant(now-10_000)},"body":"# Outcome\n\nPreserve this body.\n"})
+    json!({
+        "type": "project",
+        "metadata": {
+            "schema_version": 1,
+            "id": PROJECT,
+            "name": "Initial",
+            "state": "active",
+            "created_at": instant(now-10_000),
+            "updated_at": instant(now-10_000),
+        },
+        "body": "# Outcome\n\nPreserve this body.\n",
+    })
 }
 fn create(journal: &Journal, store: &mut ProjectStore) -> Reply {
     Writer { journal }
@@ -78,7 +89,11 @@ fn rename(previous: Option<&Value>) -> Result<Value, Reply> {
 fn assert_contract(reply: &Reply, definition: &str) {
     let spec: Value =
         serde_json::from_str(include_str!("../../../contracts/openapi.generated.json")).unwrap();
-    let schema = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":format!("#/components/schemas/{definition}"),"components":spec["components"]});
+    let schema = json!({
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": format!("#/components/schemas/{definition}"),
+        "components": spec["components"],
+    });
     let validator = jsonschema::draft202012::options()
         .should_validate_formats(true)
         .build(&schema)
@@ -283,7 +298,7 @@ fn subprocess_crashes_at_every_durability_boundary_recover_once() {
         drop(store);
         drop(journal);
         let status = process::Command::new(std::env::current_exe().unwrap())
-            .args(["--exact", "fault_child", "--nocapture"])
+            .args(["--exact", "durability_tests::fault_child", "--nocapture"])
             .env("ASTRA_FAULT_HOME", &env.root)
             .env("ASTRA_FAULT_POINT", point)
             .stdout(process::Stdio::null())

@@ -1,0 +1,141 @@
+:root {
+  --bg: #f5f5ef;
+  --paper: #fffefa;
+  --ink: #263b32;
+  --muted: #616e63;
+  --line: #e2e5dc;
+  --green: #245840;
+  --accent: #dce8a9;
+  --hover: #f0f3e8;
+  --soft: #edf0e6;
+  --wash: var(--soft);
+  --notice-bg: #fff0e5;
+  --notice-ink: #803c22;
+  --notice-line: #efccb9;
+  --plan-bg: #dce8c8;
+  --review-bg: #eee8f4;
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  font-synthesis: none;
+}
+:root[data-theme="dark"] {
+  --bg: #17221d;
+  --paper: #202e27;
+  --ink: #e7eee4;
+  --muted: #a9b7aa;
+  --line: #46554a;
+  --green: #366748;
+  --accent: #405436;
+  --hover: #314236;
+  --soft: #2a392e;
+  --notice-bg: #463325;
+  --notice-ink: #ffcea5;
+  --notice-line: #8a6449;
+  --plan-bg: #364e30;
+  --review-bg: #45384f;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg: #17221d;
+    --paper: #202e27;
+    --ink: #e7eee4;
+    --muted: #a9b7aa;
+    --line: #46554a;
+    --green: #366748;
+    --accent: #405436;
+    --hover: #314236;
+    --soft: #2a392e;
+    --notice-bg: #463325;
+    --notice-ink: #ffcea5;
+    --notice-line: #8a6449;
+    --plan-bg: #364e30;
+    --review-bg: #45384f;
+    color-scheme: dark;
+  }
+}
+body {
+  margin: 0;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: 14px;
+}
+button {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-height: 42px;
+}
+button:hover {
+  border-color: #a5b69e;
+  background: var(--hover);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+input,
+select,
+textarea {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 11px 12px;
+  min-width: 0;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #87a76d;
+  outline-offset: 2px;
+}
+.primary {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.primary:hover {
+  background: #173f2d;
+  color: white;
+}
+.quiet {
+  background: transparent;
+  border-color: transparent;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  color: var(--muted);
+}
+.notice {
+  background: var(--notice-bg);
+  color: var(--notice-ink);
+  padding: 14px;
+  border: 1px solid var(--notice-line);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}

@@ -1,9 +1,5 @@
 //! Owner-managed directory capabilities. Browsers receive access only below these roots.
-use crate::{
-    AppError,
-    engine::{Engine, pretty},
-    wire,
-};
+use crate::{AppError, engine::Engine, source::pretty, wire};
 use project_store::{document::version, filesystem::Directory};
 use serde_json::{Value, json};
 use std::path::Path;
@@ -24,7 +20,10 @@ impl Engine {
         Ok(json!({"items":items.iter().map(root_view).collect::<Vec<_>>()}))
     }
     pub fn add_root(&self, path: &str, label: &str) -> Result<Value, AppError> {
-        let _gate = self.gate.write().map_err(|_| AppError::State)?;
+        let _gate = self
+            .gate
+            .write()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
         let directory = Directory::open(Path::new(path))?;
         let identity = directory.identity()?;
         let (mut items, expected) = self.root_records()?;
@@ -49,7 +48,10 @@ impl Engine {
         Ok(root_view(&value))
     }
     pub fn remove_root(&self, id: &str) -> Result<Value, AppError> {
-        let _gate = self.gate.write().map_err(|_| AppError::State)?;
+        let _gate = self
+            .gate
+            .write()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
         let (mut items, expected) = self.root_records()?;
         let old = items.len();
         items.retain(|item| item["id"] != id);
@@ -98,7 +100,7 @@ impl Engine {
         cursor: Option<&str>,
     ) -> Result<Value, AppError> {
         let directory = self.allowed_directory(id, relative)?;
-        let workspace = self.workspace()?.0;
+        let workspace = self.workspace()?.value;
         let mut names = directory.names()?;
         names.sort();
         let mut items = Vec::new();
@@ -117,11 +119,10 @@ impl Engine {
                 } else {
                     format!("{relative}/{name}")
                 };
-                let registered = workspace["projects"]
-                    .as_array()
-                    .unwrap()
+                let registered = workspace
+                    .projects
                     .iter()
-                    .any(|p| p["path"].as_str() == child.path().to_str());
+                    .any(|p| Some(p.path.as_str()) == child.path().to_str());
                 items.push(
                     json!({"name":name,"relative_path":relative_path,"registered":registered}),
                 );

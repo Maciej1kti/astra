@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   readBoardView,
   writeBoardView,
-} from "../../apps/web/src/lib/board-view.ts";
+} from "../../apps/web/src/features/board/board-view.ts";
 
 test("board preferences isolate projects and never persist card data or cursors", () => {
   const data = new Map();

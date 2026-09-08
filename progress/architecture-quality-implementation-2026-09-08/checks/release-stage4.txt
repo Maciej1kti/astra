@@ -1,0 +1,36 @@
+   Compiling project-domain v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/domain)
+   Compiling projectd v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectd)
+   Compiling project-store v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/project-store)
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+warning: the `version:` in this pattern is redundant
+  --> crates/application/src/tags.rs:89:50
+   |
+89 |         let crate::Versioned { value: workspace, version: version } = self.workspace()?;
+   |                                                  ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+   |
+   = note: `#[warn(non_shorthand_field_patterns)]` on by default
+
+warning: the `version:` in this pattern is redundant
+   --> crates/application/src/tags.rs:140:50
+    |
+140 |         let crate::Versioned { value: workspace, version: version } = self.workspace()?;
+    |                                                  ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+   Compiling projectctl v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/projectctl)
+warning: the `version:` in this pattern is redundant
+   --> crates/projectd/src/dispatch.rs:380:17
+    |
+380 |                 version: version,
+    |                 ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+    |
+    = note: `#[warn(non_shorthand_field_patterns)]` on by default
+
+warning: the `version:` in this pattern is redundant
+   --> crates/projectd/src/dispatch.rs:387:17
+    |
+387 |                 version: version,
+    |                 ^^^^^^^^^^^^^^^^ help: use shorthand field pattern: `version`
+
+warning: `projectd` (lib) generated 2 warnings (run `cargo fix --lib -p projectd` to apply 2 suggestions)
+warning: `project-application` (lib) generated 2 warnings (run `cargo fix --lib -p project-application` to apply 2 suggestions)
+    Finished `release` profile [optimized] target(s) in 10.87s

@@ -80,9 +80,9 @@ small is local, medium spans several modules, and large changes an important lif
 
 ### 1. P1 — Planning pagination does not recognize the backend's stale-page error
 
-**Evidence:** [views.rs](../../crates/application/src/views.rs), lines 11 and 174;
-[pagination.ts](../../apps/web/src/lib/pagination.ts), line 7;
-[GanttView.svelte](../../apps/web/src/lib/GanttView.svelte), line 250.
+**Evidence:** [views.rs](../../crates/application/src/views/mod.rs), lines 11 and 174;
+[pagination.ts](../../apps/web/src/lib/api/pagination.ts), line 7;
+[GanttView.svelte](../../apps/web/src/features/planning/GanttView.svelte), line 250.
 
 Attention, calendar, board and Gantt return `PAGE_STALE`. The shared `cursorPage`
 helper only recovers from `CURSOR_STALE`, and Gantt has a separate check for that
@@ -109,7 +109,7 @@ real transport/browser regression rather than another mock with an invented code
 
 **Evidence:** [OpenAPI](../../contracts/openapi.yaml), line 1579;
 [dispatch.rs](../../crates/projectd/src/dispatch.rs), line 389;
-[Editor.svelte](../../apps/web/src/lib/Editor.svelte), line 515;
+[Editor.svelte](../../apps/web/src/features/editor/Editor.svelte), line 515;
 [typed.rs](../../crates/projectctl/src/typed.rs), line 284.
 
 The status endpoint declares a required UUID `epoch` query parameter, but the
@@ -133,7 +133,7 @@ be classified as safe new commands solely from `COMMAND_NOT_FOUND`.
 
 ### 3. P2 — Relation search can hide valid matches behind unrelated resource types
 
-**Evidence:** [Editor.svelte](../../apps/web/src/lib/Editor.svelte), line 119;
+**Evidence:** [Editor.svelte](../../apps/web/src/features/editor/Editor.svelte), line 119;
 [dispatch.rs](../../crates/projectd/src/dispatch.rs), lines 64 and 341.
 
 The editor searches all resource types with `limit=50`, then filters the returned
@@ -179,9 +179,9 @@ still fail safely. No benefit should be claimed from skipping required durabilit
 ### 5. P2 — Tag suggestions still pay for a fresh workspace-wide management scan
 
 **Evidence:** [tags.rs](../../crates/application/src/tags.rs), lines 66 and 176;
-[tag-suggestions.ts](../../apps/web/src/lib/tag-suggestions.ts), line 50;
-[view-queries.ts](../../apps/web/src/lib/view-queries.ts), line 50;
-[TagPicker.svelte](../../apps/web/src/lib/TagPicker.svelte), line 42.
+[tag-suggestions.ts](../../apps/web/src/features/tags/tag-suggestions.ts), line 50;
+[view-queries.ts](../../apps/web/src/features/workspace/view-queries.ts), line 50;
+[TagPicker.svelte](../../apps/web/src/features/tags/TagPicker.svelte), line 42.
 
 The browser cache already deduplicates requests and has a 30-second TTL. However,
 any card/project change invalidates it, including changes from other projects.
@@ -202,8 +202,8 @@ finds an unindexed external label with its original source version.
 
 ### 6. P2 — Unrelated writes invalidate every project's pagination snapshot
 
-**Evidence:** [index.rs](../../crates/application/src/index.rs), lines 269 and 703;
-[views.rs](../../crates/application/src/views.rs), lines 71, 142 and 172.
+**Evidence:** [index.rs](../../crates/application/src/index/mod.rs), lines 269 and 703;
+[views.rs](../../crates/application/src/views/mod.rs), lines 71, 142 and 172.
 
 List and planning cursors include the global index sequence. The probe confirms
 that editing only project B invalidates project A's list, Attention, board and
@@ -224,7 +224,7 @@ invalidate the correct snapshot, with no duplicate or skipped results.
 
 **Evidence:** [App.svelte](../../apps/web/src/App.svelte), especially `refresh`,
 session handling, registration and route restoration;
-[Editor.svelte](../../apps/web/src/lib/Editor.svelte), especially `save`.
+[Editor.svelte](../../apps/web/src/features/editor/Editor.svelte), especially `save`.
 
 `App.svelte` has 2,407 lines, including 834 script and 929 style lines. The editor
 has 1,010 lines, including 546 script lines. File size alone is not a defect:
@@ -249,9 +249,9 @@ conflict, pending-command and unsaved-draft behavior as acceptance constraints.
 ### 8. P2 — Transport types and command invariants need one maintained boundary
 
 **Evidence:** [generate-contracts.mjs](../../scripts/generate-contracts.mjs), line 5;
-[api.ts](../../apps/web/src/lib/api.ts), lines 13, 54, 169 and 188;
-[DateChange.svelte](../../apps/web/src/lib/DateChange.svelte), line 74;
-[MoveChange.svelte](../../apps/web/src/lib/MoveChange.svelte), line 70.
+[api.ts](../../apps/web/src/lib/api/api.ts), lines 13, 54, 169 and 188;
+[DateChange.svelte](../../apps/web/src/features/planning/DateChange.svelte), line 74;
+[MoveChange.svelte](../../apps/web/src/features/board/MoveChange.svelte), line 70.
 
 Generated types cover the domain schema. API summaries, pagination, bootstrap,
 command responses and error handling are largely handwritten and widened to strings

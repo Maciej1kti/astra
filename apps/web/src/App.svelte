@@ -1,118 +1,228 @@
 <script lang="ts">
-  import { onMount, tick, untrack } from "svelte";
+  import WorkspaceNavigation from "./features/workspace/WorkspaceNavigation.svelte";
+  import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
+  import WorkspaceFilters from "./features/workspace/WorkspaceFilters.svelte";
+  import "./styles/workspace.css";
+  import {
+    editTarget,
+    createTarget,
+    type EditorTarget,
+    type CreateType,
+  } from "./features/editor/editor-target";
+  import type { CardCreate } from "./lib/contracts/api.generated";
+  import PairingScreen from "./features/session/PairingScreen.svelte";
+  import { navigationState } from "./features/workspace/navigation-state.svelte";
+  import { sessionState } from "./features/session/session.svelte";
+  import { viewData } from "./features/workspace/view-data.svelte";
+  import { onMount, untrack } from "svelte";
   import {
     viewQueryKey,
     viewSections,
-    loadView,
-    resourcePage as readResourcePage,
-    attentionPage as readAttentionPage,
     affectedSections,
     invalidatesTags,
-    invalidationBatch,
     type Attention,
     type ViewQuery,
-    type Section,
-  } from "./lib/view-queries";
-  import { projectionNotice } from "./lib/projection-state";
-  import { cursorPage } from "./lib/pagination";
-  import { isAbortError } from "./lib/read-requests";
-  import { invalidateTagSuggestions } from "./lib/tag-suggestions";
-  import ResourceMetadata from "./lib/ResourceMetadata.svelte";
-  import { resourceLabel } from "./lib/resource-presentation";
+  } from "./features/workspace/view-queries";
+
+  import { isAbortError } from "./lib/api/read-requests";
+  import { invalidateTagSuggestions } from "./features/tags/tag-suggestions";
+  import ResourceMetadata from "./lib/ui/ResourceMetadata.svelte";
+  import { resourceLabel } from "./lib/resources/resource-presentation";
+  import { readRoute, primaryResource } from "./features/workspace/navigation";
+
+  import { applyTheme, readTheme } from "./features/settings/appearance";
+  import RegistrationBrowser from "./features/registration/RegistrationBrowser.svelte";
+  import DateChange from "./features/planning/DateChange.svelte";
+  import MoveChange from "./features/board/MoveChange.svelte";
+  import type {
+    DateProposal,
+    MoveProposal,
+  } from "./features/planning/proposals";
+  import Editor from "./features/editor/Editor.svelte";
+  import Settings from "./features/settings/Settings.svelte";
+  import TagManager from "./features/tags/TagManager.svelte";
+  import NativeProject from "./features/registration/NativeProject.svelte";
+  import FocusOrder from "./features/workspace/FocusOrder.svelte";
+  import GitObservation from "./features/host/GitObservation.svelte";
+  import Diagnostics from "./features/host/Diagnostics.svelte";
   import {
-    readRoute,
-    writeRoute,
-    searchOnlyNavigation,
-    primaryResource,
-    workspaceViews,
-    type View,
-    type WorkspaceRoute,
-  } from "./lib/navigation";
-  import type { CalendarLayout } from "./lib/planning-navigation";
-  import { applyTheme, readTheme } from "./lib/appearance";
+    api,
+    resourcePath,
+    type Summary,
+    type Resource,
+  } from "./lib/api/api";
+
+  const routing = navigationState(
+    readRoute(
+      new URLSearchParams(location.search),
+      new Date().toISOString().slice(0, 10),
+    ),
+    {
+      today: () => today,
+      hasEditor: () => !!editor,
+      requestClose: () => editorInstance?.requestClose() ?? false,
+      dialogsOpen: () =>
+        !!(
+          dateDraft ||
+          moveDraft ||
+          settings ||
+          adding ||
+          nativeAdding ||
+          arrangeFocus ||
+          manageTags ||
+          gitProject ||
+          diagnostics
+        ),
+      clearEditor: () => {
+        editor = null;
+      },
+      loadResource: (target) =>
+        api<Resource>(
+          resourcePath({
+            project_id: target.project,
+            type: target.type as Summary["type"],
+            id: target.id,
+          }),
+        ),
+      showResource: (target, resource) => {
+        editor = editTarget(target.project, resource);
+      },
+      refresh: () => refresh(),
+      error: message,
+    },
+  );
+  const assignRoute = routing.assign;
+  const restoreRoute = routing.restore;
+  const keepEditing = routing.keepEditing;
+  const historyNavigation = () => {
+    if (boot) routing.fromHistory();
+  };
+
+  const session = sessionState({
+    error: message,
+    ended: sessionEnded,
+    foreground: async () => {
+      if (routing.current.project)
+        await api(`/api/v1/projects/${routing.current.project}`);
+      await refresh();
+    },
+    changes: (events) => {
+      if (events.some(invalidatesTags)) invalidateTagSuggestions();
+      const sections = [
+        ...new Set(
+          events.flatMap((event) => affectedSections(event, currentQuery())),
+        ),
+      ];
+      if (sections.length) void refresh(sections).catch(message);
+    },
+  });
+  const startPairing = () => {
+    error = "";
+    return session.startPairing();
+  };
+  const checkPairing = () => {
+    error = "";
+    return session.checkPairing(initialize);
+  };
+  async function initialize() {
+    error = "";
+    await session.initialize(async (preferences) => {
+      const route = readRoute(
+        new URLSearchParams(location.search),
+        today,
+        preferences.preferences.default_view ?? "focus",
+      );
+      assignRoute(route);
+      weekStart = preferences.preferences.week_start ?? "monday";
+      await refresh();
+      if (!editor && route.resource)
+        await open({
+          project_id: route.resource.project,
+          type: route.resource.type as Summary["type"],
+          id: route.resource.id,
+        });
+    });
+  }
+  async function logout() {
+    try {
+      await session.logout();
+      error = "";
+    } catch (cause) {
+      message(cause);
+    }
+  }
+
+  const data = viewData(currentQuery, () => !!boot, message);
+  const refresh = data.refresh;
+  const more = data.more;
+  const moreAttention = data.moreAttention;
+
   onMount(() => applyTheme(readTheme()));
-  import RegistrationBrowser from "./lib/RegistrationBrowser.svelte";
-  let Board = $state<typeof import("./lib/Board.svelte").default | null>(null);
+
+  let Board = $state<
+    typeof import("./features/board/Board.svelte").default | null
+  >(null);
   let boardLoadError = $state("");
   async function loadBoard() {
     boardLoadError = "";
     try {
-      Board = (await import("./lib/Board.svelte")).default;
+      Board = (await import("./features/board/Board.svelte")).default;
     } catch {
       boardLoadError =
         "The board could not be loaded. Retry, or reload after preserving any open draft.";
     }
   }
   $effect(() => {
-    if (view === "board" && project && !Board) void loadBoard();
+    if (routing.current.view === "board" && routing.current.project && !Board)
+      void loadBoard();
   });
-  import DateChange from "./lib/DateChange.svelte";
-  import MoveChange from "./lib/MoveChange.svelte";
-  import type { DateProposal, MoveProposal } from "./lib/proposals";
-  let dateDraft = $state<DateProposal | null>(null),
-    moveDraft = $state<MoveProposal | null>(null);
-  import Editor from "./lib/Editor.svelte";
-  import Settings from "./lib/Settings.svelte";
-  import TagManager from "./lib/TagManager.svelte";
+
+  let dateDraft = $state<DateProposal | null>(null);
+  let moveDraft = $state<MoveProposal | null>(null);
+
   let manageTags = $state(false);
-  import NativeProject from "./lib/NativeProject.svelte";
+
   let nativeAdding = $state(false);
-  import FocusOrder from "./lib/FocusOrder.svelte";
+
   let arrangeFocus = $state(false);
-  import GitObservation from "./lib/GitObservation.svelte";
+
   let gitProject = $state("");
-  import Diagnostics from "./lib/Diagnostics.svelte";
+
   let diagnostics = $state(false);
   let settings = $state(false);
   let DateViews = $state<
-    typeof import("./lib/DateViews.svelte").default | null
+    typeof import("./features/planning/DateViews.svelte").default | null
   >(null);
-  let viewRevision = $state(0),
-    weekStart = $state("monday");
+  const viewRevision = $derived(data.state.revision);
+  let weekStart = $state("monday");
   let dateViewLoadError = $state("");
   async function loadDateViews() {
     dateViewLoadError = "";
     try {
-      DateViews = (await import("./lib/DateViews.svelte")).default;
+      DateViews = (await import("./features/planning/DateViews.svelte"))
+        .default;
     } catch {
       dateViewLoadError =
         "The planning view could not be loaded. Retry, or reload after preserving any open draft.";
     }
   }
   $effect(() => {
-    if ((view === "calendar" || view === "gantt") && !DateViews)
+    if (
+      (routing.current.view === "calendar" ||
+        routing.current.view === "gantt") &&
+      !DateViews
+    )
       void loadDateViews();
   });
-  import {
-    api,
-    clearReads,
-    configure,
-    resourcePath,
-    ApiError,
-    type Bootstrap,
-    type Summary,
-    type Resource,
-  } from "./lib/api";
-  type Pairing = {
-    id: string;
-    challenge: string;
-    state: string;
-    pending_csrf_token: string;
-    device_label: string;
-  };
-  let attentionRows = $state<Attention[]>([]),
-    attentionCursor = $state<string | null>(null),
-    attentionPaged = $state(false);
-  let pageHistory = $state<Record<string, (string | null)[]>>({});
-  let pageCursors = $state<Record<string, string | null>>({});
-  let unreadOnly = $state(false);
-  let refreshGeneration = 0;
-  let projectsReady = false;
-  let refreshRead: AbortController | undefined;
-  let refreshJob: { key: string; promise: Promise<void> } | undefined;
-  const queuedSections = new Set<Section>();
-  let queryNotice = $state("");
-  let sectionNotices = $state<Partial<Record<Section, string>>>({});
+
+  const attentionRows = $derived(data.state.attentionRows);
+  const attentionCursor = $derived(data.state.attentionCursor);
+  const attentionPaged = $derived(data.state.attentionPaged);
+  const pageHistory = $derived(data.state.pageHistory);
+  const pageCursors = $derived(data.state.pageCursors);
+
+  const queryNotice = $derived(data.state.queryNotice);
+  const sectionNotices = $derived(data.state.sectionNotices);
   const projectionMessage = $derived(
     [
       ...new Set(
@@ -122,65 +232,29 @@
       ),
     ].join(" "),
   );
-  let attentionStart: string | null = null;
-  let navigationGeneration = 0;
-  let loadedQueryKey = $state("");
+
+  const loadedQueryKey = $derived(data.state.loadedQueryKey);
   let clockTime = $state(Date.now());
-  let loadingMore = $state(false);
-  let focusCards = $state<Summary[]>([]);
-  let boot = $state<Bootstrap | null>(null),
-    pairing = $state<Pairing | null>(null),
-    device = $state("My browser");
-  let projects = $state<Summary[]>([]),
-    cards = $state<Summary[]>([]),
-    milestones = $state<Summary[]>([]),
-    updates = $state<Summary[]>([]),
-    focus = $state<{ project_id: string; card_id: string }[]>([]);
-  const initialRoute = readRoute(
-    new URLSearchParams(location.search),
-    new Date().toISOString().slice(0, 10),
-  );
-  let view = $state<View>(initialRoute.view),
-    project = $state(initialRoute.project),
-    search = $state(initialRoute.search),
-    collection = $state<"cards" | "milestones">(initialRoute.collection),
-    archived = $state(initialRoute.archived),
-    statusFilter = $state(initialRoute.status),
-    priorityFilter = $state(initialRoute.priority),
-    labelFilter = $state(initialRoute.label),
-    calendarDate = $state(initialRoute.calendarDate),
-    calendarLayout = $state<CalendarLayout>(initialRoute.calendarLayout),
-    error = $state(""),
-    loading = $state(true),
-    connected = $state(false),
-    busy = $state(false);
+  const loadingMore = $derived(data.state.loadingMore);
+  const focusCards = $derived(data.state.focusCards);
+  const boot = $derived(session.boot);
+  const pairing = $derived(session.pairing);
+
+  const projects = $derived(data.state.projects);
+  const cards = $derived(data.state.cards);
+  const milestones = $derived(data.state.milestones);
+  const updates = $derived(data.state.updates);
+  const focus = $derived(data.state.focus);
+
+  let error = $state("");
+  const loading = $derived(session.loading);
+  const connected = $derived(session.connected);
+  const busy = $derived(session.busy);
   let editorInstance = $state<{ requestClose: () => boolean }>();
-  let navElement = $state<HTMLElement>();
-  let restoringRoute = $state(false);
-  let lastRouteUrl = location.pathname + location.search;
-  let routeReady = false;
-  let pendingNavigation: URLSearchParams | null = null;
-  let editor = $state<{
-      project: string;
-      type: string;
-      resource: Resource | null;
-      initialMetadata?: Record<string, unknown>;
-      autoCreate?: boolean;
-    } | null>(null),
-    adding = $state(false);
-  let month = $state(initialRoute.month);
-  let source: EventSource | undefined;
-  const streamUpdates = invalidationBatch((events) => {
-    if (!boot) return;
-    if (events.some(invalidatesTags)) invalidateTagSuggestions();
-    const sections = [
-      ...new Set(
-        events.flatMap((event) => affectedSections(event, currentQuery())),
-      ),
-    ];
-    if (sections.length) void refresh(sections).catch(message);
-  });
-  const views = workspaceViews;
+
+  let editor = $state<EditorTarget | null>(null);
+  let adding = $state(false);
+
   const statuses = ["planned", "active", "review", "done", "cancelled"];
   let today = $derived(
     boot
@@ -195,46 +269,62 @@
   let filtered = $derived(
     cards.filter(
       (c) =>
-        (!project || c.project_id === project) &&
-        (view === "list" ? !!c.archived === archived : !c.archived) &&
-        (view === "list" ||
-          c.title.toLowerCase().includes(search.trim().toLowerCase())),
+        (!routing.current.project ||
+          c.project_id === routing.current.project) &&
+        (routing.current.view === "list"
+          ? !!c.archived === routing.current.archived
+          : !c.archived) &&
+        (routing.current.view === "list" ||
+          c.title
+            .toLowerCase()
+            .includes(routing.current.search.trim().toLowerCase())),
     ),
   );
   let visibleUpdates = $derived(
     updates.filter(
-      (c) => (!project || c.project_id === project) && (!unreadOnly || !c.read),
+      (c) =>
+        (!routing.current.project ||
+          c.project_id === routing.current.project) &&
+        (!routing.current.unreadOnly || !c.read),
     ),
   );
   function currentQuery(): ViewQuery {
     return {
-      view,
-      project,
-      search,
-      collection,
-      archived,
-      status: statusFilter,
-      priority: priorityFilter,
-      label: labelFilter,
+      view: routing.current.view,
+      project: routing.current.project,
+      search: routing.current.search,
+      collection: routing.current.collection,
+      archived: routing.current.archived,
+      status: routing.current.status,
+      priority: routing.current.priority,
+      label: routing.current.label,
     };
   }
   let queryKey = $derived(viewQueryKey(currentQuery()));
   let queryReady = $derived(loadedQueryKey === queryKey);
-  let selectedProject = $derived(projects.find((p) => p.id === project));
+  let selectedProject = $derived(
+    projects.find((p) => p.id === routing.current.project),
+  );
   let visibleFocus = $derived(
     focusCards.filter(
       (item) =>
-        (!project || item.project_id === project) &&
+        (!routing.current.project ||
+          item.project_id === routing.current.project) &&
         !item.archived &&
-        item.title.toLowerCase().includes(search.trim().toLowerCase()),
+        item.title
+          .toLowerCase()
+          .includes(routing.current.search.trim().toLowerCase()),
     ),
   );
   let attention = $derived.by(() => {
     const grouped = new Map<string, Attention & { reasons: string[] }>();
     for (const item of attentionRows) {
       if (
-        (project && item.project_id !== project) ||
-        !item.label.toLowerCase().includes(search.trim().toLowerCase())
+        (routing.current.project &&
+          item.project_id !== routing.current.project) ||
+        !item.label
+          .toLowerCase()
+          .includes(routing.current.search.trim().toLowerCase())
       )
         continue;
       const key = `${item.project_id}:${item.target.type}:${item.target.id}`;
@@ -247,30 +337,11 @@
     return [...grouped.values()];
   });
   function sessionEnded() {
-    refreshGeneration++;
-    navigationGeneration++;
-    pendingNavigation = null;
-    restoringRoute = false;
-    routeReady = false;
-    loadedQueryKey = "";
-    streamUpdates.cancel();
-    refreshRead?.abort();
-    refreshJob = undefined;
-    queuedSections.clear();
-    projectsReady = false;
-    sectionNotices = {};
-    clearReads();
     invalidateTagSuggestions(false);
-    source?.close();
-    boot = null;
-    connected = false;
-    projects = [];
-    cards = [];
-    milestones = [];
-    updates = [];
-    focus = [];
-    focusCards = [];
-    attentionRows = [];
+    routing.reset();
+
+    data.reset();
+
     adding = false;
     error = "Your session ended. Reconnect this browser to continue.";
   }
@@ -283,485 +354,94 @@
     if (isAbortError(e)) return;
     error = e instanceof Error ? e.message : String(e);
   }
-  async function initialize() {
-    loading = true;
-    error = "";
-    try {
-      boot = await api<Bootstrap>("/api/v1/bootstrap");
-      configure(boot);
-      window.dispatchEvent(new Event("session-restored"));
-      const preferences = await api<{
-        preferences: { default_view?: View; week_start?: string };
-      }>("/api/v1/workspace/preferences");
-      const route = readRoute(
-        new URLSearchParams(location.search),
-        today,
-        preferences.preferences.default_view ?? "focus",
-      );
-      assignRoute(route);
-      weekStart = preferences.preferences.week_start ?? "monday";
-      await refresh();
-      connect();
-      if (!editor && route.resource)
-        await open({
-          project_id: route.resource.project,
-          type: route.resource.type as Summary["type"],
-          id: route.resource.id,
-        });
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) {
-        boot = null;
-        projects = [];
-        cards = [];
-        milestones = [];
-        updates = [];
-        focus = [];
-        try {
-          pairing = await api<Pairing>("/api/v1/auth/pairings/current");
-        } catch {
-          pairing = null;
-        }
-      } else message(e);
-    } finally {
-      loading = false;
-    }
-  }
 
-  async function moreAttention(first = false) {
-    if (loadingMore) return;
-    loadingMore = true;
-    const generation = refreshGeneration;
-    const target = first ? null : attentionCursor;
-    try {
-      const result = await cursorPage(
-        (cursor) => readAttentionPage(project, cursor),
-        target,
-      );
-      if (generation !== refreshGeneration) return;
-      attentionRows = result.value.items;
-      sectionNotices.attention = projectionNotice(result.value);
-      attentionCursor = result.value.page.next_cursor;
-      attentionStart = result.reset ? null : target;
-      attentionPaged = attentionStart !== null;
-      if (result.reset)
-        queryNotice =
-          "Attention changed. Showing the first page of the latest results.";
-    } catch (e) {
-      message(e);
-    } finally {
-      loadingMore = false;
-    }
-  }
-  async function foreground() {
-    if (document.visibilityState !== "visible" || !boot) return;
-    try {
-      const current = await api<Bootstrap>("/api/v1/bootstrap");
-      configure(current);
-      boot = current;
-      if (project) await api(`/api/v1/projects/${project}`);
-      await refresh();
-    } catch (e) {
-      message(e);
-    }
-  }
-  function refresh(sections?: Section[]): Promise<void> {
-    const query = currentQuery();
-    const requestedQuery = viewQueryKey(query);
-    const routeChanged = loadedQueryKey !== requestedQuery;
-    const needed = viewSections(query);
-    const requested = routeChanged ? needed : (sections ?? needed);
-    if (refreshJob?.key === requestedQuery) {
-      for (const section of requested) queuedSections.add(section);
-      return refreshJob.promise;
-    }
-    refreshRead?.abort();
-    const controller = new AbortController();
-    refreshRead = controller;
-    const generation = ++refreshGeneration;
-    const selected = [...new Set([...requested, ...queuedSections])].filter(
-      (section) =>
-        needed.includes(section) &&
-        (section !== "projects" ||
-          !projectsReady ||
-          !routeChanged ||
-          sections?.includes("projects") ||
-          queuedSections.has("projects")),
-    );
-    queuedSections.clear();
-    const cursors: Record<string, string | null> = routeChanged
-      ? {}
-      : {
-          ...Object.fromEntries(
-            Object.entries(pageHistory).map(([kind, history]) => [
-              kind,
-              history.at(-1) ?? null,
-            ]),
-          ),
-          attention: attentionStart,
-        };
-    if (routeChanged) {
-      queryNotice = "";
-      pageHistory = {};
-      pageCursors = {};
-      attentionStart = null;
-    }
-    const promise = (async () => {
-      try {
-        const result = await loadView(
-          query,
-          selected,
-          cursors,
-          controller.signal,
-        );
-        if (generation !== refreshGeneration || requestedQuery !== queryKey)
-          return;
-        sectionNotices = { ...sectionNotices, ...result.notices };
-        if (result.projects) {
-          projects = result.projects;
-          projectsReady = true;
-        }
-        if (result.focus) {
-          focus = result.focus;
-          focusCards = result.focusCards ?? [];
-        }
-        if (result.attention) {
-          attentionRows = result.attention.value.items;
-          attentionCursor = result.attention.value.page.next_cursor;
-          if (result.attention.reset) {
-            attentionStart = null;
-            queryNotice =
-              "Attention changed. Showing the first page of the latest results.";
-          }
-          attentionPaged = attentionStart !== null;
-        }
-        for (const [kind, page] of Object.entries(result.pages)) {
-          if (kind === "card") cards = page.value.items;
-          else if (kind === "milestone") milestones = page.value.items;
-          else updates = page.value.items;
-          pageCursors[kind] = page.value.page.next_cursor;
-          if (routeChanged || page.reset || !pageHistory[kind])
-            pageHistory[kind] = [null];
-          if (page.reset)
-            queryNotice =
-              "This collection changed. Showing the first page of the latest results.";
-        }
-        loadedQueryKey = requestedQuery;
-        if (!routeChanged && selected.includes("planning")) viewRevision++;
-      } finally {
-        if (generation === refreshGeneration) {
-          refreshJob = undefined;
-          if (queuedSections.size && boot) {
-            const followup = [...queuedSections];
-            queuedSections.clear();
-            void refresh(followup).catch(message);
-          }
-        }
-      }
-    })();
-    refreshJob = { key: requestedQuery, promise };
-    return promise;
-  }
-  async function more(type: string, back = false) {
-    if (
-      loadingMore ||
-      (!back && !pageCursors[type]) ||
-      (back && (pageHistory[type]?.length ?? 0) < 2)
-    )
-      return;
-    loadingMore = true;
-    const generation = refreshGeneration;
-    const query = currentQuery();
-    try {
-      const history = pageHistory[type] ?? [null];
-      const target = back ? history[history.length - 2] : pageCursors[type];
-      const result = await cursorPage(
-        (cursor) => readResourcePage(query, type, cursor),
-        target,
-      );
-      if (generation !== refreshGeneration || viewQueryKey(query) !== queryKey)
-        return;
-      pageHistory[type] = result.reset
-        ? [null]
-        : back
-          ? history.slice(0, -1)
-          : [...history, target];
-      if (type === "card") cards = result.value.items;
-      else if (type === "milestone") milestones = result.value.items;
-      else updates = result.value.items;
-      pageCursors[type] = result.value.page.next_cursor;
-      sectionNotices[type as Section] = projectionNotice(result.value);
-      if (result.reset)
-        queryNotice =
-          "This collection changed. Showing the first page of the latest results.";
-    } catch (e) {
-      message(e);
-    } finally {
-      loadingMore = false;
-    }
-  }
-  function connect() {
-    source?.close();
-    if (!boot) return;
-    source = new EventSource(
-      `/api/v1/events?cursor=${encodeURIComponent(boot.snapshot_cursor)}`,
-    );
-    source.onopen = () => (connected = true);
-    source.onerror = () => {
-      connected = false;
-      // A closed stream may be a network outage or a revoked session. Probe once;
-      // the API layer distinguishes 401 without discarding drafts on a timeout.
-      void api("/api/v1/bootstrap").catch(() => {});
-    };
-    for (const kind of [
-      "changed",
-      "health_changed",
-      "resync_required",
-      "workspace_changed",
-    ])
-      source.addEventListener(kind, (event) => {
-        try {
-          streamUpdates.push({
-            ...JSON.parse((event as MessageEvent).data),
-            kind,
-          });
-        } catch {
-          streamUpdates.push({ kind: "resync_required" });
-        }
-      });
-  }
-  async function startPairing() {
-    busy = true;
-    error = "";
-    try {
-      pairing = await api<Pairing>("/api/v1/auth/pairings", "POST", {
-        device_label: device,
-      });
-    } catch (e) {
-      message(e);
-    } finally {
-      busy = false;
-    }
-  }
-  async function checkPairing() {
-    busy = true;
-    error = "";
-    try {
-      pairing = await api<Pairing>("/api/v1/auth/pairings/current");
-      if (pairing.state === "approved" || pairing.state === "claimed") {
-        await api(
-          "/api/v1/auth/pairings/claim",
-          "POST",
-          {},
-          { "X-CSRF-Token": pairing.pending_csrf_token },
-        );
-        await initialize();
-      }
-    } catch (e) {
-      message(e);
-    } finally {
-      busy = false;
-    }
-  }
   async function open(item: Pick<Summary, "type" | "id" | "project_id">) {
-    const generation = ++navigationGeneration;
-    const requestedView = view,
-      requestedProject = project;
+    const generation = ++routing.generation;
+    const requestedView = routing.current.view,
+      requestedProject = routing.current.project;
     error = "";
     try {
       const resource = await api<Resource>(resourcePath(item));
       if (
-        generation !== navigationGeneration ||
-        view !== requestedView ||
-        project !== requestedProject
+        generation !== routing.generation ||
+        routing.current.view !== requestedView ||
+        routing.current.project !== requestedProject
       )
         return;
-      editor = {
-        project: item.project_id,
-        type: item.type,
-        resource,
-      };
+      editor = editTarget(item.project_id, resource);
     } catch (e) {
       if (
-        generation === navigationGeneration &&
-        view === requestedView &&
-        project === requestedProject
+        generation === routing.generation &&
+        routing.current.view === requestedView &&
+        routing.current.project === requestedProject
       )
         message(e);
     }
   }
   function create(
-    type: string,
-    initialMetadata: Record<string, unknown> = {},
+    type: CreateType,
+    initialMetadata: Partial<CardCreate> = {},
     autoCreate = false,
   ) {
-    if (!project) {
+    if (!routing.current.project) {
       error = "Select a project before creating a resource.";
       return;
     }
-    navigationGeneration++;
-    editor = { project, type, resource: null, initialMetadata, autoCreate };
+    routing.generation++;
+    editor = createTarget(
+      routing.current.project,
+      type,
+      initialMetadata,
+      autoCreate,
+    );
   }
   async function saved() {
     editor = null;
-    if (pendingNavigation) await restoreRoute(pendingNavigation);
+    if (routing.pending) await restoreRoute(routing.pending);
     else await refresh().catch(message);
   }
   function addProject() {
     nativeAdding = true;
   }
-  async function logout() {
-    try {
-      await api("/api/v1/auth/logout", "POST", {});
-      sessionEnded();
-      error = "";
-      pairing = null;
-      connected = false;
-    } catch (e) {
-      message(e);
-    }
-  }
+
   function projectLabel(id: string) {
     return projects.find((p) => p.id === id)?.title ?? "Unavailable project";
   }
   function changeMonth(delta: number) {
-    const [year, m] = month.split("-").map(Number);
-    month = new Date(Date.UTC(year, m - 1 + delta, 1))
+    const [year, m] = routing.current.month.split("-").map(Number);
+    routing.current.month = new Date(Date.UTC(year, m - 1 + delta, 1))
       .toISOString()
       .slice(0, 7);
   }
-  function assignRoute(route: WorkspaceRoute) {
-    view = route.view;
-    project = route.project;
-    search = route.search;
-    collection = route.collection;
-    archived = route.archived;
-    statusFilter = route.status;
-    priorityFilter = route.priority;
-    labelFilter = route.label;
-    unreadOnly = route.unreadOnly;
-    month = route.month;
-    calendarDate = route.calendarDate;
-    calendarLayout = route.calendarLayout;
-  }
-  async function restoreRoute(params: URLSearchParams) {
-    const generation = ++navigationGeneration;
-    restoringRoute = true;
-    pendingNavigation = null;
-    try {
-      const route = readRoute(params, today);
-      assignRoute(route);
-      editor = null;
-      if (route.resource) {
-        const resource = await api<Resource>(
-          resourcePath({
-            project_id: route.resource.project,
-            type: route.resource.type as Summary["type"],
-            id: route.resource.id,
-          }),
-        );
-        if (generation !== navigationGeneration) return;
-        editor = {
-          project: route.resource.project,
-          type: route.resource.type,
-          resource,
-        };
-      }
-      await refresh();
-      if (generation !== navigationGeneration) return;
-      await tick();
-      lastRouteUrl = location.pathname + location.search;
-      routeReady = false;
-    } catch (e) {
-      if (generation === navigationGeneration) message(e);
-    } finally {
-      if (generation === navigationGeneration) restoringRoute = false;
-    }
-  }
-  function keepEditing() {
-    pendingNavigation = null;
-    history.pushState(null, "", lastRouteUrl);
-    restoringRoute = false;
-  }
+
   function closeEditor() {
     editor = null;
-    if (pendingNavigation) void restoreRoute(pendingNavigation);
+    if (routing.pending) void restoreRoute(routing.pending);
   }
-  function historyNavigation() {
-    if (!boot) return;
-    const target = new URLSearchParams(location.search);
-    restoringRoute = true;
-    if (editor) {
-      pendingNavigation = target;
-      if (!editorInstance?.requestClose()) keepEditing();
-    } else if (
-      dateDraft ||
-      moveDraft ||
-      settings ||
-      adding ||
-      nativeAdding ||
-      arrangeFocus
-    ) {
-      // Keep dialogs and their draft state intact while browser navigation is requested.
-      history.pushState(null, "", lastRouteUrl);
-      restoringRoute = false;
-      error =
-        "Close the open dialog before changing views with browser navigation.";
-    } else void restoreRoute(target);
-  }
+
   $effect(() => {
-    if (!boot || loading || restoringRoute) return;
-    const route = writeRoute({
-      view,
-      project,
-      search,
-      collection,
-      archived,
-      status: statusFilter,
-      priority: priorityFilter,
-      label: labelFilter,
-      unreadOnly,
-      month,
-      calendarDate,
-      calendarLayout,
-      ...(editor?.resource
+    if (!boot || loading || routing.restoring) return;
+    routing.sync(
+      editor?.resource
         ? {
-            resource: {
-              project: editor.project,
-              type: editor.type,
-              id: editor.resource.metadata.id,
-            },
+            project: editor.project,
+            type: editor.type,
+            id: editor.resource.metadata.id,
           }
-        : {}),
-    });
-    const url = `${location.pathname}?${route}`;
-    if (
-      !routeReady ||
-      searchOnlyNavigation(
-        new URL(lastRouteUrl, location.origin).searchParams,
-        route,
-      )
-    )
-      history.replaceState(null, "", url);
-    else if (url !== lastRouteUrl) history.pushState(null, "", url);
-    routeReady = true;
-    lastRouteUrl = url;
+        : undefined,
+    );
   });
   $effect(() => {
     const requestedQuery = queryKey;
     if (
       !boot ||
       loading ||
-      restoringRoute ||
+      routing.restoring ||
       untrack(() => loadedQueryKey === requestedQuery)
     )
       return;
     untrack(() => {
-      refreshGeneration++;
-      refreshRead?.abort();
-      refreshJob = undefined;
-      queuedSections.clear();
-      pageCursors = {};
-      pageHistory = {};
+      data.invalidate();
     });
     const timer = setTimeout(() => {
       void requestedQuery;
@@ -769,48 +449,16 @@
     }, 200);
     return () => clearTimeout(timer);
   });
-  $effect(() => {
-    const selectedView = view,
-      navigation = navElement;
-    if (!navigation) return;
-    const reveal = () => {
-      const active = navigation.querySelector<HTMLElement>(
-        `button[data-view="${selectedView}"]`,
-      );
-      if (active && navigation.scrollWidth > navigation.clientWidth)
-        navigation.scrollTo({
-          left: Math.max(
-            0,
-            active.offsetLeft -
-              navigation.offsetLeft -
-              (navigation.clientWidth - active.offsetWidth) / 2,
-          ),
-          behavior: "instant",
-        });
-    };
-    void tick().then(reveal);
-    const observer = new ResizeObserver(reveal);
-    observer.observe(navigation);
-    return () => observer.disconnect();
-  });
   onMount(() => {
     const clockTimer = setInterval(() => (clockTime = Date.now()), 60_000);
     window.addEventListener("popstate", historyNavigation);
-    window.addEventListener("session-ended", sessionEnded);
     window.addEventListener("command-warning", commandWarning);
-    window.addEventListener("online", foreground);
-    document.addEventListener("visibilitychange", foreground);
     void initialize();
     return () => {
       clearInterval(clockTimer);
+      data.invalidate();
       window.removeEventListener("popstate", historyNavigation);
-      window.removeEventListener("session-ended", sessionEnded);
       window.removeEventListener("command-warning", commandWarning);
-      window.removeEventListener("online", foreground);
-      document.removeEventListener("visibilitychange", foreground);
-      source?.close();
-      streamUpdates.cancel();
-      refreshRead?.abort();
     };
   });
 </script>
@@ -822,144 +470,79 @@
   /></svelte:head
 >
 {#if !boot}
-  <main class="welcome">
-    <div class="brand"><span class="brandmark">lp</span> LOCAL PROJECTS</div>
-    <p class="eyebrow">Your work, on your own machine</p>
-    <h1>A clearer view<br />of what’s next.</h1>
-    <p class="lead">
-      Projects, decisions and progress.<br />Connected to the folders you
-      already use.
-    </p>
-    <section class="pairbox">
-      <h2>{pairing ? "Approve this browser" : "Connect your browser"}</h2>
-      {#if loading}<p>Checking connection…</p>{:else if pairing}<p>
-          Compare this challenge on the host machine:
-        </p>
-        <div class="challenge">{pairing.challenge}</div>
-        <p>Status: <strong>{pairing.state}</strong></p>
-        <code
-          >projectctl --socket /path/to/projectd.sock approve {pairing.id} --challenge
-          "{pairing.challenge}"</code
-        ><button class="primary" onclick={checkPairing} disabled={busy}
-          >I approved this browser</button
-        ><button class="quiet" onclick={() => (pairing = null)}
-          >Start again</button
-        >{:else}<label
-          >Device name<input bind:value={device} maxlength="120" /></label
-        ><button
-          class="primary"
-          onclick={startPairing}
-          disabled={busy || !device.trim()}
-          >Request access <span>↗</span></button
-        >
-        <p class="small">
-          Approval is required on the host. This app does not grant access from
-          a link alone.
-        </p>{/if}{#if error}<p class="notice" role="alert">{error}</p>{/if}
-      <button onclick={() => (diagnostics = true)}>Host diagnostics</button>
-    </section>
-  </main>
+  <PairingScreen
+    {pairing}
+    {loading}
+    {busy}
+    {error}
+    bind:device={session.device}
+    {startPairing}
+    {checkPairing}
+    onrestart={session.restartPairing}
+    ondiagnostics={() => (diagnostics = true)}
+  />
 {:else}
   <div class="app">
-    <aside>
-      <div class="brand">
-        <span class="brandmark">lp</span><span>LOCAL<br />PROJECTS</span>
-      </div>
-      <p class="navlabel">WORKSPACE</p>
-      <nav bind:this={navElement} aria-label="Workspace views">
-        {#each views as item, i}<button
-            aria-label={item === "gantt"
-              ? "Timeline"
-              : item[0].toUpperCase() + item.slice(1)}
-            data-view={item}
-            aria-current={view === item ? "page" : undefined}
-            class:chosen={view === item}
-            onclick={() => {
-              if (view !== item) navigationGeneration++;
-              view = item;
-            }}
-            ><span class="navicon" aria-hidden="true"
-              >{["◉", "▦", "▥", "▦", "≋", "☷", "◷"][i]}</span
-            ><span
-              >{item === "gantt"
-                ? "Timeline"
-                : item[0].toUpperCase() + item.slice(1)}</span
-            ></button
-          >{/each}
-      </nav>
-      <div class="asidebottom">
-        <span class:live={connected} class="dot"></span>{connected
-          ? "Connected to host"
-          : "Reconnecting…"}<button class="quiet" onclick={logout}
-          >Sign out</button
-        >
-      </div>
-    </aside>
+    <WorkspaceNavigation
+      bind:view={routing.current.view}
+      {connected}
+      {logout}
+      onchange={() => routing.generation++}
+    />
     <div class="workspace">
-      <header class="topbar">
-        <span
-          class="workspace-label"
-          title={selectedProject?.title ?? "All projects"}
-          >Workspace <span class="slash">/</span>
-          {selectedProject?.title ?? "All projects"}</span
-        >
-        <div>
-          {#if project}<button
-              class="quiet"
-              onclick={() => (gitProject = project)}>Git</button
-            >{/if}
-          <span class="date">{today}</span><button
-            class="quiet"
-            aria-label="Host diagnostics"
-            onclick={() => (diagnostics = true)}>ⓘ</button
-          ><button
-            class="quiet"
-            aria-label="Workspace settings"
-            onclick={() => (settings = true)}>⚙</button
-          ><button
-            class="quiet"
-            onclick={() => refresh().catch(message)}
-            aria-label="Refresh">↻</button
-          ><button class="quiet mobile-signout" onclick={logout}
-            >Sign out</button
-          >
-        </div>
-      </header>
+      <WorkspaceHeader
+        project={routing.current.project}
+        projectName={selectedProject?.title}
+        {today}
+        ongit={() => (gitProject = routing.current.project)}
+        ondiagnostics={() => (diagnostics = true)}
+        onsettings={() => (settings = true)}
+        onrefresh={() => refresh().catch(message)}
+        {logout}
+      />
       <main class="content">
         <div class="heading">
           <div>
             <p class="eyebrow">A LITTLE CLARITY, EVERY DAY</p>
             <h1>
-              {view === "focus"
+              {routing.current.view === "focus"
                 ? "Make room for what matters."
-                : view === "gantt"
+                : routing.current.view === "gantt"
                   ? "The bigger picture."
-                  : view === "projects"
+                  : routing.current.view === "projects"
                     ? "Your projects."
-                    : view === "updates"
+                    : routing.current.view === "updates"
                       ? "The latest from your work."
-                      : view[0].toUpperCase() + view.slice(1) + "."}
+                      : routing.current.view[0].toUpperCase() +
+                        routing.current.view.slice(1) +
+                        "."}
             </h1>
             <p>
-              {view === "focus"
+              {routing.current.view === "focus"
                 ? "Your focus and the things that need a decision."
-                : view === "projects"
+                : routing.current.view === "projects"
                   ? "Real folders. Shared context. One place to see progress."
-                  : view === "calendar"
+                  : routing.current.view === "calendar"
                     ? "Planned work, deadlines and reviews — kept distinct."
-                    : view === "gantt"
+                    : routing.current.view === "gantt"
                       ? "See the sequence, connect cards and understand the finish date."
                       : "Keep the next step visible."}
             </p>
           </div>
           <button
             class="primary"
-            onclick={view === "projects"
+            onclick={routing.current.view === "projects"
               ? addProject
-              : () => create(primaryResource(view, collection))}
-            >＋ {view === "projects"
+              : () =>
+                  create(
+                    primaryResource(
+                      routing.current.view,
+                      routing.current.collection,
+                    ),
+                  )}
+            >＋ {routing.current.view === "projects"
               ? "Add project"
-              : `Add ${primaryResource(view, collection)}`}</button
+              : `Add ${primaryResource(routing.current.view, routing.current.collection)}`}</button
           >
         </div>
         {#if error}<div class="notice" role="alert">
@@ -977,85 +560,15 @@
             {projectionMessage}
           </p>{/if}
         {#if queryNotice}<p role="status" class="notice">{queryNotice}</p>{/if}
-        <div class="toolbar">
-          {#if view !== "projects"}<label class="sr" for="project"
-              >Project</label
-            ><select
-              id="project"
-              bind:value={project}
-              onchange={() => navigationGeneration++}
-              ><option value="">All projects</option
-              >{#each projects as item}<option value={item.id}
-                  >{item.title}</option
-                >{/each}</select
-            >{/if}<input
-            class="search"
-            aria-label={["list", "updates"].includes(view)
-              ? "Search content"
-              : "Filter loaded titles"}
-            bind:value={search}
-            placeholder={["list", "updates"].includes(view)
-              ? "Search content…"
-              : "Filter loaded titles…"}
-          />{#if view === "updates"}<label
-              ><input type="checkbox" bind:checked={unreadOnly} /> Unread only</label
-            >{/if}{#if view === "list"}<select
-              aria-label="Resource type"
-              bind:value={collection}
-              onchange={() => (statusFilter = "")}
-              ><option value="cards">Cards</option><option value="milestones"
-                >Milestones</option
-              ></select
-            ><select aria-label="Status filter" bind:value={statusFilter}>
-              <option value="">All statuses</option>
-              {#each collection === "cards" ? statuses : ["planned", "active", "achieved", "cancelled"] as status}<option
-                  value={status}>{resourceLabel(status)}</option
-                >{/each}
-            </select>
-            {#if collection === "cards"}<select
-                aria-label="Card visibility"
-                bind:value={archived}
-              >
-                <option value={false}>Active cards</option><option value={true}
-                  >Archived cards</option
-                >
-              </select><select
-                aria-label="Priority filter"
-                bind:value={priorityFilter}
-              >
-                <option value="">All priorities</option
-                >{#each ["urgent", "high", "normal", "low"] as priority}<option
-                    value={priority}>{resourceLabel(priority)}</option
-                  >{/each}
-              </select><input
-                aria-label="Tag filter"
-                placeholder="Exact tag…"
-                bind:value={labelFilter}
-              />{/if}
-            {#if statusFilter || priorityFilter || labelFilter || archived}<button
-                onclick={() => {
-                  statusFilter = "";
-                  priorityFilter = "";
-                  labelFilter = "";
-                  archived = false;
-                }}>Clear filters</button
-              >{/if}
-          {/if}{#if view === "gantt"}<div class="month">
-              <button
-                onclick={() => changeMonth(-1)}
-                aria-label="Previous month">←</button
-              ><input
-                type="month"
-                aria-label="Month"
-                bind:value={month}
-              /><button onclick={() => changeMonth(1)} aria-label="Next month"
-                >→</button
-              >
-            </div>{/if}
-        </div>
-        {#if (!queryReady || (projectionMessage && !projects.length)) && ["list", "updates", "projects"].includes(view)}
+        <WorkspaceFilters
+          bind:route={routing.current}
+          {projects}
+          onprojectchange={() => routing.generation++}
+          {changeMonth}
+        />
+        {#if (!queryReady || (projectionMessage && !projects.length)) && ["list", "updates", "projects"].includes(routing.current.view)}
           <div class="empty" role="status">Loading resources…</div>
-        {:else if view === "focus"}
+        {:else if routing.current.view === "focus"}
           <div class="stats">
             <div>
               <span>IN MOTION</span><strong
@@ -1079,7 +592,8 @@
           <div class="sectiontitle">
             <h2>In focus</h2>
             <span
-              >{visibleFocus.length} pinned{project || search
+              >{visibleFocus.length} pinned{routing.current.project ||
+              routing.current.search
                 ? " in selection"
                 : ""}</span
             >
@@ -1095,7 +609,7 @@
                   <h3>{item.title}</h3>
                   <ResourceMetadata {item} showStatus /></button
                 >{/if}{:else}<div class="empty">
-                {project || search
+                {routing.current.project || routing.current.search
                   ? "No pinned cards match this selection. Change the project or clear the title filter."
                   : "No pinned cards yet. Open a card and pin it to keep it here."}
               </div>{/each}
@@ -1135,10 +649,12 @@
               disabled={loadingMore}
               onclick={() => moreAttention(true)}>First attention page</button
             >{/if}
-        {:else if view === "projects"}<div class="grid">
+        {:else if routing.current.view === "projects"}<div class="grid">
             {#each projects.filter((p) => p.title
                 .toLowerCase()
-                .includes(search.trim().toLowerCase())) as item}<button
+                .includes(routing.current.search
+                    .trim()
+                    .toLowerCase())) as item}<button
                 class="card projectcard"
                 onclick={() => open(item)}
                 ><div class="projectinitial">
@@ -1164,9 +680,9 @@
                 <button onclick={addProject}>Add your first project</button>
               </div>{/each}
           </div>
-        {:else if view === "board" && project}{#if Board}{#key project}<Board
-                {project}
-                {search}
+        {:else if routing.current.view === "board" && routing.current.project}{#if Board}{#key routing.current.project}<Board
+                project={routing.current.project}
+                search={routing.current.search}
                 revision={viewRevision}
                 {open}
                 onpropose={(proposal) => (moveDraft = proposal)}
@@ -1175,7 +691,7 @@
               {boardLoadError}
               <button onclick={loadBoard}>Retry loading board</button>
             </p>{:else}<p role="status">Loading board…</p>{/if}
-        {:else if view === "board"}<p role="status">
+        {:else if routing.current.view === "board"}<p role="status">
             All projects is an overview. Select a project above to drag and
             reorder cards.
           </p>
@@ -1198,20 +714,20 @@
                   >{:else}<p class="columnempty">Nothing here yet</p>{/each}
               </section>{/each}
           </div>
-        {:else if view === "calendar" || view === "gantt"}{#if DateViews}<DateViews
-              {project}
-              {month}
-              {view}
+        {:else if routing.current.view === "calendar" || routing.current.view === "gantt"}{#if DateViews}<DateViews
+              project={routing.current.project}
+              month={routing.current.month}
+              view={routing.current.view}
               revision={viewRevision}
               {weekStart}
-              {calendarDate}
-              {calendarLayout}
+              calendarDate={routing.current.calendarDate}
+              calendarLayout={routing.current.calendarLayout}
               workspaceToday={today}
               onCalendarNavigate={(date, layout) => {
-                calendarDate = date;
-                calendarLayout = layout;
+                routing.current.calendarDate = date;
+                routing.current.calendarLayout = layout;
               }}
-              {search}
+              search={routing.current.search}
               {open}
               onpropose={(proposal) => (dateDraft = proposal)}
               oncreate={(schedule) => create("card", { schedule })}
@@ -1221,7 +737,7 @@
                 >Retry loading planning view</button
               >
             </p>{:else}<p role="status">Loading date views…</p>{/if}
-        {:else if view === "updates"}<div class="updates">
+        {:else if routing.current.view === "updates"}<div class="updates">
             {#each visibleUpdates as item}<button
                 class="update"
                 onclick={() => open(item)}
@@ -1247,7 +763,7 @@
             <div class="tablehead">
               <span>Title / project</span><span>Card details</span>
             </div>
-            {#each collection === "cards" ? filtered : milestones.filter((m) => !project || m.project_id === project) as item}<button
+            {#each routing.current.collection === "cards" ? filtered : milestones.filter((m) => !routing.current.project || m.project_id === routing.current.project) as item}<button
                 class="listrow"
                 onclick={() => open(item)}
                 ><div>
@@ -1259,15 +775,17 @@
                   <ResourceMetadata {item} showStatus compact />
                 </div></button
               >{:else}<div class="empty">
-                {archived && collection === "cards"
+                {routing.current.archived &&
+                routing.current.collection === "cards"
                   ? "No archived cards match this selection. Clear filters to see more archived cards."
                   : "No items match this selection. Try another project or clear the filters."}
               </div>{/each}
           </div>{/if}
-        {#if queryReady && ["board", "list", "updates"].includes(view) && (view !== "board" || !project)}{@const kind =
-            view === "updates"
+        {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =
+            routing.current.view === "updates"
               ? "update"
-              : view === "list" && collection === "milestones"
+              : routing.current.view === "list" &&
+                  routing.current.collection === "milestones"
                 ? "milestone"
                 : "card"}{#if pageCursors[kind]}<div class="sectiontitle">
               <span>More resources are available.</span><button
@@ -1275,10 +793,10 @@
                 onclick={() => more(kind)}>Next page</button
               >
             </div>{/if}{/if}
-        {#if queryReady && ["list", "updates"].includes(view)}{@const kind =
-            view === "updates"
+        {#if queryReady && ["list", "updates"].includes(routing.current.view)}{@const kind =
+            routing.current.view === "updates"
               ? "update"
-              : collection === "milestones"
+              : routing.current.collection === "milestones"
                 ? "milestone"
                 : "card"}{#if (pageHistory[kind]?.length ?? 0) > 1}<button
               disabled={loadingMore}
@@ -1331,11 +849,11 @@
     onchanged={() => void refresh().catch(message)}
   />{/if}
 {#if editor}{#key editor}<Editor
-      {...editor}
+      target={editor}
       bind:this={editorInstance}
       onclose={closeEditor}
       onkeepediting={() => {
-        if (pendingNavigation) keepEditing();
+        if (routing.pending) keepEditing();
       }}
       onchanged={() => refresh().catch(message)}
       onsaved={() => void saved()}
@@ -1344,9 +862,9 @@
 <RegistrationBrowser
   bind:open={adding}
   onregistered={async (id) => {
-    project = id;
-    view = "board";
-    search = "";
+    routing.current.project = id;
+    routing.current.view = "board";
+    routing.current.search = "";
     await refresh().catch(message);
   }}
 />
@@ -1368,868 +886,9 @@
     }}
     onadded={(id) => {
       nativeAdding = false;
-      project = id;
-      view = "board";
-      search = "";
+      routing.current.project = id;
+      routing.current.view = "board";
+      routing.current.search = "";
       void refresh().catch(message);
     }}
   />{/if}
-
-<style>
-  :global(:root) {
-    --bg: #f5f5ef;
-    --paper: #fffefa;
-    --ink: #263b32;
-    --muted: #616e63;
-    --line: #e2e5dc;
-    --green: #245840;
-    --accent: #dce8a9;
-    --hover: #f0f3e8;
-    --soft: #edf0e6;
-    --wash: var(--soft);
-    --notice-bg: #fff0e5;
-    --notice-ink: #803c22;
-    --notice-line: #efccb9;
-    --plan-bg: #dce8c8;
-    --review-bg: #eee8f4;
-    color-scheme: light;
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-    color: var(--ink);
-    background: var(--bg);
-    font-synthesis: none;
-  }
-  :global(:root[data-theme="dark"]) {
-    --bg: #17221d;
-    --paper: #202e27;
-    --ink: #e7eee4;
-    --muted: #a9b7aa;
-    --line: #46554a;
-    --green: #366748;
-    --accent: #405436;
-    --hover: #314236;
-    --soft: #2a392e;
-    --notice-bg: #463325;
-    --notice-ink: #ffcea5;
-    --notice-line: #8a6449;
-    --plan-bg: #364e30;
-    --review-bg: #45384f;
-    color-scheme: dark;
-  }
-  @media (prefers-color-scheme: dark) {
-    :global(:root:not([data-theme="light"]):not([data-theme="dark"])) {
-      --bg: #17221d;
-      --paper: #202e27;
-      --ink: #e7eee4;
-      --muted: #a9b7aa;
-      --line: #46554a;
-      --green: #366748;
-      --accent: #405436;
-      --hover: #314236;
-      --soft: #2a392e;
-      --notice-bg: #463325;
-      --notice-ink: #ffcea5;
-      --notice-line: #8a6449;
-      --plan-bg: #364e30;
-      --review-bg: #45384f;
-      color-scheme: dark;
-    }
-  }
-  :global(body) {
-    margin: 0;
-  }
-  :global(*) {
-    box-sizing: border-box;
-  }
-  :global(button),
-  :global(input),
-  :global(select),
-  :global(textarea) {
-    font: inherit;
-    font-size: 14px;
-  }
-  :global(button) {
-    cursor: pointer;
-    border: 1px solid var(--line);
-    background: var(--paper);
-    color: var(--ink);
-    border-radius: 8px;
-    padding: 10px 14px;
-    min-height: 42px;
-  }
-  :global(button:hover) {
-    border-color: #a5b69e;
-    background: var(--hover);
-  }
-  :global(button:disabled) {
-    opacity: 0.5;
-    cursor: default;
-  }
-  :global(input),
-  :global(select),
-  :global(textarea) {
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--paper);
-    color: var(--ink);
-    padding: 11px 12px;
-    min-width: 0;
-  }
-  :global(button:focus-visible),
-  :global(input:focus-visible),
-  :global(select:focus-visible),
-  :global(textarea:focus-visible) {
-    outline: 3px solid #87a76d;
-    outline-offset: 2px;
-  }
-  :global(.primary) {
-    background: var(--green);
-    color: white;
-    border-color: var(--green);
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  :global(.primary:hover) {
-    background: #173f2d;
-    color: white;
-  }
-  :global(.quiet) {
-    background: transparent;
-    border-color: transparent;
-  }
-  :global(.eyebrow) {
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    font-weight: 700;
-    color: var(--muted);
-  }
-  :global(.notice) {
-    background: var(--notice-bg);
-    color: var(--notice-ink);
-    padding: 14px;
-    border: 1px solid var(--notice-line);
-    border-radius: 8px;
-    overflow-wrap: anywhere;
-  }
-  :global(.sr) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-  }
-  .brand {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.07em;
-    line-height: 1.5;
-  }
-  .brandmark {
-    background: var(--green);
-    color: var(--accent);
-    font-family: Georgia, serif;
-    font-size: 28px;
-    line-height: 42px;
-    width: 42px;
-    text-align: center;
-    border-radius: 12px;
-    letter-spacing: -3px;
-    padding-right: 3px;
-  }
-  .welcome {
-    max-width: 1040px;
-    margin: 8vh auto;
-    padding: 32px;
-    position: relative;
-  }
-  .welcome > .eyebrow {
-    margin-top: 90px;
-  }
-  .welcome h1 {
-    font:
-      normal clamp(42px, 5vw, 64px)/1.08 Georgia,
-      serif;
-    letter-spacing: -2px;
-  }
-  .lead {
-    font-size: 18px;
-    color: var(--muted);
-    line-height: 1.7;
-  }
-  .pairbox {
-    position: absolute;
-    width: 380px;
-    right: 32px;
-    top: 155px;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    padding: 30px;
-    border-radius: 18px;
-  }
-  .pairbox h2 {
-    font-size: 21px;
-  }
-  .pairbox label {
-    display: block;
-  }
-  .pairbox input {
-    width: 100%;
-    margin: 10px 0 18px;
-  }
-  .pairbox > .primary {
-    width: 100%;
-    margin: 12px 0;
-  }
-  .small {
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-  .challenge {
-    font-size: 25px;
-    letter-spacing: 3px;
-    background: var(--bg);
-    padding: 16px;
-    text-align: center;
-    font-family: monospace;
-  }
-  .pairbox code {
-    display: block;
-    font-size: 11px;
-    overflow-wrap: anywhere;
-    line-height: 1.7;
-  }
-  .app {
-    display: flex;
-    min-height: 100vh;
-  }
-  aside {
-    width: 218px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--line);
-    padding: 30px 20px;
-    position: fixed;
-    inset: 0 auto 0 0;
-    background: var(--soft);
-    display: flex;
-    flex-direction: column;
-  }
-  .navlabel {
-    font-size: 9px;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-    margin: 48px 14px 14px;
-  }
-  nav {
-    display: grid;
-    gap: 6px;
-  }
-  nav button {
-    display: flex;
-    align-items: center;
-    text-align: left;
-    border-color: transparent;
-    background: transparent;
-    font-size: 13px;
-    gap: 14px;
-    padding: 12px;
-  }
-  .navicon {
-    font-size: 19px;
-    width: 20px;
-    color: #7e8d7d;
-  }
-  nav button.chosen {
-    background: var(--accent);
-    font-weight: 650;
-  }
-  nav button.chosen .navicon {
-    color: var(--green);
-  }
-  .asidebottom {
-    margin-top: auto;
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .asidebottom button {
-    display: block;
-    font-size: 11px;
-    padding-left: 0;
-  }
-  .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 7px;
-    background: #bd8745;
-  }
-  .dot.live {
-    background: #638653;
-  }
-  .workspace {
-    margin-left: 218px;
-    width: calc(100% - 218px);
-  }
-  .topbar {
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--line);
-    padding: 0 24px;
-    font-size: 12px;
-  }
-  .topbar > div {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    flex-shrink: 0;
-  }
-  .slash {
-    color: #a7afa4;
-    margin: 0 14px;
-  }
-  .date {
-    color: var(--muted);
-  }
-  .content {
-    max-width: 1500px;
-    padding: 24px 24px 20px;
-    margin: auto;
-  }
-  .heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-    margin-bottom: 20px;
-  }
-  h1 {
-    font:
-      650 26px/1.25 Inter,
-      ui-sans-serif,
-      system-ui,
-      sans-serif;
-    letter-spacing: -0.5px;
-    margin: 10px 0;
-  }
-  .heading p:not(.eyebrow) {
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-  .toolbar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-  }
-  .toolbar select {
-    min-width: 170px;
-  }
-  .search {
-    margin-left: auto;
-    width: 220px;
-  }
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--paper);
-    margin-bottom: 22px;
-  }
-  .stats > div {
-    padding: 16px 20px;
-    border-right: 1px solid var(--line);
-  }
-  .stats > div:last-child {
-    border: 0;
-  }
-  .stats span {
-    font-size: 9px;
-    letter-spacing: 0.13em;
-    color: var(--muted);
-    display: block;
-  }
-  .stats strong {
-    display: block;
-    font:
-      600 30px ui-sans-serif,
-      system-ui,
-      sans-serif;
-    margin: 8px 0 6px;
-  }
-  .stats p {
-    font-size: 12px;
-    color: var(--muted);
-    margin: 0;
-  }
-  .sectiontitle {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 20px 0 14px;
-  }
-  .sectiontitle h2 {
-    font-size: 15px;
-    font-weight: 600;
-  }
-  .sectiontitle > span {
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
-    gap: 18px;
-  }
-  .card {
-    padding: 16px;
-    text-align: left;
-    border-radius: 12px;
-    width: 100%;
-  }
-  .card small {
-    font-size: 10px;
-    color: var(--muted);
-  }
-  .card h3 {
-    font-size: 15px;
-    line-height: 1.45;
-    font-weight: 600;
-    margin: 8px 0 12px;
-  }
-  .badge {
-    font-size: 10px;
-    background: var(--soft);
-    padding: 5px 8px;
-    border-radius: 5px;
-    white-space: nowrap;
-    text-transform: capitalize;
-  }
-  .card footer {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-size: 10px;
-    color: var(--muted);
-    border-top: 1px solid var(--line);
-    padding-top: 16px;
-    margin-top: 20px;
-  }
-  .card footer > span:last-child {
-    margin-left: auto;
-  }
-  .projectinitial {
-    background: var(--accent);
-    color: var(--ink);
-    padding: 12px;
-    border-radius: 10px;
-    display: inline-block;
-    font-family: Georgia, serif;
-    font-size: 22px;
-    margin-bottom: 10px;
-  }
-  .projectcard > .badge {
-    float: right;
-  }
-  .projectcard h2 {
-    font:
-      23px Georgia,
-      serif;
-  }
-  .projectcard p {
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .listrow {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    gap: 16px;
-    text-align: left;
-    padding: 18px 20px;
-    margin-bottom: 8px;
-    border-radius: 10px;
-  }
-  .listrow > div {
-    flex: 1;
-    min-width: 0;
-  }
-  .listrow strong {
-    font-size: 13px;
-    font-weight: 550;
-  }
-  .listrow small {
-    display: block;
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 6px;
-  }
-  .listrow > span:last-child {
-    font-size: 12px;
-  }
-  .priority {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #b2c495;
-    flex-shrink: 0;
-  }
-  .empty {
-    background: var(--soft);
-    border: 1px dashed var(--line);
-    padding: 30px;
-    border-radius: 12px;
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.7;
-    grid-column: 1/-1;
-  }
-  .empty strong {
-    font:
-      22px Georgia,
-      serif;
-    color: var(--ink);
-  }
-  .pagefooter {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: #92998e;
-    border-top: 1px solid var(--line);
-    padding-top: 20px;
-    margin-top: 28px;
-  }
-  .board {
-    display: flex;
-    gap: 16px;
-    overflow: auto;
-    padding-bottom: 20px;
-  }
-  .column {
-    min-width: 230px;
-    flex: 1;
-  }
-  .column .sectiontitle h2 {
-    text-transform: capitalize;
-    font-size: 12px;
-  }
-  .column .card {
-    margin-bottom: 12px;
-    padding: 18px;
-  }
-  .columnempty {
-    padding: 24px 10px;
-    border: 1px dashed var(--line);
-    font-size: 11px;
-    color: var(--muted);
-    text-align: center;
-    border-radius: 10px;
-  }
-  .month {
-    display: flex;
-    gap: 6px;
-  }
-  .month input {
-    width: 160px;
-  }
-  .table {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .table .listrow {
-    margin: 0;
-    border: 0;
-    border-top: 1px solid var(--line);
-    border-radius: 0;
-  }
-  .tablehead {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 16px 20px;
-    font-size: 10px;
-    color: var(--muted);
-  }
-  .updates {
-    max-width: 850px;
-  }
-  .update {
-    display: flex;
-    text-align: left;
-    width: 100%;
-    gap: 20px;
-    margin-bottom: 12px;
-    padding: 24px;
-    border-radius: 12px;
-  }
-  .updateicon {
-    background: var(--soft);
-    align-self: flex-start;
-    flex-shrink: 0;
-    border-radius: 50%;
-    padding: 12px;
-    color: var(--green);
-  }
-  .update small {
-    font-size: 10px;
-    color: var(--muted);
-  }
-  .update h3 {
-    font-size: 16px;
-    font-weight: 500;
-  }
-  .connection {
-    padding: 12px;
-    font-size: 12px;
-    background: var(--notice-bg);
-    border-radius: 8px;
-    margin-bottom: 16px;
-  }
-  @media (max-width: 1100px) {
-    aside {
-      width: 180px;
-      padding: 26px 12px;
-    }
-    .workspace {
-      margin-left: 180px;
-      width: calc(100% - 180px);
-    }
-    .content {
-      padding: 28px 24px;
-    }
-    .topbar {
-      padding: 0 24px;
-    }
-    h1 {
-      font-size: 26px;
-    }
-    .pairbox {
-      position: static;
-      width: auto;
-      max-width: 430px;
-      margin-top: 36px;
-    }
-    .welcome > .eyebrow {
-      margin-top: 45px;
-    }
-  }
-  @media (max-width: 700px) {
-    aside {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      width: 100%;
-      padding: 12px;
-      border: 0;
-      border-bottom: 1px solid var(--line);
-    }
-    .app {
-      display: block;
-    }
-    aside .brand,
-    aside .navlabel,
-    .asidebottom {
-      display: none;
-    }
-    nav {
-      display: flex;
-      overflow: auto;
-      gap: 4px;
-    }
-    nav button {
-      font-size: 11px;
-      padding: 9px;
-      gap: 5px;
-      flex-shrink: 0;
-    }
-    .navicon {
-      display: none;
-    }
-    .workspace {
-      width: 100%;
-      margin: 0;
-    }
-    .topbar {
-      min-height: 50px;
-      padding: 0 18px;
-      font-size: 10px;
-    }
-    .topbar .date {
-      display: none;
-    }
-    .content {
-      padding: 18px 14px;
-    }
-    .heading {
-      display: block;
-      margin-bottom: 22px;
-    }
-    .heading .primary {
-      margin-top: 4px;
-    }
-    .heading h1 {
-      font-size: 24px;
-    }
-    .heading .eyebrow {
-      font-size: 8px;
-    }
-    .toolbar {
-      gap: 8px;
-    }
-    .toolbar select {
-      min-width: 0;
-      max-width: 100%;
-      flex: 1;
-    }
-    .search {
-      width: 120px;
-      flex: 1;
-      margin: 0;
-    }
-    .stats > div {
-      padding: 12px 10px;
-    }
-    .stats span {
-      font-size: 7px;
-    }
-    .stats strong {
-      font-size: 26px;
-    }
-    .stats p {
-      font-size: 10px;
-      line-height: 1.5;
-    }
-    .grid {
-      grid-template-columns: 1fr;
-    }
-    .pagefooter span {
-      display: none;
-    }
-    .month {
-      width: 100%;
-    }
-    .month input {
-      flex: 1;
-    }
-    .tablehead {
-      grid-template-columns: 1fr;
-    }
-    .table .listrow {
-      gap: 8px;
-      padding: 14px 12px;
-    }
-    .welcome {
-      padding: 24px;
-      margin: 0;
-    }
-    .welcome h1 {
-      font-size: 44px;
-    }
-    .pairbox {
-      padding: 22px;
-    }
-    .welcome > .eyebrow {
-      margin-top: 40px;
-    }
-    .listrow {
-      padding: 16px 12px;
-    }
-    .listrow strong {
-      font-size: 12px;
-    }
-  }
-  .heading .eyebrow {
-    display: none;
-  }
-  .workspace-label {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .topbar {
-    gap: 12px;
-  }
-  .mobile-signout {
-    display: none;
-  }
-  .attention-reasons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    justify-content: flex-end;
-    max-width: 45%;
-  }
-  .row-metadata {
-    max-width: 50%;
-  }
-  .card,
-  .update,
-  .listrow {
-    overflow-wrap: anywhere;
-  }
-  .grid .card {
-    align-self: start;
-  }
-  .toolbar > input {
-    max-width: 100%;
-  }
-  @media (max-width: 700px) {
-    .mobile-signout {
-      display: inline-flex;
-      align-items: center;
-      padding: 8px;
-      font-size: 11px;
-    }
-    .topbar {
-      padding: 0 12px;
-      gap: 4px;
-    }
-    .topbar > div {
-      gap: 0;
-    }
-    .topbar button {
-      padding: 8px;
-      min-width: 34px;
-    }
-    .topbar .slash {
-      margin: 0 4px;
-    }
-    .workspace-label {
-      font-size: 11px;
-    }
-    .table .listrow {
-      display: block;
-    }
-    .row-metadata {
-      max-width: none;
-      margin-top: 10px;
-    }
-    .tablehead span:last-child {
-      display: none;
-    }
-    .attention-reasons {
-      max-width: 38%;
-    }
-    .badge {
-      white-space: normal;
-    }
-    .toolbar > input[aria-label="Tag filter"] {
-      flex: 1 1 140px;
-      width: 140px;
-    }
-    .heading p {
-      margin: 6px 0;
-    }
-    .heading {
-      margin-bottom: 16px;
-    }
-  }
-</style>

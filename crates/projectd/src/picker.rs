@@ -235,7 +235,7 @@ mod tests {
             .commit_registration(
                 selected["plan"]["plan_id"].as_str().unwrap(),
                 &Uuid::now_v7().to_string(),
-                &engine.journal.epoch,
+                engine.command_epoch(),
             )
             .unwrap();
         assert_eq!(reply.http_status, 202);

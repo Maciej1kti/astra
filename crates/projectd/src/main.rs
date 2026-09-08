@@ -33,9 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     directory.require_private()?;
     let mut engine = Engine::open_for_service(&args.data_dir)?;
     if args.after_restore {
-        engine
-            .journal
-            .rotate_after_restore(project_application::now_millis())?;
+        engine.rotate_after_restore(project_application::now_millis())?;
     }
     let service = Service::new(engine, &args.public_origin)?;
     let socket = args.data_dir.join("projectd.sock");

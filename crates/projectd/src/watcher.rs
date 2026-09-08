@@ -79,7 +79,7 @@ pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
             _ = reconcile.tick() => {
                 refresh(&engine, &projects, None, &mut shutdown).await;
                 let worker=engine.clone();
-                let _=tokio::task::spawn_blocking(move || worker.journal.retain(project_application::now_millis())).await;
+                let _=tokio::task::spawn_blocking(move || worker.retain_history(project_application::now_millis())).await;
             },
             event = receiver.recv(), if watcher.is_some() => {
                 let Some(event) = event else { break; };
@@ -110,22 +110,15 @@ fn membership_paths(
     engine: &Engine,
     initial: bool,
 ) -> Result<(Projects, DirectoryIdentities, Vec<String>), project_application::AppError> {
-    use project_application::AppError;
-    let (workspace, _) = engine.workspace()?;
-    let projects = workspace["projects"]
-        .as_array()
-        .ok_or(AppError::State)?
-        .iter()
-        .map(|project| {
-            Ok((
-                PathBuf::from(project["path"].as_str().ok_or(AppError::State)?),
-                project["project_id"]
-                    .as_str()
-                    .ok_or(AppError::State)?
-                    .to_owned(),
-            ))
-        })
-        .collect::<Result<Projects, AppError>>()?;
+    let project_application::Versioned {
+        value: workspace,
+        version: _,
+    } = engine.workspace()?;
+    let projects: Projects = workspace
+        .projects
+        .into_iter()
+        .map(|project| (PathBuf::from(project.path), project.project_id))
+        .collect();
     let desired = projects
         .keys()
         .flat_map(|root| {
@@ -274,7 +267,7 @@ mod tests {
             .commit_registration(
                 plan["plan_id"].as_str().unwrap(),
                 &uuid::Uuid::now_v7().to_string(),
-                &engine.journal.epoch,
+                engine.command_epoch(),
             )
             .unwrap();
         let project_id = plan["project_id"].as_str().unwrap().to_owned();

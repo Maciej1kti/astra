@@ -1,9 +1,11 @@
 use crate::{
     AppError, Reply,
-    engine::{Engine, collection, read},
+    engine::Engine,
     instant,
     journal::{Command, Reference, Target},
-    now_millis, wire,
+    now_millis,
+    source::{collection, read},
+    wire,
     writer::Writer,
 };
 use project_domain::ordering::{Position, validate_dependencies};
@@ -25,7 +27,10 @@ pub struct Mutation {
 }
 impl Engine {
     pub fn mutate(&self, input: Mutation) -> Result<Reply, AppError> {
-        let _gate = self.gate.read().map_err(|_| AppError::State)?;
+        let _gate = self
+            .gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
         let Mutation {
             project_id,
             kind,
@@ -92,9 +97,11 @@ impl Engine {
             Ok(handle) => handle,
             Err(error) => return self.journal.reject_error(&command, error, now_millis()),
         };
-        let mut store = handle.lock().map_err(|_| AppError::State)?;
+        let mut store = handle
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("project store"))?;
         let now = now_millis();
-        let (next, references) = match prepare(&self.journal, &store, &command, create, now) {
+        let prepared = match prepare(&self.journal, &store, &command, create, now) {
             Ok(value) => value,
             Err(AppError::Rejected(reply)) => return reject(reply),
             Err(error) => return Err(error),
@@ -102,7 +109,9 @@ impl Engine {
         let mut reply = Writer {
             journal: &self.journal,
         }
-        .execute(&mut store, &command, references, now, |_| Ok(next))?;
+        .execute(&mut store, &command, prepared.references, now, |_| {
+            Ok(prepared.draft)
+        })?;
         if reply.http_status == 200
             && reply.body["status"] == "committed"
             && self
@@ -124,19 +133,26 @@ impl Engine {
         Ok(reply)
     }
 }
+/// A patch remains JSON until defaults, placement and references are resolved.
+/// Writer validates this complete candidate before serializing or preparing an intent.
+struct PreparedMutation {
+    draft: Value,
+    references: Vec<Reference>,
+}
+
 fn prepare(
     journal: &crate::journal::Journal,
     store: &ProjectStore,
     command: &Command,
     create: bool,
     now: i64,
-) -> Result<(Value, Vec<Reference>), AppError> {
+) -> Result<PreparedMutation, AppError> {
     let kind = command.target.kind;
     let id = &command.target.id;
     let project_id = &command.target.project_id;
     let payload = &command.payload;
-    let (project, project_version) = read(store, Kind::Project, project_id)?;
-    if kind != Kind::Project && project["metadata"]["state"] == "archived" {
+    let project = read(store, Kind::Project, project_id)?;
+    if kind != Kind::Project && project.document.get().status() == Some("archived") {
         return Err(AppError::reject(409, "PROJECT_ARCHIVED"));
     }
     let mut references = if kind == Kind::Project {
@@ -145,17 +161,17 @@ fn prepare(
         vec![Reference {
             kind: Kind::Project,
             id: project_id.clone(),
-            version: Some(project_version),
+            version: Some(project.version),
         }]
     };
     let previous = if create {
         None
     } else {
-        let (value, version) = read(store, kind, id)?;
-        if command.expected.as_deref() != Some(&version) {
+        let source = read(store, kind, id)?;
+        if command.expected.as_deref() != Some(&source.version) {
             return Err(AppError::reject(412, "VERSION_CONFLICT"));
         }
-        Some(value)
+        Some(source)
     };
     let mut next = if create {
         let mut metadata = payload.clone();
@@ -195,14 +211,14 @@ fn prepare(
         }
         json!({"type":kind.as_str(),"metadata":metadata,"body":body})
     } else {
-        let mut next = previous.clone().unwrap();
+        let mut next = previous.as_ref().unwrap().value();
         if let Some(undo) = payload.get("undo") {
-            let (_, current) = read(store, kind, id)?;
+            let current = &previous.as_ref().unwrap().version;
             next = crate::history::undo_document(
                 journal,
                 command,
                 undo["history_entry_id"].as_str().ok_or(AppError::State)?,
-                &current,
+                current,
             )?;
         }
         if let Some(set) = payload["set"].as_object() {
@@ -228,9 +244,9 @@ fn prepare(
     let reorders = matches!(kind, Kind::Card | Kind::Milestone)
         && (create
             || payload.get("placement").is_some()
-            || previous
-                .as_ref()
-                .is_some_and(|old| old["metadata"]["status"] != next["metadata"]["status"]));
+            || previous.as_ref().is_some_and(|old| {
+                old.document.get().status() != next["metadata"]["status"].as_str()
+            }));
     let validates_dependencies = kind == Kind::Card
         && (create || payload["set"].get("depends_on").is_some() || payload.get("undo").is_some());
     // Ordering and graph validation share the same source observations. The
@@ -243,25 +259,21 @@ fn prepare(
     if reorders {
         let mut ordered = siblings
             .iter()
-            .filter(|(value, _)| {
-                value["metadata"]["id"] != *id
+            .filter(|source| {
+                let document = source.document.get();
+                document.id() != id
                     && (kind != Kind::Card
-                        || value["metadata"]["status"] == next["metadata"]["status"])
+                        || document.status() == next["metadata"]["status"].as_str())
             })
             .collect::<Vec<_>>();
         ordered.sort_by(|a, b| {
-            a.0["metadata"]["position"]
-                .as_str()
-                .cmp(&b.0["metadata"]["position"].as_str())
-                .then(
-                    a.0["metadata"]["id"]
-                        .as_str()
-                        .cmp(&b.0["metadata"]["id"].as_str()),
-                )
+            let a = a.document.get();
+            let b = b.document.get();
+            a.position().cmp(&b.position()).then(a.id().cmp(b.id()))
         });
         let ids = ordered
             .iter()
-            .map(|(value, _)| value["metadata"]["id"].as_str().unwrap())
+            .map(|source| source.document.get().id())
             .collect::<Vec<_>>();
         let slot = if let Some(placement) = payload.get("placement") {
             let after = placement["after_id"].as_str();
@@ -282,8 +294,14 @@ fn prepare(
             ordered.len()
         };
         let position = |slot: usize| -> Result<Position, AppError> {
-            Position::parse(ordered[slot].0["metadata"]["position"].as_str().unwrap())
-                .map_err(|_| AppError::reject(409, "ORDER_REBALANCE_REQUIRED"))
+            Position::parse(
+                ordered[slot]
+                    .document
+                    .get()
+                    .position()
+                    .ok_or_else(|| AppError::invariant("ordered document position"))?,
+            )
+            .map_err(|_| AppError::reject(409, "ORDER_REBALANCE_REQUIRED"))
         };
         let low = if slot == 0 {
             None
@@ -300,14 +318,14 @@ fn prepare(
                 .map_err(|_| AppError::reject(409, "ORDER_REBALANCE_REQUIRED"))?
                 .to_string()
         );
-        references.extend(ordered.iter().map(|(value, version)| Reference {
+        references.extend(ordered.iter().map(|source| Reference {
             kind,
-            id: value["metadata"]["id"].as_str().unwrap().into(),
-            version: Some(version.clone()),
+            id: source.document.get().id().into(),
+            version: Some(source.version.clone()),
         }));
     }
     if let Some(milestone) = next["metadata"]["milestone_id"].as_str() {
-        let (_, version) = read(store, Kind::Milestone, milestone)?;
+        let version = read(store, Kind::Milestone, milestone)?.version;
         references.push(Reference {
             kind: Kind::Milestone,
             id: milestone.into(),
@@ -316,14 +334,15 @@ fn prepare(
     }
     if validates_dependencies {
         let mut graph = BTreeMap::new();
-        for (value, version) in &siblings {
-            let card = value["metadata"]["id"].as_str().unwrap();
-            graph.insert(card.to_owned(), dependencies(&value["metadata"]));
+        for source in &siblings {
+            let document = source.document.get();
+            let card = document.id();
+            graph.insert(card.to_owned(), document.dependencies().to_vec());
             if card != id {
                 references.push(Reference {
                     kind: Kind::Card,
                     id: card.into(),
-                    version: Some(version.clone()),
+                    version: Some(source.version.clone()),
                 });
             }
         }
@@ -335,7 +354,7 @@ fn prepare(
         let target_kind: Kind = serde_json::from_value(target["type"].clone())
             .map_err(|_| AppError::reject(422, "INVALID_TARGET"))?;
         let target_id = target["id"].as_str().unwrap();
-        let (_, version) = read(store, target_kind, target_id)?;
+        let version = read(store, target_kind, target_id)?.version;
         references.push(Reference {
             kind: target_kind,
             id: target_id.into(),
@@ -350,7 +369,7 @@ fn prepare(
         }
         for update in updates {
             let id = update.as_str().unwrap();
-            let (_, version) = read(store, Kind::Update, id)?;
+            let version = read(store, Kind::Update, id)?.version;
             references.push(Reference {
                 kind: Kind::Update,
                 id: id.into(),
@@ -358,7 +377,10 @@ fn prepare(
             });
         }
     }
-    Ok((next, references))
+    Ok(PreparedMutation {
+        draft: next,
+        references,
+    })
 }
 fn dependencies(metadata: &Value) -> Vec<String> {
     metadata["depends_on"]

@@ -4,7 +4,7 @@ import {
   isCalendarDate,
   navigateCalendar,
   calendarWidgetView,
-} from "../../apps/web/src/lib/planning-navigation.ts";
+} from "../../apps/web/src/features/planning/planning-navigation.ts";
 
 test("calendar navigation preserves its period across month, year and leap boundaries", () => {
   assert.equal(navigateCalendar("2026-01-31", "month", 1), "2026-02-01");

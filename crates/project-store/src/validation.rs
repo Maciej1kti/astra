@@ -72,7 +72,13 @@ pub fn report(directory: &Directory) -> Result<Value, StoreError> {
             );
         }
     }
-    Ok(
-        json!({"scope":"source_documents","checked":checked,"invalid":invalid,"normalization_required":normalization,"issues_truncated":invalid+normalization>issues.len(),"issues":issues,"valid":invalid==0 && normalization==0}),
-    )
+    Ok(json!({
+        "scope": "source_documents",
+        "checked": checked,
+        "invalid": invalid,
+        "normalization_required": normalization,
+        "issues_truncated": invalid+normalization>issues.len(),
+        "issues": issues,
+        "valid": invalid==0 && normalization==0,
+    }))
 }

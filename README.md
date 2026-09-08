@@ -62,7 +62,8 @@ creating project metadata or requiring a running server.
 
 - [Source schemas](contracts/domain.schema.json), [HTTP API](contracts/openapi.yaml),
   [CLI output](contracts/cli-output.schema.json) and [local IPC](contracts/local-ipc.json).
-- [Architecture decisions](docs/12-ADRS.md), [implementation plan](progress/PLAN.md)
+- [Code structure and ownership](docs/CODE-STRUCTURE.md),
+  [architecture decisions](docs/12-ADRS.md), [implementation plan](progress/PLAN.md)
   and [acceptance scenarios](delivery/ACCEPTANCE.json).
 - Original handoff documents remain temporary implementation references until their
   outstanding requirements are resolved. They are not a claim of product readiness.

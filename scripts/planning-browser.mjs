@@ -42,7 +42,10 @@ async function hitbox(locator, attempt = 0) {
   }
 }
 const root = resolve(import.meta.dirname, "..");
-const evidenceDir = resolve(root, process.env.ASTRA_EVIDENCE_DIR ?? "test-results/browser/planning-browser");
+const evidenceDir = resolve(
+  root,
+  process.env.ASTRA_EVIDENCE_DIR ?? "test-results/browser/planning-browser",
+);
 await mkdir(evidenceDir, { recursive: true });
 const host = await createHost();
 const { temp, folder, cli, origin } = host;
@@ -274,26 +277,47 @@ try {
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   // A refresh must not move a gesture target or remove its resizer while the
   // displayed source version is still usable. Hold a real response across input.
-  await expect(locator()).toHaveAttribute("data-source-version", cli("get", `/api/v1/projects/${plan.project_id}/cards/${design.id}`).version);
+  await expect(locator()).toHaveAttribute(
+    "data-source-version",
+    cli("get", `/api/v1/projects/${plan.project_id}/cards/${design.id}`)
+      .version,
+  );
   const retainedBox = await hitbox(locator());
   const calendarRead = /\/api\/v1\/views\/calendar\?/;
   let releaseCalendar;
   let finishCalendar;
   let calendarRouteError;
-  const calendarGate = new Promise((resolve) => { releaseCalendar = resolve; });
-  const calendarFinished = new Promise((resolve) => { finishCalendar = resolve; });
-  await page.route(calendarRead, async (route) => {
-    try {
-      const response = await route.fetch();
-      await calendarGate;
-      await route.fulfill({ response });
-    } catch (error) { calendarRouteError = error; }
-    finally { finishCalendar(); }
-  }, { times: 1 });
+  const calendarGate = new Promise((resolve) => {
+    releaseCalendar = resolve;
+  });
+  const calendarFinished = new Promise((resolve) => {
+    finishCalendar = resolve;
+  });
+  await page.route(
+    calendarRead,
+    async (route) => {
+      try {
+        const response = await route.fetch();
+        await calendarGate;
+        await route.fulfill({ response });
+      } catch (error) {
+        calendarRouteError = error;
+      } finally {
+        finishCalendar();
+      }
+    },
+    { times: 1 },
+  );
   try {
     await page.getByRole("button", { name: "Refresh", exact: true }).click();
-    await expect(page.getByText("Loading calendar…", { exact: true })).toBeVisible();
-    assert.deepEqual(await locator().boundingBox(), retainedBox, "Background loading must not shift the calendar");
+    await expect(
+      page.getByText("Loading calendar…", { exact: true }),
+    ).toBeVisible();
+    assert.deepEqual(
+      await locator().boundingBox(),
+      retainedBox,
+      "Background loading must not shift the calendar",
+    );
     await drag("end");
   } finally {
     releaseCalendar();
@@ -322,19 +346,42 @@ try {
     .getByRole("button", { name: "Save planned dates", exact: true })
     .click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
-  await expect(locator()).toHaveAttribute("data-source-version", cli("get", `/api/v1/projects/${plan.project_id}/cards/${design.id}`).version);
+  await expect(locator()).toHaveAttribute(
+    "data-source-version",
+    cli("get", `/api/v1/projects/${plan.project_id}/cards/${design.id}`)
+      .version,
+  );
   // Selection helpers have no application metadata. They must render safely
   // while a blank date range becomes an ordinary unsaved card draft.
   const blankDay = await hitbox(page.locator(".ec-body .ec-day").first());
-  await page.mouse.move(blankDay.x + blankDay.width / 2, blankDay.y + blankDay.height - 4);
+  await page.mouse.move(
+    blankDay.x + blankDay.width / 2,
+    blankDay.y + blankDay.height - 4,
+  );
   await page.mouse.down();
-  await page.mouse.move(blankDay.x + blankDay.width * 1.5, blankDay.y + blankDay.height - 4, { steps: 12 });
+  await page.mouse.move(
+    blankDay.x + blankDay.width * 1.5,
+    blankDay.y + blankDay.height - 4,
+    { steps: 12 },
+  );
   await page.mouse.up();
-  const selectedDraft = page.getByRole("dialog", { name: "Create resource", exact: true });
-  await expect(selectedDraft.getByLabel("Start", { exact: true })).toHaveValue("2026-09-07");
-  await expect(selectedDraft.getByLabel("End", { exact: true })).toHaveValue("2026-09-08");
-  await selectedDraft.getByRole("button", { name: "Close editor", exact: true }).click();
-  const discardSelection = selectedDraft.getByRole("button", { name: "Discard draft", exact: true });
+  const selectedDraft = page.getByRole("dialog", {
+    name: "Create resource",
+    exact: true,
+  });
+  await expect(selectedDraft.getByLabel("Start", { exact: true })).toHaveValue(
+    "2026-09-07",
+  );
+  await expect(selectedDraft.getByLabel("End", { exact: true })).toHaveValue(
+    "2026-09-08",
+  );
+  await selectedDraft
+    .getByRole("button", { name: "Close editor", exact: true })
+    .click();
+  const discardSelection = selectedDraft.getByRole("button", {
+    name: "Discard draft",
+    exact: true,
+  });
   if (await discardSelection.isVisible()) await discardSelection.click();
   await selectedDraft.waitFor({ state: "hidden" });
   await page.getByLabel("Calendar layout", { exact: true }).selectOption("day");
@@ -431,6 +478,10 @@ try {
   }
   throw error;
 } finally {
-  try { await browser?.close(); } finally { await host.close(); }
+  try {
+    await browser?.close();
+  } finally {
+    await host.close();
+  }
   await artifactManifest(evidenceDir);
 }

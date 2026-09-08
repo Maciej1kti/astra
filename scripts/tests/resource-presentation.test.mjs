@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resourceDates } from "../../apps/web/src/lib/resource-presentation.ts";
+import { resourceDates } from "../../apps/web/src/lib/resources/resource-presentation.ts";
 
 test("card summaries retain the distinct meanings of deadline, plan and review", () => {
   const card = {

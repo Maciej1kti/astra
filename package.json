@@ -18,8 +18,8 @@
     "test:browser:regressions": "node scripts/browser/regressions.mjs",
     "try": "node scripts/try.mjs",
     "pair:try": "node scripts/try-pair.mjs",
-    "format": "prettier --write apps/web/src apps/web/vite.config.ts scripts/generate-contracts.mjs scripts/check-bundle.mjs",
-    "format:check": "prettier --check apps/web/src apps/web/vite.config.ts scripts/generate-contracts.mjs scripts/check-bundle.mjs",
+    "format": "prettier --write apps/web/src apps/web/vite.config.ts apps/web/tsconfig.json \"scripts/**/*.mjs\"",
+    "format:check": "prettier --check apps/web/src apps/web/vite.config.ts apps/web/tsconfig.json \"scripts/**/*.mjs\"",
     "check:bundle": "node scripts/check-bundle.mjs"
   },
   "devDependencies": {
