@@ -1,0 +1,5 @@
+   Compiling project-domain v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/domain)
+   Compiling project-store v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/project-store)
+   Compiling project-application v0.1.0 (/Users/maciek/kodowanko/projekty/astra/astra-project-handoff-v1.0/crates/application)
+    Finished `release` profile [optimized] target(s) in 6.83s
+     Running `target/release/examples/benchmark 100 100 500`

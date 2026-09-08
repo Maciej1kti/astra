@@ -1,0 +1,213 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running unittests src/lib.rs (target/debug/deps/project_application-cc31742abf85b77b)
+
+running 1 test
+test git::tests::subprocess_output_and_deadline_are_bounded ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/auth.rs (target/debug/deps/auth-a2d4ec6bc8294186)
+
+running 5 tests
+test passive_stream_checks_do_not_extend_session_idle_lifetime ... ok
+test pairing_requires_owner_approval_cookie_and_csrf_and_claim_retry_rotates ... ok
+test rate_limits_and_expiration_are_enforced ... ok
+test state_schema_version_and_explicit_restore_epoch_survive_restart ... ok
+test session_idle_and_absolute_expiration_survive_restart ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+     Running tests/durability.rs (target/debug/deps/durability-060cac3a2855a41c)
+
+running 10 tests
+test fault_child ... ok
+test unknown_expired_ids_and_old_epochs_are_never_reexecuted ... ok
+test external_edits_after_prepared_are_not_overwritten ... ok
+test replacement_symlink_after_prepared_requires_review ... ok
+test missing_precondition_and_invalid_source_never_write ... ok
+test recovery_rechecks_dependencies_even_when_target_is_unchanged ... ok
+test invalid_request_ids_produce_valid_errors_and_state_loss_changes_epoch ... ok
+test committed_conflicts_replays_and_noops_follow_the_contract ... ok
+test state_database_can_grow_beyond_document_limits_and_restart ... ok
+test subprocess_crashes_at_every_durability_boundary_recover_once ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.40s
+
+     Running tests/engine.rs (target/debug/deps/engine-97468c55f7d7500d)
+
+running 32 tests
+test browser_roots_reject_escape_symlinks_and_replaced_directories ... ok
+test forecast_example_matches_projection_contracts ... ok
+test browser_registration_plan_cannot_outlive_root_revocation ... ok
+test completed_registration_replays_after_restart_with_missing_project_folder ... ok
+test create_retry_without_client_id_returns_the_original_resource ... ok
+test agent_context_includes_complete_card_purpose_or_an_explicit_next_read ... ok
+test card_acceptance_lifecycle_keeps_status_body_and_conflict_history ... ok
+test foreground_project_read_reconciles_external_changes_with_a_bounded_ttl ... ok
+test attention_distinguishes_hard_deadlines_and_reading_from_resolution ... ok
+test attention_project_filter_applies_before_pagination ... ok
+test gantt_pages_include_milestones_and_board_stays_card_only ... ok
+test broken_workspace_keeps_diagnostics_available_without_recreating_sources ... ok
+test agent_context_is_project_scoped_and_counts_utf8_json_overhead ... ok
+test incremental_projection_preserves_other_sources_and_handles_invalid_delete_recreate ... ok
+test index_rebuild_cannot_finish_before_projection_succeeds ... ok
+test invalid_external_source_preserves_stale_projection_without_repairing_files ... ok
+test missing_receipt_target_rejection_remains_stable_after_creation ... ok
+test maintenance_plan_rejects_intervening_source_edits_and_relocates_moved_folder ... ok
+test read_receipts_are_atomic_shared_and_do_not_modify_reports ... ok
+test maintenance_normalizes_conditionally_rebalances_and_unregisters_without_deleting_files ... ok
+test pagination_detects_staleness_and_stream_snapshots_do_not_lose_changes ... ok
+test rebalance_rejects_new_collection_members_and_replays_rejection ... ok
+test real_card_edit_two_clients_search_and_index_rebuild ... ok
+test stale_registration_plan_does_not_overwrite_user_edits ... ok
+test retention_keeps_retry_window_and_pending_intents ... ok
+test registration_is_explicit_preserves_existing_instructions_and_repeats_safely ... ok
+test git_observer_is_explicit_bounded_and_never_runs_repository_filters ... ok
+test schedule_warning_is_durable_and_never_moves_deadline ... ok
+test undo_restores_one_change_and_refuses_later_edits ... ok
+test upgrading_body_only_search_index_preserves_sources_and_indexes_card_content ... ok
+test timeline_forecast_uses_other_pages_without_changing_recorded_dates ... ok
+test workspace_writes_replay_and_recover_without_overwriting_external_changes ... ok
+
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.58s
+
+     Running tests/tag_management.rs (target/debug/deps/tag_management-b47d7f98cb9f2bc6)
+
+running 9 tests
+test invalid_vocabulary_does_not_replace_valid_names ... ok
+test vocabulary_prepared_write_recovers_with_original_identity ... ok
+test preview_merges_exact_tags_without_writes_and_preserves_unrelated_order ... ok
+test preview_preserves_exact_historical_whitespace_destinations ... ok
+test vocabulary_is_optional_versioned_durable_and_does_not_rewrite_card_labels ... ok
+test applying_preview_uses_expected_versions_and_keeps_partial_results_safe ... ok
+test catalog_and_preview_report_invalid_cards_and_unavailable_projects_individually ... ok
+test catalog_reads_all_sources_including_archived_and_beyond_first_page ... ok
+test preview_bounds_affected_cards_and_identifies_archived_project_limits ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.25s
+
+     Running tests/workflow.rs (target/debug/deps/workflow-7286d5d881ec96ed)
+
+running 1 test
+test recovery_rechecks_completed_steps_before_publishing_registration ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running unittests src/lib.rs (target/debug/deps/project_domain-ec4ecd93b59d82f1)
+
+running 5 tests
+test timeline::tests::waterfall_preserves_durations_and_dates_without_mutating_input ... ok
+test timeline::tests::parallel_paths_wait_for_latest_predecessor_and_preserve_later_start ... ok
+test timeline::tests::leap_day_dst_and_supported_date_boundary ... ok
+test timeline::tests::unknown_missing_and_cyclic_paths_are_incomplete ... ok
+test timeline::tests::ten_thousand_card_chain_is_iterative_and_bounded ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/contracts.rs (target/debug/deps/contracts-99d5cc2140ceafcd)
+
+running 9 tests
+test handoff_calendar_vectors ... ok
+test handoff_rank_vectors_and_exhaustion ... ok
+test examples_roundtrip_without_losing_optional_fields_or_body ... ok
+test fractional_timestamps_compare_as_instants ... ok
+test workspace_catalog_is_optional_exact_and_bounded ... ok
+test handoff_document_vectors ... ok
+test structured_card_content_preserves_identity_order_and_explicit_status ... ok
+test validation_enforces_bytes_depth_and_safe_extensions ... ok
+test handoff_graph_vectors_and_long_chain ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/lib.rs (target/debug/deps/project_store-a0bbf280b80e4614)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/documents.rs (target/debug/deps/documents-9c773eb10238b299)
+
+running 5 tests
+test rejects_yaml_abuse_and_invalid_source_identity ... ok
+test all_handoff_parser_vectors ... ok
+test metadata_edits_preserve_body_and_extensions_byte_for_byte ... ok
+test hashes_inside_scalars_are_content_including_unicode_and_blocks ... ok
+test comments_and_encoding_require_explicit_normalization ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/filesystem.rs (target/debug/deps/filesystem-3750dbe48053d69f)
+
+running 5 tests
+test project_directory_must_not_be_a_symlink ... ok
+test detached_directory_cannot_receive_a_write ... ok
+test symlinks_hardlinks_traversal_and_replaced_leases_are_rejected ... ok
+test failure_after_rename_keeps_the_new_source_for_recovery ... ok
+test conditional_create_replace_and_exclusive_lease ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src/main.rs (target/debug/deps/projectctl-74fb62dad2eaeab1)
+
+running 1 test
+test tests::command_tree_is_valid_and_requires_socket_except_for_offline_validation ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/output.rs (target/debug/deps/output-7c402909699949c9)
+
+running 4 tests
+test argument_and_transport_failures_are_single_json_with_stable_exits ... ok
+test offline_validation_does_not_initialize_or_modify_the_selected_folder ... ok
+test accepted_and_malformed_mutation_replies_preserve_command_identity ... ok
+test tag_preview_sends_one_read_only_post_and_classifies_failures_as_reads ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+
+     Running unittests src/lib.rs (target/debug/deps/projectd-fe35329d7a6b47fa)
+
+running 1 test
+test picker::tests::native_selection_is_session_bound_and_only_prepares_a_plan ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+
+     Running unittests src/main.rs (target/debug/deps/projectd-78f8a796a3bc43c2)
+
+running 1 test
+test watcher::tests::source_events_ignore_private_state_temporary_files_and_unrelated_code ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/transport.rs (target/debug/deps/transport-9395ae2110061fed)
+
+running 3 tests
+test browser_pairing_csrf_and_local_uid_transport ... ok
+test workspace_tag_transport_preserves_command_contracts_and_view_versions ... ok
+test registration_mutation_preconditions_and_replay_over_unix ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+
+   Doc-tests project_application
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests project_domain
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests project_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests projectd
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

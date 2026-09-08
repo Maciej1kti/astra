@@ -1,0 +1,304 @@
+{
+  "revision": "171663744338efe8a3f0d23c10d610d6841086f8",
+  "tracked_files": 618,
+  "tracked_bytes": 33069237,
+  "groups": {
+    "progress": {
+      "files": 371,
+      "bytes": 31135388
+    },
+    "crates": {
+      "files": 53,
+      "bytes": 504923
+    },
+    "apps": {
+      "files": 50,
+      "bytes": 361553
+    },
+    "contracts": {
+      "files": 7,
+      "bytes": 340894
+    },
+    "docs": {
+      "files": 17,
+      "bytes": 249735
+    },
+    "scripts": {
+      "files": 29,
+      "bytes": 135752
+    },
+    "delivery": {
+      "files": 11,
+      "bytes": 98178
+    },
+    "package-lock.json": {
+      "files": 1,
+      "bytes": 72307
+    },
+    "Cargo.lock": {
+      "files": 1,
+      "bytes": 62304
+    },
+    "integrations": {
+      "files": 7,
+      "bytes": 20146
+    },
+    "examples": {
+      "files": 39,
+      "bytes": 18311
+    },
+    "tests": {
+      "files": 8,
+      "bytes": 14703
+    },
+    "ops": {
+      "files": 7,
+      "bytes": 12436
+    },
+    "MANIFEST.sha256": {
+      "files": 1,
+      "bytes": 7909
+    },
+    "MANUAL-TESTING.md": {
+      "files": 1,
+      "bytes": 6318
+    },
+    "DEVELOPMENT.md": {
+      "files": 1,
+      "bytes": 4667
+    },
+    "START_HERE.md": {
+      "files": 1,
+      "bytes": 4618
+    },
+    "AGENTS.md": {
+      "files": 1,
+      "bytes": 4456
+    },
+    "templates": {
+      "files": 4,
+      "bytes": 4216
+    },
+    "README.md": {
+      "files": 1,
+      "bytes": 3667
+    },
+    "ASTRA-KICKOFF.md": {
+      "files": 1,
+      "bytes": 2788
+    },
+    ".github": {
+      "files": 1,
+      "bytes": 1686
+    },
+    "Cargo.toml": {
+      "files": 1,
+      "bytes": 1216
+    },
+    "package.json": {
+      "files": 1,
+      "bytes": 735
+    },
+    ".gitignore": {
+      "files": 1,
+      "bytes": 237
+    },
+    "rust-toolchain.toml": {
+      "files": 1,
+      "bytes": 86
+    },
+    ".nvmrc": {
+      "files": 1,
+      "bytes": 8
+    }
+  },
+  "tracked_images": {
+    "files": 210,
+    "bytes": 30303329
+  },
+  "largest_code_files": [
+    {
+      "path": "apps/web/src/App.svelte",
+      "lines": 2429
+    },
+    {
+      "path": "crates/application/tests/engine.rs",
+      "lines": 1502
+    },
+    {
+      "path": "apps/web/src/lib/Editor.svelte",
+      "lines": 988
+    },
+    {
+      "path": "progress/stage2-2026-09-08/card-browser-checks.mjs",
+      "lines": 887
+    },
+    {
+      "path": "scripts/browser-smoke.mjs",
+      "lines": 795
+    },
+    {
+      "path": "apps/web/src/lib/GanttView.svelte",
+      "lines": 785
+    },
+    {
+      "path": "progress/audit-2026-09-08/regression/browser-smoke.mjs",
+      "lines": 778
+    },
+    {
+      "path": "apps/web/src/lib/CalendarView.svelte",
+      "lines": 697
+    },
+    {
+      "path": "crates/application/src/index.rs",
+      "lines": 653
+    },
+    {
+      "path": "crates/application/tests/tag_management.rs",
+      "lines": 602
+    },
+    {
+      "path": "apps/web/src/lib/Settings.svelte",
+      "lines": 589
+    },
+    {
+      "path": "apps/web/src/lib/Board.svelte",
+      "lines": 575
+    },
+    {
+      "path": "crates/projectd/tests/transport.rs",
+      "lines": 564
+    },
+    {
+      "path": "crates/projectctl/src/main.rs",
+      "lines": 536
+    },
+    {
+      "path": "progress/fixes-2026-09-08/board-dialog-browser-checks.mjs",
+      "lines": 521
+    },
+    {
+      "path": "progress/audit-2026-09-08/regression/planning-browser.mjs",
+      "lines": 516
+    },
+    {
+      "path": "crates/application/src/engine.rs",
+      "lines": 515
+    },
+    {
+      "path": "crates/projectd/src/dispatch.rs",
+      "lines": 513
+    },
+    {
+      "path": "progress/fixes-2026-09-08/editor-browser-checks.mjs",
+      "lines": 510
+    },
+    {
+      "path": "scripts/planning-browser.mjs",
+      "lines": 509
+    },
+    {
+      "path": "apps/web/src/lib/domain.generated.ts",
+      "lines": 502
+    },
+    {
+      "path": "crates/projectctl/src/typed.rs",
+      "lines": 455
+    },
+    {
+      "path": "scripts/check_package.py",
+      "lines": 448
+    },
+    {
+      "path": "crates/application/tests/durability.rs",
+      "lines": 440
+    },
+    {
+      "path": "apps/web/src/lib/FocusOrder.svelte",
+      "lines": 439
+    },
+    {
+      "path": "crates/application/src/mutation.rs",
+      "lines": 363
+    },
+    {
+      "path": "crates/application/src/workflow.rs",
+      "lines": 359
+    },
+    {
+      "path": "crates/projectd/src/lib.rs",
+      "lines": 350
+    },
+    {
+      "path": "crates/application/src/journal.rs",
+      "lines": 346
+    },
+    {
+      "path": "apps/web/src/lib/NativeProject.svelte",
+      "lines": 331
+    }
+  ],
+  "assets": [
+    {
+      "path": "apps/web/dist/assets/Board-DLgdT0rQ.css",
+      "bytes": 55447,
+      "gzip_bytes": 7715
+    },
+    {
+      "path": "apps/web/dist/assets/Board-DZreoc33.js",
+      "bytes": 78298,
+      "gzip_bytes": 25563
+    },
+    {
+      "path": "apps/web/dist/assets/CalendarView-B1sFYCok.js",
+      "bytes": 66211,
+      "gzip_bytes": 22819
+    },
+    {
+      "path": "apps/web/dist/assets/CalendarView-DsPD_E6s.css",
+      "bytes": 33488,
+      "gzip_bytes": 4171
+    },
+    {
+      "path": "apps/web/dist/assets/DateViews-C4Wu2rVH.js",
+      "bytes": 1893,
+      "gzip_bytes": 815
+    },
+    {
+      "path": "apps/web/dist/assets/GanttView-DitbIY0S.js",
+      "bytes": 267767,
+      "gzip_bytes": 85900
+    },
+    {
+      "path": "apps/web/dist/assets/GanttView-pobotIn2.css",
+      "bytes": 135632,
+      "gzip_bytes": 17343
+    },
+    {
+      "path": "apps/web/dist/assets/dist-CEI9ovs9.js",
+      "bytes": 6056,
+      "gzip_bytes": 2482
+    },
+    {
+      "path": "apps/web/dist/assets/events-CPVfB6AE.js",
+      "bytes": 28,
+      "gzip_bytes": 48
+    },
+    {
+      "path": "apps/web/dist/assets/index-1vz-kNRB.css",
+      "bytes": 36342,
+      "gzip_bytes": 6718
+    },
+    {
+      "path": "apps/web/dist/assets/index-DMip3k9t.js",
+      "bytes": 310277,
+      "gzip_bytes": 109976
+    }
+  ],
+  "rust_tests_passed": 92,
+  "notes": [
+    "Tracked working-tree file sizes exclude Git history and ignored build/dependency/runtime directories.",
+    "Assets are measured from a fresh Vite production build. Gzip is a size estimate, not evidence of HTTP compression.",
+    "Rust test total includes unit/integration tests; documentation test suites have zero tests."
+  ]
+}
