@@ -132,6 +132,7 @@
   let preview = $state(false);
   let projectDescriptionEditing = $state(false);
   let projectDescriptionInput = $state<HTMLTextAreaElement>();
+  let projectCloseButton = $state<HTMLButtonElement>();
   let discard = $state(false);
   let closing = $state(false);
 
@@ -250,7 +251,9 @@
     discard = false;
     onkeepediting?.();
   }
-  function beginProjectDescriptionEdit() {
+  function beginProjectDescriptionEdit(event?: Event) {
+    const target = event?.target;
+    if (target instanceof Element && target.closest("a")) return;
     if (draft.type === "project" && !locked) projectDescriptionEditing = true;
   }
   function finishProjectDescriptionEdit() {
@@ -271,6 +274,19 @@
         projectDescriptionInput.value.length,
       );
     });
+  });
+  $effect(() => {
+    if (!projectDescriptionEditing) return;
+    const outsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (projectDescriptionInput?.contains(target)) return;
+      if (projectCloseButton?.contains(target)) return;
+      finishProjectDescriptionEdit();
+    };
+    document.addEventListener("pointerdown", outsidePointer, true);
+    return () =>
+      document.removeEventListener("pointerdown", outsidePointer, true);
   });
   function focusDeleteAction(node: HTMLButtonElement) {
     node.focus({ preventScroll: true });
@@ -915,10 +931,11 @@
           </p>{/if}
       </div>
       <button
+        bind:this={projectCloseButton}
         aria-label="Close editor"
         onpointerdown={(event) => {
-          // Keep the textarea focused until click closes the dialog. Rendering
-          // on blur could otherwise move a centered dialog under the pointer.
+          // Keep the textarea focused until close() starts its flush. Moving
+          // focus first can reflow the centered dialog under the pointer.
           if (event.button === 0 && projectDescriptionEditing)
             event.preventDefault();
         }}
@@ -1075,17 +1092,29 @@
               onblur={finishProjectDescriptionEdit}
               disabled={locked}></textarea>
           {:else}
-            <div class="project-description-rendered">
+            <div
+              class="project-description-rendered"
+              role="button"
+              tabindex={locked ? -1 : 0}
+              aria-label="Edit project description"
+              aria-disabled={locked}
+              onclick={beginProjectDescriptionEdit}
+              onkeydown={(event) => {
+                if (
+                  event.target instanceof Element &&
+                  event.target.closest("a")
+                )
+                  return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  beginProjectDescriptionEdit(event);
+                }
+              }}
+            >
               {#if draft.common.body.trim()}<Markdown
                   source={draft.common.body}
                 />{:else}<p class="empty-context">No description yet.</p>{/if}
             </div>
-            <button
-              type="button"
-              class="quiet project-description-edit"
-              onclick={beginProjectDescriptionEdit}
-              disabled={locked}>Edit description</button
-            >
           {/if}
         </section>
       {:else}
@@ -1192,7 +1221,7 @@
             spellcheck="false"
             disabled={locked}></textarea>
         </details>{/if}
-      {#if resource && !readonly}<details>
+      {#if resource && !readonly && draft.type !== "project"}<details>
           <summary>Change history</summary><button
             type="button"
             onclick={() => loadHistory()}

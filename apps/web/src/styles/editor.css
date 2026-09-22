@@ -59,11 +59,11 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--bg);
+  cursor: text;
 }
-.editor .project-description-edit {
-  margin-top: 10px;
-  padding: 4px 8px;
-  font-size: 12px;
+.editor .project-description-rendered:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 .editor header,
 .editor footer,

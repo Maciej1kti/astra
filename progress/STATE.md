@@ -12,7 +12,10 @@ date and extensions are removed across source/API contracts, CLI validation and
 projections; both registered projects were checked and the one legacy phase was
 cleared through a conditional CLI write. The local gate passes 213 Rust,
 95 JavaScript and 12 Python tests, with five relevant release browser suites.
-The existing manual runtime now serves the verified build.
+The existing manual runtime now serves the verified build. A verified
+[interaction follow-up](2026-09-22-project-description-interaction.md) makes the
+description directly clickable, ends editing on outside clicks and removes the
+project modal's Change history section.
 
 [Editor autosave](2026-09-22-editor-autosave.md) removes Save changes and Cancel
 from card/project editors, with serialized conditional writes, guarded close,

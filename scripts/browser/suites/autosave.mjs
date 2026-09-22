@@ -587,16 +587,19 @@ export async function runAutosaveChecks({
       await expect(
         dialog().getByText("Additional fields", { exact: true }),
       ).toHaveCount(0);
+      await expect(dialog().locator(".project-description-edit")).toHaveCount(
+        0,
+      );
+      await expect(
+        dialog().getByText("Change history", { exact: true }),
+      ).toHaveCount(0);
       const name = `Autosave project ${Date.now().toString(36)}`;
       const projectWrites = () => writesFor(projectPath, "PATCH").length;
       await dialog().getByLabel("Name", { exact: true }).fill(name);
       await waitForWrite(projectPath, "PATCH", 1);
       await waitForSaved(projectPath, (value) => value.metadata.name === name);
-      const editDescription = dialog().getByRole("button", {
-        name: "Edit description",
-        exact: true,
-      });
-      await editDescription.click();
+      const renderedBox = dialog().locator(".project-description-rendered");
+      await renderedBox.click();
       const sourceEditor = dialog().getByRole("textbox", {
         name: "Project description",
         exact: true,
@@ -610,8 +613,11 @@ export async function runAutosaveChecks({
       };
       page.on("request", onRemoteImageRequest);
       await sourceEditor.fill(nextSource);
-      await sourceEditor.blur();
+      await dialog()
+        .locator("header")
+        .click({ position: { x: 2, y: 2 } });
       const preview = dialog().locator(".project-description-rendered");
+      await expect(sourceEditor).toBeHidden();
       await expect(preview).toBeVisible();
       await expect(preview).toContainText("Rendered project Markdown");
       await expect(preview.locator("h2")).toContainText(
@@ -624,12 +630,29 @@ export async function runAutosaveChecks({
       assert.doesNotMatch(rendered, /<(script|img|iframe|object|svg)\b/i);
       assert.equal(await preview.locator("img").count(), 0);
       assert.equal(remoteImageRequests.length, 0);
-      await editDescription.click();
-      await expect(sourceEditor).toHaveValue(nextSource);
-      await sourceEditor.blur();
       await waitForWrite(projectPath, "PATCH", 2);
       await waitForSaved(projectPath, (value) => value.body === nextSource);
       await page.off("request", onRemoteImageRequest);
+      await expect(renderedBox).toHaveAttribute("tabindex", "0");
+      await renderedBox.focus();
+      await renderedBox.press("Enter");
+      await expect(sourceEditor).toBeVisible();
+      await expect(sourceEditor).toHaveValue(nextSource);
+      await sourceEditor.press("Tab");
+      await expect(renderedBox).toBeVisible();
+      assert.equal(projectWrites(), 2);
+      await renderedBox.focus();
+      await renderedBox.press("Space");
+      await expect(sourceEditor).toBeVisible();
+      await sourceEditor.press("Tab");
+      await expect(renderedBox).toBeVisible();
+      assert.equal(projectWrites(), 2);
+      await renderedBox.click();
+      await expect(sourceEditor).toBeVisible();
+      await page.mouse.click(5, 5);
+      await expect(dialog()).toBeVisible();
+      await expect(renderedBox).toBeVisible();
+      assert.equal(projectWrites(), 2);
       await dialog()
         .getByLabel("Status", { exact: true })
         .selectOption("paused");
@@ -651,7 +674,7 @@ export async function runAutosaveChecks({
           value.metadata.state === "active" && value.body === nextSource,
       );
       const closeSource = `${nextSource}\n\nPointer close source is saved.`;
-      await editDescription.click();
+      await renderedBox.click();
       await dialog()
         .getByLabel("Project description", { exact: true })
         .fill(closeSource);
@@ -666,6 +689,8 @@ export async function runAutosaveChecks({
         descriptionSource: true,
         markdownPreview: true,
         sanitizedPreview: true,
+        outsideClicksExitEditing: true,
+        keyboardEditing: true,
         pointerCloseFlushed: true,
         modalStayedOpen: true,
       };
