@@ -198,7 +198,7 @@ fn state_schema_version_and_explicit_restore_epoch_survive_restart() {
             .unwrap()
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        1
+        2
     );
     journal.rotate_after_restore(now_millis()).unwrap();
     assert!(changes.has_changed().unwrap());
@@ -209,7 +209,7 @@ fn state_schema_version_and_explicit_restore_epoch_survive_restart() {
     assert_eq!(journal.epoch, restored);
     drop(journal);
     let connection = rusqlite::Connection::open(path.join("state.sqlite")).unwrap();
-    connection.pragma_update(None, "user_version", 2).unwrap();
+    connection.pragma_update(None, "user_version", 3).unwrap();
     drop(connection);
     assert!(
         matches!(Journal::open(&path),Err(AppError::Rejected(reply)) if reply.body["error"]["code"]=="STATE_SCHEMA_TOO_NEW")

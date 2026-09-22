@@ -1,0 +1,12 @@
+{
+  "api_version": "1",
+  "request_id": "01992900-0000-7000-8000-000000000001",
+  "status": "committed",
+  "result": {
+    "type": "card",
+    "id": "22222222-2222-4222-8222-222222222222",
+    "deleted": true
+  },
+  "warnings": [],
+  "replayed": false
+}

@@ -17,6 +17,7 @@ const suites = [
   "code-health",
   "protocol",
   "command-outcomes",
+  "deletion",
 ];
 
 export async function runSuites(selected = suites) {

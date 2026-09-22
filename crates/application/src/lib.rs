@@ -1,7 +1,9 @@
 pub mod auth;
+mod card_deletion;
 mod command_state;
 mod context;
 mod diagnostics;
+mod project_deletion;
 pub use diagnostics::{record_failure, record_worker_failure};
 pub mod engine;
 mod git;
@@ -134,6 +136,9 @@ mod durability_tests;
 #[cfg(test)]
 #[path = "../tests/engine.rs"]
 mod engine_tests;
+#[cfg(test)]
+#[path = "../tests/project_deletion.rs"]
+mod project_deletion_tests;
 #[cfg(test)]
 #[path = "../tests/tag_management.rs"]
 mod tag_management_tests;

@@ -9,7 +9,7 @@ use project_domain::validate_document;
 use project_store::{
     StoreError,
     document::{self, Kind},
-    filesystem::{ProjectStore, WritePoint},
+    filesystem::{DeletePoint, ProjectStore, WritePoint},
 };
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -20,6 +20,7 @@ pub enum CommitPoint {
     TempWritten,
     TempSynced,
     Renamed,
+    Unlinked,
     DirectorySynced,
     Committed,
 }
@@ -27,6 +28,137 @@ pub struct Writer<'a> {
     pub journal: &'a Journal,
 }
 impl Writer<'_> {
+    /// Execute a physical card deletion through the same journal and durable
+    /// filesystem sequence as ordinary source writes. The caller performs the
+    /// domain guards and supplies a reference snapshot; `guard` runs again
+    /// after admission and before the unlink.
+    pub fn execute_delete(
+        &self,
+        store: &mut ProjectStore,
+        command: &Command,
+        references: Vec<Reference>,
+        now: i64,
+        guard: impl Fn(&ProjectStore) -> Result<(), AppError>,
+        mut checkpoint: impl FnMut(CommitPoint) -> Result<(), StoreError>,
+    ) -> Result<Reply, AppError> {
+        if let Some(reply) = self.journal.admit(command, now)? {
+            return Ok(reply);
+        }
+        let reject = |reply: Reply| -> Result<Reply, AppError> {
+            Ok(self
+                .journal
+                .record(command, &reply, None, now, true)?
+                .unwrap_or(reply))
+        };
+        if self.journal.has_pending(&command.target.project_id)? {
+            return reject(Reply::error(
+                409,
+                "PROJECT_RECOVERY_REQUIRED",
+                &command.request_id,
+            ));
+        }
+        if command.expected.is_none() {
+            return reject(Reply::error(
+                428,
+                "PRECONDITION_REQUIRED",
+                &command.request_id,
+            ));
+        }
+        let (directory, filename) =
+            match store.location(command.target.kind, &command.target.id, false) {
+                Ok(location) => location,
+                Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+                    return reject(Reply::error(404, "RESOURCE_NOT_FOUND", &command.request_id));
+                }
+                Err(error) => return Err(error.into()),
+            };
+        let before = match directory.read(&filename)? {
+            Some(bytes) => bytes,
+            None => return reject(Reply::error(404, "RESOURCE_NOT_FOUND", &command.request_id)),
+        };
+        let before_version = document::version(&before);
+        if command.expected.as_deref() != Some(&before_version) {
+            return reject(Reply::error(412, "VERSION_CONFLICT", &command.request_id));
+        }
+        if document::parse(command.target.kind, Some(&command.target.id), &before).is_err() {
+            return reject(Reply::error(409, "DOCUMENT_INVALID", &command.request_id));
+        }
+        let references = match distinct_references(references) {
+            Some(references) => references,
+            None => return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id)),
+        };
+        if !references_match(store, &references)? {
+            return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id));
+        }
+        if let Err(error) = guard(store) {
+            return match error {
+                AppError::Rejected(reply) => reject(reply),
+                error => Err(error),
+            };
+        }
+        let reply = Reply {
+            http_status: 200,
+            body: json!({
+                "api_version": "1",
+                "request_id": command.request_id,
+                "status": "committed",
+                "result": {
+                    "type": command.target.kind.as_str(),
+                    "id": command.target.id,
+                    "deleted": true,
+                },
+                "warnings": [],
+                "replayed": false,
+            }),
+        };
+        let intent = Intent {
+            command: command.clone(),
+            before: Some(before),
+            after: None,
+            references,
+            source_root: store.directory.path().to_str().unwrap().to_owned(),
+        };
+        if let Some(existing) = self
+            .journal
+            .record(command, &reply, Some(&intent), now, false)?
+        {
+            return Ok(existing);
+        }
+        let write = (|| -> Result<(), AppError> {
+            checkpoint(CommitPoint::Prepared)?;
+            guard(store)?;
+            directory.remove_with(
+                &filename,
+                command
+                    .expected
+                    .as_deref()
+                    .ok_or(AppError::invariant("delete expected version"))?,
+                |point| {
+                    checkpoint(match point {
+                        DeletePoint::Unlinked => CommitPoint::Unlinked,
+                        DeletePoint::DirectorySynced => CommitPoint::DirectorySynced,
+                    })
+                },
+            )?;
+            self.journal.finish(&intent, now)?;
+            checkpoint(CommitPoint::Committed)?;
+            Ok(())
+        })();
+        if let Err(error) = write {
+            crate::diagnostics::record_failure(
+                "source_delete",
+                &error,
+                Some(&command.target.project_id),
+                Some(&command.request_id),
+            );
+            return Ok(Reply {
+                http_status: 202,
+                body: json!({"api_version":"1","request_id":command.request_id,"state":"prepared"}),
+            });
+        }
+        Ok(reply)
+    }
+
     pub fn execute(
         &self,
         store: &mut ProjectStore,
@@ -178,7 +310,7 @@ impl Writer<'_> {
         let intent = Intent {
             command: command.clone(),
             before,
-            after,
+            after: Some(after),
             references,
             source_root: store.directory.path().to_str().unwrap().to_owned(),
         };
@@ -194,7 +326,10 @@ impl Writer<'_> {
             checkpoint(CommitPoint::Prepared)?;
             directory.replace_with(
                 &filename,
-                &intent.after,
+                intent
+                    .after
+                    .as_deref()
+                    .ok_or(AppError::invariant("replacement intent after bytes"))?,
                 command.expected.as_deref(),
                 |point| {
                     checkpoint(match point {
@@ -224,11 +359,28 @@ impl Writer<'_> {
         Ok(reply)
     }
 
+    #[cfg(test)]
     pub fn recover(
         &self,
         store: &mut ProjectStore,
         project_id: &str,
         now: i64,
+    ) -> Result<usize, AppError> {
+        self.recover_with_guard(store, project_id, now, |_, intent| {
+            // Any absent-after intent is destructive. Its caller must provide
+            // the current dependency and workspace guards explicitly.
+            Ok(intent.after.is_some())
+        })
+    }
+
+    /// Recover source intents while allowing destructive operations to apply
+    /// their current dependency and workspace guards before touching bytes.
+    pub fn recover_with_guard(
+        &self,
+        store: &mut ProjectStore,
+        project_id: &str,
+        now: i64,
+        guard: impl Fn(&ProjectStore, &Intent) -> Result<bool, AppError>,
     ) -> Result<usize, AppError> {
         let mut recovered = 0;
         for intent in self.journal.pending(project_id)? {
@@ -241,19 +393,41 @@ impl Writer<'_> {
                 break;
             }
             let attempt = (|| -> Result<bool, AppError> {
-                let (directory, name) =
-                    store.location(intent.command.target.kind, &intent.command.target.id, true)?;
+                if !guard(store, &intent)? {
+                    return Ok(false);
+                }
+                let (directory, name) = store.location(
+                    intent.command.target.kind,
+                    &intent.command.target.id,
+                    intent.after.is_some(),
+                )?;
                 let actual = directory.read(&name)?;
                 let actual_hash = actual.as_ref().map(|b| document::version(b));
-                if actual_hash.as_deref() == Some(&document::version(&intent.after)) {
-                    directory.resync(&name)?;
-                } else if actual_hash == intent.before.as_ref().map(|b| document::version(b)) {
-                    if !references_match(store, &intent.references)? {
-                        return Ok(false);
+                match intent.after.as_deref() {
+                    Some(after) if actual_hash.as_deref() == Some(&document::version(after)) => {
+                        directory.resync(&name)?;
                     }
-                    directory.replace(&name, &intent.after, actual_hash.as_deref())?;
-                } else {
-                    return Ok(false);
+                    None if actual.is_none() => {
+                        directory.sync()?;
+                    }
+                    Some(after)
+                        if actual_hash == intent.before.as_ref().map(|b| document::version(b)) =>
+                    {
+                        if !references_match(store, &intent.references)? {
+                            return Ok(false);
+                        }
+                        directory.replace(&name, after, actual_hash.as_deref())?;
+                    }
+                    None if actual_hash == intent.before.as_ref().map(|b| document::version(b)) => {
+                        if !references_match(store, &intent.references)? {
+                            return Ok(false);
+                        }
+                        let expected = actual_hash
+                            .as_deref()
+                            .ok_or(AppError::invariant("delete recovery before hash"))?;
+                        directory.remove_with(&name, expected, |_| Ok(()))?;
+                    }
+                    _ => return Ok(false),
                 }
                 self.journal.finish(&intent, now)?;
                 Ok(true)

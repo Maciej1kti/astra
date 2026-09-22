@@ -856,3 +856,6 @@ async fn session_revocation_closes_the_browser_event_stream() {
         401
     );
 }
+
+#[path = "transport/deletion.rs"]
+mod deletion;

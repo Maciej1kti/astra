@@ -13,6 +13,7 @@ import type {
   PreferencesResource,
   ReceiptsInput,
   UpdateCreate,
+  ProjectDeletionPlan,
 } from "../contracts/api.generated";
 
 type Reference<K extends Resource["type"] = Resource["type"]> = Pick<
@@ -33,6 +34,12 @@ export function getResource<K extends Resource["type"]>(
 }
 export function getProject(project: string) {
   return getResource({ type: "project", project_id: project, id: project });
+}
+export function getProjectDeletionPlan(project: string) {
+  return api<ProjectDeletionPlan>(`/api/v1/projects/${project}/deletion-plan`);
+}
+export function deleteProject(project: string, version: string) {
+  return command(`/api/v1/projects/${project}`, "DELETE", {}, version);
 }
 export function getFocus() {
   return api<FocusResource>("/api/v1/workspace/focus");
@@ -60,6 +67,14 @@ export function patchCard(
     resourcePath({ type: "card", project_id: project, id }),
     "PATCH",
     payload,
+    version,
+  );
+}
+export function deleteCard(project: string, id: string, version: string) {
+  return command(
+    resourcePath({ type: "card", project_id: project, id }),
+    "DELETE",
+    {},
     version,
   );
 }

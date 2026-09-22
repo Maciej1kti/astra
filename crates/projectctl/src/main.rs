@@ -1,5 +1,6 @@
 mod input;
 mod output;
+mod project;
 mod queries;
 mod transport;
 mod typed;
@@ -45,6 +46,11 @@ enum OutputFormat {
 }
 #[derive(Subcommand)]
 enum Action {
+    /// Read a project deletion plan or permanently remove its `.project` tree.
+    Project {
+        #[command(subcommand)]
+        action: project::Action,
+    },
     /// Prepare a local maintenance operation from a strict JSON input file.
     MaintenancePlan {
         #[arg(long)]
@@ -220,6 +226,7 @@ async fn run(args: Arguments) -> Result<transport::Outcome, Box<dyn std::error::
         .timeout(Duration::from_secs(args.timeout))
         .build()?;
     let request = match args.command {
+        Action::Project { action } => action.prepare()?,
         Action::MaintenancePlan { json_file } => Request::local(
             "POST",
             "/local/v1/maintenance/plans",

@@ -28,7 +28,15 @@ impl Engine {
         let store = handle
             .lock()
             .map_err(|_| AppError::LockPoisoned("project store"))?;
-        let current = read(&store, kind, id)?.version;
+        let current = match read(&store, kind, id) {
+            Ok(source) => Some(source.version),
+            Err(AppError::Rejected(reply))
+                if reply.body["error"]["code"] == "RESOURCE_NOT_FOUND" =>
+            {
+                None
+            }
+            Err(error) => return Err(error),
+        };
         let db = self.journal.db()?;
         let (newest, count): (i64, i64) = db.query_row(
             "SELECT COALESCE(MAX(rowid),
@@ -81,7 +89,7 @@ LIMIT ?5",
                         r.get::<_, String>(2)?,
                         r.get::<_, String>(3)?,
                         r.get::<_, Option<String>>(4)?,
-                        r.get::<_, String>(5)?,
+                        r.get::<_, Option<String>>(5)?,
                         r.get::<_, Option<Vec<u8>>>(6)?,
                         r.get::<_, Option<Vec<u8>>>(7)?,
                     ))
@@ -128,7 +136,10 @@ LIMIT ?5",
                 "before_version": before_hash,
                 "after_version": after_hash,
                 "changed_fields": fields.into_iter().take(100).collect::<Vec<_>>(),
-                "can_undo": previous.is_some()&&kind!=Kind::Update&&after_hash==current,
+                "can_undo": previous.is_some()
+                    && kind != Kind::Update
+                    && after_hash.is_some()
+                    && after_hash.as_ref() == current.as_ref(),
             }));
         }
         let next = more.then(|| json!([revision, last]).to_string());
@@ -149,7 +160,7 @@ pub(crate) fn undo_document(
     history_id: &str,
     current: &str,
 ) -> Result<Value, AppError> {
-    let row: Option<(Option<Vec<u8>>, String)> = journal
+    let row: Option<(Option<Vec<u8>>, Option<String>)> = journal
         .db()?
         .query_row(
             "SELECT before_bytes,
@@ -169,6 +180,9 @@ AND target_id=?4",
         )
         .optional()?;
     let (before, after) = row.ok_or_else(|| AppError::reject(404, "HISTORY_NOT_FOUND"))?;
+    let Some(after) = after else {
+        return Err(AppError::reject(409, "UNDO_DELETE_NOT_SUPPORTED"));
+    };
     if after != current {
         return Err(AppError::reject(409, "UNDO_TARGET_CHANGED"));
     }

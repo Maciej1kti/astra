@@ -84,6 +84,37 @@ advanced operations remain available through the existing JSON contracts.
 `milestone` supports `list`, `get`, `create`, `set`, `move`, `history` and `undo`.
 Its create/set input options follow the same pattern. Schedule editing is card-only.
 
+## Permanent deletion
+
+Read the card before deleting its source file:
+
+```sh
+projectctl --project /absolute/project card get CARD_ID
+projectctl --project /absolute/project card delete CARD_ID --if-version CARD_VERSION
+```
+
+Incoming dependencies (including archived cards) and workspace focus block card
+removal. Disconnect those references explicitly first. Reports remain available;
+there is no undo or restore for a deleted card.
+
+Project deletion uses an explicit project ID and a reviewed directory snapshot:
+
+```sh
+projectctl project deletion-plan PROJECT_ID
+projectctl project delete PROJECT_ID --if-version DELETION_PLAN_VERSION
+```
+
+Review the returned `.project` path, file count and byte count. Use the preview's
+version, not the version of `project.md`. The command physically removes the whole
+`.project/` directory and its workspace registration/focus entries. Other files
+in the repository remain. A changed tree or workspace rejects the stale preview;
+read and review a new preview before issuing a new command. There is no restore.
+
+Both deletion commands print their request identity before sending. Keep it and
+the original version. An uncertain result uses `command-status` or an identical
+retry with `--request-id` and `--epoch`, as described below. The project command
+continues to work for retries after its folder metadata and registration disappear.
+
 ## Search and planning reads
 
 ```sh

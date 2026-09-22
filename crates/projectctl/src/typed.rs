@@ -85,6 +85,14 @@ pub enum Action {
 pub enum Card {
     #[command(flatten)]
     Resource(Resource),
+    /// Permanently remove one card source after an explicit version check.
+    Delete {
+        id: String,
+        #[arg(long)]
+        if_version: String,
+        #[command(flatten)]
+        identity: Identity,
+    },
     /// Set inclusive schedule dates or explicitly remove the schedule.
     Schedule {
         id: String,
@@ -521,6 +529,20 @@ fn resource(root: String, action: Resource) -> Result<Request, Error> {
 fn card(root: String, action: Card) -> Result<Request, Error> {
     match action {
         Card::Resource(action) => resource(root, action),
+        Card::Delete {
+            id,
+            if_version,
+            identity,
+        } => {
+            super::uuid4(&id)?;
+            Ok(write(
+                "DELETE",
+                format!("{root}/{id}"),
+                json!({}),
+                Some(if_version),
+                identity,
+            ))
+        }
         Card::Schedule {
             id,
             start,

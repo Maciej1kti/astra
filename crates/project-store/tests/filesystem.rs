@@ -1,7 +1,7 @@
 use project_store::{
     StoreError,
     document::{Kind, version},
-    filesystem::{Directory, ProjectStore, WritePoint},
+    filesystem::{DeletePoint, Directory, ProjectStore, WritePoint},
 };
 use std::{fs, os::unix::fs::symlink};
 
@@ -110,6 +110,42 @@ fn failure_after_rename_keeps_the_new_source_for_recovery() {
     assert!(result.is_err());
     assert_eq!(dir.read("card").unwrap().unwrap(), b"after");
     dir.resync("card").unwrap();
+}
+
+#[test]
+fn conditional_delete_unlinks_and_syncs_the_parent_directory() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().canonicalize().unwrap();
+    let dir = Directory::open(&root).unwrap();
+    dir.replace("card", b"before", None).unwrap();
+    let mut points = Vec::new();
+    dir.remove_with("card", &version(b"before"), |point| {
+        points.push(point);
+        Ok(())
+    })
+    .unwrap();
+    assert_eq!(
+        points,
+        [DeletePoint::Unlinked, DeletePoint::DirectorySynced]
+    );
+    assert_eq!(dir.read("card").unwrap(), None);
+    assert!(matches!(
+        dir.remove_with("card", &version(b"before"), |_| Ok(())),
+        Err(StoreError::Conflict)
+    ));
+}
+
+#[test]
+fn conditional_delete_rejects_an_observed_version_change() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().canonicalize().unwrap();
+    let dir = Directory::open(&root).unwrap();
+    dir.replace("card", b"before", None).unwrap();
+    assert!(matches!(
+        dir.remove_with("card", &version(b"other"), |_| Ok(())),
+        Err(StoreError::Conflict)
+    ));
+    assert_eq!(dir.read("card").unwrap().unwrap(), b"before");
 }
 
 #[test]

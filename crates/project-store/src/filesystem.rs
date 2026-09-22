@@ -245,6 +245,26 @@ impl Directory {
         let _ = fs::unlinkat(&self.file, &temp, AtFlags::empty());
         result
     }
+
+    /// Remove a regular file only when its current bytes still match the
+    /// observed version. The unlink and parent directory sync are separate
+    /// durability checkpoints; callers must journal the intent before calling
+    /// this method.
+    pub fn remove_with(
+        &self,
+        name: &str,
+        expected: &str,
+        mut checkpoint: impl FnMut(DeletePoint) -> Result<(), StoreError>,
+    ) -> Result<(), StoreError> {
+        component(name)?;
+        self.precondition(name, Some(expected))?;
+        self.verify()?;
+        fs::unlinkat(&self.file, name, AtFlags::empty())?;
+        checkpoint(DeletePoint::Unlinked)?;
+        self.file.sync_all()?;
+        checkpoint(DeletePoint::DirectorySynced)?;
+        Ok(())
+    }
     fn precondition(&self, name: &str, expected: Option<&str>) -> Result<(), StoreError> {
         let actual = self.read(name)?.map(|bytes| version(&bytes));
         if actual.as_deref() != expected {
@@ -273,6 +293,12 @@ pub enum WritePoint {
     TempWritten,
     TempSynced,
     Renamed,
+    DirectorySynced,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeletePoint {
+    Unlinked,
     DirectorySynced,
 }
 pub struct Lease {

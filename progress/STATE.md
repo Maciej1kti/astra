@@ -1,12 +1,18 @@
 # Current implementation state
 
-Updated 2026-09-08. The application is implemented and under verification;
+Updated 2026-09-22. The application is implemented and under verification;
 full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 [release checklist](../delivery/RELEASE-CHECKLIST.md).
 
 ## Current work and verification
 
-This checkpoint includes the completed
+[Permanent deletion](2026-09-22-permanent-deletion.md) implements physical card-file
+and `.project/` removal through the browser and CLI, with conditional confirmation,
+durable recovery and stable retries. There is no restore. The local gate passes
+210 Rust, 85 JavaScript and 12 Python tests; the evidence record contains coverage
+and platform limits. The running owner service has not been redeployed.
+
+The earlier 2026-09-08 checkpoint includes the completed
 [maintainability cleanup](maintainability-cleanup-2026-09-08/README.md), CLI work
 and important audit fixes. The owner authorized committing and pushing the
 verified work to `origin/main` on 2026-09-08. The earlier safety checkpoint
@@ -27,7 +33,7 @@ are complete; additional named frontend endpoints, smoke scenario separation and
 Q10's vendor assumptions remain follow-up work. See
 [ADR-033](../docs/ADR-033-AUDIT-OWNERSHIP-AND-RECOVERY.md).
 
-The current local gate passes 174 Rust, 82 JavaScript and 12 Python tests,
+The 2026-09-08 local gate passed 174 Rust, 82 JavaScript and 12 Python tests,
 contracts/examples, frontend typing, import boundaries, formatters, Clippy and
 release builds. Release HTTPS/CLI smoke, planning tests and all eight browser
 regression suites pass, including 14 new direct/status conflict cases. The audit

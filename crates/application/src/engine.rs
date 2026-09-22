@@ -111,6 +111,7 @@ ON CONFLICT (key) DO UPDATE
 SET value=excluded.value",
             [&initial_workspace.instance_id],
         )?;
+        engine.recover_project_deletions()?;
         engine.recover_workspace()?;
         for (job, plan) in (Workflows {
             journal: &engine.journal,
@@ -188,8 +189,14 @@ SET value=excluded.value",
                     if let Err(error) = (Writer {
                         journal: &engine.journal,
                     })
-                    .recover(&mut store, id, now_millis())
-                    {
+                    .recover_with_guard(
+                        &mut store,
+                        id,
+                        now_millis(),
+                        |store, intent| {
+                            crate::card_deletion::recovery_guard(&engine, store, intent)
+                        },
+                    ) {
                         crate::diagnostics::record_failure(
                             "startup_source_recovery",
                             &error,
@@ -261,6 +268,7 @@ SET value=excluded.value",
         Ok(())
     }
     pub(crate) fn store_path(&self, path: &str, create: bool) -> Result<StoreHandle, AppError> {
+        self.ensure_project_deletion_path(Some(path))?;
         let mut stores = self
             .stores
             .lock()

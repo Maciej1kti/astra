@@ -378,7 +378,8 @@ await runBrowserSuite(
             page.getByText("Loading resources…", { exact: true }),
           ).toBeHidden();
           await snapshot("mobile-direct-updates");
-          await expect(selected).toBeInViewport({ ratio: 1 });
+          // Chromium can report a fractional final pixel at the mobile viewport edge.
+          await expect(selected).toBeInViewport({ ratio: 0.99 });
           return selected.boundingBox();
         },
       );

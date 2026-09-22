@@ -484,3 +484,99 @@ fn failure_to_record_a_command_cannot_commit_family_side_effects() {
         1
     );
 }
+
+#[test]
+fn state_v1_migration_keeps_pending_intents_history_and_epoch() {
+    use std::os::unix::fs::PermissionsExt;
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    let root = temp.path().canonicalize().unwrap();
+    let epoch = Uuid::new_v4().to_string();
+    let request = Uuid::now_v7().to_string();
+    let project = "11111111-1111-4111-8111-111111111111";
+    let card = "22222222-2222-4222-8222-222222222222";
+    let connection = rusqlite::Connection::open(root.join("state.sqlite")).unwrap();
+    let v1_schema = include_str!("../../../../contracts/state-starting-schema.sql")
+        .replace("after_hash TEXT,", "after_hash TEXT NOT NULL,")
+        .replace(
+            "'create','replace','delete','remove_registration','workflow_step'",
+            "'create','replace','remove_registration','workflow_step'",
+        );
+    connection.execute_batch(&v1_schema).unwrap();
+    connection
+        .execute(
+            "INSERT INTO meta(key,value) VALUES('command_epoch',?1)",
+            [&epoch],
+        )
+        .unwrap();
+    let command = json!({
+        "request_id":request,
+        "epoch":epoch,
+        "method":"PATCH",
+        "target":{"project_id":project,"kind":"card","id":card},
+        "expected":"r1.before",
+        "payload":{"set":{"title":"after"}}
+    });
+    connection
+        .execute(
+            "INSERT INTO commands(epoch,request_id,digest,state,target_kind,project_id,target_id,received_at,expires_at,result_json,error_json) VALUES(?1,?2,'digest','prepared','card',?3,?4,'2026-01-01','2026-01-08',?5,NULL)",
+            rusqlite::params![
+                epoch,
+                request,
+                project,
+                card,
+                json!({"http_status":202,"body":{"api_version":"1","request_id":request,"state":"prepared"}}).to_string()
+            ],
+        )
+        .unwrap();
+    connection
+        .execute(
+            "INSERT INTO write_intents(epoch,request_id,step,approved_root,relative_path,before_hash,after_hash,before_bytes,after_bytes,intent_kind) VALUES(?1,?2,0,?3,?4,'r1.before','r1.after',?5,?6,'replace')",
+            rusqlite::params![
+                epoch,
+                request,
+                root.to_str().unwrap(),
+                format!("cards/{card}.md"),
+                b"before".as_slice(),
+                b"after".as_slice()
+            ],
+        )
+        .unwrap();
+    connection
+        .execute(
+            "INSERT INTO intent_context(epoch,request_id,command_json,references_json) VALUES(?1,?2,?3,'[]')",
+            rusqlite::params![epoch, request, command.to_string()],
+        )
+        .unwrap();
+    connection
+        .execute(
+            "INSERT INTO history(id,project_id,target_kind,target_id,epoch,request_id,before_hash,after_hash,before_bytes,after_bytes,recorded_at) VALUES('55555555-5555-4555-8555-555555555555',?1,'card',?2,?3,?4,'r1.before','r1.after',?5,?6,'2026-01-01')",
+            rusqlite::params![project, card, epoch, request, b"before".as_slice(), b"after".as_slice()],
+        )
+        .unwrap();
+    connection.pragma_update(None, "user_version", 1).unwrap();
+    drop(connection);
+
+    let journal = Journal::open(&root).unwrap();
+    assert_eq!(journal.epoch, epoch);
+    assert_eq!(
+        journal
+            .db()
+            .unwrap()
+            .pragma_query_value(None, "user_version", |row| row.get::<_, u32>(0))
+            .unwrap(),
+        2
+    );
+    let pending = journal.pending(project).unwrap();
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].after.as_deref(), Some(&b"after"[..]));
+    assert_eq!(
+        journal
+            .db()
+            .unwrap()
+            .query_row("SELECT count(*) FROM history", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+}

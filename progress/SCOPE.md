@@ -35,3 +35,18 @@ iteration. Further feature expansion or new Kanban dependencies require renewed
 owner direction. Bug fixes and remaining platform, accessibility and performance
 verification stay in scope. This freeze does not mark outstanding release
 acceptance checks as passed or waive the physical-device requirements.
+
+## Permanent deletion — owner decision, 2026-09-22
+
+Implement card and project deletion without trash or restoration. Deleting a
+card physically removes its source file from `.project/cards/`. Deleting a
+project physically removes its `.project/` directory and its workspace/focus
+registration, preserving the enclosing repository and all files outside that
+directory. The owner explicitly confirmed the singular `.project/` spelling.
+
+This supersedes the recoverable-trash proposal in the 2026-09-22 deletion review
+and the earlier restriction to archive/unregistration for these user actions.
+Existing archive and local administrative unregistration remain distinct.
+Conditional writes, durable recovery, dependency validation, authentication and
+the other architectural invariants still apply. No deletion is authorized against
+the owner's remaining live projects as part of implementation verification.

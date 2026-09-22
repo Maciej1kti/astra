@@ -59,7 +59,9 @@ pub struct Reference {
 pub struct Intent {
     pub command: Command,
     pub before: Option<Vec<u8>>,
-    pub after: Vec<u8>,
+    /// `None` means the durable target is expected to be absent. It remains
+    /// distinct from an empty source document during recovery.
+    pub after: Option<Vec<u8>>,
     pub references: Vec<Reference>,
     pub source_root: String,
 }
@@ -153,7 +155,7 @@ WHERE state IN ('pending',
             OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
         )?;
         let schema: u32 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
-        if schema > 1 {
+        if schema > 2 {
             return Err(AppError::reject(503, "STATE_SCHEMA_TOO_NEW"));
         }
         connection.busy_timeout(Duration::from_secs(2))?;
@@ -162,7 +164,52 @@ WHERE state IN ('pending',
             connection.execute_batch("BEGIN IMMEDIATE;")?;
             connection
                 .execute_batch(include_str!("../../../contracts/state-starting-schema.sql"))?;
-            connection.execute_batch("PRAGMA user_version=1; COMMIT;")?;
+            connection.execute_batch("PRAGMA user_version=2; COMMIT;")?;
+        }
+        if schema == 1 {
+            connection.execute_batch(
+                "BEGIN IMMEDIATE;
+                 ALTER TABLE write_intents RENAME TO write_intents_old;
+                 CREATE TABLE write_intents (
+                   epoch TEXT NOT NULL,
+                   request_id TEXT NOT NULL,
+                   step INTEGER NOT NULL,
+                   approved_root TEXT NOT NULL,
+                   relative_path TEXT NOT NULL,
+                   before_hash TEXT,
+                   after_hash TEXT,
+                   before_bytes BLOB,
+                   after_bytes BLOB,
+                   intent_kind TEXT NOT NULL CHECK(intent_kind IN ('create','replace','delete','remove_registration','workflow_step')),
+                   resolved INTEGER NOT NULL DEFAULT 0 CHECK(resolved IN (0,1)),
+                   PRIMARY KEY(epoch,request_id,step),
+                   FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id) ON DELETE RESTRICT
+                 ) STRICT;
+                 INSERT INTO write_intents(epoch,request_id,step,approved_root,relative_path,before_hash,after_hash,before_bytes,after_bytes,intent_kind,resolved)
+                   SELECT epoch,request_id,step,approved_root,relative_path,before_hash,after_hash,before_bytes,after_bytes,intent_kind,resolved FROM write_intents_old;
+                 DROP TABLE write_intents_old;
+                 ALTER TABLE history RENAME TO history_old;
+                 CREATE TABLE history (
+                   id TEXT PRIMARY KEY,
+                   project_id TEXT,
+                   target_kind TEXT NOT NULL,
+                   target_id TEXT NOT NULL,
+                   epoch TEXT NOT NULL,
+                   request_id TEXT NOT NULL,
+                   before_hash TEXT,
+                   after_hash TEXT,
+                   before_bytes BLOB,
+                   after_bytes BLOB,
+                   recorded_at TEXT NOT NULL,
+                   pinned INTEGER NOT NULL DEFAULT 0 CHECK(pinned IN (0,1))
+                 ) STRICT;
+                 INSERT INTO history(id,project_id,target_kind,target_id,epoch,request_id,before_hash,after_hash,before_bytes,after_bytes,recorded_at,pinned)
+                   SELECT id,project_id,target_kind,target_id,epoch,request_id,before_hash,after_hash,before_bytes,after_bytes,recorded_at,pinned FROM history_old;
+                 DROP TABLE history_old;
+                 CREATE INDEX IF NOT EXISTS history_target ON history(project_id,target_kind,target_id,recorded_at);
+                 PRAGMA user_version=2;
+                 COMMIT;",
+            )?;
         }
         let epoch: Option<String> = connection
             .query_row(
@@ -363,7 +410,7 @@ ORDER BY m.rowid,
             Ok((
                 r.get::<_, String>(0)?,
                 r.get::<_, Option<Vec<u8>>>(1)?,
-                r.get::<_, Vec<u8>>(2)?,
+                r.get::<_, Option<Vec<u8>>>(2)?,
                 r.get::<_, String>(3)?,
                 r.get::<_, String>(4)?,
                 r.get::<_, String>(5)?,
@@ -460,10 +507,12 @@ VALUES (?1,
                     intent.source_root,
                     relative,
                     intent.before.as_ref().map(|b| document::version(b)),
-                    document::version(&intent.after),
+                    intent.after.as_ref().map(|bytes| document::version(bytes)),
                     intent.before,
                     intent.after,
-                    if intent.before.is_some() {
+                    if intent.after.is_none() {
+                        "delete"
+                    } else if intent.before.is_some() {
                         "replace"
                     } else {
                         "create"
@@ -535,7 +584,7 @@ VALUES (?1,
                 command.epoch,
                 command.request_id,
                 intent.before.as_ref().map(|b| document::version(b)),
-                document::version(&intent.after),
+                intent.after.as_ref().map(|bytes| document::version(bytes)),
                 intent.before,
                 intent.after,
                 instant(now)

@@ -184,7 +184,7 @@ try {
   await page
     .getByLabel("Project", { exact: true })
     .selectOption(plan.project_id);
-  await page.getByRole("button", { name: "Add card", exact: false }).click();
+  await page.getByRole("button", { name: "＋ Add card", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill("Ship the field guide");
   await page.getByLabel("Start", { exact: true }).fill("2026-09-07");
   await page.getByLabel("End", { exact: true }).fill("2026-09-12");

@@ -51,6 +51,7 @@ impl Engine {
             .gate
             .write()
             .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        self.ensure_no_project_deletion()?;
         let crate::Versioned {
             value: mut workspace,
             version: workspace_version,
@@ -290,6 +291,7 @@ impl Engine {
         {
             return Ok(reply);
         }
+        self.ensure_no_project_deletion()?;
         if self.journal.has_pending("workspace")? {
             return Err(AppError::reject(409, "WORKSPACE_RECOVERY_REQUIRED"));
         }

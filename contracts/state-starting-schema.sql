@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS write_intents (
   after_hash TEXT,
   before_bytes BLOB,
   after_bytes BLOB,
-  intent_kind TEXT NOT NULL CHECK(intent_kind IN ('create','replace','remove_registration','workflow_step')),
+  intent_kind TEXT NOT NULL CHECK(intent_kind IN ('create','replace','delete','remove_registration','workflow_step')),
   resolved INTEGER NOT NULL DEFAULT 0 CHECK(resolved IN (0,1)),
   PRIMARY KEY(epoch,request_id,step),
   FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id) ON DELETE RESTRICT
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS history (
   epoch TEXT NOT NULL,
   request_id TEXT NOT NULL,
   before_hash TEXT,
-  after_hash TEXT NOT NULL,
+  after_hash TEXT,
   before_bytes BLOB,
   after_bytes BLOB,
   recorded_at TEXT NOT NULL,

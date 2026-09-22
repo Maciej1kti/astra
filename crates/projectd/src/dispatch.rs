@@ -97,6 +97,10 @@ pub(super) fn run(
             engine.list(Some(resource_type), &query)?
         }
 
+        ("GET", ["api", "v1", "projects", project, "deletion-plan"]) => {
+            parameters(&input, &[])?;
+            engine.project_deletion_plan(project)?
+        }
         ("GET", ["api", "v1", "projects", project, "git"]) => {
             parameters(&input, &[])?;
             engine.git_observation(project)?
@@ -375,6 +379,29 @@ pub(super) fn run(
         }
         ("PATCH", ["api", "v1", "projects", project]) => {
             return mutate(engine, &input, project, Kind::Project, Some(project));
+        }
+        ("DELETE", ["api", "v1", "projects", project]) => {
+            parameters(&input, &[])?;
+            let expected = expected_version(&input)?;
+            return Ok(response(engine.delete_project(
+                project,
+                input.body.clone(),
+                request_id,
+                epoch,
+                expected,
+            )?));
+        }
+        ("DELETE", ["api", "v1", "projects", project, "cards", id]) => {
+            parameters(&input, &[])?;
+            let expected = expected_version(&input)?;
+            return Ok(response(engine.delete_card(
+                project,
+                id,
+                input.body.clone(),
+                request_id,
+                epoch,
+                expected,
+            )?));
         }
         ("POST", ["api", "v1", "projects", project, collection]) => {
             return mutate(engine, &input, project, kind(collection)?, None);

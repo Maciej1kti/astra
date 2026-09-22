@@ -98,36 +98,42 @@ fn version(value: &Value) -> bool {
 }
 
 fn resource_result(value: &Value) -> bool {
-    object(value, &["type", "id", "version", "resource", "job_id"])
-        && matches!(
-            value["type"].as_str(),
-            Some(
-                "project"
-                    | "card"
-                    | "milestone"
-                    | "update"
-                    | "focus"
-                    | "preferences"
-                    | "tags"
-                    | "registration"
-                    | "receipt"
-                    | "normalization"
-                    | "job"
-            )
+    object(
+        value,
+        &["type", "id", "version", "resource", "job_id", "deleted"],
+    ) && matches!(
+        value["type"].as_str(),
+        Some(
+            "project"
+                | "card"
+                | "milestone"
+                | "update"
+                | "focus"
+                | "preferences"
+                | "tags"
+                | "registration"
+                | "receipt"
+                | "normalization"
+                | "job"
         )
-        && value.get("id").is_none_or(|value| uuid(value, 4))
+    ) && value.get("id").is_none_or(|value| uuid(value, 4))
         && value.get("job_id").is_none_or(|value| uuid(value, 4))
-        && value.get("version").is_none_or(version)
-        && value.get("resource").is_none_or(|resource| {
-            object(resource, &["type", "metadata", "body", "version"])
-                && matches!(
-                    resource["type"].as_str(),
-                    Some("project" | "card" | "milestone" | "update")
-                )
-                && resource["metadata"].is_object()
-                && resource["body"].is_string()
-                && version(&resource["version"])
-        })
+        && value.get("deleted").is_none_or(|value| value == true)
+        && if value.get("deleted") == Some(&Value::Bool(true)) {
+            value.get("version").is_none() && value.get("resource").is_none()
+        } else {
+            value.get("version").is_none_or(version)
+                && value.get("resource").is_none_or(|resource| {
+                    object(resource, &["type", "metadata", "body", "version"])
+                        && matches!(
+                            resource["type"].as_str(),
+                            Some("project" | "card" | "milestone" | "update")
+                        )
+                        && resource["metadata"].is_object()
+                        && resource["body"].is_string()
+                        && version(&resource["version"])
+                })
+        }
 }
 
 fn warning(value: &Value) -> bool {

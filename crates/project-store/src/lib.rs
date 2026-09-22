@@ -1,5 +1,6 @@
 pub mod document;
 pub mod filesystem;
+pub mod tree_removal;
 pub mod validation;
 
 #[derive(Debug, thiserror::Error)]

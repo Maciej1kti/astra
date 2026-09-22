@@ -44,6 +44,7 @@
   import Settings from "./features/settings/Settings.svelte";
   import TagManager from "./features/tags/TagManager.svelte";
   import NativeProject from "./features/registration/NativeProject.svelte";
+  import ProjectDeletion from "./features/registration/ProjectDeletion.svelte";
   import FocusOrder from "./features/workspace/FocusOrder.svelte";
   import GitObservation from "./features/host/GitObservation.svelte";
   import Diagnostics from "./features/host/Diagnostics.svelte";
@@ -69,7 +70,8 @@
           arrangeFocus ||
           manageTags ||
           gitProject ||
-          diagnostics
+          diagnostics ||
+          projectDeletion
         ),
       clearEditor: () => {
         editor = null;
@@ -249,6 +251,7 @@
 
   let editor = $state<EditorTarget | null>(null);
   let adding = $state(false);
+  let projectDeletion = $state<Summary | null>(null);
 
   let today = $derived(
     boot
@@ -326,6 +329,42 @@
     editor = null;
     if (routing.pending) await restoreRoute(routing.pending);
     else await refresh().catch(message);
+  }
+  async function deleted() {
+    const removed = editor;
+    const next = routing.pending;
+    editor = null;
+    if (next) {
+      const destination = new URLSearchParams(next);
+      if (
+        destination.get("project") === removed?.project &&
+        destination.get("type") === "card" &&
+        destination.get("resource") === removed?.resource?.metadata.id
+      ) {
+        destination.delete("type");
+        destination.delete("resource");
+      }
+      await restoreRoute(destination);
+    } else {
+      routing.assign({ ...routing.current, resource: undefined });
+      await refresh().catch(message);
+    }
+  }
+  function deleteProject(project: Summary) {
+    projectDeletion = project;
+  }
+  async function projectDeleted(id: string) {
+    projectDeletion = null;
+    const route = routing.current;
+    if (route.project === id || route.resource?.project === id) {
+      routing.assign({
+        ...route,
+        view: "projects",
+        project: "",
+        resource: undefined,
+      });
+    }
+    await refresh(["projects"]).catch(message);
   }
   function addProject() {
     nativeAdding = true;
@@ -509,6 +548,7 @@
             {updates}
             {open}
             {addProject}
+            onremove={deleteProject}
           />
         {:else if routing.current.view === "board" && routing.current.project}{#if Board}{#key routing.current.project}<Board
                 project={routing.current.project}
@@ -630,7 +670,13 @@
       }}
       onchanged={() => refresh().catch(message)}
       onsaved={() => void saved()}
+      ondeleted={() => void deleted()}
     />{/key}{/if}
+{#if projectDeletion}<ProjectDeletion
+    project={projectDeletion}
+    onclose={() => (projectDeletion = null)}
+    ondeleted={projectDeleted}
+  />{/if}
 <!-- Keep the registration identity alive while its dialog is closed. -->
 <RegistrationBrowser
   bind:open={adding}

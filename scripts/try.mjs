@@ -114,7 +114,7 @@ try {
       await new Promise((r) => setTimeout(r, 50));
     }
   }
-  await seedSampleProject(cli, project);
+  await seedSampleProject(cli, project, join(data, "sample-seeded"));
   proxy.listen(47832, "127.0.0.1", () => {
     console.log(
       `\nOpen ${origin}\nAccept the local test certificate warning, then request browser access.\nIn another terminal, list and approve the displayed matching challenge:\n`,

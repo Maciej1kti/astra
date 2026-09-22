@@ -300,6 +300,8 @@ export interface ApiContracts {
   UpdateCreate: UpdateCreate;
   Error: Error;
   Warning: Warning;
+  DeleteInput: DeleteInput;
+  ProjectDeletionPlan: ProjectDeletionPlan;
   ResourceResult: ResourceResult;
   CommandResponse: CommandResponse;
   CommandStatus: CommandStatus;
@@ -588,6 +590,14 @@ export interface Warning {
   message: string;
   field?: string;
 }
+export interface DeleteInput {}
+export interface ProjectDeletionPlan {
+  project_id: string;
+  display_path: string;
+  version: string;
+  file_count: number;
+  total_bytes: number;
+}
 export interface ResourceResult {
   type:
     | "project"
@@ -605,6 +615,7 @@ export interface ResourceResult {
   version?: string;
   resource?: ProjectResource | CardResource | MilestoneResource | UpdateResource;
   job_id?: string;
+  deleted?: true;
 }
 export interface CommandResponse {
   api_version: "1";
@@ -1026,7 +1037,7 @@ export interface HistoryEntry {
   request_id: string;
   recorded_at: string;
   before_version: string | null;
-  after_version: string;
+  after_version: string | null;
   /**
    * @maxItems 100
    */

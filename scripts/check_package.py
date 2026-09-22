@@ -306,11 +306,12 @@ def check_api_examples() -> dict:
         "focus-replace.json": "FocusReplace",
         "tags-replace.json": "TagsReplace",
         "tag-preview.json": "TagPreviewRequest",
+        "delete.json": "DeleteInput",
     }
     for filename, definition in bindings.items():
         schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"#/components/schemas/{definition}", "components": OAS["components"]}
         Draft202012Validator(schema, format_checker=FORMAT).validate(load_json(f"examples/requests/{filename}"))
-    for filename, definition in {"tag-suggestions.json": "TagSuggestions", "command-status.json": "CommandStatus", "command-status-rejected.json": "CommandStatus"}.items():
+    for filename, definition in {"tag-suggestions.json": "TagSuggestions", "command-status.json": "CommandStatus", "command-status-rejected.json": "CommandStatus", "deletion-response.json": "CommandResponse", "project-deletion-plan.json": "ProjectDeletionPlan"}.items():
         schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"#/components/schemas/{definition}", "components": OAS["components"]}
         Draft202012Validator(schema, format_checker=FORMAT).validate(load_json(f"examples/{filename}"))
     cli_schema = load_json("contracts/cli-output.schema.json")

@@ -205,6 +205,7 @@ impl Engine {
         {
             return Ok(reply);
         }
+        self.ensure_no_project_deletion()?;
         if self.journal.has_pending("workspace")? {
             return Err(AppError::reject(409, "WORKSPACE_RECOVERY_REQUIRED"));
         }

@@ -1,6 +1,6 @@
 use super::*;
 
-fn projection_failure(env: &Environment) -> rusqlite::Connection {
+pub(super) fn projection_failure(env: &Environment) -> rusqlite::Connection {
     let db = rusqlite::Connection::open(env.root.join("state/index.sqlite")).unwrap();
     db.execute_batch(
         "CREATE TRIGGER fail_projection_update BEFORE UPDATE ON projection_meta

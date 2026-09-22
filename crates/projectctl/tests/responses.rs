@@ -19,6 +19,14 @@ fn committed() -> Value {
     })
 }
 
+fn committed_deleted() -> Value {
+    json!({
+        "api_version":"1", "request_id":REQUEST, "status":"committed",
+        "result":{"type":"card", "id":RESOURCE, "deleted":true},
+        "warnings":[], "replayed":false,
+    })
+}
+
 fn accepted() -> Value {
     json!({"api_version":"1", "request_id":REQUEST, "status":"running", "job_id":RESOURCE})
 }
@@ -181,6 +189,16 @@ fn valid_source_confirmation_and_unresolved_states_keep_their_meaning() {
         assert_eq!(value["data"], body);
         assert_eq!(value["request_id"], REQUEST);
     }
+}
+
+#[test]
+fn deleted_card_confirmation_has_no_recreatable_resource_or_version() {
+    let (output, _) = run(&source_arguments(), 200, committed_deleted());
+    let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(output.status.code(), Some(0), "{value}");
+    assert_eq!(value["data"]["result"]["deleted"], true);
+    assert!(value["data"]["result"].get("version").is_none());
+    assert!(value["data"]["result"].get("resource").is_none());
 }
 
 #[test]

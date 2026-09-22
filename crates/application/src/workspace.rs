@@ -61,6 +61,9 @@ impl Engine {
         if let Some(reply) = self.journal.admit(&command, now)? {
             return Ok(reply);
         }
+        if let Err(error) = self.ensure_no_project_deletion() {
+            return self.journal.reject_error(&command, error, now);
+        }
         let reject = |status, code| -> Result<Reply, AppError> {
             let reply = Reply::error(status, code, request);
             Ok(self

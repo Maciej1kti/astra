@@ -958,6 +958,183 @@
             }
           }
         }
+      },
+      "delete": {
+        "operationId": "deleteProject",
+        "tags": [
+          "projects"
+        ],
+        "summary": "Permanently delete the project's .project directory",
+        "description": "Requires the version returned by getProjectDeletionPlan, which binds the complete directory inventory and workspace registration. Removes only .project and its workspace/focus registration; preserves the enclosing repository and its other files. No trash or restore operation is provided. After preparation an interrupted deletion remains unresolved until recovery completes or requires review. Retry with the original identity and payload.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/project_id"
+          },
+          {
+            "$ref": "#/components/parameters/RequestID"
+          },
+          {
+            "$ref": "#/components/parameters/CommandEpoch"
+          },
+          {
+            "$ref": "#/components/parameters/CSRF"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Directory removal and workspace update are durably committed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Deletion is unresolved. Check the original command status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandStatus"
+                }
+              }
+            }
+          },
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
+          "409": {
+            "description": "Konflikt domeny/epoki/źródła",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Niezgodna wersja",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Brak precondition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Wygasły wynik lub okno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Błąd walidacji",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Usługa/zasób niedostępny",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "Błąd storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error; no automatic overwrite or expanded deletion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/deletion-plan": {
+      "get": {
+        "operationId": "getProjectDeletionPlan",
+        "tags": [
+          "projects"
+        ],
+        "summary": "Preview permanent deletion of the project's .project directory",
+        "description": "Reads a bounded inventory without modifying the project. The returned version is the precondition for deleteProject, not the project.md version. Added or changed entries invalidate the preview. Symlinks and unsupported filesystem entries are rejected; no links are followed for deletion.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/project_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current deletion scope and its conditional version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDeletionPlan"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The project cannot be safely inventoried for deletion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/projects/{project_id}/context": {
@@ -1601,6 +1778,149 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CardPatch"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteCard",
+        "tags": [
+          "cards"
+        ],
+        "summary": "Permanently delete a card source file",
+        "description": "Requires the observed card version. Incoming dependencies, including those from archived cards, and workspace focus references must first be removed explicitly. Reports and operational history are retained. Deletion has no undo or restore operation. A lost reply is uncertain; preserve the original request ID, epoch, version and empty payload when checking or retrying.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/project_id"
+          },
+          {
+            "$ref": "#/components/parameters/card_id"
+          },
+          {
+            "$ref": "#/components/parameters/RequestID"
+          },
+          {
+            "$ref": "#/components/parameters/CommandEpoch"
+          },
+          {
+            "$ref": "#/components/parameters/CSRF"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source deletion and its command result are durably committed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Deletion is unresolved. Check the original command status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandStatus"
+                }
+              }
+            }
+          },
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
+          "409": {
+            "description": "Konflikt domeny/epoki/źródła",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Niezgodna wersja",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Brak precondition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Wygasły wynik lub okno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Błąd walidacji",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Usługa/zasób niedostępny",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "Błąd storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error; referenced, changed or unsafe sources are preserved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
               }
             }
           }
@@ -5404,6 +5724,43 @@
         ],
         "additionalProperties": false
       },
+      "DeleteInput": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "ProjectDeletionPlan": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "display_path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "file_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "project_id",
+          "display_path",
+          "version",
+          "file_count",
+          "total_bytes"
+        ],
+        "additionalProperties": false
+      },
       "ResourceResult": {
         "type": "object",
         "properties": {
@@ -5447,6 +5804,11 @@
           },
           "job_id": {
             "$ref": "#/components/schemas/UUID"
+          },
+          "deleted": {
+            "type": "boolean",
+            "const": true,
+            "description": "The target was permanently deleted; resource and version are absent."
           }
         },
         "required": [
@@ -6966,7 +7328,14 @@
             ]
           },
           "after_version": {
-            "$ref": "#/components/schemas/Version"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Version"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "changed_fields": {
             "type": "array",

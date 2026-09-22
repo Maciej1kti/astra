@@ -44,19 +44,23 @@
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { modal } from "../../lib/ui/dialog";
   import { api, command, type Resource, type Pending } from "../../lib/api/api";
+  import { deleteCard } from "../../lib/api/resources";
 
   const operation = commandOperation(() => !accessLost);
+  const deleteOperation = commandOperation(() => !accessLost);
 
   let {
     target,
     onclose,
     onsaved,
+    ondeleted,
     onchanged,
     onkeepediting,
   }: {
     target: EditorTarget;
     onclose: () => void;
     onsaved: () => void;
+    ondeleted: () => void;
     onchanged?: () => void;
     onkeepediting?: () => void;
   } = $props();
@@ -83,6 +87,11 @@
   let error = $state("");
   let busy = $derived(operation.busy);
   let pending = $derived(operation.pending);
+  let deleteBusy = $derived(deleteOperation.busy);
+  let deletePending = $derived(deleteOperation.pending);
+  let deleteError = $state("");
+  let deleteConflict = $state(false);
+  let deleteConfirmation = $state<"drafts" | "final" | null>(null);
   let conflict = $state<{ current: Resource | null } | null>(null);
 
   let preview = $state(false);
@@ -101,7 +110,14 @@
   let dirty = $derived(cardDirty || updateDirty || !!updatePending);
   let accessLost = $state(false);
   let locked = $derived(
-    busy || !!pending || accessLost || updateBusy || !!updatePending,
+    busy ||
+      !!pending ||
+      accessLost ||
+      updateBusy ||
+      !!updatePending ||
+      deleteBusy ||
+      !!deletePending ||
+      !!deleteConfirmation,
   );
 
   async function copyDraft() {
@@ -111,6 +127,7 @@
           {
             fields: JSON.parse(snapshot()),
             pending,
+            delete_pending: deletePending,
             card_update: { fields: updateDraft, pending: updatePending },
           },
           null,
@@ -125,7 +142,7 @@
   }
   onMount(() => {
     const ended = () => {
-      if (!dirty && !pending) {
+      if (!dirty && !pending && !deletePending) {
         onclose();
         return;
       }
@@ -149,12 +166,12 @@
     };
   });
   function close() {
-    if (busy || updateBusy) return;
-    if (dirty || pending) discard = true;
+    if (busy || updateBusy || deleteBusy) return;
+    if (dirty || pending || deletePending) discard = true;
     else onclose();
   }
   export function requestClose() {
-    if (busy || updateBusy) return false;
+    if (busy || updateBusy || deleteBusy) return false;
     close();
     return true;
   }
@@ -162,8 +179,11 @@
     discard = false;
     onkeepediting?.();
   }
+  function focusDeleteAction(node: HTMLButtonElement) {
+    node.focus();
+  }
   function beforeUnload(event: BeforeUnloadEvent) {
-    if (dirty || pending) {
+    if (dirty || pending || deletePending) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -244,7 +264,7 @@
   }
   async function undo(id: string) {
     if (!resource) return;
-    if (!canUndoDraft(dirty, !!pending, busy || updateBusy) || accessLost) {
+    if (locked || !canUndoDraft(dirty, !!pending, busy || updateBusy)) {
       error = "Save or discard your draft before undoing a saved change.";
       return;
     }
@@ -328,6 +348,79 @@
       await transmit();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  function requestDelete() {
+    if (
+      draft.type !== "card" ||
+      !resource ||
+      locked ||
+      conflict ||
+      deleteConflict
+    )
+      return;
+    deleteError = "";
+    deleteConflict = false;
+    deleteConfirmation = dirty ? "drafts" : "final";
+  }
+  function cancelDelete() {
+    if (deleteBusy) return;
+    deleteConfirmation = null;
+    deleteError = "";
+  }
+  function continueDelete() {
+    if (deleteBusy || !resource || draft.type !== "card") return;
+    deleteConfirmation = "final";
+  }
+  async function deleteSavedCard() {
+    if (
+      deleteConfirmation !== "final" ||
+      deleteBusy ||
+      deletePending ||
+      busy ||
+      pending ||
+      updateBusy ||
+      updatePending ||
+      conflict ||
+      deleteConflict ||
+      draft.type !== "card" ||
+      !resource ||
+      accessLost
+    )
+      return;
+    deleteConfirmation = null;
+    deleteError = "";
+    deleteConflict = false;
+    try {
+      deleteOperation.prepare(
+        deleteCard(project, resource.metadata.id, resource.version),
+      );
+    } catch (cause) {
+      deleteError = commandErrorMessage(cause);
+      return;
+    }
+    await runDelete("submit");
+  }
+  async function checkDelete() {
+    await runDelete("status");
+  }
+  async function retryDelete() {
+    await runDelete("submit");
+  }
+  async function runDelete(action: "submit" | "status") {
+    if (!deletePending || deleteBusy || accessLost) return;
+    deleteError = "";
+    try {
+      if (action === "status") await deleteOperation.confirm();
+      else await deleteOperation.commit();
+      ondeleted();
+    } catch (cause) {
+      deleteError = commandErrorMessage(cause);
+      if (isRejectedConflict(deleteOperation.phase, cause)) {
+        deleteConflict = true;
+        deleteError = `${deleteError} Close and reopen the card before trying again.`;
+      }
     }
   }
   async function transmit() {
@@ -429,7 +522,7 @@
       <button
         aria-label="Close editor"
         onclick={close}
-        disabled={busy || updateBusy}>✕</button
+        disabled={busy || updateBusy || deleteBusy}>✕</button
       >
     </header>
     <form
@@ -440,12 +533,14 @@
     >
       {#if discard}<div role="alert" class="notice">
           <p>
-            {pending || updatePending
+            {pending || updatePending || deletePending
               ? "The command result may still be unknown. Keep its request ID before closing."
               : "Discard your unsaved draft?"}
           </p>
-          <button type="button" onclick={onclose} disabled={busy || updateBusy}
-            >Discard draft</button
+          <button
+            type="button"
+            onclick={onclose}
+            disabled={busy || updateBusy || deleteBusy}>Discard draft</button
           ><button type="button" onclick={keepEditing}>Keep editing</button>
         </div>{/if}
       {#if readonly}<button type="button" onclick={toggleRead} disabled={locked}
@@ -461,6 +556,51 @@
             onclick={loadFocus}
             disabled={locked}>Refresh focus state</button
           >{/if}{/if}
+      {#if draft.type === "card" && resource}<button
+          type="button"
+          onclick={requestDelete}
+          disabled={locked || deleteConflict}>Delete card</button
+        >{/if}
+      {#if deleteConfirmation}<section
+          class="notice delete-confirmation"
+          role="alert"
+          aria-labelledby="delete-card-heading"
+          aria-describedby="delete-card-description"
+        >
+          <h3 id="delete-card-heading">
+            {deleteConfirmation === "drafts"
+              ? "Discard drafts before deleting?"
+              : "Permanently delete card?"}
+          </h3>
+          <p id="delete-card-description">
+            {#if deleteConfirmation === "drafts"}
+              Your unsaved card or report drafts will be discarded before
+              permanently deleting card “{resource?.metadata.title}”.
+            {:else}
+              Permanently delete card “{resource?.metadata.title}”? This removes
+              its source file and cannot be undone.
+            {/if}
+          </p>
+          <div class="row">
+            {#if deleteConfirmation === "drafts"}<button
+                type="button"
+                class="primary"
+                onclick={continueDelete}
+                use:focusDeleteAction
+                disabled={deleteBusy}>Discard drafts and continue</button
+              >{:else}<button
+                type="button"
+                class="primary"
+                onclick={() => void deleteSavedCard()}
+                use:focusDeleteAction
+                disabled={deleteBusy || accessLost}
+                >Permanently delete card</button
+              >{/if}
+            <button type="button" onclick={cancelDelete} disabled={deleteBusy}
+              >Keep editing</button
+            >
+          </div>
+        </section>{/if}
       {#if statusMessage}<p class="action-status" role="status">
           {statusMessage}
         </p>{/if}
@@ -591,7 +731,12 @@
           bind:draft={updateDraft}
           bind:pending={updatePending}
           bind:busy={updateBusy}
-          disabled={busy || !!pending || accessLost}
+          disabled={busy ||
+            !!pending ||
+            accessLost ||
+            deleteBusy ||
+            !!deletePending ||
+            !!deleteConfirmation}
           onposted={() => {
             void cardActivity?.refresh();
             onchanged?.();
@@ -629,7 +774,8 @@
               <p>{entry.changed_fields.join(", ")}</p>
               <button
                 type="button"
-                disabled={!entry.can_undo ||
+                disabled={locked ||
+                  !entry.can_undo ||
                   !canUndoDraft(dirty, !!pending, busy || updateBusy) ||
                   accessLost}
                 onclick={() => undo(entry.id)}>Undo this change</button
@@ -670,15 +816,36 @@
             disabled={busy || accessLost}>Retry same command</button
           >
         </div>{/if}
-      {#if dirty || pending}<button type="button" onclick={copyDraft}
-          >Copy draft</button
+      {#if dirty || pending || deletePending}<button
+          type="button"
+          onclick={copyDraft}>Copy draft</button
         >{/if}
+      {#if deleteError}<div class="notice" role="alert">
+          {deleteError}
+        </div>{/if}
+      {#if deletePending}<p>
+          Deletion request <code>{deletePending.requestId}</code>
+        </p>
+        <div class="row">
+          <button
+            type="button"
+            onclick={() => void checkDelete()}
+            disabled={deleteBusy || accessLost}>Check deletion status</button
+          ><button
+            type="button"
+            onclick={() => void retryDelete()}
+            disabled={deleteBusy || accessLost}>Retry same deletion</button
+          >
+        </div>{/if}
       {#if updateDirty || updatePending}<p class="empty-context">
           Post or discard the update draft before saving this card. Copy draft
           includes both drafts and any unresolved request.
         </p>{/if}
       <footer>
-        <button type="button" onclick={close} disabled={busy || updateBusy}
+        <button
+          type="button"
+          onclick={close}
+          disabled={busy || updateBusy || deleteBusy}
           >{readonly ? "Close" : "Cancel"}</button
         >{#if !readonly}<button
             class="primary"

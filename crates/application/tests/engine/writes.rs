@@ -185,6 +185,310 @@ fn create_retry_without_client_id_returns_the_original_resource() {
 }
 
 #[test]
+fn card_delete_removes_source_replays_and_keeps_non_undoable_history() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Delete me");
+    let id = created.body["result"]["id"].as_str().unwrap().to_owned();
+    let version = created.body["result"]["version"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let request = Uuid::now_v7().to_string();
+    let first = engine
+        .delete_card(
+            &project,
+            &id,
+            json!({}),
+            &request,
+            &engine.journal.epoch,
+            Some(version.clone()),
+        )
+        .unwrap();
+    assert_eq!(first.http_status, 200, "{first:?}");
+    wire::validate("CommandResponse", &first.body).unwrap();
+    assert_eq!(first.body["result"]["deleted"], true);
+    assert!(
+        !env.root
+            .join(format!("project/.project/cards/{id}.md"))
+            .exists()
+    );
+    let replay = engine
+        .delete_card(
+            &project,
+            &id,
+            json!({}),
+            &request,
+            &engine.journal.epoch,
+            Some(version),
+        )
+        .unwrap();
+    assert_eq!(replay.body["result"], first.body["result"]);
+    assert_eq!(replay.body["status"], first.body["status"]);
+    assert_eq!(replay.body["replayed"], true);
+    let history = engine.history(&project, Kind::Card, &id, None, 50).unwrap();
+    assert_eq!(history["items"][0]["after_version"], Value::Null);
+    assert_eq!(history["items"][0]["can_undo"], false);
+}
+
+#[test]
+fn card_delete_blocks_incoming_dependency_from_archived_card() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let target = create(&engine, &project, "Dependency target");
+    let incoming = create(&engine, &project, "Archived incoming");
+    let target_id = target.body["result"]["id"].as_str().unwrap();
+    let incoming_id = incoming.body["result"]["id"].as_str().unwrap();
+    let mut version = incoming.body["result"]["version"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    for set in [json!({"depends_on":[target_id]}), json!({"archived":true})] {
+        let reply = patch(&engine, &project, incoming_id, &version, json!({"set":set}));
+        assert_eq!(reply.http_status, 200, "{reply:?}");
+        version = reply.body["result"]["version"].as_str().unwrap().to_owned();
+    }
+    let deleted = engine
+        .delete_card(
+            &project,
+            target_id,
+            json!({}),
+            &Uuid::now_v7().to_string(),
+            &engine.journal.epoch,
+            Some(
+                target.body["result"]["version"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned(),
+            ),
+        )
+        .unwrap();
+    assert_eq!(deleted.http_status, 409);
+    assert_eq!(deleted.body["error"]["code"], "CARD_REFERENCED");
+    assert_eq!(
+        deleted.body["error"]["details"]["incoming"][0]["id"],
+        incoming_id
+    );
+    assert!(
+        env.root
+            .join(format!("project/.project/cards/{target_id}.md"))
+            .exists()
+    );
+}
+
+#[test]
+fn card_delete_requires_explicit_focus_removal() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Focused card");
+    let id = created.body["result"]["id"].as_str().unwrap();
+    let workspace = engine.workspace().unwrap();
+    engine
+        .mutate_workspace(
+            "focus",
+            &json!({"items":[{"project_id":project,"card_id":id}]}),
+            &Uuid::now_v7().to_string(),
+            &engine.journal.epoch,
+            Some(&workspace.version),
+        )
+        .unwrap();
+    let blocked = engine
+        .delete_card(
+            &project,
+            id,
+            json!({}),
+            &Uuid::now_v7().to_string(),
+            &engine.journal.epoch,
+            Some(
+                created.body["result"]["version"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned(),
+            ),
+        )
+        .unwrap();
+    assert_eq!(blocked.http_status, 409);
+    assert_eq!(blocked.body["error"]["code"], "CARD_IN_FOCUS");
+}
+
+#[test]
+fn stale_card_delete_precedes_bounded_dependency_scan_and_replays() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Stale delete");
+    let id = created.body["result"]["id"].as_str().unwrap().to_owned();
+    let observed = created.body["result"]["version"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let _current = patch(
+        &engine,
+        &project,
+        &id,
+        &observed,
+        json!({"set":{"title":"Changed"}}),
+    );
+    fs::write(
+        env.root
+            .join(format!("project/.project/cards/{}.md", Uuid::new_v4())),
+        b"invalid source",
+    )
+    .unwrap();
+    let request = Uuid::now_v7().to_string();
+    let first = engine
+        .delete_card(
+            &project,
+            &id,
+            json!({}),
+            &request,
+            &engine.journal.epoch,
+            Some(observed.clone()),
+        )
+        .unwrap();
+    assert_eq!(first.body["error"]["code"], "VERSION_CONFLICT");
+    let replay = engine
+        .delete_card(
+            &project,
+            &id,
+            json!({}),
+            &request,
+            &engine.journal.epoch,
+            Some(observed),
+        )
+        .unwrap();
+    assert_eq!(replay.body, first.body);
+}
+
+#[test]
+fn card_delete_recovery_rechecks_new_incoming_dependencies() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let target = create(&engine, &project, "Recovery target");
+    let incoming = create(&engine, &project, "Recovery incoming");
+    let target_id = target.body["result"]["id"].as_str().unwrap().to_owned();
+    let incoming_id = incoming.body["result"]["id"].as_str().unwrap().to_owned();
+    let command = crate::journal::Command {
+        request_id: Uuid::now_v7().to_string(),
+        epoch: engine.journal.epoch.clone(),
+        method: "DELETE".into(),
+        target: crate::journal::Target {
+            project_id: project.clone(),
+            kind: Kind::Card,
+            id: target_id.clone(),
+        },
+        expected: Some(target.body["result"]["version"].as_str().unwrap().into()),
+        payload: json!({}),
+    };
+    let handle = engine.store(&project).unwrap();
+    {
+        let mut store = handle.lock().unwrap();
+        let reply = crate::writer::Writer {
+            journal: &engine.journal,
+        }
+        .execute_delete(
+            &mut store,
+            &command,
+            vec![],
+            now_millis(),
+            |_| Ok(()),
+            |point| {
+                if point == crate::writer::CommitPoint::Prepared {
+                    Err(project_store::StoreError::Invalid("INJECTED_FAILURE"))
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+        assert_eq!(reply.http_status, 202);
+    }
+
+    let mut incoming_source = incoming.body["result"]["resource"].clone();
+    incoming_source["metadata"]["depends_on"] = json!([target_id]);
+    incoming_source.as_object_mut().unwrap().remove("version");
+    let bytes = project_store::document::serialize(
+        &project_domain::validate_document(incoming_source).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        env.root
+            .join(format!("project/.project/cards/{incoming_id}.md")),
+        bytes,
+    )
+    .unwrap();
+
+    let mut store = handle.lock().unwrap();
+    let recovered = crate::writer::Writer {
+        journal: &engine.journal,
+    }
+    .recover_with_guard(&mut store, &project, now_millis(), |store, intent| {
+        crate::card_deletion::recovery_guard(&engine, store, intent)
+    })
+    .unwrap();
+    assert_eq!(recovered, 0);
+    assert_eq!(
+        engine.journal.state(&command).unwrap(),
+        crate::command_state::CommandState::NeedsReview
+    );
+    let (directory, name) = store.location(Kind::Card, &target_id, false).unwrap();
+    assert!(directory.read(&name).unwrap().is_some());
+}
+
+#[test]
+fn card_delete_projection_failure_is_repaired_after_retry() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Projection delete");
+    let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+    let version = card.body["result"]["version"].as_str().unwrap().to_owned();
+    let source = env.root.join(format!("project/.project/cards/{id}.md"));
+    let fault = super::maintenance::projection_failure(&env);
+    let request = Uuid::now_v7().to_string();
+    let reply = engine
+        .delete_card(
+            &project,
+            &id,
+            json!({}),
+            &request,
+            &engine.journal.epoch,
+            Some(version),
+        )
+        .unwrap();
+    assert_eq!(reply.http_status, 200, "{reply:?}");
+    assert_eq!(reply.body["status"], "committed");
+    assert_eq!(reply.body["result"]["deleted"], true);
+    assert!(!source.exists(), "source deletion must remain committed");
+    assert_eq!(
+        engine.list(Some("card"), &Query::default()).unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1,
+        "the injected projection failure leaves stale index data before repair"
+    );
+
+    fault
+        .execute_batch("DROP TRIGGER fail_projection_update; DROP TRIGGER fail_projection_delete;")
+        .unwrap();
+    engine
+        .retry_projection_repairs_at(std::time::Instant::now() + std::time::Duration::from_secs(31))
+        .unwrap();
+    assert!(
+        engine.list(Some("card"), &Query::default()).unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
+        "deferred projection repair must remove the deleted card"
+    );
+}
+
+#[test]
 fn undo_restores_one_change_and_refuses_later_edits() {
     let env = Environment::new();
     let engine = env.engine();
