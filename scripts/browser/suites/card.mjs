@@ -3,7 +3,9 @@ import { expect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { isMain, runBrowserSuite } from "../runtime.mjs";
+import { binaries } from "../host.mjs";
 import assert from "node:assert/strict";
 
 export async function runCardChecks({
@@ -36,8 +38,14 @@ export async function runCardChecks({
   const dialog = () =>
     page.getByRole("dialog", { name: /^(Edit|Create) resource$/ });
   const title = () => dialog().getByLabel("Title", { exact: true });
-  const expectedResult = () => dialog().getByLabel(/^Expected result/);
-  const owner = () => dialog().getByLabel(/^Owner/);
+  const reviewOn = () => dialog().getByLabel("Review on", { exact: true });
+  const descriptionRendered = () =>
+    dialog().locator(".resource-description-rendered");
+  const description = () => dialog().getByLabel("Description", { exact: true });
+  async function editDescription() {
+    await descriptionRendered().click();
+    await expect(description()).toBeVisible();
+  }
   const item = (index) =>
     dialog().getByLabel(`Acceptance item ${index}`, { exact: true });
   const checklist = () =>
@@ -186,26 +194,115 @@ export async function runCardChecks({
       assert.equal(matches.length, 1);
       const saved = get(matches[0].id);
       assert.equal(saved.metadata.title, name);
-      for (const field of ["expected_result", "owner", "acceptance"])
+      for (const field of ["review_on", "acceptance"])
         assert.equal(Object.hasOwn(saved.metadata, field), false);
       return { card: matches[0].id, optionalFieldsAbsent: true };
     },
   );
 
   await check(
+    "C01-description",
+    "A card description enters from the keyboard, renders after an outside click, and flushes before close",
+    async () => {
+      const initialSource = "Initial card context.";
+      const card = await create({
+        title: unique("description editing"),
+        body: initialSource,
+      });
+      await open(card.id);
+      await expect(descriptionRendered()).toBeVisible();
+      await expect(
+        dialog().getByRole("button", { name: "Save changes", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        dialog().getByRole("button", { name: "Cancel", exact: true }),
+      ).toHaveCount(0);
+      for (const field of ["Kind", "Expected result", "Owner"])
+        await expect(dialog().getByLabel(field, { exact: true })).toHaveCount(
+          0,
+        );
+      await expect(
+        dialog().getByText("Change history", { exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        dialog().getByRole("button", {
+          name: "Preview Markdown",
+          exact: true,
+        }),
+      ).toHaveCount(0);
+
+      await descriptionRendered().focus();
+      await descriptionRendered().press("Enter");
+      await expect(description()).toBeVisible();
+      await expect(description()).toHaveValue(initialSource);
+      const nextSource = [
+        "## Rendered card Markdown",
+        "",
+        "**Strong card context**",
+      ].join("\n");
+      await description().fill(nextSource);
+      await dialog()
+        .locator("header")
+        .click({ position: { x: 2, y: 2 } });
+      await expect(description()).toBeHidden();
+      const rendered = descriptionRendered();
+      await expect(rendered).toBeVisible();
+      await expect(rendered.locator("h2")).toContainText(
+        "Rendered card Markdown",
+      );
+      await expect(rendered.locator("strong")).toContainText(
+        "Strong card context",
+      );
+      await expect
+        .poll(
+          () => {
+            try {
+              return get(card.id).body;
+            } catch {
+              return undefined;
+            }
+          },
+          { timeout: 15000 },
+        )
+        .toBe(nextSource);
+      await waitForAutosaveACK();
+
+      const closeSource = `${nextSource}\n\nClose flush source.`;
+      await rendered.click();
+      await description().fill(closeSource);
+      await dialog()
+        .getByRole("button", { name: "Close editor", exact: true })
+        .click();
+      await expect(dialog()).toBeHidden();
+      await expect
+        .poll(() => {
+          try {
+            return get(card.id).body;
+          } catch {
+            return undefined;
+          }
+        })
+        .toBe(closeSource);
+      return {
+        card: card.id,
+        keyboardEditing: true,
+        outsideClickRendersAndPersists: true,
+        closeFlushesAndCloses: true,
+      };
+    },
+  );
+
+  await check(
     "C02-model",
-    "Purpose, owner and reordered acceptance items persist through autosave and reload without accepting the card",
+    "Review date and reordered acceptance items persist through autosave and reload without accepting the card",
     async () => {
       const card = await create({
         title: unique("acceptance workflow"),
         status: "active",
+        review_on: "2026-09-20",
         body: "Original context remains intact.",
       });
       await open(card.id);
-      await expectedResult().fill(
-        "A useful release with clear acceptance evidence — zażółć gęślą jaźń.",
-      );
-      await owner().fill("Synthetic QA owner");
       await dialog()
         .getByLabel("New acceptance condition", { exact: true })
         .fill("The intended result is visible.");
@@ -243,11 +340,7 @@ export async function runCardChecks({
       await screenshot("C02-acceptance-draft");
       await waitForAutosaveACK();
       const saved = get(card.id);
-      assert.equal(
-        saved.metadata.expected_result,
-        "A useful release with clear acceptance evidence — zażółć gęślą jaźń.",
-      );
-      assert.equal(saved.metadata.owner, "Synthetic QA owner");
+      assert.equal(saved.metadata.review_on, "2026-09-20");
       assert.equal(saved.body, "Original context remains intact.");
       assert.equal(saved.metadata.status, "active");
       assert.deepEqual(
@@ -272,10 +365,7 @@ export async function runCardChecks({
         );
       await open(card.id);
       await page.reload();
-      await expect(expectedResult()).toHaveValue(
-        saved.metadata.expected_result,
-      );
-      await expect(owner()).toHaveValue(saved.metadata.owner);
+      await expect(reviewOn()).toHaveValue(saved.metadata.review_on);
       await expect(item(1)).toHaveValue(saved.metadata.acceptance[0].text);
       await expect(item(2)).toHaveValue(saved.metadata.acceptance[1].text);
       await dialog()
@@ -295,19 +385,16 @@ export async function runCardChecks({
       const summary = all(
         `/api/v1/views/list?type=card&project_id=${project}&q=${encodeURIComponent(card.title)}`,
       ).find((entry) => entry.id === card.id);
-      assert.equal(summary.owner, "Synthetic QA owner");
       assert.deepEqual(summary.acceptance_progress, { total: 2, completed: 2 });
       await route("list", { q: card.title });
       const row = page
         .locator("main .table")
         .getByRole("button")
         .filter({ hasText: card.title });
-      await expect(row).toContainText("Synthetic QA owner");
       await expect(row).toContainText("Acceptance 2/2");
       await screenshot("C02-list-summary");
       await route("board", { q: card.title });
       const boardCard = page.locator(`[data-board-card="${card.id}"]`);
-      await expect(boardCard).toContainText("Synthetic QA owner");
       await expect(boardCard).toContainText("Acceptance 2/2");
       await screenshot("C02-board-summary");
       return {
@@ -321,14 +408,12 @@ export async function runCardChecks({
 
   await check(
     "C03-clear",
-    "Clearing the optional purpose, owner and checklist keeps other card facts",
+    "Clearing the review date and checklist keeps other card facts",
     async () => {
       const card = await create({
         title: unique("clear card fields"),
-        kind: "decision",
         status: "review",
-        expected_result: "Choose a release window.",
-        owner: "Synthetic reviewer",
+        review_on: "2026-09-21",
         acceptance: [
           {
             id: randomUUID(),
@@ -339,27 +424,24 @@ export async function runCardChecks({
         body: "Decision context",
       });
       await open(card.id);
-      await expectedResult().fill("");
-      await owner().fill("");
+      await reviewOn().fill("");
       await dialog()
         .getByRole("button", { name: "Remove acceptance item 1", exact: true })
         .click();
       await waitForAutosaveACK();
       const saved = get(card.id);
-      for (const field of ["expected_result", "owner", "acceptance"])
+      for (const field of ["review_on", "acceptance"])
         assert.equal(Object.hasOwn(saved.metadata, field), false, field);
-      assert.equal(saved.metadata.kind, "decision");
       assert.equal(saved.metadata.status, "review");
       assert.equal(saved.body, "Decision context");
       await open(card.id);
-      await expect(expectedResult()).toHaveValue("");
-      await expect(owner()).toHaveValue("");
+      await expect(reviewOn()).toHaveValue("");
       await expect(checklist().locator("li")).toHaveCount(0);
       await screenshot("C03-cleared-optional-fields");
       return {
         card: card.id,
-        removed: ["expected_result", "owner", "acceptance"],
-        preserved: ["kind", "status", "body"],
+        removed: ["review_on", "acceptance"],
+        preserved: ["status", "body"],
       };
     },
   );
@@ -371,17 +453,16 @@ export async function runCardChecks({
       const card = await create({
         title: unique("dirty card update"),
         status: "active",
-        expected_result: "Saved result",
+        review_on: "2026-09-22",
         body: "Saved description",
       });
       const before = get(card.id);
       const summary = unique("recorded result");
       await open(card.id);
       await title().fill(`${card.title} — autosaved card draft`);
-      await expectedResult().fill("Autosaved expected result");
-      await dialog()
-        .getByLabel(/^Description/)
-        .fill("Autosaved description with preserved context.");
+      await reviewOn().fill("2026-09-23");
+      await editDescription();
+      await description().fill("Autosaved description with preserved context.");
       await waitForAutosaveACK();
       await composer()
         .getByRole("button", { name: "Add card update", exact: true })
@@ -407,8 +488,8 @@ export async function runCardChecks({
         "Update recorded for this card",
       );
       await expect(title()).toHaveValue(`${card.title} — autosaved card draft`);
-      await expect(expectedResult()).toHaveValue("Autosaved expected result");
-      await expect(dialog().getByLabel(/^Description/)).toHaveValue(
+      if (!(await description().count())) await editDescription();
+      await expect(description()).toHaveValue(
         "Autosaved description with preserved context.",
       );
       assert.notEqual(get(card.id).version, before.version);
@@ -436,10 +517,7 @@ export async function runCardChecks({
       ).toBeVisible();
       await screenshot("C04-update-with-card-draft");
       await waitForAutosaveACK();
-      assert.equal(
-        get(card.id).metadata.expected_result,
-        "Autosaved expected result",
-      );
+      assert.equal(get(card.id).metadata.review_on, "2026-09-23");
       assert.equal(get(card.id).metadata.status, "active");
       assert.equal(
         updatesFor(card.id).filter((update) => update.title === summary).length,
@@ -668,10 +746,6 @@ export async function runCardChecks({
         title: unique(
           "mobile card with long context and Polish characters — zażółć gęślą jaźń",
         ),
-        owner: "Synthetic mobile owner with a descriptive name",
-        expected_result: "A readable, useful card on a narrow screen. ".repeat(
-          8,
-        ),
         acceptance: [
           {
             id: randomUUID(),
@@ -691,7 +765,7 @@ export async function runCardChecks({
       await page.setViewportSize({ width: 390, height: 844 });
       try {
         await open(card.id);
-        await expectedResult().scrollIntoViewIfNeeded();
+        await checklist().scrollIntoViewIfNeeded();
         await screenshot("C08-mobile-purpose");
         await checklist().scrollIntoViewIfNeeded();
         const checklistMetrics = await dialog().evaluate((element) => ({
@@ -765,6 +839,52 @@ export async function runCardChecks({
         await close();
         await page.setViewportSize({ width: 1440, height: 1000 });
       }
+    },
+  );
+
+  await check(
+    "C09-removed-fields",
+    "Removed card fields are rejected without changing the versioned source",
+    async () => {
+      const card = await create({ title: unique("removed field contract") });
+      const path = `${base}/cards/${card.id}`;
+      const original = get(card.id);
+      for (const payload of [
+        { set: { kind: "outcome" } },
+        { set: { expected_result: "Removed" } },
+        { set: { owner: "Removed" } },
+        { clear: ["kind"] },
+        { clear: ["expected_result"] },
+        { clear: ["owner"] },
+      ]) {
+        await writeFile(commandFile, JSON.stringify(payload), { mode: 0o600 });
+        const result = spawnSync(
+          join(binaries, "projectctl"),
+          [
+            "--socket",
+            config.socket,
+            "command",
+            "PATCH",
+            path,
+            "--json-file",
+            commandFile,
+            "--if-version",
+            original.version,
+          ],
+          { encoding: "utf8", timeout: 30000 },
+        );
+        assert.ifError(result.error);
+        assert.equal(result.signal, null);
+        assert.notEqual(result.status, 0);
+        const envelope = JSON.parse(result.stdout);
+        assert.equal(envelope.ok, false);
+        assert.equal(envelope.http_status, 422);
+        assert.equal(envelope.error.code, "VALIDATION_FAILED");
+        const after = get(card.id);
+        assert.equal(after.version, original.version);
+        assert.equal(after.body, original.body);
+      }
+      return { removedFieldsRejected: true, sourceUnchanged: true };
     },
   );
 

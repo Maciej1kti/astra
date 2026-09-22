@@ -186,8 +186,6 @@ export interface ApiContracts {
       };
   ProjectMetadata: ProjectMetadata;
   AcceptanceItem: AcceptanceItem;
-  ExpectedResult: string;
-  CardOwner: string;
   Acceptance: Acceptance;
   AcceptanceProgress: AcceptanceProgress;
   CardMetadata: CardMetadata;
@@ -223,7 +221,6 @@ export interface ApiContracts {
     | {
         set?: {
           title?: string;
-          kind?: "outcome" | "decision";
           status?: "planned" | "active" | "review" | "done" | "cancelled";
           priority?: "low" | "normal" | "high" | "urgent";
           archived?: boolean;
@@ -236,8 +233,6 @@ export interface ApiContracts {
            * @maxItems 100
            */
           depends_on?: string[];
-          expected_result?: string;
-          owner?: string;
           acceptance?: Acceptance;
           /**
            * @maxItems 20
@@ -249,16 +244,7 @@ export interface ApiContracts {
          * @maxItems 20
          */
         clear?: (
-          | "schedule"
-          | "due"
-          | "review_on"
-          | "milestone_id"
-          | "blocked"
-          | "depends_on"
-          | "labels"
-          | "expected_result"
-          | "owner"
-          | "acceptance"
+          "schedule" | "due" | "review_on" | "milestone_id" | "blocked" | "depends_on" | "labels" | "acceptance"
         )[];
         placement?: Placement;
       }
@@ -394,7 +380,6 @@ export interface CardMetadata {
   created_at: string;
   updated_at: string;
   title: string;
-  kind: "outcome" | "decision";
   status: "planned" | "active" | "review" | "done" | "cancelled";
   priority: "low" | "normal" | "high" | "urgent";
   position: string;
@@ -408,8 +393,6 @@ export interface CardMetadata {
    * @maxItems 100
    */
   depends_on?: string[];
-  expected_result?: string;
-  owner?: string;
   acceptance?: Acceptance;
   /**
    * @maxItems 20
@@ -418,8 +401,6 @@ export interface CardMetadata {
   [k: string]:
     | ExtensionValue
     | string
-    | "outcome"
-    | "decision"
     | "planned"
     | "active"
     | "review"
@@ -531,7 +512,6 @@ export interface Placement {
 }
 export interface CardCreate {
   title: string;
-  kind?: "outcome" | "decision";
   status?: "planned" | "active" | "review" | "done" | "cancelled";
   priority?: "low" | "normal" | "high" | "urgent";
   archived?: boolean;
@@ -548,8 +528,6 @@ export interface CardCreate {
    * @maxItems 20
    */
   labels?: string[];
-  expected_result?: string;
-  owner?: string;
   acceptance?: Acceptance;
   body?: string;
   id?: string;
@@ -663,7 +641,6 @@ export interface Summary {
    */
   labels?: string[];
   milestone_id?: string;
-  owner?: string;
   acceptance_progress?: AcceptanceProgress;
   read?: boolean;
 }
@@ -995,8 +972,6 @@ export interface ContextEntry {
   blocked?: Blocked;
   target?: Target;
   recorded_at?: string;
-  expected_result?: string;
-  owner?: string;
   acceptance?: Acceptance;
 }
 export interface PairingCreate {
@@ -1188,10 +1163,6 @@ export type Version = ApiContracts["Version"];
 export type Position = ApiContracts["Position"];
 
 export type Evidence = ApiContracts["Evidence"];
-
-export type ExpectedResult = ApiContracts["ExpectedResult"];
-
-export type CardOwner = ApiContracts["CardOwner"];
 
 export type ProjectPatch = ApiContracts["ProjectPatch"];
 

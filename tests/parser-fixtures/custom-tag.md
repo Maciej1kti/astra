@@ -1,7 +1,6 @@
 ---
 "id": "22222222-2222-4222-8222-222222222222"
 "title": !custom "Title"
-"kind": "outcome"
 "status": "active"
 "priority": "high"
 "position": "80000000000000000000000000000000"

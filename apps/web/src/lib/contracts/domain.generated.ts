@@ -102,7 +102,6 @@ export interface CardMetadata {
   created_at: Instant;
   updated_at: Instant;
   title: string;
-  kind: "outcome" | "decision";
   status: "planned" | "active" | "review" | "done" | "cancelled";
   priority: "low" | "normal" | "high" | "urgent";
   position: Position;
@@ -252,8 +251,6 @@ export interface CardMetadata {
         string,
         string
       ];
-  expected_result?: string;
-  owner?: string;
   /**
    * Ordered acceptance items with unique stable IDs. Completion does not change card status.
    *
@@ -263,8 +260,6 @@ export interface CardMetadata {
   [k: string]:
     | ExtensionValue
     | UUID
-    | "outcome"
-    | "decision"
     | "planned"
     | "active"
     | "review"

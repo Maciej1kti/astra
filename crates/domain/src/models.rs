@@ -17,7 +17,6 @@ wire_enum!(ProjectState {
     Paused,
     Archived
 });
-wire_enum!(CardKind { Outcome, Decision });
 wire_enum!(CardStatus {
     Planned,
     Active,
@@ -129,7 +128,6 @@ pub struct ProjectMetadata {
 pub struct CardMetadata {
     pub id: String,
     pub title: String,
-    pub kind: CardKind,
     pub status: CardStatus,
     pub priority: Priority,
     pub position: String,
@@ -150,10 +148,6 @@ pub struct CardMetadata {
     pub depends_on: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub expected_result: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub owner: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acceptance: Option<Vec<AcceptanceItem>>,
     #[serde(flatten)]

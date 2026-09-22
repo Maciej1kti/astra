@@ -38,10 +38,3 @@ export function moveAcceptance(
   [result[index], result[destination]] = [result[destination], result[index]];
   return result;
 }
-
-export function cardPurposeValidation(expectedResult: string, owner: string) {
-  if ([...expectedResult].length > 4000)
-    return "Expected result must use 4,000 characters or fewer.";
-  if ([...owner].length > 120) return "Owner must use 120 characters or fewer.";
-  return "";
-}

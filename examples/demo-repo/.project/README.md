@@ -1,10 +1,10 @@
 # Dane prowadzenia projektu
 
-Ten folder jest źródłem prawdy o rezultatach, etapach i terminach projektu.
+Ten folder jest źródłem prawdy o pracy projektu, etapach i terminach.
 Nie jest magazynem całej pracy agentów ani zależnością od otwartego UI.
 
 `project.md` contains the stable ID, name, state and context.
-`cards/<uuid>.md` describes an outcome or decision; `milestones/<uuid>.md`
+`cards/<uuid>.md` describes a card work item; `milestones/<uuid>.md`
 a milestone; `updates/<uuid>.md` a meaningful report. Each card has its own
 file. `.local` contains runtime state only.
 

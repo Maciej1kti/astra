@@ -8,7 +8,7 @@ import {
   autosaveSnapshot,
 } from "../../apps/web/src/features/editor/editor-draft.ts";
 
-function card(version, owner) {
+function card(version, review) {
   return {
     type: "card",
     version,
@@ -18,10 +18,9 @@ function card(version, owner) {
       title: "Title",
       status: "planned",
       priority: "normal",
-      kind: "outcome",
       archived: false,
       labels: [],
-      ...(owner ? { owner } : {}),
+      ...(review ? { review_on: review } : {}),
     },
   };
 }
@@ -119,7 +118,7 @@ test("a queued clear uses metadata introduced by the preceding acknowledged writ
         await new Promise((resolve) => {
           release = resolve;
         });
-        return ack(card("v1", "New owner"));
+        return ack(card("v1", "2026-09-08"));
       }
       return ack(card("v2"));
     },
@@ -129,15 +128,15 @@ test("a queued clear uses metadata introduced by the preceding acknowledged writ
     type: "card",
     resource: card("v0"),
   });
-  draft.fields.owner = "New owner";
+  draft.fields.review = "2026-09-08";
   const first = autosave.enqueue(draft, autosaveSnapshot(draft));
-  draft.fields.owner = "";
+  draft.fields.review = "";
   void autosave.enqueue(draft, autosaveSnapshot(draft));
   release();
   await first;
   assert.equal(attempts.length, 2);
   assert.equal(attempts[1].version, "v1");
-  assert.deepEqual(attempts[1].payload.clear, ["owner"]);
+  assert.deepEqual(attempts[1].payload.clear, ["review_on"]);
 });
 
 test("session loss between acknowledgements prevents dispatch of the queued write", async () => {

@@ -6,6 +6,16 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Card editor simplification](2026-09-22-card-editor-simplification.md) removes
+card kind, expected result and owner throughout the source/API contracts, CLI,
+projections and UI. Five existing cards, including one archived card, were cleaned
+through conditional CLI writes with bodies and retained metadata preserved.
+Card descriptions now share direct click editing, Markdown rendering, autosave
+and centered layout with project descriptions; both modals omit Change history.
+The full local gate passes 216 Rust, 95 JavaScript and 12 Python tests. All ten
+release browser suites and the broad HTTPS smoke pass. The existing manual runtime
+serves the verified build; both registered projects validate cleanly.
+
 [Project editor simplification](2026-09-22-project-editor.md) centers the project
 modal and renders descriptions as Markdown after editing. Project phase, review
 date and extensions are removed across source/API contracts, CLI validation and
@@ -73,7 +83,7 @@ has a maintained user/contributor entry point. The owner deferred licensing.
 - Explicit folder registration, host-native selection, pairing and sessions.
 - Shared HTTP/Unix application engine, CLI and rebuildable search projections.
 - Projects, focus, board, calendar, Gantt, lists and reports against real sources.
-- Structured card results/acceptance, relations, targeted updates and workspace tags.
+- Structured card acceptance, relations, targeted updates and workspace tags.
 - Versioned settings/focus, read receipts, undo, diagnostics and Git observation.
 - Maintenance workflows, packaging and documented stopped-server copy recovery.
 

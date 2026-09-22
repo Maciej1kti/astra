@@ -18,7 +18,6 @@ await runBrowserSuite(
       const metadata = {
         id,
         title: `Pagination fixture ${String(index).padStart(3, "0")}`,
-        kind: "outcome",
         status: "active",
         priority: "normal",
         archived: false,

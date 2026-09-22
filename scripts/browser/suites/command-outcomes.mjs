@@ -175,7 +175,16 @@ await runBrowserSuite(
         exact: true,
       });
       const title = dialog.getByLabel("Title", { exact: true });
-      const body = dialog.getByLabel(/^Description/);
+      const body = dialog.getByLabel("Description", { exact: true });
+      const renderedBody = dialog.locator(".resource-description-rendered");
+      async function expectBodyDraft() {
+        if (await body.isVisible()) {
+          await expect(body).toHaveValue("Autosaved body\nSecond line");
+        } else {
+          await expect(renderedBody).toBeVisible();
+          await expect(renderedBody).toHaveText("Autosaved body\nSecond line");
+        }
+      }
       await expect(
         dialog.getByRole("button", { name: "Pin to focus", exact: true }),
       ).toBeEnabled();
@@ -218,6 +227,7 @@ await runBrowserSuite(
         },
       });
       await title.fill("Autosaved title — Zażółć");
+      await renderedBody.click();
       await body.fill("Autosaved body\nSecond line");
       if (focus) {
         await expect(dialog.getByTestId("autosave-status")).toHaveText("Saved");
@@ -227,7 +237,7 @@ await runBrowserSuite(
       }
       await rejected.recover(dialog);
       await expect(title).toHaveValue("Autosaved title — Zażółć");
-      await expect(body).toHaveValue("Autosaved body\nSecond line");
+      await expectBodyDraft();
       if (focus) {
         await expect(dialog).toContainText(
           "Focus changed elsewhere. Your draft is preserved.",

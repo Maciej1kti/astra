@@ -2229,17 +2229,6 @@ components:
       - text
       - completed
       additionalProperties: false
-    ExpectedResult:
-      type: string
-      minLength: 1
-      maxLength: 4000
-      pattern: '\S'
-    CardOwner:
-      type: string
-      minLength: 1
-      maxLength: 120
-      pattern: '\S'
-      description: Display label only; does not assign an account or grant access.
     Acceptance:
       type: array
       items:
@@ -2274,11 +2263,6 @@ components:
           type: string
           minLength: 1
           maxLength: 240
-        kind:
-          type: string
-          enum:
-          - outcome
-          - decision
         status:
           type: string
           enum:
@@ -2314,10 +2298,6 @@ components:
             $ref: '#/components/schemas/UUID'
           maxItems: 100
           uniqueItems: true
-        expected_result:
-          $ref: '#/components/schemas/ExpectedResult'
-        owner:
-          $ref: '#/components/schemas/CardOwner'
         acceptance:
           $ref: '#/components/schemas/Acceptance'
         labels:
@@ -2331,7 +2311,6 @@ components:
       required:
       - id
       - title
-      - kind
       - status
       - priority
       - position
@@ -2771,11 +2750,6 @@ components:
                 type: string
                 minLength: 1
                 maxLength: 240
-              kind: &id010
-                type: string
-                enum:
-                - outcome
-                - decision
               status: &id011
                 type: string
                 enum:
@@ -2809,10 +2783,6 @@ components:
                   $ref: '#/components/schemas/UUID'
                 maxItems: 100
                 uniqueItems: true
-              expected_result:
-                $ref: '#/components/schemas/ExpectedResult'
-              owner:
-                $ref: '#/components/schemas/CardOwner'
               acceptance:
                 $ref: '#/components/schemas/Acceptance'
               labels: &id020
@@ -2842,8 +2812,6 @@ components:
               - blocked
               - depends_on
               - labels
-              - expected_result
-              - owner
               - acceptance
             maxItems: 20
             uniqueItems: true
@@ -2871,7 +2839,6 @@ components:
       type: object
       properties:
         title: *id009
-        kind: *id010
         status: *id011
         priority: *id012
         archived: *id013
@@ -2882,10 +2849,6 @@ components:
         blocked: *id018
         depends_on: *id019
         labels: *id020
-        expected_result:
-          $ref: '#/components/schemas/ExpectedResult'
-        owner:
-          $ref: '#/components/schemas/CardOwner'
         acceptance:
           $ref: '#/components/schemas/Acceptance'
         body: *id021
@@ -3324,8 +3287,6 @@ components:
           maxItems: 20
         milestone_id:
           $ref: '#/components/schemas/UUID'
-        owner:
-          $ref: '#/components/schemas/CardOwner'
         acceptance_progress:
           $ref: '#/components/schemas/AcceptanceProgress'
         read:
@@ -4477,10 +4438,6 @@ components:
           $ref: '#/components/schemas/Target'
         recorded_at:
           $ref: '#/components/schemas/Instant'
-        expected_result:
-          $ref: '#/components/schemas/ExpectedResult'
-        owner:
-          $ref: '#/components/schemas/CardOwner'
         acceptance:
           $ref: '#/components/schemas/Acceptance'
       required:

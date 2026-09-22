@@ -11,7 +11,6 @@ function resource(version, title = "Saved") {
       id: "card",
       title,
       status: "active",
-      kind: "outcome",
       priority: "normal",
       archived: false,
       labels: [],

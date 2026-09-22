@@ -29,7 +29,7 @@ fn agent_context_is_project_scoped_and_counts_utf8_json_overhead() {
 }
 
 #[test]
-fn agent_context_includes_complete_card_purpose_or_an_explicit_next_read() {
+fn agent_context_includes_card_acceptance_and_body_or_an_explicit_next_read() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
@@ -46,8 +46,8 @@ fn agent_context_includes_complete_card_purpose_or_an_explicit_next_read() {
         created.body["result"]["version"].as_str().unwrap(),
         json!({
             "set": {
-                "expected_result": "The owner can review every criterion.",
-                "owner": "Project owner",
+                "body": "The owner can review every criterion.",
+                "review_on": "2026-09-08",
                 "acceptance": acceptance,
             },
         }),
@@ -57,19 +57,30 @@ fn agent_context_includes_complete_card_purpose_or_an_explicit_next_read() {
     wire::validate("Context", &context).unwrap();
     assert_eq!(context["cards"][0]["acceptance"], acceptance);
     assert_eq!(
-        context["cards"][0]["expected_result"],
+        context["cards"][0]["excerpt"],
         "The owner can review every criterion."
     );
-    assert_eq!(context["cards"][0]["owner"], "Project owner");
+    assert_eq!(context["cards"][0]["review_on"], "2026-09-08");
     assert_eq!(context["cards"][0]["truncated"], false);
 
     let large = "ą".repeat(4000);
+    let large_acceptance = json!(
+        (0..12)
+            .map(|index| {
+                json!({
+                    "id": format!("{index:08x}-aaaa-4aaa-8aaa-{index:012x}"),
+                    "text": "ą".repeat(250),
+                    "completed": index % 2 == 0,
+                })
+            })
+            .collect::<Vec<_>>()
+    );
     let updated = patch(
         &engine,
         &project,
         id,
         updated.body["result"]["version"].as_str().unwrap(),
-        json!({"set":{"expected_result":large}}),
+        json!({"set":{"body":large,"acceptance":large_acceptance}}),
     );
     assert_eq!(updated.http_status, 200);
     let narrow = engine.context(&project, 4096).unwrap();
@@ -81,7 +92,9 @@ fn agent_context_includes_complete_card_purpose_or_an_explicit_next_read() {
     assert_eq!(narrow["next_reads"][0], json!({"type":"card","id":id}));
     let full = engine.context(&project, 24576).unwrap();
     wire::validate("Context", &full).unwrap();
-    assert_eq!(full["cards"][0]["expected_result"], large);
-    assert_eq!(full["cards"][0]["acceptance"], acceptance);
+    assert_eq!(full["cards"][0]["excerpt"], &large[..1024]);
+    assert_eq!(full["cards"][0]["truncated"], true);
+    assert_eq!(full["cards"][0]["review_on"], "2026-09-08");
+    assert_eq!(full["cards"][0]["acceptance"], large_acceptance);
     assert_eq!(full["omitted"]["cards"], 0);
 }

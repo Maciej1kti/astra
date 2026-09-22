@@ -124,6 +124,9 @@ mod projections;
 #[path = "engine/writes.rs"]
 mod writes;
 
+#[path = "engine/card_fields.rs"]
+mod card_fields;
+
 #[path = "engine/registration.rs"]
 mod registration;
 

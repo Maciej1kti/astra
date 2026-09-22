@@ -22,7 +22,7 @@
   padding: 28px;
   box-shadow: -12px 0 70px #10201b22;
 }
-.editor.project-editor {
+.editor.resource-editor {
   inset: 50% auto auto 50%;
   width: min(720px, calc(100vw - 32px));
   height: auto;
@@ -34,26 +34,26 @@
   transform: translate(-50%, -50%);
   box-shadow: 0 24px 90px #10201b44;
 }
-.editor.project-editor::backdrop {
+.editor.resource-editor::backdrop {
   background: #152d2890;
   backdrop-filter: blur(8px);
 }
-.editor.project-editor header {
+.editor.resource-editor header {
   top: -32px;
 }
-.editor .project-description-field {
+.editor .resource-description-field {
   margin: 20px 0;
 }
-.editor .project-description-field .field-label {
+.editor .resource-description-field .field-label {
   margin-bottom: 8px;
   font-size: 13px;
   font-weight: 600;
 }
-.editor .project-description-field .field-label span {
+.editor .resource-description-field .field-label span {
   color: var(--muted);
   font-weight: 400;
 }
-.editor .project-description-rendered {
+.editor .resource-description-rendered {
   min-height: 80px;
   padding: 12px;
   border: 1px solid var(--line);
@@ -61,7 +61,7 @@
   background: var(--bg);
   cursor: text;
 }
-.editor .project-description-rendered:focus-visible {
+.editor .resource-description-rendered:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 3px;
 }
@@ -213,13 +213,13 @@
   .editor {
     padding: 16px;
   }
-  .editor.project-editor {
+  .editor.resource-editor {
     width: calc(100vw - 20px);
     max-height: calc(100dvh - 20px);
     padding: 20px;
     border-radius: 14px;
   }
-  .editor.project-editor header {
+  .editor.resource-editor header {
     top: -20px;
   }
   .editor header {

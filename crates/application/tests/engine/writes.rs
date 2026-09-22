@@ -607,7 +607,7 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
         {"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"CriterionOne","completed":false},
         {"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","text":"CriterionTwo","completed":true}
     ]);
-    let body = "# Context\n\nKeep spacing and UTF-8: żółć.  \n";
+    let body = "# Context\n\nSearchableBody keeps spacing and UTF-8: żółć.  \n";
     let created = engine
         .mutate(Mutation {
             project_id: project.clone(),
@@ -616,8 +616,7 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
             payload: json!({
                 "title": "Structured card",
                 "body": body,
-                "expected_result": "SearchableOutcome",
-                "owner": "ResponsiblePerson",
+                "review_on": "2026-09-08",
                 "acceptance": acceptance,
             }),
             request_id: Uuid::now_v7().to_string(),
@@ -669,12 +668,7 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
         completed
     );
 
-    for term in [
-        "SearchableOutcome",
-        "ResponsiblePerson",
-        "CriterionOne",
-        "CriterionTwo",
-    ] {
+    for term in ["SearchableBody", "CriterionOne", "CriterionTwo"] {
         let page = engine
             .list(
                 Some("card"),
@@ -687,7 +681,7 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
             .unwrap();
         wire::validate("SummaryPage", &page).unwrap();
         assert_eq!(page["items"].as_array().unwrap().len(), 1, "{term}");
-        assert_eq!(page["items"][0]["owner"], "ResponsiblePerson");
+        assert_eq!(page["items"][0]["review_on"], "2026-09-08");
         assert_eq!(
             page["items"][0]["acceptance_progress"],
             json!({"total":2,"completed":2})
@@ -703,10 +697,10 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
         &project,
         id,
         titled.body["result"]["version"].as_str().unwrap(),
-        json!({"clear":["expected_result","owner","acceptance"]}),
+        json!({"clear":["review_on","acceptance"]}),
     );
     assert_eq!(cleared.http_status, 200, "{cleared:?}");
-    for field in ["expected_result", "owner", "acceptance"] {
+    for field in ["review_on", "acceptance"] {
         assert!(
             cleared.body["result"]["resource"]["metadata"]
                 .get(field)
@@ -727,8 +721,8 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
         completed
     );
     assert_eq!(
-        restored.body["result"]["resource"]["metadata"]["expected_result"],
-        "SearchableOutcome"
+        restored.body["result"]["resource"]["metadata"]["review_on"],
+        "2026-09-08"
     );
     assert_eq!(restored.body["result"]["resource"]["body"], body);
 

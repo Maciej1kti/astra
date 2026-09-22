@@ -237,8 +237,6 @@ fn fractional_timestamps_compare_as_instants() {
 #[test]
 fn structured_card_content_preserves_identity_order_and_explicit_status() {
     let mut value = card();
-    value["metadata"]["expected_result"] = json!("A readable export with Polish characters: żółć.");
-    value["metadata"]["owner"] = json!("Project owner");
     value["metadata"]["acceptance"] = json!([
         {"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"First criterion","completed":true},
         {"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","text":"Second criterion","completed":true}
@@ -254,11 +252,19 @@ fn structured_card_content_preserves_identity_order_and_explicit_status() {
         validate_document(duplicate).is_err(),
         "Different criteria cannot share identity"
     );
+    for (field, retired) in [
+        ("kind", json!("outcome")),
+        ("expected_result", json!("Legacy result")),
+        ("owner", json!("Legacy owner")),
+    ] {
+        let mut retired_card = value.clone();
+        retired_card["metadata"][field] = retired;
+        assert!(
+            validate_document(retired_card).is_err(),
+            "retired card field {field} must be rejected"
+        );
+    }
     for (field, invalid) in [
-        ("expected_result", json!(" ")),
-        ("owner", json!("\t\n")),
-        ("expected_result", json!("ą".repeat(4001))),
-        ("owner", json!("a".repeat(121))),
         (
             "acceptance",
             json!([{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"\u{2003}","completed":false}]),

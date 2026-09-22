@@ -16,14 +16,11 @@ type DeadlineFields = { due: string; dueKind: "hard" | "target" };
 export type CardFields = DeadlineFields & {
   status: NonNullable<CardCreate["status"]>;
   priority: NonNullable<CardCreate["priority"]>;
-  kind: NonNullable<CardCreate["kind"]>;
   start: string;
   end: string;
   review: string;
   labels: string[];
   tagDraft: string;
-  expectedResult: string;
-  owner: string;
   acceptance: AcceptanceItem[];
   acceptanceDraft: string;
   archived: boolean;
@@ -82,7 +79,6 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         fields: {
           status: m?.status ?? "planned",
           priority: m?.priority ?? "normal",
-          kind: m?.kind ?? "outcome",
           start: m?.schedule?.start ?? "",
           end: m?.schedule?.end ?? "",
           due: m?.due?.date ?? "",
@@ -90,8 +86,6 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
           review: m?.review_on ?? "",
           labels: [...(m?.labels ?? [])],
           tagDraft: "",
-          expectedResult: m?.expected_result ?? "",
-          owner: m?.owner ?? "",
           acceptance: (m?.acceptance ?? []).map((item) => ({ ...item })),
           acceptanceDraft: "",
           archived: m?.archived ?? false,
@@ -187,16 +181,10 @@ export function editorPayload(draft: EditorDraft) {
         title,
         status: d.status,
         priority: d.priority,
-        kind: d.kind,
         archived: d.archived,
         labels: [...d.labels],
       };
       const clear: NonNullable<PatchSet<CardPatch>["clear"]> = [];
-      if (d.expectedResult.trim()) fields.expected_result = d.expectedResult;
-      else if (metadata?.expected_result !== undefined)
-        clear.push("expected_result");
-      if (d.owner.trim()) fields.owner = d.owner;
-      else if (metadata?.owner !== undefined) clear.push("owner");
       if (d.acceptance.length)
         fields.acceptance = d.acceptance.map((item) => ({ ...item }));
       else if (metadata?.acceptance !== undefined) clear.push("acceptance");

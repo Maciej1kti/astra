@@ -66,9 +66,11 @@ impl Indexed {
             "blocked",
             "labels",
             "milestone_id",
-            "owner",
         ] {
             if key == "review_on" && self.kind == "project" {
+                continue;
+            }
+            if key == "kind" && self.kind == "card" {
                 continue;
             }
             if let Some(value) = m.get(key) {
@@ -91,12 +93,6 @@ impl Indexed {
 /// Search remains a derived projection; source Markdown is never rewritten.
 fn search_text(body: &str, metadata: &Value) -> String {
     let mut text = body.to_owned();
-    for key in ["expected_result", "owner"] {
-        if let Some(value) = metadata.get(key).and_then(Value::as_str) {
-            text.push('\n');
-            text.push_str(value);
-        }
-    }
     if let Some(items) = metadata.get("acceptance").and_then(Value::as_array) {
         for item in items {
             if let Some(value) = item["text"].as_str() {
@@ -116,7 +112,7 @@ fn upgrade_search_projection(connection: &mut Connection) -> Result<(), AppError
             |r| r.get(0),
         )
         .optional()?;
-    if version.as_deref() == Some("2") {
+    if version.as_deref() == Some("3") {
         return Ok(());
     }
     let tx = connection.transaction()?;
@@ -161,9 +157,9 @@ fn upgrade_search_projection(connection: &mut Connection) -> Result<(), AppError
         "INSERT INTO projection_meta(key,
     value)
 VALUES ('search_format',
-    '2')
+    '3')
 ON CONFLICT (key) DO UPDATE
-SET value='2'",
+SET value='3'",
         [],
     )?;
     tx.commit()?;

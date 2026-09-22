@@ -4379,19 +4379,6 @@
         ],
         "additionalProperties": false
       },
-      "ExpectedResult": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 4000,
-        "pattern": "\\S"
-      },
-      "CardOwner": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 120,
-        "pattern": "\\S",
-        "description": "Display label only; does not assign an account or grant access."
-      },
       "Acceptance": {
         "type": "array",
         "items": {
@@ -4436,13 +4423,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 240
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "outcome",
-              "decision"
-            ]
           },
           "status": {
             "type": "string",
@@ -4492,12 +4472,6 @@
             "maxItems": 100,
             "uniqueItems": true
           },
-          "expected_result": {
-            "$ref": "#/components/schemas/ExpectedResult"
-          },
-          "owner": {
-            "$ref": "#/components/schemas/CardOwner"
-          },
           "acceptance": {
             "$ref": "#/components/schemas/Acceptance"
           },
@@ -4515,7 +4489,6 @@
         "required": [
           "id",
           "title",
-          "kind",
           "status",
           "priority",
           "position",
@@ -5146,13 +5119,6 @@
                     "minLength": 1,
                     "maxLength": 240
                   },
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "outcome",
-                      "decision"
-                    ]
-                  },
                   "status": {
                     "type": "string",
                     "enum": [
@@ -5198,12 +5164,6 @@
                     "maxItems": 100,
                     "uniqueItems": true
                   },
-                  "expected_result": {
-                    "$ref": "#/components/schemas/ExpectedResult"
-                  },
-                  "owner": {
-                    "$ref": "#/components/schemas/CardOwner"
-                  },
                   "acceptance": {
                     "$ref": "#/components/schemas/Acceptance"
                   },
@@ -5239,8 +5199,6 @@
                     "blocked",
                     "depends_on",
                     "labels",
-                    "expected_result",
-                    "owner",
                     "acceptance"
                   ]
                 },
@@ -5286,13 +5244,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 240
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "outcome",
-              "decision"
-            ]
           },
           "status": {
             "type": "string",
@@ -5348,12 +5299,6 @@
             },
             "maxItems": 20,
             "uniqueItems": true
-          },
-          "expected_result": {
-            "$ref": "#/components/schemas/ExpectedResult"
-          },
-          "owner": {
-            "$ref": "#/components/schemas/CardOwner"
           },
           "acceptance": {
             "$ref": "#/components/schemas/Acceptance"
@@ -6012,9 +5957,6 @@
           },
           "milestone_id": {
             "$ref": "#/components/schemas/UUID"
-          },
-          "owner": {
-            "$ref": "#/components/schemas/CardOwner"
           },
           "acceptance_progress": {
             "$ref": "#/components/schemas/AcceptanceProgress"
@@ -7747,12 +7689,6 @@
           },
           "recorded_at": {
             "$ref": "#/components/schemas/Instant"
-          },
-          "expected_result": {
-            "$ref": "#/components/schemas/ExpectedResult"
-          },
-          "owner": {
-            "$ref": "#/components/schemas/CardOwner"
           },
           "acceptance": {
             "$ref": "#/components/schemas/Acceptance"

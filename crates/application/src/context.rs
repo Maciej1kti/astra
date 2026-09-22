@@ -196,8 +196,6 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
         "blocked",
         "target",
         "recorded_at",
-        "expected_result",
-        "owner",
         "acceptance",
     ] {
         if key == "review_on" && document["type"] == "project" {

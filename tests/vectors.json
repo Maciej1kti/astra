@@ -199,6 +199,45 @@
       ],
       "valid": true,
       "reason": "Po due: ostrzeżenie, nie błąd"
+    },
+    {
+      "id": "V15",
+      "base": "examples/card-22222222-2222-4222-8222-222222222222.json",
+      "changes": [
+        {
+          "op": "set",
+          "path": "/metadata/kind",
+          "value": "outcome"
+        }
+      ],
+      "valid": false,
+      "reason": "Usunięte pole card kind"
+    },
+    {
+      "id": "V16",
+      "base": "examples/card-22222222-2222-4222-8222-222222222222.json",
+      "changes": [
+        {
+          "op": "set",
+          "path": "/metadata/expected_result",
+          "value": "Removed field"
+        }
+      ],
+      "valid": false,
+      "reason": "Usunięte pole expected_result"
+    },
+    {
+      "id": "V17",
+      "base": "examples/card-22222222-2222-4222-8222-222222222222.json",
+      "changes": [
+        {
+          "op": "set",
+          "path": "/metadata/owner",
+          "value": "Removed field"
+        }
+      ],
+      "valid": false,
+      "reason": "Usunięte pole owner"
     }
   ],
   "date_cases": [

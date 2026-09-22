@@ -52,6 +52,7 @@ let browser;
 try {
   const plan = cli("registration-plan", folder, "--name", "Field notes");
   cli("register", plan.plan_id);
+  const commandFile = join(temp, "browser-smoke-command.json");
   browser = await chromium.launch({
     headless: true,
     executablePath: process.env.ASTRA_TEST_CHROMIUM || undefined,
@@ -189,12 +190,14 @@ try {
   await page.getByLabel("Start", { exact: true }).fill("2026-09-07");
   await page.getByLabel("End", { exact: true }).fill("2026-09-12");
   await page.getByLabel("Due date", { exact: true }).fill("2026-09-15");
+  await page.locator(".resource-description-rendered").click();
   await page
-    .getByLabel(/^Description/)
+    .getByLabel("Description", { exact: true })
     .fill('A real browser write.\n\n<script>alert("untrusted")</script>');
   await page
-    .getByRole("button", { name: "Preview Markdown", exact: true })
-    .click();
+    .getByRole("dialog")
+    .locator("header")
+    .click({ position: { x: 2, y: 2 } });
   assert.equal(
     await page.locator(".markdown script, .markdown img").count(),
     0,
@@ -258,15 +261,26 @@ try {
     .click();
 
   await page.getByRole("heading", { name: "Ship the revised guide" }).click();
-  await page.getByText("Change history", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "First history page", exact: true })
-    .click();
-  await page
-    .locator("button:enabled")
-    .filter({ hasText: /^Undo this change$/ })
-    .first()
-    .click();
+  const current = cli("get", path);
+  const history = cli("get", `${path}/history`).items;
+  const entry = history.find(
+    (item) => item.can_undo && item.changed_fields.includes("title"),
+  );
+  assert(entry, "the browser smoke title edit should be undoable");
+  await writeFile(
+    commandFile,
+    JSON.stringify({ undo: { history_entry_id: entry.id } }),
+    { mode: 0o600 },
+  );
+  cli(
+    "command",
+    "PATCH",
+    path,
+    "--json-file",
+    commandFile,
+    "--if-version",
+    current.version,
+  );
   await expect(page.getByRole("dialog")).toBeVisible();
   assert.equal(cli("get", path).metadata.title, "Ship the field guide");
   await page.getByRole("button", { name: "Close editor", exact: true }).click();

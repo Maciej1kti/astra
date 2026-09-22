@@ -1,9 +1,6 @@
 {
   "title": "Prepare the demonstration",
-  "kind": "outcome",
   "body": "Demonstrate the agreed project export.",
-  "expected_result": "The owner can review an export using the agreed sample data.",
-  "owner": "Project owner",
   "acceptance": [
     {
       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",

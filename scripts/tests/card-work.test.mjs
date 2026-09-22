@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import {
   acceptanceValidation,
   moveAcceptance,
-  cardPurposeValidation,
 } from "../../apps/web/src/features/cards/card-work.ts";
 import {
   cardUpdatePayload,
@@ -49,9 +48,6 @@ test("invalid acceptance drafts have specific feedback without normalizing saved
     "",
   );
   assert.match(acceptanceValidation(Array(101).fill(first)), /100 acceptance/);
-  assert.equal(cardPurposeValidation("", ""), "");
-  assert.match(cardPurposeValidation("x".repeat(4001), ""), /Expected result/);
-  assert.match(cardPurposeValidation("", "x".repeat(121)), /Owner/);
 });
 
 test("card update payload is independently targeted and cannot include card mutations", () => {

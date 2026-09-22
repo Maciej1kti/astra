@@ -434,7 +434,13 @@ fn service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked
 }
 
 #[test]
-fn upgrading_body_only_search_index_preserves_sources_and_indexes_card_content() {
+fn upgrading_search_index_preserves_sources_and_indexes_body_and_acceptance() {
+    for body_only in [true, false] {
+        run_search_upgrade(body_only);
+    }
+}
+
+fn run_search_upgrade(body_only: bool) {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
@@ -445,7 +451,11 @@ fn upgrading_body_only_search_index_preserves_sources_and_indexes_card_content()
         &project,
         &id,
         created.body["result"]["version"].as_str().unwrap(),
-        json!({"set":{"expected_result":"PreviouslyUnindexed","owner":"CatalogOwner","body":"Original source body\n"}}),
+        json!({"set":{
+            "review_on":"2026-09-08",
+            "body":"Original source body\n",
+            "acceptance":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"PreviouslyUnindexed","completed":false}]
+        }}),
     );
     assert_eq!(edited.http_status, 200);
     let source_path = env.root.join(format!("project/.project/cards/{id}.md"));
@@ -454,7 +464,35 @@ fn upgrading_body_only_search_index_preserves_sources_and_indexes_card_content()
 
     // Recreate the prior disposable projection, including its old FTS columns.
     let db = rusqlite::Connection::open(env.root.join("state/index.sqlite")).unwrap();
-    db.execute_batch("DROP TRIGGER documents_ai; DROP TRIGGER documents_ad; DROP TRIGGER documents_au; DROP TABLE documents_fts; ALTER TABLE documents DROP COLUMN search_text;
+    db.execute(
+        "UPDATE documents SET metadata_json=?1, search_text=?2 WHERE entity_id=?3",
+        rusqlite::params![
+            json!({
+                "id":id,
+                "title":"Upgrade fixture",
+                "status":"planned",
+                "priority":"normal",
+                "position":"80000000000000000000000000000000",
+                "archived":false,
+                "created_at":"2026-09-22T00:00:00Z",
+                "updated_at":"2026-09-22T00:00:00Z",
+                "expected_result":"LegacyExpected",
+                "owner":"LegacyOwner",
+                "acceptance":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"PreviouslyUnindexed","completed":false}]
+            })
+            .to_string(),
+            "LegacyExpected LegacyOwner Original source body PreviouslyUnindexed",
+            id,
+        ],
+    )
+    .unwrap();
+    db.execute(
+        "UPDATE projection_meta SET value='2' WHERE key='search_format'",
+        [],
+    )
+    .unwrap();
+    if body_only {
+        db.execute_batch("DROP TRIGGER documents_ai; DROP TRIGGER documents_ad; DROP TRIGGER documents_au; DROP TABLE documents_fts; ALTER TABLE documents DROP COLUMN search_text;
         CREATE VIRTUAL TABLE documents_fts USING fts5(title,
     body,
     content='documents',
@@ -485,16 +523,27 @@ VALUES ('delete',
     title,
     body)
 VALUES (new.rowid,
-    new.title,
+        new.title,
     new.body); END;
         INSERT INTO documents_fts(documents_fts)
-VALUES ('rebuild'); DELETE
-FROM projection_meta
-WHERE key='search_format';").unwrap();
+VALUES ('rebuild');")
+        .unwrap();
+    } else {
+        for term in ["LegacyExpected", "LegacyOwner"] {
+            let count: i64 = db
+                .query_row(
+                    "SELECT count(*) FROM documents_fts WHERE documents_fts MATCH ?1",
+                    [term],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(count, 1, "pre-upgrade FTS term {term}");
+        }
+    }
     drop(db);
 
     let engine = env.engine();
-    for term in ["PreviouslyUnindexed", "CatalogOwner", "Original"] {
+    for term in ["PreviouslyUnindexed", "Original"] {
         let page = engine
             .list(
                 Some("card"),
@@ -507,6 +556,19 @@ WHERE key='search_format';").unwrap();
             .unwrap();
         assert_eq!(page["items"][0]["id"], id, "{term}");
     }
+    for term in ["LegacyExpected", "LegacyOwner"] {
+        let page = engine
+            .list(
+                Some("card"),
+                &Query {
+                    project: Some(project.clone()),
+                    search: Some(term.into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert!(page["items"].as_array().unwrap().is_empty(), "{term}");
+    }
     assert_eq!(fs::read(source_path).unwrap(), bytes);
     assert_eq!(
         engine.get(&project, Kind::Card, &id).unwrap()["body"],
@@ -515,8 +577,12 @@ WHERE key='search_format';").unwrap();
     drop(engine);
     let engine = env.engine();
     assert_eq!(
-        engine.get(&project, Kind::Card, &id).unwrap()["metadata"]["owner"],
-        "CatalogOwner"
+        engine.get(&project, Kind::Card, &id).unwrap()["metadata"]["review_on"],
+        "2026-09-08"
+    );
+    assert_eq!(
+        engine.get(&project, Kind::Card, &id).unwrap()["metadata"]["acceptance"],
+        json!([{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"PreviouslyUnindexed","completed":false}])
     );
 }
 

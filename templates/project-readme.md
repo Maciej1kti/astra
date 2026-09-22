@@ -1,8 +1,8 @@
 # Project planning data
 
-This directory is the source of truth for project outcomes, milestones and dates.
+This directory is the source of truth for project work, milestones and dates.
 `project.md` contains the project's stable ID and context. `cards/<uuid>.md`
-describes an outcome or decision, `milestones/<uuid>.md` a milestone, and
+describes a card work item, `milestones/<uuid>.md` a milestone, and
 `updates/<uuid>.md` an append-only report. `.local/` contains runtime files only.
 
 Documents use UTF-8, restricted YAML front matter and Markdown bodies. Names and

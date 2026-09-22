@@ -57,14 +57,6 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
         return Err(DomainError::Invalid("body byte limit or NUL"));
     }
     if let Some(m) = value.get("metadata") {
-        for field in ["expected_result", "owner"] {
-            if m.get(field)
-                .and_then(Value::as_str)
-                .is_some_and(|text| text.trim().is_empty())
-            {
-                return Err(DomainError::Invalid("blank card content"));
-            }
-        }
         if let Some(items) = m.get("acceptance").and_then(Value::as_array) {
             let mut ids = HashSet::new();
             for item in items {

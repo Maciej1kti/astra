@@ -19,7 +19,6 @@ function card(metadata = {}) {
       id: "card",
       title: "Edited card",
       status: "active",
-      kind: "outcome",
       priority: "normal",
       position: "position",
       archived: false,
@@ -32,7 +31,9 @@ function card(metadata = {}) {
   };
 }
 test("an unrelated card edit preserves exact tags, extensions and dependency intent", () => {
-  const source = card({ "x-custom": { retained: true } });
+  const source = card({
+    "x-custom": { retained: true },
+  });
   const draft = createEditorDraft(editTarget("p", source));
   const payload = editorPayload(draft);
   assert.deepEqual(payload.set.labels, [" preserved tag "]);
@@ -46,8 +47,6 @@ test("clearing optional fields is explicit and never clears unrelated extensions
     editTarget(
       "p",
       card({
-        expected_result: "Result",
-        owner: "Owner",
         acceptance: [{ id: "a", text: "Done", completed: true }],
         milestone_id: "m",
         blocked: { reason: "Review" },
@@ -58,8 +57,6 @@ test("clearing optional fields is explicit and never clears unrelated extensions
     ),
   );
   Object.assign(draft.fields, {
-    expectedResult: "",
-    owner: "",
     acceptance: [],
     milestoneId: "",
     blockedReason: "",
@@ -72,8 +69,6 @@ test("clearing optional fields is explicit and never clears unrelated extensions
   draft.common.advanced = '{"x-user":{"enabled":true}}';
   const payload = editorPayload(draft);
   const optional = [
-    "expected_result",
-    "owner",
     "acceptance",
     "milestone_id",
     "blocked",

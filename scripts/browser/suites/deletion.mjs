@@ -265,8 +265,9 @@ await runBrowserSuite(
           try {
             const latestTitle = "Delete after autosave acknowledgement";
             await dialog.getByLabel("Title", { exact: true }).fill(latestTitle);
+            await dialog.locator(".resource-description-rendered").click();
             await dialog
-              .getByLabel(/^Description/)
+              .getByLabel("Description", { exact: true })
               .fill("The delete preview must use the acknowledged source.");
             await waitForSignal(autosaveStarted, "delete autosave");
             const deleteButton = dialog.getByRole("button", {
@@ -321,7 +322,10 @@ await runBrowserSuite(
           await dialog
             .getByLabel("Title", { exact: true })
             .fill("Autosaved delete title");
-          await dialog.getByLabel(/^Description/).fill("Autosaved report body");
+          await dialog.locator(".resource-description-rendered").click();
+          await dialog
+            .getByLabel("Description", { exact: true })
+            .fill("Autosaved report body");
           await expect(dialog.getByTestId("autosave-status")).toHaveText(
             "Saved",
           );
@@ -345,7 +349,9 @@ await runBrowserSuite(
           await expect(
             dialog.getByLabel("Title", { exact: true }),
           ).toBeDisabled();
-          await expect(dialog.getByLabel(/^Description/)).toBeDisabled();
+          await expect(
+            dialog.locator(".resource-description-rendered"),
+          ).toHaveAttribute("aria-disabled", "true");
           await expect(
             report.getByLabel("Update summary", { exact: true }),
           ).toBeDisabled();

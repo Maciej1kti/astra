@@ -14,7 +14,6 @@
   import CardRelations from "./CardRelations.svelte";
   import ReportFields from "./ReportFields.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
-  import CardPurposeFields from "./CardPurposeFields.svelte";
   import "../../styles/editor.css";
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
@@ -28,10 +27,7 @@
   import CardActivity from "../cards/CardActivity.svelte";
 
   import CardUpdateComposer from "../cards/CardUpdateComposer.svelte";
-  import {
-    acceptanceValidation,
-    cardPurposeValidation,
-  } from "../cards/card-work";
+  import { acceptanceValidation } from "../cards/card-work";
   import { hasCardUpdateDraft, newCardUpdateDraft } from "../cards/card-update";
   import { tagValidation } from "../tags/tags";
   import { canUndoDraft, type EditorIntent } from "./editor-actions";
@@ -130,9 +126,9 @@
   );
 
   let preview = $state(false);
-  let projectDescriptionEditing = $state(false);
-  let projectDescriptionInput = $state<HTMLTextAreaElement>();
-  let projectCloseButton = $state<HTMLButtonElement>();
+  let descriptionEditing = $state(false);
+  let descriptionInput = $state<HTMLTextAreaElement>();
+  let descriptionCloseButton = $state<HTMLButtonElement>();
   let discard = $state(false);
   let closing = $state(false);
 
@@ -251,38 +247,39 @@
     discard = false;
     onkeepediting?.();
   }
-  function beginProjectDescriptionEdit(event?: Event) {
+  function beginDescriptionEdit(event?: Event) {
     const target = event?.target;
     if (target instanceof Element && target.closest("a")) return;
-    if (draft.type === "project" && !locked) projectDescriptionEditing = true;
+    if ((draft.type === "project" || draft.type === "card") && !locked)
+      descriptionEditing = true;
   }
-  function finishProjectDescriptionEdit() {
-    if (draft.type !== "project") return;
-    projectDescriptionEditing = false;
+  function finishDescriptionEdit() {
+    if (draft.type !== "project" && draft.type !== "card") return;
+    descriptionEditing = false;
     if (persistedDirty && !closing)
       void flushAutosave().catch((cause) => {
         autosaveError = cause instanceof Error ? cause.message : String(cause);
       });
   }
   $effect(() => {
-    if (!projectDescriptionEditing || !projectDescriptionInput) return;
+    if (!descriptionEditing || !descriptionInput) return;
     queueMicrotask(() => {
-      if (!projectDescriptionEditing || !projectDescriptionInput) return;
-      projectDescriptionInput.focus();
-      projectDescriptionInput.setSelectionRange(
-        projectDescriptionInput.value.length,
-        projectDescriptionInput.value.length,
+      if (!descriptionEditing || !descriptionInput) return;
+      descriptionInput.focus();
+      descriptionInput.setSelectionRange(
+        descriptionInput.value.length,
+        descriptionInput.value.length,
       );
     });
   });
   $effect(() => {
-    if (!projectDescriptionEditing) return;
+    if (!descriptionEditing) return;
     const outsidePointer = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (projectDescriptionInput?.contains(target)) return;
-      if (projectCloseButton?.contains(target)) return;
-      finishProjectDescriptionEdit();
+      if (descriptionInput?.contains(target)) return;
+      if (descriptionCloseButton?.contains(target)) return;
+      finishDescriptionEdit();
     };
     document.addEventListener("pointerdown", outsidePointer, true);
     return () =>
@@ -530,11 +527,6 @@
       if ([...title].length > maxTitle)
         throw new Error(`Use ${maxTitle} characters or fewer for the title.`);
       if (draft.type === "card") {
-        const purposeError = cardPurposeValidation(
-          draft.fields.expectedResult,
-          draft.fields.owner,
-        );
-        if (purposeError) throw new Error(purposeError);
         acceptanceError = acceptanceValidation(draft.fields.acceptance);
         if (acceptanceError) throw new Error(acceptanceError);
         tagError = tagValidation(draft.fields.labels);
@@ -871,6 +863,7 @@
 <dialog
   use:modal
   class="editor"
+  class:resource-editor={draft.type === "project" || draft.type === "card"}
   class:project-editor={draft.type === "project"}
   aria-label={resource ? "Edit resource" : "Create resource"}
   oncancel={(e) => {
@@ -931,13 +924,12 @@
           </p>{/if}
       </div>
       <button
-        bind:this={projectCloseButton}
+        bind:this={descriptionCloseButton}
         aria-label="Close editor"
         onpointerdown={(event) => {
           // Keep the textarea focused until close() starts its flush. Moving
           // focus first can reflow the centered dialog under the pointer.
-          if (event.button === 0 && projectDescriptionEditing)
-            event.preventDefault();
+          if (event.button === 0 && descriptionEditing) event.preventDefault();
         }}
         onclick={close}
         disabled={busy || updateBusy || deleteBusy || closing}>✕</button
@@ -1061,44 +1053,44 @@
               ></label
             >{/if}
         </div>{/if}
-      {#if draft.type === "card" || draft.type === "update"}<label
+      {#if draft.type === "update"}<label
           >Kind<select
             aria-label="Kind"
             bind:value={draft.fields.kind}
             disabled={readonly || locked}
-            >{#each draft.type === "card" ? ["outcome", "decision"] : ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
+            >{#each ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
                 value={item}>{resourceLabel(item)}</option
               >{/each}</select
           ></label
         >{/if}
-      {#if draft.type === "card"}<CardPurposeFields
-          bind:fields={draft.fields}
-          {locked}
-        />{/if}
-      {#if draft.type === "project"}
+      {#if draft.type === "project" || draft.type === "card"}
         <section
-          class="project-description-field"
-          aria-labelledby="project-description-label"
+          class="resource-description-field"
+          aria-labelledby="resource-description-label"
         >
-          <div class="field-label" id="project-description-label">
-            Description <span>Markdown</span>
+          <div class="field-label" id="resource-description-label">
+            Description <span
+              >{draft.type === "card"
+                ? "Context and supporting details · Markdown"
+                : "Markdown"}</span
+            >
           </div>
-          {#if projectDescriptionEditing}
+          {#if descriptionEditing}
             <textarea
-              bind:this={projectDescriptionInput}
+              bind:this={descriptionInput}
               bind:value={draft.common.body}
               rows="8"
-              aria-label="Project description"
-              onblur={finishProjectDescriptionEdit}
+              aria-label="Description"
+              onblur={finishDescriptionEdit}
               disabled={locked}></textarea>
           {:else}
             <div
-              class="project-description-rendered"
+              class="resource-description-rendered"
               role="button"
               tabindex={locked ? -1 : 0}
-              aria-label="Edit project description"
+              aria-label={`Edit ${draft.type} description`}
               aria-disabled={locked}
-              onclick={beginProjectDescriptionEdit}
+              onclick={beginDescriptionEdit}
               onkeydown={(event) => {
                 if (
                   event.target instanceof Element &&
@@ -1107,7 +1099,7 @@
                   return;
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  beginProjectDescriptionEdit(event);
+                  beginDescriptionEdit(event);
                 }
               }}
             >
@@ -1119,11 +1111,7 @@
         </section>
       {:else}
         <label class="description-label"
-          >Description <span
-            >{draft.type === "card"
-              ? "Context and supporting details · Markdown"
-              : "Markdown source"}</span
-          ><textarea
+          >Description <span>Markdown source</span><textarea
             bind:value={draft.common.body}
             rows="8"
             disabled={readonly || locked}></textarea></label
@@ -1221,7 +1209,8 @@
             spellcheck="false"
             disabled={locked}></textarea>
         </details>{/if}
-      {#if resource && !readonly && draft.type !== "project"}<details>
+      {#if resource && !readonly && draft.type !== "project" && draft.type !== "card"}<details
+        >
           <summary>Change history</summary><button
             type="button"
             onclick={() => loadHistory()}

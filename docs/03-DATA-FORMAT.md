@@ -21,17 +21,13 @@ Puste katalogi można tworzyć leniwie. Inne pliki są ignorowane z diagnostyką
 | Obiekt | Pola wymagane w poprawnym pliku | Opcjonalne |
 |---|---|---|
 | Project | schema_version, id, name, state, created_at, updated_at | — |
-| Card | id, title, kind, status, priority, position, archived, created_at, updated_at | schedule, due, review_on, milestone_id, blocked, depends_on, labels, expected_result, owner, acceptance, x-* |
+| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule, due, review_on, milestone_id, blocked, depends_on, labels, acceptance, x-* |
 | Milestone | id, title, status, position, archived, created_at, updated_at | due, x-* |
 | Update | id, kind, target, summary, author, recorded_at | observed_at, supersedes, resolves, evidence, x-* |
 
 Project bodies describe the goal and context. Card and milestone bodies retain their Markdown description, including any existing result or acceptance headings. No headings are parsed or converted automatically. Card structured fields are independently optional. Update bodies contain result details, rather than a full agent transcript.
 
 ### Structured card content
-
-`expected_result` is an optional nonblank string of 1–4,000 characters. `owner`
-is an optional nonblank display label of 1–120 characters. It is not a user
-account, authorization rule, notification subscription or team assignment.
 
 `acceptance` is an optional ordered array of at most 100 objects, each containing
 `id` (UUIDv4), `text` (nonblank, 1–500 characters) and `completed` (boolean).
@@ -40,25 +36,24 @@ editing, reordering or toggling it; new items receive a new UUIDv4. Completion i
 explicit and independent of card status. A complete checklist never marks a card
 done, and a manually completed card may still contain incomplete criteria.
 
-All three fields use the ordinary versioned card create/patch API. `set` replaces
-the ordered checklist as a whole; `clear` removes an optional field. An empty
-array represents an explicitly empty checklist. Existing cards without these
-fields stay valid and are not rewritten on read. Status changes and unrelated
-edits retain their structured content and Markdown body. History and Undo retain
-the same version/conflict rules as every other card edit.
+The checklist uses the ordinary versioned card create/patch API. `set` replaces
+the ordered checklist as a whole; `clear` removes it. An empty array represents
+an explicitly empty checklist. Existing cards without a checklist stay valid and
+are not rewritten on read. Status changes and unrelated edits retain their
+structured content and Markdown body. History and Undo retain the same
+version/conflict rules as every other card edit.
 
-List summaries expose the optional owner label and, when a checklist exists,
-`acceptance_progress: {total, completed}`. Progress is a compact projection,
-not an acceptance decision. Full-text search includes the result, owner and
-criterion text as well as title and body. The existing aggregate front matter
-limit of 64 KiB still applies even when individual field limits are satisfied.
+List summaries expose `acceptance_progress: {total, completed}` when a checklist
+exists. Progress is a compact projection, not an acceptance decision. Full-text
+search includes criterion text as well as title and body. The existing aggregate
+front matter limit of 64 KiB still applies even when individual field limits are
+satisfied.
 
 Tworzenie przez API potrzebuje tylko tytułu karty lub nazwy projektu; pola wymagane w pliku uzupełnia serwer. Czasy są RFC3339 UTC z `Z`. `created_at` jest niezmienne w zwykłych mutacjach; `updated_at` ustala serwer dopiero przy rzeczywistej zmianie. No-op nie zmienia czasu ani wersji. Zwykły zapis nie tworzy updated_at wcześniejszego od created_at; wykryty skok zegara obsługuje polityka admission/recovery zamiast fałszowania chronologii. Zewnętrzna edycja może pozostawić stary czas; świeżość źródła określa też hash i `observed_at` w indeksie, nie tylko nagłówek.
 
 ### Enumy
 
 - Project state: `active | paused | archived`.
-- Card kind: `outcome | decision`.
 - Card status: `planned | active | review | done | cancelled`.
 - Priority: `low | normal | high | urgent`.
 - Milestone status: `planned | active | achieved | cancelled`.

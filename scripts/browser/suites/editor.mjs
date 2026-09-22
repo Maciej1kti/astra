@@ -132,8 +132,9 @@ export async function runEditorChecks({
       });
       await open(card.id);
       await title().fill("Repair draft — preserved after pin");
+      await dialog().locator(".resource-description-rendered").click();
       await dialog()
-        .getByLabel(/^Description/)
+        .getByLabel("Description", { exact: true })
         .fill("Autosaved body — Zażółć gęślą jaźń.");
       await waitForAutosaveACK();
       await dialog()
@@ -156,9 +157,10 @@ export async function runEditorChecks({
       await expect(
         dialog().getByRole("button", { name: "Pin to focus", exact: true }),
       ).toBeEnabled();
-      await expect(dialog().getByLabel(/^Description/)).toHaveValue(
-        "Autosaved body — Zażółć gęślą jaźń.",
-      );
+      await dialog().locator(".resource-description-rendered").click();
+      await expect(
+        dialog().getByLabel("Description", { exact: true }),
+      ).toHaveValue("Autosaved body — Zażółć gęślą jaźń.");
       await screenshot("A01-preserved-draft");
       await waitForAutosaveACK();
       assert.equal(
@@ -422,67 +424,40 @@ export async function runEditorChecks({
 
   await check(
     "A01-undo",
-    "Undo waits for a held autosave before restoring the prior source",
+    "Versioned CLI undo restores the prior card source while the API history remains available",
     async () => {
       const card = await create({ title: "Repair undo baseline" });
+      const first = get(card.id);
+      await mutate(
+        "PATCH",
+        `${base}/cards/${card.id}`,
+        { set: { title: "Repair undo prior edit" } },
+        first.version,
+      );
+      const prior = get(card.id);
+      await mutate(
+        "PATCH",
+        `${base}/cards/${card.id}`,
+        { set: { title: "Repair undo saved edit" } },
+        prior.version,
+      );
+      const current = get(card.id);
+      const history = cli("get", `${base}/cards/${card.id}/history`).items;
+      const entry = history.find(
+        (item) => item.can_undo && item.changed_fields.includes("title"),
+      );
+      assert(entry, "the saved title edit should be undoable");
+      await mutate(
+        "PATCH",
+        `${base}/cards/${card.id}`,
+        { undo: { history_entry_id: entry.id } },
+        current.version,
+      );
+      assert.equal(get(card.id).metadata.title, "Repair undo prior edit");
       await open(card.id);
-      await title().fill("Repair undo prior edit");
-      await waitForAutosaveACK();
-      const matcher = `${config.origin}${base}/cards/${card.id}`;
-      let resolveStarted;
-      const autosaveStarted = new Promise((resolve) => {
-        resolveStarted = resolve;
-      });
-      let releaseAutosave;
-      const autosaveReleased = new Promise((resolve) => {
-        releaseAutosave = resolve;
-      });
-      const writes = [];
-      await page.route(matcher, async (intercept) => {
-        if (intercept.request().method() !== "PATCH")
-          return intercept.continue();
-        writes.push(intercept.request().postData());
-        if (writes.length === 1) {
-          resolveStarted();
-          await autosaveReleased;
-        }
-        return intercept.continue();
-      });
-      try {
-        await title().fill("Repair undo saved edit");
-        await waitForSignal(autosaveStarted, "Undo autosave");
-        await dialog().getByText("Change history", { exact: true }).click();
-        await dialog()
-          .getByRole("button", { name: "First history page", exact: true })
-          .click();
-        const undo = dialog()
-          .getByRole("button", { name: "Undo this change", exact: true })
-          .first();
-        await expect(undo).toBeDisabled();
-        assert.equal(writes.length, 1);
-        releaseAutosave();
-        await waitForAutosaveACK();
-        await expect
-          .poll(() => get(card.id).metadata.title)
-          .toBe("Repair undo saved edit");
-        await dialog()
-          .getByRole("button", { name: "First history page", exact: true })
-          .click();
-        await expect(undo).toBeEnabled();
-        await undo.click();
-        await expect
-          .poll(() => get(card.id).metadata.title)
-          .toBe("Repair undo prior edit");
-        await expect(dialog()).toBeVisible();
-        await dialog()
-          .getByRole("button", { name: "Close editor", exact: true })
-          .click();
-        await dialog().waitFor({ state: "hidden" });
-        return "Undo stayed blocked during the held autosave, then restored the prior source after acknowledgement.";
-      } finally {
-        releaseAutosave();
-        await page.unroute(matcher);
-      }
+      await expect(title()).toHaveValue("Repair undo prior edit");
+      await close();
+      return { apiHistory: true, versionedUndo: true };
     },
   );
 
@@ -503,8 +478,8 @@ export async function runEditorChecks({
           .locator(".heading")
           .getByRole("button", { name: /Add card$/ })
           .click();
-        await expect(dialog().getByLabel("Kind", { exact: true })).toHaveValue(
-          "outcome",
+        await expect(dialog().getByLabel("Kind", { exact: true })).toHaveCount(
+          0,
         );
         await close();
       }

@@ -65,14 +65,14 @@ projectctl --project /absolute/project card create --input - <<'JSON'
   "status": "active",
   "priority": "high",
   "labels": ["docs"],
-  "expected_result": "A contributor can build and test the project",
-  "owner": "Maintainer",
+  "review_on": "2026-09-16",
+  "acceptance": [{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"A contributor can build and test the project","completed":false}],
   "body": "Document setup and a small example change."
 }
 JSON
 
 projectctl --project /absolute/project card set CARD_ID --patch-file - --if-version VERSION <<'JSON'
-{"set":{"owner":"Reviewer","labels":["docs","review"]},"clear":["review_on"]}
+{"set":{"review_on":"2026-09-20","labels":["docs","review"]}}
 JSON
 ```
 
@@ -80,6 +80,8 @@ JSON
 `set --patch-file` cannot be combined with field flags; this avoids ambiguous
 merge precedence. Unmentioned fields are preserved. Source extensions remain
 available for cards, milestones and reports through their JSON contracts.
+Use `clear` for an optional retained card field, for example
+`{"clear":["review_on"]}` in a versioned patch.
 Projects support only `name`, `state` and Markdown `body` edits; project
 `phase`, `review_on` and `x-*` fields are rejected by the shared server rules.
 

@@ -349,7 +349,7 @@ fn subprocess_crashes_at_each_delete_boundary_and_never_recreates_the_card() {
             &project_domain::validate_document(json!({
                 "type":"card",
                 "metadata": {
-                    "id":card, "title":"Delete boundary", "kind":"outcome",
+                    "id":card, "title":"Delete boundary",
                     "status":"planned", "priority":"normal", "position":"80000000000000000000000000000000",
                     "archived":false, "created_at":instant(now_millis()-1000), "updated_at":instant(now_millis()-1000)
                 },

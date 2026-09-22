@@ -24,7 +24,7 @@
   );
 </script>
 
-{#if hasState || dates.length || item.labels?.length || item.owner || item.acceptance_progress?.total}
+{#if hasState || dates.length || item.labels?.length || item.acceptance_progress?.total}
   <span class="resource-metadata" class:compact>
     {#if hasState}
       <span class="state-badges">
@@ -54,17 +54,14 @@
         {/if}
       </span>
     {/if}
-    {#if item.owner || item.acceptance_progress?.total}
+    {#if item.acceptance_progress?.total}
       <span class="work-badges">
-        {#if item.owner}<span class="badge owner"
-            ><span class="date-label">Owner</span> {item.owner}</span
-          >{/if}
-        {#if item.acceptance_progress?.total}<span
-            class="badge acceptance"
-            title="Completed acceptance conditions; card status is set separately"
-            >Acceptance {item.acceptance_progress.completed}/{item
-              .acceptance_progress.total}</span
-          >{/if}
+        <span
+          class="badge acceptance"
+          title="Completed acceptance conditions; card status is set separately"
+          >Acceptance {item.acceptance_progress.completed}/{item
+            .acceptance_progress.total}</span
+        >
       </span>
     {/if}
     {#if dates.length}

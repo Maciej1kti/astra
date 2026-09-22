@@ -293,13 +293,6 @@
           "minLength": 1,
           "maxLength": 240
         },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "outcome",
-            "decision"
-          ]
-        },
         "status": {
           "type": "string",
           "enum": [
@@ -358,18 +351,6 @@
           "maxItems": 20,
           "uniqueItems": true
         },
-        "expected_result": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 4000,
-          "pattern": "\\S"
-        },
-        "owner": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 120,
-          "pattern": "\\S"
-        },
         "acceptance": {
           "type": "array",
           "items": {
@@ -382,7 +363,6 @@
       "required": [
         "id",
         "title",
-        "kind",
         "status",
         "priority",
         "position",

@@ -27,7 +27,7 @@ export async function runAutosaveChecks({
   const dialog = () =>
     page.getByRole("dialog", { name: /^(Edit|Create) resource$/ });
   const title = () => dialog().getByLabel("Title", { exact: true });
-  const owner = () => dialog().getByLabel(/^Owner/);
+  const reviewOn = () => dialog().getByLabel("Review on", { exact: true });
   const cardPath = (id) => `${base}/cards/${id}`;
   const projectPath = `${base}`;
 
@@ -299,11 +299,11 @@ export async function runAutosaveChecks({
 
   await check(
     "AS02",
-    "Delayed acknowledgements serialize edits, preserve newest text and send owner clears from the prior version",
+    "Delayed acknowledgements serialize edits, preserve newest text and send review-date clears from the prior version",
     async () => {
       const card = await createCard({
         title: `Autosave delayed ${Date.now().toString(36)}`,
-        owner: "Original owner",
+        review_on: "2026-09-20",
       });
       await openCard(card.metadata.id);
       const path = cardPath(card.metadata.id);
@@ -329,7 +329,7 @@ export async function runAutosaveChecks({
         }
       });
       try {
-        await owner().fill("Temporary owner");
+        await reviewOn().fill("2026-09-21");
         await title().fill("First delayed title");
         await expect
           .poll(() => writesFor(path, "PATCH").length, { timeout: 15000 })
@@ -339,12 +339,12 @@ export async function runAutosaveChecks({
           "first autosave ACK",
         );
         assert.equal(
-          writesFor(path, "PATCH")[0].payload.set.owner,
-          "Temporary owner",
+          writesFor(path, "PATCH")[0].payload.set.review_on,
+          "2026-09-21",
         );
         await expect(title()).toBeEnabled();
         await title().fill("Newest typed title");
-        await owner().fill("");
+        await reviewOn().fill("");
         await page.waitForTimeout(150);
         assert.equal(
           writesFor(path, "PATCH").length,
@@ -356,12 +356,12 @@ export async function runAutosaveChecks({
         const second = writesFor(path, "PATCH")[1];
         assert.equal(second.version, JSON.stringify(firstVersion));
         assert.equal(second.payload.set.title, "Newest typed title");
-        assert(second.payload.clear.includes("owner"));
+        assert(second.payload.clear.includes("review_on"));
         await waitForSaved(
           path,
           (value) =>
             value.metadata.title === "Newest typed title" &&
-            !Object.hasOwn(value.metadata, "owner"),
+            !Object.hasOwn(value.metadata, "review_on"),
         );
         let releaseThird = () => {};
         let thirdReady;
@@ -385,7 +385,7 @@ export async function runAutosaveChecks({
           await route.fulfill({ response });
         });
         try {
-          await owner().fill("Owner ACK holder");
+          await reviewOn().fill("2026-09-22");
           await expect
             .poll(() => writesFor(path, "PATCH").length, { timeout: 15000 })
             .toBe(3);
@@ -410,7 +410,7 @@ export async function runAutosaveChecks({
           releaseThird();
           await waitForSaved(
             path,
-            (value) => value.metadata.owner === "Owner ACK holder",
+            (value) => value.metadata.review_on === "2026-09-22",
           );
           await page.waitForTimeout(550);
           await expect(tagInput).toHaveValue(tagDraft);
@@ -434,7 +434,7 @@ export async function runAutosaveChecks({
         return {
           serialized: true,
           versionChained: true,
-          ownerCleared: true,
+          reviewDateCleared: true,
           entryBuffersSurviveAck: true,
         };
       } finally {
@@ -598,10 +598,10 @@ export async function runAutosaveChecks({
       await dialog().getByLabel("Name", { exact: true }).fill(name);
       await waitForWrite(projectPath, "PATCH", 1);
       await waitForSaved(projectPath, (value) => value.metadata.name === name);
-      const renderedBox = dialog().locator(".project-description-rendered");
+      const renderedBox = dialog().locator(".resource-description-rendered");
       await renderedBox.click();
       const sourceEditor = dialog().getByRole("textbox", {
-        name: "Project description",
+        name: "Description",
         exact: true,
       });
       await sourceEditor.focus();
@@ -616,7 +616,7 @@ export async function runAutosaveChecks({
       await dialog()
         .locator("header")
         .click({ position: { x: 2, y: 2 } });
-      const preview = dialog().locator(".project-description-rendered");
+      const preview = dialog().locator(".resource-description-rendered");
       await expect(sourceEditor).toBeHidden();
       await expect(preview).toBeVisible();
       await expect(preview).toContainText("Rendered project Markdown");
@@ -676,7 +676,7 @@ export async function runAutosaveChecks({
       const closeSource = `${nextSource}\n\nPointer close source is saved.`;
       await renderedBox.click();
       await dialog()
-        .getByLabel("Project description", { exact: true })
+        .getByLabel("Description", { exact: true })
         .fill(closeSource);
       await dialog()
         .getByRole("button", { name: "Close editor", exact: true })
@@ -834,7 +834,7 @@ export async function runAutosaveChecks({
 
   await check(
     "AS07",
-    "Card owner, acceptance, dependency and tag edits autosave while an independent report draft remains editable",
+    "Card review date, acceptance, dependency and tag edits autosave while an independent report draft remains editable",
     async () => {
       const dependency = await createCard({
         title: `Autosave dependency ${Date.now().toString(36)}`,
@@ -844,17 +844,17 @@ export async function runAutosaveChecks({
       });
       await openCard(card.metadata.id);
       const path = cardPath(card.metadata.id);
-      await owner().fill("Added owner");
+      await reviewOn().fill("2026-09-23");
       await waitForWrite(path, "PATCH", 1);
       await waitForSaved(
         path,
-        (value) => value.metadata.owner === "Added owner",
+        (value) => value.metadata.review_on === "2026-09-23",
       );
-      await owner().fill("");
+      await reviewOn().fill("");
       await waitForWrite(path, "PATCH", 2);
       await waitForSaved(
         path,
-        (value) => !Object.hasOwn(value.metadata, "owner"),
+        (value) => !Object.hasOwn(value.metadata, "review_on"),
       );
       const acceptance = dialog().getByLabel("New acceptance condition", {
         exact: true,
@@ -914,7 +914,7 @@ export async function runAutosaveChecks({
         dialog().getByLabel("Update summary", { exact: true }),
       ).toHaveValue("Independent report draft");
       return {
-        ownerAddClear: true,
+        reviewDateAddClear: true,
         acceptance: true,
         tag: true,
         dependency: true,

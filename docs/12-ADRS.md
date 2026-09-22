@@ -220,6 +220,9 @@ chart itself retains its native scrolling and virtualization.
 
 ## ADR-027 — Structured card purpose and acceptance (2026-09-08)
 
+The card purpose and owner fields in this historical decision are superseded by
+[ADR-037](ADR-037-CARD-FIELD-SIMPLIFICATION.md). Ordered acceptance remains supported.
+
 Following the owner-requested next stage after the UI repair batch, add optional
 `expected_result`, `owner` and ordered `acceptance` fields to the shared card
 model. Keep Markdown as authored; do not infer or migrate headings into fields.

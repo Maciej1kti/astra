@@ -261,11 +261,6 @@ fn create_document(command: &Command, now: i64) -> Value {
             metadata
                 .as_object_mut()
                 .unwrap()
-                .entry("kind")
-                .or_insert(json!("outcome"));
-            metadata
-                .as_object_mut()
-                .unwrap()
                 .entry("priority")
                 .or_insert(json!("normal"));
         }

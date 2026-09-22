@@ -42,13 +42,11 @@ export function detailSummary(
     if (type === "card") {
       const card = m as CardMetadata;
       result.priority = card.priority;
-      result.kind = card.kind;
       if (card.schedule !== undefined) result.schedule = card.schedule;
       if (card.review_on !== undefined) result.review_on = card.review_on;
       if (card.archived !== undefined) result.archived = card.archived;
       if (card.blocked !== undefined) result.blocked = card.blocked;
       if (card.labels !== undefined) result.labels = [...card.labels];
-      if (card.owner !== undefined) result.owner = card.owner;
       if (card.acceptance !== undefined)
         result.acceptance_progress = acceptanceProgress(card.acceptance);
     }

@@ -62,3 +62,17 @@ intact. Card review dates and card/milestone/report extensions remain supported.
 Project descriptions render Markdown automatically after editing; project
 editors are centered with a dimmed, blurred backdrop. Card and project autosave
 continues to apply. See [ADR-036](../docs/ADR-036-PROJECT-FIELD-REMOVAL.md).
+
+## Card field simplification — owner decision, 2026-09-22
+
+Remove card `kind`, `expected_result` and `owner` across the editor, source/API
+contracts, CLI, projections and existing card sources. Keep card acceptance,
+scheduling, review dates and extensions. Report kinds and nested deadline/author
+kinds remain separate concepts. The owner requested the same direct description
+editing behavior as the project modal.
+
+Because card `kind` was required, a bounded compatibility build permits its
+explicit removal through ordinary conditional server writes before the final
+strict release. It accepts old source fields for the cleanup and prevents new
+writes from introducing them. No general source migration framework or direct
+source-file editing is introduced. Archived cards are included in cleanup.

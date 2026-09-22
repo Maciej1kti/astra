@@ -50,7 +50,6 @@ impl Environment {
             "metadata": {
                 "id": id,
                 "title": title,
-                "kind": "outcome",
                 "status": "planned",
                 "priority": "normal",
                 "position": "80000000000000000000000000000000",

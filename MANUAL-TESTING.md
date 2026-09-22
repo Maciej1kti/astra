@@ -52,11 +52,12 @@ card is created after entering a valid title. Add tags/checklist items with thei
 Add controls, and post reports separately. Invalid input, conflicts or uncertain
 commands keep the draft available for correction or explicit recovery.
 
-The project editor opens in a centered dialog over a dimmed, blurred workspace.
-Its description displays formatted Markdown; click the description field to
+Card and project editors open in centered dialogs over a dimmed, blurred workspace.
+Their descriptions display formatted Markdown; click the description field to
 edit the source, then click outside it to return to the formatted view. Keyboard
 users can focus the description and press Enter or Space to edit, then Tab to
-leave it. The project modal has no Change history section. Project
+leave it. These modals have no Change history section. Cards no longer have
+Kind, Expected result or Owner fields. Project
 review dates, phases and extensions are also removed from the source and API
 contracts; card review dates remain available.
 
