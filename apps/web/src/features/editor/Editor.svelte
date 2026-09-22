@@ -43,7 +43,13 @@
 
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { modal } from "../../lib/ui/dialog";
-  import { api, command, type Resource, type Pending } from "../../lib/api/api";
+  import {
+    ApiError,
+    api,
+    command,
+    type Resource,
+    type Pending,
+  } from "../../lib/api/api";
   import { deleteCard } from "../../lib/api/resources";
 
   const operation = commandOperation(() => !accessLost);
@@ -92,6 +98,10 @@
   let deleteError = $state("");
   let deleteConflict = $state(false);
   let deleteConfirmation = $state<"drafts" | "final" | null>(null);
+  let deleteBlockers = $state<
+    { id: string; title: string; archived: boolean }[]
+  >([]);
+  let deleteNotice = $state<HTMLDivElement>();
   let conflict = $state<{ current: Resource | null } | null>(null);
 
   let preview = $state(false);
@@ -180,7 +190,8 @@
     onkeepediting?.();
   }
   function focusDeleteAction(node: HTMLButtonElement) {
-    node.focus();
+    node.focus({ preventScroll: true });
+    node.scrollIntoView({ block: "center", inline: "nearest" });
   }
   function beforeUnload(event: BeforeUnloadEvent) {
     if (dirty || pending || deletePending) {
@@ -362,12 +373,14 @@
       return;
     deleteError = "";
     deleteConflict = false;
+    deleteBlockers = [];
     deleteConfirmation = dirty ? "drafts" : "final";
   }
   function cancelDelete() {
     if (deleteBusy) return;
     deleteConfirmation = null;
     deleteError = "";
+    deleteBlockers = [];
   }
   function continueDelete() {
     if (deleteBusy || !resource || draft.type !== "card") return;
@@ -392,6 +405,7 @@
     deleteConfirmation = null;
     deleteError = "";
     deleteConflict = false;
+    deleteBlockers = [];
     try {
       deleteOperation.prepare(
         deleteCard(project, resource.metadata.id, resource.version),
@@ -411,15 +425,42 @@
   async function runDelete(action: "submit" | "status") {
     if (!deletePending || deleteBusy || accessLost) return;
     deleteError = "";
+    deleteBlockers = [];
     try {
       if (action === "status") await deleteOperation.confirm();
       else await deleteOperation.commit();
       ondeleted();
     } catch (cause) {
       deleteError = commandErrorMessage(cause);
+      if (cause instanceof ApiError) {
+        const details = cause.data.error;
+        const incoming =
+          details && typeof details === "object" && "details" in details
+            ? (details as { details?: unknown }).details
+            : undefined;
+        const blockers =
+          incoming && typeof incoming === "object" && "incoming" in incoming
+            ? (incoming as { incoming?: unknown }).incoming
+            : undefined;
+        if (Array.isArray(blockers))
+          deleteBlockers = blockers.slice(0, 100).flatMap((item) => {
+            if (!item || typeof item !== "object") return [];
+            const blocker = item as Record<string, unknown>;
+            return typeof blocker.id === "string" &&
+              typeof blocker.title === "string"
+              ? [
+                  {
+                    id: blocker.id,
+                    title: blocker.title,
+                    archived: blocker.archived === true,
+                  },
+                ]
+              : [];
+          });
+      }
       if (isRejectedConflict(deleteOperation.phase, cause)) {
         deleteConflict = true;
-        deleteError = `${deleteError} Close and reopen the card before trying again.`;
+        deleteError = `${deleteError} Card was not deleted. Close and reopen the card before trying again.`;
       }
     }
   }
@@ -473,6 +514,13 @@
     }
     onchanged?.();
   }
+  $effect(() => {
+    if (!deleteError || !deleteNotice) return;
+    queueMicrotask(() => {
+      deleteNotice?.scrollIntoView({ block: "center", inline: "nearest" });
+      deleteNotice?.focus({ preventScroll: true });
+    });
+  });
 </script>
 
 <svelte:window onbeforeunload={beforeUnload} />
@@ -559,7 +607,7 @@
       {#if draft.type === "card" && resource}<button
           type="button"
           onclick={requestDelete}
-          disabled={locked || deleteConflict}>Delete card</button
+          disabled={locked || !!conflict || deleteConflict}>Delete card</button
         >{/if}
       {#if deleteConfirmation}<section
           class="notice delete-confirmation"
@@ -820,8 +868,21 @@
           type="button"
           onclick={copyDraft}>Copy draft</button
         >{/if}
-      {#if deleteError}<div class="notice" role="alert">
-          {deleteError}
+      {#if deleteError}<div
+          bind:this={deleteNotice}
+          class="notice"
+          role="alert"
+          tabindex="-1"
+        >
+          <p>{deleteError}</p>
+          {#if deleteBlockers.length}<p>
+              Incoming cards still reference this card:
+            </p>
+            <ul>
+              {#each deleteBlockers as blocker}<li>
+                  {blocker.title}{blocker.archived ? " (archived)" : ""}
+                </li>{/each}
+            </ul>{/if}
         </div>{/if}
       {#if deletePending}<p>
           Deletion request <code>{deletePending.requestId}</code>

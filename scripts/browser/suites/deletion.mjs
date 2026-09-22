@@ -84,6 +84,68 @@ await runBrowserSuite(
       if (await discard.isVisible()) await discard.click();
       await expect(dialog).toBeHidden();
     }
+    async function clickAtVisiblePoint(page, locator, label) {
+      const box = await locator.boundingBox();
+      assert(box, `${label} must be rendered before pointer input`);
+      const viewport = await page.evaluate(() => ({
+        width: innerWidth,
+        height: innerHeight,
+      }));
+      assert(
+        box.x >= 0 &&
+          box.y >= 0 &&
+          box.x + box.width <= viewport.width &&
+          box.y + box.height <= viewport.height,
+        `${label} must be fully visible before pointer input: ${JSON.stringify({ box, viewport })}`,
+      );
+      const point = {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+      };
+      const hit = await locator.evaluate((element, value) => {
+        const hit = document.elementFromPoint(value.x, value.y);
+        return {
+          inside: !!hit && (hit === element || element.contains(hit)),
+          tag: hit?.tagName,
+          text: hit?.textContent?.trim().slice(0, 80),
+          aria: hit?.getAttribute("aria-label"),
+        };
+      }, point);
+      assert.equal(
+        hit.inside,
+        true,
+        `${label} must receive the pointer at its visible center; hit ${JSON.stringify(hit)}`,
+      );
+      await page.mouse.click(point.x, point.y);
+    }
+    async function assertVisibleHit(page, locator, label) {
+      const box = await locator.boundingBox();
+      assert(box, `${label} must be rendered`);
+      const viewport = await page.evaluate(() => ({
+        width: innerWidth,
+        height: innerHeight,
+      }));
+      assert(
+        box.x >= 0 &&
+          box.y >= 0 &&
+          box.x + box.width <= viewport.width &&
+          box.y + box.height <= viewport.height,
+        `${label} must be visible without automatic scrolling: ${JSON.stringify({ box, viewport })}`,
+      );
+      const point = {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+      };
+      assert.equal(
+        await locator.evaluate((element, value) => {
+          const hit = document.elementFromPoint(value.x, value.y);
+          return !!hit && (hit === element || element.contains(hit));
+        }, point),
+        true,
+        `${label} must remain the element at its visible center`,
+      );
+      return box;
+    }
     async function check(id, name, run) {
       const started = Date.now();
       try {
@@ -467,6 +529,107 @@ await runBrowserSuite(
             editor(page).getByLabel("Title", { exact: true }),
           ).toHaveValue("Changed elsewhere");
           return { card: card.id, conflictPreserved: true, reopened: true };
+        },
+      );
+
+      await check(
+        "D13",
+        "A referenced card deletion shows its archived blocker in the short viewport",
+        async () => {
+          const target = await createCard(
+            `Delete referenced target ${Date.now()}`,
+          );
+          const blocker = await createCard(
+            `Archived incoming blocker ${Date.now()}`,
+          );
+          const blockerPath = `${base}/cards/${blocker.id}`;
+          const blockerSaved = cli("get", blockerPath);
+          const patched = await mutate(
+            "PATCH",
+            blockerPath,
+            { set: { depends_on: [target.id], archived: true } },
+            blockerSaved.version,
+          );
+          assert.equal(
+            patched.resource?.metadata.archived ?? patched.metadata?.archived,
+            true,
+          );
+
+          const previousViewport = page.viewportSize();
+          await page.setViewportSize({ width: 390, height: 640 });
+          try {
+            await openCard(page, target);
+            const dialog = editor(page);
+            const deleteButton = dialog.getByRole("button", {
+              name: "Delete card",
+              exact: true,
+            });
+            await dialog.evaluate((node) => {
+              node.scrollTop = 0;
+            });
+            await expect(deleteButton).toBeVisible();
+            await clickAtVisiblePoint(page, deleteButton, "Delete card");
+
+            const confirmation = page
+              .getByRole("alert")
+              .filter({ hasText: "Permanently delete card?" });
+            await expect(confirmation).toHaveCount(1);
+            await expect(confirmation).toContainText(target.title);
+            const confirmButton = confirmation.getByRole("button", {
+              name: "Permanently delete card",
+              exact: true,
+            });
+            await clickAtVisiblePoint(
+              page,
+              confirmButton,
+              "Permanently delete card",
+            );
+
+            const deletionError = page
+              .getByRole("alert")
+              .filter({ hasText: "CARD_REFERENCED" });
+            await expect.poll(() => deletionError.count()).toBe(1);
+            const errorText = await deletionError.textContent();
+            assert.match(errorText ?? "", /CARD_REFERENCED/);
+            assert.match(errorText ?? "", /Disconnect incoming dependencies/);
+            assert.match(errorText ?? "", new RegExp(blocker.title));
+            assert.match(errorText ?? "", /archived/i);
+            await assertVisibleHit(page, deletionError, "Deletion error");
+            await page.screenshot({ path: join(evidence, "D13-feedback.png") });
+            await expect(deleteButton).toBeDisabled();
+            await clickAtVisiblePoint(
+              page,
+              dialog.getByRole("button", { name: "Save changes", exact: true }),
+              "Save changes after rejected deletion",
+            );
+            await expect(dialog).toBeHidden();
+            assert.equal(
+              cli("get", `${base}/cards/${target.id}`).metadata.title,
+              target.title,
+            );
+            assert.equal(
+              await exists(
+                join(
+                  config.projects[0].folder,
+                  ".project",
+                  "cards",
+                  `${target.id}.md`,
+                ),
+              ),
+              true,
+            );
+            return {
+              target: target.id,
+              blocker: blocker.id,
+              blockerNamed: true,
+              blockerArchived: true,
+              errorVisibleWithoutAutoScroll: true,
+            };
+          } finally {
+            await page.setViewportSize(
+              previousViewport ?? { width: 1440, height: 1000 },
+            );
+          }
         },
       );
 
