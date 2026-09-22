@@ -19,6 +19,7 @@ const suites = [
   "protocol",
   "command-outcomes",
   "deletion",
+  "focus",
 ];
 
 export async function runSuites(selected = suites) {

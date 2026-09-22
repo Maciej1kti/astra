@@ -73,9 +73,7 @@ try {
   const pending = cli("pairings").items[0];
   cli("approve", pending.id, "--challenge", pending.challenge);
   await page.getByRole("button", { name: "I approved this browser" }).click();
-  await page
-    .getByRole("heading", { name: "Make room for what matters." })
-    .waitFor();
+  await page.getByRole("heading", { name: "In focus" }).waitFor();
   let pickerRequests = 0;
   await page.route("**/api/v1/native-folder-selections", (route) => {
     pickerRequests++;
@@ -230,9 +228,7 @@ try {
   });
   const mobile = await second.newPage();
   await mobile.goto(origin);
-  await mobile
-    .getByRole("heading", { name: "Make room for what matters." })
-    .waitFor();
+  await mobile.getByRole("heading", { name: "In focus" }).waitFor();
   await mobile.getByRole("button", { name: "Board", exact: true }).click();
   await mobile.getByRole("heading", { name: "Ship the field guide" }).click();
   await page.getByRole("heading", { name: "Ship the field guide" }).click();
@@ -678,6 +674,13 @@ try {
       .title,
     "Column-created card",
   );
+  // Finish quick creation before the separate card-ordering scenario. The
+  // open composer restores its input focus when its column is refreshed.
+  await page
+    .locator(".astra-column-review")
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
+  await expect(quickTitle).toHaveCount(0);
   await expect(
     page.locator(
       "[data-board-card] select, [data-board-card] .handle, [data-board-card] details",

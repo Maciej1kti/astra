@@ -5,131 +5,146 @@
   import ResourceMetadata from "../../../lib/ui/ResourceMetadata.svelte";
   import { resourceLabel } from "../../../lib/resources/resource-presentation";
   import type { Attention } from "../view-queries";
-  import { visibleCards } from "./screen-data";
+  import {
+    focusSections,
+    type FocusAttention,
+    type FocusCard,
+  } from "./focus-sections";
   let {
     route,
     projects,
     cards,
-    milestones,
     focusCards,
     focusCount,
     attentionRows,
     attentionCursor,
     attentionPaged,
+    activeCardCursor,
+    activeCardPaged,
     loadingMore,
     open,
     onarrange,
     moreAttention,
+    moreActiveCards,
   }: {
     route: Readonly<WorkspaceRoute>;
     projects: Summary[];
     cards: Summary[];
-    milestones: Summary[];
     focusCards: Summary[];
     focusCount: number;
     attentionRows: Attention[];
     attentionCursor: string | null;
     attentionPaged: boolean;
+    activeCardCursor: string | null;
+    activeCardPaged: boolean;
     loadingMore: boolean;
     open: OpenResource;
     onarrange: () => void;
     moreAttention: (first?: boolean) => Promise<void>;
+    moreActiveCards: (back?: boolean) => Promise<void>;
   } = $props();
-  const filtered = $derived(visibleCards(cards, route));
-  const visibleFocus = $derived(visibleCards(focusCards, route));
-  const attention = $derived.by(() => {
-    const grouped = new Map<string, Attention & { reasons: string[] }>();
-    for (const item of attentionRows) {
-      if (
-        (route.project && item.project_id !== route.project) ||
-        !item.label.toLowerCase().includes(route.search.trim().toLowerCase())
-      )
-        continue;
-      const key = `${item.project_id}:${item.target.type}:${item.target.id}`;
-      const existing = grouped.get(key);
-      if (existing) {
-        if (!existing.reasons.includes(item.reason))
-          existing.reasons.push(item.reason);
-      } else grouped.set(key, { ...item, reasons: [item.reason] });
-    }
-    return [...grouped.values()];
-  });
+  const sections = $derived(
+    focusSections(cards, focusCards, attentionRows, route),
+  );
+  const visibleFocus = $derived<FocusCard[]>(sections.focusCards);
+  const attention = $derived<FocusAttention[]>(sections.attention);
+  const activeCards = $derived(sections.activeCards);
+
+  function openAttention(item: FocusAttention) {
+    return open({
+      project_id: item.project_id,
+      type: item.target.type,
+      id: item.target.id,
+    });
+  }
 </script>
 
-<div class="stats">
-  <div>
-    <span>IN MOTION</span><strong
-      >{filtered.filter((c) => c.status === "active").length}</strong
-    >
-    <p>Loaded active cards</p>
+<section aria-labelledby="focus-section-title" data-focus-section="focus">
+  <div class="sectiontitle">
+    <h2 id="focus-section-title">In focus</h2>
+    <span>{visibleFocus.length} visible cards</span>
+    {#if focusCount > 1}<button onclick={onarrange}>Arrange focus</button>{/if}
   </div>
-  <div>
-    <span>NEEDS A LOOK</span><strong>{attention.length}</strong>
-    <p>Overdue or coming due</p>
+  <div class="grid">
+    {#each visibleFocus as item (item.project_id + ":" + item.id)}<button
+        class="card"
+        onclick={() => open(item)}
+        ><small>{projectLabel(projects, item.project_id)}</small>
+        <h3>{item.title}</h3>
+        <ResourceMetadata {item} showStatus />
+        {#if item.attentionReasons.length}<span
+            class="attention-reasons"
+            aria-label="Attention reasons"
+            >{#each item.attentionReasons as reason}<span class="badge"
+                >{resourceLabel(reason)}</span
+              >{/each}</span
+          >{/if}</button
+      >{:else}<div class="empty">
+        {route.project || route.search
+          ? "No pinned cards match this selection. Change the project or clear the title filter."
+          : "No pinned cards yet. Open a card and pin it to keep it here."}
+      </div>{/each}
   </div>
-  <div>
-    <span>ON THE HORIZON</span><strong
-      >{milestones.filter(
-        (m) => !["achieved", "cancelled"].includes(m.status ?? ""),
-      ).length}</strong
-    >
-    <p>Loaded open milestones</p>
+</section>
+
+<section
+  aria-labelledby="attention-section-title"
+  data-focus-section="attention"
+>
+  <div class="sectiontitle">
+    <h2 id="attention-section-title">Needs my attention</h2>
+    <span>{attention.length} visible items</span>
   </div>
-</div>
-<div class="sectiontitle">
-  <h2>In focus</h2>
-  <span
-    >{visibleFocus.length} pinned{route.project || route.search
-      ? " in selection"
-      : ""}</span
-  >
-  {#if focusCount > 1}<button onclick={onarrange}>Arrange focus</button>{/if}
-</div>
-<div class="grid">
-  {#each visibleFocus as item}{#if item}<button
+  {#each attention as item (item.project_id + ":" + item.target.type + ":" + item.target.id)}<button
+      class="listrow"
+      onclick={() => openAttention(item)}
+      ><span class="priority"></span>
+      <div>
+        <strong>{item.label}</strong><small
+          >{projectLabel(projects, item.project_id)}</small
+        >
+      </div>
+      <span class="attention-reasons" aria-label="Attention reasons"
+        >{#each item.reasons as reason}<span class="badge"
+            >{resourceLabel(reason)}</span
+          >{/each}</span
+      ><span aria-hidden="true">↗</span></button
+    >{:else}<div class="empty">
+      <strong>A little breathing room.</strong>
+      <p>No additional items need attention on this page.</p>
+    </div>{/each}
+  {#if attentionCursor}<button
+      disabled={loadingMore}
+      onclick={() => moreAttention()}>Next attention page</button
+    >{/if}
+  {#if attentionPaged}<button
+      disabled={loadingMore}
+      onclick={() => moreAttention(true)}>First attention page</button
+    >{/if}
+</section>
+
+<section aria-labelledby="motion-section-title" data-focus-section="motion">
+  <div class="sectiontitle">
+    <h2 id="motion-section-title">In motion</h2>
+    <span>{activeCards.length} visible active cards</span>
+  </div>
+  <div class="grid">
+    {#each activeCards as item (item.project_id + ":" + item.id)}<button
         class="card"
         onclick={() => open(item)}
         ><small>{projectLabel(projects, item.project_id)}</small>
         <h3>{item.title}</h3>
         <ResourceMetadata {item} showStatus /></button
-      >{/if}{:else}<div class="empty">
-      {route.project || route.search
-        ? "No pinned cards match this selection. Change the project or clear the title filter."
-        : "No pinned cards yet. Open a card and pin it to keep it here."}
-    </div>{/each}
-</div>
-<div class="sectiontitle">
-  <h2>Needs your attention</h2>
-  <span>{attention.length} items</span>
-</div>
-{#each attention as item}<button
-    class="listrow"
-    onclick={() =>
-      open({
-        project_id: item.project_id,
-        type: item.target.type,
-        id: item.target.id,
-      })}
-    ><span class="priority"></span>
-    <div>
-      <strong>{item.label}</strong><small
-        >{projectLabel(projects, item.project_id)}</small
-      >
-    </div>
-    <span class="attention-reasons"
-      >{#each item.reasons as reason}<span class="badge"
-          >{resourceLabel(reason)}</span
-        >{/each}</span
-    ><span aria-hidden="true">↗</span></button
-  >{:else}<div class="empty">
-    <strong>A little breathing room.</strong>
-    <p>No overdue or coming due items in this selection.</p>
-  </div>{/each}
-{#if attentionCursor}<button
-    disabled={loadingMore}
-    onclick={() => moreAttention()}>Next attention page</button
-  >{/if}
-{#if attentionPaged}<button
-    disabled={loadingMore}
-    onclick={() => moreAttention(true)}>First attention page</button
-  >{/if}
+      >{:else}<div class="empty">
+        No other active cards on this page.
+      </div>{/each}
+  </div>
+  {#if activeCardCursor}<button
+      disabled={loadingMore}
+      onclick={() => moreActiveCards()}>Next active cards</button
+    >{/if}
+  {#if activeCardPaged}<button
+      disabled={loadingMore}
+      onclick={() => moreActiveCards(true)}>Previous active cards</button
+    >{/if}
+</section>

@@ -24,6 +24,25 @@ textarea with a safe preview; v1 is not WYSIWYG.
 
 Pole tytułu ma Save/Cancel oraz skrót zatwierdzenia; pełny formularz zbiera intencję do jednego patcha. Nawigacja z brudnym formularzem ostrzega. Równoczesna zewnętrzna zmiana pokazuje niewymuszające ostrzeżenie, nie przepisuje body.
 
+## Focus — current layout, 2026-09-22
+
+Focus shows In focus, Needs my attention and In motion, in that order. Pinned
+cards retain their explicit workspace order. A pinned card's attention reasons
+appear on that card; the attention list omits it. In motion shows active cards
+outside the pinned and current attention results. Each resource appears once
+in the currently displayed sections. Active cards and attention have bounded
+pages; the title filter applies to the loaded results.
+
+Card attention uses schedule End and Review status. Undated active cards remain
+eligible for In motion. Independent milestone dates and project/milestone
+decision reports can still appear through the shared attention endpoint; Focus
+does not fetch a separate milestone collection. The three summary counters and
+the introductory hero copy are removed.
+
+Add card is a floating button in the lower right, including on narrow screens.
+It opens the existing centered card editor for the selected project. Autosave,
+conditional command recovery and keyboard focus restoration remain unchanged.
+
 ## Kanban
 
 Columns show a count, a small visible card page and an action to load more. Title,

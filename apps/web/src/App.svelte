@@ -472,14 +472,18 @@
         onrefresh={() => refresh().catch(message)}
         {logout}
       />
-      <main class="content">
-        <div class="heading">
-          <div>
-            <p class="eyebrow">A LITTLE CLARITY, EVERY DAY</p>
-            <h1>
-              {routing.current.view === "focus"
-                ? "Make room for what matters."
-                : routing.current.view === "gantt"
+      <main
+        class="content"
+        class:focus-content={routing.current.view === "focus"}
+      >
+        {#if routing.current.view === "focus"}
+          <h1 class="sr">Focus</h1>
+        {:else}
+          <div class="heading">
+            <div>
+              <p class="eyebrow">A LITTLE CLARITY, EVERY DAY</p>
+              <h1>
+                {routing.current.view === "gantt"
                   ? "The bigger picture."
                   : routing.current.view === "projects"
                     ? "Your projects."
@@ -488,35 +492,34 @@
                       : routing.current.view[0].toUpperCase() +
                         routing.current.view.slice(1) +
                         "."}
-            </h1>
-            <p>
-              {routing.current.view === "focus"
-                ? "Your focus and the things that need a decision."
-                : routing.current.view === "projects"
+              </h1>
+              <p>
+                {routing.current.view === "projects"
                   ? "Real folders. Shared context. One place to see progress."
                   : routing.current.view === "calendar"
                     ? "Planned work and milestone dates, kept clear."
                     : routing.current.view === "gantt"
                       ? "See the sequence of planned work."
                       : "Keep the next step visible."}
-            </p>
+              </p>
+            </div>
+            <button
+              class="primary"
+              onclick={routing.current.view === "projects"
+                ? addProject
+                : () =>
+                    create(
+                      primaryResource(
+                        routing.current.view,
+                        routing.current.collection,
+                      ),
+                    )}
+              >＋ {routing.current.view === "projects"
+                ? "Add project"
+                : `Add ${primaryResource(routing.current.view, routing.current.collection)}`}</button
+            >
           </div>
-          <button
-            class="primary"
-            onclick={routing.current.view === "projects"
-              ? addProject
-              : () =>
-                  create(
-                    primaryResource(
-                      routing.current.view,
-                      routing.current.collection,
-                    ),
-                  )}
-            >＋ {routing.current.view === "projects"
-              ? "Add project"
-              : `Add ${primaryResource(routing.current.view, routing.current.collection)}`}</button
-          >
-        </div>
+        {/if}
         {#if error}<div class="notice" role="alert">
             {error}<button
               class="quiet"
@@ -538,23 +541,25 @@
           onchange={routing.changeFilters}
           changeMonth={routing.changeMonth}
         />
-        {#if (!queryReady || (projectionMessage && !projects.length)) && ["list", "updates", "projects"].includes(routing.current.view)}
+        {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
           <div class="empty" role="status">Loading resources…</div>
         {:else if routing.current.view === "focus"}
           <FocusScreen
             route={routing.current}
             {projects}
             {cards}
-            {milestones}
             {focusCards}
             focusCount={focus.length}
             {attentionRows}
             {attentionCursor}
             {attentionPaged}
+            activeCardCursor={pageCursors.card ?? null}
+            activeCardPaged={(pageHistory.card?.length ?? 0) > 1}
             {loadingMore}
             {open}
             onarrange={() => (arrangeFocus = true)}
             {moreAttention}
+            moreActiveCards={(back = false) => more("card", back)}
           />
         {:else if routing.current.view === "projects"}
           <ProjectsScreen
@@ -609,6 +614,12 @@
             {milestones}
             {open}
           />
+        {/if}
+        {#if routing.current.view === "focus"}
+          <button
+            class="focus-add-action primary"
+            onclick={() => create("card")}>＋ Add card</button
+          >
         {/if}
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =
             routing.current.view === "updates"

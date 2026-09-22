@@ -45,6 +45,14 @@ its folder through the normal registration flow.
 Report the action, expected result and actual result. A screenshot helps with
 layout issues. This handoff is for practical feedback, not final release acceptance.
 
+On Focus, check the order **In focus → Needs my attention → In motion**. An
+active card without dates belongs in In motion; a card with an overdue End or
+Review status belongs in attention. Pinning it moves its display to In focus,
+keeping any loaded attention badges there. Cards should not repeat across the
+visible sections. Check project/title filters and active-card pagination. The
+floating **Add card** button stays at the lower right while scrolling and opens
+the centered editor for the selected project; check this on a narrow viewport too.
+
 Card and project fields save automatically. Text saves after a short pause;
 selections save immediately. Wait for **Saved** to confirm persistence. Use the
 header X to close the editor; there are no Save changes or Cancel buttons. A new

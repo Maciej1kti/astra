@@ -51,6 +51,12 @@ test("planning routes only load shared project context; list and reports fetch t
     viewSections({ ...query, view: "list", collection: "milestones" }),
     ["projects", "milestone"],
   );
+  assert.deepEqual(viewSections({ ...query, view: "focus" }), [
+    "projects",
+    "focus",
+    "attention",
+    "card",
+  ]);
 });
 
 test("SSE changes invalidate only affected visible data, with conservative recovery for gaps", () => {
@@ -128,6 +134,27 @@ test("loaded-title filters retain queries and pagination, while server filters r
   assert.equal(url.searchParams.get("label"), "Review, exact");
   assert.equal(url.searchParams.get("cursor"), "opaque:c");
   assert.equal(url.searchParams.get("archived"), "true");
+});
+
+test("focus card reads are bounded to active cards and ignore list-only filters", () => {
+  const url = new URL(
+    resourceListPath(
+      {
+        ...query,
+        view: "focus",
+        archived: true,
+        status: "done",
+        priority: "urgent",
+        label: "retired",
+      },
+      "card",
+    ),
+    "https://local.test",
+  );
+  assert.equal(url.searchParams.get("status"), "active");
+  assert.equal(url.searchParams.get("archived"), null);
+  assert.equal(url.searchParams.get("priority"), null);
+  assert.equal(url.searchParams.get("label"), null);
 });
 
 test("continuous invalidations flush at the deadline and teardown cancels queued work", () => {

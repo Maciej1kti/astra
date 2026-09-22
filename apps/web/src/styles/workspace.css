@@ -119,6 +119,16 @@
   padding: 24px 24px 20px;
   margin: auto;
 }
+.app .content.focus-content {
+  padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+}
+.app .focus-add-action {
+  position: fixed;
+  right: calc(24px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  box-shadow: 0 8px 24px rgb(38 59 50 / 20%);
+}
 .app .heading {
   display: flex;
   justify-content: space-between;
@@ -152,40 +162,6 @@
 .app .search {
   margin-left: auto;
   width: 220px;
-}
-.app .stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--paper);
-  margin-bottom: 22px;
-}
-.app .stats > div {
-  padding: 16px 20px;
-  border-right: 1px solid var(--line);
-}
-.app .stats > div:last-child {
-  border: 0;
-}
-.app .stats span {
-  font-size: 9px;
-  letter-spacing: 0.13em;
-  color: var(--muted);
-  display: block;
-}
-.app .stats strong {
-  display: block;
-  font:
-    600 30px ui-sans-serif,
-    system-ui,
-    sans-serif;
-  margin: 8px 0 6px;
-}
-.app .stats p {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0;
 }
 .app .sectiontitle {
   display: flex;
@@ -493,6 +469,13 @@
   .app .content {
     padding: 18px 14px;
   }
+  .app .content.focus-content {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+  }
+  .app .focus-add-action {
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
   .app .heading {
     display: block;
     margin-bottom: 22px;
@@ -518,19 +501,6 @@
     width: 120px;
     flex: 1;
     margin: 0;
-  }
-  .app .stats > div {
-    padding: 12px 10px;
-  }
-  .app .stats span {
-    font-size: 7px;
-  }
-  .app .stats strong {
-    font-size: 26px;
-  }
-  .app .stats p {
-    font-size: 10px;
-    line-height: 1.5;
   }
   .app .grid {
     grid-template-columns: 1fr;

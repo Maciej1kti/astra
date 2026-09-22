@@ -43,7 +43,7 @@ import type {
 export function viewSections(query: ViewQuery): Section[] {
   switch (query.view) {
     case "focus":
-      return ["projects", "focus", "attention", "card", "milestone"];
+      return ["projects", "focus", "attention", "card"];
     case "projects":
       return ["projects", "card", "update"];
     case "list":
@@ -137,6 +137,7 @@ export function resourceListPath(
       if (query.label) params.set("label", query.label);
     }
   }
+  if (query.view === "focus" && type === "card") params.set("status", "active");
   if (cursor) params.set("cursor", cursor);
   return `/api/v1/views/list?${params}`;
 }

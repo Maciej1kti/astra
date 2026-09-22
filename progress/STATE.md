@@ -6,6 +6,16 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Focus layout](2026-09-22-focus-layout.md) removes the hero copy and counters,
+orders In focus, Needs my attention and In motion, and displays cards once per
+visible page with attention badges retained on pinned cards. Focus reads bounded
+active-card pages and no separate milestone collection. Add card floats at the
+lower right while its editor remains centered. The full local gate passes
+209 Rust, 97 JavaScript and 12 Python tests; five relevant release browser suites
+and the broad HTTPS smoke pass. The updated manual runtime preserves source
+versions and the focus list. The evidence records the Board smoke setup correction
+and browser/device coverage limits.
+
 [Card planning simplification](2026-09-22-card-planning-simplification.md) removes
 Connections and blockers, card deadlines/review dates and deadline types across
 UI, CLI, source/API contracts and derived views. Cards retain Start and End;

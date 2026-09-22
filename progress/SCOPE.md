@@ -113,3 +113,16 @@ conditional CLI writes. The only present field was `depends_on` (one actual edge
 and four empty arrays). No card deadline/review dates, milestone links, blocked
 reasons or milestone documents were present. Bodies, schedules and retained
 metadata were verified unchanged; no compatibility bridge was needed.
+
+## Focus layout — owner decision, 2026-09-22
+
+Remove the Focus introduction and three summary counters. Show In focus first,
+Needs my attention next and In motion below, avoiding repeated card rows.
+Retain attention badges on pinned cards. In motion is based on active card
+status; date attention uses the simplified schedule End field. Independent
+milestone resources and report attention remain supported, but Focus no longer
+loads milestones for a counter.
+
+The owner clarified that Add card is a floating button at the lower right;
+the editor itself stays centered. This changes presentation and view reads,
+not stored project data, pin order or source/API contracts.

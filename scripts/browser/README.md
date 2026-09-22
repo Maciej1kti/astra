@@ -17,7 +17,9 @@ suite covers permanent card and project metadata deletion, confirmation safety,
 command uncertainty, conflicts and current-project navigation.
 
 The autosave suite covers automatic card/project writes, queued edits, creation,
-close flushing and recovery without replacing the original command identity.
+close flushing and recovery without replacing the original command identity. The
+focus suite covers the three Focus sections, active-only bounded reads, pinned
+card precedence, filters and the viewport anchored card action.
 
 ```sh
 ASTRA_TEST_PROFILE=release npm run test:browser:regressions
