@@ -26,6 +26,11 @@ stay in the ignored `.manual/` directory. Your edits persist after stopping and
 restarting. Ctrl+C in the launch terminal stops the host and local HTTPS proxy.
 Do not delete `.manual/` if you want to keep these test edits.
 
+The sample is seeded only when its `.project` entry is absent. Unregistering it
+leaves those files in place, so restarting the launcher does not add it again.
+To bring a retained sample back, explicitly register its folder through the
+normal registration flow.
+
 ## A useful first pass
 
 1. Select **Try Local Projects**, open a card and change its title/description.

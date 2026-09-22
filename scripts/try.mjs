@@ -4,6 +4,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import https from "node:https";
 import http from "node:http";
+import { seedSampleProject } from "./try-seed.mjs";
 const root = resolve(import.meta.dirname, "..");
 const data = join(root, ".manual", "state"),
   project = join(root, ".manual", "Sample project");
@@ -113,32 +114,7 @@ try {
       await new Promise((r) => setTimeout(r, 50));
     }
   }
-  let registered = false;
-  try {
-    cli("--project", project, "cards");
-    registered = true;
-  } catch {}
-  if (!registered) {
-    const plan = cli(
-      "registration-plan",
-      project,
-      "--name",
-      "Try Local Projects",
-    );
-    try {
-      cli("register", plan.plan_id);
-    } catch (e) {
-      if (e.status !== 9) throw e;
-    }
-    const cards = cli("--project", project, "cards").items;
-    if (!cards.length)
-      for (const title of [
-        "Try editing this card",
-        "Plan a few dates",
-        "Write a progress update",
-      ])
-        cli("--project", project, "card", "create", "--title", title);
-  }
+  await seedSampleProject(cli, project);
   proxy.listen(47832, "127.0.0.1", () => {
     console.log(
       `\nOpen ${origin}\nAccept the local test certificate warning, then request browser access.\nIn another terminal, list and approve the displayed matching challenge:\n`,
