@@ -36,7 +36,7 @@ export type {
   AttentionItem as Attention,
 } from "../../lib/contracts/api.generated";
 import type {
-  FocusRef,
+  FocusResource,
   AttentionItem as Attention,
 } from "../../lib/contracts/api.generated";
 
@@ -173,7 +173,7 @@ export function attentionPage(
 
 export type LoadedView = {
   projects?: Summary[];
-  focus?: FocusRef[];
+  focus?: FocusResource;
   focusCards?: Summary[];
   attention?: { value: Page<Attention>; reset: boolean };
   pages: Partial<
@@ -204,15 +204,13 @@ export async function loadView(
           },
         });
       } else if (section === "focus")
-        result.focus = (
-          await api<{ items: FocusRef[] }>(
-            "/api/v1/workspace/focus",
-            "GET",
-            undefined,
-            {},
-            options,
-          )
-        ).items;
+        result.focus = await api<FocusResource>(
+          "/api/v1/workspace/focus",
+          "GET",
+          undefined,
+          {},
+          { ...options, fresh: true },
+        );
       else if (section === "attention") {
         result.attention = await cursorPage(
           (cursor) => attentionPage(query.project, cursor, options),
@@ -238,7 +236,7 @@ export async function loadView(
       ]),
     );
     result.focusCards = await mapReads(
-      result.focus,
+      result.focus.items,
       async (ref): Promise<Summary> => {
         const summary = cached.get(`${ref.project_id}:${ref.card_id}`);
         if (summary) return summary;

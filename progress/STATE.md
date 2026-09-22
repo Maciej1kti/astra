@@ -6,6 +6,13 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Inline Focus ordering](2026-09-22-focus-inline-order.md) replaces Arrange focus
+with a vertical card stack, direct drag/drop saving and Alt+Up/Down ordering.
+Hidden pins, observed versions and uncertain commands are preserved. The full
+local gate passes 212 Rust, 98 JavaScript and 12 Python tests; Focus, dialogs,
+autosave and broad HTTPS smoke pass. The updated manual runtime retains existing
+source versions and Focus order, and both projects validate cleanly.
+
 [Priority simplification and Focus footer](2026-09-22-priority-simplification.md)
 keeps only Normal and High throughout UI, source/API contracts, shared CLI rules
 and filters. All six existing cards were already Normal. Focus workspace actions

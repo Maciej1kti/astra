@@ -139,3 +139,12 @@ and filters. Remove Low and Urgent and their presentation branches. Existing Low
 would map to Normal and Urgent to High through conditional writes; all six cards
 in the two registered projects already use Normal, so no conversion is needed.
 Historical command records remain immutable; undo cannot restore invalid values.
+
+## Inline Focus ordering — owner decision, 2026-09-22
+
+Replace Arrange focus and its modal with direct reordering of the visible pinned
+cards. Present In focus as a vertical stack styled like Kanban cards. Holding
+the left mouse button and dragging up/down changes order; release saves it.
+Retain ordinary click-to-open, a keyboard alternative, conditional conflict
+handling and unchanged retries. Filtering must preserve hidden pinned entries.
+This changes the browser interaction, not the Focus source/API contract.

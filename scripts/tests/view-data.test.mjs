@@ -93,3 +93,50 @@ test("in-flight invalidations coalesce into one follow-up while preserving loade
   await new Promise((done) => setImmediate(done));
   assert.deepEqual(owner.state.cards, [{ id: "after" }]);
 });
+
+test("focus references and their observed version move together on refresh", async () => {
+  const focusQuery = { ...query, view: "focus" };
+  const snapshots = [
+    {
+      focus: {
+        items: [
+          { project_id: "first", card_id: "card-a" },
+          { project_id: "second", card_id: "card-b" },
+        ],
+        version: "focus-v1",
+      },
+      focusCards: [{ id: "card-a" }, { id: "card-b" }],
+      pages: {},
+      notices: {},
+    },
+    {
+      focus: {
+        items: [
+          { project_id: "second", card_id: "card-b" },
+          { project_id: "first", card_id: "card-a" },
+        ],
+        version: "focus-v2",
+      },
+      focusCards: [{ id: "card-b" }, { id: "card-a" }],
+      pages: {},
+      notices: {},
+    },
+  ];
+  let calls = 0;
+  const owner = new ViewData({
+    query: () => focusQuery,
+    active: () => true,
+    error: assert.fail,
+    load: async () => snapshots[calls++],
+  });
+
+  await owner.refresh();
+  assert.deepEqual(owner.state.focus, snapshots[0].focus.items);
+  assert.equal(owner.state.focusVersion, "focus-v1");
+  assert.deepEqual(owner.state.focusCards, snapshots[0].focusCards);
+
+  await owner.refresh(["focus"]);
+  assert.deepEqual(owner.state.focus, snapshots[1].focus.items);
+  assert.equal(owner.state.focusVersion, "focus-v2");
+  assert.deepEqual(owner.state.focusCards, snapshots[1].focusCards);
+});

@@ -1164,16 +1164,24 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   const focusBefore = cli("get", "/api/v1/workspace/focus");
-  const focusFile = join(temp, "focus.json");
-  await writeFile(
-    focusFile,
-    JSON.stringify({
-      items: [
-        ...focusBefore.items,
-        { project_id: plan.project_id, card_id: typedId },
-      ],
-    }),
+  const focusNeighbor = cli(
+    "--project",
+    folder,
+    "card",
+    "create",
+    "--title",
+    "Focus keyboard neighbor",
   );
+  const focusItems = [
+    ...focusBefore.items,
+    {
+      project_id: plan.project_id,
+      card_id: focusNeighbor.result.resource.metadata.id,
+    },
+    { project_id: plan.project_id, card_id: typedId },
+  ];
+  const focusFile = join(temp, "focus.json");
+  await writeFile(focusFile, JSON.stringify({ items: focusItems }));
   cli(
     "command",
     "PUT",
@@ -1183,18 +1191,39 @@ try {
     "--if-version",
     focusBefore.version,
   );
-  await page.getByRole("button", { name: "Focus", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Arrange focus", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Move up: Typed CLI task", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Save focus order", exact: true })
-    .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
-  assert.equal(cli("get", "/api/v1/workspace/focus").items[0].card_id, typedId);
+  await page.goto(`${origin}/?view=focus&project=${plan.project_id}`);
+  const typedFocusCard = page.locator(`[data-focus-card="${typedId}"]`);
+  await expect(typedFocusCard).toBeVisible();
+  const focusWrite = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      new URL(response.url()).pathname === "/api/v1/workspace/focus",
+  );
+  await typedFocusCard.focus();
+  await typedFocusCard.press("Alt+ArrowUp");
+  const focusReply = await focusWrite;
+  assert.equal(focusReply.status(), 200);
+  await expect(page.locator(`[data-focus-card="${typedId}"]`)).toBeFocused();
+  const expectedFocus = [...focusItems];
+  const lastFocusIndex = expectedFocus.length - 1;
+  [expectedFocus[lastFocusIndex - 1], expectedFocus[lastFocusIndex]] = [
+    expectedFocus[lastFocusIndex],
+    expectedFocus[lastFocusIndex - 1],
+  ];
+  assert.deepEqual(cli("get", "/api/v1/workspace/focus").items, expectedFocus);
+  await page.reload();
+  await expect(page.locator(`[data-focus-card="${typedId}"]`)).toBeVisible();
+  const reloadedFocusOrder = await page
+    .locator('[data-focus-section="focus"] [data-focus-card]')
+    .evaluateAll((cards) =>
+      cards.map((card) => card.getAttribute("data-focus-card")),
+    );
+  assert.deepEqual(
+    reloadedFocusOrder,
+    expectedFocus
+      .filter((item) => item.project_id === plan.project_id)
+      .map((item) => item.card_id),
+  );
 
   const milestoneFile = join(temp, "milestone.json");
   await writeFile(

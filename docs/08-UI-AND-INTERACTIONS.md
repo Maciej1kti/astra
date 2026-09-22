@@ -46,6 +46,14 @@ The workspace/project/date/actions bar follows Focus content as its footer;
 other views retain the bar at the top. The decorative source-of-truth slogan
 footer is removed.
 
+In focus uses one vertical stack of cards styled like Kanban cards. Hold the
+primary mouse button on a card, drag up or down and release to save its order.
+A short click opens the card; Alt+Up/Down provides keyboard reordering. Escape
+cancels a gesture. There is no Arrange focus modal or separate Save action.
+Filtered reordering changes visible slots in the complete pinned list while
+preserving hidden pins. Reordering uses the observed workspace Focus version;
+conflicts require review, and uncertain writes retain their original command.
+
 ## Kanban
 
 Columns show a count, a small visible card page and an action to load more. Title,

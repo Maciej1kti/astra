@@ -8,15 +8,10 @@ import {
   checkSettingsDraftSafety,
   checkSettingsPendingFields,
 } from "../../settings-dialog-regression.mjs";
-import { checkFocusOrderKeyboard } from "../../focus-order-regression.mjs";
 
 await runBrowserSuite(
   async ({ config, cli, runtime, evidence, browser, newContext, pair }) => {
-    const mode = process.argv[2] ?? "all";
-    const resultsFile = join(
-      evidence,
-      mode === "all" ? "results.json" : `results-${mode}.json`,
-    );
+    const resultsFile = join(evidence, "results.json");
     async function mutate(method, path, value, version) {
       const payload = join(runtime, "board-dialog-command.json");
       await writeFile(payload, JSON.stringify(value), { mode: 0o600 });
@@ -46,8 +41,6 @@ await runBrowserSuite(
     const snapshot = async (name) =>
       page.screenshot({ path: join(evidence, `${name}.png`), fullPage: true });
     async function check(id, name, run) {
-      if (mode === "without-focus" && id === "focus-order") return;
-      if (mode === "focus-only" && id !== "focus-order") return;
       const started = Date.now();
       try {
         results.push({
@@ -112,7 +105,6 @@ await runBrowserSuite(
       });
     }
 
-    let originalFocus, expectedFocus;
     try {
       await pair(page, {
         requireRequest: true,
@@ -130,12 +122,6 @@ await runBrowserSuite(
           "LongTagWithoutSpacesForTestingMobileWrapping1234",
         ],
         schedule: { start: "2026-09-10", end: "2026-09-15" },
-      });
-      const secondary = await mutate("POST", `${base}/cards`, {
-        title: "Board target-date regression",
-        status: "active",
-        priority: "normal",
-        schedule: { start: "2026-09-08", end: "2026-09-08" },
       });
       const primaryCard = page.locator(`[data-board-card="${primary.id}"]`);
 
@@ -370,74 +356,6 @@ await runBrowserSuite(
       );
 
       await check(
-        "focus-order",
-        "Focus order keyboard focus, discard guard and mobile footer",
-        async () => {
-          originalFocus = cli("get", "/api/v1/workspace/focus");
-          const items = [
-            ...originalFocus.items,
-            { project_id: project, card_id: primary.id },
-            { project_id: project, card_id: secondary.id },
-          ];
-          await mutate(
-            "PUT",
-            "/api/v1/workspace/focus",
-            { items },
-            originalFocus.version,
-          );
-          expectedFocus = items;
-          await route("focus");
-          await page
-            .getByRole("button", { name: "Arrange focus", exact: true })
-            .click();
-          const dialog = page.getByRole("dialog", {
-            name: "Arrange focus",
-            exact: true,
-          });
-          await checkFocusOrderKeyboard(dialog);
-          const rows = dialog.locator("[data-focus-card]");
-          await rows.nth(1).locator('[data-direction="-1"]').click();
-          const widths = [];
-          for (const width of [1440, 390, 320]) {
-            await page.setViewportSize({
-              width,
-              height: width === 1440 ? 1000 : 844,
-            });
-            const metrics = await layoutMetrics(dialog);
-            assert(metrics.rect.x >= 0 && metrics.rect.right <= width);
-            assert(metrics.footer.bottom <= metrics.viewport.height);
-            assert.equal(metrics.bodyWidth, metrics.bodyScrollWidth);
-            widths.push(metrics);
-            await snapshot(`focus-order-${width}`);
-          }
-          await dialog
-            .getByRole("button", { name: "Close focus order", exact: true })
-            .click();
-          await expect(
-            dialog.getByRole("button", { name: "Keep editing", exact: true }),
-          ).toBeFocused();
-          await dialog
-            .getByRole("button", { name: "Keep editing", exact: true })
-            .click();
-          await expect(
-            dialog.getByRole("button", {
-              name: "Close focus order",
-              exact: true,
-            }),
-          ).toBeFocused();
-          await dialog
-            .getByRole("button", { name: "Close focus order", exact: true })
-            .press("Control+Enter");
-          await dialog.waitFor({ state: "hidden" });
-          const saved = cli("get", "/api/v1/workspace/focus");
-          const expected = [...items];
-          [expected[0], expected[1]] = [expected[1], expected[0]];
-          assert.deepEqual(saved.items, expected);
-          expectedFocus = expected;
-          return { widths, keyboardOrderSaved: true };
-        },
-      );
-      await check(
         "A08",
         "Mobile Sign out directly ends the synthetic browser session",
         async () => {
@@ -470,20 +388,6 @@ await runBrowserSuite(
         },
       );
     } finally {
-      if (originalFocus) {
-        const current = cli("get", "/api/v1/workspace/focus");
-        assert.deepEqual(
-          current.items,
-          expectedFocus,
-          "Do not replace focus changes made by another actor during the regression",
-        );
-        await mutate(
-          "PUT",
-          "/api/v1/workspace/focus",
-          { items: originalFocus.items },
-          current.version,
-        );
-      }
       await writeFile(
         resultsFile,
         JSON.stringify(

@@ -16,6 +16,7 @@ await runBrowserSuite(
     const results = [];
     const errors = [];
     const requests = [];
+    const focusWrites = [];
 
     await mkdir(evidence, { recursive: true });
 
@@ -87,6 +88,51 @@ await runBrowserSuite(
       return region.getByText(title(resource), { exact: true });
     }
 
+    function focusCards(page) {
+      return section(page, "In focus").locator("[data-focus-card]");
+    }
+
+    function focusCard(page, id) {
+      return section(page, "In focus").locator(
+        `[data-focus-card="${id}"], [data-focus-card$=":${id}"]`,
+      );
+    }
+
+    async function visibleFocusOrder(page) {
+      return focusCards(page).evaluateAll((nodes) =>
+        nodes.map((node) =>
+          node.getAttribute("data-focus-card")?.split(":").at(-1),
+        ),
+      );
+    }
+
+    async function beginFocusDrag(page, movingId, targetId) {
+      const moving = focusCard(page, movingId);
+      const target = focusCard(page, targetId);
+      const sourceBox = await moving.boundingBox();
+      const targetBox = await target.boundingBox();
+      assert(sourceBox, `Focus card ${movingId} must be rendered`);
+      assert(targetBox, `Focus card ${targetId} must be rendered`);
+      await page.mouse.move(
+        sourceBox.x + sourceBox.width * 0.6,
+        sourceBox.y + sourceBox.height / 2,
+      );
+      await page.mouse.down();
+      await page.waitForTimeout(275);
+      await page.mouse.move(
+        targetBox.x + targetBox.width * 0.6,
+        targetBox.y + 1,
+        { steps: 8 },
+      );
+      try {
+        await expect(page.locator("[data-focus-drag-preview]")).toBeVisible();
+        await expect(page.locator("[data-focus-drop-indicator]")).toBeVisible();
+      } catch (cause) {
+        await page.mouse.up().catch(() => {});
+        throw cause;
+      }
+    }
+
     async function check(id, name, run, page) {
       const started = Date.now();
       try {
@@ -155,6 +201,22 @@ await runBrowserSuite(
       title: `Other project pin ${suffix}`,
       status: "active",
     });
+    const orderFirst = await createCard(project.id, {
+      title: `Focus order first ${suffix}`,
+      status: "active",
+    });
+    const unavailable = await createCard(project.id, {
+      title: `Temporarily unavailable focus pin ${suffix}`,
+      status: "planned",
+    });
+    const hidden = await createCard(otherProject.id, {
+      title: `Filtered focus pin ${suffix}`,
+      status: "active",
+    });
+    const orderLast = await createCard(project.id, {
+      title: `Focus order last ${suffix}`,
+      status: "active",
+    });
     await setFocus([
       { project_id: project.id, card_id: pinned.metadata.id },
       { project_id: otherProject.id, card_id: otherPinned.metadata.id },
@@ -165,7 +227,20 @@ await runBrowserSuite(
     page.setDefaultTimeout(15000);
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("request", (request) => {
-      requests.push(new URL(request.url()));
+      const url = new URL(request.url());
+      requests.push(url);
+      if (
+        request.method() === "PUT" &&
+        url.pathname === "/api/v1/workspace/focus"
+      ) {
+        const headers = request.headers();
+        focusWrites.push({
+          requestId: headers["x-request-id"],
+          epoch: headers["x-command-epoch"],
+          version: headers["if-match"],
+          payload: request.postDataJSON(),
+        });
+      }
     });
 
     try {
@@ -414,6 +489,393 @@ await runBrowserSuite(
           await page.keyboard.press("Escape");
           await expect(modal).toBeHidden();
           return { id, project: project.id, postCount: 1, autosaved: true };
+        },
+        page,
+      );
+
+      await check(
+        "F06",
+        "Inline Focus drag reorders visible cards and keeps hidden or unavailable pins in place",
+        async () => {
+          const items = [
+            { project_id: project.id, card_id: orderFirst.metadata.id },
+            { project_id: project.id, card_id: unavailable.metadata.id },
+            { project_id: otherProject.id, card_id: hidden.metadata.id },
+            { project_id: project.id, card_id: orderLast.metadata.id },
+          ];
+          await setFocus(items);
+          const observed = cli("focus", "get");
+          let unavailableReads = 0;
+          const unavailablePath = `${config.origin}${base}/cards/${unavailable.metadata.id}`;
+          await page.route(unavailablePath, async (route) => {
+            if (route.request().method() !== "GET") return route.continue();
+            unavailableReads++;
+            return route.fulfill({
+              status: 503,
+              json: {
+                api_version: "1",
+                error: {
+                  code: "RESOURCE_UNAVAILABLE",
+                  message: "Synthetic unavailable card read",
+                },
+              },
+            });
+          });
+          await routeFocus(page, { project: project.id });
+          const startOrder = [
+            orderFirst.metadata.id,
+            unavailable.metadata.id,
+            orderLast.metadata.id,
+          ];
+          await expect.poll(() => visibleFocusOrder(page)).toEqual(startOrder);
+          assert(
+            unavailableReads > 0,
+            "The unavailable detail read was exercised",
+          );
+          await expect(focusCard(page, unavailable.metadata.id)).toContainText(
+            "Unavailable pinned card",
+          );
+          await expect(focusCard(page, hidden.metadata.id)).toHaveCount(0);
+
+          const writesBefore = focusWrites.length;
+          const longClick = focusCard(page, orderFirst.metadata.id);
+          const clickBox = await longClick.boundingBox();
+          assert(clickBox, "The Focus title must have a hitbox");
+          await page.mouse.move(
+            clickBox.x + clickBox.width / 2,
+            clickBox.y + clickBox.height / 2,
+          );
+          await page.mouse.down();
+          await page.waitForTimeout(300);
+          await page.mouse.up();
+          await expect(editor(page)).toBeVisible();
+          assert.equal(
+            focusWrites.length,
+            writesBefore,
+            "A held ordinary click must not write focus order",
+          );
+          await page.keyboard.press("Escape");
+          await expect(editor(page)).toBeHidden();
+
+          await beginFocusDrag(
+            page,
+            orderLast.metadata.id,
+            orderFirst.metadata.id,
+          );
+          await page.keyboard.press("Escape");
+          await page.mouse.up();
+          await expect(page.locator("[data-focus-drag-preview]")).toHaveCount(
+            0,
+          );
+          await expect(page.locator("[data-focus-drop-indicator]")).toHaveCount(
+            0,
+          );
+          assert.equal(
+            focusWrites.length,
+            writesBefore,
+            "Escape must cancel a drag without writing focus order",
+          );
+          await expect.poll(() => visibleFocusOrder(page)).toEqual(startOrder);
+
+          await focusCard(page, orderFirst.metadata.id).click();
+          await expect(editor(page)).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(editor(page)).toBeHidden();
+          assert.equal(
+            focusWrites.length,
+            writesBefore,
+            "A click after Escape must still open the card without reordering",
+          );
+
+          await beginFocusDrag(
+            page,
+            orderLast.metadata.id,
+            orderFirst.metadata.id,
+          );
+          await page.mouse.move(8, 8, { steps: 8 });
+          await expect(page.locator("[data-focus-drop-indicator]")).toHaveCSS(
+            "display",
+            "none",
+          );
+          await page.mouse.up();
+          assert.equal(
+            focusWrites.length,
+            writesBefore,
+            "Dropping outside the Focus stack must not write an order",
+          );
+          await expect.poll(() => visibleFocusOrder(page)).toEqual(startOrder);
+
+          await beginFocusDrag(
+            page,
+            orderFirst.metadata.id,
+            orderFirst.metadata.id,
+          );
+          await page.mouse.up();
+          await expect(editor(page)).toHaveCount(0);
+          assert.equal(
+            focusWrites.length,
+            writesBefore,
+            "Dropping in the original slot must not write focus order",
+          );
+
+          const putResponse = page.waitForResponse(
+            (response) =>
+              response.request().method() === "PUT" &&
+              new URL(response.url()).pathname === "/api/v1/workspace/focus",
+          );
+          await beginFocusDrag(
+            page,
+            orderLast.metadata.id,
+            orderFirst.metadata.id,
+          );
+          await page.screenshot({
+            path: join(evidence, "F06-drag-preview.png"),
+          });
+          await page.mouse.up();
+          const response = await putResponse;
+          assert.equal(response.status(), 200);
+          const expected = [items[3], items[1], items[2], items[0]];
+          const saved = cli("focus", "get");
+          assert.deepEqual(saved.items, expected);
+          assert.deepEqual(focusWrites.at(-1).payload, { items: expected });
+          assert.equal(focusWrites.at(-1).version, `"${observed.version}"`);
+          await page.reload();
+          await expect
+            .poll(() => visibleFocusOrder(page))
+            .toEqual([
+              orderLast.metadata.id,
+              unavailable.metadata.id,
+              orderFirst.metadata.id,
+            ]);
+          assert.deepEqual(cli("focus", "get").items, expected);
+          for (const width of [1440, 390, 320]) {
+            await page.setViewportSize({ width, height: 1000 });
+            assert.equal(
+              await page.evaluate(() => document.documentElement.scrollWidth),
+              width,
+            );
+            const boxes = await focusCards(page).evaluateAll((nodes) =>
+              nodes.map((node) => {
+                const { top, bottom, left, right } =
+                  node.getBoundingClientRect();
+                return { top, bottom, left, right };
+              }),
+            );
+            for (let i = 0; i < boxes.length; i++) {
+              assert(boxes[i].left >= 0 && boxes[i].right <= width);
+              if (i) assert(boxes[i].top >= boxes[i - 1].bottom);
+            }
+            await page.screenshot({
+              path: join(evidence, `F06-stack-${width}.png`),
+            });
+          }
+          await page.setViewportSize({ width: 1440, height: 1000 });
+          return {
+            hiddenPinRetainedAtSlot: 2,
+            unavailablePinRetainedAtSlot: 1,
+            conditionalPointerWrite: true,
+            persistedAfterReload: true,
+            clickAndEscapeDidNotWrite: true,
+            outsideDropDidNotWrite: true,
+          };
+        },
+        page,
+      );
+
+      await check(
+        "F07",
+        "A competing Focus refresh stays deferred during drag and a stale write cannot overwrite it",
+        async () => {
+          const initialItems = [
+            { project_id: project.id, card_id: orderFirst.metadata.id },
+            { project_id: project.id, card_id: pinned.metadata.id },
+            { project_id: project.id, card_id: orderLast.metadata.id },
+          ];
+          await setFocus(initialItems);
+          const observed = cli("focus", "get");
+          await routeFocus(page, { project: project.id });
+          await expect
+            .poll(() => visibleFocusOrder(page))
+            .toEqual(initialItems.map((item) => item.card_id));
+          const focusReadsBefore = requests.filter(
+            (url) => url.pathname === "/api/v1/workspace/focus",
+          ).length;
+          const writesBefore = focusWrites.length;
+          await beginFocusDrag(
+            page,
+            orderLast.metadata.id,
+            orderFirst.metadata.id,
+          );
+          const competingItems = [
+            initialItems[1],
+            initialItems[0],
+            initialItems[2],
+          ];
+          await mutate(
+            "PUT",
+            "/api/v1/workspace/focus",
+            { items: competingItems },
+            observed.version,
+          );
+          await expect
+            .poll(
+              () =>
+                requests.filter(
+                  (url) => url.pathname === "/api/v1/workspace/focus",
+                ).length,
+            )
+            .toBeGreaterThan(focusReadsBefore);
+          await expect
+            .poll(() => visibleFocusOrder(page))
+            .toEqual(initialItems.map((item) => item.card_id));
+          await expect(page.locator("[data-focus-drag-preview]")).toBeVisible();
+          const conflictResponse = page.waitForResponse(
+            (response) =>
+              response.request().method() === "PUT" &&
+              new URL(response.url()).pathname === "/api/v1/workspace/focus",
+          );
+          await page.mouse.up();
+          const response = await conflictResponse;
+          assert.equal(response.status(), 412);
+          assert.equal(focusWrites.length, writesBefore + 1);
+          assert.equal(focusWrites.at(-1).version, `"${observed.version}"`);
+          assert.deepEqual(
+            cli("focus", "get").items,
+            competingItems,
+            "The stale drag must not overwrite the competing full order",
+          );
+          await expect(
+            section(page, "In focus").getByRole("alert"),
+          ).toBeVisible();
+          await page
+            .getByRole("button", { name: "Reload focus order", exact: true })
+            .click();
+          await expect
+            .poll(() => visibleFocusOrder(page))
+            .toEqual(competingItems.map((item) => item.card_id));
+          assert.equal(
+            focusWrites.length,
+            writesBefore + 1,
+            "Reloading after a conflict must not create another write",
+          );
+          return {
+            deferredReadWhileHeld: true,
+            conditionalVersionRejected: true,
+            competingOrderPreserved: true,
+          };
+        },
+        page,
+      );
+
+      await check(
+        "F08",
+        "Focus keeps an uncertain command identity across workspace navigation",
+        async () => {
+          const items = [
+            { project_id: project.id, card_id: orderFirst.metadata.id },
+            { project_id: project.id, card_id: orderLast.metadata.id },
+          ];
+          await setFocus(items);
+          const observed = cli("focus", "get");
+          await routeFocus(page, { project: project.id });
+          await expect
+            .poll(() => visibleFocusOrder(page))
+            .toEqual(items.map((item) => item.card_id));
+
+          const attempts = [];
+          let interceptionError;
+          let committedVersion;
+          const focusPath = `${config.origin}/api/v1/workspace/focus`;
+          await page.route(focusPath, async (route) => {
+            if (route.request().method() !== "PUT") return route.continue();
+            const request = route.request();
+            const headers = request.headers();
+            const attempt = {
+              requestId: headers["x-request-id"],
+              epoch: headers["x-command-epoch"],
+              version: headers["if-match"],
+              payload: request.postDataJSON(),
+            };
+            attempts.push(attempt);
+            try {
+              if (attempts.length > 1)
+                assert.deepEqual(
+                  attempt,
+                  attempts[0],
+                  "Focus retry must keep the original identity and payload",
+                );
+              const response = await route.fetch();
+              assert.equal(response.status(), 200);
+              if (attempts.length === 1) {
+                committedVersion = cli("focus", "get").version;
+                await route.abort("failed");
+              } else await route.fulfill({ response });
+            } catch (cause) {
+              interceptionError = cause;
+              await route.abort("failed").catch(() => {});
+            }
+          });
+          const writesBefore = focusWrites.length;
+          await beginFocusDrag(
+            page,
+            orderLast.metadata.id,
+            orderFirst.metadata.id,
+          );
+          await page.mouse.up();
+          await expect(
+            page.getByRole("button", {
+              name: "Retry same command",
+              exact: true,
+            }),
+          ).toBeVisible();
+          assert.equal(attempts.length, 1);
+          assert.equal(interceptionError, undefined);
+          assert.equal(attempts[0].version, `"${observed.version}"`);
+
+          const navigation = page.getByRole("navigation", {
+            name: "Workspace views",
+          });
+          await navigation
+            .getByRole("button", { name: "Board", exact: true })
+            .click();
+          await expect(
+            navigation.getByRole("button", { name: "Board", exact: true }),
+          ).toHaveAttribute("aria-current", "page");
+          await navigation
+            .getByRole("button", { name: "Focus", exact: true })
+            .click();
+          await expect(focusCard(page, orderLast.metadata.id)).toBeVisible();
+          const retry = page.getByRole("button", {
+            name: "Retry same command",
+            exact: true,
+          });
+          await expect(retry).toBeEnabled();
+          await retry.click();
+          await expect.poll(() => attempts.length).toBe(2);
+          await expect(retry).toHaveCount(0);
+          assert.equal(interceptionError, undefined);
+          assert.equal(focusWrites.length, writesBefore + 2);
+          assert.deepEqual(attempts[1], attempts[0]);
+          const expected = [items[1], items[0]];
+          assert.deepEqual(attempts[0].payload, { items: expected });
+          assert.deepEqual(cli("focus", "get").items, expected);
+          assert.equal(
+            cli("focus", "get").version,
+            committedVersion,
+            "Retrying the committed command must not create a second focus version",
+          );
+          const command = cli(
+            "get",
+            `/api/v1/commands/${attempts[0].requestId}?epoch=${encodeURIComponent(attempts[0].epoch)}`,
+          );
+          assert.equal(command.state, "committed");
+          await page.unroute(focusPath);
+          return {
+            retries: attempts.length,
+            sameRequestIdAndEpoch: true,
+            samePayloadAndVersion: true,
+            navigationPreservedPendingCommand: true,
+          };
         },
         page,
       );

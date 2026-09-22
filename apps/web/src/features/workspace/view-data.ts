@@ -19,6 +19,8 @@ export type ViewDataState = {
   milestones: Summary[];
   updates: Summary[];
   focus: FocusRef[];
+  focusVersion: string;
+  focusRevision: number;
   focusCards: Summary[];
   attentionRows: Attention[];
   attentionCursor: string | null;
@@ -37,6 +39,8 @@ const emptyState = (): ViewDataState => ({
   milestones: [],
   updates: [],
   focus: [],
+  focusVersion: "",
+  focusRevision: 0,
   focusCards: [],
   attentionRows: [],
   attentionCursor: null,
@@ -61,6 +65,7 @@ type Dependencies = {
 export class ViewData {
   private snapshot = emptyState();
   private generation = 0;
+  private focusRevision = 0;
   private projectsReady = false;
   private controller: AbortController | undefined;
   private job: { key: string; promise: Promise<void> } | undefined;
@@ -90,6 +95,7 @@ export class ViewData {
     this.projectsReady = false;
     this.attentionStart = null;
     this.snapshot = emptyState();
+    this.snapshot.focusRevision = this.focusRevision;
     this.publish();
   }
   refresh(sections?: Section[]): Promise<void> {
@@ -156,7 +162,9 @@ export class ViewData {
           this.projectsReady = true;
         }
         if (result.focus) {
-          this.snapshot.focus = result.focus;
+          this.snapshot.focus = result.focus.items;
+          this.snapshot.focusVersion = result.focus.version;
+          this.snapshot.focusRevision = ++this.focusRevision;
           this.snapshot.focusCards = result.focusCards ?? [];
         }
         if (result.attention) {

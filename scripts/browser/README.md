@@ -8,10 +8,11 @@ scripts/cargo-local build --workspace --release --locked
 ASTRA_TEST_PROFILE=release npm run test:browser
 ```
 
-The two primary suites exercise broad workflows and planning widgets. The portable
+The HTTPS smoke exercises broad workflows, including keyboard Focus ordering and
+reload persistence, while the planning suite covers its widgets. The portable
 regression runner adds card checklists and handle reordering, workspace tags,
-editor draft safety, board/settings/focus dialogs, planning navigation, bounded
-view reads, real stale-page recovery in all five paged views, and direct/status command
+editor draft safety, board/settings dialogs, planning navigation, bounded view
+reads, real stale-page recovery in all five paged views, and direct/status command
 outcomes with preserved drafts and unavailable conflict details. The deletion
 suite covers permanent card and project metadata deletion, confirmation safety,
 command uncertainty, conflicts and current-project navigation.
@@ -19,7 +20,8 @@ command uncertainty, conflicts and current-project navigation.
 The autosave suite covers automatic card/project writes, queued edits, creation,
 close flushing and recovery without replacing the original command identity. The
 focus suite covers the three Focus sections, active-only bounded reads, pinned
-card precedence, filters and the viewport anchored card action.
+card precedence, filters, inline pointer ordering and the viewport anchored card
+action.
 
 ```sh
 ASTRA_TEST_PROFILE=release npm run test:browser:regressions

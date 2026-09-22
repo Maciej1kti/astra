@@ -45,11 +45,12 @@
   import TagManager from "./features/tags/TagManager.svelte";
   import NativeProject from "./features/registration/NativeProject.svelte";
   import ProjectDeletion from "./features/registration/ProjectDeletion.svelte";
-  import FocusOrder from "./features/workspace/FocusOrder.svelte";
   import GitObservation from "./features/host/GitObservation.svelte";
   import Diagnostics from "./features/host/Diagnostics.svelte";
-  import type { Resource, Summary } from "./lib/api/api";
-  import { getResource, getProject } from "./lib/api/resources";
+  import { apiCode, type Resource, type Summary } from "./lib/api/api";
+  import { getResource, getProject, replaceFocus } from "./lib/api/resources";
+  import type { FocusRef, FocusResource } from "./lib/contracts/api.generated";
+  import { commandOperation } from "./lib/api/command-operation.svelte";
 
   const routing = navigationState(
     readRoute(
@@ -67,7 +68,6 @@
           settings ||
           adding ||
           nativeAdding ||
-          arrangeFocus ||
           manageTags ||
           gitProject ||
           diagnostics ||
@@ -181,8 +181,6 @@
 
   let nativeAdding = $state(false);
 
-  let arrangeFocus = $state(false);
-
   let gitProject = $state("");
 
   let diagnostics = $state(false);
@@ -242,6 +240,180 @@
   const milestones = $derived(data.state.milestones);
   const updates = $derived(data.state.updates);
   const focus = $derived(data.state.focus);
+  const focusCommand = commandOperation(() => !!boot);
+  let focusProposal = $state<FocusRef[] | null>(null);
+  let focusProposalVersion = $state("");
+  let focusAcknowledged = $state<FocusResource | null>(null);
+  let focusAcknowledgedRevision = 0;
+  let focusError = $state("");
+  let focusCopyMessage = $state("");
+  let focusConflict = $state(false);
+  let focusReloading = $state(false);
+  const focusPending = $derived(focusCommand.pending);
+  const focusBusy = $derived(focusCommand.busy);
+  const focusOrder = $derived(
+    focusProposal ?? focusAcknowledged?.items ?? focus,
+  );
+  const orderedFocusCards = $derived.by(() => {
+    const summaries = new Map(
+      focusCards.map((item) => [`${item.project_id}:${item.id}`, item]),
+    );
+    return focusOrder.map((item): Summary => {
+      return (
+        summaries.get(focusReferenceKey(item)) ?? {
+          type: "card",
+          project_id: item.project_id,
+          id: item.card_id,
+          title: "Unavailable pinned card",
+          version: "",
+          availability: "unavailable",
+        }
+      );
+    });
+  });
+  const focusVersion = $derived(
+    focusProposal
+      ? focusProposalVersion
+      : (focusAcknowledged?.version ?? data.state.focusVersion),
+  );
+  const focusCanRetry = $derived(
+    !!focusProposal &&
+      focusCommand.phase === "rejected" &&
+      !focusConflict &&
+      !focusReloading,
+  );
+  const focusCanReload = $derived(
+    focusConflict ||
+      (!!focusAcknowledged && !focusAcknowledged.version) ||
+      (!!focusProposal && focusCommand.phase === "rejected"),
+  );
+
+  $effect(() => {
+    const acknowledged = focusAcknowledged;
+    if (acknowledged && data.state.focusRevision > focusAcknowledgedRevision)
+      focusAcknowledged = null;
+  });
+
+  function focusReferenceKey(item: Pick<FocusRef, "project_id" | "card_id">) {
+    return `${item.project_id}:${item.card_id}`;
+  }
+
+  function reorderFocus(
+    visible: Summary[],
+    fullOrder: FocusRef[],
+    expectedVersion: string,
+  ) {
+    if (
+      !expectedVersion ||
+      focusProposal ||
+      focusCommand.pending ||
+      focusCommand.busy ||
+      focusConflict ||
+      focusReloading
+    )
+      return;
+    const reorderedVisible = visible.map(({ project_id, id }) => ({
+      project_id,
+      card_id: id,
+    }));
+    const slots = new Set(reorderedVisible.map(focusReferenceKey));
+    let next = 0;
+    const proposed = fullOrder.map((item) =>
+      slots.has(focusReferenceKey(item)) ? reorderedVisible[next++] : item,
+    );
+    if (
+      JSON.stringify(proposed) === JSON.stringify(fullOrder) ||
+      next !== reorderedVisible.length
+    )
+      return;
+
+    focusError = "";
+    focusConflict = false;
+    focusCopyMessage = "";
+    focusProposal = proposed;
+    focusProposalVersion = expectedVersion;
+    data.invalidate();
+    focusCommand.prepare(replaceFocus({ items: proposed }, expectedVersion));
+    void transmitFocus();
+  }
+
+  async function transmitFocus() {
+    if (!focusProposal || focusCommand.busy || !focusCommand.pending) return;
+    focusError = "";
+    try {
+      const reply = await focusCommand.commit();
+      const committed: FocusResource = {
+        items: focusProposal.map((item) => ({ ...item })),
+        version: reply.result.version ?? "",
+      };
+      data.invalidate();
+      focusAcknowledged = committed;
+      focusAcknowledgedRevision = data.state.focusRevision;
+      focusProposal = null;
+      focusProposalVersion = "";
+      focusConflict = false;
+      void refresh().catch(message);
+    } catch (cause) {
+      focusError = cause instanceof Error ? cause.message : String(cause);
+      focusConflict =
+        focusCommand.phase === "rejected" &&
+        apiCode(cause) === "VERSION_CONFLICT";
+    }
+  }
+
+  function retryFocus() {
+    void transmitFocus();
+  }
+
+  async function copyFocusCommand() {
+    const pending = focusCommand.pending;
+    if (!pending || !focusProposal) return;
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(
+          {
+            items: focusProposal,
+            expected_version: focusProposalVersion,
+            request_id: pending.requestId,
+            epoch: pending.epoch,
+          },
+          null,
+          2,
+        ),
+      );
+      focusCopyMessage = "Pending focus command copied.";
+    } catch {
+      focusCopyMessage =
+        "Clipboard access is unavailable. The request ID and order remain below.";
+    }
+  }
+
+  function retryRejectedFocus() {
+    if (!focusProposal || !focusCanRetry) return;
+    focusError = "";
+    focusCommand.prepare(
+      replaceFocus({ items: focusProposal }, focusProposalVersion),
+    );
+    void transmitFocus();
+  }
+
+  async function reloadFocus() {
+    if (!focusCanReload || focusCommand.pending || focusReloading) return;
+    focusReloading = true;
+    focusError = "";
+    data.invalidate();
+    try {
+      await refresh(["focus"]);
+      focusProposal = null;
+      focusProposalVersion = "";
+      focusAcknowledged = null;
+      focusConflict = false;
+    } catch (cause) {
+      focusError = `The current focus order could not be reloaded: ${cause instanceof Error ? cause.message : String(cause)}`;
+    } finally {
+      focusReloading = false;
+    }
+  }
 
   let error = $state("");
   const loading = $derived(session.loading);
@@ -425,12 +597,20 @@
     const clockTimer = setInterval(() => (clockTime = Date.now()), 60_000);
     window.addEventListener("popstate", historyNavigation);
     window.addEventListener("command-warning", commandWarning);
+    const leaving = (event: BeforeUnloadEvent) => {
+      if (focusProposal || focusCommand.pending) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", leaving);
     void initialize();
     return () => {
       clearInterval(clockTimer);
       data.invalidate();
       window.removeEventListener("popstate", historyNavigation);
       window.removeEventListener("command-warning", commandWarning);
+      window.removeEventListener("beforeunload", leaving);
     };
   });
 </script>
@@ -554,8 +734,19 @@
             route={routing.current}
             {projects}
             {cards}
-            {focusCards}
-            focusCount={focus.length}
+            focusCards={orderedFocusCards}
+            focusCount={focusOrder.length}
+            {focusOrder}
+            {focusVersion}
+            focusPending={!!focusPending}
+            {focusBusy}
+            {focusConflict}
+            focusRefreshing={focusReloading}
+            {focusError}
+            {focusCopyMessage}
+            {focusCanRetry}
+            {focusCanReload}
+            focusRequestId={focusPending?.requestId ?? ""}
             {attentionRows}
             {attentionCursor}
             {attentionPaged}
@@ -563,7 +754,11 @@
             activeCardPaged={(pageHistory.card?.length ?? 0) > 1}
             {loadingMore}
             {open}
-            onarrange={() => (arrangeFocus = true)}
+            onreorder={reorderFocus}
+            onretry={retryFocus}
+            onretrynew={retryRejectedFocus}
+            onreload={reloadFocus}
+            oncopycommand={copyFocusCommand}
             {moreAttention}
             moreActiveCards={(back = false) => more("card", back)}
           />
@@ -719,15 +914,6 @@
     await refresh().catch(message);
   }}
 />
-
-{#if arrangeFocus}<FocusOrder
-    cards={focusCards}
-    onclose={() => (arrangeFocus = false)}
-    onsaved={() => {
-      arrangeFocus = false;
-      void refresh().catch(message);
-    }}
-  />{/if}
 
 {#if nativeAdding}<NativeProject
     onclose={() => (nativeAdding = false)}
