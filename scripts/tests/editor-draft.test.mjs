@@ -30,19 +30,16 @@ function card(metadata = {}) {
     },
   };
 }
-test("an unrelated card edit preserves exact tags, extensions and dependency intent", () => {
-  const source = card({
-    "x-custom": { retained: true },
-  });
+test("an unrelated card edit preserves exact tags and dependency intent", () => {
+  const source = card();
   const draft = createEditorDraft(editTarget("p", source));
   const payload = editorPayload(draft);
   assert.deepEqual(payload.set.labels, [" preserved tag "]);
   assert.equal("depends_on" in payload.set, false);
-  assert.equal("x-custom" in payload.set, false);
+  assert.equal("advanced" in draft.common, false);
   assert.equal("clear" in payload, false);
-  assert.deepEqual(source.metadata["x-custom"], { retained: true });
 });
-test("clearing optional fields is explicit and never clears unrelated extensions", () => {
+test("clearing optional card fields is explicit", () => {
   const draft = createEditorDraft(
     editTarget(
       "p",
@@ -66,7 +63,6 @@ test("clearing optional fields is explicit and never clears unrelated extensions
     review: "",
     dependencies: [],
   });
-  draft.common.advanced = '{"x-user":{"enabled":true}}';
   const payload = editorPayload(draft);
   const optional = [
     "acceptance",
@@ -77,7 +73,6 @@ test("clearing optional fields is explicit and never clears unrelated extensions
     "review_on",
   ];
   assert.deepEqual(payload.clear, optional);
-  assert.deepEqual(payload.set["x-user"], { enabled: true });
   assert.deepEqual(payload.set.depends_on, []);
   for (const field of optional) assert.equal(field in payload.set, false);
 });
@@ -89,6 +84,7 @@ test("each resource draft emits only its own fields", () => {
     }),
   );
   const created = editorPayload(cardDraft);
+  assert.equal("advanced" in cardDraft.common, false);
   assert.deepEqual(created.schedule, {
     start: "2026-09-01",
     end: "2026-09-02",
@@ -108,11 +104,15 @@ test("each resource draft emits only its own fields", () => {
   assert.deepEqual(report.target, { type: "project", id: "p" });
   assert.deepEqual(report.resolves, ["a", "b"]);
   assert.equal("labels" in report, false);
-  const milestone = editorPayload(
-    createEditorDraft(createTarget("p", "milestone")),
-  );
+  reportDraft.common.advanced = '{"x-report":{"enabled":true}}';
+  const reportWithExtra = editorPayload(reportDraft);
+  assert.deepEqual(reportWithExtra["x-report"], { enabled: true });
+  const milestoneDraft = createEditorDraft(createTarget("p", "milestone"));
+  milestoneDraft.common.advanced = '{"x-milestone":{"enabled":true}}';
+  const milestone = editorPayload(milestoneDraft);
   assert.equal(milestone.status, "planned");
   assert.equal("priority" in milestone, false);
+  assert.deepEqual(milestone["x-milestone"], { enabled: true });
   const project = createEditorDraft(
     editTarget("p", {
       type: "project",
@@ -128,17 +128,16 @@ test("each resource draft emits only its own fields", () => {
       },
     }),
   );
-  project.common.advanced = '{"x-editor":{"ignored":true}}';
   assert.deepEqual(editorPayload(project), {
     set: { body: "", name: "Project", state: "paused" },
   });
   assert.equal("phase" in editorPayload(project).set, false);
   assert.equal("review_on" in editorPayload(project).set, false);
-  assert.equal("x-editor" in editorPayload(project).set, false);
+  assert.equal("advanced" in project.common, false);
   cardDraft.fields.end = "";
   assert.throws(() => editorPayload(cardDraft), /both start and end/);
-  cardDraft.common.advanced = "[]";
-  assert.throws(() => editorPayload(cardDraft), /JSON object/);
+  milestoneDraft.common.advanced = "[]";
+  assert.throws(() => editorPayload(milestoneDraft), /JSON object/);
 });
 test("drafts own nested edits and include unfinished tag and acceptance input", () => {
   const source = card({

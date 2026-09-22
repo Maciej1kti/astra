@@ -79,7 +79,8 @@ JSON
 `create --input` cannot be combined with `--title` or `--body-file`.
 `set --patch-file` cannot be combined with field flags; this avoids ambiguous
 merge precedence. Unmentioned fields are preserved. Source extensions remain
-available for cards, milestones and reports through their JSON contracts.
+available for milestones and reports through their JSON contracts. Cards have a
+closed field set.
 Use `clear` for an optional retained card field, for example
 `{"clear":["review_on"]}` in a versioned patch.
 Projects support only `name`, `state` and Markdown `body` edits; project
@@ -107,8 +108,9 @@ projectctl --project /absolute/project card delete CARD_ID --if-version CARD_VER
 ```
 
 Incoming dependencies (including archived cards) and workspace focus block card
-removal. Disconnect those references explicitly first. Reports remain available;
-there is no undo or restore for a deleted card.
+removal. Disconnect those references explicitly first. There is no undo or restore
+for a deleted card. Reports can target projects or milestones; card targets are
+rejected.
 
 Project deletion uses an explicit project ID and a reviewed directory snapshot:
 

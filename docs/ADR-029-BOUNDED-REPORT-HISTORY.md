@@ -1,14 +1,17 @@
 # ADR-029 — Bounded report history by target (2026-09-08)
 
 Status: accepted for the owner-authorized code health implementation.
+Card report support was subsequently removed by
+[ADR-038](ADR-038-CARD-EXTENSION-REMOVAL.md); the retained filter contract is
+documented below.
 
-Card activity previously downloaded every report in the project before selecting
-its target. A card's short history could fail when unrelated reports reached the
-client's collection bound. The existing report collection now accepts the optional
+Report history previously downloaded every report in the project before selecting
+its target. A bounded history page could fail when unrelated reports reached the
+client's collection bound. The existing report collection accepts the optional
 pair `target_type` and `target_id`. Both fields must be supplied together;
-`target_type` is `project`, `card` or `milestone`, and `target_id` is a canonical
-UUIDv4. Invalid pairs and target filters on other resource collections return
-HTTP 422 `INVALID_TARGET_FILTER`.
+`target_type` is `project` or `milestone`, and `target_id` is a canonical UUIDv4.
+Card-targeted reports are rejected. Invalid pairs and target filters on other
+resource collections return HTTP 422 `INVALID_TARGET_FILTER`.
 
 `GET /api/v1/projects/{project_id}/updates` applies both target fields to the
 derived report metadata before sorting and pagination. The same filters are
@@ -27,4 +30,4 @@ and durability do not change. Clients keep explicit pagination and recover from
 Verification covers more than 20,000 unrelated reports, type/project isolation,
 bounded pages without duplicates, cursor target identity, invalid filter pairs,
 and the existing transport and SummaryPage contracts. See
-`examples/requests/card-report-history.json`.
+`examples/requests/project-report-history.json`.

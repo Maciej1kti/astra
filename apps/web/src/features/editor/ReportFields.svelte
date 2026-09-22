@@ -11,8 +11,9 @@
   <legend>Report details</legend>
   <label
     >Target type<select bind:value={fields.targetType}
-      ><option value="project">Project</option><option value="card">Card</option
-      ><option value="milestone">Milestone</option></select
+      ><option value="project">Project</option><option value="milestone"
+        >Milestone</option
+      ></select
     ></label
   >
   {#if fields.targetType !== "project"}<label

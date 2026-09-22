@@ -8,7 +8,10 @@ Playwright Chromium/Firefox/WebKit jest kandydatem do automatyzacji przeglądare
 
 ## Obowiązkowe klasy przypadków
 
-Parser: duplicate keys, anchors/aliases, komentarze wymagające normalizacji, nieznane pola, x-extensions, body round-trip, BOM/CRLF, invalid UTF-8, depth/size limits, filename-ID mismatch i future schema.
+Parser: duplicate keys, anchors/aliases, comments requiring normalization,
+unknown fields, card x-* rejection, milestone/update x-extensions, body
+round-trip, BOM/CRLF, invalid UTF-8, depth/size limits, filename-ID mismatch and
+future schema.
 
 Domena: leap year, koniec miesiąca, DST i różne timezone klientów; plan niezależny od due; cykle/self/dangling edges; milestone independent completion; rank collision/exhaustion; archiwizacja bez kasowania referencji; resolution vs read.
 

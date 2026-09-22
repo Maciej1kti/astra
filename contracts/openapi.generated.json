@@ -2367,7 +2367,7 @@
           "updates"
         ],
         "summary": "listUpdates",
-        "description": "Returns bounded report summaries. Supply target_type and target_id together to select one project's card, milestone or project history before pagination. Invalid pairs return 422 INVALID_TARGET_FILTER; target filters are bound into the cursor.",
+        "description": "Returns bounded report summaries. Supply target_type and target_id together to select project or milestone history before pagination. Card-targeted reports are rejected. Invalid pairs return 422 INVALID_TARGET_FILTER; target filters are bound into the cursor.",
         "responses": {
           "200": {
             "description": "Poprawna odpowiedź",
@@ -4001,12 +4001,11 @@
       "TargetType": {
         "name": "target_type",
         "in": "query",
-        "description": "Report target kind. Must be paired with target_id and is only valid for update collections or views/list with type=update.",
+        "description": "Report target kind. Must be paired with target_id and is only valid for update collections or views/list with type=update. Card targets are rejected.",
         "schema": {
           "type": "string",
           "enum": [
             "project",
-            "card",
             "milestone"
           ]
         }
@@ -4231,6 +4230,26 @@
             "enum": [
               "project",
               "card",
+              "milestone"
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          }
+        },
+        "required": [
+          "type",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "ReportTarget": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "project",
               "milestone"
             ]
           },
@@ -4496,12 +4515,7 @@
           "created_at",
           "updated_at"
         ],
-        "additionalProperties": false,
-        "patternProperties": {
-          "^x-[a-z0-9][a-z0-9_.-]{0,62}$": {
-            "$ref": "#/components/schemas/ExtensionValue"
-          }
-        }
+        "additionalProperties": false
       },
       "MilestoneMetadata": {
         "type": "object",
@@ -4573,7 +4587,7 @@
             ]
           },
           "target": {
-            "$ref": "#/components/schemas/Target"
+            "$ref": "#/components/schemas/ReportTarget"
           },
           "summary": {
             "type": "string",
@@ -5447,7 +5461,7 @@
             ]
           },
           "target": {
-            "$ref": "#/components/schemas/Target"
+            "$ref": "#/components/schemas/ReportTarget"
           },
           "summary": {
             "type": "string",
@@ -5942,7 +5956,7 @@
             "$ref": "#/components/schemas/Author"
           },
           "target": {
-            "$ref": "#/components/schemas/Target"
+            "$ref": "#/components/schemas/ReportTarget"
           },
           "blocked": {
             "$ref": "#/components/schemas/Blocked"
@@ -7685,7 +7699,7 @@
             "$ref": "#/components/schemas/Blocked"
           },
           "target": {
-            "$ref": "#/components/schemas/Target"
+            "$ref": "#/components/schemas/ReportTarget"
           },
           "recorded_at": {
             "$ref": "#/components/schemas/Instant"

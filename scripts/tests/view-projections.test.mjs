@@ -75,7 +75,7 @@ test("detail summaries map project/update names and preserve read receipt state"
         id: "u",
         summary: "Result",
         kind: "result",
-        target: { type: "card", id: "c" },
+        target: { type: "milestone", id: "m" },
       },
       version: "v",
       body: "",
@@ -85,6 +85,6 @@ test("detail summaries map project/update names and preserve read receipt state"
     "update",
   );
   assert.equal(update.title, "Result");
-  assert.deepEqual(update.target, { type: "card", id: "c" });
+  assert.deepEqual(update.target, { type: "milestone", id: "m" });
   assert.equal(update.read, false);
 });

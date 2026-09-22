@@ -53,7 +53,7 @@ type Draft<
   common: C;
   fields: Fields;
 };
-export type CardDraft = Draft<"card", CardFields, EditableCommon>;
+export type CardDraft = Draft<"card", CardFields, Common>;
 export type EditorDraft =
   | CardDraft
   | Draft<"project", ProjectFields, Common>
@@ -75,7 +75,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         type: "card",
         project,
         source: target.resource,
-        common: editableCommon(),
+        common,
         fields: {
           status: m?.status ?? "planned",
           priority: m?.priority ?? "normal",
@@ -170,7 +170,9 @@ type PatchSet<T> = Extract<T, { set?: unknown }>;
 export function editorPayload(draft: EditorDraft) {
   const { title, body } = draft.common;
   const extra =
-    draft.type === "project" ? {} : additionalFields(draft.common.advanced);
+    draft.type === "milestone" || draft.type === "update"
+      ? additionalFields(draft.common.advanced)
+      : {};
   switch (draft.type) {
     case "card": {
       const d = draft.fields;

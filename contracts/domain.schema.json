@@ -164,6 +164,26 @@
       ],
       "additionalProperties": false
     },
+    "ReportTarget": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "project",
+            "milestone"
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/UUID"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
     "Evidence": {
       "oneOf": [
         {
@@ -370,12 +390,7 @@
         "created_at",
         "updated_at"
       ],
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-[a-z0-9][a-z0-9_.-]{0,62}$": {
-          "$ref": "#/$defs/ExtensionValue"
-        }
-      }
+      "additionalProperties": false
     },
     "MilestoneMetadata": {
       "type": "object",
@@ -447,7 +462,7 @@
           ]
         },
         "target": {
-          "$ref": "#/$defs/Target"
+          "$ref": "#/$defs/ReportTarget"
         },
         "summary": {
           "type": "string",

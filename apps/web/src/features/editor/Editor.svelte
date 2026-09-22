@@ -24,11 +24,7 @@
   import { untrack, onMount } from "svelte";
   import Markdown from "../../lib/ui/Markdown.svelte";
 
-  import CardActivity from "../cards/CardActivity.svelte";
-
-  import CardUpdateComposer from "../cards/CardUpdateComposer.svelte";
   import { acceptanceValidation } from "../cards/card-work";
-  import { hasCardUpdateDraft, newCardUpdateDraft } from "../cards/card-update";
   import { tagValidation } from "../tags/tags";
   import { canUndoDraft, type EditorIntent } from "./editor-actions";
   import {
@@ -80,11 +76,6 @@
   const autoCreate = $derived(target.autoCreate ?? false);
   let draft = $state(createEditorDraft(untrack(() => target)));
   let acceptanceError = $state("");
-  let updateDraft = $state(newCardUpdateDraft());
-  let updatePending = $state<Pending | null>(null);
-  let updateBusy = $state(false);
-  let cardActivity = $state<{ refresh: () => Promise<void> }>();
-  const updateDirty = $derived(hasCardUpdateDraft(updateDraft));
   let tagError = $state("");
 
   let projectName = $state("");
@@ -154,15 +145,12 @@
     draft.type === "card" &&
       (!!draft.fields.tagDraft.trim() || !!draft.fields.acceptanceDraft.trim()),
   );
-  let cardDirty = $derived(persistedDirty || unfinishedEntry);
-  let dirty = $derived(cardDirty || updateDirty || !!updatePending);
+  let dirty = $derived(persistedDirty || unfinishedEntry);
   let accessLost = $state(false);
   let locked = $derived(
     busy ||
       !!pending ||
       accessLost ||
-      updateBusy ||
-      !!updatePending ||
       deleteBusy ||
       !!deletePending ||
       !!deleteConfirmation ||
@@ -179,7 +167,6 @@
             pending,
             autosave_pending: autosave.pending,
             delete_pending: deletePending,
-            card_update: { fields: updateDraft, pending: updatePending },
           },
           null,
           2,
@@ -219,7 +206,7 @@
     };
   });
   function close() {
-    if (closing || busy || updateBusy || deleteBusy) return;
+    if (closing || busy || deleteBusy) return;
     if (autosaveResource && (autosave.hasWork || persistedDirty)) {
       closing = true;
       void flushAutosave()
@@ -239,7 +226,7 @@
     else onclose();
   }
   export function requestClose() {
-    if (busy || updateBusy || deleteBusy) return false;
+    if (busy || deleteBusy) return false;
     void close();
     return true;
   }
@@ -380,11 +367,7 @@
   }
   async function undo(id: string) {
     if (!resource) return;
-    if (
-      locked ||
-      autosave.hasWork ||
-      !canUndoDraft(dirty, !!pending, busy || updateBusy)
-    ) {
+    if (locked || autosave.hasWork || !canUndoDraft(dirty, !!pending, busy)) {
       error =
         "Wait for changes to save, or resolve your draft before undoing a saved change.";
       return;
@@ -584,9 +567,6 @@
     }
     await autosave.flush();
   }
-  function insideCardUpdate(target: EventTarget | null) {
-    return target instanceof Element && !!target.closest(".card-update");
-  }
   let watchedAutosaveSnapshot = $state(untrack(() => autosaveSnapshot(draft)));
   let immediateAutosave = $state(false);
   function discreteAutosaveChange(previous: string, next: string) {
@@ -631,7 +611,6 @@
     untrack(() => scheduleAutosave(immediate));
   });
   function handleChange(event: Event) {
-    if (insideCardUpdate(event.target)) return;
     const target = event.target;
     const immediate =
       target instanceof HTMLSelectElement ||
@@ -710,8 +689,6 @@
       deletePending ||
       busy ||
       pending ||
-      updateBusy ||
-      updatePending ||
       conflict ||
       deleteConflict ||
       draft.type !== "card" ||
@@ -903,17 +880,15 @@
           >
             {busy
               ? "Saving…"
-              : updateBusy
-                ? "Recording card update…"
-                : pending || updatePending
-                  ? "Awaiting command confirmation"
-                  : conflict
-                    ? "Conflict · draft preserved"
-                    : dirty
-                      ? "Unsaved changes"
-                      : resource
-                        ? "Saved version"
-                        : "New draft"}
+              : pending
+                ? "Awaiting command confirmation"
+                : conflict
+                  ? "Conflict · draft preserved"
+                  : dirty
+                    ? "Unsaved changes"
+                    : resource
+                      ? "Saved version"
+                      : "New draft"}
           </p>{/if}
         {#if autosaveStatus}<p
             class="draft-state"
@@ -932,7 +907,7 @@
           if (event.button === 0 && descriptionEditing) event.preventDefault();
         }}
         onclick={close}
-        disabled={busy || updateBusy || deleteBusy || closing}>✕</button
+        disabled={busy || deleteBusy || closing}>✕</button
       >
     </header>
     <form
@@ -944,15 +919,14 @@
     >
       {#if discard}<div role="alert" class="notice">
           <p>
-            {pending || updatePending || deletePending || autosaveWork
+            {pending || deletePending || autosaveWork
               ? "The command result may still be unknown. Keep its request ID before closing."
               : "Discard your unsaved draft?"}
           </p>
           <button
             type="button"
             onclick={onclose}
-            disabled={busy || updateBusy || deleteBusy || autosaveBusy}
-            >Discard draft</button
+            disabled={busy || deleteBusy || autosaveBusy}>Discard draft</button
           ><button type="button" onclick={keepEditing}>Keep editing</button>
         </div>{/if}
       {#if readonly}<button type="button" onclick={toggleRead} disabled={locked}
@@ -1170,33 +1144,8 @@
           bind:fields={draft.fields}
           locked={readonly || locked}
         />{/if}
-      {#if draft.type === "card" && resource}
-        <CardUpdateComposer
-          {project}
-          cardId={resource.metadata.id}
-          bind:draft={updateDraft}
-          bind:pending={updatePending}
-          bind:busy={updateBusy}
-          disabled={busy ||
-            !!pending ||
-            accessLost ||
-            deleteBusy ||
-            !!deletePending ||
-            !!deleteConfirmation ||
-            deleteFlushing}
-          onposted={() => {
-            void cardActivity?.refresh();
-            onchanged?.();
-          }}
-        />
-        <CardActivity
-          bind:this={cardActivity}
-          {project}
-          cardId={resource.metadata.id}
-          disabled={accessLost}
-        />
-      {/if}
-      {#if !readonly && draft.type !== "project"}<details>
+      {#if !readonly && (draft.type === "milestone" || draft.type === "update")}<details
+        >
           <summary>Additional fields</summary>
           <p>
             Technical extensions and report evidence. Use the named fields above
@@ -1226,7 +1175,7 @@
                 disabled={locked ||
                   autosaveWork ||
                   !entry.can_undo ||
-                  !canUndoDraft(dirty, !!pending, busy || updateBusy) ||
+                  !canUndoDraft(dirty, !!pending, busy) ||
                   accessLost}
                 onclick={() => undo(entry.id)}>Undo this change</button
               >
@@ -1314,20 +1263,13 @@
             disabled={deleteBusy || accessLost}>Retry same deletion</button
           >
         </div>{/if}
-      {#if updateDirty || updatePending}<p class="empty-context">
-          Post or discard the update draft before saving this card. Copy draft
-          includes both drafts and any unresolved request.
-        </p>{/if}
       {#if !autosaveResource}<footer>
-          <button
-            type="button"
-            onclick={close}
-            disabled={busy || updateBusy || deleteBusy}
+          <button type="button" onclick={close} disabled={busy || deleteBusy}
             >{readonly ? "Close" : "Cancel"}</button
           >{#if !readonly}<button
               class="primary"
               type="submit"
-              disabled={locked || !!conflict || updateDirty}
+              disabled={locked || !!conflict}
               >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</button
             >{/if}
         </footer>{/if}

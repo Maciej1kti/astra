@@ -13,6 +13,9 @@ fn read(path: &str) -> Value {
 fn card() -> Value {
     read("examples/card-22222222-2222-4222-8222-222222222222.json")
 }
+fn milestone() -> Value {
+    read("examples/milestone.json")
+}
 
 #[test]
 fn project_rejects_retired_phase_review_and_extensions() {
@@ -42,8 +45,8 @@ fn project_rejects_retired_phase_review_and_extensions() {
     let mut card = card();
     card["metadata"]["x-owner-note"] = json!({"retained": true});
     assert!(
-        validate_document(card).is_ok(),
-        "card extensions remain supported"
+        validate_document(card).is_err(),
+        "card extensions must be rejected"
     );
 }
 
@@ -65,6 +68,25 @@ fn examples_roundtrip_without_losing_optional_fields_or_body() {
     assert_eq!(
         serde_json::to_value(validate_workspace(input.clone()).unwrap().get()).unwrap(),
         input
+    );
+}
+
+#[test]
+fn report_targets_reject_cards_but_retain_project_and_milestone_targets() {
+    let mut report = read("examples/update.json");
+    assert!(validate_document(report.clone()).is_ok());
+    report["metadata"]["target"] = json!({
+        "type": "milestone",
+        "id": "44444444-4444-4444-8444-444444444444"
+    });
+    assert!(validate_document(report.clone()).is_ok());
+    report["metadata"]["target"] = json!({
+        "type": "card",
+        "id": "22222222-2222-4222-8222-222222222222"
+    });
+    assert!(
+        validate_document(report).is_err(),
+        "card-targeted reports must be rejected"
     );
 }
 
@@ -199,24 +221,27 @@ fn handoff_rank_vectors_and_exhaustion() {
 }
 
 #[test]
-fn validation_enforces_bytes_depth_and_safe_extensions() {
+fn validation_enforces_bytes_depth_and_safe_values() {
     let mut value = card();
     value["body"] = json!("ą".repeat(491_521));
     assert!(
         validate_document(value).is_err(),
         "body limit is bytes, not characters"
     );
-    let mut value = card();
+    let mut supported = milestone();
+    supported["metadata"]["x-test"] = json!({"retained": true});
+    assert!(validate_document(supported).is_ok());
+    let mut value = milestone();
     let mut nested = json!(0);
     for _ in 0..13 {
         nested = json!([nested]);
     }
     value["metadata"]["x-test"] = nested;
     assert!(validate_document(value).is_err());
-    let mut value = card();
+    let mut value = milestone();
     value["metadata"]["x-test"] = json!({"constructor": {"prototype": true}});
     assert!(validate_document(value).is_err());
-    let mut value = card();
+    let mut value = milestone();
     value["metadata"]["x-test"] = json!(vec![0; 10_001]);
     assert!(validate_document(value).is_err());
     let mut value = card();

@@ -11,8 +11,9 @@ Project metadata has the closed field set `schema_version`, `id`, `name`,
 emit `phase`, `review_on`, or `x-*` extension fields. The project patch API
 accepts only `name`, `state`, and `body`; its `clear` operation is removed.
 
-Card `review_on` and card extensions remain supported. This decision does not
-change milestone or update extension rules.
+Card `review_on` remains supported. Card metadata extensions are removed by
+[ADR-038](ADR-038-CARD-EXTENSION-REMOVAL.md); milestone and update extension
+rules remain unchanged.
 
 The JSON Schema and OpenAPI contracts use closed project metadata objects, and
 the generated browser contract types are regenerated from those sources.

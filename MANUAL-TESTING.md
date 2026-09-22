@@ -61,6 +61,13 @@ Kind, Expected result or Owner fields. Project
 review dates, phases and extensions are also removed from the source and API
 contracts; card review dates remain available.
 
+The card Checklist uses one row per item: checkbox, text, remove icon and drag
+handle. Drag the handle to reorder; keyboard users can pick up with Space or
+Enter, move with arrow keys, then confirm or cancel with Escape. Only a completed
+reorder is saved. Use Add item for a new entry. Card editors have no Record
+progress, Card updates or Additional fields sections. Reports target projects
+or milestones; cards have no custom metadata extensions.
+
 ## Known limits
 
 - The launcher listens on localhost on the host computer. Phone access requires

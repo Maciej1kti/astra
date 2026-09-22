@@ -35,8 +35,8 @@ independent test, not merely to shorten a file.
 Update the source schema and API request/response schemas where their behavior
 changes. Change domain validation and application preparation, then the editor
 translation and presentation. Run `npm run contracts` to update generated types.
-Preserve card, milestone and report extensions when editing unrelated fields.
-Project metadata does not allow extensions. A protocol change
+Preserve milestone and report extensions when editing unrelated fields.
+Project and card metadata do not allow extensions. A protocol change
 includes examples, regression coverage and an architecture decision in the same
 change. Do not edit generated types by hand.
 

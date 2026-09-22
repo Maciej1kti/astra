@@ -14,9 +14,10 @@ archive/unregistration behavior. Archive remains a separate action.
 and the observed card version in `If-Match`. It physically removes that source
 file. Incoming dependencies, including archived sources, block deletion; the
 caller must explicitly disconnect them first. A pinned card must be explicitly
-removed from focus before deletion. Reports about the card remain append-only
-and queryable. Resource history exposes deletion with a null `after_version` and
-does not offer undo for a deleted source.
+removed from focus before deletion. Card-targeted reports are subsequently
+removed by [ADR-038](ADR-038-CARD-EXTENSION-REMOVAL.md); project and milestone
+reports remain append-only. Resource history exposes deletion with a null
+`after_version` and does not offer undo for a deleted source.
 
 `GET /api/v1/projects/{project_id}/deletion-plan` reads the exact `.project/`
 scope and returns its path, file count, bytes and an observed deletion version.

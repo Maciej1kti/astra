@@ -1,9 +1,6 @@
 /* Generated from contracts/openapi.generated.json. Run npm run contracts. */
 
 /**
- * This interface was referenced by `CardMetadata`'s JSON-Schema definition
- * via the `patternProperty` "^x-[a-z0-9][a-z0-9_.-]{0,62}$".
- *
  * This interface was referenced by `MilestoneMetadata`'s JSON-Schema definition
  * via the `patternProperty` "^x-[a-z0-9][a-z0-9_.-]{0,62}$".
  *
@@ -29,7 +26,7 @@ export type Acceptance = AcceptanceItem[];
 export type UpdateMetadata = {
   id: string;
   kind: "result" | "blocker" | "decision_needed" | "note" | "correction" | "resolution";
-  target: Target;
+  target: ReportTarget;
   summary: string;
   author: Author;
   recorded_at: string;
@@ -68,7 +65,7 @@ export type UpdateMetadata = {
     | "note"
     | "correction"
     | "resolution"
-    | Target
+    | ReportTarget
     | Author
     | string[]
     | (
@@ -92,7 +89,7 @@ export type UpdateMetadata = {
 };
 export type UpdateCreate = {
   kind: "result" | "blocker" | "decision_needed" | "note" | "correction" | "resolution";
-  target: Target;
+  target: ReportTarget;
   summary: string;
   author: Author;
   observed_at?: string;
@@ -131,7 +128,7 @@ export type UpdateCreate = {
     | "note"
     | "correction"
     | "resolution"
-    | Target
+    | ReportTarget
     | string
     | Author
     | string[]
@@ -168,6 +165,7 @@ export interface ApiContracts {
   Blocked: Blocked;
   Author: Author;
   Target: Target;
+  ReportTarget: ReportTarget;
   Evidence:
     | {
         type: "url";
@@ -358,6 +356,10 @@ export interface Target {
   type: "project" | "card" | "milestone";
   id: string;
 }
+export interface ReportTarget {
+  type: "project" | "milestone";
+  id: string;
+}
 export interface ProjectMetadata {
   id: string;
   created_at: string;
@@ -398,25 +400,6 @@ export interface CardMetadata {
    * @maxItems 20
    */
   labels?: string[];
-  [k: string]:
-    | ExtensionValue
-    | string
-    | "planned"
-    | "active"
-    | "review"
-    | "done"
-    | "cancelled"
-    | "low"
-    | "normal"
-    | "high"
-    | "urgent"
-    | boolean
-    | Schedule
-    | Due
-    | Blocked
-    | string[]
-    | Acceptance
-    | undefined;
 }
 export interface MilestoneMetadata {
   id: string;
@@ -634,7 +617,7 @@ export interface Summary {
   kind?: string;
   recorded_at?: string;
   author?: Author;
-  target?: Target;
+  target?: ReportTarget;
   blocked?: Blocked;
   /**
    * @maxItems 20
@@ -970,7 +953,7 @@ export interface ContextEntry {
   priority?: "low" | "normal" | "high" | "urgent";
   review_on?: string;
   blocked?: Blocked;
-  target?: Target;
+  target?: ReportTarget;
   recorded_at?: string;
   acceptance?: Acceptance;
 }

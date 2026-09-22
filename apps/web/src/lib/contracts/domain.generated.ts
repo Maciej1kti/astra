@@ -12,9 +12,6 @@ export type LocalDate = string;
 /**
  * Ograniczone JSON values; poza schema: max depth 12, 10000 nodes, brak niebezpiecznych kluczy prototypu w obiektach JS.
  *
- * This interface was referenced by `CardMetadata`'s JSON-Schema definition
- * via the `patternProperty` "^x-[a-z0-9][a-z0-9_.-]{0,62}$".
- *
  * This interface was referenced by `MilestoneMetadata`'s JSON-Schema definition
  * via the `patternProperty` "^x-[a-z0-9][a-z0-9_.-]{0,62}$".
  *
@@ -33,7 +30,7 @@ export type ExtensionValue =
 export type UpdateMetadata = {
   id: UUID;
   kind: "result" | "blocker" | "decision_needed" | "note" | "correction" | "resolution";
-  target: Target;
+  target: ReportTarget;
   summary: string;
   author: Author;
   recorded_at: Instant;
@@ -56,7 +53,7 @@ export type UpdateMetadata = {
     | "note"
     | "correction"
     | "resolution"
-    | Target
+    | ReportTarget
     | Author
     | UUID[]
     | Evidence[]
@@ -257,157 +254,6 @@ export interface CardMetadata {
    * @maxItems 100
    */
   acceptance?: AcceptanceItem[];
-  [k: string]:
-    | ExtensionValue
-    | UUID
-    | "planned"
-    | "active"
-    | "review"
-    | "done"
-    | "cancelled"
-    | "low"
-    | "normal"
-    | "high"
-    | "urgent"
-    | boolean
-    | Schedule
-    | Due
-    | Blocked
-    | UUID[]
-    | []
-    | [string]
-    | [string, string]
-    | [string, string, string]
-    | [string, string, string, string]
-    | [string, string, string, string, string]
-    | [string, string, string, string, string, string]
-    | [string, string, string, string, string, string, string]
-    | [string, string, string, string, string, string, string, string]
-    | [string, string, string, string, string, string, string, string, string]
-    | [string, string, string, string, string, string, string, string, string, string]
-    | [string, string, string, string, string, string, string, string, string, string, string]
-    | [string, string, string, string, string, string, string, string, string, string, string, string]
-    | [string, string, string, string, string, string, string, string, string, string, string, string, string]
-    | [string, string, string, string, string, string, string, string, string, string, string, string, string, string]
-    | [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ]
-    | [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ]
-    | [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ]
-    | [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ]
-    | [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ]
-    | [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ]
-    | AcceptanceItem[]
-    | undefined;
 }
 export interface Schedule {
   start: LocalDate;
@@ -446,8 +292,8 @@ export interface UpdateDocument {
   metadata: UpdateMetadata;
   body: string;
 }
-export interface Target {
-  type: "project" | "card" | "milestone";
+export interface ReportTarget {
+  type: "project" | "milestone";
   id: UUID;
 }
 export interface Author {

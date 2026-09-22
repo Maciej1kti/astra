@@ -76,3 +76,17 @@ explicit removal through ordinary conditional server writes before the final
 strict release. It accepts old source fields for the cleanup and prevents new
 writes from introducing them. No general source migration framework or direct
 source-file editing is introduced. Archived cards are included in cleanup.
+
+## Compact card checklist and report removal — owner decision, 2026-09-22
+
+Use a simple Checklist in the card modal, with each item occupying one row:
+checkbox, text, remove icon and reorder handle. Remove explanatory prose,
+per-row counts, arrow buttons and the verbose add-condition subsection.
+Preserve stable item IDs and explicit completion; reorder commits on drop.
+
+Remove Record progress and Card updates from the modal, including card-targeted
+reports from the source/API/CLI contracts and existing data. The owner explicitly
+confirmed the removal of card report functionality. Reports for projects and
+milestones remain supported. Remove card Additional fields and `x-*` extensions
+throughout the application. Both live projects were inventoried: their five cards
+have no extensions, and neither project has card-targeted reports to remove.

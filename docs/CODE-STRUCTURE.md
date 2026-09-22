@@ -60,9 +60,10 @@ See [ADR-035](ADR-035-EDITOR-AUTOSAVE.md) for queue and recovery behavior.
 
 All named OpenAPI schemas are exported by contract generation, including inline
 unions. New endpoint functions should use these types, as in
-[resources](../apps/web/src/lib/api/resources.ts). Extra JSON fields for cards,
+[resources](../apps/web/src/lib/api/resources.ts). Extra JSON fields for
 milestones and reports remain an explicit user input boundary and are always
-validated by the server. Project metadata has no extension fields.
+validated by the server. Project and card metadata have no extension fields.
+Reports target projects or milestones.
 
 ### Planning and tag ownership
 

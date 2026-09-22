@@ -69,8 +69,8 @@
           }
         }
       ],
-      "valid": true,
-      "reason": "Rozszerzenie zachowane"
+          "valid": false,
+          "reason": "Rozszerzenie karty jest usunięte"
     },
     {
       "id": "V06",
@@ -387,6 +387,12 @@
     {
       "id": "P06",
       "path": "tests/parser-fixtures/custom-tag.md",
+      "type": "card",
+      "valid": false
+    },
+    {
+      "id": "P07",
+      "path": "tests/parser-fixtures/card-extension.md",
       "type": "card",
       "valid": false
     }

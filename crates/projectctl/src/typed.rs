@@ -394,8 +394,8 @@ impl Action {
             } => {
                 let (kind_target, id) = target
                     .split_once(':')
-                    .ok_or("Target must be project:UUID, card:UUID or milestone:UUID")?;
-                if !["project", "card", "milestone"].contains(&kind_target) {
+                    .ok_or("Target must be project:UUID or milestone:UUID")?;
+                if !["project", "milestone"].contains(&kind_target) {
                     return Err("Invalid target type".into());
                 }
                 super::uuid4(id)?;

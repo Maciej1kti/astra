@@ -59,7 +59,7 @@
         <span
           class="badge acceptance"
           title="Completed acceptance conditions; card status is set separately"
-          >Acceptance {item.acceptance_progress.completed}/{item
+          >Checklist {item.acceptance_progress.completed}/{item
             .acceptance_progress.total}</span
         >
       </span>

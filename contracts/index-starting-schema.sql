@@ -36,5 +36,5 @@ CREATE INDEX IF NOT EXISTS documents_blocked ON documents(project_id,entity_id) 
 CREATE INDEX IF NOT EXISTS documents_in_review ON documents(project_id,entity_id) WHERE entity_type='card' AND json_extract(metadata_json,'$.status')='review';
 CREATE INDEX IF NOT EXISTS documents_decision_needed ON documents(project_id,entity_id) WHERE entity_type='update' AND json_extract(metadata_json,'$.kind')='decision_needed';
 CREATE INDEX IF NOT EXISTS documents_report_kind ON documents(project_id,json_extract(metadata_json,'$.kind')) WHERE entity_type='update';
--- Card activity seeks its target before sorting/paging unrelated project reports.
+-- Report history seeks its target before sorting/paging unrelated project reports.
 CREATE INDEX IF NOT EXISTS documents_report_target ON documents(project_id,json_extract(metadata_json,'$.target.type'),json_extract(metadata_json,'$.target.id'),json_extract(metadata_json,'$.recorded_at') DESC,entity_id) WHERE entity_type='update';

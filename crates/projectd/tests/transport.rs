@@ -637,8 +637,20 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
         }
     }
     let card = resource["metadata"]["id"].as_str().unwrap();
+    let milestone: Value = app
+        .local("POST", &format!("/api/v1/projects/{project}/milestones"))
+        .header("x-request-id", Uuid::now_v7().to_string())
+        .header("x-command-epoch", epoch)
+        .json(&json!({"title":"Report target milestone"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let milestone = milestone["result"]["id"].as_str().unwrap();
     for target in [
-        json!({"type":"card","id":card}),
+        json!({"type":"milestone","id":milestone}),
         json!({"type":"project","id":project}),
     ] {
         let report = app.local("POST", &format!("/api/v1/projects/{project}/updates"))
@@ -647,10 +659,24 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
             .send().await.unwrap();
         assert_eq!(report.status(), 200);
     }
+    let rejected = app.local("POST", &format!("/api/v1/projects/{project}/updates"))
+        .header("x-request-id", Uuid::now_v7().to_string()).header("x-command-epoch", epoch)
+        .json(&json!({"kind":"note","summary":"Removed card report","target":{"type":"card","id":card},"author":{"kind":"human","label":"Test"}}))
+        .send().await.unwrap();
+    assert_eq!(rejected.status(), 422);
+    let reports: Value = app
+        .local("GET", &format!("/api/v1/projects/{project}/updates"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(reports["items"].as_array().unwrap().len(), 2);
     for path in [
-        format!("/api/v1/projects/{project}/updates?target_type=card&target_id={card}"),
+        format!("/api/v1/projects/{project}/updates?target_type=milestone&target_id={milestone}"),
         format!(
-            "/api/v1/views/list?type=update&project_id={project}&target_type=card&target_id={card}"
+            "/api/v1/views/list?type=update&project_id={project}&target_type=milestone&target_id={milestone}"
         ),
     ] {
         let response = app.local("GET", &path).send().await.unwrap();
@@ -660,12 +686,16 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
         assert_eq!(value["items"].as_array().unwrap().len(), 1);
         assert_eq!(
             value["items"][0]["target"],
-            json!({"type":"card","id":card})
+            json!({"type":"milestone","id":milestone})
         );
     }
     for path in [
-        format!("/api/v1/projects/{project}/updates?target_type=card"),
-        format!("/api/v1/views/list?type=card&target_type=card&target_id={card}"),
+        format!("/api/v1/projects/{project}/updates?target_type=card&target_id={card}"),
+        format!(
+            "/api/v1/views/list?type=update&project_id={project}&target_type=card&target_id={card}"
+        ),
+        format!("/api/v1/projects/{project}/updates?target_type=milestone"),
+        format!("/api/v1/views/list?type=card&target_type=milestone&target_id={milestone}"),
     ] {
         assert_eq!(app.local("GET", &path).send().await.unwrap().status(), 422);
     }

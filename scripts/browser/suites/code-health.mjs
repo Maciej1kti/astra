@@ -1,4 +1,4 @@
-/** Request scope, lazy reads and complete paginated card history on a real host. */
+/** Request scope and omitted card report reads on a real host. */
 import { runBrowserSuite } from "../runtime.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
@@ -17,7 +17,7 @@ await runBrowserSuite(
         JSON.stringify({
           kind: "note",
           summary: `History entry ${String(index + 1).padStart(2, "0")}`,
-          target: { type: "card", id: card.id },
+          target: { type: "project", id: project },
           author: { kind: "human", label: "Synthetic QA" },
           body: `## Lazy body ${index + 1}\n\nSynthetic history evidence.`,
         }),
@@ -101,15 +101,12 @@ await runBrowserSuite(
               .length,
         )
         .toBe(1);
-      const history = dialog
-        .locator("details")
-        .filter({ has: page.locator("summary", { hasText: /^Card updates/ }) });
       assert.equal(
         requests
           .slice(start)
           .filter((path) => path.startsWith(`${base}/updates`)).length,
         0,
-        "History must stay lazy until expanded",
+        "Card editor must not fetch reports",
       );
       assert.equal(
         requests
@@ -120,49 +117,14 @@ await runBrowserSuite(
         0,
         "Editor must not enumerate relation collections",
       );
-      await history.locator("summary").click();
-      await expect(history.locator("li")).toHaveCount(50);
-      const first = await history.locator("li > button").allTextContents();
-      assert.equal(
-        requests.filter((path) => path.startsWith(`${base}/updates/`)).length,
-        0,
-        "Report bodies must stay lazy",
-      );
-      await history
-        .getByRole("button", { name: "Next updates", exact: true })
-        .click();
-      await expect(history.locator("li")).toHaveCount(5);
-      const second = await history.locator("li > button").allTextContents();
-      assert.equal(new Set([...first, ...second]).size, 55);
       await expect(
-        history.getByRole("button", { name: "Next updates", exact: true }),
+        dialog.getByText("Card updates", { exact: true }),
       ).toHaveCount(0);
-      await history.locator("li > button").first().click();
       await expect(
-        history.getByRole("heading", { name: /^Lazy body / }),
-      ).toBeVisible();
-      await history
-        .getByRole("button", { name: "Previous updates", exact: true })
-        .click();
-      await expect(history.locator("li")).toHaveCount(50);
-      assert.deepEqual(
-        await history.locator("li > button").allTextContents(),
-        first,
-      );
-      const activity = requests.filter((path) =>
-        path.startsWith(`${base}/updates?`),
-      );
-      for (const path of activity) {
-        const params = new URL(path, config.origin).searchParams;
-        assert.equal(params.get("target_type"), "card");
-        assert.equal(params.get("target_id"), card.id);
-        assert.equal(params.get("limit"), "50");
-      }
+        dialog.getByText("Record progress", { exact: true }),
+      ).toHaveCount(0);
       results.push({
-        check: "Card history uses bounded target pages and lazy bodies",
-        pageSizes: [first.length, second.length],
-        uniqueReports: 55,
-        requests: activity,
+        check: "Card editor omits report UI and makes no report requests",
       });
       await dialog.getByLabel("Find by title", { exact: true }).fill("History");
       await dialog

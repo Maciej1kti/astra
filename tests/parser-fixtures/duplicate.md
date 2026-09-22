@@ -19,8 +19,6 @@
 "depends_on": []
 "labels":
 - "demo"
-"x-owner-note":
-  "visibility": "private"
 ---
 ## Oczekiwany rezultat
 

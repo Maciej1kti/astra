@@ -21,17 +21,3 @@ export async function cursorPage<T>(
     return { value: await read(null), reset: true };
   }
 }
-
-export function cardActivityPath(
-  project: string,
-  card: string,
-  cursor: string | null = null,
-) {
-  const params = new URLSearchParams({
-    target_type: "card",
-    target_id: card,
-    limit: "50",
-  });
-  if (cursor) params.set("cursor", cursor);
-  return `/api/v1/projects/${project}/updates?${params}`;
-}

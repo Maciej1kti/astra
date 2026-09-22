@@ -9,9 +9,9 @@ ASTRA_TEST_PROFILE=release npm run test:browser
 ```
 
 The two primary suites exercise broad workflows and planning widgets. The portable
-regression runner adds card acceptance/activity, workspace tags, editor draft
-safety, board/settings/focus dialogs, planning navigation, bounded view/activity
-reads, real stale-page recovery in all five paged views, and direct/status command
+regression runner adds card checklists and handle reordering, workspace tags,
+editor draft safety, board/settings/focus dialogs, planning navigation, bounded
+view reads, real stale-page recovery in all five paged views, and direct/status command
 outcomes with preserved drafts and unavailable conflict details. The deletion
 suite covers permanent card and project metadata deletion, confirmation safety,
 command uncertainty, conflicts and current-project navigation.

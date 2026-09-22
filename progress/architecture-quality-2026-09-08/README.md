@@ -74,7 +74,7 @@ baseline; it does not prove exhaustive coverage or architectural quality.
 **Priority: high.** Evidence:
 [DateChange](../../apps/web/src/features/planning/DateChange.svelte#L72),
 [MoveChange](../../apps/web/src/features/board/MoveChange.svelte#L75),
-[CardUpdateComposer](../../apps/web/src/features/cards/CardUpdateComposer.svelte#L75),
+[CardUpdateComposer](https://github.com/Maciej1kti/astra/blob/0188524d2414ff98e542426e1c9c704b18936da3/apps/web/src/features/cards/CardUpdateComposer.svelte#L75),
 [Editor](../../apps/web/src/features/editor/Editor.svelte#L530),
 [Settings](../../apps/web/src/features/settings/Settings.svelte#L163) and
 [TagManager](../../apps/web/src/features/tags/TagManager.svelte#L178).

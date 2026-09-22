@@ -18,10 +18,7 @@ import {
   command,
   send,
 } from "../../apps/web/src/lib/api/api.ts";
-import {
-  cursorPage,
-  cardActivityPath,
-} from "../../apps/web/src/lib/api/pagination.ts";
+import { cursorPage } from "../../apps/web/src/lib/api/pagination.ts";
 import { TagSuggestions } from "../../apps/web/src/features/tags/tag-suggestions.ts";
 
 const query = {
@@ -175,13 +172,6 @@ test("page refresh preserves a valid cursor and restarts only on explicit CURSOR
     }, "page"),
     { status: 401 },
   );
-  const url = new URL(
-    cardActivityPath("p", "selected-card", "next"),
-    "https://local.test",
-  );
-  assert.equal(url.searchParams.get("target_id"), "selected-card");
-  assert.equal(url.searchParams.get("target_type"), "card");
-  assert.equal(url.searchParams.get("limit"), "50");
 });
 
 test("one active card-list load makes exactly one request and leaves unrelated arrays absent", async () => {

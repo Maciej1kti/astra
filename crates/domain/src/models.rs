@@ -51,6 +51,7 @@ wire_enum!(TargetKind {
     Card,
     Milestone
 });
+wire_enum!(ReportTargetKind { Project, Milestone });
 wire_enum!(EvidenceKind { Url, Commit, Path });
 wire_enum!(Locale { Pl, En });
 wire_enum!(WeekStart { Monday, Sunday });
@@ -97,6 +98,13 @@ pub struct Target {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct ReportTarget {
+    #[serde(rename = "type")]
+    pub kind: ReportTargetKind,
+    pub id: String,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Author {
     pub kind: AuthorKind,
     pub label: String,
@@ -125,6 +133,7 @@ pub struct ProjectMetadata {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CardMetadata {
     pub id: String,
     pub title: String,
@@ -150,8 +159,6 @@ pub struct CardMetadata {
     pub labels: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acceptance: Option<Vec<AcceptanceItem>>,
-    #[serde(flatten)]
-    pub extensions: Extensions,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -173,7 +180,7 @@ pub struct MilestoneMetadata {
 pub struct UpdateMetadata {
     pub id: String,
     pub kind: UpdateKind,
-    pub target: Target,
+    pub target: ReportTarget,
     pub summary: String,
     pub author: Author,
     pub recorded_at: String,

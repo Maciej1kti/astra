@@ -110,7 +110,7 @@ Typ: integration. Wymagania: R21, R26.
 
 Typ: unit. Wymagania: R26.
 
-**Kroki:** Zmień wyłącznie status pliku z nietypowym body i x-*; porównaj body bajtowo.
+**Steps:** Change only the status of a milestone with a nonstandard body and an x-* extension; compare the body byte-for-byte.
 
 **Oczekiwany wynik:** Body identyczne, rozszerzenia zachowane, reszta nagłówka zgodna ze schema.
 

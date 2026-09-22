@@ -183,7 +183,7 @@
         "R26"
       ],
       "title": "Round-trip i extensions",
-      "steps": "Zmień wyłącznie status pliku z nietypowym body i x-*; porównaj body bajtowo.",
+      "steps": "Change only the status of a milestone with a nonstandard body and an x-* extension; compare the body byte-for-byte.",
       "expected": "Body identyczne, rozszerzenia zachowane, reszta nagłówka zgodna ze schema.",
       "type": "unit",
       "release_blocker": true,

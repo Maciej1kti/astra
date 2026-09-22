@@ -17,9 +17,6 @@
 "milestone_id": "44444444-4444-4444-8444-444444444444"
 "depends_on": []
 "labels": &labels ["demo"]
-"x-copy": *labels
-"x-owner-note":
-  "visibility": "private"
 ---
 ## Oczekiwany rezultat
 

@@ -22,10 +22,7 @@
     "depends_on": [],
     "labels": [
       "demo"
-    ],
-    "x-owner-note": {
-      "visibility": "private"
-    }
+    ]
   },
   "body": "## Oczekiwany rezultat\n\nEksport działa na uzgodnionym zestawie danych.\n\n## Akceptacja\n\nUżytkownik sprawdził plik wynikowy.\n"
 }

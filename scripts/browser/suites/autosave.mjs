@@ -140,11 +140,6 @@ export async function runAutosaveChecks({
       exact: true,
     });
     if (await discard.isVisible()) await discard.click();
-    const discardUpdate = dialog().getByRole("button", {
-      name: "Discard update draft",
-      exact: true,
-    });
-    if (await discardUpdate.isVisible()) await discardUpdate.click();
     await dialog()
       .waitFor({ state: "hidden" })
       .catch(() => {});
@@ -395,10 +390,9 @@ export async function runAutosaveChecks({
           const tagInput = dialog().locator(
             'input[placeholder="Find or create a tag"]',
           );
-          const acceptanceInput = dialog().getByLabel(
-            "New acceptance condition",
-            { exact: true },
-          );
+          const acceptanceInput = dialog().getByLabel("New item", {
+            exact: true,
+          });
           await tagInput.fill(tagDraft);
           await acceptanceInput.fill(acceptanceDraft);
           await page.waitForTimeout(550);
@@ -425,7 +419,7 @@ export async function runAutosaveChecks({
             !persisted.metadata.acceptance?.some(
               (item) => item.text === acceptanceDraft,
             ),
-            "buffered acceptance item must not be posted",
+            "buffered checklist item must not be posted",
           );
         } finally {
           releaseThird();
@@ -834,7 +828,7 @@ export async function runAutosaveChecks({
 
   await check(
     "AS07",
-    "Card review date, acceptance, dependency and tag edits autosave while an independent report draft remains editable",
+    "Card review date, checklist, dependency and tag edits autosave",
     async () => {
       const dependency = await createCard({
         title: `Autosave dependency ${Date.now().toString(36)}`,
@@ -856,7 +850,7 @@ export async function runAutosaveChecks({
         path,
         (value) => !Object.hasOwn(value.metadata, "review_on"),
       );
-      const acceptance = dialog().getByLabel("New acceptance condition", {
+      const acceptance = dialog().getByLabel("New item", {
         exact: true,
       });
       await acceptance.fill("The autosave acceptance condition is met.");
@@ -867,7 +861,7 @@ export async function runAutosaveChecks({
         (value) => value.metadata.acceptance?.length === 1,
       );
       await dialog()
-        .getByRole("checkbox", { name: /^Complete acceptance item 1:/ })
+        .getByRole("checkbox", { name: /^Complete checklist item 1:/ })
         .check();
       await waitForWrite(path, "PATCH", 4);
       await waitForSaved(
@@ -897,28 +891,15 @@ export async function runAutosaveChecks({
       await waitForSaved(path, (value) =>
         value.metadata.depends_on?.includes(dependency.metadata.id),
       );
-      await dialog()
-        .getByRole("button", { name: "Add card update", exact: true })
-        .click();
-      await dialog()
-        .getByLabel("Update summary", { exact: true })
-        .fill("Independent report draft");
-      await dialog()
-        .getByLabel(/^Update details/)
-        .fill("This draft must not block card autosave.");
-      const latest = "Card autosave while report draft is open";
+      const latest = "Card autosave after checklist and relation changes";
       await title().fill(latest);
       await waitForWrite(path, "PATCH", 7);
       await waitForSaved(path, (value) => value.metadata.title === latest);
-      await expect(
-        dialog().getByLabel("Update summary", { exact: true }),
-      ).toHaveValue("Independent report draft");
       return {
         reviewDateAddClear: true,
         acceptance: true,
         tag: true,
         dependency: true,
-        reportIndependent: true,
       };
     },
   );

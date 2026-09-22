@@ -44,11 +44,12 @@ Gdy GUI rozrejestrowuje projekt, zmienia tylko workspace. Nie usuwa plików. Rel
 ## Kolekcje i filtrowanie
 
 Report collections support `target_type` and `target_id` as an optional pair.
-Use `/api/v1/projects/{project_id}/updates?target_type=card&target_id={card_id}`
-for a bounded card activity page, or the same pair with
-`/api/v1/views/list?type=update`. The target kind is `project`, `card` or
-`milestone`; the identifier is a canonical UUIDv4. Incomplete/invalid pairs and
-target filters on other resource kinds return 422 `INVALID_TARGET_FILTER`.
+Use `/api/v1/projects/{project_id}/updates?target_type=project&target_id={project_id}`
+or `target_type=milestone` for bounded report history, or the same pair with
+`/api/v1/views/list?type=update`. Report targets are `project` or `milestone`;
+card-targeted reports are rejected. The identifier is a canonical UUIDv4.
+Incomplete/invalid pairs and target filters on other resource kinds return 422
+`INVALID_TARGET_FILTER`.
 Both fields are applied before pagination and are bound into the cursor identity.
 Report bodies remain detail-only. See [ADR-029](ADR-029-BOUNDED-REPORT-HISTORY.md).
 

@@ -23,9 +23,22 @@ export async function runCardChecks({
   const results = [],
     errors = [],
     csp = [];
+  const writes = [];
   const unique = (name) => `Stage 2 ${name} ${randomUUID().slice(0, 8)}`;
   page.setDefaultTimeout(15000);
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      (request.method() === "POST" || request.method() === "PATCH") &&
+      url.pathname.startsWith(`${base}/cards`)
+    )
+      writes.push({
+        method: request.method(),
+        path: url.pathname,
+        payload: request.postDataJSON(),
+      });
+  });
   await page.addInitScript(() => {
     window.__stage2CardCsp = [];
     document.addEventListener("securitypolicyviolation", (event) => {
@@ -47,15 +60,26 @@ export async function runCardChecks({
     await expect(description()).toBeVisible();
   }
   const item = (index) =>
-    dialog().getByLabel(`Acceptance item ${index}`, { exact: true });
+    dialog().getByLabel(`Checklist item ${index}`, { exact: true });
   const checklist = () =>
-    dialog().getByRole("region", { name: "Acceptance checklist", exact: true });
-  const composer = () =>
-    dialog().getByRole("region", {
-      name: "Add an update to this card",
+    dialog().getByRole("region", { name: "Checklist", exact: true });
+  const grip = (index) =>
+    dialog().getByRole("button", {
+      name: `Move checklist item ${index}`,
       exact: true,
     });
+  const keyboardMove = async (index, direction = "ArrowDown") => {
+    await grip(index).focus();
+    await page.keyboard.press("Space");
+    await page.keyboard.press(direction);
+    await page.keyboard.press("Space");
+  };
   const get = (id) => cli("get", `${base}/cards/${id}`);
+  const cardWrites = (id) =>
+    writes.filter(
+      (write) =>
+        write.path === `${base}/cards/${id}` && write.method === "PATCH",
+    );
 
   async function mutate(method, path, payload, version) {
     await writeFile(commandFile, JSON.stringify(payload), { mode: 0o600 });
@@ -78,11 +102,6 @@ export async function runCardChecks({
     } while (cursor);
     return items;
   }
-  const updatesFor = (cardId) =>
-    all(`${base}/updates`).filter(
-      (update) => update.target?.type === "card" && update.target.id === cardId,
-    );
-
   async function close() {
     if (!(await dialog().count())) return;
     await dialog()
@@ -294,7 +313,7 @@ export async function runCardChecks({
 
   await check(
     "C02-model",
-    "Review date and reordered acceptance items persist through autosave and reload without accepting the card",
+    "Review date and reordered checklist items persist through autosave and reload without accepting the card",
     async () => {
       const card = await create({
         title: unique("acceptance workflow"),
@@ -304,33 +323,26 @@ export async function runCardChecks({
       });
       await open(card.id);
       await dialog()
-        .getByLabel("New acceptance condition", { exact: true })
+        .getByLabel("New item", { exact: true })
         .fill("The intended result is visible.");
+      await dialog().getByLabel("New item", { exact: true }).press("Enter");
       await dialog()
-        .getByLabel("New acceptance condition", { exact: true })
-        .press("Enter");
-      await dialog()
-        .getByLabel("New acceptance condition", { exact: true })
+        .getByLabel("New item", { exact: true })
         .fill("Keyboard and narrow layouts are verified.");
       await dialog()
         .getByRole("button", { name: "Add item", exact: true })
         .click();
       await dialog()
-        .getByRole("checkbox", { name: /^Complete acceptance item 1:/ })
+        .getByRole("checkbox", { name: /^Complete checklist item 1:/ })
         .check();
-      await dialog()
-        .getByRole("button", {
-          name: "Move acceptance item 1 down",
-          exact: true,
-        })
-        .click();
+      await keyboardMove(1);
       await expect(item(1)).toHaveValue(
         "Keyboard and narrow layouts are verified.",
       );
       await expect(item(2)).toHaveValue("The intended result is visible.");
       await expect(
         dialog().getByRole("checkbox", {
-          name: /^Complete acceptance item 2:/,
+          name: /^Complete checklist item 2:/,
         }),
       ).toBeChecked();
       await expect(dialog().getByLabel("Status", { exact: true })).toHaveValue(
@@ -369,7 +381,7 @@ export async function runCardChecks({
       await expect(item(1)).toHaveValue(saved.metadata.acceptance[0].text);
       await expect(item(2)).toHaveValue(saved.metadata.acceptance[1].text);
       await dialog()
-        .getByRole("checkbox", { name: /^Complete acceptance item 1:/ })
+        .getByRole("checkbox", { name: /^Complete checklist item 1:/ })
         .check();
       await expect(dialog().getByLabel("Status", { exact: true })).toHaveValue(
         "active",
@@ -391,11 +403,11 @@ export async function runCardChecks({
         .locator("main .table")
         .getByRole("button")
         .filter({ hasText: card.title });
-      await expect(row).toContainText("Acceptance 2/2");
+      await expect(row).toContainText("Checklist 2/2");
       await screenshot("C02-list-summary");
       await route("board", { q: card.title });
       const boardCard = page.locator(`[data-board-card="${card.id}"]`);
-      await expect(boardCard).toContainText("Acceptance 2/2");
+      await expect(boardCard).toContainText("Checklist 2/2");
       await screenshot("C02-board-summary");
       return {
         card: card.id,
@@ -426,7 +438,7 @@ export async function runCardChecks({
       await open(card.id);
       await reviewOn().fill("");
       await dialog()
-        .getByRole("button", { name: "Remove acceptance item 1", exact: true })
+        .getByRole("button", { name: "Remove checklist item 1", exact: true })
         .click();
       await waitForAutosaveACK();
       const saved = get(card.id);
@@ -447,256 +459,179 @@ export async function runCardChecks({
   );
 
   await check(
-    "C04-update",
-    "A real card-targeted update posts once while the autosaved card remains editable",
+    "C04-drag",
+    "Checklist pointer and keyboard ordering persist exactly once and cancel safely",
     async () => {
+      const acceptance = [
+        { id: randomUUID(), text: "First checklist item", completed: false },
+        { id: randomUUID(), text: "Completed checklist item", completed: true },
+        { id: randomUUID(), text: "Last checklist item", completed: false },
+      ];
       const card = await create({
-        title: unique("dirty card update"),
-        status: "active",
-        review_on: "2026-09-22",
-        body: "Saved description",
+        title: unique("checklist drag ordering"),
+        acceptance,
       });
-      const before = get(card.id);
-      const summary = unique("recorded result");
       await open(card.id);
-      await title().fill(`${card.title} — autosaved card draft`);
-      await reviewOn().fill("2026-09-23");
-      await editDescription();
-      await description().fill("Autosaved description with preserved context.");
-      await waitForAutosaveACK();
-      await composer()
-        .getByRole("button", { name: "Add card update", exact: true })
-        .click();
-      await composer()
-        .getByLabel("Update kind", { exact: true })
-        .selectOption("result");
-      await composer()
-        .getByLabel("Update summary", { exact: true })
-        .fill(summary);
-      await composer()
-        .getByLabel(/^Update details/)
-        .fill(
-          "## Evidence from the card\n\nA real targeted report recorded in the synthetic project.",
-        );
-      await composer()
-        .getByLabel("Update author", { exact: true })
-        .fill("Synthetic card QA");
-      await composer()
-        .getByRole("button", { name: "Post card update", exact: true })
-        .click();
-      await expect(composer().getByRole("status")).toContainText(
-        "Update recorded for this card",
+      const path = `${base}/cards/${card.id}`;
+      const beforePointerWrites = cardWrites(card.id).length;
+      const firstGrip = grip(1);
+      const lastRow = dialog().locator("[data-checklist-item]").nth(2);
+      const gripBox = await firstGrip.boundingBox();
+      const lastBox = await lastRow.boundingBox();
+      assert(
+        gripBox && lastBox,
+        "Checklist drag targets should be measurable.",
       );
-      await expect(title()).toHaveValue(`${card.title} — autosaved card draft`);
-      if (!(await description().count())) await editDescription();
-      await expect(description()).toHaveValue(
-        "Autosaved description with preserved context.",
+      await page.mouse.move(
+        gripBox.x + gripBox.width / 2,
+        gripBox.y + gripBox.height / 2,
       );
-      assert.notEqual(get(card.id).version, before.version);
-      const reports = updatesFor(card.id).filter(
-        (update) => update.title === summary,
+      await page.mouse.down();
+      await page.mouse.move(
+        lastBox.x + lastBox.width / 2,
+        lastBox.y + lastBox.height / 2,
+        {
+          steps: 8,
+        },
       );
-      assert.equal(reports.length, 1);
-      const report = cli("get", `${base}/updates/${reports[0].id}`);
-      assert.deepEqual(report.metadata.target, { type: "card", id: card.id });
-      assert.equal(report.metadata.kind, "result");
-      assert.equal(report.metadata.author.label, "Synthetic card QA");
-      assert.match(report.body, /A real targeted report/);
-      await dialog()
-        .locator("summary")
-        .filter({ hasText: /^Card updates/ })
-        .click();
-      await dialog()
-        .getByRole("button", { name: summary, exact: true })
-        .click();
-      await expect(
-        dialog().getByRole("heading", {
-          name: "Evidence from the card",
-          exact: true,
-        }),
-      ).toBeVisible();
-      await screenshot("C04-update-with-card-draft");
-      await waitForAutosaveACK();
-      assert.equal(get(card.id).metadata.review_on, "2026-09-23");
-      assert.equal(get(card.id).metadata.status, "active");
+      await page.waitForTimeout(250);
       assert.equal(
-        updatesFor(card.id).filter((update) => update.title === summary).length,
-        1,
+        cardWrites(card.id).length,
+        beforePointerWrites,
+        "A held drag must not submit a PATCH.",
       );
+      await page.mouse.up();
+      await expect(item(1)).toHaveValue("Completed checklist item");
+      await expect(item(2)).toHaveValue("Last checklist item");
+      await expect(item(3)).toHaveValue("First checklist item");
+      await expect
+        .poll(() => cardWrites(card.id).length, { timeout: 15000 })
+        .toBe(beforePointerWrites + 1);
+      await waitForAutosaveACK();
+      assert.equal(cardWrites(card.id).length, beforePointerWrites + 1);
+      const pointerSaved = get(card.id);
+      assert.deepEqual(
+        pointerSaved.metadata.acceptance.map(({ id, text, completed }) => ({
+          id,
+          text,
+          completed,
+        })),
+        [acceptance[1], acceptance[2], acceptance[0]],
+      );
+      assert.equal(cardWrites(card.id).at(-1).path, path);
+
+      await page.reload();
+      await title().waitFor();
+      assert.deepEqual(
+        await dialog()
+          .locator("[data-checklist-item]")
+          .evaluateAll((rows) =>
+            rows.map((row) => ({
+              id: row.dataset.checklistItem,
+              text: row.querySelector("textarea").value,
+              completed: row.querySelector('input[type="checkbox"]').checked,
+            })),
+          ),
+        [acceptance[1], acceptance[2], acceptance[0]],
+      );
+
+      await keyboardMove(1);
+      await expect(item(1)).toHaveValue("Last checklist item");
+      await expect(item(2)).toHaveValue("Completed checklist item");
+      await expect
+        .poll(() => cardWrites(card.id).length, { timeout: 15000 })
+        .toBe(beforePointerWrites + 2);
+      await waitForAutosaveACK();
+      const keyboardSaved = get(card.id);
+      assert.deepEqual(
+        keyboardSaved.metadata.acceptance.map(({ id, text, completed }) => ({
+          id,
+          text,
+          completed,
+        })),
+        [acceptance[2], acceptance[1], acceptance[0]],
+      );
+
+      await grip(1).focus();
+      await page.keyboard.press("Space");
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("Escape");
+      await expect(item(1)).toHaveValue("Last checklist item");
+      await expect(item(2)).toHaveValue("Completed checklist item");
+      await page.waitForTimeout(400);
+      assert.equal(
+        cardWrites(card.id).length,
+        beforePointerWrites + 2,
+        "Escape must cancel the keyboard reorder without a write.",
+      );
+      assert.equal(get(card.id).version, keyboardSaved.version);
       return {
         card: card.id,
-        update: reports[0].id,
-        cardAutosavedBeforeUpdate: true,
-        duplicateUpdates: 0,
+        pointerWrites: 1,
+        keyboardWrites: 1,
+        idsStable: true,
+        completionPreserved: true,
+        cancelUnchanged: true,
       };
     },
   );
 
   await check(
-    "C05-update-guard",
-    "An update-only draft is protected by Close and browser Back",
+    "C05-long-drag-cancel",
+    "A held checklist drag scrolls the dialog and Escape restores the saved order",
     async () => {
-      const card = await create({ title: unique("update only draft") });
+      const acceptance = Array.from({ length: 24 }, (_, index) => ({
+        id: randomUUID(),
+        text: `Scrollable item ${index + 1}`,
+        completed: index % 2 === 0,
+      }));
+      const card = await create({
+        title: unique("long checklist"),
+        acceptance,
+      });
+      await open(card.id);
+      await grip(1).scrollIntoViewIfNeeded();
       const before = get(card.id);
-      await openFromList(card);
-      await composer()
-        .getByRole("button", { name: "Add card update", exact: true })
-        .click();
-      await composer()
-        .getByLabel("Update summary", { exact: true })
-        .fill("Unsaved update with a clean card");
-      await dialog()
-        .getByRole("button", { name: "Close editor", exact: true })
-        .click();
+      const startScroll = await dialog().evaluate((node) => node.scrollTop);
+      const handle = await grip(1).boundingBox();
+      const modal = await dialog().boundingBox();
+      assert(handle && modal);
+      const initialWrites = cardWrites(card.id).length;
+      await page.mouse.move(
+        handle.x + handle.width / 2,
+        handle.y + handle.height / 2,
+      );
+      await page.mouse.down();
+      try {
+        await page.mouse.move(
+          handle.x + handle.width / 2,
+          modal.y + modal.height - 14,
+          { steps: 6 },
+        );
+        await expect
+          .poll(() => dialog().evaluate((node) => node.scrollTop), {
+            timeout: 5000,
+          })
+          .toBeGreaterThan(startScroll + 30);
+        assert.equal(cardWrites(card.id).length, initialWrites);
+        await page.keyboard.press("Escape");
+        await expect(dialog()).toBeVisible();
+      } finally {
+        await page.mouse.up();
+      }
       await expect(
-        dialog().getByText("Discard your unsaved draft?", { exact: true }),
-      ).toBeVisible();
-      await dialog()
-        .getByRole("button", { name: "Keep editing", exact: true })
-        .click();
-      await expect(
-        composer().getByLabel("Update summary", { exact: true }),
-      ).toHaveValue("Unsaved update with a clean card");
-      const editorUrl = page.url();
-      await page.goBack();
-      await expect(
-        dialog().getByText("Discard your unsaved draft?", { exact: true }),
-      ).toBeVisible();
-      await dialog()
-        .getByRole("button", { name: "Keep editing", exact: true })
-        .click();
-      await expect(page).toHaveURL(editorUrl);
-      await expect(
-        composer().getByLabel("Update summary", { exact: true }),
-      ).toHaveValue("Unsaved update with a clean card");
-      await composer().scrollIntoViewIfNeeded();
-      await screenshot("C05-update-only-guarded-draft");
+        dialog().locator("[data-checklist-item]").first(),
+      ).toHaveAttribute("data-checklist-item", acceptance[0].id);
+      await page.waitForTimeout(400);
+      assert.equal(cardWrites(card.id).length, initialWrites);
       assert.equal(get(card.id).version, before.version);
-      assert.equal(updatesFor(card.id).length, 0);
-      await composer()
-        .getByRole("button", { name: "Cancel update", exact: true })
-        .click();
-      await composer()
-        .getByRole("button", { name: "Discard update draft", exact: true })
-        .click();
-      await dialog()
-        .getByRole("button", { name: "Close editor", exact: true })
-        .click();
-      await dialog().waitFor({ state: "hidden" });
       return {
-        card: card.id,
-        closeGuard: true,
-        backGuard: true,
-        sourceUnchanged: true,
+        dialogAutoScroll: true,
+        cancelledWithoutWrite: true,
+        modalStayedOpen: true,
       };
     },
   );
-
-  for (const recovery of ["retry", "status"]) {
-    await check(
-      `C06-update-${recovery}`,
-      `A committed update with a lost response recovers by ${recovery} without a duplicate or editor state loss`,
-      async () => {
-        const card = await create({
-          title: unique(`update ${recovery} recovery`),
-        });
-        const summary = unique(`response loss ${recovery}`);
-        await open(card.id);
-        await title().fill(`${card.title} — preserved draft`);
-        await waitForAutosaveACK();
-        await composer()
-          .getByRole("button", { name: "Add card update", exact: true })
-          .click();
-        await composer()
-          .getByLabel("Update summary", { exact: true })
-          .fill(summary);
-        const requests = [];
-        let interceptionError;
-        const matcher = `**${base}/updates`;
-        await page.route(matcher, async (intercept) => {
-          if (intercept.request().method() !== "POST")
-            return intercept.continue();
-          const request = intercept.request();
-          requests.push({
-            requestId: request.headers()["x-request-id"],
-            epoch: request.headers()["x-command-epoch"],
-            payload: request.postData(),
-          });
-          if (requests.length > 1) return intercept.continue();
-          try {
-            const committed = await intercept.fetch();
-            assert.equal(committed.ok(), true, await committed.text());
-            await intercept.abort("failed");
-          } catch (cause) {
-            interceptionError = String(cause);
-            await intercept.abort("failed").catch(() => {});
-          }
-        });
-        try {
-          await composer()
-            .getByRole("button", { name: "Post card update", exact: true })
-            .click();
-          await expect(
-            composer().getByRole("button", {
-              name: "Check update status",
-              exact: true,
-            }),
-          ).toBeEnabled();
-          assert.equal(interceptionError, undefined);
-          assert.equal(
-            updatesFor(card.id).filter((update) => update.title === summary)
-              .length,
-            1,
-          );
-          assert.equal(
-            cli(
-              "get",
-              `/api/v1/commands/${requests[0].requestId}?epoch=${requests[0].epoch}`,
-            ).state,
-            "committed",
-          );
-          await expect(title()).toBeDisabled();
-          await expect(title()).toHaveValue(`${card.title} — preserved draft`);
-          await composer()
-            .getByRole("button", {
-              name:
-                recovery === "retry"
-                  ? "Retry same update"
-                  : "Check update status",
-              exact: true,
-            })
-            .click();
-          await expect(composer().getByRole("status")).toContainText(
-            "Update recorded for this card",
-          );
-          await expect(title()).toBeEnabled();
-          await expect(title()).toHaveValue(`${card.title} — preserved draft`);
-          assert.equal(requests.length, recovery === "retry" ? 2 : 1);
-          if (recovery === "retry") assert.deepEqual(requests[1], requests[0]);
-          assert.equal(
-            updatesFor(card.id).filter((update) => update.title === summary)
-              .length,
-            1,
-          );
-          assert.equal(
-            get(card.id).metadata.title,
-            `${card.title} — preserved draft`,
-          );
-          await composer().scrollIntoViewIfNeeded();
-          await screenshot(`C06-update-${recovery}-recovered`);
-          return {
-            card: card.id,
-            requests: requests.length,
-            sameIdentity: true,
-            committedBeforeResponseLoss: true,
-            duplicateUpdates: 0,
-          };
-        } finally {
-          await page.unroute(matcher);
-        }
-      },
-    );
-  }
 
   await check(
     "C07-invalid",
@@ -716,7 +651,7 @@ export async function runCardChecks({
       await open(card.id);
       await item(1).fill("  ");
       await expect(checklist().getByRole("alert")).toContainText(
-        "Add text to acceptance item 1",
+        "Add text to checklist item 1",
       );
       assert.equal(get(card.id).version, before.version);
       await item(1).fill("x".repeat(501));
@@ -740,7 +675,7 @@ export async function runCardChecks({
 
   await check(
     "C08-mobile",
-    "Card purpose, acceptance controls and update composer fit a 390px viewport",
+    "Card checklist controls fit a 390px viewport without card report sections",
     async () => {
       const card = await create({
         title: unique(
@@ -765,6 +700,14 @@ export async function runCardChecks({
       await page.setViewportSize({ width: 390, height: 844 });
       try {
         await open(card.id);
+        for (const section of [
+          "Record progress",
+          "Card updates",
+          "Additional fields",
+        ])
+          await expect(
+            dialog().getByText(section, { exact: true }),
+          ).toHaveCount(0);
         await checklist().scrollIntoViewIfNeeded();
         await screenshot("C08-mobile-purpose");
         await checklist().scrollIntoViewIfNeeded();
@@ -776,63 +719,88 @@ export async function runCardChecks({
           checklistMetrics.scrollWidth <= checklistMetrics.width + 1,
           JSON.stringify(checklistMetrics),
         );
-        const moveTarget = await dialog()
-          .getByRole("button", {
-            name: "Move acceptance item 1 down",
-            exact: true,
-          })
+        const rowMetrics = await dialog()
+          .locator("[data-checklist-item]")
+          .first()
+          .evaluate((row) => {
+            const rect = (selector) => {
+              const node = row.querySelector(selector);
+              if (!node) return null;
+              const box = node.getBoundingClientRect();
+              return { width: box.width, height: box.height };
+            };
+            return {
+              width: row.clientWidth,
+              scrollWidth: row.scrollWidth,
+              height: row.clientHeight,
+              checkbox: rect('input[type="checkbox"]'),
+              text: rect("textarea"),
+              trash: rect("button.icon-button"),
+              grip: rect("button.handle"),
+            };
+          });
+        assert(
+          rowMetrics.scrollWidth <= rowMetrics.width + 1,
+          JSON.stringify(rowMetrics),
+        );
+        assert(rowMetrics.text?.height >= 44, JSON.stringify(rowMetrics));
+        for (const control of ["trash", "grip"])
+          assert(
+            rowMetrics[control]?.width >= 44 &&
+              rowMetrics[control]?.height >= 44,
+            `${control}: ${JSON.stringify(rowMetrics)}`,
+          );
+        await screenshot("C08-mobile-checklist");
+        const touchGrip = await grip(1).boundingBox();
+        const touchTarget = await dialog()
+          .locator("[data-checklist-item]")
+          .nth(1)
           .boundingBox();
         assert(
-          moveTarget && moveTarget.width >= 44 && moveTarget.height >= 44,
-          JSON.stringify(moveTarget),
+          touchGrip && touchTarget,
+          "Touch drag targets should be measurable.",
         );
-        await screenshot("C08-mobile-checklist");
-        await dialog()
-          .getByRole("button", {
-            name: "Move acceptance item 1 down",
-            exact: true,
-          })
-          .click();
+        const writesBeforeTouch = cardWrites(card.id).length;
+        const cdp = await page.context().newCDPSession(page);
+        const touchPoint = (x, y) => [{ x, y, id: 1, radiusX: 3, radiusY: 3 }];
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: touchPoint(
+            touchGrip.x + touchGrip.width / 2,
+            touchGrip.y + touchGrip.height / 2,
+          ),
+        });
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: touchPoint(
+            touchTarget.x + touchTarget.width / 2,
+            touchTarget.y + touchTarget.height / 2,
+          ),
+        });
+        await page.waitForTimeout(250);
+        assert.equal(cardWrites(card.id).length, writesBeforeTouch);
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
         await expect(item(1)).toHaveValue(
-          card.acceptance?.[1]?.text ??
-            "Every move and remove action is reachable from the keyboard and viewport.",
+          "Every move and remove action is reachable from the keyboard and viewport.",
         );
+        await expect
+          .poll(() => cardWrites(card.id).length, { timeout: 15000 })
+          .toBe(writesBeforeTouch + 1);
         await waitForAutosaveACK();
-        await open(card.id);
-        await composer()
-          .getByRole("button", { name: "Add card update", exact: true })
-          .click();
-        await composer()
-          .getByLabel("Update summary", { exact: true })
-          .fill("Mobile update draft remains reachable");
-        await composer()
-          .getByLabel(/^Update details/)
-          .fill(
-            "Synthetic narrow-layout check. No update is posted by this layout-only case.",
-          );
-        await composer()
-          .getByRole("button", { name: "Post card update", exact: true })
-          .scrollIntoViewIfNeeded();
-        const composerMetrics = await dialog().evaluate((element) => ({
-          width: element.clientWidth,
-          scrollWidth: element.scrollWidth,
-        }));
-        assert(
-          composerMetrics.scrollWidth <= composerMetrics.width + 1,
-          JSON.stringify(composerMetrics),
+        await expect(item(2)).toHaveValue(
+          "A long acceptance condition remains editable without horizontal page scrolling. ".repeat(
+            5,
+          ),
         );
-        await expect(
-          composer().getByRole("button", {
-            name: "Post card update",
-            exact: true,
-          }),
-        ).toBeVisible();
-        await screenshot("C08-mobile-update-composer");
+        await screenshot("C08-mobile-touch-checklist");
         return {
           viewport: { width: 390, height: 844 },
           checklistMetrics,
-          composerMetrics,
-          moveTarget,
+          rowMetrics,
+          touchWrites: 1,
           physicalPhone: false,
         };
       } finally {

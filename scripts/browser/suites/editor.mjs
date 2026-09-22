@@ -894,7 +894,7 @@ export async function runEditorChecks({
 
   await check(
     "inspector-context",
-    "Card relationships and targeted updates display names and content",
+    "Card relationships display names without report sections",
     async () => {
       const predecessor = await create({ title: "Repair named predecessor" });
       const milestone = await mutate("POST", `${base}/milestones`, {
@@ -904,13 +904,6 @@ export async function runEditorChecks({
         title: "Repair card inspector",
         milestone_id: milestone.id,
         depends_on: [predecessor.id],
-      });
-      await mutate("POST", `${base}/updates`, {
-        kind: "result",
-        summary: "Repair card result",
-        author: { kind: "human", label: "Synthetic repair QA" },
-        target: { type: "card", id: card.id },
-        body: "## Verified card context\n\nThis update belongs to the selected card.",
       });
       await open(card.id);
       await expect(
@@ -923,18 +916,11 @@ export async function runEditorChecks({
           .locator(".relation-row")
           .getByText(predecessor.title, { exact: true }),
       ).toBeVisible();
-      await dialog().getByText("Card updates", { exact: true }).click();
-      await dialog()
-        .getByRole("button", { name: "Repair card result", exact: true })
-        .click();
       await expect(
-        dialog().getByRole("heading", {
-          name: "Verified card context",
-          exact: true,
-        }),
-      ).toBeVisible();
+        dialog().getByText("Card updates", { exact: true }),
+      ).toHaveCount(0);
       await screenshot("inspector-related-context");
-      return "Named relationships and real card-targeted update Markdown are visible inside the inspector.";
+      return "Named relationships remain visible without card report sections.";
     },
   );
 

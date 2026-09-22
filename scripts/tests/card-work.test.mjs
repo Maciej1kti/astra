@@ -2,14 +2,12 @@ import { acceptanceProgress } from "../../apps/web/src/lib/resources/resource-su
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  acceptanceDropIndex,
   acceptanceValidation,
   moveAcceptance,
+  moveAcceptanceToIndex,
+  reorderAcceptance,
 } from "../../apps/web/src/features/cards/card-work.ts";
-import {
-  cardUpdatePayload,
-  hasCardUpdateDraft,
-  newCardUpdateDraft,
-} from "../../apps/web/src/features/cards/card-update.ts";
 
 const first = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -28,6 +26,30 @@ test("checklist reordering retains source items and stable identities", () => {
   assert.deepEqual(original, [first, second]);
   assert.deepEqual(moveAcceptance(original, first.id, -1), original);
   assert.deepEqual(moveAcceptance(original, "missing", 1), original);
+  assert.deepEqual(moveAcceptanceToIndex(original, first.id, 1), [
+    second,
+    first,
+  ]);
+  assert.deepEqual(moveAcceptanceToIndex(original, first.id, 0), original);
+  assert.deepEqual(
+    acceptanceDropIndex(original, first.id, 40, [
+      { id: first.id, top: 0, bottom: 40 },
+      { id: second.id, top: 48, bottom: 88 },
+    ]),
+    0,
+  );
+  assert.deepEqual(
+    acceptanceDropIndex(original, first.id, 100, [
+      { id: first.id, top: 0, bottom: 40 },
+      { id: second.id, top: 48, bottom: 88 },
+    ]),
+    1,
+  );
+  assert.equal(acceptanceDropIndex(original, "missing", 40, []), null);
+  assert.deepEqual(reorderAcceptance(original, [second.id, first.id]), [
+    second,
+    first,
+  ]);
   assert.deepEqual(acceptanceProgress(original), { total: 2, completed: 1 });
   assert.deepEqual(acceptanceProgress([]), { total: 0, completed: 0 });
 });
@@ -47,33 +69,5 @@ test("invalid acceptance drafts have specific feedback without normalizing saved
     acceptanceValidation([{ ...first, text: "😀".repeat(500) }]),
     "",
   );
-  assert.match(acceptanceValidation(Array(101).fill(first)), /100 acceptance/);
-});
-
-test("card update payload is independently targeted and cannot include card mutations", () => {
-  const empty = newCardUpdateDraft();
-  assert.equal(hasCardUpdateDraft(empty), false);
-  assert.throws(() => cardUpdatePayload(first.id, empty), /summary/);
-  const draft = {
-    ...empty,
-    kind: "result",
-    summary: "Verified result",
-    body: "Details",
-  };
-  assert.equal(hasCardUpdateDraft(draft), true);
-  assert.deepEqual(cardUpdatePayload(first.id, draft), {
-    target: { type: "card", id: first.id },
-    kind: "result",
-    summary: "Verified result",
-    body: "Details",
-    author: { kind: "human", label: "Owner" },
-  });
-  assert.equal(
-    Object.hasOwn(cardUpdatePayload(first.id, draft), "status"),
-    false,
-  );
-  assert.throws(
-    () => cardUpdatePayload(first.id, { ...draft, author: " " }),
-    /author/,
-  );
+  assert.match(acceptanceValidation(Array(101).fill(first)), /100 checklist/);
 });

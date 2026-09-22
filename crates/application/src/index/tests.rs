@@ -9,7 +9,7 @@ fn report_target_pagination_is_bounded_amid_more_than_twenty_thousand_unrelated_
         .unwrap();
     let index = Index::open(directory.path()).unwrap();
     let project = Uuid::new_v4().to_string();
-    let card = Uuid::new_v4().to_string();
+    let milestone = Uuid::new_v4().to_string();
     let other = Uuid::new_v4().to_string();
     let mut expected = BTreeSet::new();
     {
@@ -46,26 +46,26 @@ VALUES (?1,
                 let id = Uuid::new_v4().to_string();
                 let target = if number >= 20_001 {
                     expected.insert(id.clone());
-                    &card
+                    &milestone
                 } else {
                     &other
                 };
-                let metadata = json!({"id":id,"summary":"Report","recorded_at":"2026-09-08T10:00:00Z","target":{"type":"card","id":target}});
+                let metadata = json!({"id":id,"summary":"Report","recorded_at":"2026-09-08T10:00:00Z","target":{"type":"milestone","id":target}});
                 insert
                     .execute(params![project, id, metadata.to_string()])
                     .unwrap();
             }
             // Identical target identifiers in another project or target kind
-            // must not leak into the selected card's report history.
+            // must not leak into the selected milestone's report history.
             for (project_id, target_type) in
-                [(other.as_str(), "card"), (project.as_str(), "milestone")]
+                [(other.as_str(), "milestone"), (project.as_str(), "project")]
             {
                 let id = Uuid::new_v4().to_string();
                 insert
                     .execute(params![
                         project_id,
                         id,
-                        json!({"id":id,"summary":"Report","target":{"type":target_type,"id":card}})
+                        json!({"id":id,"summary":"Report","target":{"type":target_type,"id":milestone}})
                             .to_string()
                     ])
                     .unwrap();
@@ -75,8 +75,8 @@ VALUES (?1,
     }
     let mut query = Query {
         project: Some(project),
-        target_type: Some("card".into()),
-        target_id: Some(card),
+        target_type: Some("milestone".into()),
+        target_id: Some(milestone),
         limit: Some(2),
         ..Default::default()
     };
@@ -113,13 +113,20 @@ fn report_target_filter_requires_a_valid_pair_on_update_queries() {
         .unwrap();
     let index = Index::open(directory.path()).unwrap();
     let valid = Query {
-        target_type: Some("card".into()),
+        target_type: Some("milestone".into()),
         target_id: Some(Uuid::new_v4().to_string()),
         ..Default::default()
     };
     for (kind, query) in [
         (Some("card"), valid.clone()),
         (None, valid.clone()),
+        (
+            Some("update"),
+            Query {
+                target_type: Some("card".into()),
+                ..valid.clone()
+            },
+        ),
         (
             Some("update"),
             Query {

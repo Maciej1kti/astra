@@ -314,7 +314,7 @@ await runBrowserSuite(
 
       await check(
         "D02",
-        "Card deletion keeps an explicit report draft behind a discard confirmation",
+        "Card deletion keeps an unfinished checklist item behind a discard confirmation",
         async () => {
           const card = await createCard(`Delete draft ${Date.now()}`);
           await openCard(page, card, "board");
@@ -329,16 +329,8 @@ await runBrowserSuite(
           await expect(dialog.getByTestId("autosave-status")).toHaveText(
             "Saved",
           );
-          const report = dialog.getByRole("region", {
-            name: "Add an update to this card",
-            exact: true,
-          });
-          await report
-            .getByRole("button", { name: "Add card update", exact: true })
-            .click();
-          await report
-            .getByLabel("Update summary", { exact: true })
-            .fill("Unsaved report draft");
+          const newItem = dialog.getByLabel("New item", { exact: true });
+          await newItem.fill("Unfinished checklist item");
           await dialog
             .getByRole("button", { name: "Delete card", exact: true })
             .click();
@@ -352,15 +344,7 @@ await runBrowserSuite(
           await expect(
             dialog.locator(".resource-description-rendered"),
           ).toHaveAttribute("aria-disabled", "true");
-          await expect(
-            report.getByLabel("Update summary", { exact: true }),
-          ).toBeDisabled();
-          await expect(
-            report.getByRole("button", {
-              name: "Post card update",
-              exact: true,
-            }),
-          ).toBeDisabled();
+          await expect(newItem).toBeDisabled();
           await draftWarning
             .getByRole("button", { name: "Keep editing", exact: true })
             .click();
@@ -400,7 +384,7 @@ await runBrowserSuite(
             ),
             false,
           );
-          return { card: card.id, reportDraftRequiredExplicitDiscard: true };
+          return { card: card.id, checklistDraftRequiredExplicitDiscard: true };
         },
       );
 

@@ -6,6 +6,17 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Compact checklist and card report removal](2026-09-22-card-checklist.md) replaces
+checklist arrows and verbose controls with one row per item and a drag grip.
+Record progress, Card updates and card Additional fields are removed with their
+code; source/API contracts and CLI reject card extensions and card report
+targets. Project and milestone reports remain. Both existing projects have no
+matching data to remove. The full local gate passes 218 Rust, 94 JavaScript and
+12 Python tests; all ten browser suites and the broad HTTPS smoke pass across
+the documented runs. The updated manual runtime preserves existing source
+versions and validates cleanly. The evidence record includes corrected drag
+regressions and the initial test failures.
+
 [Card editor simplification](2026-09-22-card-editor-simplification.md) removes
 card kind, expected result and owner throughout the source/API contracts, CLI,
 projections and UI. Five existing cards, including one archived card, were cleaned

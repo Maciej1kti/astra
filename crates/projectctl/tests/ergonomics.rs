@@ -238,7 +238,7 @@ fn assert_scoped_mutation(
 #[test]
 fn create_inputs_preserve_complete_json_from_stdin_and_files() {
     let input = json!({"title":"Zażółć gęślą 🦀", "body":"First line\n\nDruga linia.\n",
-        "due":{"date":"2026-09-12", "kind":"target"}, "x-source":{"owner":"社区"}});
+        "due":{"date":"2026-09-12", "kind":"target"}});
     let bytes = serde_json::to_vec(&input).unwrap();
     assert_scoped_mutation(
         &["card", "create", "--input", "-"],
@@ -305,9 +305,8 @@ fn set_shorthand_puts_body_inside_set_and_never_refetches_the_version() {
 }
 
 #[test]
-fn exact_json_patches_from_stdin_keep_clear_fields_and_extensions() {
-    let patch =
-        json!({"set":{"title":"Final", "body":"A\nB\n", "x-owner":"Community"}, "clear":["due"]});
+fn exact_json_patches_from_stdin_keep_clear_fields() {
+    let patch = json!({"set":{"title":"Final", "body":"A\nB\n"}, "clear":["due"]});
     let bytes = serde_json::to_vec(&patch).unwrap();
     for (kind, collection) in [("card", "cards"), ("milestone", "milestones")] {
         assert_scoped_mutation(
@@ -479,6 +478,36 @@ fn incompatible_or_incomplete_arguments_fail_before_connecting() {
             "{args:?}"
         );
     }
+}
+
+#[test]
+fn report_add_rejects_card_target_before_mutation() {
+    let host = Host::new(vec![(200, json!({"project_id": PROJECT}))]);
+    let project_path = host.directory.path().canonicalize().unwrap();
+    let target = format!("card:{RESOURCE}");
+    let mut command = host.scoped_command();
+    command.args([
+        "report",
+        "add",
+        "--kind",
+        "note",
+        "--target",
+        &target,
+        "--summary",
+        "Removed card report",
+        "--request-id",
+        REQUEST,
+        "--epoch",
+        EPOCH,
+    ]);
+    let output = invoke(&mut command, None);
+    let requests = host.finish();
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(parsed(&output)["error"]["code"], "CLIENT_ERROR");
+    assert_eq!(parsed(&output)["error"]["message"], "Invalid target type");
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].path, "/local/v1/projects/resolve");
+    assert_eq!(requests[0].body, json!({"absolute_path": project_path}));
 }
 
 #[test]

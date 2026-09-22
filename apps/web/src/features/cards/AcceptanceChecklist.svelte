@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { acceptanceProgress } from "../../lib/resources/resource-summary";
+  import { onMount, tick } from "svelte";
   import {
     ACCEPTANCE_LIMIT,
     ACCEPTANCE_TEXT_LIMIT,
+    acceptanceDropIndex,
     moveAcceptance,
+    moveAcceptanceToIndex,
+    reorderAcceptance,
     type AcceptanceItem,
   } from "./card-work";
 
@@ -19,14 +22,28 @@
     disabled?: boolean;
   } = $props();
   const id = $props.id();
-  const progress = $derived(acceptanceProgress(items));
   let input = $state<HTMLInputElement>();
-  let list = $state<HTMLOListElement>();
+  let list = $state<HTMLUListElement>();
   let announcement = $state("");
+  let previewOrder = $state<string[] | null>(null);
+  let activeDrag = $state<{
+    id: string;
+    mode: "pointer" | "keyboard";
+    pointerId?: number;
+  } | null>(null);
+  let pointerHandle: HTMLElement | null = null;
+  let dragMembership: string[] | null = null;
+  let scrollContainer: HTMLElement | null = null;
+  let autoScrollFrame = 0;
+  let latestPointerY = 0;
+
+  const displayedItems = $derived(
+    previewOrder ? reorderAcceptance(items, previewOrder) : items,
+  );
 
   $effect(() => {
     if (!error) return;
-    const index = error.match(/acceptance item (\d+)/i)?.[1];
+    const index = error.match(/checklist item (\d+)/i)?.[1];
     const field =
       (index
         ? list?.querySelectorAll("textarea")[Number(index) - 1]
@@ -35,117 +52,367 @@
     field?.scrollIntoView({ block: "center" });
   });
 
+  $effect(() => {
+    if (
+      activeDrag &&
+      (disabled ||
+        !dragMembership ||
+        items.length !== dragMembership.length ||
+        items.some((item, index) => item.id !== dragMembership?.[index]))
+    )
+      cancelDrag();
+  });
+
   function add() {
     if (disabled) return;
     const text = draft.trim();
     if (!text) {
-      error = "Write an acceptance condition first.";
+      error = "Enter a checklist item.";
       return;
     }
     if ([...text].length > ACCEPTANCE_TEXT_LIMIT) {
-      error = `Use ${ACCEPTANCE_TEXT_LIMIT} characters or fewer for an acceptance item.`;
+      error = `Use ${ACCEPTANCE_TEXT_LIMIT} characters or fewer for a checklist item.`;
       return;
     }
     if (items.length >= ACCEPTANCE_LIMIT) {
-      error = `Use up to ${ACCEPTANCE_LIMIT} acceptance items.`;
+      error = `Use up to ${ACCEPTANCE_LIMIT} checklist items.`;
       return;
     }
     items = [...items, { id: crypto.randomUUID(), text, completed: false }];
     draft = "";
     error = "";
-    announcement = `Added acceptance item ${items.length}.`;
+    announcement = `Added checklist item ${items.length}.`;
     input?.focus();
   }
 
-  function move(itemId: string, offset: -1 | 1) {
-    items = moveAcceptance(items, itemId, offset);
-    announcement = `Moved acceptance item to position ${items.findIndex((item) => item.id === itemId) + 1}.`;
+  function finishDrag(commit: boolean, restoreKeyboardFocus = commit) {
+    const drag = activeDrag;
+    const order = previewOrder;
+    const restoreFocus =
+      restoreKeyboardFocus && drag?.mode === "keyboard" ? drag.id : null;
+    stopAutoScroll();
+    activeDrag = null;
+    previewOrder = null;
+    dragMembership = null;
+    scrollContainer = null;
+    if (pointerHandle && drag?.pointerId !== undefined) {
+      if (
+        typeof pointerHandle.hasPointerCapture === "function" &&
+        pointerHandle.hasPointerCapture(drag.pointerId)
+      )
+        pointerHandle.releasePointerCapture(drag.pointerId);
+    }
+    pointerHandle = null;
+    if (restoreFocus) void tick().then(() => focusHandle(restoreFocus));
+    if (!commit || disabled || !drag || !order) return;
+    const next = reorderAcceptance(items, order);
+    if (next === items) return;
+    items = next;
+    announcement = `Moved checklist item to position ${items.findIndex((item) => item.id === drag.id) + 1}.`;
   }
+
+  function cancelDrag() {
+    finishDrag(false);
+  }
+
+  function focusHandle(itemId: string) {
+    const row = [
+      ...(list?.querySelectorAll<HTMLElement>("[data-checklist-item]") ?? []),
+    ].find((value) => value.dataset.checklistItem === itemId);
+    row?.querySelector<HTMLButtonElement>(".handle")?.focus();
+  }
+
+  function findScrollableAncestor(node: HTMLElement | undefined) {
+    let current = node?.parentElement ?? null;
+    while (current) {
+      const style = getComputedStyle(current);
+      if (
+        style.overflowY === "auto" ||
+        style.overflowY === "scroll" ||
+        current.classList.contains("editor")
+      )
+        return current;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  function scrollBounds() {
+    if (!scrollContainer) return null;
+    const rect = scrollContainer.getBoundingClientRect();
+    const header = scrollContainer.querySelector<HTMLElement>("header");
+    const footer = scrollContainer.querySelector<HTMLElement>("footer");
+    return {
+      top: Math.max(
+        rect.top,
+        header?.getBoundingClientRect().bottom ?? rect.top,
+      ),
+      bottom: Math.min(
+        rect.bottom,
+        footer?.getBoundingClientRect().top ?? rect.bottom,
+      ),
+    };
+  }
+
+  function stopAutoScroll() {
+    if (autoScrollFrame) cancelAnimationFrame(autoScrollFrame);
+    autoScrollFrame = 0;
+  }
+
+  function applyPointerDrop() {
+    const drag = activeDrag;
+    if (!drag || drag.mode !== "pointer") return;
+    const rows = [
+      ...(list?.querySelectorAll<HTMLElement>("[data-checklist-item]") ?? []),
+    ].map((row) => {
+      const rect = row.getBoundingClientRect();
+      return {
+        id: row.dataset.checklistItem ?? "",
+        top: rect.top,
+        bottom: rect.bottom,
+      };
+    });
+    const destination = acceptanceDropIndex(
+      displayedItems,
+      drag.id,
+      latestPointerY,
+      rows,
+    );
+    if (destination === null) return;
+    const next = moveAcceptanceToIndex(displayedItems, drag.id, destination);
+    if (next !== displayedItems) previewOrder = next.map((item) => item.id);
+  }
+
+  function scheduleAutoScroll() {
+    if (autoScrollFrame || !activeDrag || activeDrag.mode !== "pointer") return;
+    autoScrollFrame = requestAnimationFrame(() => {
+      autoScrollFrame = 0;
+      if (!activeDrag || activeDrag.mode !== "pointer") return;
+      const bounds = scrollBounds();
+      if (!bounds) return;
+      const edge = 48;
+      const delta =
+        latestPointerY < bounds.top + edge
+          ? -Math.min(12, bounds.top + edge - latestPointerY)
+          : latestPointerY > bounds.bottom - edge
+            ? Math.min(12, latestPointerY - (bounds.bottom - edge))
+            : 0;
+      if (!delta) return;
+      const before = scrollContainer?.scrollTop ?? 0;
+      if (scrollContainer) scrollContainer.scrollTop += delta;
+      applyPointerDrop();
+      if (scrollContainer?.scrollTop !== before) scheduleAutoScroll();
+    });
+  }
+
+  function beginPointerDrag(event: PointerEvent, itemId: string) {
+    if (disabled || activeDrag || !event.isPrimary || event.button !== 0)
+      return;
+    event.preventDefault();
+    // Capture on the stable list: moving a keyed row can release its capture.
+    pointerHandle = list ?? (event.currentTarget as HTMLButtonElement);
+    activeDrag = { id: itemId, mode: "pointer", pointerId: event.pointerId };
+    previewOrder = items.map((item) => item.id);
+    dragMembership = items.map((item) => item.id);
+    scrollContainer = findScrollableAncestor(list);
+    latestPointerY = event.clientY;
+    try {
+      pointerHandle.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture can be unavailable in a detached test node.
+    }
+    announcement = `Picked up checklist item ${items.findIndex((item) => item.id === itemId) + 1}.`;
+  }
+
+  function updatePointerDrag(event: PointerEvent) {
+    const drag = activeDrag;
+    if (!drag || drag.mode !== "pointer" || drag.pointerId !== event.pointerId)
+      return;
+    if (disabled) {
+      cancelDrag();
+      return;
+    }
+    event.preventDefault();
+    latestPointerY = event.clientY;
+    applyPointerDrop();
+    scheduleAutoScroll();
+  }
+
+  function finishPointerDrag(event: PointerEvent) {
+    const drag = activeDrag;
+    if (!drag || drag.mode !== "pointer" || drag.pointerId !== event.pointerId)
+      return;
+    updatePointerDrag(event);
+    finishDrag(true);
+  }
+
+  function beginKeyboardDrag(itemId: string) {
+    if (disabled || activeDrag) return;
+    activeDrag = { id: itemId, mode: "keyboard" };
+    previewOrder = items.map((item) => item.id);
+    dragMembership = items.map((item) => item.id);
+    announcement = `Picked up checklist item ${items.findIndex((item) => item.id === itemId) + 1}.`;
+  }
+
+  function handleKeydown(event: KeyboardEvent, itemId: string) {
+    if (disabled) return;
+    const drag = activeDrag;
+    const pickup =
+      event.key === "Enter" || event.key === " " || event.key === "Spacebar";
+    if (!drag) {
+      if (pickup) {
+        event.preventDefault();
+        beginKeyboardDrag(itemId);
+      }
+      return;
+    }
+    if (drag.mode !== "keyboard" || drag.id !== itemId) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      finishDrag(false, true);
+      announcement = "Checklist item order restored.";
+      return;
+    }
+    if (event.key === "Tab") {
+      cancelDrag();
+      announcement = "Checklist item order restored.";
+      return;
+    }
+    if (pickup) {
+      event.preventDefault();
+      finishDrag(true);
+      return;
+    }
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    event.preventDefault();
+    const next = moveAcceptance(
+      displayedItems,
+      itemId,
+      event.key === "ArrowUp" ? -1 : 1,
+    );
+    if (next !== displayedItems) {
+      previewOrder = next.map((item) => item.id);
+      announcement = `Checklist item moved to position ${next.findIndex((item) => item.id === itemId) + 1}.`;
+      void tick().then(() => {
+        if (activeDrag?.mode === "keyboard" && activeDrag.id === itemId)
+          focusHandle(itemId);
+      });
+    }
+  }
+
+  onMount(() => {
+    const move = (event: PointerEvent) => updatePointerDrag(event);
+    const up = (event: PointerEvent) => finishPointerDrag(event);
+    const cancel = () => cancelDrag();
+    const lostCapture = (event: PointerEvent) => {
+      if (event.target === pointerHandle) cancelDrag();
+    };
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && activeDrag) {
+        event.preventDefault();
+        finishDrag(false, true);
+        announcement = "Checklist item order restored.";
+      }
+    };
+    const pointerdown = (event: PointerEvent) => {
+      if (!activeDrag) return;
+      if (
+        activeDrag.mode === "pointer" &&
+        activeDrag.pointerId === event.pointerId
+      )
+        return;
+      cancelDrag();
+      announcement = "Checklist item order restored.";
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    window.addEventListener("lostpointercapture", lostCapture);
+    window.addEventListener("pointerdown", pointerdown, true);
+    window.addEventListener("blur", cancel);
+    window.addEventListener("orientationchange", cancel);
+    window.addEventListener("keydown", keydown);
+    return () => {
+      cancel();
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("lostpointercapture", lostCapture);
+      window.removeEventListener("pointerdown", pointerdown, true);
+      window.removeEventListener("blur", cancel);
+      window.removeEventListener("orientationchange", cancel);
+      window.removeEventListener("keydown", keydown);
+    };
+  });
 </script>
 
-<section class="acceptance" aria-label="Acceptance checklist">
-  <div class="heading">
-    <h3>Acceptance checklist</h3>
-    <span>{progress.completed}/{progress.total} complete</span>
-  </div>
-  <p class="hint">
-    Define what must be true before you accept the result. Completion is saved
-    with the card; its status stays your decision.
-  </p>
-  {#if items.length}<progress
-      value={progress.completed}
-      max={progress.total}
-      aria-label="Acceptance checklist progress"
-    ></progress>{/if}
-  <ol bind:this={list}>
-    {#each items as item, index (item.id)}
-      <li>
-        <div class="item-fields">
-          <input
-            type="checkbox"
-            checked={item.completed}
-            {disabled}
-            aria-label={`Complete acceptance item ${index + 1}: ${item.text}`}
-            onchange={(event) => {
-              items = items.map((value) =>
-                value.id === item.id
-                  ? { ...value, completed: event.currentTarget.checked }
-                  : value,
-              );
-            }}
-          />
-          <textarea
-            rows="2"
-            value={item.text}
-            {disabled}
-            aria-label={`Acceptance item ${index + 1}`}
-            oninput={(event) => {
-              items = items.map((value) =>
-                value.id === item.id
-                  ? { ...value, text: event.currentTarget.value }
-                  : value,
-              );
-              error = "";
-            }}></textarea>
-        </div>
-        <div class="item-actions">
-          <span>{index + 1} of {items.length}</span>
-          <button
-            type="button"
-            disabled={disabled || index === 0}
-            aria-label={`Move acceptance item ${index + 1} up`}
-            onclick={() => move(item.id, -1)}>↑</button
-          >
-          <button
-            type="button"
-            disabled={disabled || index === items.length - 1}
-            aria-label={`Move acceptance item ${index + 1} down`}
-            onclick={() => move(item.id, 1)}>↓</button
-          >
-          <button
-            type="button"
-            {disabled}
-            aria-label={`Remove acceptance item ${index + 1}`}
-            onclick={() => {
-              items = items.filter((value) => value.id !== item.id);
-              error = "";
-              announcement = `Removed acceptance item ${index + 1}.`;
-            }}>Remove</button
-          >
-        </div>
+<section class="checklist" aria-label="Checklist">
+  <h3>Checklist</h3>
+  <ul bind:this={list}>
+    {#each displayedItems as item, index (item.id)}
+      <li
+        data-checklist-item={item.id}
+        class:dragging={activeDrag?.id === item.id}
+      >
+        <input
+          type="checkbox"
+          checked={item.completed}
+          {disabled}
+          aria-label={`Complete checklist item ${index + 1}: ${item.text}`}
+          onchange={(event) => {
+            items = items.map((value) =>
+              value.id === item.id
+                ? { ...value, completed: event.currentTarget.checked }
+                : value,
+            );
+          }}
+        />
+        <textarea
+          rows="1"
+          value={item.text}
+          {disabled}
+          aria-label={`Checklist item ${index + 1}`}
+          oninput={(event) => {
+            items = items.map((value) =>
+              value.id === item.id
+                ? { ...value, text: event.currentTarget.value }
+                : value,
+            );
+            error = "";
+          }}></textarea>
+        <button
+          class="icon-button"
+          type="button"
+          {disabled}
+          aria-label={`Remove checklist item ${index + 1}`}
+          onclick={() => {
+            items = items.filter((value) => value.id !== item.id);
+            error = "";
+            announcement = `Removed checklist item ${index + 1}.`;
+          }}><span aria-hidden="true">×</span></button
+        >
+        <button
+          class="handle"
+          type="button"
+          {disabled}
+          aria-label={`Move checklist item ${index + 1}`}
+          aria-pressed={activeDrag?.id === item.id}
+          onpointerdown={(event) => beginPointerDrag(event, item.id)}
+          onkeydown={(event) => handleKeydown(event, item.id)}
+          ><span aria-hidden="true">⠿</span></button
+        >
       </li>
     {/each}
-  </ol>
-  {#if !items.length}<p class="hint">No acceptance conditions yet.</p>{/if}
-  <label for={`${id}-new`}>New acceptance condition</label>
+  </ul>
+  <label class="sr-only" for={`${id}-new`}>New item</label>
   <div class="add-row">
     <input
       id={`${id}-new`}
       bind:this={input}
       bind:value={draft}
       {disabled}
-      placeholder="A clear, verifiable result"
-      aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`}
+      aria-label="New item"
+      aria-describedby={error ? `${id}-error` : undefined}
       aria-invalid={!!error}
       oninput={() => (error = "")}
       onkeydown={(event) => {
@@ -161,47 +428,23 @@
       onclick={add}>Add item</button
     >
   </div>
-  <p class="hint" id={`${id}-hint`}>
-    Up to {ACCEPTANCE_LIMIT} items, {ACCEPTANCE_TEXT_LIMIT} characters each. Use the
-    arrows to change their order.
-  </p>
   {#if error}<p role="alert" id={`${id}-error`} class="error">{error}</p>{/if}
-  <p role="status" class="sr-only">{announcement}</p>
+  <p role="status" aria-live="polite" aria-atomic="true" class="sr-only">
+    {announcement}
+  </p>
 </section>
 
 <style>
-  .acceptance {
+  .checklist {
     margin: 24px 0;
-  }
-  .heading {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
   }
   h3 {
     margin: 0;
     font-size: 15px;
   }
-  .heading span,
-  .hint {
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-  .heading span {
-    white-space: nowrap;
-  }
-  progress {
-    display: block;
-    width: 100%;
-    height: 7px;
-    margin: 12px 0;
-    accent-color: var(--green);
-  }
-  ol {
+  ul {
     list-style: none;
-    margin: 0;
+    margin: 12px 0 0;
     padding: 0;
   }
   li {
@@ -210,54 +453,60 @@
     border-radius: 8px;
     padding: 8px;
     background: var(--bg);
-  }
-  .item-fields {
-    display: flex;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) 44px 44px;
+    align-items: center;
     gap: 8px;
   }
-  .item-fields input {
-    flex-shrink: 0;
-    margin-top: 12px;
+  li.dragging {
+    opacity: 0.55;
+    border-color: var(--ink);
+  }
+  li > input {
+    justify-self: center;
     width: 22px;
     height: 22px;
     accent-color: var(--green);
   }
   textarea {
-    flex: 1;
     min-width: 0;
     width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
     font-family: inherit;
     line-height: 1.4;
     resize: vertical;
   }
-  .item-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
-    margin-top: 6px;
-  }
-  .item-actions span {
-    margin-right: auto;
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .item-actions button {
+  .icon-button,
+  .handle {
+    width: 44px;
     min-width: 44px;
+    height: 44px;
     min-height: 44px;
-    padding: 4px 10px;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
   }
-  label {
-    display: block;
-    margin: 16px 0 8px;
-    font-size: 13px;
-    font-weight: 600;
+  .icon-button {
+    font-size: 22px;
+    line-height: 1;
+  }
+  .handle {
+    cursor: grab;
+    touch-action: none;
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1;
+  }
+  .handle:active,
+  li.dragging .handle {
+    cursor: grabbing;
   }
   .add-row {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-top: 12px;
   }
   .add-row input {
     flex: 1;
@@ -266,6 +515,7 @@
   }
   .add-row button {
     flex-shrink: 0;
+    min-height: 44px;
   }
   .error {
     font-size: 13px;

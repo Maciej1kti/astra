@@ -21,7 +21,7 @@ impl Index {
             (None, None) => {}
             (Some(target_type), Some(target_id))
                 if kind == Some("update")
-                    && matches!(target_type.as_str(), "project" | "card" | "milestone")
+                    && matches!(target_type.as_str(), "project" | "milestone")
                     && Uuid::parse_str(target_id).is_ok_and(|id| {
                         id.get_version_num() == 4
                             && id.get_variant() == uuid::Variant::RFC4122

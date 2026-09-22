@@ -9,8 +9,9 @@ removal applies to the source front matter, domain and API schemas, CLI payloads
 generated contracts, projections, and editor controls. Cards retain lifecycle
 status, priority, scheduling and due dates, review dates, milestones, blocking
 information, dependencies, labels, ordered acceptance items, and bounded `x-*`
-extensions. `Update.kind` and `Due.kind` are unrelated fields and remain part of
-their contracts.
+extensions. Card extension support is subsequently superseded by
+[ADR-038](ADR-038-CARD-EXTENSION-REMOVAL.md). `Update.kind` and `Due.kind` are
+unrelated fields and remain part of their contracts.
 
 The server keeps strict validation. A versioned create or patch containing a
 removed field is rejected without changing the source. Existing history and
@@ -23,7 +24,9 @@ Five live cards, including the archived card, are cleaned with a temporary
 compatibility build through normal versioned PATCH commands before the strict
 contract is deployed. No direct source edits or migration framework are used.
 The cleanup preserves card bodies, retained metadata, extensions, reports, and
-history. The temporary compatibility path is removed after the cleanup.
+history. The temporary compatibility path is removed after the cleanup. ADR-038
+later closes the card metadata field set after confirming that the live cards
+contain no card extensions.
 
 ## Consequences
 

@@ -8,7 +8,12 @@ Plik UTF-8 rozpoczyna się dokładnie delimitrem `---` w pierwszej linii i zamyk
 
 Body zachowujemy bajt w bajt przy operacji niedotyczącej body, łącznie z pustymi liniami i końcowym newline. Wymiana body jest osobną świadomą zmianą. Pole tekstowe nie wykonuje skryptów ani komend. Parser MUSI odrzucać niepoprawny UTF-8, NUL i przekroczenie limitów zanim stworzy duży obiekt w pamięci.
 
-Headers use canonical formatting. Unknown fields block normal writes. Bounded `x-*` JSON extensions are supported only on cards, milestones and updates; project metadata has a closed field set. YAML comments that serialization would discard cause `NORMALIZATION_REQUIRED`; the user receives a preview and an explicit normalization operation with backup and If-Match. A frontend flag cannot silently authorize normalization.
+Headers use canonical formatting. Unknown fields block normal writes. Bounded
+`x-*` JSON extensions are supported only on milestones and updates; project and
+card metadata have closed field sets. YAML comments that serialization would
+discard cause `NORMALIZATION_REQUIRED`; the user receives a preview and an
+explicit normalization operation with backup and If-Match. A frontend flag
+cannot silently authorize normalization.
 
 ## Lokalizacje i tożsamość
 
@@ -21,7 +26,7 @@ Puste katalogi można tworzyć leniwie. Inne pliki są ignorowane z diagnostyką
 | Obiekt | Pola wymagane w poprawnym pliku | Opcjonalne |
 |---|---|---|
 | Project | schema_version, id, name, state, created_at, updated_at | — |
-| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule, due, review_on, milestone_id, blocked, depends_on, labels, acceptance, x-* |
+| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule, due, review_on, milestone_id, blocked, depends_on, labels, acceptance |
 | Milestone | id, title, status, position, archived, created_at, updated_at | due, x-* |
 | Update | id, kind, target, summary, author, recorded_at | observed_at, supersedes, resolves, evidence, x-* |
 
@@ -74,7 +79,14 @@ Finish-to-start: poprzednik zaplanowany do 18 września wymaga startu następcy 
 
 `milestone_id` odnosi się do milestone tego samego projektu. `depends_on` zawiera unikalne ID kart tego projektu, bez self-edge i bez cykli. Wprowadzenie cyklu jest błędem. Naruszenie dat zależności jest ostrzeżeniem. Zmiana statusu nie wykonuje kaskady. Archiwizacja zależnej karty nie kasuje krawędzi; UI pokazuje ukryty cel. Przy ręcznym usunięciu referencji oznaczamy broken reference, nie usuwamy jej cicho.
 
-Update jest append-only w normalnym API. `target` to typ `project|card|milestone` i ID istniejącego obiektu z tego projektu. Korekta wskazuje wcześniejszy raport przez `supersedes`; rozwiązanie wskazuje wcześniejsze raporty przez `resolves`. Referencje muszą należeć do tego samego projektu, resolution nie wskazuje siebie i nie tworzy cyklu. Nowy raport `blocker` nie ustawia automatycznie `card.blocked`. Odczyt raportu nie rozwiązuje decyzji. `resolution` jawnie zamyka sygnał; korekta oznacza zastąpienie treści, nie tajne przepisanie historii.
+Updates are append-only in the normal API. Report targets have type
+`project|milestone` and the ID of an existing resource in the same project;
+card targets are rejected. Corrections refer to earlier reports through
+`supersedes`; resolutions refer to earlier reports through `resolves`.
+References must stay within the project and cannot introduce cycles or
+self-resolution. A blocker report does not automatically change `card.blocked`.
+Reading a report does not resolve a decision. Resolution explicitly closes a
+signal; correction supersedes content without rewriting history.
 
 `evidence` jest listą typowanych referencji: `url` (http/https, bez automatycznego pobierania), `commit` (hex OID jako tekst), `path` (względna ścieżka do opisu, nie uprawnienie do zdalnego czytania pliku). Author jest deklaracją, nie podpisem tożsamości.
 

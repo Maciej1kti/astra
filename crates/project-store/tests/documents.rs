@@ -16,6 +16,9 @@ fn card() -> Value {
     )
     .unwrap()
 }
+fn milestone() -> Value {
+    serde_json::from_slice(&std::fs::read(root().join("examples/milestone.json")).unwrap()).unwrap()
+}
 fn bytes() -> Vec<u8> {
     document::serialize(&validate_document(card()).unwrap()).unwrap()
 }
@@ -37,23 +40,25 @@ fn all_handoff_parser_vectors() {
 }
 
 #[test]
-fn metadata_edits_preserve_body_and_extensions_byte_for_byte() {
-    let mut input = card();
+fn metadata_edits_preserve_body_and_milestone_extensions_byte_for_byte() {
+    let mut input = milestone();
     let body = "\r\n# Body\r\n\r\nEmoji 🦀 and UTF-8 ąę\n---\n\ttrailing  \n\n";
     input["body"] = json!(body);
     input["metadata"]["x-nested"] = json!({"array": [null, true, 1.25, "# hash"]});
     let bytes = document::serialize(&validate_document(input.clone()).unwrap()).unwrap();
     let parsed = document::parse(
-        Kind::Card,
+        Kind::Milestone,
         Some(input["metadata"]["id"].as_str().unwrap()),
         &bytes,
     )
     .unwrap();
     assert!(!parsed.normalization_required);
     let mut edited = parsed.editable().unwrap();
-    edited["metadata"]["status"] = json!("review");
+    edited["metadata"]["status"] = json!("achieved");
     let encoded = document::serialize(&validate_document(edited).unwrap()).unwrap();
-    let decoded = document::parse(Kind::Card, None, &encoded).unwrap().value();
+    let decoded = document::parse(Kind::Milestone, None, &encoded)
+        .unwrap()
+        .value();
     assert_eq!(
         decoded["body"].as_str().unwrap().as_bytes(),
         body.as_bytes()
