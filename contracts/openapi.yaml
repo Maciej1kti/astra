@@ -786,12 +786,6 @@ paths:
           type: string
           minLength: 1
           maxLength: 120
-      - name: milestone_id
-        in: query
-        schema:
-          type: string
-          minLength: 1
-          maxLength: 120
       - name: archived
         in: query
         schema:
@@ -915,9 +909,8 @@ paths:
       tags: [cards]
       summary: Permanently delete a card source file
       description: >-
-        Requires the observed card version. Incoming dependencies, including those
-        from archived cards, and workspace focus references must first be removed
-        explicitly. Reports and operational history are retained. Deletion has no
+        Requires the observed card version. Workspace focus references must first
+        be removed explicitly. Reports and operational history are retained. Deletion has no
         undo or restore operation. A lost reply is uncertain; preserve the original
         request ID, epoch, version and empty payload when checking or retrying.
       parameters:
@@ -1805,12 +1798,6 @@ paths:
           type: string
           minLength: 1
           maxLength: 120
-      - name: milestone_id
-        in: query
-        schema:
-          type: string
-          minLength: 1
-          maxLength: 120
       - name: archived
         in: query
         schema:
@@ -2079,24 +2066,8 @@ components:
       properties:
         date:
           $ref: '#/components/schemas/LocalDate'
-        kind:
-          type: string
-          enum:
-          - hard
-          - target
       required:
       - date
-      - kind
-      additionalProperties: false
-    Blocked:
-      type: object
-      properties:
-        reason:
-          type: string
-          minLength: 1
-          maxLength: 1000
-      required:
-      - reason
       additionalProperties: false
     Author:
       type: object
@@ -2298,20 +2269,6 @@ components:
           type: boolean
         schedule:
           $ref: '#/components/schemas/Schedule'
-        due:
-          $ref: '#/components/schemas/Due'
-        review_on:
-          $ref: '#/components/schemas/LocalDate'
-        milestone_id:
-          $ref: '#/components/schemas/UUID'
-        blocked:
-          $ref: '#/components/schemas/Blocked'
-        depends_on:
-          type: array
-          items:
-            $ref: '#/components/schemas/UUID'
-          maxItems: 100
-          uniqueItems: true
         acceptance:
           $ref: '#/components/schemas/Acceptance'
         labels:
@@ -2780,20 +2737,6 @@ components:
                 type: boolean
               schedule: &id014
                 $ref: '#/components/schemas/Schedule'
-              due: &id015
-                $ref: '#/components/schemas/Due'
-              review_on: &id016
-                $ref: '#/components/schemas/LocalDate'
-              milestone_id: &id017
-                $ref: '#/components/schemas/UUID'
-              blocked: &id018
-                $ref: '#/components/schemas/Blocked'
-              depends_on: &id019
-                type: array
-                items:
-                  $ref: '#/components/schemas/UUID'
-                maxItems: 100
-                uniqueItems: true
               acceptance:
                 $ref: '#/components/schemas/Acceptance'
               labels: &id020
@@ -2817,11 +2760,6 @@ components:
               type: string
               enum:
               - schedule
-              - due
-              - review_on
-              - milestone_id
-              - blocked
-              - depends_on
               - labels
               - acceptance
             maxItems: 20
@@ -2854,11 +2792,6 @@ components:
         priority: *id012
         archived: *id013
         schedule: *id014
-        due: *id015
-        review_on: *id016
-        milestone_id: *id017
-        blocked: *id018
-        depends_on: *id019
         labels: *id020
         acceptance:
           $ref: '#/components/schemas/Acceptance'
@@ -3258,8 +3191,6 @@ components:
           $ref: '#/components/schemas/Schedule'
         due:
           $ref: '#/components/schemas/Due'
-        review_on:
-          $ref: '#/components/schemas/LocalDate'
         archived:
           type: boolean
         position:
@@ -3288,16 +3219,12 @@ components:
           $ref: '#/components/schemas/Author'
         target:
           $ref: '#/components/schemas/ReportTarget'
-        blocked:
-          $ref: '#/components/schemas/Blocked'
         labels:
           type: array
           items:
             type: string
             maxLength: 48
           maxItems: 20
-        milestone_id:
-          $ref: '#/components/schemas/UUID'
         acceptance_progress:
           $ref: '#/components/schemas/AcceptanceProgress'
         read:
@@ -3342,8 +3269,6 @@ components:
           type: string
           enum:
           - card_schedule
-          - card_due
-          - card_review
           - milestone_due
         project_id:
           $ref: '#/components/schemas/UUID'
@@ -3359,11 +3284,6 @@ components:
           $ref: '#/components/schemas/LocalDate'
         end:
           $ref: '#/components/schemas/LocalDate'
-        due_kind:
-          type: string
-          enum:
-          - hard
-          - target
       required:
       - item_id
       - kind
@@ -3441,74 +3361,14 @@ components:
       - snapshot_cursor
       - warnings
       additionalProperties: false
-    GanttEdge:
-      type: object
-      properties:
-        from:
-          $ref: '#/components/schemas/UUID'
-        to:
-          $ref: '#/components/schemas/UUID'
-        kind:
-          const: finish_to_start
-        outside_page:
-          type: boolean
-        warning:
-          type:
-          - string
-          - 'null'
-      required:
-      - from
-      - to
-      - kind
-      - outside_page
-      - warning
-      additionalProperties: false
-    TimelineAnalysis:
-      type: object
-      description: Read-only finish-to-start forecast over up to 10000 non-archived, non-cancelled cards in the project snapshot. Recorded starts are lower bounds; inclusive durations include weekends. Unknown predecessors block descendants. A partial forecast is not a complete project estimate. One deterministic driving chain is returned, not all critical paths or resource leveling.
-      additionalProperties: false
-      required: [planned_start, planned_end, forecast_end, delay_days, scheduled_cards, unscheduled_cards, unresolved_cards, complete, driving_path]
-      properties:
-        planned_start: {type: [string, 'null'], format: date}
-        planned_end: {type: [string, 'null'], format: date}
-        forecast_end: {type: [string, 'null'], format: date}
-        delay_days: {type: integer, minimum: 0}
-        scheduled_cards: {type: integer, minimum: 0, maximum: 10000}
-        unscheduled_cards: {type: integer, minimum: 0, maximum: 10000}
-        unresolved_cards: {type: integer, minimum: 0, maximum: 10000}
-        complete: {type: boolean}
-        driving_path:
-          type: array
-          maxItems: 10000
-          items: {$ref: '#/components/schemas/UUID'}
-    TimelineForecast:
-      type: object
-      additionalProperties: false
-      required: [id, schedule, delay_days, drives_finish]
-      properties:
-        id: {$ref: '#/components/schemas/UUID'}
-        schedule: {$ref: '#/components/schemas/Schedule'}
-        delay_days: {type: integer, minimum: 0}
-        drives_finish: {type: boolean}
     GanttPage:
       type: object
       properties:
-        analysis:
-          $ref: '#/components/schemas/TimelineAnalysis'
-        forecasts:
-          type: array
-          maxItems: 500
-          items: {$ref: '#/components/schemas/TimelineForecast'}
         rows:
           type: array
           items:
             $ref: '#/components/schemas/Summary'
           maxItems: 500
-        edges:
-          type: array
-          items:
-            $ref: '#/components/schemas/GanttEdge'
-          maxItems: 50000
         page:
           $ref: '#/components/schemas/PageMeta'
         warnings:
@@ -3517,10 +3377,7 @@ components:
             $ref: '#/components/schemas/Warning'
           maxItems: 100
       required:
-      - analysis
-      - forecasts
       - rows
-      - edges
       - page
       - warnings
       additionalProperties: false
@@ -3917,8 +3774,6 @@ components:
           enum:
           - overdue
           - due_soon
-          - review_due
-          - blocked
           - decision_needed
           - review
         label:
@@ -4441,10 +4296,6 @@ components:
           - normal
           - high
           - urgent
-        review_on:
-          $ref: '#/components/schemas/LocalDate'
-        blocked:
-          $ref: '#/components/schemas/Blocked'
         target:
           $ref: '#/components/schemas/ReportTarget'
         recorded_at:

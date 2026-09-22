@@ -23,7 +23,6 @@ pub struct Query {
     pub status: Option<String>,
     pub priority: Option<String>,
     pub label: Option<String>,
-    pub milestone_id: Option<String>,
     pub target_type: Option<String>,
     pub target_id: Option<String>,
     pub archived: Option<bool>,
@@ -56,18 +55,21 @@ impl Indexed {
             "priority",
             "schedule",
             "due",
-            "review_on",
             "archived",
             "position",
             "kind",
             "recorded_at",
             "author",
             "target",
-            "blocked",
             "labels",
-            "milestone_id",
         ] {
-            if key == "review_on" && self.kind == "project" {
+            if key == "due" {
+                let Some(date) = m["due"]["date"].as_str() else {
+                    continue;
+                };
+                if self.kind == "milestone" {
+                    out["due"] = json!({"date": date});
+                }
                 continue;
             }
             if key == "kind" && self.kind == "card" {

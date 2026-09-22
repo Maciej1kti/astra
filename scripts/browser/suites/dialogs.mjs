@@ -129,19 +129,12 @@ await runBrowserSuite(
           "Zażółć gęślą jaźń",
           "LongTagWithoutSpacesForTestingMobileWrapping1234",
         ],
-        due: { date: "2026-09-02", kind: "hard" },
         schedule: { start: "2026-09-10", end: "2026-09-15" },
-        review_on: "2026-09-08",
-        blocked: {
-          reason:
-            "Waiting for synthetic approval of the interface and its fully spelled-out acceptance criteria across all supported views.",
-        },
       });
       const secondary = await mutate("POST", `${base}/cards`, {
         title: "Board target-date regression",
         status: "active",
         priority: "low",
-        due: { date: "2026-09-20", kind: "target" },
         schedule: { start: "2026-09-08", end: "2026-09-08" },
       });
       const primaryCard = page.locator(`[data-board-card="${primary.id}"]`);
@@ -162,22 +155,14 @@ await runBrowserSuite(
           ).not.toHaveAttribute("style");
           await expect(primaryCard).toContainText("Urgent priority");
           for (const text of [
-            "Hard deadline",
-            "2026-09-02",
             "Plan",
             "2026-09-10",
             "2026-09-15",
-            "Review",
-            "2026-09-08",
             "Research, discovery",
-            "Blocked:",
           ])
             await expect(primaryCard).toContainText(text);
           await expect(primaryCard.locator(".tag")).toHaveCount(3);
           await expect(primaryCard.locator("button")).toHaveCount(1);
-          await expect(
-            page.locator(`[data-board-card="${secondary.id}"]`),
-          ).toContainText("Target date");
           assert.deepEqual(
             await page.evaluate(() => window.boardDialogCsp),
             [],

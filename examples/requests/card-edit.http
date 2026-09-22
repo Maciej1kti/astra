@@ -1,6 +1,6 @@
 # Przykład protokołu, nie plik z działającym tokenem. Narzędzie klienta musi
 # wygenerować nowe UUIDv7 i pobrać epoch/CSRF/version z działającej instancji.
-# GET detail zwraca ETag; PATCH zmienia plan, nie deadline.
+# GET detail returns ETag; PATCH changes only the card schedule.
 GET https://HOST.TAILNET.ts.net/api/v1/projects/PROJECT_ID/cards/CARD_ID
 Cookie: __Host-project_session=REPLACE_FROM_PAIRED_BROWSER
 

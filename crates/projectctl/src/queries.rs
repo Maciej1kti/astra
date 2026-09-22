@@ -39,7 +39,7 @@ pub enum View {
         #[arg(long)]
         cursor: Option<String>,
     },
-    /// Read timeline rows and forecasts for --project (required); source dates stay unchanged.
+    /// Read timeline rows with explicit source schedules for --project (required).
     Gantt {
         #[arg(long, default_value_t = 200, value_parser = clap::value_parser!(u32).range(1..=500))]
         limit: u32,

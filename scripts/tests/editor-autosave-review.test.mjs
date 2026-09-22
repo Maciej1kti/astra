@@ -8,7 +8,7 @@ import {
   autosaveSnapshot,
 } from "../../apps/web/src/features/editor/editor-draft.ts";
 
-function card(version, review) {
+function card(version, schedule) {
   return {
     type: "card",
     version,
@@ -20,7 +20,7 @@ function card(version, review) {
       priority: "normal",
       archived: false,
       labels: [],
-      ...(review ? { review_on: review } : {}),
+      ...(schedule ? { schedule } : {}),
     },
   };
 }
@@ -107,7 +107,7 @@ test("returning to the active draft cancels a newer queued value without a dupli
   assert.equal(autosave.hasWork, false);
 });
 
-test("a queued clear uses metadata introduced by the preceding acknowledged write", async () => {
+test("a queued schedule clear uses metadata introduced by the preceding acknowledged write", async () => {
   const attempts = [];
   let release;
   const autosave = setup({
@@ -118,7 +118,7 @@ test("a queued clear uses metadata introduced by the preceding acknowledged writ
         await new Promise((resolve) => {
           release = resolve;
         });
-        return ack(card("v1", "2026-09-08"));
+        return ack(card("v1", { start: "2026-09-08", end: "2026-09-09" }));
       }
       return ack(card("v2"));
     },
@@ -128,15 +128,17 @@ test("a queued clear uses metadata introduced by the preceding acknowledged writ
     type: "card",
     resource: card("v0"),
   });
-  draft.fields.review = "2026-09-08";
+  draft.fields.start = "2026-09-08";
+  draft.fields.end = "2026-09-09";
   const first = autosave.enqueue(draft, autosaveSnapshot(draft));
-  draft.fields.review = "";
+  draft.fields.start = "";
+  draft.fields.end = "";
   void autosave.enqueue(draft, autosaveSnapshot(draft));
   release();
   await first;
   assert.equal(attempts.length, 2);
   assert.equal(attempts[1].version, "v1");
-  assert.deepEqual(attempts[1].payload.clear, ["review_on"]);
+  assert.deepEqual(attempts[1].payload.clear, ["schedule"]);
 });
 
 test("session loss between acknowledgements prevents dispatch of the queued write", async () => {

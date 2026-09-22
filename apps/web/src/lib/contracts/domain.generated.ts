@@ -104,14 +104,6 @@ export interface CardMetadata {
   position: Position;
   archived: boolean;
   schedule?: Schedule;
-  due?: Due;
-  review_on?: LocalDate;
-  milestone_id?: UUID;
-  blocked?: Blocked;
-  /**
-   * @maxItems 100
-   */
-  depends_on?: UUID[];
   /**
    * @maxItems 20
    */
@@ -259,13 +251,6 @@ export interface Schedule {
   start: LocalDate;
   end: LocalDate;
 }
-export interface Due {
-  date: LocalDate;
-  kind: "hard" | "target";
-}
-export interface Blocked {
-  reason: string;
-}
 export interface AcceptanceItem {
   id: UUID;
   text: string;
@@ -286,6 +271,9 @@ export interface MilestoneMetadata {
   archived: boolean;
   due?: Due;
   [k: string]: ExtensionValue | UUID | "planned" | "active" | "achieved" | "cancelled" | boolean | Due | undefined;
+}
+export interface Due {
+  date: LocalDate;
 }
 export interface UpdateDocument {
   type: "update";

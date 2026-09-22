@@ -15,9 +15,9 @@ version before editing. A conflict requires reconciling intent, not fetching a
 new version just to overwrite it. A timeout is an uncertain result: inspect the
 original request ID instead of submitting a new command.
 
-Schedule start/end dates are inclusive. Deadlines and review dates are separate;
-moving a schedule never moves a deadline. All-day dates are independent of the
-phone's timezone. Reading a decision report does not resolve it.
+Card schedule start/end dates are inclusive and are the only card planning
+dates. Milestones may have a separate date, without a deadline type. All-day
+dates are independent of the phone's timezone. Reading a decision report does not resolve it.
 
 Keep detailed agent plans and transcripts outside this directory. Add reports
 only for meaningful outcomes, blockers or decisions. Corrections and resolutions

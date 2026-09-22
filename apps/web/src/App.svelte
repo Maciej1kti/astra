@@ -495,9 +495,9 @@
                 : routing.current.view === "projects"
                   ? "Real folders. Shared context. One place to see progress."
                   : routing.current.view === "calendar"
-                    ? "Planned work, deadlines and reviews — kept distinct."
+                    ? "Planned work and milestone dates, kept clear."
                     : routing.current.view === "gantt"
-                      ? "See the sequence, connect cards and understand the finish date."
+                      ? "See the sequence of planned work."
                       : "Keep the next step visible."}
             </p>
           </div>

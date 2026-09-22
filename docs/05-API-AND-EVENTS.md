@@ -55,11 +55,19 @@ Report bodies remain detail-only. See [ADR-029](ADR-029-BOUNDED-REPORT-HISTORY.m
 
 Domyślnie 50 rekordów, max 200 dla list ogólnych. Calendar max 400 dni i 1000 elementów strony; Gantt domyślnie 200 wierszy i max 500. Limit przekroczenia wymaga stronicowania, nie ucięcia bez informacji. Body nie jest na listach.
 
-Filtry: project, status, priority, label, milestone, archived, due range, search. Sort ma określoną stabilność i tie-breaker ID. Opaque cursor wiąże query hash i revision projekcji. Gdy nie da się utrzymać spójności kolejnej strony po zmianie danych, zwróć `CURSOR_STALE` i odśwież, zamiast mieszać rekordy. Nie utrzymuj długich transakcji SQL przez interakcję użytkownika.
+Filters are project, status, priority, label, archived and search. Sorting has
+defined stability and an ID tie-breaker. An opaque cursor binds the query hash
+and projection revision. If a later page cannot remain consistent after a data
+change, return `CURSOR_STALE` and refresh instead of mixing rows. Do not hold
+long SQL transactions across user interaction.
 
 Search używa bezpiecznie związanych parametrów i jawnego składania zapytania FTS. Tekst użytkownika nie jest SQL ani dowolną komendą FTS. Limit długości 256 znaków; domyślnie literalne terminy/prefix, tytuł ważniejszy niż body, polskie znaki testowane. FTS5 dostarcza mechanizm, nie gotową semantykę produktu [S06].
 
-Calendar returns an item_id separate from resource_id because a card can have a schedule, deadline and review date. Marker kinds are `card_schedule`, `card_due`, `card_review` and `milestone_due`; projects have no review date. Each marker identifies its source and version. Moving a schedule does not move its deadline marker. Gantt dependencies reference card IDs; hidden targets are described rather than silently omitted.
+Calendar returns an item_id separate from resource_id because a resource can
+have a card schedule or milestone due date. Marker kinds are `card_schedule` and
+`milestone_due`; each marker identifies its source and version. Moving a card
+schedule updates its recorded schedule. Gantt exposes explicit schedule rows;
+it has no dependency edges or forecast projection.
 
 ## SSE bez zgubionej zmiany
 
@@ -85,13 +93,10 @@ Jeśli plik został committed, lecz indeksowanie zawiodło, nie emituj zwykłego
 
 Build ID i contract version są jawne. Przy niezgodności zapisu UI zachowuje szkic i prosi o bezpieczny reload. Nie odświeżaj automatycznie strony nad wpisywanym tekstem. Stare lazy chunk URL muszą dawać rzeczywisty błąd, nie HTML 200. HTML: no-cache; prywatne API: no-store; hashowane zasoby: immutable. Nie ma service workera w v1.
 
-## Dependency forecast projection
+## Explicit Gantt schedules
 
-`GET /api/v1/views/gantt` includes `analysis` for the project snapshot and
-`forecasts` for the requested page's cards. Both are read-only and defined in
-OpenAPI as `TimelineAnalysis` / `TimelineForecast`. The project analysis is
-independent of row pagination; it considers up to 10,000 non-archived,
-non-cancelled cards. `complete=false` requires the client to label the finish as
-partial, including missing dates, missing/invalid predecessors, cycles and the
-analysis bound. Forecast ranges retain inclusive source-date semantics. See
-ADR-026 and `examples/gantt-forecast.json` for the deterministic waterfall rule.
+`GET /api/v1/views/gantt` returns bounded rows containing recorded card
+schedules and milestone due dates, together with page metadata and warnings.
+Rows with no card schedule remain available to the list view but are not drawn as
+bars. The endpoint does not infer dates, connect cards, or calculate a project
+finish forecast. A move or resize submits a conditional card schedule patch.

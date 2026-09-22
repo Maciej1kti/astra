@@ -5,7 +5,6 @@ import type { CommandSnapshot } from "./command-controller.ts";
 // These source/workspace conflicts require review before a new proposal.
 const conflictCodes = new Set([
   "VERSION_CONFLICT",
-  "CARD_REFERENCED",
   "CARD_IN_FOCUS",
   "PROJECT_TREE_CHANGED",
   "PROJECT_DELETION_PENDING",

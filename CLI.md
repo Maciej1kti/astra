@@ -51,8 +51,8 @@ projectctl --project /absolute/project card schedule CARD_ID --clear --if-versio
 
 Replace `VERSION` with the exact version from a fresh read, normally
 `data.version` in JSON output. Re-read after each confirmed edit before preparing
-a new change. Schedule dates are inclusive and do not change the independent
-deadline. Date rules and allowed statuses are validated by the server.
+a new change. Card planning uses only inclusive schedule start/end dates. Date
+rules and allowed statuses are validated by the server.
 
 For richer requests, provide a JSON file or use `-` for stdin. Input is bounded
 to 1.1 MB; body files must be UTF-8. This works for existing `--json-file`,
@@ -65,14 +65,14 @@ projectctl --project /absolute/project card create --input - <<'JSON'
   "status": "active",
   "priority": "high",
   "labels": ["docs"],
-  "review_on": "2026-09-16",
+  "schedule": {"start":"2026-09-10","end":"2026-09-16"},
   "acceptance": [{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"A contributor can build and test the project","completed":false}],
   "body": "Document setup and a small example change."
 }
 JSON
 
 projectctl --project /absolute/project card set CARD_ID --patch-file - --if-version VERSION <<'JSON'
-{"set":{"review_on":"2026-09-20","labels":["docs","review"]}}
+{"set":{"schedule":{"start":"2026-09-10","end":"2026-09-20"},"labels":["docs","review"]}}
 JSON
 ```
 
@@ -82,7 +82,8 @@ merge precedence. Unmentioned fields are preserved. Source extensions remain
 available for milestones and reports through their JSON contracts. Cards have a
 closed field set.
 Use `clear` for an optional retained card field, for example
-`{"clear":["review_on"]}` in a versioned patch.
+`{"clear":["schedule"]}` in a versioned patch. Card deadline/review dates,
+milestone links, dependencies and blocked reasons are not supported.
 Projects support only `name`, `state` and Markdown `body` edits; project
 `phase`, `review_on` and `x-*` fields are rejected by the shared server rules.
 
@@ -96,7 +97,8 @@ JSON
 ```
 
 `milestone` supports `list`, `get`, `create`, `set`, `move`, `history` and `undo`.
-Its create/set input options follow the same pattern. Schedule editing is card-only.
+Its create/set input options follow the same pattern. A milestone may have
+`due: {"date":"2026-09-20"}` with no deadline type. Schedule editing is card-only.
 
 ## Permanent deletion
 
@@ -107,9 +109,8 @@ projectctl --project /absolute/project card get CARD_ID
 projectctl --project /absolute/project card delete CARD_ID --if-version CARD_VERSION
 ```
 
-Incoming dependencies (including archived cards) and workspace focus block card
-removal. Disconnect those references explicitly first. There is no undo or restore
-for a deleted card. Reports can target projects or milestones; card targets are
+Workspace focus blocks card removal. Remove the card from focus explicitly
+first. There is no undo or restore for a deleted card. Reports can target projects or milestones; card targets are
 rejected.
 
 Project deletion uses an explicit project ID and a reviewed directory snapshot:
@@ -146,7 +147,8 @@ provided. Board and Gantt require an explicitly selected project. These commands
 read one bounded page; pass the returned cursor with the same filters and limit
 to continue. Board cursors belong to individual columns. Stale cursors are
 reported as errors; the CLI does not silently restart or combine different
-snapshots. Forecasts are observations and do not rewrite source schedules.
+snapshots. Timeline and calendar show explicitly recorded schedules; dependency
+forecasts are not supported.
 
 ## History, undo and background work
 

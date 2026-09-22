@@ -1,24 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { partitionEdges } from "../../apps/web/src/features/planning/gantt-projection.ts";
 import { detailSummary } from "../../apps/web/src/lib/resources/resource-summary.ts";
-
-test("Gantt partition retains edge order and identifies hidden or undated predecessors", () => {
-  const edges = [
-    { from: "outside", to: "a", warning: "outside", outside_page: true },
-    { from: "a", to: "b", warning: null, outside_page: false },
-    { from: "undated", to: "b", warning: null, outside_page: false },
-    { from: "b", to: "a", warning: null, outside_page: false },
-  ];
-  assert.deepEqual(partitionEdges(edges, ["a", "b"]), {
-    links: [
-      { id: "a:b", source: "a", target: "b", type: "e2s" },
-      { id: "b:a", source: "b", target: "a", type: "e2s" },
-    ],
-    hiddenEdges: [edges[0], edges[2]],
-  });
-  assert.deepEqual(partitionEdges(edges, []).hiddenEdges, edges);
-});
 
 test("Focus detail fallback has the same source-derived badges as an indexed card summary", () => {
   const resource = {

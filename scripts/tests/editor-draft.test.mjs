@@ -25,17 +25,23 @@ function card(metadata = {}) {
       created_at: "2026-09-01T00:00:00Z",
       updated_at: "2026-09-01T00:00:00Z",
       labels: [" preserved tag "],
-      depends_on: ["existing-dependency"],
       ...metadata,
     },
   };
 }
-test("an unrelated card edit preserves exact tags and dependency intent", () => {
+test("an unrelated card edit preserves exact tags and omits retired card fields", () => {
   const source = card();
   const draft = createEditorDraft(editTarget("p", source));
   const payload = editorPayload(draft);
   assert.deepEqual(payload.set.labels, [" preserved tag "]);
-  assert.equal("depends_on" in payload.set, false);
+  for (const field of [
+    "due",
+    "review_on",
+    "milestone_id",
+    "blocked",
+    "depends_on",
+  ])
+    assert.equal(field in payload.set, false);
   assert.equal("advanced" in draft.common, false);
   assert.equal("clear" in payload, false);
 });
@@ -45,35 +51,18 @@ test("clearing optional card fields is explicit", () => {
       "p",
       card({
         acceptance: [{ id: "a", text: "Done", completed: true }],
-        milestone_id: "m",
-        blocked: { reason: "Review" },
         schedule: { start: "2026-09-01", end: "2026-09-02" },
-        due: { date: "2026-09-03", kind: "hard" },
-        review_on: "2026-09-04",
       }),
     ),
   );
   Object.assign(draft.fields, {
     acceptance: [],
-    milestoneId: "",
-    blockedReason: "",
     start: "",
     end: "",
-    due: "",
-    review: "",
-    dependencies: [],
   });
   const payload = editorPayload(draft);
-  const optional = [
-    "acceptance",
-    "milestone_id",
-    "blocked",
-    "schedule",
-    "due",
-    "review_on",
-  ];
+  const optional = ["acceptance", "schedule"];
   assert.deepEqual(payload.clear, optional);
-  assert.deepEqual(payload.set.depends_on, []);
   for (const field of optional) assert.equal(field in payload.set, false);
 });
 test("each resource draft emits only its own fields", () => {
@@ -111,6 +100,8 @@ test("each resource draft emits only its own fields", () => {
   milestoneDraft.common.advanced = '{"x-milestone":{"enabled":true}}';
   const milestone = editorPayload(milestoneDraft);
   assert.equal(milestone.status, "planned");
+  milestoneDraft.fields.due = "2026-09-30";
+  assert.deepEqual(editorPayload(milestoneDraft).due, { date: "2026-09-30" });
   assert.equal("priority" in milestone, false);
   assert.deepEqual(milestone["x-milestone"], { enabled: true });
   const project = createEditorDraft(
@@ -148,11 +139,9 @@ test("drafts own nested edits and include unfinished tag and acceptance input", 
   draft.fields.tagDraft = "unsubmitted tag";
   draft.fields.acceptanceDraft = "unsubmitted criterion";
   draft.fields.acceptance[0].text = "Edited";
-  draft.fields.dependencies.push("new");
   draft.fields.labels.push("new");
   assert.notEqual(draftSnapshot(draft), before);
   assert.equal(JSON.parse(draftSnapshot(draft)).tagDraft, "unsubmitted tag");
   assert.equal(source.metadata.acceptance[0].text, "Original");
-  assert.deepEqual(source.metadata.depends_on, ["existing-dependency"]);
   assert.deepEqual(source.metadata.labels, [" preserved tag "]);
 });

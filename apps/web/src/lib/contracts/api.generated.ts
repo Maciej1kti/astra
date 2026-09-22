@@ -162,7 +162,6 @@ export interface ApiContracts {
   ExtensionValue: ExtensionValue;
   Schedule: Schedule;
   Due: Due;
-  Blocked: Blocked;
   Author: Author;
   Target: Target;
   ReportTarget: ReportTarget;
@@ -223,14 +222,6 @@ export interface ApiContracts {
           priority?: "low" | "normal" | "high" | "urgent";
           archived?: boolean;
           schedule?: Schedule;
-          due?: Due;
-          review_on?: string;
-          milestone_id?: string;
-          blocked?: Blocked;
-          /**
-           * @maxItems 100
-           */
-          depends_on?: string[];
           acceptance?: Acceptance;
           /**
            * @maxItems 20
@@ -241,9 +232,7 @@ export interface ApiContracts {
         /**
          * @maxItems 20
          */
-        clear?: (
-          "schedule" | "due" | "review_on" | "milestone_id" | "blocked" | "depends_on" | "labels" | "acceptance"
-        )[];
+        clear?: ("schedule" | "labels" | "acceptance")[];
         placement?: Placement;
       }
     | {
@@ -287,9 +276,6 @@ export interface ApiContracts {
   CalendarItem: CalendarItem;
   CalendarPage: CalendarPage;
   BoardView: BoardView;
-  GanttEdge: GanttEdge;
-  TimelineAnalysis: TimelineAnalysis;
-  TimelineForecast: TimelineForecast;
   GanttPage: GanttPage;
   FocusResource: FocusResource;
   FocusReplace: FocusReplace;
@@ -342,10 +328,6 @@ export interface Schedule {
 }
 export interface Due {
   date: string;
-  kind: "hard" | "target";
-}
-export interface Blocked {
-  reason: string;
 }
 export interface Author {
   kind: "human" | "agent";
@@ -387,14 +369,6 @@ export interface CardMetadata {
   position: string;
   archived: boolean;
   schedule?: Schedule;
-  due?: Due;
-  review_on?: string;
-  milestone_id?: string;
-  blocked?: Blocked;
-  /**
-   * @maxItems 100
-   */
-  depends_on?: string[];
   acceptance?: Acceptance;
   /**
    * @maxItems 20
@@ -499,14 +473,6 @@ export interface CardCreate {
   priority?: "low" | "normal" | "high" | "urgent";
   archived?: boolean;
   schedule?: Schedule;
-  due?: Due;
-  review_on?: string;
-  milestone_id?: string;
-  blocked?: Blocked;
-  /**
-   * @maxItems 100
-   */
-  depends_on?: string[];
   /**
    * @maxItems 20
    */
@@ -606,7 +572,6 @@ export interface Summary {
   priority?: string;
   schedule?: Schedule;
   due?: Due;
-  review_on?: string;
   archived?: boolean;
   position?: string;
   availability?: "ready" | "stale" | "invalid" | "unavailable" | "recovering";
@@ -618,12 +583,10 @@ export interface Summary {
   recorded_at?: string;
   author?: Author;
   target?: ReportTarget;
-  blocked?: Blocked;
   /**
    * @maxItems 20
    */
   labels?: string[];
-  milestone_id?: string;
   acceptance_progress?: AcceptanceProgress;
   read?: boolean;
 }
@@ -641,14 +604,13 @@ export interface SummaryPage {
 }
 export interface CalendarItem {
   item_id: string;
-  kind: "card_schedule" | "card_due" | "card_review" | "milestone_due";
+  kind: "card_schedule" | "milestone_due";
   project_id: string;
   resource_id: string;
   version: string;
   title: string;
   start: string;
   end: string;
-  due_kind?: "hard" | "target";
 }
 export interface CalendarPage {
   /**
@@ -681,47 +643,11 @@ export interface BoardView {
    */
   warnings: Warning[];
 }
-export interface GanttEdge {
-  from: string;
-  to: string;
-  kind: "finish_to_start";
-  outside_page: boolean;
-  warning: string | null;
-}
-export interface TimelineAnalysis {
-  planned_start: string | null;
-  planned_end: string | null;
-  forecast_end: string | null;
-  delay_days: number;
-  scheduled_cards: number;
-  unscheduled_cards: number;
-  unresolved_cards: number;
-  complete: boolean;
-  /**
-   * @maxItems 10000
-   */
-  driving_path: string[];
-}
-export interface TimelineForecast {
-  id: string;
-  schedule: Schedule;
-  delay_days: number;
-  drives_finish: boolean;
-}
 export interface GanttPage {
-  analysis: TimelineAnalysis;
-  /**
-   * @maxItems 500
-   */
-  forecasts: TimelineForecast[];
   /**
    * @maxItems 500
    */
   rows: Summary[];
-  /**
-   * @maxItems 50000
-   */
-  edges: GanttEdge[];
   page: PageMeta;
   /**
    * @maxItems 100
@@ -884,7 +810,7 @@ export interface AttentionItem {
   id: string;
   project_id: string;
   target: Target;
-  reason: "overdue" | "due_soon" | "review_due" | "blocked" | "decision_needed" | "review";
+  reason: "overdue" | "due_soon" | "decision_needed" | "review";
   label: string;
   date?: string;
 }
@@ -951,8 +877,6 @@ export interface ContextEntry {
   schedule?: Schedule;
   due?: Due;
   priority?: "low" | "normal" | "high" | "urgent";
-  review_on?: string;
-  blocked?: Blocked;
   target?: ReportTarget;
   recorded_at?: string;
   acceptance?: Acceptance;

@@ -192,13 +192,11 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
         "schedule",
         "due",
         "priority",
-        "review_on",
-        "blocked",
         "target",
         "recorded_at",
         "acceptance",
     ] {
-        if key == "review_on" && document["type"] == "project" {
+        if key == "due" && document["type"] != "milestone" {
             continue;
         }
         if let Some(value) = metadata.get(key) {

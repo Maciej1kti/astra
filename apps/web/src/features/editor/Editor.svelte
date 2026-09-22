@@ -11,7 +11,6 @@
     HistoryEntry,
     CommandResponse,
   } from "../../lib/contracts/api.generated";
-  import CardRelations from "./CardRelations.svelte";
   import ReportFields from "./ReportFields.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
   import "../../styles/editor.css";
@@ -40,13 +39,7 @@
 
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { modal } from "../../lib/ui/dialog";
-  import {
-    ApiError,
-    api,
-    command,
-    type Resource,
-    type Pending,
-  } from "../../lib/api/api";
+  import { api, command, type Resource, type Pending } from "../../lib/api/api";
   import { deleteCard } from "../../lib/api/resources";
 
   const operation = commandOperation(() => !accessLost);
@@ -94,9 +87,6 @@
   let deleteConflict = $state(false);
   let deleteFlushing = $state(false);
   let deleteConfirmation = $state<"drafts" | "final" | null>(null);
-  let deleteBlockers = $state<
-    { id: string; title: string; archived: boolean }[]
-  >([]);
   let deleteNotice = $state<HTMLDivElement>();
   let conflict = $state<{ current: Resource | null } | null>(null);
   let autosaveState = $state<AutosaveState>({
@@ -118,6 +108,7 @@
 
   let preview = $state(false);
   let descriptionEditing = $state(false);
+  let descriptionPointerOutside = false;
   let descriptionInput = $state<HTMLTextAreaElement>();
   let descriptionCloseButton = $state<HTMLButtonElement>();
   let discard = $state(false);
@@ -243,10 +234,15 @@
   function finishDescriptionEdit() {
     if (draft.type !== "project" && draft.type !== "card") return;
     descriptionEditing = false;
+    descriptionPointerOutside = false;
     if (persistedDirty && !closing)
       void flushAutosave().catch((cause) => {
         autosaveError = cause instanceof Error ? cause.message : String(cause);
       });
+  }
+  function blurDescription() {
+    // Keep the clicked control in place until its click has been dispatched.
+    if (!descriptionPointerOutside) finishDescriptionEdit();
   }
   $effect(() => {
     if (!descriptionEditing || !descriptionInput) return;
@@ -266,11 +262,19 @@
       if (!(target instanceof Node)) return;
       if (descriptionInput?.contains(target)) return;
       if (descriptionCloseButton?.contains(target)) return;
-      finishDescriptionEdit();
+      descriptionPointerOutside = true;
+    };
+    const finishPointer = () => {
+      if (descriptionPointerOutside) finishDescriptionEdit();
     };
     document.addEventListener("pointerdown", outsidePointer, true);
-    return () =>
+    document.addEventListener("click", finishPointer);
+    document.addEventListener("pointercancel", finishPointer);
+    return () => {
       document.removeEventListener("pointerdown", outsidePointer, true);
+      document.removeEventListener("click", finishPointer);
+      document.removeEventListener("pointercancel", finishPointer);
+    };
   });
   function focusDeleteAction(node: HTMLButtonElement) {
     node.focus({ preventScroll: true });
@@ -573,16 +577,7 @@
     try {
       const before = JSON.parse(previous) as Record<string, unknown>;
       const after = JSON.parse(next) as Record<string, unknown>;
-      for (const key of [
-        "status",
-        "priority",
-        "kind",
-        "dueKind",
-        "milestoneId",
-        "archived",
-        "labels",
-        "dependencies",
-      ]) {
+      for (const key of ["status", "priority", "kind", "archived", "labels"]) {
         if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
           return true;
       }
@@ -669,14 +664,12 @@
     }
     deleteError = "";
     deleteConflict = false;
-    deleteBlockers = [];
     deleteConfirmation = dirty ? "drafts" : "final";
   }
   function cancelDelete() {
     if (deleteBusy) return;
     deleteConfirmation = null;
     deleteError = "";
-    deleteBlockers = [];
   }
   function continueDelete() {
     if (deleteBusy || !resource || draft.type !== "card") return;
@@ -699,7 +692,6 @@
     deleteConfirmation = null;
     deleteError = "";
     deleteConflict = false;
-    deleteBlockers = [];
     try {
       deleteOperation.prepare(
         deleteCard(project, resource.metadata.id, resource.version),
@@ -719,39 +711,12 @@
   async function runDelete(action: "submit" | "status") {
     if (!deletePending || deleteBusy || accessLost) return;
     deleteError = "";
-    deleteBlockers = [];
     try {
       if (action === "status") await deleteOperation.confirm();
       else await deleteOperation.commit();
       ondeleted();
     } catch (cause) {
       deleteError = commandErrorMessage(cause);
-      if (cause instanceof ApiError) {
-        const details = cause.data.error;
-        const incoming =
-          details && typeof details === "object" && "details" in details
-            ? (details as { details?: unknown }).details
-            : undefined;
-        const blockers =
-          incoming && typeof incoming === "object" && "incoming" in incoming
-            ? (incoming as { incoming?: unknown }).incoming
-            : undefined;
-        if (Array.isArray(blockers))
-          deleteBlockers = blockers.slice(0, 100).flatMap((item) => {
-            if (!item || typeof item !== "object") return [];
-            const blocker = item as Record<string, unknown>;
-            return typeof blocker.id === "string" &&
-              typeof blocker.title === "string"
-              ? [
-                  {
-                    id: blocker.id,
-                    title: blocker.title,
-                    archived: blocker.archived === true,
-                  },
-                ]
-              : [];
-          });
-      }
       if (isRejectedConflict(deleteOperation.phase, cause)) {
         deleteConflict = true;
         deleteError = `${deleteError} Card was not deleted. Close and reopen the card before trying again.`;
@@ -1055,7 +1020,7 @@
               bind:value={draft.common.body}
               rows="8"
               aria-label="Description"
-              onblur={finishDescriptionEdit}
+              onblur={blurDescription}
               disabled={locked}></textarea>
           {:else}
             <div
@@ -1101,31 +1066,15 @@
           bind:acceptanceError
           bind:tagError
         />{/if}
-      {#if draft.type === "card" || draft.type === "milestone"}<div class="row">
+      {#if draft.type === "milestone"}<div class="row">
           <label
             >Due date<input
               type="date"
               bind:value={draft.fields.due}
               disabled={locked}
             /></label
-          ><label
-            >Deadline type<select
-              aria-label="Deadline type"
-              bind:value={draft.fields.dueKind}
-              disabled={locked}
-              ><option value="target">Target</option><option value="hard"
-                >Hard deadline</option
-              ></select
-            ></label
           >
         </div>{/if}
-      {#if draft.type === "card"}<label
-          >Review on<input
-            type="date"
-            bind:value={draft.fields.review}
-            disabled={locked}
-          /></label
-        >{/if}
       {#if draft.type === "update" && !readonly}<label
           >Author<input
             bind:value={draft.fields.author}
@@ -1134,12 +1083,20 @@
             disabled={locked}
           /></label
         >{/if}
-      {#if draft.type === "card"}<CardRelations
-          bind:fields={draft.fields}
-          {project}
-          cardId={resource?.metadata.id}
-          {locked}
-        />{/if}
+      {#if draft.type === "card"}<details>
+          <summary>Card lifecycle</summary>
+          <label
+            ><input
+              type="checkbox"
+              bind:checked={draft.fields.archived}
+              disabled={locked}
+            /> Archived</label
+          >
+          <p class="empty-context">
+            Archived cards remain in the project and can be restored from the
+            archive filter.
+          </p>
+        </details>{/if}
       {#if draft.type === "update"}<ReportFields
           bind:fields={draft.fields}
           locked={readonly || locked}
@@ -1226,13 +1183,13 @@
         >
           Autosave request <code>{autosaveState.pending.requestId}</code>
         </p>
-        <div class="row">
-          <button type="button" onclick={autosaveCheck} disabled={accessLost}
-            >Check status</button
-          ><button type="button" onclick={autosaveRetry} disabled={accessLost}
-            >Retry same command</button
-          >
-        </div>{/if}
+        {#if autosaveState.phase === "uncertain"}<div class="row">
+            <button type="button" onclick={autosaveCheck} disabled={accessLost}
+              >Check status</button
+            ><button type="button" onclick={autosaveRetry} disabled={accessLost}
+              >Retry same command</button
+            >
+          </div>{/if}{/if}
       {#if deleteError}<div
           bind:this={deleteNotice}
           class="notice"
@@ -1240,14 +1197,6 @@
           tabindex="-1"
         >
           <p>{deleteError}</p>
-          {#if deleteBlockers.length}<p>
-              Incoming cards still reference this card:
-            </p>
-            <ul>
-              {#each deleteBlockers as blocker}<li>
-                  {blocker.title}{blocker.archived ? " (archived)" : ""}
-                </li>{/each}
-            </ul>{/if}
         </div>{/if}
       {#if deletePending}<p>
           Deletion request <code>{deletePending.requestId}</code>

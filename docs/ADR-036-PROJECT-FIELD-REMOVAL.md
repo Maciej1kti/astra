@@ -11,9 +11,10 @@ Project metadata has the closed field set `schema_version`, `id`, `name`,
 emit `phase`, `review_on`, or `x-*` extension fields. The project patch API
 accepts only `name`, `state`, and `body`; its `clear` operation is removed.
 
-Card `review_on` remains supported. Card metadata extensions are removed by
-[ADR-038](ADR-038-CARD-EXTENSION-REMOVAL.md); milestone and update extension
-rules remain unchanged.
+Card metadata extensions are removed by [ADR-038](ADR-038-CARD-EXTENSION-REMOVAL.md);
+card planning fields are subsequently simplified by
+[ADR-039](ADR-039-CARD-PLANNING-SIMPLIFICATION.md). Milestone and update
+extension rules remain unchanged.
 
 The JSON Schema and OpenAPI contracts use closed project metadata objects, and
 the generated browser contract types are regenerated from those sources.
@@ -36,7 +37,7 @@ schema and cannot resurrect unsupported metadata.
 
 ## Consequences
 
-Project summaries and search results no longer expose `phase`. Clients must
-use card `review_on` for card review scheduling. A client sending removed
+Project summaries and search results no longer expose `phase`. Clients use card
+schedules and reports for current card planning. A client sending removed
 project fields receives normal schema validation failure and must not retry the
 same unsupported payload.

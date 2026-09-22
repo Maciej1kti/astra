@@ -3,19 +3,13 @@ FROM documents
 WHERE (?1 IS NULL
 OR project_id=?1)
 AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0), dates AS (
-              SELECT project_id,entity_id,source_hash,title,'card_schedule' kind,json_extract(metadata_json,'$.schedule.start') start,json_extract(metadata_json,'$.schedule.end') end,NULL due_kind
+              SELECT project_id,entity_id,source_hash,title,'card_schedule' kind,json_extract(metadata_json,'$.schedule.start') start,json_extract(metadata_json,'$.schedule.end') end
 FROM selected
 WHERE entity_type='card'
-UNION ALL SELECT project_id,entity_id,source_hash,title,'card_due',json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.kind')
-FROM selected
-WHERE entity_type='card'
-UNION ALL SELECT project_id,entity_id,source_hash,title,'milestone_due',json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.kind')
+UNION ALL SELECT project_id,entity_id,source_hash,title,'milestone_due',json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.date')
 FROM selected
 WHERE entity_type='milestone'
-UNION ALL SELECT project_id,entity_id,source_hash,title,'card_review',json_extract(metadata_json,'$.review_on'),json_extract(metadata_json,'$.review_on'),NULL
-FROM selected
-WHERE entity_type='card'
-            ) SELECT project_id,entity_id,source_hash,title,kind,start,end,due_kind
+            ) SELECT project_id,entity_id,source_hash,title,kind,start,end
 FROM dates
 WHERE start<=?3
 AND end>=?2

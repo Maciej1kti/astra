@@ -6,7 +6,7 @@ Użytkownik ma po otwarciu wiedzieć, co jest istotne, co wymaga decyzji i co pl
 
 ## Scenariusz podstawowy
 
-Użytkownik dodaje folder przez CLI lub kontrolowany formularz hosta. Aplikacja tworzy jawne pliki i krótki blok w `AGENTS.md`. Użytkownik zapisuje kartę, plan i deadline, przypina ją do focusu. Agent odczytuje kontekst i dopisuje istotny raport. Na telefonie użytkownik zmienia datę; desktop widzi tę samą kartę. Raport nie zamyka sam etapu i nie zmienia deadline'u.
+The user adds a folder through the CLI or the controlled host form. The application creates explicit files and a short block in `AGENTS.md`. The user saves a card and its schedule, then pins it to focus. An agent reads the context and adds a useful report. The user can change a date on the phone and see the same card on desktop. A report does not close a stage by itself.
 
 ## Przepływy v1
 
@@ -16,7 +16,7 @@ Użytkownik dodaje folder przez CLI lub kontrolowany formularz hosta. Aplikacja 
 
 **Szybka karta:** tytuł to jedyne obowiązkowe pole formularza. Serwer uzupełnia ID, status `planned`, priorytet `normal`, rank, czasy. Zmiana jednego pola nie wymaga przepisywania całego opisu. Formularz nie autosave'uje każdego znaku do plików.
 
-**Praca:** aktywna karta ma wynik, kontekst, ewentualną przeszkodę, zakres planu, deadline, przegląd i kamień milowy. Blokada nie zastępuje statusu. Zmiana statusu nie aktualizuje automatycznie fazy projektu.
+**Work:** an active card has an outcome, context and an optional schedule. A `blocker` report can describe an obstacle without adding a blocking field to the card. Changing status does not update a project phase automatically.
 
 **Decyzja:** raport `decision_needed` pojawia się w uwadze. Samo przeczytanie go nie rozwiązuje sprawy. Raport `resolution` wskazujący go jawnie zamyka sygnał. `correction` odnosi się do błędnego raportu; historia nie znika.
 
@@ -31,18 +31,18 @@ Użytkownik dodaje folder przez CLI lub kontrolowany formularz hosta. Aplikacja 
 | Focus | Własna kolejność, szybkie dodanie/usunięcie, sygnały uwagi | Nie zmienia statusów i priorytetów |
 | Projects | Goal, next milestone, availability, latest meaningful update | No progress percentage inferred from commits |
 | Kanban | Pięć stanów, ręczne sortowanie, dnd, filtr, karta szczegółów | Cancelled domyślnie zwinięte, archiwum osobno |
-| Kalendarz | Miesiąc, tydzień całodniowy, agenda, move/resize planu, osobne markery terminów | Plan i deadline są rozróżnione także ikoną/etykietą |
-| Gantt | Dni/tygodnie/miesiące, paski, milestones, zależności, niezaplanowane | Bez automatycznego przesuwania następców |
+| Calendar | Month, all-day week, agenda, schedule move/resize, milestone due dates | Card schedules and milestone due dates have distinct markers and labels |
+| Gantt | Days/weeks/months, explicit schedule bars, milestones, unscheduled cards | No connections or automatic scheduling |
 | Lista | Wirtualizowane wiersze, status/datowanie/priorytet, filtry i sort | Alternatywa dla każdej czynności wymagającej gestu |
 | Aktualizacje | Chronologia, nieprzeczytane, target, źródło, korekta/rozwiązanie | Nie transkrypcje sesji |
 
-Wszystkie widoki mają wspólny panel karty i jeden kontrakt mutacji. Telefon ma tę samą możliwość edycji: status, opis, daty, focus, raporty, milestone i zależności. Układ może być inny; nie stosujemy mobilnego read-only ani desktopowego hover jako jedynej drogi.
+All views use the same card panel and mutation contract. The phone has the same editing capabilities: status, description, schedule, focus and reports. The layout may differ; mobile is not read-only and desktop hover is never the only route.
 
 ## Sygnały uwagi
 
-Wyliczane deterministycznie w strefie workspace, domyślnie Europe/Warsaw: overdue hard deadline, hard deadline dzisiaj/najbliższe 7 dni, przekroczona data przeglądu, jawna blokada, nierozwiązana decyzja i karta w review. Źródło i powód są widoczne. Target date to plan, nie czerwony alarm równy hard deadline. Done/cancelled/archived nie generują zaległości kart. Wstrzymany projekt może nadal mieć realny deadline; nie ukrywaj go, tylko pokaż stan projektu.
+Signals are deterministic in the workspace timezone, Europe/Warsaw by default: `overdue` or `due_soon` from an explicit card schedule end, `overdue` or `due_soon` from a milestone due date, unresolved decisions and cards in review. The source and reason are visible. A card without a schedule has no date signal. Done, cancelled and archived cards do not produce card date signals.
 
-Sygnały nie przestawiają focusu. Użytkownik może zmienić datę przeglądu albo rozwiązać raport. Oznaczenie jako przeczytane nie przesuwa terminów. Nie dodajemy autonomicznego scoringu ani LLM w tej ścieżce.
+Signals do not reorder focus. The user can change a schedule or milestone due date, or resolve a report. Marking a report read does not move dates. This path has no autonomous scoring or LLM.
 
 ## Poza v1
 

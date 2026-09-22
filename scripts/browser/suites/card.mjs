@@ -51,7 +51,6 @@ export async function runCardChecks({
   const dialog = () =>
     page.getByRole("dialog", { name: /^(Edit|Create) resource$/ });
   const title = () => dialog().getByLabel("Title", { exact: true });
-  const reviewOn = () => dialog().getByLabel("Review on", { exact: true });
   const descriptionRendered = () =>
     dialog().locator(".resource-description-rendered");
   const description = () => dialog().getByLabel("Description", { exact: true });
@@ -213,7 +212,14 @@ export async function runCardChecks({
       assert.equal(matches.length, 1);
       const saved = get(matches[0].id);
       assert.equal(saved.metadata.title, name);
-      for (const field of ["review_on", "acceptance"])
+      for (const field of [
+        "due",
+        "review_on",
+        "milestone_id",
+        "blocked",
+        "depends_on",
+        "acceptance",
+      ])
         assert.equal(Object.hasOwn(saved.metadata, field), false);
       return { card: matches[0].id, optionalFieldsAbsent: true };
     },
@@ -313,15 +319,33 @@ export async function runCardChecks({
 
   await check(
     "C02-model",
-    "Review date and reordered checklist items persist through autosave and reload without accepting the card",
+    "Only planned start and end dates plus checklist items persist through autosave and reload",
     async () => {
       const card = await create({
         title: unique("acceptance workflow"),
         status: "active",
-        review_on: "2026-09-20",
+        schedule: { start: "2026-09-12", end: "2026-09-14" },
         body: "Original context remains intact.",
       });
       await open(card.id);
+      for (const field of [
+        "Due date",
+        "Review on",
+        "Blocked reason",
+        "Find by title",
+      ])
+        await expect(dialog().getByLabel(field, { exact: true })).toHaveCount(
+          0,
+        );
+      await expect(
+        dialog().getByText("Connections and blockers", { exact: true }),
+      ).toHaveCount(0);
+      await expect(dialog().getByLabel("Start", { exact: true })).toHaveValue(
+        "2026-09-12",
+      );
+      await expect(dialog().getByLabel("End", { exact: true })).toHaveValue(
+        "2026-09-14",
+      );
       await dialog()
         .getByLabel("New item", { exact: true })
         .fill("The intended result is visible.");
@@ -352,7 +376,10 @@ export async function runCardChecks({
       await screenshot("C02-acceptance-draft");
       await waitForAutosaveACK();
       const saved = get(card.id);
-      assert.equal(saved.metadata.review_on, "2026-09-20");
+      assert.deepEqual(saved.metadata.schedule, {
+        start: "2026-09-12",
+        end: "2026-09-14",
+      });
       assert.equal(saved.body, "Original context remains intact.");
       assert.equal(saved.metadata.status, "active");
       assert.deepEqual(
@@ -377,7 +404,12 @@ export async function runCardChecks({
         );
       await open(card.id);
       await page.reload();
-      await expect(reviewOn()).toHaveValue(saved.metadata.review_on);
+      await expect(dialog().getByLabel("Start", { exact: true })).toHaveValue(
+        saved.metadata.schedule.start,
+      );
+      await expect(dialog().getByLabel("End", { exact: true })).toHaveValue(
+        saved.metadata.schedule.end,
+      );
       await expect(item(1)).toHaveValue(saved.metadata.acceptance[0].text);
       await expect(item(2)).toHaveValue(saved.metadata.acceptance[1].text);
       await dialog()
@@ -420,12 +452,12 @@ export async function runCardChecks({
 
   await check(
     "C03-clear",
-    "Clearing the review date and checklist keeps other card facts",
+    "Clearing the planned dates and checklist keeps other card facts",
     async () => {
       const card = await create({
         title: unique("clear card fields"),
         status: "review",
-        review_on: "2026-09-21",
+        schedule: { start: "2026-09-18", end: "2026-09-19" },
         acceptance: [
           {
             id: randomUUID(),
@@ -436,23 +468,35 @@ export async function runCardChecks({
         body: "Decision context",
       });
       await open(card.id);
-      await reviewOn().fill("");
+      await dialog().getByLabel("Start", { exact: true }).fill("");
+      await dialog().getByLabel("End", { exact: true }).fill("");
       await dialog()
         .getByRole("button", { name: "Remove checklist item 1", exact: true })
         .click();
       await waitForAutosaveACK();
       const saved = get(card.id);
-      for (const field of ["review_on", "acceptance"])
+      for (const field of [
+        "schedule",
+        "due",
+        "review_on",
+        "milestone_id",
+        "blocked",
+        "depends_on",
+        "acceptance",
+      ])
         assert.equal(Object.hasOwn(saved.metadata, field), false, field);
       assert.equal(saved.metadata.status, "review");
       assert.equal(saved.body, "Decision context");
       await open(card.id);
-      await expect(reviewOn()).toHaveValue("");
+      await expect(dialog().getByLabel("Start", { exact: true })).toHaveValue(
+        "",
+      );
+      await expect(dialog().getByLabel("End", { exact: true })).toHaveValue("");
       await expect(checklist().locator("li")).toHaveCount(0);
       await screenshot("C03-cleared-optional-fields");
       return {
         card: card.id,
-        removed: ["review_on", "acceptance"],
+        removed: ["schedule", "acceptance"],
         preserved: ["status", "body"],
       };
     },

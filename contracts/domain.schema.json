@@ -87,32 +87,10 @@
       "properties": {
         "date": {
           "$ref": "#/$defs/LocalDate"
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "hard",
-            "target"
-          ]
         }
       },
       "required": [
-        "date",
-        "kind"
-      ],
-      "additionalProperties": false
-    },
-    "Blocked": {
-      "type": "object",
-      "properties": {
-        "reason": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 1000
-        }
-      },
-      "required": [
-        "reason"
+        "date"
       ],
       "additionalProperties": false
     },
@@ -340,26 +318,6 @@
         },
         "schedule": {
           "$ref": "#/$defs/Schedule"
-        },
-        "due": {
-          "$ref": "#/$defs/Due"
-        },
-        "review_on": {
-          "$ref": "#/$defs/LocalDate"
-        },
-        "milestone_id": {
-          "$ref": "#/$defs/UUID"
-        },
-        "blocked": {
-          "$ref": "#/$defs/Blocked"
-        },
-        "depends_on": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/UUID"
-          },
-          "maxItems": 100,
-          "uniqueItems": true
         },
         "labels": {
           "type": "array",

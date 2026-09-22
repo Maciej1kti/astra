@@ -892,38 +892,6 @@ export async function runEditorChecks({
     },
   );
 
-  await check(
-    "inspector-context",
-    "Card relationships display names without report sections",
-    async () => {
-      const predecessor = await create({ title: "Repair named predecessor" });
-      const milestone = await mutate("POST", `${base}/milestones`, {
-        title: "Repair named milestone",
-      });
-      const card = await create({
-        title: "Repair card inspector",
-        milestone_id: milestone.id,
-        depends_on: [predecessor.id],
-      });
-      await open(card.id);
-      await expect(
-        dialog()
-          .locator(".relation-row")
-          .getByText(milestone.title, { exact: true }),
-      ).toBeVisible();
-      await expect(
-        dialog()
-          .locator(".relation-row")
-          .getByText(predecessor.title, { exact: true }),
-      ).toBeVisible();
-      await expect(
-        dialog().getByText("Card updates", { exact: true }),
-      ).toHaveCount(0);
-      await screenshot("inspector-related-context");
-      return "Named relationships remain visible without card report sections.";
-    },
-  );
-
   await writeFile(
     join(evidenceDir, "results.json"),
     JSON.stringify({ results, errors }, null, 2),

@@ -70,7 +70,7 @@ Reports target projects or milestones.
 [PlanningRead](../apps/web/src/features/planning/planning-read.ts) owns one view's
 request generation, cancellation and deferred publication during gestures. Calendar
 and Gantt keep their own pagination policy. Typed widget adapters convert inclusive
-domain dates and forecast projections into vendor events/tasks without modifying
+domain dates into vendor events/tasks without modifying
 source rows. Gantt gesture activity is passed through its instance context.
 
 [Tag review](../apps/web/src/features/tags/tag-review.svelte.ts) owns catalog
@@ -95,8 +95,8 @@ writer, workflow and index implementation modules are private to the crate.
 
 [Source reads](../crates/application/src/source.rs) return validated documents
 with their original byte versions. Workspace reads return `Versioned<Workspace>`.
-Registration, workspace mutation, source-dependent ordering and dependency checks
-operate on these models. Projection rows and patch envelopes still use JSON where
+Registration, workspace mutation and source-dependent ordering operate on
+these models. Projection rows and patch envelopes still use JSON where
 the schema intentionally varies; this does not replace domain validation.
 
 Patch preparation composes creation defaults, patch/undo application, placement
@@ -133,9 +133,9 @@ Rejected status results come from the stored error slot. Typed
 [workflow inputs](../crates/application/src/workflow/model.rs) separate execution
 paths from preview fields while retaining the saved JSON format and digest.
 
-Timeline analysis takes typed schedule, dependency and reliability inputs from
-the Gantt projection adapter. Invalid indexed shapes produce a stored-data error
-instead of silently dropping dependencies.
+Timeline projections use explicitly recorded inclusive card schedules and
+milestone dates. Card dependencies, blocked reasons and dependency forecasts
+are not part of the current model.
 
 [Operational failure records](../crates/application/src/diagnostics/failure.rs)
 retain the stage, error category, safe identifiers and available IO/SQLite code

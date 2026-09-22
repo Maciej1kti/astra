@@ -11,8 +11,13 @@ fn scoped_pages_survive_other_projects_but_reject_relevant_changes() {
     let mut cards = Vec::new();
     for title in ["First", "Second", "Third"] {
         let created = create(&engine, &a, title);
-        cards.push(patch(&engine, &a, created.body["result"]["id"].as_str().unwrap(), created.body["result"]["version"].as_str().unwrap(),
-            json!({"set":{"blocked":{"reason":"Waiting"},"schedule":{"start":"2026-09-08","end":"2026-09-09"}}})));
+        cards.push(patch(
+            &engine,
+            &a,
+            created.body["result"]["id"].as_str().unwrap(),
+            created.body["result"]["version"].as_str().unwrap(),
+            json!({"set":{"schedule":{"start":"2026-09-08","end":"2026-09-09"}}}),
+        ));
     }
     let query = Query {
         project: Some(a.clone()),
@@ -452,7 +457,6 @@ fn run_search_upgrade(body_only: bool) {
         &id,
         created.body["result"]["version"].as_str().unwrap(),
         json!({"set":{
-            "review_on":"2026-09-08",
             "body":"Original source body\n",
             "acceptance":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"PreviouslyUnindexed","completed":false}]
         }}),
@@ -478,10 +482,15 @@ fn run_search_upgrade(body_only: bool) {
                 "updated_at":"2026-09-22T00:00:00Z",
                 "expected_result":"LegacyExpected",
                 "owner":"LegacyOwner",
+                "review_on":"2026-09-08",
+                "milestone_id":"44444444-4444-4444-8444-444444444444",
+                "blocked":{"reason":"LegacyBlocked"},
+                "depends_on":["33333333-3333-4333-8333-333333333333"],
+                "due":{"date":"2026-09-08","kind":"hard"},
                 "acceptance":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"PreviouslyUnindexed","completed":false}]
             })
             .to_string(),
-            "LegacyExpected LegacyOwner Original source body PreviouslyUnindexed",
+            "LegacyExpected LegacyOwner LegacyReview LegacyBlocked LegacyDependency LegacyDue Original source body PreviouslyUnindexed",
             id,
         ],
     )
@@ -556,7 +565,14 @@ VALUES ('rebuild');")
             .unwrap();
         assert_eq!(page["items"][0]["id"], id, "{term}");
     }
-    for term in ["LegacyExpected", "LegacyOwner"] {
+    for term in [
+        "LegacyExpected",
+        "LegacyOwner",
+        "LegacyReview",
+        "LegacyBlocked",
+        "LegacyDependency",
+        "LegacyDue",
+    ] {
         let page = engine
             .list(
                 Some("card"),
@@ -576,10 +592,6 @@ VALUES ('rebuild');")
     );
     drop(engine);
     let engine = env.engine();
-    assert_eq!(
-        engine.get(&project, Kind::Card, &id).unwrap()["metadata"]["review_on"],
-        "2026-09-08"
-    );
     assert_eq!(
         engine.get(&project, Kind::Card, &id).unwrap()["metadata"]["acceptance"],
         json!([{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","text":"PreviouslyUnindexed","completed":false}])

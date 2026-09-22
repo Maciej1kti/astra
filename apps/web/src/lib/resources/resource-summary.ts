@@ -37,15 +37,16 @@ export function detailSummary(
     const m = resource.metadata as CardMetadata | MilestoneMetadata;
     result.title = m.title;
     result.status = m.status;
-    if (m.due !== undefined) result.due = m.due;
+    if (type === "milestone") {
+      const milestone = m as MilestoneMetadata;
+      if (milestone.due !== undefined) result.due = milestone.due;
+    }
     if (m.position !== undefined) result.position = m.position;
     if (type === "card") {
       const card = m as CardMetadata;
       result.priority = card.priority;
       if (card.schedule !== undefined) result.schedule = card.schedule;
-      if (card.review_on !== undefined) result.review_on = card.review_on;
       if (card.archived !== undefined) result.archived = card.archived;
-      if (card.blocked !== undefined) result.blocked = card.blocked;
       if (card.labels !== undefined) result.labels = [...card.labels];
       if (card.acceptance !== undefined)
         result.acceptance_progress = acceptanceProgress(card.acceptance);

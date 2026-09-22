@@ -54,8 +54,7 @@ fn calendar_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
     let kind: String = row.get(4)?;
     let start: String = row.get(5)?;
     let end: String = row.get(6)?;
-    let due: Option<String> = row.get(7)?;
-    let mut item = json!({
+    let item = json!({
         "item_id": format!("{id}:{kind}"),
         "kind": kind,
         "project_id": project,
@@ -65,8 +64,5 @@ fn calendar_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
         "start": start,
         "end": end,
     });
-    if let Some(due) = due {
-        item["due_kind"] = json!(due);
-    }
     Ok(item)
 }

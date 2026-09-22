@@ -2,9 +2,6 @@ import type { Summary } from "../../lib/api/api";
 import { shiftDate } from "./dates.ts";
 export type {
   CalendarItem,
-  GanttEdge as Edge,
-  TimelineForecast as Forecast,
-  TimelineAnalysis as Analysis,
   GanttPage,
 } from "../../lib/contracts/api.generated";
 import type { CalendarItem } from "../../lib/contracts/api.generated";
@@ -48,9 +45,5 @@ export function calendarTarget(
   };
 }
 export function calendarLabel(item: CalendarItem) {
-  return item.kind.endsWith("due")
-    ? `${item.due_kind ?? "target"} deadline`
-    : item.kind.endsWith("review")
-      ? "Review"
-      : "Planned work";
+  return item.kind.endsWith("due") ? "Due" : "Planned work";
 }

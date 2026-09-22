@@ -44,7 +44,6 @@ wire_enum!(UpdateKind {
     Correction,
     Resolution
 });
-wire_enum!(DueKind { Hard, Target });
 wire_enum!(AuthorKind { Human, Agent });
 wire_enum!(TargetKind {
     Project,
@@ -75,12 +74,6 @@ pub struct Schedule {
 #[serde(deny_unknown_fields)]
 pub struct Due {
     pub date: String,
-    pub kind: DueKind,
-}
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Blocked {
-    pub reason: String,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -145,16 +138,6 @@ pub struct CardMetadata {
     pub updated_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schedule: Option<Schedule>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub due: Option<Due>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub review_on: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub milestone_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub blocked: Option<Blocked>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub depends_on: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -291,13 +274,6 @@ impl Document {
                 MilestoneStatus::Cancelled => "cancelled",
             }),
             Self::Update { .. } => None,
-        }
-    }
-
-    pub fn dependencies(&self) -> &[String] {
-        match self {
-            Self::Card { metadata, .. } => metadata.depends_on.as_deref().unwrap_or_default(),
-            _ => &[],
         }
     }
 }

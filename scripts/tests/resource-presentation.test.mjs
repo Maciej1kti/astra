@@ -2,38 +2,44 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resourceDates } from "../../apps/web/src/lib/resources/resource-presentation.ts";
 
-test("card summaries retain the distinct meanings of deadline, plan and review", () => {
+test("card summaries retain multi-day planned work", () => {
   const card = {
-    due: { date: "2026-09-02", kind: "hard" },
+    type: "card",
     schedule: { start: "2026-09-10", end: "2026-09-15" },
-    review_on: "2026-09-08",
   };
   assert.deepEqual(resourceDates(card), [
-    { kind: "hard", label: "Hard deadline", start: "2026-09-02" },
     { kind: "plan", label: "Plan", start: "2026-09-10", end: "2026-09-15" },
-    { kind: "review", label: "Review", start: "2026-09-08" },
   ]);
-  assert.equal(card.due.date, "2026-09-02");
   assert.equal(card.schedule.end, "2026-09-15");
 });
 
-test("a target date never claims to be a hard deadline or substitutes a plan date", () => {
+test("milestone summaries retain date-only due values", () => {
   assert.deepEqual(
     resourceDates({
-      due: { date: "2026-09-20", kind: "target" },
-      schedule: { start: "2026-09-08", end: "2026-09-08" },
+      type: "milestone",
+      due: { date: "2026-09-20" },
     }),
-    [
-      { kind: "target", label: "Target date", start: "2026-09-20" },
-      { kind: "plan", label: "Plan", start: "2026-09-08" },
-    ],
+    [{ kind: "due", label: "Due", start: "2026-09-20" }],
   );
-  assert.deepEqual(resourceDates({}), []);
 });
 
-test("project summaries do not present review dates", () => {
+test("one-day planned work keeps its inclusive date", () => {
   assert.deepEqual(
-    resourceDates({ type: "project", review_on: "2026-09-08" }),
+    resourceDates({
+      type: "card",
+      schedule: { start: "2026-09-08", end: "2026-09-08" },
+    }),
+    [{ kind: "plan", label: "Plan", start: "2026-09-08" }],
+  );
+});
+
+test("card summaries do not present retired due or review dates", () => {
+  assert.deepEqual(
+    resourceDates({
+      type: "card",
+      due: { date: "2026-09-08" },
+      review_on: "2026-09-09",
+    }),
     [],
   );
 });

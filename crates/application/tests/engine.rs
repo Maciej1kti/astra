@@ -83,7 +83,7 @@ fn patch(engine: &Engine, project_id: &str, id: &str, expected: &str, payload: V
 }
 
 #[test]
-fn project_summary_drops_retired_fields_but_card_review_dates_remain() {
+fn summaries_drop_retired_card_fields_and_keep_milestone_due() {
     let project = Indexed {
         project_id: "project".into(),
         kind: "project".into(),
@@ -94,7 +94,6 @@ fn project_summary_drops_retired_fields_but_card_review_dates_remain() {
             "name": "Project",
             "state": "active",
             "phase": "Legacy",
-            "review_on": "2026-09-16",
         }),
         validity: "valid".into(),
     };
@@ -111,11 +110,31 @@ fn project_summary_drops_retired_fields_but_card_review_dates_remain() {
             "id": "card",
             "title": "Card",
             "status": "active",
-            "review_on": "2026-09-16",
+            "due": {"date": "2026-09-16", "kind": "hard"},
+            "blocked": {"reason": "legacy"},
+            "depends_on": ["legacy"],
+            "milestone_id": "legacy",
         }),
         validity: "valid".into(),
     };
-    assert_eq!(card.summary()["review_on"], "2026-09-16");
+    assert!(card.summary().get("due").is_none());
+    assert!(card.summary().get("blocked").is_none());
+    assert!(card.summary().get("depends_on").is_none());
+    assert!(card.summary().get("milestone_id").is_none());
+    let milestone = Indexed {
+        project_id: "project".into(),
+        kind: "milestone".into(),
+        id: "milestone".into(),
+        version: "r1.milestone".into(),
+        metadata: json!({
+            "id": "milestone",
+            "title": "Milestone",
+            "status": "planned",
+            "due": {"date": "2026-09-16", "kind": "hard"},
+        }),
+        validity: "valid".into(),
+    };
+    assert_eq!(milestone.summary()["due"], json!({"date": "2026-09-16"}));
 }
 
 #[path = "engine/projections.rs"]

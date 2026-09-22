@@ -16,7 +16,6 @@
     path,
     version,
     schedule,
-    dependencies,
     title = "",
     onclose,
     onsaved,
@@ -24,7 +23,6 @@
     path: string;
     version: string;
     schedule?: { start: string; end: string };
-    dependencies?: string[];
     title?: string;
     onclose: () => void;
     onsaved: () => void;
@@ -58,7 +56,7 @@
     try {
       await navigator.clipboard.writeText(
         JSON.stringify(
-          { path, version, schedule: { start, end }, dependencies, pending },
+          { path, version, schedule: { start, end }, pending },
           null,
           2,
         ),
@@ -102,9 +100,7 @@
         path,
         "PATCH",
         {
-          set: dependencies
-            ? { depends_on: dependencies }
-            : { schedule: { start, end } },
+          set: { schedule: { start, end } },
         },
         version,
       ),
@@ -116,53 +112,40 @@
 <dialog
   class="app-dialog"
   use:modal
-  aria-label={dependencies ? "Change dependencies" : "Change planned dates"}
+  aria-label="Change planned dates"
   oncancel={(event) => {
     event.preventDefault();
     if (!busy && !pending) onclose();
   }}
 >
-  <h2>{dependencies ? "Change dependencies" : "Change planned dates"}</h2>
+  <h2>Change planned dates</h2>
   {#if title}<p>{title}</p>{/if}
-  <p>
-    {dependencies
-      ? "Finish-to-start: the successor starts after its predecessor finishes. Recorded dates remain unchanged."
-      : "The deadline remains unchanged."}
-  </p>
+  <p>Recorded dates are updated using the version you opened.</p>
   <form
     onsubmit={(event) => {
       event.preventDefault();
       void save();
     }}
   >
-    {#if !dependencies}<label
-        >Planned start<input
-          type="date"
-          bind:value={start}
-          required
-          disabled={busy || !!pending || !!conflict || accessLost}
-        /></label
-      >
-      <label
-        >Planned end<input
-          type="date"
-          bind:value={end}
-          min={start}
-          required
-          disabled={busy || !!pending || !!conflict || accessLost}
-        /></label
-      >
-    {/if}
+    <label
+      >Planned start<input
+        type="date"
+        bind:value={start}
+        required
+        disabled={busy || !!pending || !!conflict || accessLost}
+      /></label
+    >
+    <label
+      >Planned end<input
+        type="date"
+        bind:value={end}
+        min={start}
+        required
+        disabled={busy || !!pending || !!conflict || accessLost}
+      /></label
+    >
     {#if error}<p role="alert">{error}</p>{/if}
-    {#if conflict?.current && dependencies}<p>
-        Current dependencies: {JSON.stringify(
-          "depends_on" in conflict.current.metadata
-            ? conflict.current.metadata.depends_on
-            : [],
-        )}. Your proposed connection is kept. Reopen the card to reconcile the
-        changes.
-      </p>
-    {:else if conflict?.current}<p>
+    {#if conflict?.current}<p>
         Current saved schedule: {JSON.stringify(
           conflict.current.type === "card"
             ? (conflict.current.metadata.schedule ?? null)
@@ -191,7 +174,7 @@
       ><button
         type="submit"
         disabled={busy || !!pending || !!conflict || accessLost}
-        >{dependencies ? "Save dependencies" : "Save planned dates"}</button
+        >Save planned dates</button
       >
     </footer>
   </form>

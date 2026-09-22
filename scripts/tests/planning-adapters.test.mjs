@@ -13,7 +13,7 @@ test("calendar conversion keeps inclusive source dates and only allows ready sch
     start: "2026-09-01",
     end: "2026-09-01",
   };
-  const due = { ...schedule, item_id: "due", kind: "card_due" };
+  const due = { ...schedule, item_id: "due", kind: "milestone_due" };
   const events = calendarEvents([schedule, due], "work", true);
   assert.equal(events[0].end, "2026-09-02");
   assert.equal(schedule.end, "2026-09-01");
@@ -23,7 +23,7 @@ test("calendar conversion keeps inclusive source dates and only allows ready sch
   assert.deepEqual(calendarEvents([schedule], "missing", true), []);
 });
 
-test("forecast tasks never change source schedules or milestone deadlines", () => {
+test("Gantt tasks use saved schedules and milestone due dates", () => {
   const card = {
     id: "c",
     type: "card",
@@ -34,27 +34,17 @@ test("forecast tasks never change source schedules or milestone deadlines", () =
     id: "m",
     type: "milestone",
     title: "Ship",
-    due: { date: "2026-09-05", kind: "hard" },
+    due: { date: "2026-09-05" },
   };
-  const forecasts = new Map([
-    [
-      "c",
-      {
-        schedule: { start: "2026-09-03", end: "2026-09-04" },
-        drives_finish: true,
-      },
-    ],
-  ]);
-  const tasks = ganttTasks([card, milestone], forecasts, true);
-  assert.equal(dateOnly(tasks[0].start), "2026-09-03");
-  assert.equal(dateOnly(tasks[0].end), "2026-09-05");
-  assert.equal(tasks[0].astraDriving, true);
+  const tasks = ganttTasks([card, milestone]);
+  assert.equal(dateOnly(tasks[0].start), "2026-09-01");
+  assert.equal(dateOnly(tasks[0].end), "2026-09-03");
   assert.equal(dateOnly(tasks[1].start), "2026-09-05");
   assert.equal(tasks[1].duration, 0);
   assert.equal(card.schedule.start, "2026-09-01");
-  assert.equal(
-    dateOnly(ganttTasks([card], forecasts, false)[0].start),
-    "2026-09-01",
+  assert.equal(dateOnly(ganttTasks([card])[0].start), "2026-09-01");
+  assert.deepEqual(
+    ganttTasks([{ id: "u", type: "card", title: "Undated" }]),
+    [],
   );
-  assert.deepEqual(ganttTasks([card], new Map(), true), []);
 });

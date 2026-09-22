@@ -3,7 +3,6 @@ export type DateProposal = {
   path: string;
   version: string;
   schedule?: { start: string; end: string };
-  dependencies?: string[];
   title?: string;
 };
 export type MoveProposal = {

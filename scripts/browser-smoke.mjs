@@ -189,7 +189,10 @@ try {
   await page.getByLabel("Title", { exact: true }).fill("Ship the field guide");
   await page.getByLabel("Start", { exact: true }).fill("2026-09-07");
   await page.getByLabel("End", { exact: true }).fill("2026-09-12");
-  await page.getByLabel("Due date", { exact: true }).fill("2026-09-15");
+  await expect(page.getByLabel("Due date", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Deadline type", { exact: true })).toHaveCount(
+    0,
+  );
   await page.locator(".resource-description-rendered").click();
   await page
     .getByLabel("Description", { exact: true })
@@ -739,7 +742,7 @@ try {
   ).toHaveAttribute("data-board-card", typedId);
   await boardHandle.focus();
   await expect(boardHandle).toBeFocused();
-  await page.keyboard.press("Alt+ArrowDown");
+  await boardHandle.press("Alt+ArrowDown");
   try {
     await expect
       .poll(
@@ -1195,7 +1198,7 @@ try {
     milestoneFile,
     JSON.stringify({
       title: "Release gate",
-      due: { date: "2026-09-30", kind: "hard" },
+      due: { date: "2026-09-30" },
     }),
   );
   cli(
@@ -1208,7 +1211,7 @@ try {
   await page.getByRole("button", { name: "Timeline", exact: true }).click();
   await page
     .getByRole("button", {
-      name: "hard milestone deadline: Release gate",
+      name: "Due milestone: Release gate",
       exact: true,
     })
     .waitFor();
@@ -1242,76 +1245,44 @@ try {
   await expect(page.getByLabel("Start", { exact: true })).toHaveValue(
     "2026-09-09",
   );
-  await page.getByLabel("Title", { exact: true }).fill("Waterfall successor");
+  await page.getByLabel("Title", { exact: true }).fill("Scheduled follow-up");
   await page.getByLabel("End", { exact: true }).fill("2026-09-11");
   await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
-  const waterfall = cli(
+  const scheduledCard = cli(
     "get",
     `/api/v1/views/list?type=card&project_id=${plan.project_id}&limit=200`,
-  ).items.find((row) => row.title === "Waterfall successor");
-  assert(waterfall);
+  ).items.find((row) => row.title === "Scheduled follow-up");
+  assert(scheduledCard);
   await page.getByRole("button", { name: "Timeline", exact: true }).click();
-  await page
-    .getByLabel("Predecessor", { exact: true })
-    .selectOption(cards[0].id);
-  await page
-    .getByLabel("Successor", { exact: true })
-    .selectOption(waterfall.id);
-  await page
-    .getByRole("button", { name: "Connect cards", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Save dependencies", exact: true })
-    .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
-  const waterfallPath = `/api/v1/projects/${plan.project_id}/cards/${waterfall.id}`;
-  assert.deepEqual(cli("get", waterfallPath).metadata.depends_on, [
-    cards[0].id,
-  ]);
-  const forecast = cli(
-    "get",
-    `/api/v1/views/gantt?project_id=${plan.project_id}`,
-  ).forecasts.find((row) => row.id === waterfall.id);
-  assert.equal(forecast.schedule.start, "2026-09-15");
-  assert.equal(forecast.schedule.end, "2026-09-17");
-  await page.getByLabel("Dependency forecast", { exact: true }).check();
+  const scheduledPath = `/api/v1/projects/${plan.project_id}/cards/${scheduledCard.id}`;
+  const recorded = cli("get", scheduledPath);
+  assert.deepEqual(recorded.metadata.schedule, {
+    start: "2026-09-09",
+    end: "2026-09-11",
+  });
+  await expect(
+    page.getByLabel("Dependency forecast", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("Predecessor", { exact: true })).toHaveCount(0);
   await expect(
     page.getByRole("button", {
-      name: "Move plan: Waterfall successor",
+      name: "Move plan: Scheduled follow-up",
       exact: true,
     }),
-  ).toBeDisabled();
-  assert.equal(cli("get", waterfallPath).metadata.schedule.start, "2026-09-09");
+  ).toBeEnabled();
   await page.screenshot({
-    path: join(evidenceDir, "gantt-waterfall.png"),
+    path: join(evidenceDir, "gantt-recorded-schedule.png"),
     fullPage: true,
   });
-  await page.getByLabel("Dependency forecast", { exact: true }).uncheck();
-  await page
-    .getByLabel("Predecessor", { exact: true })
-    .selectOption(waterfall.id);
-  await page.getByLabel("Successor", { exact: true }).selectOption(cards[0].id);
-  await page
-    .getByRole("button", { name: "Connect cards", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Save dependencies", exact: true })
-    .click();
-  await page
-    .getByRole("alert")
-    .filter({ hasText: /DEPENDENCY|dependency/i })
-    .waitFor();
-  assert(!cli("get", path).metadata.depends_on?.includes(waterfall.id));
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
   await page.getByLabel("Go to date", { exact: true }).fill("2026-09-09");
   await page
     .getByLabel("Calendar layout", { exact: true })
     .selectOption("week");
   const calendarCard = page.getByRole("button", {
-    name: "Planned work: Waterfall successor",
+    name: "Planned work: Scheduled follow-up",
     exact: true,
   });
   await calendarCard.waitFor();
@@ -1324,7 +1295,7 @@ try {
     .getByRole("button", { name: "Save planned dates", exact: true })
     .click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
-  assert.equal(cli("get", waterfallPath).metadata.schedule.end, "2026-09-12");
+  assert.equal(cli("get", scheduledPath).metadata.schedule.end, "2026-09-12");
   await page.screenshot({
     path: join(evidenceDir, "calendar-week.png"),
     fullPage: true,

@@ -1,5 +1,4 @@
 use crate::DomainError;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Position(u128);
@@ -34,48 +33,4 @@ impl std::fmt::Display for Position {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:032x}", self.0)
     }
-}
-
-/// Validate a complete project's dependency graph, including hidden cards.
-/// Iterative traversal avoids stack exhaustion on a long dependency chain.
-pub fn validate_dependencies(graph: &BTreeMap<String, Vec<String>>) -> Result<(), DomainError> {
-    let mut degrees: BTreeMap<&str, usize> = graph.keys().map(|id| (id.as_str(), 0)).collect();
-    let mut successors: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
-    for (id, dependencies) in graph {
-        if dependencies.len() > 100 {
-            return Err(DomainError::Invalid("too many dependencies"));
-        }
-        let mut seen = BTreeSet::new();
-        for dependency in dependencies {
-            if dependency == id || !seen.insert(dependency) {
-                return Err(DomainError::Invalid("self or duplicate dependency"));
-            }
-            if !graph.contains_key(dependency) {
-                return Err(DomainError::Invalid("broken dependency"));
-            }
-            *degrees.get_mut(id.as_str()).unwrap() += 1;
-            successors.entry(dependency).or_default().push(id);
-        }
-    }
-    let mut queue: VecDeque<_> = degrees
-        .iter()
-        .filter_map(|(id, count)| (*count == 0).then_some(*id))
-        .collect();
-    let mut visited = 0;
-    while let Some(id) = queue.pop_front() {
-        visited += 1;
-        if let Some(next) = successors.get(id) {
-            for target in next {
-                let count = degrees.get_mut(target).unwrap();
-                *count -= 1;
-                if *count == 0 {
-                    queue.push_back(target);
-                }
-            }
-        }
-    }
-    if visited != graph.len() {
-        return Err(DomainError::Invalid("dependency cycle"));
-    }
-    Ok(())
 }

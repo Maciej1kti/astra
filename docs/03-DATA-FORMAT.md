@@ -26,7 +26,7 @@ Puste katalogi można tworzyć leniwie. Inne pliki są ignorowane z diagnostyką
 | Obiekt | Pola wymagane w poprawnym pliku | Opcjonalne |
 |---|---|---|
 | Project | schema_version, id, name, state, created_at, updated_at | — |
-| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule, due, review_on, milestone_id, blocked, depends_on, labels, acceptance |
+| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule, labels, acceptance |
 | Milestone | id, title, status, position, archived, created_at, updated_at | due, x-* |
 | Update | id, kind, target, summary, author, recorded_at | observed_at, supersedes, resolves, evidence, x-* |
 
@@ -71,20 +71,27 @@ Brak sztucznego workflow przechodzenia przez wszystkie stany. Done/cancelled mo�
 
 Daty całodniowe mają format `YYYY-MM-DD` i muszą istnieć w kalendarzu gregoriańskim. Sam regex nie odrzuci 30 lutego. `schedule` występuje z obiema granicami; `start <= end`, obie **włączne**. Jednodniowy plan ma tę samą datę start/end. Dodajemy dni kalendarzowe, nie stałe 86 400 000 ms. Nie wykonujemy `new Date('YYYY-MM-DD')` jako kanonicznego modelu daty.
 
-`due` is `{date, kind: hard|target}`. A card's `review_on` is independent of its schedule. A schedule ending after the deadline produces a warning without rejecting the schedule or moving the deadline. `due_today` means the date equals today in the workspace timezone; overdue means the date is earlier than today for an open card. Phone timezone changes do not move dates. Timeline library adapters must round-trip to identical LocalDate values.
+Card `schedule` is the only card planning date range. Its inclusive `start` and
+`end` dates are the source for card `overdue` and `due_soon` attention signals.
+Milestone `due` is `{date}` and remains an independent commitment. A milestone
+due date earlier than today is overdue; a date in the workspace's due soon
+window produces `due_soon`. Phone timezone changes do not move dates. Timeline
+library adapters must round-trip to identical LocalDate values.
 
-Finish-to-start: poprzednik zaplanowany do 18 września wymaga startu następcy co najmniej 19 września, jeśli przyjmujemy rozłączne dni. Nie ma kalendarza roboczego, weekendów jako blokad, lagów, leadów ani auto-schedulera. Brak planu którejkolwiek strony to stan nieoceniony, nie konflikt.
+Cards have no stored dependency graph or automatic scheduler. A card without a
+schedule is simply unscheduled and does not produce a date based attention
+signal. There is no work calendar, weekend blocking, lag, lead or automatic
+date shifting.
 
 ## Relacje i raporty
-
-`milestone_id` odnosi się do milestone tego samego projektu. `depends_on` zawiera unikalne ID kart tego projektu, bez self-edge i bez cykli. Wprowadzenie cyklu jest błędem. Naruszenie dat zależności jest ostrzeżeniem. Zmiana statusu nie wykonuje kaskady. Archiwizacja zależnej karty nie kasuje krawędzi; UI pokazuje ukryty cel. Przy ręcznym usunięciu referencji oznaczamy broken reference, nie usuwamy jej cicho.
 
 Updates are append-only in the normal API. Report targets have type
 `project|milestone` and the ID of an existing resource in the same project;
 card targets are rejected. Corrections refer to earlier reports through
 `supersedes`; resolutions refer to earlier reports through `resolves`.
 References must stay within the project and cannot introduce cycles or
-self-resolution. A blocker report does not automatically change `card.blocked`.
+self-resolution. A blocker report is an append-only report kind and does not
+add blocking metadata to a card.
 Reading a report does not resolve a decision. Resolution explicitly closes a
 signal; correction supersedes content without rewriting history.
 
@@ -100,7 +107,7 @@ Nowy rank = low + floor((high−low)/2), jeżeli istnieje przerwa. Tworzenie i z
 
 ## Limity baseline
 
-Cały dokument <= 1 MiB; nagłówek <= 64 KiB; body <= 960 KiB. Title <= 240 znaków, project name <= 120, summary <= 500, label <= 48 i max 20 etykiet. Max 100 zależności na kartę, 50 evidence na raport, 100 resolves. Max depth JSON/YAML 12 i 10 000 węzłów. Limits działają w parserze i HTTP; JSON Schema nie zastępuje limitu bajtowego.
+Cały dokument <= 1 MiB; nagłówek <= 64 KiB; body <= 960 KiB. Title <= 240 znaków, project name <= 120, summary <= 500, label <= 48 i max 20 etykiet. Max 50 evidence na raport, 100 resolves. Max depth JSON/YAML 12 i 10 000 węzłów. Limits działają w parserze i HTTP; JSON Schema nie zastępuje limitu bajtowego.
 
 Limit testowy 100 projektów/10k kart/50k raportów nie jest limitem danych. Lista i raporty są stronicowane. Nie podnosimy limitów bez pomiaru i testu nadużycia.
 

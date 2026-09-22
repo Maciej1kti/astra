@@ -8,7 +8,7 @@
 | T02 | G0 | core | Schema i typed models | T01 |
 | T03 | G0 | lead | Workspace build i lokalne CI | T01 |
 | T04 | G1 | store | Parser i canonical serializer | T02, T03 |
-| T05 | G1 | core | Daty, graf, rank i alerts | T02 |
+| T05 | G1 | core | Dates, rank and alerts | T02 |
 | T06 | G1 | store | Path policy i leases | T03 |
 | T07 | G1 | store | State journal i command epoch | T02, T06 |
 | T08 | G1 | store | Durable one-file commit | T04, T07 |
@@ -25,7 +25,7 @@
 | T19 | G3 | core | Index i FTS | T04, T05, T14 |
 | T20 | G3 | core | Watcher i external edits | T19, T06 |
 | T21 | G3 | api | SSE i snapshot cursors | T19, T18 |
-| T22 | G3 | core | Milestones i zależności | T05, T15 |
+| T22 | G3 | core | Milestones and due signals | T05, T15 |
 | T23 | G3 | core | Raporty, resolutions i receipts | T15, T19 |
 | T24 | G3 | core | Focus i attention | T14, T22, T23 |
 | T25 | G3 | api | Pełny kontrakt HTTP/CLI | T21, T22, T23, T24 |

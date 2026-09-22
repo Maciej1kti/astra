@@ -12,26 +12,22 @@ import type { EditorTarget } from "./editor-target";
 
 type Common = { title: string; body: string };
 type EditableCommon = Common & { advanced: string };
-type DeadlineFields = { due: string; dueKind: "hard" | "target" };
-export type CardFields = DeadlineFields & {
+export type CardFields = {
   status: NonNullable<CardCreate["status"]>;
   priority: NonNullable<CardCreate["priority"]>;
   start: string;
   end: string;
-  review: string;
   labels: string[];
   tagDraft: string;
   acceptance: AcceptanceItem[];
   acceptanceDraft: string;
   archived: boolean;
-  milestoneId: string;
-  blockedReason: string;
-  dependencies: string[];
 };
 export type ProjectFields = {
   status: "active" | "paused" | "archived";
 };
-export type MilestoneFields = DeadlineFields & {
+export type MilestoneFields = {
+  due: string;
   status: NonNullable<MilestoneCreate["status"]>;
 };
 export type ReportFields = {
@@ -81,17 +77,11 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
           priority: m?.priority ?? "normal",
           start: m?.schedule?.start ?? "",
           end: m?.schedule?.end ?? "",
-          due: m?.due?.date ?? "",
-          dueKind: m?.due?.kind ?? "target",
-          review: m?.review_on ?? "",
           labels: [...(m?.labels ?? [])],
           tagDraft: "",
           acceptance: (m?.acceptance ?? []).map((item) => ({ ...item })),
           acceptanceDraft: "",
           archived: m?.archived ?? false,
-          milestoneId: m?.milestone_id ?? "",
-          blockedReason: m?.blocked?.reason ?? "",
-          dependencies: [...(m?.depends_on ?? [])],
         },
       };
     }
@@ -119,7 +109,6 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         fields: {
           status: m?.status ?? "planned",
           due: m?.due?.date ?? "",
-          dueKind: m?.due?.kind ?? "target",
         },
       };
     }
@@ -190,25 +179,10 @@ export function editorPayload(draft: EditorDraft) {
       if (d.acceptance.length)
         fields.acceptance = d.acceptance.map((item) => ({ ...item }));
       else if (metadata?.acceptance !== undefined) clear.push("acceptance");
-      if (
-        !draft.source ||
-        JSON.stringify(d.dependencies) !==
-          JSON.stringify(metadata?.depends_on ?? [])
-      )
-        fields.depends_on = [...d.dependencies];
-      if (d.milestoneId) fields.milestone_id = d.milestoneId;
-      else if (metadata?.milestone_id) clear.push("milestone_id");
-      if (d.blockedReason.trim())
-        fields.blocked = { reason: d.blockedReason.trim() };
-      else if (metadata?.blocked) clear.push("blocked");
       if (d.start && d.end) fields.schedule = { start: d.start, end: d.end };
       else if (d.start || d.end)
         throw new Error("A schedule needs both start and end dates.");
       else if (metadata?.schedule) clear.push("schedule");
-      if (d.due) fields.due = { date: d.due, kind: d.dueKind };
-      else if (metadata?.due) clear.push("due");
-      if (d.review) fields.review_on = d.review;
-      else if (metadata?.review_on) clear.push("review_on");
       return draft.source
         ? ({
             set: fields,
@@ -232,8 +206,7 @@ export function editorPayload(draft: EditorDraft) {
         status: draft.fields.status,
       };
       const clear: NonNullable<PatchSet<MilestonePatch>["clear"]> = [];
-      if (draft.fields.due)
-        fields.due = { date: draft.fields.due, kind: draft.fields.dueKind };
+      if (draft.fields.due) fields.due = { date: draft.fields.due };
       else if (draft.source?.metadata.due) clear.push("due");
       return draft.source
         ? ({

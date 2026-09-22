@@ -51,10 +51,6 @@ export class ApiError extends Error {
   constructor(status: number, data: Record<string, unknown>) {
     const code = (data.error as { code?: string })?.code ?? "";
     const messages: Record<string, string> = {
-      DEPENDENCY_INVALID:
-        "This dependency would create a cycle or refer to a missing card. Choose a different connection.",
-      CARD_REFERENCED:
-        "This card is referenced by another card. Disconnect incoming dependencies before deleting it.",
       CARD_IN_FOCUS:
         "This card is pinned to focus. Remove it from focus before deleting it.",
       VERSION_CONFLICT:

@@ -64,7 +64,6 @@ pub(super) fn run(
                     "status",
                     "priority",
                     "label",
-                    "milestone_id",
                     "archived",
                     "target_type",
                     "target_id",
@@ -82,7 +81,6 @@ pub(super) fn run(
                 status: fields.get("status").cloned(),
                 priority: fields.get("priority").cloned(),
                 label: fields.get("label").cloned(),
-                milestone_id: fields.get("milestone_id").cloned(),
                 target_type: fields.get("target_type").cloned(),
                 target_id: fields.get("target_id").cloned(),
                 archived: fields

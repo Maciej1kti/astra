@@ -2,7 +2,11 @@
 
 ## Warstwy
 
-Unit/property: LocalDate, rank, graf zależności, alerts, typed patch, parser i limity. Integration: filesystem, SQLite journal, locks, recovery, indeks, HTTP/UDS, auth i SSE. End-to-end: przeglądarka + prawdziwy serwer + tymczasowy folder, nie tylko mocki. Manual device: realny iPhone Safari przez prywatną sieć, desktop macOS i Arch. Performance: release na zapisanym środowisku.
+Unit/property: LocalDate, rank, attention signals, typed patches, parser and
+limits. Integration: filesystem, SQLite journal, locks, recovery, index, HTTP/UDS,
+auth and SSE. End-to-end: browser, real server and temporary folder rather than
+only mocks. Manual device: real iPhone Safari over a private network, desktop
+macOS and Arch. Performance: release builds on a recorded environment.
 
 Playwright Chromium/Firefox/WebKit jest kandydatem do automatyzacji przeglądarek [S27]. WebKit runner nie jest dowodem pełnej zgodności fizycznego iPhone'a. Brak urządzenia wpisuje się jako verification gap, nie PASS.
 
@@ -13,7 +17,9 @@ unknown fields, card x-* rejection, milestone/update x-extensions, body
 round-trip, BOM/CRLF, invalid UTF-8, depth/size limits, filename-ID mismatch and
 future schema.
 
-Domena: leap year, koniec miesiąca, DST i różne timezone klientów; plan niezależny od due; cykle/self/dangling edges; milestone independent completion; rank collision/exhaustion; archiwizacja bez kasowania referencji; resolution vs read.
+Domena: leap year, koniec miesiąca, DST i różne timezone klientów; inclusive
+card schedules; milestone due dates and overdue/due_soon signals; milestone
+independent completion; rank collision/exhaustion; resolution vs read.
 
 Mutacje: dwóch klientów na tej samej wersji; ten sam request z innym payloadem; retry po utracie odpowiedzi i restarcie; retry po retencji; stale epoch po restore; znany wynik przed If-Match; create collision; no-op; undo po późniejszej zmianie.
 

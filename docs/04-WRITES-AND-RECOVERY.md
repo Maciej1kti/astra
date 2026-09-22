@@ -41,12 +41,12 @@ Jeżeli journal nie przyjmuje zapisu, nie modyfikuj źródła. Jeśli rename ju�
 | Stan targetu | Wynik |
 |---|---|
 | Hash == after | Utrwal/zweryfikuj doc i katalog, dokończ COMMITTED, odbuduj projekcję |
-| Hash == before | Dla zwykłej edycji wznowienie zapisanej intencji, o ile precondition i zależności nadal poprawne; w przeciwnym razie konflikt recovery |
+| Hash == before | Resume the saved intention when its precondition still matches; otherwise return a recovery conflict |
 | Brak, a before był absent (create) | Wznów no-replace create |
 | Inne bajty, błędny plik, nowy symlink lub nieoczekiwany brak | NEEDS_REVIEW; nie nadpisuj i nie przywracaj automatycznie |
 | Niedostępny katalog/dysk | BLOCKED; zachowaj journal do powrotu zasobu |
 
-Nie usuwaj nierozstrzygniętych zamiarów przez zwykłą retencję. Recovery wykonuje się przed dostępem do zapisu, według kolejności w obrębie projektu. Wznowienie nie ignoruje zewnętrznej zmiany zależności tylko dlatego, że target ma stary hash.
+Do not remove unresolved intentions through ordinary retention. Recovery runs before write access, in project order. Resuming an intention does not ignore an external target change just because the target has an old hash.
 
 ## Zewnętrzny edytor i granice gwarancji
 

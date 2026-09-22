@@ -397,7 +397,7 @@
   </div>
   <div class="view-meta">
     <p class="legend">
-      <span>▬ Plan</span><span>◆ Deadline</span><span>◉ Review</span>
+      <span>▬ Plan</span><span>◆ Due</span>
     </p>
     <details class="help">
       <summary>Calendar shortcuts & editing</summary>
@@ -458,11 +458,7 @@
               use:eventAccess={item}
             >
               <small
-                >{item.kind.endsWith("due")
-                  ? "◆"
-                  : item.kind.endsWith("review")
-                    ? "◉"
-                    : "▬"}
+                >{item.kind.endsWith("due") ? "◆" : "▬"}
                 {calendarLabel(item)}</small
               ><strong>{item.title}</strong>
             </div>
@@ -486,7 +482,6 @@
   .calendar-region {
     --calendar-plan-bg: color-mix(in srgb, var(--accent) 18%, var(--paper));
     --calendar-due-bg: color-mix(in srgb, #ad6b35 18%, var(--paper));
-    --calendar-review-bg: color-mix(in srgb, #8866aa 18%, var(--paper));
   }
   .toolbar,
   .navigation,

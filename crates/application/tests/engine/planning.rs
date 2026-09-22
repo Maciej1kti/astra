@@ -1,11 +1,14 @@
 use super::*;
 
 #[test]
-fn attention_distinguishes_hard_deadlines_and_reading_from_resolution() {
+fn attention_uses_card_schedule_end_and_milestone_due() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
-    for (title, kind) in [("Soft target", "target"), ("Hard deadline", "hard")] {
+    for (title, end) in [
+        ("Overdue schedule", "2026-09-03"),
+        ("Upcoming schedule", "2026-09-10"),
+    ] {
         let card = create(&engine, &project, title);
         let resource = &card.body["result"]["resource"];
         patch(
@@ -13,7 +16,7 @@ fn attention_distinguishes_hard_deadlines_and_reading_from_resolution() {
             &project,
             resource["metadata"]["id"].as_str().unwrap(),
             resource["version"].as_str().unwrap(),
-            json!({"set":{"due":{"date":"2026-09-01","kind":kind},"schedule":{"start":"2026-08-30","end":"2026-09-03"}}}),
+            json!({"set":{"schedule":{"start":"2026-08-30","end":end}}}),
         );
     }
     let now = chrono::DateTime::parse_from_rfc3339("2026-09-05T12:00:00Z")
@@ -21,13 +24,14 @@ fn attention_distinguishes_hard_deadlines_and_reading_from_resolution() {
         .timestamp_millis();
     let attention = engine.attention(None, 200, now).unwrap();
     wire::validate("AttentionPage", &attention).unwrap();
-    assert_eq!(attention["items"].as_array().unwrap().len(), 1);
-    assert_eq!(attention["items"][0]["label"], "Hard deadline");
+    assert_eq!(attention["items"].as_array().unwrap().len(), 2);
+    assert_eq!(attention["items"][0]["label"], "Overdue schedule");
+    assert_eq!(attention["items"][0]["reason"], "overdue");
     let calendar = engine
         .calendar(Some(&project), "2026-09-01", "2026-09-30", None, 100)
         .unwrap();
     wire::validate("CalendarPage", &calendar).unwrap();
-    assert_eq!(calendar["items"].as_array().unwrap().len(), 4);
+    assert_eq!(calendar["items"].as_array().unwrap().len(), 2);
     assert!(
         engine
             .calendar(None, "2026-02-30", "2026-03-01", None, 10)
@@ -72,7 +76,7 @@ fn attention_distinguishes_hard_deadlines_and_reading_from_resolution() {
             .as_array()
             .unwrap()
             .len(),
-        2
+        3
     );
     let result = engine
         .mutate(Mutation {
@@ -103,40 +107,33 @@ fn attention_distinguishes_hard_deadlines_and_reading_from_resolution() {
             .as_array()
             .unwrap()
             .len(),
-        1
+        2
     );
 }
 
 #[test]
-fn schedule_warning_is_durable_and_never_moves_deadline() {
+fn milestone_due_is_date_only_and_durable() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
     let request = Uuid::now_v7().to_string();
     let mutation = Mutation {
         project_id: project.clone(),
-        kind: Kind::Card,
+        kind: Kind::Milestone,
         id: None,
         payload: json!({
-            "title": "Plan after due",
-            "schedule": {
-                "start": "2026-09-01",
-                "end": "2026-09-10",
-            },
-            "due": {
-                "date": "2026-09-05",
-                "kind": "hard",
-            },
+            "title": "Release gate",
+            "due": {"date": "2026-09-05"},
         }),
         request_id: request,
         epoch: engine.journal.epoch.clone(),
         expected: None,
     };
     let first = engine.mutate(mutation.clone()).unwrap();
-    assert_eq!(first.body["warnings"][0]["code"], "SCHEDULE_AFTER_DUE");
+    assert!(first.body["warnings"].as_array().unwrap().is_empty());
     assert_eq!(
-        first.body["result"]["resource"]["metadata"]["due"]["date"],
-        "2026-09-05"
+        first.body["result"]["resource"]["metadata"]["due"],
+        json!({"date":"2026-09-05"})
     );
     let replay = engine.mutate(mutation).unwrap();
     assert_eq!(replay.body["warnings"], first.body["warnings"]);
@@ -153,7 +150,7 @@ fn gantt_pages_include_milestones_and_board_stays_card_only() {
             project_id: project.clone(),
             kind: Kind::Milestone,
             id: None,
-            payload: json!({"title":"Release gate","due":{"date":"2026-09-30","kind":"hard"}}),
+            payload: json!({"title":"Release gate","due":{"date":"2026-09-30"}}),
             request_id: Uuid::now_v7().to_string(),
             epoch: engine.journal.epoch.clone(),
             expected: None,
@@ -210,188 +207,27 @@ fn attention_project_filter_applies_before_pagination() {
 }
 
 #[test]
-fn timeline_forecast_uses_other_pages_without_changing_recorded_dates() {
+fn gantt_keeps_source_rows_and_page_snapshot_without_forecasts_or_edges() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
-    let a = create(&engine, &project, "Design");
-    let aid = a.body["result"]["id"].as_str().unwrap();
+    let scheduled = create(&engine, &project, "Scheduled");
     patch(
         &engine,
         &project,
-        aid,
-        a.body["result"]["version"].as_str().unwrap(),
-        json!({"set":{"schedule":{"start":"2026-09-01","end":"2026-09-03"}}}),
-    );
-    let b = create(&engine, &project, "Build");
-    let bid = b.body["result"]["id"].as_str().unwrap();
-    let changed = patch(
-        &engine,
-        &project,
-        bid,
-        b.body["result"]["version"].as_str().unwrap(),
-        json!({"set":{"schedule":{"start":"2026-09-02","end":"2026-09-04"},"depends_on":[aid]}}),
-    );
-    assert_eq!(changed.http_status, 200);
-    let first = engine.gantt(&project, None, 1).unwrap();
-    wire::validate("GanttPage", &first).unwrap();
-    assert_eq!(first["analysis"]["forecast_end"], "2026-09-06");
-    assert_eq!(first["analysis"]["delay_days"], 2);
-    assert_eq!(first["analysis"]["complete"], true);
-    let next = engine
-        .gantt(&project, first["page"]["next_cursor"].as_str(), 1)
-        .unwrap();
-    wire::validate("GanttPage", &next).unwrap();
-    assert_eq!(first["analysis"], next["analysis"]);
-    let all = engine.gantt(&project, None, 50).unwrap();
-    assert_eq!(
-        all["rows"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|r| r["id"] == bid)
-            .unwrap()["schedule"]["start"],
-        "2026-09-02"
-    );
-}
-
-#[test]
-fn gantt_bulk_predecessors_preserve_archived_cancelled_stale_missing_and_undated_warnings() {
-    let env = Environment::new();
-    let engine = env.engine();
-    let project = register(&engine, &env.path());
-    let mut predecessors = std::collections::BTreeMap::new();
-    for name in ["archived", "cancelled", "stale", "missing", "undated"] {
-        let created = create(&engine, &project, name);
-        let id = created.body["result"]["id"].as_str().unwrap();
-        let mut set = json!({});
-        if name != "undated" {
-            set["schedule"] = json!({"start":"2026-09-01","end":"2026-09-10"});
-        }
-        if name == "archived" {
-            set["archived"] = json!(true);
-        }
-        if name == "cancelled" {
-            set["status"] = json!("cancelled");
-        }
-        if name != "undated" {
-            let edited = patch(
-                &engine,
-                &project,
-                id,
-                created.body["result"]["version"].as_str().unwrap(),
-                json!({"set":set}),
-            );
-            assert_eq!(edited.http_status, 200);
-        }
-        predecessors.insert(name, id.to_owned());
-    }
-    let target = create(&engine, &project, "Dependent card");
-    let id = target.body["result"]["id"].as_str().unwrap();
-    let edited = patch(
-        &engine,
-        &project,
-        id,
-        target.body["result"]["version"].as_str().unwrap(),
-        json!({
-            "set": {
-                "schedule": {
-                    "start": "2026-09-02",
-                    "end": "2026-09-03",
-                },
-                "depends_on": predecessors.values().collect::<Vec<_>>(),
-            },
-        }),
-    );
-    assert_eq!(edited.http_status, 200);
-    fs::write(
-        env.root.join(format!(
-            "project/.project/cards/{}.md",
-            predecessors["stale"]
-        )),
-        b"Unfinished external edit",
-    )
-    .unwrap();
-    fs::remove_file(env.root.join(format!(
-        "project/.project/cards/{}.md",
-        predecessors["missing"]
-    )))
-    .unwrap();
-    engine.refresh_project(&project, None).unwrap();
-    let view = engine.gantt(&project, None, 50).unwrap();
-    wire::validate("GanttPage", &view).unwrap();
-    for (name, warning) in [
-        ("archived", Some("DEPENDENCY_DATE_CONFLICT")),
-        ("cancelled", Some("DEPENDENCY_DATE_CONFLICT")),
-        ("stale", Some("DEPENDENCY_STALE")),
-        ("missing", Some("DEPENDENCY_MISSING")),
-        ("undated", None),
-    ] {
-        let edge = view["edges"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|edge| edge["from"] == predecessors[name] && edge["to"] == id)
-            .unwrap();
-        assert_eq!(edge["warning"].as_str(), warning, "{name}");
-        if name == "archived" || name == "missing" {
-            assert_eq!(edge["outside_page"], true);
-        }
-    }
-    assert_eq!(view["analysis"]["complete"], false);
-}
-
-#[test]
-fn forecast_example_matches_projection_contracts() {
-    let example: Value =
-        serde_json::from_str(include_str!("../../../../examples/gantt-forecast.json")).unwrap();
-    wire::validate("TimelineAnalysis", &example["analysis"]).unwrap();
-    for forecast in example["forecasts"].as_array().unwrap() {
-        wire::validate("TimelineForecast", forecast).unwrap();
-    }
-}
-
-#[test]
-fn malformed_timeline_projection_inputs_are_reported_instead_of_silently_ignored() {
-    let env = Environment::new();
-    let engine = env.engine();
-    let project = register(&engine, &env.path());
-    let created = create(&engine, &project, "Typed forecast input");
-    let id = created.body["result"]["id"].as_str().unwrap();
-    patch(
-        &engine,
-        &project,
-        id,
-        created.body["result"]["version"].as_str().unwrap(),
+        scheduled.body["result"]["id"].as_str().unwrap(),
+        scheduled.body["result"]["version"].as_str().unwrap(),
         json!({"set":{"schedule":{"start":"2026-09-01","end":"2026-09-02"}}}),
     );
-    let metadata: String = engine
-        .index
-        .with_snapshot(|db, _| {
-            Ok(db.query_row(
-                "SELECT metadata_json FROM documents WHERE entity_id=?1",
-                [id],
-                |row| row.get(0),
-            )?)
-        })
-        .unwrap();
-    for invalid in [
-        json!({"depends_on":[17]}),
-        json!({"schedule":{"start":false}}),
-    ] {
-        engine
-            .index
-            .with_snapshot(|db, _| {
-                db.execute(
-                    "UPDATE documents SET metadata_json=json_patch(?1,?2) WHERE entity_id=?3",
-                    rusqlite::params![metadata, invalid.to_string(), id],
-                )?;
-                Ok(())
-            })
-            .unwrap();
-        assert!(matches!(
-            engine.gantt(&project, None, 50).unwrap_err(),
-            crate::AppError::StoredData { .. }
-        ));
-    }
+    create(&engine, &project, "Unscheduled");
+    let first = engine.gantt(&project, None, 1).unwrap();
+    wire::validate("GanttPage", &first).unwrap();
+    assert_eq!(first["rows"].as_array().unwrap().len(), 1);
+    assert!(first.get("analysis").is_none());
+    assert!(first.get("forecasts").is_none());
+    assert!(first.get("edges").is_none());
+    let cursor = first["page"]["next_cursor"].as_str().unwrap();
+    let next = engine.gantt(&project, Some(cursor), 1).unwrap();
+    wire::validate("GanttPage", &next).unwrap();
+    assert_eq!(next["rows"].as_array().unwrap().len(), 1);
 }

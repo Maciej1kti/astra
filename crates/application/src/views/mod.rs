@@ -7,7 +7,6 @@ use crate::{
 use chrono::Days;
 use rusqlite::{Connection, params};
 use serde_json::{Value, json};
-use std::collections::{BTreeMap, BTreeSet};
 fn offset(cursor: Option<&str>, scope: &Value) -> Result<u64, AppError> {
     let Some(cursor) = cursor else { return Ok(0) };
     if cursor.len() > 4096 {

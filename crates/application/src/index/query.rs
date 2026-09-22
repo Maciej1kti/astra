@@ -91,10 +91,6 @@ WHERE 1=1"
                 query.priority.as_deref(),
             ),
             (
-                "json_extract(metadata_json,'$.milestone_id')",
-                query.milestone_id.as_deref(),
-            ),
-            (
                 "json_extract(metadata_json,'$.target.type')",
                 query.target_type.as_deref(),
             ),

@@ -7,7 +7,6 @@ export type GanttContext = {
     days: number,
     operation: "move" | "start" | "end",
   ) => void;
-  link: (row: Summary) => void;
   editable: () => boolean;
   gesture: (active: boolean) => void;
 };

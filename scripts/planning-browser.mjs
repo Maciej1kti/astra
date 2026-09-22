@@ -93,10 +93,10 @@ try {
 
   page.setDefaultTimeout(10000);
   const commandFile = join(temp, "command.json");
-  const createCard = async (title, start, end, depends = []) => {
+  const createCard = async (title, start, end) => {
     await writeFile(
       commandFile,
-      JSON.stringify({ title, schedule: { start, end }, depends_on: depends }),
+      JSON.stringify({ title, schedule: { start, end } }),
     );
     return cli(
       "command",
@@ -111,17 +111,11 @@ try {
     "2026-09-07",
     "2026-09-09",
   );
-  const build = await createCard(
-    "Build the field guide",
-    "2026-09-08",
-    "2026-09-10",
-    [design.id],
-  );
+  await createCard("Build the field guide", "2026-09-08", "2026-09-10");
   const review = await createCard(
     "Review and publish",
     "2026-09-09",
     "2026-09-10",
-    [build.id],
   );
   await page
     .getByLabel("Project", { exact: true })
@@ -139,14 +133,14 @@ try {
     fullPage: true,
   });
   const reviewPath = `/api/v1/projects/${plan.project_id}/cards/${review.id}`;
-  const dependencyRequests = [];
+  const scheduleRequests = [];
   await page.route(`**${reviewPath}`, async (route) => {
     if (route.request().method() !== "PATCH") return route.continue();
-    dependencyRequests.push({
+    scheduleRequests.push({
       headers: route.request().headers(),
       payload: route.request().postDataJSON(),
     });
-    if (dependencyRequests.length === 1)
+    if (scheduleRequests.length === 1)
       return route.fulfill({
         status: 503,
         contentType: "application/json",
@@ -160,57 +154,35 @@ try {
     return route.continue();
   });
   await page
-    .getByRole("button", {
-      name: "Connect from Design the field guide",
-      exact: true,
-    })
-    .click();
+    .getByLabel("Selected card", { exact: true })
+    .selectOption(review.id);
   await page
-    .getByRole("button", {
-      name: "Connect from Review and publish",
-      exact: true,
-    })
+    .getByRole("button", { name: "Edit planned dates", exact: true })
     .click();
+  await page.getByLabel("Planned end", { exact: true }).fill("2026-09-11");
   await page
-    .getByRole("button", { name: "Save dependencies", exact: true })
+    .getByRole("button", { name: "Save planned dates", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Retry same command", exact: true })
     .click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
-  assert.equal(dependencyRequests.length, 2);
+  assert.equal(scheduleRequests.length, 2);
   for (const header of ["x-request-id", "x-command-epoch", "if-match"])
     assert.equal(
-      dependencyRequests[0].headers[header],
-      dependencyRequests[1].headers[header],
+      scheduleRequests[0].headers[header],
+      scheduleRequests[1].headers[header],
     );
-  assert.deepEqual(
-    dependencyRequests[0].payload,
-    dependencyRequests[1].payload,
-  );
-  assert.deepEqual(
-    new Set(cli("get", reviewPath).metadata.depends_on),
-    new Set([design.id, build.id]),
-  );
-  await page.unroute(`**${reviewPath}`);
-  await page.getByText("Dependencies · 3", { exact: true }).click();
-  await page
-    .getByRole("button", {
-      name: "Disconnect Design the field guide from Review and publish",
-      exact: true,
-    })
-    .click();
-  await page
-    .getByRole("button", { name: "Save dependencies", exact: true })
-    .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
-  assert.deepEqual(cli("get", reviewPath).metadata.depends_on, [build.id]);
-  await page.getByLabel("Dependency forecast", { exact: true }).check();
-  await page.screenshot({
-    path: join(evidenceDir, "gantt-forecast.png"),
-    fullPage: true,
+  assert.deepEqual(scheduleRequests[0].payload, scheduleRequests[1].payload);
+  assert.deepEqual(cli("get", reviewPath).metadata.schedule, {
+    start: "2026-09-09",
+    end: "2026-09-11",
   });
-  await page.getByLabel("Dependency forecast", { exact: true }).uncheck();
+  await page.unroute(`**${reviewPath}`);
+  await expect(
+    page.getByLabel("Dependency forecast", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("Predecessor", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
   await page.getByLabel("Go to date", { exact: true }).fill("2026-09-07");
   await page
@@ -452,7 +424,7 @@ try {
   assert.deepEqual(await page.evaluate(() => window.astraCspViolations), []);
   assert.deepEqual(externalRequests, []);
   console.log(
-    "PASS: real HTTPS Gantt rendering and narrow viewport, forecast, connector links, identical uncertain retry, disconnect preserving other edges, calendar day/week/month/agenda, native drag, both resize boundaries, stable gestures during a held background read, blank-range draft creation and Escape cancellation. No page errors, external assets or CSP violations. Screenshots are Chromium, not physical iPhone evidence.",
+    "PASS: real HTTPS Gantt rendering and narrow viewport, recorded schedules, identical uncertain date retry, absence of dependency controls, calendar day/week/month/agenda, native drag, both resize boundaries, stable gestures during a held background read, blank-range draft creation and Escape cancellation. No page errors, external assets or CSP violations. Screenshots are Chromium, not physical iPhone evidence.",
   );
 } catch (error) {
   const activePage = browser?.contexts()[0]?.pages()[0];

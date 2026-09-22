@@ -297,7 +297,7 @@ impl Writer<'_> {
                         "version": document::version(&after),
                     },
                 },
-                "warnings": project_domain::date_warnings(&value["metadata"]),
+                "warnings": [],
                 "replayed": false,
             }),
         };

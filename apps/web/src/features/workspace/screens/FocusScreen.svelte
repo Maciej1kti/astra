@@ -65,7 +65,7 @@
   </div>
   <div>
     <span>NEEDS A LOOK</span><strong>{attention.length}</strong>
-    <p>Blocked, overdue or up for review</p>
+    <p>Overdue or coming due</p>
   </div>
   <div>
     <span>ON THE HORIZON</span><strong
@@ -123,7 +123,7 @@
     ><span aria-hidden="true">↗</span></button
   >{:else}<div class="empty">
     <strong>A little breathing room.</strong>
-    <p>No blocked, overdue or review items in this selection.</p>
+    <p>No overdue or coming due items in this selection.</p>
   </div>{/each}
 {#if attentionCursor}<button
     disabled={loadingMore}

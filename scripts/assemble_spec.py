@@ -66,7 +66,8 @@ tooling are deferred beyond v1. All other outstanding requirements remain.
 The central contract remains unchanged: `.project/` is the source of truth;
 one server coordinates normal writes; the CLI and browser share the domain.
 The search index is derived; operational SQLite contains durable state.
-A forecast is not a persisted schedule change.
+Card planning stores an inclusive start/end range; dependency forecasts and
+separate card deadline/review dates have been removed by owner decision.
 
 ## Contents
 

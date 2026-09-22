@@ -1,10 +1,6 @@
-use project_domain::{
-    local_date,
-    ordering::{Position, validate_dependencies},
-    validate_document, validate_workspace,
-};
+use project_domain::{local_date, ordering::Position, validate_document, validate_workspace};
 use serde_json::{Value, json};
-use std::{collections::BTreeMap, path::PathBuf};
+use std::path::PathBuf;
 
 fn read(path: &str) -> Value {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -147,42 +143,6 @@ fn handoff_calendar_vectors() {
     for invalid in ["2026-9-05", "２０２６-09-05", "2026-09-05Z", "2026-02-29"] {
         assert!(local_date(invalid).is_err());
     }
-}
-
-#[test]
-fn handoff_graph_vectors_and_long_chain() {
-    for case in read("tests/vectors.json")["graph_cases"]
-        .as_array()
-        .unwrap()
-    {
-        let graph = serde_json::from_value(case["graph"].clone()).unwrap();
-        assert_eq!(
-            validate_dependencies(&graph).is_ok(),
-            case["valid"].as_bool().unwrap(),
-            "{}",
-            case["id"]
-        );
-    }
-    let graph: BTreeMap<_, _> = (0..10_000)
-        .map(|i| {
-            (
-                i.to_string(),
-                if i == 0 {
-                    vec![]
-                } else {
-                    vec![(i - 1).to_string()]
-                },
-            )
-        })
-        .collect();
-    assert!(validate_dependencies(&graph).is_ok());
-    assert!(
-        validate_dependencies(&BTreeMap::from([
-            ("a".into(), vec![]),
-            ("b".into(), vec!["a".into(), "a".into()])
-        ]))
-        .is_err()
-    );
 }
 
 #[test]

@@ -673,7 +673,7 @@
       "id": "T22",
       "phase": "G3",
       "owner_role": "core",
-      "title": "Milestones i zależności",
+      "title": "Milestones and due signals",
       "priority": "P0",
       "status": "in_progress",
       "depends_on": [

@@ -100,56 +100,119 @@ fn stale_target_rejection_precedes_unrelated_collection_validation_and_replays()
 }
 
 #[test]
-fn dependency_validation_rereads_external_edits_and_deleted_cards() {
+fn removed_card_fields_are_rejected_on_create_patch_and_undo() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
-    let first = create(&engine, &project, "First");
-    let second = create(&engine, &project, "Second");
-    create(&engine, &project, "Observe the initial source graph");
-    let a = first.body["result"]["id"].as_str().unwrap();
-    let b = second.body["result"]["id"].as_str().unwrap();
-    let mut changed = first.body["result"]["resource"].clone();
-    changed.as_object_mut().unwrap().remove("version");
-    changed["metadata"]["depends_on"] = json!([b]);
-    let bytes =
-        project_store::document::serialize(&project_domain::validate_document(changed).unwrap())
+    let created = engine
+        .mutate(Mutation {
+            project_id: project.clone(),
+            kind: Kind::Card,
+            id: None,
+            payload: json!({
+                "title": "Preserved",
+                "body": "Keep this body",
+                "schedule": {"start":"2026-09-08", "end":"2026-09-09"}
+            }),
+            request_id: Uuid::now_v7().to_string(),
+            epoch: engine.journal.epoch.clone(),
+            expected: None,
+        })
+        .unwrap();
+    assert_eq!(created.http_status, 200, "{created:?}");
+    let id = created.body["result"]["id"].as_str().unwrap().to_owned();
+    let version = created.body["result"]["version"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let source_path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let original_bytes = fs::read(&source_path).unwrap();
+    let fields = [
+        ("due", json!({"date":"2026-09-10", "kind":"hard"})),
+        ("review_on", json!("2026-09-10")),
+        ("milestone_id", json!(Uuid::new_v4().to_string())),
+        ("blocked", json!({"reason":"Waiting"})),
+        ("depends_on", json!([Uuid::new_v4().to_string()])),
+    ];
+    for (field, value) in &fields {
+        let mut create_payload = json!({
+            "title": "Rejected",
+            "body": "Rejected body",
+            "schedule": {"start":"2026-09-08", "end":"2026-09-09"}
+        });
+        create_payload[field] = value.clone();
+        let rejected = engine
+            .mutate(Mutation {
+                project_id: project.clone(),
+                kind: Kind::Card,
+                id: None,
+                payload: create_payload,
+                request_id: Uuid::now_v7().to_string(),
+                epoch: engine.journal.epoch.clone(),
+                expected: None,
+            })
             .unwrap();
-    let source = env.root.join(format!("project/.project/cards/{a}.md"));
-    fs::write(&source, bytes).unwrap();
-    let cycle = patch(
-        &engine,
-        &project,
-        b,
-        second.body["result"]["version"].as_str().unwrap(),
-        json!({"set":{"depends_on":[a]}}),
-    );
-    assert_eq!(cycle.body["error"]["code"], "DEPENDENCY_INVALID");
-    fs::remove_file(source).unwrap();
-    let missing = patch(
-        &engine,
-        &project,
-        b,
-        second.body["result"]["version"].as_str().unwrap(),
-        json!({"set":{"depends_on":[a]}}),
-    );
-    assert_eq!(missing.body["error"]["code"], "DEPENDENCY_INVALID");
-    let cursor = engine.index.cursor().unwrap();
-    let fresh = engine.get(&project, Kind::Card, b).unwrap();
-    assert_eq!(
-        patch(
+        assert_eq!(rejected.http_status, 422, "create field {field}");
+
+        let mut patch_set = serde_json::Map::new();
+        patch_set.insert(field.to_string(), value.clone());
+        let rejected = patch(&engine, &project, &id, &version, json!({"set": patch_set}));
+        assert_eq!(rejected.http_status, 422, "patch field {field}");
+        let current = engine.get(&project, Kind::Card, &id).unwrap();
+        assert_eq!(current["version"], version);
+        assert_eq!(current["body"], "Keep this body");
+        assert_eq!(
+            current["metadata"]["schedule"],
+            json!({"start":"2026-09-08", "end":"2026-09-09"})
+        );
+
+        let current_bytes = fs::read(&source_path).unwrap();
+        assert_eq!(current_bytes, original_bytes);
+        let current_text = String::from_utf8(current_bytes.clone()).unwrap();
+        let needle = "\"title\": \"Preserved\"\n";
+        let historical_text = current_text.replacen(
+            needle,
+            &format!(
+                "{needle}\"{field}\": {}\n",
+                serde_json::to_string(value).unwrap()
+            ),
+            1,
+        );
+        let historical = historical_text.into_bytes();
+        let history_id = Uuid::new_v4().to_string();
+        engine
+            .journal
+            .db()
+            .unwrap()
+            .execute(
+                "INSERT INTO history(
+                    id, project_id, target_kind, target_id, epoch, request_id,
+                    before_hash, after_hash, before_bytes, after_bytes, recorded_at
+                 ) VALUES (?1, ?2, 'card', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                params![
+                    history_id.clone(),
+                    project.clone(),
+                    id,
+                    engine.journal.epoch.clone(),
+                    Uuid::now_v7().to_string(),
+                    project_store::document::version(&historical),
+                    version,
+                    historical,
+                    current_bytes,
+                    "2026-09-22T00:00:00Z",
+                ],
+            )
+            .unwrap();
+        let rejected = patch(
             &engine,
             &project,
-            b,
-            fresh["version"].as_str().unwrap(),
-            json!({"set":{"title":"Renamed"}})
-        )
-        .http_status,
-        200
-    );
-    for event in engine.index.events_since(&cursor, now_millis()).unwrap() {
-        wire::validate("Event", &event).unwrap();
-        assert_eq!(event["tags_changed"], false);
+            &id,
+            &version,
+            json!({"undo": {"history_entry_id": history_id}}),
+        );
+        assert_eq!(rejected.http_status, 409, "undo field {field}");
+        assert_eq!(rejected.body["error"]["code"], "HISTORY_UNAVAILABLE");
+        assert_eq!(fs::read(&source_path).unwrap(), original_bytes);
     }
 }
 
@@ -292,7 +355,7 @@ fn card_delete_removes_source_replays_and_keeps_non_undoable_history() {
 }
 
 #[test]
-fn card_delete_blocks_incoming_dependency_from_archived_card() {
+fn card_delete_ignores_unrelated_archived_cards() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
@@ -300,15 +363,18 @@ fn card_delete_blocks_incoming_dependency_from_archived_card() {
     let incoming = create(&engine, &project, "Archived incoming");
     let target_id = target.body["result"]["id"].as_str().unwrap();
     let incoming_id = incoming.body["result"]["id"].as_str().unwrap();
-    let mut version = incoming.body["result"]["version"]
+    let version = incoming.body["result"]["version"]
         .as_str()
         .unwrap()
         .to_owned();
-    for set in [json!({"depends_on":[target_id]}), json!({"archived":true})] {
-        let reply = patch(&engine, &project, incoming_id, &version, json!({"set":set}));
-        assert_eq!(reply.http_status, 200, "{reply:?}");
-        version = reply.body["result"]["version"].as_str().unwrap().to_owned();
-    }
+    let reply = patch(
+        &engine,
+        &project,
+        incoming_id,
+        &version,
+        json!({"set":{"archived":true}}),
+    );
+    assert_eq!(reply.http_status, 200, "{reply:?}");
     let deleted = engine
         .delete_card(
             &project,
@@ -324,14 +390,9 @@ fn card_delete_blocks_incoming_dependency_from_archived_card() {
             ),
         )
         .unwrap();
-    assert_eq!(deleted.http_status, 409);
-    assert_eq!(deleted.body["error"]["code"], "CARD_REFERENCED");
-    assert_eq!(
-        deleted.body["error"]["details"]["incoming"][0]["id"],
-        incoming_id
-    );
+    assert_eq!(deleted.http_status, 200, "{deleted:?}");
     assert!(
-        env.root
+        !env.root
             .join(format!("project/.project/cards/{target_id}.md"))
             .exists()
     );
@@ -423,7 +484,7 @@ fn stale_card_delete_precedes_bounded_dependency_scan_and_replays() {
 }
 
 #[test]
-fn card_delete_recovery_rechecks_new_incoming_dependencies() {
+fn card_delete_recovery_does_not_scan_incoming_cards() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
@@ -467,17 +528,10 @@ fn card_delete_recovery_rechecks_new_incoming_dependencies() {
         assert_eq!(reply.http_status, 202);
     }
 
-    let mut incoming_source = incoming.body["result"]["resource"].clone();
-    incoming_source["metadata"]["depends_on"] = json!([target_id]);
-    incoming_source.as_object_mut().unwrap().remove("version");
-    let bytes = project_store::document::serialize(
-        &project_domain::validate_document(incoming_source).unwrap(),
-    )
-    .unwrap();
     fs::write(
         env.root
             .join(format!("project/.project/cards/{incoming_id}.md")),
-        bytes,
+        b"invalid unrelated source",
     )
     .unwrap();
 
@@ -489,13 +543,13 @@ fn card_delete_recovery_rechecks_new_incoming_dependencies() {
         crate::card_deletion::recovery_guard(&engine, store, intent)
     })
     .unwrap();
-    assert_eq!(recovered, 0);
+    assert_eq!(recovered, 1);
     assert_eq!(
         engine.journal.state(&command).unwrap(),
-        crate::command_state::CommandState::NeedsReview
+        crate::command_state::CommandState::Committed
     );
     let (directory, name) = store.location(Kind::Card, &target_id, false).unwrap();
-    assert!(directory.read(&name).unwrap().is_some());
+    assert!(directory.read(&name).unwrap().is_none());
 }
 
 #[test]
@@ -616,7 +670,6 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
             payload: json!({
                 "title": "Structured card",
                 "body": body,
-                "review_on": "2026-09-08",
                 "acceptance": acceptance,
             }),
             request_id: Uuid::now_v7().to_string(),
@@ -681,7 +734,6 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
             .unwrap();
         wire::validate("SummaryPage", &page).unwrap();
         assert_eq!(page["items"].as_array().unwrap().len(), 1, "{term}");
-        assert_eq!(page["items"][0]["review_on"], "2026-09-08");
         assert_eq!(
             page["items"][0]["acceptance_progress"],
             json!({"total":2,"completed":2})
@@ -697,16 +749,14 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
         &project,
         id,
         titled.body["result"]["version"].as_str().unwrap(),
-        json!({"clear":["review_on","acceptance"]}),
+        json!({"clear":["acceptance"]}),
     );
     assert_eq!(cleared.http_status, 200, "{cleared:?}");
-    for field in ["review_on", "acceptance"] {
-        assert!(
-            cleared.body["result"]["resource"]["metadata"]
-                .get(field)
-                .is_none()
-        );
-    }
+    assert!(
+        cleared.body["result"]["resource"]["metadata"]
+            .get("acceptance")
+            .is_none()
+    );
     let history = engine.history(&project, Kind::Card, id, None, 50).unwrap();
     let restored = patch(
         &engine,
@@ -719,10 +769,6 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
     assert_eq!(
         restored.body["result"]["resource"]["metadata"]["acceptance"],
         completed
-    );
-    assert_eq!(
-        restored.body["result"]["resource"]["metadata"]["review_on"],
-        "2026-09-08"
     );
     assert_eq!(restored.body["result"]["resource"]["body"], body);
 

@@ -27,7 +27,8 @@ export async function runAutosaveChecks({
   const dialog = () =>
     page.getByRole("dialog", { name: /^(Edit|Create) resource$/ });
   const title = () => dialog().getByLabel("Title", { exact: true });
-  const reviewOn = () => dialog().getByLabel("Review on", { exact: true });
+  const startDate = () => dialog().getByLabel("Start", { exact: true });
+  const endDate = () => dialog().getByLabel("End", { exact: true });
   const cardPath = (id) => `${base}/cards/${id}`;
   const projectPath = `${base}`;
 
@@ -294,11 +295,11 @@ export async function runAutosaveChecks({
 
   await check(
     "AS02",
-    "Delayed acknowledgements serialize edits, preserve newest text and send review-date clears from the prior version",
+    "Delayed acknowledgements serialize edits and send schedule clears from the prior version",
     async () => {
       const card = await createCard({
         title: `Autosave delayed ${Date.now().toString(36)}`,
-        review_on: "2026-09-20",
+        schedule: { start: "2026-09-21", end: "2026-09-22" },
       });
       await openCard(card.metadata.id);
       const path = cardPath(card.metadata.id);
@@ -324,7 +325,6 @@ export async function runAutosaveChecks({
         }
       });
       try {
-        await reviewOn().fill("2026-09-21");
         await title().fill("First delayed title");
         await expect
           .poll(() => writesFor(path, "PATCH").length, { timeout: 15000 })
@@ -333,13 +333,14 @@ export async function runAutosaveChecks({
           firstReadyPromise,
           "first autosave ACK",
         );
-        assert.equal(
-          writesFor(path, "PATCH")[0].payload.set.review_on,
-          "2026-09-21",
-        );
+        assert.deepEqual(writesFor(path, "PATCH")[0].payload.set.schedule, {
+          start: "2026-09-21",
+          end: "2026-09-22",
+        });
         await expect(title()).toBeEnabled();
         await title().fill("Newest typed title");
-        await reviewOn().fill("");
+        await startDate().fill("");
+        await endDate().fill("");
         await page.waitForTimeout(150);
         assert.equal(
           writesFor(path, "PATCH").length,
@@ -351,12 +352,12 @@ export async function runAutosaveChecks({
         const second = writesFor(path, "PATCH")[1];
         assert.equal(second.version, JSON.stringify(firstVersion));
         assert.equal(second.payload.set.title, "Newest typed title");
-        assert(second.payload.clear.includes("review_on"));
+        assert(second.payload.clear.includes("schedule"));
         await waitForSaved(
           path,
           (value) =>
             value.metadata.title === "Newest typed title" &&
-            !Object.hasOwn(value.metadata, "review_on"),
+            !Object.hasOwn(value.metadata, "schedule"),
         );
         let releaseThird = () => {};
         let thirdReady;
@@ -380,7 +381,8 @@ export async function runAutosaveChecks({
           await route.fulfill({ response });
         });
         try {
-          await reviewOn().fill("2026-09-22");
+          await startDate().fill("2026-09-22");
+          await endDate().fill("2026-09-23");
           await expect
             .poll(() => writesFor(path, "PATCH").length, { timeout: 15000 })
             .toBe(3);
@@ -404,7 +406,9 @@ export async function runAutosaveChecks({
           releaseThird();
           await waitForSaved(
             path,
-            (value) => value.metadata.review_on === "2026-09-22",
+            (value) =>
+              value.metadata.schedule?.start === "2026-09-22" &&
+              value.metadata.schedule?.end === "2026-09-23",
           );
           await page.waitForTimeout(550);
           await expect(tagInput).toHaveValue(tagDraft);
@@ -428,7 +432,7 @@ export async function runAutosaveChecks({
         return {
           serialized: true,
           versionChained: true,
-          reviewDateCleared: true,
+          plannedDatesCleared: true,
           entryBuffersSurviveAck: true,
         };
       } finally {
@@ -828,27 +832,28 @@ export async function runAutosaveChecks({
 
   await check(
     "AS07",
-    "Card review date, checklist, dependency and tag edits autosave",
+    "Card planned dates, checklist and tag edits autosave",
     async () => {
-      const dependency = await createCard({
-        title: `Autosave dependency ${Date.now().toString(36)}`,
-      });
       const card = await createCard({
         title: `Autosave fields ${Date.now().toString(36)}`,
       });
       await openCard(card.metadata.id);
       const path = cardPath(card.metadata.id);
-      await reviewOn().fill("2026-09-23");
+      await startDate().fill("2026-09-23");
+      await endDate().fill("2026-09-24");
       await waitForWrite(path, "PATCH", 1);
       await waitForSaved(
         path,
-        (value) => value.metadata.review_on === "2026-09-23",
+        (value) =>
+          value.metadata.schedule?.start === "2026-09-23" &&
+          value.metadata.schedule?.end === "2026-09-24",
       );
-      await reviewOn().fill("");
+      await startDate().fill("");
+      await endDate().fill("");
       await waitForWrite(path, "PATCH", 2);
       await waitForSaved(
         path,
-        (value) => !Object.hasOwn(value.metadata, "review_on"),
+        (value) => !Object.hasOwn(value.metadata, "schedule"),
       );
       const acceptance = dialog().getByLabel("New item", {
         exact: true,
@@ -877,29 +882,14 @@ export async function runAutosaveChecks({
         .press("Enter");
       await waitForWrite(path, "PATCH", 5);
       await waitForSaved(path, (value) => value.metadata.labels?.includes(tag));
-      await dialog()
-        .getByLabel("Find by title", { exact: true })
-        .fill(dependency.metadata.title);
-      await dialog()
-        .getByRole("button", { name: "Find resources", exact: true })
-        .click();
-      await dialog()
-        .getByRole("button", { name: dependency.metadata.title, exact: true })
-        .last()
-        .click();
-      await waitForWrite(path, "PATCH", 6);
-      await waitForSaved(path, (value) =>
-        value.metadata.depends_on?.includes(dependency.metadata.id),
-      );
-      const latest = "Card autosave after checklist and relation changes";
+      const latest = "Card autosave after checklist and tag changes";
       await title().fill(latest);
-      await waitForWrite(path, "PATCH", 7);
+      await waitForWrite(path, "PATCH", 6);
       await waitForSaved(path, (value) => value.metadata.title === latest);
       return {
-        reviewDateAddClear: true,
+        plannedDatesAddClear: true,
         acceptance: true,
         tag: true,
-        dependency: true,
       };
     },
   );

@@ -37,7 +37,7 @@ export async function seed(host) {
     milestones.push(
       await create(`${base}/milestones`, {
         title,
-        due: { date, kind: "hard" },
+        due: { date },
       }),
     );
   }
@@ -71,14 +71,6 @@ export async function seed(host) {
             },
           }
         : {}),
-      ...(i % 3 === 0
-        ? { due: { date: "2026-09-07", kind: i % 2 ? "target" : "hard" } }
-        : {}),
-      ...(i % 7 === 0
-        ? { blocked: { reason: "Waiting for synthetic approval" } }
-        : {}),
-      ...(i % 8 === 0 ? { review_on: "2026-09-08" } : {}),
-      ...(i === 1 || i === 2 ? { depends_on: [cards[i - 1].id] } : {}),
     };
     cards.push(await create(`${base}/cards`, payload));
   }

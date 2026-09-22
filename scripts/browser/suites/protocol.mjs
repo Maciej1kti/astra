@@ -9,7 +9,8 @@ import { join } from "node:path";
 await runBrowserSuite(
   async ({ config, cli, runtime, evidence, newContext }) => {
     const project = config.projects[0];
-    const count = 350,
+    // Each card now contributes one schedule event; exceed the calendar's 1000-item page.
+    const count = 1050,
       ids = [];
     // Synthetic external sources exercise normal filesystem reconciliation on the host.
     for (let index = 0; index < count; index++) {
@@ -27,9 +28,6 @@ await runBrowserSuite(
         created_at: "2026-09-05T10:00:00Z",
         updated_at: "2026-09-05T10:00:00Z",
         schedule: { start: "2026-09-07", end: "2026-09-09" },
-        due: { date: "2026-09-08", kind: "target" },
-        review_on: "2026-09-08",
-        blocked: { reason: "Synthetic pagination fixture" },
       };
       await writeFile(
         join(project.folder, ".project", "cards", `${id}.md`),

@@ -90,8 +90,6 @@ def domain_valid(document: dict[str, Any]) -> None:
     schedule = metadata.get("schedule")
     if schedule:
         require(schedule["start"] <= schedule["end"], "schedule.start > schedule.end")
-    if document.get("type") == "card":
-        require(metadata["id"] not in metadata.get("depends_on", []), "self dependency")
     if metadata.get("created_at") and metadata.get("updated_at"):
         require(metadata["updated_at"] >= metadata["created_at"], "updated_at before created_at")
     # These are reference checks of supplied vectors, not all production limits.
@@ -183,11 +181,6 @@ def check_markdown_examples() -> dict:
             documents.append(document)
     by_type = {kind: {d["metadata"]["id"]: d for d in documents if d["type"] == kind}
                for kind in ["project", "card", "milestone", "update"]}
-    for card in by_type["card"].values():
-        md = card["metadata"]
-        require(not md.get("milestone_id") or md["milestone_id"] in by_type["milestone"], "Missing milestone")
-        for predecessor in md.get("depends_on", []):
-            require(predecessor in by_type["card"], "Missing dependency")
     for update in by_type["update"].values():
         target = update["metadata"]["target"]
         require(target["id"] in by_type[target["type"]], "Missing update target")
@@ -253,8 +246,6 @@ def check_vectors() -> dict:
             actual, length = False, None
         require(actual == case["valid"], f"Date vector {case['id']}")
         require(length == case["inclusive_days"], f"Date length {case['id']}")
-    for case in vectors["graph_cases"]:
-        require(graph_valid(case["graph"]) == case["valid"], f"Graph vector {case['id']}")
     for case in vectors["rank_cases"]:
         low, high = int(case["low"], 16), int(case["high"], 16)
         middle = (low + high) // 2

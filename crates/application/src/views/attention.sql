@@ -1,33 +1,34 @@
 WITH candidates AS (
-              SELECT project_id,entity_id,entity_type,title,'overdue' reason,json_extract(metadata_json,'$.due.date') date,0 weight
+              SELECT project_id,entity_id,entity_type,title,'overdue' reason,json_extract(metadata_json,'$.schedule.end') date,0 weight
 FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
-AND json_extract(metadata_json,'$.due.kind')='hard'
+AND entity_type='card'
+AND json_extract(metadata_json,'$.schedule.end')<?1
+UNION ALL SELECT project_id,entity_id,entity_type,title,'due_soon',json_extract(metadata_json,'$.schedule.end'),3
+FROM documents d
+WHERE {ACTIVE}
+AND (?5 IS NULL
+OR d.project_id=?5)
+AND entity_type='card'
+AND json_extract(metadata_json,'$.schedule.end') BETWEEN ?1
+AND ?2
+UNION ALL SELECT project_id,entity_id,entity_type,title,'overdue',json_extract(metadata_json,'$.due.date'),0
+FROM documents d
+WHERE {ACTIVE}
+AND (?5 IS NULL
+OR d.project_id=?5)
+AND entity_type='milestone'
 AND json_extract(metadata_json,'$.due.date')<?1
 UNION ALL SELECT project_id,entity_id,entity_type,title,'due_soon',json_extract(metadata_json,'$.due.date'),3
 FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
-AND json_extract(metadata_json,'$.due.kind')='hard'
+AND entity_type='milestone'
 AND json_extract(metadata_json,'$.due.date') BETWEEN ?1
 AND ?2
-UNION ALL SELECT project_id,entity_id,entity_type,title,'review_due',json_extract(metadata_json,'$.review_on'),2
-FROM documents d
-WHERE {ACTIVE}
-AND (?5 IS NULL
-OR d.project_id=?5)
-AND entity_type='card'
-AND json_extract(metadata_json,'$.review_on')<=?1
-UNION ALL SELECT project_id,entity_id,entity_type,title,'blocked',NULL,1
-FROM documents d
-WHERE {ACTIVE}
-AND (?5 IS NULL
-OR d.project_id=?5)
-AND entity_type='card'
-AND json_type(metadata_json,'$.blocked')='object'
 UNION ALL SELECT project_id,entity_id,entity_type,title,'review',NULL,4
 FROM documents d
 WHERE {ACTIVE}

@@ -1,7 +1,6 @@
 //! Shared domain boundary, without HTTP, filesystem access or command execution.
 pub mod models;
 pub mod ordering;
-pub mod timeline;
 
 use chrono::{DateTime, NaiveDate};
 use models::{Document, Workspace};
@@ -84,7 +83,7 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
                 return Err(DomainError::Invalid("updated_at before created_at"));
             }
         }
-        for field in ["depends_on", "resolves"] {
+        for field in ["resolves"] {
             if m.get(field)
                 .and_then(Value::as_array)
                 .is_some_and(|ids| ids.contains(&m["id"]))
@@ -143,17 +142,4 @@ pub fn local_date(text: &str) -> Result<NaiveDate, DomainError> {
     }
     NaiveDate::parse_from_str(text, "%Y-%m-%d")
         .map_err(|_| DomainError::Invalid("invalid calendar date"))
-}
-
-/// Planning inconsistencies are advisory; schedules never silently move deadlines.
-pub fn date_warnings(metadata: &Value) -> Vec<Value> {
-    let mut warnings = Vec::new();
-    if let (Some(end), Some(due)) = (
-        metadata["schedule"]["end"].as_str(),
-        metadata["due"]["date"].as_str(),
-    ) && end > due
-    {
-        warnings.push(serde_json::json!({"code":"SCHEDULE_AFTER_DUE","message":"The planned work ends after its due date."}));
-    }
-    warnings
 }

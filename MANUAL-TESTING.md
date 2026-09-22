@@ -35,8 +35,8 @@ its folder through the normal registration flow.
 ## A useful first pass
 
 1. Select **Try Local Projects**, open a card and change its title/description.
-2. Set start/end/due dates; move it on Board and Timeline.
-3. Create another card and a milestone. Try a dependency and blocked status.
+2. Set start/end dates; move it on Board and Timeline.
+3. Create another card and a milestone. Change their statuses.
 4. Pin two cards to Focus and arrange their order.
 5. Add an update, mark it read, then inspect history and undo a card edit.
 6. Open a second browser tab, edit the same card in both and inspect the conflict.
@@ -59,13 +59,15 @@ users can focus the description and press Enter or Space to edit, then Tab to
 leave it. These modals have no Change history section. Cards no longer have
 Kind, Expected result or Owner fields. Project
 review dates, phases and extensions are also removed from the source and API
-contracts; card review dates remain available.
+contracts. Card planning uses only Start and End dates; card deadline/review
+dates, deadline types, dependencies, milestone links and blocked reasons are
+removed throughout the application.
 
 The card Checklist uses one row per item: checkbox, text, remove icon and drag
 handle. Drag the handle to reorder; keyboard users can pick up with Space or
 Enter, move with arrow keys, then confirm or cancel with Escape. Only a completed
 reorder is saved. Use Add item for a new entry. Card editors have no Record
-progress, Card updates or Additional fields sections. Reports target projects
+progress, Card updates, Additional fields or Connections and blockers sections. Reports target projects
 or milestones; cards have no custom metadata extensions.
 
 ## Known limits
@@ -114,29 +116,19 @@ Use a sample project and three cards named Design, Build and Review. Set their
 inclusive schedules to September 7–9, September 8–10 and September 9–10, 2026.
 In **Timeline**, choose September 2026, then:
 
-1. Connect Design to Build and Build to Review using the predecessor/successor
-   form. Confirm each dependency proposal. Alternatively, click the connector
-   beside the predecessor's bar and then the successor's connector.
-2. Inspect the arrows and project timing summary. With only these three cards,
-   the recorded finish is September 10 and the dependency forecast ends on
-   September 14. Enable **Dependency forecast** to see the shifted bars and the
-   amber underline on one chain determining that finish.
-3. Disable the forecast. Drag a bar or either edge and confirm the date proposal.
-   Escape during a gesture cancels it. Alt+Left/Right on a focused handle changes
-   one day; adding Shift changes a week. Open the selected card for full editing.
-4. Expand **Dependencies** to disconnect an edge. The successor's other
-   predecessors must remain. Attempting Review → Design while the original
-   chain exists should show a cycle error and leave the graph unchanged.
-
-The forecast is a read-only estimate within one project. It includes weekends,
-respects recorded starts and preserves durations. Missing dates or predecessors
-make the estimate incomplete. It does not automatically save a waterfall plan,
-move deadlines or account for resource capacity.
+1. Inspect the recorded schedule bars. With only these three cards, the latest
+   recorded end date is September 10.
+2. Drag a bar or either edge and confirm the date proposal. Escape during a
+   gesture cancels it. Alt+Left/Right on a focused handle changes one day;
+   adding Shift changes a week. Open the selected card for full editing.
+3. Change the card's Start and End fields, wait for Saved, then reload and check
+   that the same inclusive range appears. There are no dependency connectors,
+   forecast controls or separate card deadline/review markers.
 
 In **Calendar**, navigate to the same dates and try day, week, month and agenda.
 Select an empty day/range or use **New scheduled card** to open a prefilled draft.
-Move planned work or resize either end, then confirm the proposal. Deadline and
-review markers open the shared editor and remain separate from the planned range.
+Move planned work or resize either end, then confirm the proposal. Milestone
+date markers open the milestone editor; card events use their planned range.
 
 The **Calendar shortcuts & editing** disclosure lists controls. Alt+1 through
 Alt+4 select the four layouts; Alt+T returns to today. Alt+Left/Right navigates

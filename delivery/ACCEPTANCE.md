@@ -130,21 +130,21 @@ Typ: unit. Wymagania: R25.
 
 **Oczekiwany wynik:** Plan/date-only identyczny w pliku, liście, calendar i Gantt.
 
-## A17 — Plan nie zmienia deadline
+## A17 — Explicit schedule and milestone due date
 
 Typ: e2e. Wymagania: R08, R25.
 
-**Kroki:** Rozciągnij pasek poza hard deadline.
+**Steps:** Move or resize an explicit card schedule; open a milestone with a due date.
 
-**Oczekiwany wynik:** Zmienia się tylko schedule; ostrzeżenie, deadline nietknięty.
+**Expected result:** Only the card schedule changes. The milestone keeps `due: {date}`; `overdue` and `due_soon` signals use the corresponding date.
 
-## A18 — Graf i brak autoschedulera
+## A18 — Explicit Gantt without automatic scheduling
 
 Typ: integration. Wymagania: R09, R12.
 
-**Kroki:** Dodaj cykl/self-edge; następnie legalną krawędź ze sprzecznymi datami.
+**Steps:** Open Gantt with scheduled and unscheduled cards and a milestone due date.
 
-**Oczekiwany wynik:** Cykl odrzucony, konflikt dat ostrzega, następnik nie przesuwa się sam.
+**Expected result:** Gantt shows only recorded schedules and milestone due dates; it has no connections or automatic date shifts.
 
 ## A19 — Porządek i nieaktualni sąsiedzi
 
@@ -246,7 +246,7 @@ Typ: security. Wymagania: R17.
 
 Typ: device. Wymagania: R06, R13.
 
-**Kroki:** Na realnym iPhonie zmień title/body/status/daty/focus/zależność i dodaj raport.
+**Steps:** On a physical iPhone, change title/body/status/schedule/focus and add a report.
 
 **Oczekiwany wynik:** Te same skutki co desktop, widoczne po drugiej stronie, brak readonly ograniczeń.
 

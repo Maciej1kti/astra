@@ -53,14 +53,14 @@
     {
       "id": "R08",
       "source": "U05",
-      "title": "Kalendarz z planem, deadline i przeglądem",
+      "title": "Calendar with explicit schedules and milestone due dates",
       "priority": "P0",
       "status": "specified_not_implemented"
     },
     {
       "id": "R09",
       "source": "U05",
-      "title": "Gantt z resize/move, milestones i zależnościami",
+      "title": "Gantt with explicit schedules and milestones",
       "priority": "P0",
       "status": "specified_not_implemented"
     },
@@ -81,7 +81,7 @@
     {
       "id": "R12",
       "source": "B",
-      "title": "Milestones, blokady, decyzje i wyjaśnione alerts",
+      "title": "Milestones, decisions, blocker reports and explained alerts",
       "priority": "P0",
       "status": "specified_not_implemented"
     },
@@ -172,7 +172,7 @@
     {
       "id": "R25",
       "source": "B",
-      "title": "Date-only, strefa workspace, plan != deadline",
+      "title": "Date-only dates, workspace timezone, schedules and milestone due dates",
       "priority": "P0",
       "status": "specified_not_implemented"
     },

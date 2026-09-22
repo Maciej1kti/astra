@@ -237,24 +237,27 @@ fn assert_scoped_mutation(
 
 #[test]
 fn create_inputs_preserve_complete_json_from_stdin_and_files() {
-    let input = json!({"title":"Zażółć gęślą 🦀", "body":"First line\n\nDruga linia.\n",
-        "due":{"date":"2026-09-12", "kind":"target"}});
-    let bytes = serde_json::to_vec(&input).unwrap();
+    let card_input = json!({"title":"Zażółć gęślą 🦀", "body":"First line\n\nDruga linia.\n"});
+    let bytes = serde_json::to_vec(&card_input).unwrap();
     assert_scoped_mutation(
         &["card", "create", "--input", "-"],
         Some(&bytes),
         "cards",
-        input.clone(),
+        card_input,
         true,
     );
     let directory = tempfile::tempdir().unwrap();
     let file = directory.path().join("create.json");
     std::fs::write(&file, &bytes).unwrap();
+    let milestone_input = json!({"title":"Zażółć gęślą 🦀", "body":"First line\n\nDruga linia.\n",
+        "due":{"date":"2026-09-12"}});
+    let milestone_bytes = serde_json::to_vec(&milestone_input).unwrap();
+    std::fs::write(&file, &milestone_bytes).unwrap();
     assert_scoped_mutation(
         &["milestone", "create", "--input", file.to_str().unwrap()],
         None,
         "milestones",
-        input,
+        milestone_input,
         true,
     );
 }
@@ -306,14 +309,17 @@ fn set_shorthand_puts_body_inside_set_and_never_refetches_the_version() {
 
 #[test]
 fn exact_json_patches_from_stdin_keep_clear_fields() {
-    let patch = json!({"set":{"title":"Final", "body":"A\nB\n"}, "clear":["due"]});
-    let bytes = serde_json::to_vec(&patch).unwrap();
-    for (kind, collection) in [("card", "cards"), ("milestone", "milestones")] {
+    for (kind, collection, clear) in [
+        ("card", "cards", "schedule"),
+        ("milestone", "milestones", "due"),
+    ] {
+        let patch = json!({"set":{"title":"Final", "body":"A\nB\n"}, "clear":[clear]});
+        let bytes = serde_json::to_vec(&patch).unwrap();
         assert_scoped_mutation(
             &[kind, "set", RESOURCE, "--patch-file", "-"],
             Some(&bytes),
             collection,
-            patch.clone(),
+            patch,
             false,
         );
     }

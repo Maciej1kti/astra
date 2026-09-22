@@ -22,7 +22,10 @@
 
 ## ADR-006 — plan != zobowiązanie
 
-**Decyzja:** schedule, due i review_on rozdzielone; daty całodniowe. **Powód:** planner rezultatów, nie timesheet. **Koszt:** widget adaptery i różne markery. **Odrzucono:** drag paska zmienia deadline i algorytm automatycznie przesuwający plan.
+This historical baseline separated a card schedule from card due and review
+dates. Card due and review fields are superseded by
+[ADR-039](ADR-039-CARD-PLANNING-SIMPLIFICATION.md). Inclusive date-only card
+schedules and independent milestone due dates remain supported.
 
 ## ADR-007 — request window i restore epoch
 
@@ -99,9 +102,10 @@ Title-only filters in board/date views remain explicitly scoped to loaded result
 ## ADR-020 — Milestones in bounded timeline pages
 
 The Gantt endpoint pages cards and milestones together, using the existing typed
-Summary contract. Cards carry schedules and optional deadlines; milestone rows
-carry deadlines only. Dependencies remain card-to-card finish-to-start edges.
-Board pages continue to contain cards only. The combined page limit still applies.
+Summary contract. Cards carry explicit schedules; milestone rows carry due dates.
+The page exposes rows, pagination and warnings without card dependency edges or
+forecast projections. Board pages continue to contain cards only. The combined
+page limit still applies. See [ADR-039](ADR-039-CARD-PLANNING-SIMPLIFICATION.md).
 
 ## ADR-021 — CLI outcomes and read-only source validation
 
@@ -183,6 +187,10 @@ restriction for this explicitly interactive host-native flow.
 
 ## ADR-026 — Planning widgets and dependency forecasts (2026-09-07)
 
+Superseded for card connections, dependency forecasts and card planning fields
+by [ADR-039](ADR-039-CARD-PLANNING-SIMPLIFICATION.md). The following text is
+retained as historical implementation evidence.
+
 The owner requested implementation of the researched Gantt/calendar components,
 card-to-card waterfall dependencies, and visibility into project completion.
 Use MIT SVAR Svelte Gantt 2.7.2 and EventCalendar 5.12.2 as separately lazy-loaded
@@ -217,6 +225,16 @@ viewport avoids that path, with the title grid collapsed on narrow screens.
 Vendor display-mode switches are intercepted; the shared selection/editor
 controls remain available. Only bar content receives overflow styling, so the
 chart itself retains its native scrolling and virtualization.
+
+## ADR-039 — Simplify card planning fields
+
+Cards keep only explicit inclusive `schedule` dates. Card due, review, milestone
+link, blocking metadata and dependency fields are removed from source and API
+contracts. Milestones retain `due: {date}`. Attention due signals derive from a
+card schedule end or a milestone due date, and Gantt renders explicit schedule
+rows without connections or forecasts. See
+[ADR-039](ADR-039-CARD-PLANNING-SIMPLIFICATION.md) for the decision and cleanup
+evidence.
 
 ## ADR-027 — Structured card purpose and acceptance (2026-09-08)
 

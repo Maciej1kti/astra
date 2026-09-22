@@ -162,3 +162,39 @@ fn rejects_yaml_abuse_and_invalid_source_identity() {
     );
     assert!(document::parse(Kind::Card, None, input.as_bytes()).is_err());
 }
+
+#[test]
+fn card_sources_reject_retired_connection_and_deadline_fields() {
+    let original = String::from_utf8(bytes()).unwrap();
+    let title_line = original
+        .lines()
+        .find(|line| line.starts_with("\"title\": "))
+        .unwrap()
+        .to_owned();
+    for (field, value) in [
+        ("due", json!({"date":"2026-09-10", "kind":"hard"})),
+        ("review_on", json!("2026-09-10")),
+        (
+            "milestone_id",
+            json!("44444444-4444-4444-8444-444444444444"),
+        ),
+        ("blocked", json!({"reason":"Waiting"})),
+        (
+            "depends_on",
+            json!(["33333333-3333-4333-8333-333333333333"]),
+        ),
+    ] {
+        let input = original.replacen(
+            &title_line,
+            &format!(
+                "{title_line}\n\"{field}\": {}",
+                serde_json::to_string(&value).unwrap()
+            ),
+            1,
+        );
+        assert!(
+            document::parse(Kind::Card, None, input.as_bytes()).is_err(),
+            "retired card source field {field} must be rejected"
+        );
+    }
+}

@@ -18,27 +18,41 @@ Breakpointy początkowe 720/1100 CSS px służą układowi, nie uprawnieniom ani
 
 ## Wspólny panel karty
 
-Nagłówek: tytuł, status, zapis/conflict/unsaved, menu archiwizacji. Sekcje: rezultat/body, plan i deadline, milestone/zależności, blokada, aktualizacje/historia. Rzadkie pola stopniowo ujawniane. Body zwykły Markdown textarea + bezpieczny preview; nie WYSIWYG v1.
+Header: title, status, save/conflict/unsaved state and archive menu. Sections:
+outcome/body, schedule, checklist and updates/history. Body uses a plain Markdown
+textarea with a safe preview; v1 is not WYSIWYG.
 
 Pole tytułu ma Save/Cancel oraz skrót zatwierdzenia; pełny formularz zbiera intencję do jednego patcha. Nawigacja z brudnym formularzem ostrzega. Równoczesna zewnętrzna zmiana pokazuje niewymuszające ostrzeżenie, nie przepisuje body.
 
 ## Kanban
 
-Kolumny mają licznik, małą część widocznych kart i możliwość wczytania reszty. Tytuł, priorytet, deadline, blokada i milestone są kompaktowe. Na starcie nie renderuj 10k kart. Dnd przekazuje status i sąsiadów, nie arbitralny numer pozycji. Filtr może ukryć pośrednie karty; w trybie ręcznego sortowania trzeba wyjaśnić zakres albo zablokować reorder przy filtrze ukrywającym sąsiadów. Zmiana statusu przez menu pozostaje dostępna.
+Columns show a count, a small visible card page and an action to load more. Title,
+priority and schedule stay compact. Do not render 10,000 cards at startup. DnD
+passes status and neighbors rather than an arbitrary position. The menu always
+offers a status change.
 
 ## Kalendarz
 
-Widoki miesiąc, tydzień całodniowy, agenda. Zakres planu to pasek; deadline to oznaczony marker; review to odmienna etykieta. Ten sam obiekt może mieć kilka elementów, wszystkie otwierają tę samą kartę. Klik pustego dnia może rozpocząć nową kartę z planem, bez automatycznego deadline'u.
+Views are month, all-day week and agenda. A card schedule is a bar and a
+milestone due date is a marker. One resource can have several items and all open
+the same resource. Clicking an empty day can start a new scheduled card.
 
-Move planu zachowuje liczbę dni. Resize zmienia tylko chwytaną granicę, minimum 1 dzień. Przejście przez miesiąc i rok jest normalną operacją. Przeniesienie hard deadline wymaga wyraźnego potwierdzenia pola daty, nie dzieje się przez uchwyt planu. Na telefonie marker można wybrać i zmienić datę w panelu.
+Moving a schedule preserves its number of days. Resizing changes only the
+selected boundary, with a one-day minimum. Crossing a month or year is ordinary.
+On a phone, select a schedule or milestone due date and edit it in the panel.
 
 Nakładające się wydarzenia dostają czytelne ułożenie i licznik overflow. Nie tworzymy godzinowego week grid sugerującego blokadę czasu, gdy model jest całodniowy. Brak danych przez network error nie jest pustym dniem.
 
 ## Gantt
 
-Wiersze kart i milestones, stała kolumna tytułu, wspólna pozioma oś czasu. Skale dni, tygodni, miesięcy. Nieistniejący plan jest w sekcji niezaplanowanych z akcją zaplanowania. Koniec planu i due mogą być różne. Zależności rysowane tylko dla widocznego kontekstu z oznaczeniem połączeń poza ekran; nie budujemy gigantycznego DOM dla każdej krawędzi całego archiwum.
+Rows contain cards and milestones with a fixed title column and a shared
+horizontal time axis. Scales cover days, weeks and months. Missing card
+schedules appear in an unscheduled section with an action to schedule them. Card
+bars use recorded schedules and milestone rows use their due date. Gantt renders
+no card connections or inferred forecast.
 
-Zależność dodawana przez panel z wyszukaniem karty jest obowiązkowa. Rysowanie krawędzi palcem może być dodatkową interakcją, nie jedynym sposobem. Weekend może być oznaczony, ale nie zmienia długości planu. Bez auto-schedulera i capacity planning.
+Weekends may be marked but do not change schedule length. There is no automatic
+scheduler or capacity planning.
 
 ## Maszyna stanów gestu
 
@@ -71,20 +85,15 @@ loaded separately when their view opens. All assets are served by the host.
 The shared editor and versioned command transport own persistence. A pointer
 gesture or keyboard move opens an explicit proposal; it does not silently save.
 
-Each scheduled card is one Gantt bar. Milestone deadlines remain distinct.
-Connect a predecessor to a successor using the two card connectors or the
-labelled connection form; disconnecting preserves the successor's other edges.
-The server validates the graph, including cycle rejection. Dependencies outside
-the current page remain listed. The project timing summary covers up to 10,000
-cards independently of the 200-row UI page and marks incomplete estimates.
-The optional forecast preserves durations, applies finish-to-start ordering and
-highlights one chain driving the estimated project finish. It never changes
-recorded dates. See ADR-026 for the forecast's semantics and limits.
+Each scheduled card is one Gantt bar. Milestone due dates remain distinct.
+Gantt displays recorded schedules and does not draw card connections or infer a
+project finish. A move or resize produces the ordinary conditional schedule
+patch for that card.
 
 The calendar supports day, all-day week, month and agenda views. Clicking an
 empty date or selecting a range opens a scheduled card draft in the selected
-project. Planned work can move or resize at either boundary; deadlines and
-reviews open their resource editor. Overflow and loading/error states remain
+project. Planned work can move or resize at either boundary; milestone due
+dates open their resource editor. Overflow and loading/error states remain
 visible. The model remains date-only, so there is no hourly time blocking.
 
 On a focused planned calendar event or Gantt handle, Alt+Left/Right changes the

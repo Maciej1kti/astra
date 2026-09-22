@@ -90,3 +90,26 @@ confirmed the removal of card report functionality. Reports for projects and
 milestones remain supported. Remove card Additional fields and `x-*` extensions
 throughout the application. Both live projects were inventoried: their five cards
 have no extensions, and neither project has card-targeted reports to remove.
+
+## Card connections and planning simplification — owner decision, 2026-09-22
+
+Remove Connections and blockers throughout the application: card milestone links,
+dependency edges and blocked reasons, their commands, projections and rules.
+Card planning keeps only inclusive schedule Start and End. Remove card `due`
+and `review_on`, and remove deadline types globally. Milestones retain their
+single date as `due: {date}`. Project/milestone reports, including blocker reports,
+remain supported independently of removed card fields.
+
+Timeline and calendar show recorded schedules without dependency forecasts or
+card deadline/review markers. Card date attention uses schedule end; milestone
+date attention uses its date. Retain archive, focus, checklist, tags, ordinary
+version conflicts and durable command recovery. This supersedes dependency and
+separate card deadline requirements in older handoff chapters; unrelated release
+obligations remain.
+
+The owner authorized removal from existing sources. Five cards across the two
+registered projects, including the archived card, were cleared through normal
+conditional CLI writes. The only present field was `depends_on` (one actual edge
+and four empty arrays). No card deadline/review dates, milestone links, blocked
+reasons or milestone documents were present. Bodies, schedules and retained
+metadata were verified unchanged; no compatibility bridge was needed.

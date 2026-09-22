@@ -19,7 +19,6 @@
   const hasState = $derived(
     (showStatus && item.status) ||
       (item.priority && item.priority !== "normal") ||
-      item.blocked ||
       item.archived,
   );
 </script>
@@ -46,12 +45,6 @@
           </span>
         {/if}
         {#if item.archived}<span class="badge archived">Archived</span>{/if}
-        {#if item.blocked}
-          <span class="badge blocked" title={`Blocked: ${item.blocked.reason}`}>
-            <span aria-hidden="true">!</span>
-            <span class="blocked-text">Blocked: {item.blocked.reason}</span>
-          </span>
-        {/if}
       </span>
     {/if}
     {#if item.acceptance_progress?.total}
@@ -138,8 +131,7 @@
     background: var(--review-bg);
   }
   .priority[data-priority="high"],
-  .priority[data-priority="urgent"],
-  .blocked {
+  .priority[data-priority="urgent"] {
     color: var(--notice-ink);
     border-color: var(--notice-line);
     background: var(--notice-bg);
@@ -147,16 +139,6 @@
   .priority[data-priority="urgent"] {
     border-width: 2px;
     padding: 1px 5px;
-  }
-  .blocked {
-    min-width: 0;
-  }
-  .blocked-text {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
   }
   .date-badges {
     column-gap: 10px;
@@ -171,7 +153,7 @@
   .date-label {
     font-weight: 600;
   }
-  .date[data-date-kind="hard"] {
+  .date[data-date-kind="due"] {
     color: var(--notice-ink);
     background: var(--notice-bg);
     border-radius: 4px;

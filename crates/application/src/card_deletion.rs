@@ -13,15 +13,10 @@ use crate::{
     writer::Writer,
 };
 use project_store::{
-    document::{self, Kind, ParsedDocument},
+    document::{self, Kind},
     filesystem::ProjectStore,
 };
 use serde_json::{Value, json};
-use uuid::Uuid;
-
-const MAX_BLOCKERS: usize = 100;
-const MAX_CARD_FILES: usize = 10_000;
-const MAX_CARD_BYTES: usize = 64 * 1024 * 1024;
 
 impl Engine {
     pub fn delete_card(
@@ -79,11 +74,11 @@ impl Engine {
             return self.journal.reject_error(&command, error, now);
         }
         let workspace = self.workspace()?.value;
-        if workspace
+        let focused = workspace
             .focus
             .iter()
-            .any(|focus| focus.project_id == project_id && focus.card_id == card_id)
-        {
+            .any(|focus| focus.project_id == project_id && focus.card_id == card_id);
+        if focused {
             return reject(focus_blocker(request_id, project_id, card_id));
         }
         let project = match read(&store, Kind::Project, project_id) {
@@ -93,19 +88,26 @@ impl Engine {
         if project.document.get().status() == Some("archived") {
             return reject(Reply::error(409, "PROJECT_ARCHIVED", request_id));
         }
-        let references = match delete_references(&store, project_id, card_id) {
-            Ok(references) => references,
-            Err(error) => return self.journal.reject_error(&command, error, now),
-        };
         let mut reply = Writer {
             journal: &self.journal,
         }
         .execute_delete(
             &mut store,
             &command,
-            references,
+            vec![Reference {
+                kind: Kind::Project,
+                id: project_id.into(),
+                version: Some(project.version),
+            }],
             now,
-            |current| delete_dependency_guard(current, card_id, request_id),
+            |_| {
+                if focused {
+                    return Err(AppError::Rejected(focus_blocker(
+                        request_id, project_id, card_id,
+                    )));
+                }
+                Ok(())
+            },
             |_| Ok(()),
         )?;
         let repair_projection = reply.http_status == 200
@@ -153,29 +155,6 @@ fn focus_blocker(request_id: &str, project_id: &str, card_id: &str) -> Reply {
     reply
 }
 
-fn delete_references(
-    store: &ProjectStore,
-    project_id: &str,
-    card_id: &str,
-) -> Result<Vec<Reference>, AppError> {
-    let project = read(store, Kind::Project, project_id)?;
-    let mut references = vec![Reference {
-        kind: Kind::Project,
-        id: project_id.into(),
-        version: Some(project.version),
-    }];
-    for card in card_set(store)? {
-        if card.document.get().id() != card_id {
-            references.push(Reference {
-                kind: Kind::Card,
-                id: card.document.get().id().into(),
-                version: Some(card.version),
-            });
-        }
-    }
-    Ok(references)
-}
-
 fn preflight_card(
     store: &ProjectStore,
     card_id: &str,
@@ -201,88 +180,9 @@ fn preflight_card(
     Ok(())
 }
 
-fn card_set(store: &ProjectStore) -> Result<Vec<ParsedDocument>, AppError> {
-    let directory = match store.directory.child("cards", false) {
-        Ok(directory) => directory,
-        Err(project_store::StoreError::Io(error))
-            if error.kind() == std::io::ErrorKind::NotFound =>
-        {
-            return Ok(Vec::new());
-        }
-        Err(error) => return Err(error.into()),
-    };
-    let names = directory.names_bounded(MAX_CARD_FILES)?;
-    let mut bytes_total = 0usize;
-    let mut cards = Vec::new();
-    for filename in names.into_iter().filter(|name| name.ends_with(".md")) {
-        let id = filename
-            .strip_suffix(".md")
-            .ok_or(AppError::invariant("card filename suffix"))?;
-        let valid_id = Uuid::parse_str(id)
-            .ok()
-            .is_some_and(|uuid| uuid.get_version_num() == 4 && uuid.to_string() == id);
-        if !valid_id {
-            return Err(AppError::reject(409, "DOCUMENT_INVALID"));
-        }
-        let raw = directory
-            .read(&filename)?
-            .ok_or(AppError::reject(409, "DOCUMENT_INVALID"))?;
-        bytes_total = bytes_total
-            .checked_add(raw.len())
-            .filter(|total| *total <= MAX_CARD_BYTES)
-            .ok_or_else(|| AppError::reject(409, "SOURCE_LIMIT"))?;
-        cards.push(
-            document::parse(Kind::Card, Some(id), &raw)
-                .map_err(|_| AppError::reject(409, "DOCUMENT_INVALID"))?,
-        );
-    }
-    Ok(cards)
-}
-
-fn delete_dependency_guard(
-    store: &ProjectStore,
-    target: &str,
-    request_id: &str,
-) -> Result<(), AppError> {
-    let mut blockers = Vec::new();
-    for card in card_set(store)? {
-        if card.document.get().id() == target {
-            continue;
-        }
-        if card
-            .document
-            .get()
-            .dependencies()
-            .iter()
-            .any(|id| id == target)
-        {
-            let value = card.value();
-            blockers.push(json!({
-                "id": card.document.get().id(),
-                "title": value["metadata"]["title"],
-                "archived": value["metadata"]["archived"],
-            }));
-            if blockers.len() >= MAX_BLOCKERS {
-                break;
-            }
-        }
-    }
-    if blockers.is_empty() {
-        return Ok(());
-    }
-    let mut reply = Reply::error(409, "CARD_REFERENCED", request_id);
-    reply.body["error"]["details"] = json!({
-        "target_id": target,
-        "incoming": blockers,
-        "truncated": blockers.len() == MAX_BLOCKERS,
-        "message": "Disconnect incoming depends_on references before deleting this card.",
-    });
-    Err(AppError::Rejected(reply))
-}
-
 /// Called by the startup owner while holding the exclusive workspace gate.
-/// It rechecks focus and incoming edges after a crash, including newly created
-/// card files. Returning false makes Writer mark the intent needs_review.
+/// It rechecks focus after a crash. Returning false makes Writer mark the
+/// intent needs_review.
 pub(crate) fn recovery_guard(
     engine: &Engine,
     store: &ProjectStore,
@@ -303,10 +203,6 @@ pub(crate) fn recovery_guard(
     }) {
         return Ok(false);
     }
-    if delete_dependency_guard(store, &intent.command.target.id, &intent.command.request_id)
-        .is_err()
-    {
-        return Ok(false);
-    }
+    let _ = store;
     Ok(true)
 }

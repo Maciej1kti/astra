@@ -264,7 +264,7 @@ Two concrete seams justify this recommendation:
   response shape and raw URL.
 - [Gantt rendering](../../crates/application/src/views/gantt.rs#L130) converts
   known fields to JSON and passes the magic `x-analysis-invalid` key into
-  [domain timeline analysis](../../crates/domain/src/timeline.rs#L33). The
+  [domain timeline analysis](https://github.com/Maciej1kti/astra/blob/e1e022e53cace6e00e3725bdc44730c5df9b3a97/crates/domain/src/timeline.rs#L33). The
   algorithm reparses keys and silently filters missing IDs/non-string
   dependencies. Adapter mistakes can resemble absent data.
 

@@ -126,24 +126,18 @@ await runBrowserSuite(
       results.push({
         check: "Card editor omits report UI and makes no report requests",
       });
-      await dialog.getByLabel("Find by title", { exact: true }).fill("History");
-      await dialog
-        .getByRole("button", { name: "Find resources", exact: true })
-        .click();
+      for (const field of [
+        "Due date",
+        "Review on",
+        "Blocked reason",
+        "Find by title",
+      ])
+        await expect(dialog.getByLabel(field, { exact: true })).toHaveCount(0);
       await expect(
-        dialog.getByRole("button", { name: "History probe", exact: true }),
-      ).toBeVisible();
-      assert(
-        requests.some(
-          (path) =>
-            path.startsWith("/api/v1/views/list?") &&
-            path.includes("type=card") &&
-            path.includes("q=History"),
-        ),
-      );
+        dialog.getByText("Connections and blockers", { exact: true }),
+      ).toHaveCount(0);
       results.push({
-        check:
-          "Relation search finds a card behind more than 50 matching reports",
+        check: "Card editor exposes only schedule dates for card planning",
       });
       await dialog
         .getByRole("button", { name: "Close editor", exact: true })

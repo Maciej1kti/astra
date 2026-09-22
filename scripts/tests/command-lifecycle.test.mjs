@@ -2,39 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as api from "../../apps/web/src/lib/api/api.ts";
 import { cursorPage } from "../../apps/web/src/lib/api/pagination.ts";
-import { searchRelations } from "../../apps/web/src/features/editor/relation-search.ts";
-
-test("relation search filters resource type on the server before its bounded page", async () => {
-  const previous = globalThis.fetch;
-  const paths = [];
-  globalThis.fetch = async (path) => {
-    paths.push(path);
-    return {
-      status: 200,
-      ok: true,
-      json: async () => ({
-        items: [
-          { id: "self", type: "card" },
-          { id: "matching", type: "card" },
-        ],
-      }),
-    };
-  };
-  try {
-    assert.deepEqual(
-      await searchRelations("project", "card", " shared term ", "self"),
-      [{ id: "matching", type: "card" }],
-    );
-    const url = new URL(paths[0], "https://local.test");
-    assert.equal(url.pathname, "/api/v1/views/list");
-    assert.equal(url.searchParams.get("type"), "card");
-    assert.equal(url.searchParams.get("q"), "shared term");
-    assert.equal(url.searchParams.get("limit"), "50");
-  } finally {
-    api.clearReads();
-    globalThis.fetch = previous;
-  }
-});
 
 test("both server stale-page codes restart once, while unrelated failures retain their meaning", async () => {
   for (const code of ["CURSOR_STALE", "PAGE_STALE"]) {

@@ -6,6 +6,17 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Card planning simplification](2026-09-22-card-planning-simplification.md) removes
+Connections and blockers, card deadlines/review dates and deadline types across
+UI, CLI, source/API contracts and derived views. Cards retain Start and End;
+milestones retain a single date. Conditional CLI writes removed obsolete fields
+from all five existing cards while preserving schedules and content. The full
+local gate passes 209 Rust, 93 JavaScript and 12 Python tests; all ten release
+browser suites pass across the documented runs, along with the broad HTTPS
+smoke and native planning gestures. Description clicks preserve their target
+while Markdown rendering changes layout. The updated manual runtime validates
+both projects cleanly and preserves existing source versions.
+
 [Compact checklist and card report removal](2026-09-22-card-checklist.md) replaces
 checklist arrows and verbose controls with one row per item and a drag grip.
 Record progress, Card updates and card Additional fields are removed with their

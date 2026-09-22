@@ -65,18 +65,21 @@ marked done. A failed rebuild remains recoverable through the existing workflow.
 
 ## Browser ownership and timeline inputs
 
+The former dependency and forecast timeline inputs are superseded by
+[ADR-039](ADR-039-CARD-PLANNING-SIMPLIFICATION.md). Current planning reads use
+explicit card schedules and milestone due dates.
+
 Focus, project overview, resource list, updates and the workspace board overview
 own their markup and selectors. App composes them and coordinates sessions, dialogs
 and data refresh. Navigation exposes read-only route state and named actions;
 its resource-read generation is private. View/project changes, draft creation
 and reset cancel obsolete resource reads, including interrupted history restoration.
 
-Timeline analysis accepts typed ID, schedule, dependencies and reliability inputs.
-The application converts its indexed snapshot at the boundary. A malformed
-dependency or schedule shape is reported instead of being silently interpreted as
-missing data. The domain retains date, cycle, missing-predecessor and forecast
-rules; it no longer interprets an internal magic JSON field. Public Gantt output
-and source schedules remain unchanged for valid inputs.
+Planning reads accept typed IDs, explicit schedules and reliability inputs. The
+application converts its indexed snapshot at the boundary. A malformed schedule
+shape is reported instead of being silently interpreted as missing data. Public
+Gantt output contains recorded schedule rows and milestone due dates; it does
+not calculate dependency or forecast projections.
 
 ## Browser verification runtime
 

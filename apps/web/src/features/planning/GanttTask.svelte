@@ -38,18 +38,12 @@
   }
 </script>
 
-<div
-  class="task"
-  class:driving={data.astraDriving}
-  use:isolate
-  data-card-id={row.id}
->
+<div class="task" use:isolate data-card-id={row.id}>
   {#if row.type === "milestone"}
     <button
       class="milestone"
       onclick={() => actions.open(row)}
-      aria-label={`${row.due?.kind} milestone deadline: ${row.title}`}
-      >◆ {row.title}</button
+      aria-label={`Due milestone: ${row.title}`}>◆ {row.title}</button
     >
   {:else if row.schedule}
     <button
@@ -94,13 +88,6 @@
       onkeydown={(e) => keyboard(e, "end")}
       onclick={() => actions.propose(row, 0, "end")}>›</button
     >
-    <button
-      class="connector"
-      disabled={!actions.editable()}
-      aria-label={`Connect from ${row.title}`}
-      title="Connect this card to its successor"
-      onclick={() => actions.link(row)}>○</button
-    >
   {/if}
 </div>
 
@@ -114,9 +101,6 @@
     color: var(--ink);
     border-radius: 5px;
     background: color-mix(in srgb, var(--accent) 22%, var(--paper));
-  }
-  .driving {
-    box-shadow: inset 0 -3px #b36b20;
   }
   button {
     color: inherit;
@@ -142,20 +126,6 @@
     white-space: nowrap;
     text-align: left;
   }
-  .connector {
-    position: absolute;
-    right: -42px;
-    top: 0;
-    width: 40px;
-    min-height: 44px;
-    color: var(--ink);
-    opacity: 0;
-    cursor: crosshair;
-  }
-  .task:hover .connector,
-  .task:focus-within .connector {
-    opacity: 1;
-  }
   .milestone {
     white-space: nowrap;
   }
@@ -169,9 +139,6 @@
     box-shadow: 0 3px 12px #0003;
   }
   @media (pointer: coarse) {
-    .connector {
-      opacity: 1;
-    }
     .edge {
       min-width: 44px;
     }

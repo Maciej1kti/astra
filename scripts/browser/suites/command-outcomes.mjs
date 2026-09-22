@@ -235,6 +235,8 @@ await runBrowserSuite(
           .getByRole("button", { name: "Pin to focus", exact: true })
           .click();
       }
+      // Keep Description focused for resource cases: clicking recovery must
+      // still work when leaving Markdown editing changes the dialog's height.
       await rejected.recover(dialog);
       await expect(title).toHaveValue("Autosaved title — Zażółć");
       await expectBodyDraft();

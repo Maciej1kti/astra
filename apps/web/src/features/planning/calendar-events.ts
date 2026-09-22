@@ -22,9 +22,7 @@ export function calendarEvents(
       extendedProps: { astra: item },
       backgroundColor: item.kind.endsWith("due")
         ? "var(--calendar-due-bg)"
-        : item.kind.endsWith("review")
-          ? "var(--calendar-review-bg)"
-          : "var(--calendar-plan-bg)",
+        : "var(--calendar-plan-bg)",
       textColor: "var(--ink)",
     }));
 }

@@ -47,7 +47,6 @@ fn agent_context_includes_card_acceptance_and_body_or_an_explicit_next_read() {
         json!({
             "set": {
                 "body": "The owner can review every criterion.",
-                "review_on": "2026-09-08",
                 "acceptance": acceptance,
             },
         }),
@@ -60,7 +59,7 @@ fn agent_context_includes_card_acceptance_and_body_or_an_explicit_next_read() {
         context["cards"][0]["excerpt"],
         "The owner can review every criterion."
     );
-    assert_eq!(context["cards"][0]["review_on"], "2026-09-08");
+    assert!(context["cards"][0].get("review_on").is_none());
     assert_eq!(context["cards"][0]["truncated"], false);
 
     let large = "ą".repeat(4000);
@@ -94,7 +93,7 @@ fn agent_context_includes_card_acceptance_and_body_or_an_explicit_next_read() {
     wire::validate("Context", &full).unwrap();
     assert_eq!(full["cards"][0]["excerpt"], &large[..1024]);
     assert_eq!(full["cards"][0]["truncated"], true);
-    assert_eq!(full["cards"][0]["review_on"], "2026-09-08");
+    assert!(full["cards"][0].get("review_on").is_none());
     assert_eq!(full["cards"][0]["acceptance"], large_acceptance);
     assert_eq!(full["omitted"]["cards"], 0);
 }

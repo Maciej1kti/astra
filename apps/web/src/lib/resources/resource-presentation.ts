@@ -21,20 +21,19 @@ export function resourceLabel(value: string): string {
 }
 
 export type ResourceDateBadge = {
-  kind: "hard" | "target" | "plan" | "review";
+  kind: "due" | "plan";
   label: string;
   start: string;
   end?: string;
 };
 
-/** Keep deadlines, planned work and review dates separate on every surface. */
+/** Keep milestone due dates and planned work separate on every surface. */
 export function resourceDates(item: Summary): ResourceDateBadge[] {
   const dates: ResourceDateBadge[] = [];
-  if (item.due) {
-    const hard = item.due.kind === "hard";
+  if (item.type === "milestone" && item.due) {
     dates.push({
-      kind: hard ? "hard" : "target",
-      label: hard ? "Hard deadline" : "Target date",
+      kind: "due",
+      label: "Due",
       start: item.due.date,
     });
   }
@@ -47,9 +46,6 @@ export function resourceDates(item: Summary): ResourceDateBadge[] {
         ? { end: item.schedule.end }
         : {}),
     });
-  }
-  if (item.type !== "project" && item.review_on) {
-    dates.push({ kind: "review", label: "Review", start: item.review_on });
   }
   return dates;
 }

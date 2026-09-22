@@ -8,10 +8,9 @@ use crate::{
     wire,
     writer::Writer,
 };
-use project_domain::ordering::{Position, validate_dependencies};
+use project_domain::ordering::Position;
 use project_store::{document::Kind, filesystem::ProjectStore};
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -171,11 +170,7 @@ fn prepare(
             || previous.as_ref().is_some_and(|old| {
                 old.document.get().status() != next["metadata"]["status"].as_str()
             }));
-    let validates_dependencies = kind == Kind::Card
-        && (create || payload["set"].get("depends_on").is_some() || payload.get("undo").is_some());
-    // Ordering and graph validation share the same source observations. The
-    // writer still verifies every distinct reference immediately before prepare.
-    let siblings = if reorders || validates_dependencies {
+    let siblings = if reorders {
         collection(store, kind)?
     } else {
         Vec::new()
@@ -185,31 +180,6 @@ fn prepare(
         next["metadata"]["position"] = json!(placement.position.to_string());
         references.extend(placement.references);
     }
-    if let Some(milestone) = next["metadata"]["milestone_id"].as_str() {
-        let version = read(store, Kind::Milestone, milestone)?.version;
-        references.push(Reference {
-            kind: Kind::Milestone,
-            id: milestone.into(),
-            version: Some(version),
-        });
-    }
-    if validates_dependencies {
-        let mut graph = BTreeMap::new();
-        for source in &siblings {
-            let document = source.document.get();
-            let card = document.id();
-            graph.insert(card.to_owned(), document.dependencies().to_vec());
-            if card != id {
-                references.push(Reference {
-                    kind: Kind::Card,
-                    id: card.into(),
-                    version: Some(source.version.clone()),
-                });
-            }
-        }
-        graph.insert(id.clone(), dependencies(&next["metadata"]));
-        validate_dependencies(&graph).map_err(|_| AppError::reject(422, "DEPENDENCY_INVALID"))?;
-    }
     if kind == Kind::Update {
         references.extend(report_references(store, &next)?);
     }
@@ -218,18 +188,6 @@ fn prepare(
         references,
     })
 }
-fn dependencies(metadata: &Value) -> Vec<String> {
-    metadata["depends_on"]
-        .as_array()
-        .map(|v| {
-            v.iter()
-                .filter_map(Value::as_str)
-                .map(str::to_owned)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
 fn create_document(command: &Command, now: i64) -> Value {
     let kind = command.target.kind;
     let id = &command.target.id;

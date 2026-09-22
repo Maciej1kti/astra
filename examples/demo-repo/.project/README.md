@@ -16,9 +16,9 @@ Normalny zapis wykonuje CLI przez lokalny serwer. Odczytuj zasób wraz z version
 przed edycją. Przy konflikcie nie pobieraj nowej version tylko po to, żeby
 nadpisać cudzą zmianę. Timeout nie dowodzi niepowodzenia; sprawdź request ID.
 
-Schedule start/end dates are inclusive. Deadlines and card review dates
-are independent of the schedule. Moving a schedule does not move the deadline.
-All-day dates do not shift with the phone timezone.
+Schedule start/end dates are inclusive. Card attention due signals use the
+schedule end date; milestone due dates remain independent commitments. All-day
+dates do not shift with the phone timezone.
 
 Agent dodaje tylko nowy istotny rezultat/przeszkodę/decyzję. Korekta albo
 rozwiązanie jest nowym raportem odwołującym się do wcześniejszego. Odczyt

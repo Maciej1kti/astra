@@ -18,7 +18,6 @@
   import { PlanningRead } from "./planning-read";
   import { projectionNotice } from "../../lib/api/projection-state";
   import { ganttTasks } from "./gantt-tasks";
-  import { partitionEdges } from "./gantt-projection";
 
   let {
     project,
@@ -44,9 +43,6 @@
   let freshness = $state("");
   let gesture = $state(false);
   let scale = $state("days");
-  let preview = $state(false);
-  let predecessor = $state("");
-  let successor = $state("");
   let selection = $state("");
   let history = $state<(string | null)[]>([null]);
   let chartWidth = $state(1000);
@@ -64,19 +60,7 @@
   );
   const cards = $derived(filtered.filter((r) => r.type === "card"));
   const selected = $derived(data?.rows.find((r) => r.id === selection));
-  const analysis = $derived(data?.analysis);
-  const forecasts = $derived(
-    new Map((data?.forecasts ?? []).map((forecast) => [forecast.id, forecast])),
-  );
-  const tasks = $derived(ganttTasks(filtered, forecasts, preview));
-  const dependencies = $derived(
-    partitionEdges(
-      data?.edges ?? [],
-      tasks.map((task) => String(task.id)),
-    ),
-  );
-  const links = $derived(dependencies.links);
-  const hiddenEdges = $derived(dependencies.hiddenEdges);
+  const tasks = $derived(ganttTasks(filtered));
   const scales = $derived<NonNullable<IConfig["scales"]>>(
     scale === "days"
       ? [
@@ -122,12 +106,7 @@
           `${month}-28`,
           ...filtered.flatMap((row) => (row.due ? [row.due.date] : [])),
           ...tasks
-            .map((t) =>
-              preview
-                ? (forecasts.get(String(t.id))?.schedule.end ??
-                  t.astra.due?.date)
-                : (t.astra.schedule?.end ?? t.astra.due?.date),
-            )
+            .map((t) => t.astra.schedule?.end ?? t.astra.due?.date)
             .filter((value): value is string => !!value),
         ]
           .sort()
@@ -136,7 +115,7 @@
       ),
     ),
   );
-  const editable = () => !preview && (!loading || gesture) && !error;
+  const editable = () => (!loading || gesture) && !error;
   setContext<GanttContext>(GANTT_CONTEXT, {
     open: (row) => open(row),
     editable,
@@ -144,15 +123,8 @@
       gesture = active;
       reads.pause(active);
     },
-    link: (row) => {
-      selection = row.id;
-      if (predecessor && predecessor !== row.id) {
-        successor = row.id;
-        dependency(predecessor, row.id);
-      } else predecessor = predecessor === row.id ? "" : row.id;
-    },
     propose: (row, days, operation) => {
-      if (preview || !row.schedule || row.availability !== "ready") return;
+      if (!row.schedule || row.availability !== "ready") return;
       selection = row.id;
       try {
         onpropose({
@@ -174,8 +146,6 @@
         history = [null];
         data = null;
         selection = "";
-        predecessor = "";
-        successor = "";
         pageNotice = "";
       }
       void load(history.at(-1) ?? null);
@@ -207,33 +177,6 @@
         error = String(cause);
       },
     });
-  }
-  function dependency(from: string, to: string, remove = false) {
-    const row = data?.rows.find((r) => r.id === to);
-    if (!row || row.type !== "card" || row.availability !== "ready" || gesture)
-      return;
-    const previous = (data?.edges ?? [])
-      .filter((e) => e.to === to)
-      .map((e) => e.from);
-    if (from === to) {
-      error = "A card cannot depend on itself.";
-      return;
-    }
-    if (!remove && previous.includes(from)) {
-      error = "These cards are already connected.";
-      return;
-    }
-    onpropose({
-      path: resourcePath(row),
-      version: row.version,
-      dependencies: remove
-        ? previous.filter((id) => id !== from)
-        : [...previous, from],
-      title: `${remove ? "Disconnect" : "Connect"}: ${name(from)} → ${name(to)}`,
-    });
-  }
-  function name(id: string) {
-    return data?.rows.find((r) => r.id === id)?.title ?? id;
   }
   function selectCard(id: string) {
     selection = id;
@@ -293,9 +236,6 @@
       "add-task",
       "delete-task",
       "update-task",
-      "add-link",
-      "delete-link",
-      "update-link",
       "move-task",
       "indent-task",
       "copy-task",
@@ -307,39 +247,8 @@
   }
 </script>
 
-{#if !project}<p>
-    Select one project to see its cards, dependencies and finish forecast.
-  </p>
+{#if !project}<p>Select a project to see its planned dates.</p>
 {:else}
-  {#if analysis}<section class="project-timing" aria-label="Project timing">
-      <div>
-        <small>Recorded plan</small><strong
-          >{analysis.planned_start ?? "Not scheduled"} → {analysis.planned_end ??
-            "—"}</strong
-        >
-      </div>
-      <div>
-        <small
-          >{analysis.complete
-            ? "Finish with dependencies"
-            : "Known work · partial forecast"}</small
-        ><strong
-          >{analysis.forecast_end ?? "Unknown"}{analysis.delay_days
-            ? ` · +${analysis.delay_days} days`
-            : ""}</strong
-        >
-      </div>
-      <div>
-        <small>Coverage</small><strong
-          >{analysis.scheduled_cards} dated · {analysis.unscheduled_cards} undated</strong
-        >
-      </div>
-    </section>
-    {#if !analysis.complete}<p class="notice">
-        Incomplete forecast: {analysis.unresolved_cards} cards have missing dates
-        or unresolved dependencies, or the 10,000-card analysis limit was reached.
-        The displayed finish is not a complete project estimate.
-      </p>{/if}{/if}
   <div class="toolbar">
     <label
       >Timeline scale<select aria-label="Timeline scale" bind:value={scale}
@@ -347,30 +256,16 @@
         ><option value="months">Months</option></select
       ></label
     >
-    <label class="toggle"
-      ><input type="checkbox" bind:checked={preview} disabled={gesture} /> Dependency
-      forecast</label
-    >
     <button
       onclick={() => oncreate({ start: `${month}-01`, end: `${month}-01` })}
       >New scheduled card</button
     >
   </div>
-  {#if predecessor}<p class="notice">
-      Connect from <strong>{name(predecessor)}</strong>: click another card’s
-      circle or choose a successor below.
-      <button onclick={() => (predecessor = "")}>Cancel connection</button>
-    </p>{/if}
-  {#if preview}<p class="hint">
-      Read-only forecast · Saved dates are unchanged.
-    </p>{/if}
   <details class="timeline-help">
     <summary>Timeline shortcuts & editing</summary>
     <p class="hint">
       Drag a card’s bar or its edges. Click the bar to edit its dates. Alt+←/→
-      on a handle changes one day; hold Shift for a week. The forecast preserves
-      durations and moves each successor after its predecessors. The amber
-      underline marks one chain determining the finish.
+      on a handle changes one day; hold Shift for a week.
     </p>
   </details>
   {#if error}<p role="alert">
@@ -418,9 +313,7 @@
           {selected.schedule
             ? ` · ${selected.schedule.start} → ${selected.schedule.end}`
             : " · No recorded plan"}
-          {selected.due
-            ? ` · ◆ ${selected.due.kind} deadline: ${selected.due.date}`
-            : ""}
+          {selected.due ? ` · ◆ Due: ${selected.due.date}` : ""}
         </span>
       </div>{/if}
   </div>
@@ -434,7 +327,6 @@
     >
       <Gantt
         {tasks}
-        {links}
         {scales}
         {columns}
         {init}
@@ -455,61 +347,6 @@
       />
     </div>
   </div>
-  <section class="dependencies" aria-label="Connect cards">
-    <h3>Connect cards</h3>
-    <p>
-      Finish-to-start: the successor waits for the predecessor. Parallel
-      branches can share a predecessor.
-    </p>
-    <form
-      onsubmit={(e) => {
-        e.preventDefault();
-        dependency(predecessor, successor);
-      }}
-    >
-      <label
-        >Predecessor<select
-          aria-label="Predecessor"
-          required
-          bind:value={predecessor}
-          ><option value="">Finishes first…</option>{#each cards as row}<option
-              value={row.id}>{row.title}</option
-            >{/each}</select
-        ></label
-      >
-      <span aria-hidden="true">→</span>
-      <label
-        >Successor<select aria-label="Successor" required bind:value={successor}
-          ><option value="">Starts next…</option>{#each cards as row}<option
-              value={row.id}
-              disabled={row.id === predecessor}>{row.title}</option
-            >{/each}</select
-        ></label
-      >
-      <button disabled={!predecessor || !successor || loading || gesture}
-        >Connect cards</button
-      >
-    </form>
-    {#if hiddenEdges.length}<p>
-        {hiddenEdges.length} connections involve cards outside the visible chart.
-        See the dependency list.
-      </p>{/if}
-    <details>
-      <summary>Dependencies · {data?.edges.length ?? 0}</summary>
-      {#each data?.edges ?? [] as edge}<div class="connection">
-          <span
-            >{name(edge.from)} → {name(edge.to)}{edge.outside_page
-              ? " · predecessor outside this page"
-              : ""}{edge.warning ? ` · ${edge.warning}` : ""}</span
-          ><button
-            disabled={loading || gesture}
-            aria-label={`Disconnect ${name(edge.from)} from ${name(edge.to)}`}
-            onclick={() => dependency(edge.from, edge.to, true)}
-            >Disconnect</button
-          >
-        </div>{/each}
-    </details>
-  </section>
   <section>
     <h3>Unscheduled cards</h3>
     <div class="unscheduled">
@@ -540,27 +377,11 @@
 {/if}
 
 <style>
-  .project-timing {
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 12px 16px;
-    background: var(--paper);
-    margin-bottom: 12px;
-  }
-  small {
-    display: block;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
   strong {
     font-size: 15px;
   }
   .toolbar,
   .selection-bar,
-  form,
   nav {
     display: flex;
     gap: 12px;
@@ -610,14 +431,8 @@
     max-width: 330px;
     min-height: 44px;
   }
-  .toggle {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-  }
   .hint,
-  .notice,
-  .dependencies p {
+  .notice {
     font-size: 13px;
     color: var(--muted);
   }
@@ -666,7 +481,6 @@
     --wx-gantt-task-font-color: var(--ink);
     --wx-gantt-task-fill-color: transparent;
     --wx-gantt-holiday-background: var(--wash);
-    --wx-gantt-link-color: var(--muted);
     --wx-grid-body-row-background: var(--paper);
   }
   .astra-gantt :global(.weekend) {
@@ -674,14 +488,6 @@
   }
   .astra-gantt :global(.wx-bar .wx-content) {
     overflow: visible;
-  }
-  .connection {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    border-bottom: 1px solid var(--line);
-    padding: 8px 0;
   }
   .unscheduled {
     display: flex;
@@ -695,16 +501,6 @@
     .chart {
       height: 430px;
     }
-    .project-timing {
-      gap: 10px;
-      padding: 12px;
-    }
-    .project-timing > div {
-      flex: 1 1 140px;
-    }
-    .project-timing strong {
-      font-size: 13px;
-    }
     .toolbar {
       gap: 8px;
       margin: 12px 0;
@@ -715,14 +511,8 @@
     .selection-bar label {
       flex-basis: 100%;
     }
-    form label {
-      width: 100%;
-    }
     select {
       max-width: 100%;
-    }
-    .connection {
-      align-items: start;
     }
   }
 </style>
