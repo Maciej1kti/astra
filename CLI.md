@@ -51,8 +51,9 @@ projectctl --project /absolute/project card schedule CARD_ID --clear --if-versio
 
 Replace `VERSION` with the exact version from a fresh read, normally
 `data.version` in JSON output. Re-read after each confirmed edit before preparing
-a new change. Card planning uses only inclusive schedule start/end dates. Date
-rules and allowed statuses are validated by the server.
+a new change. Card planning uses only inclusive schedule start/end dates. Card
+priorities are `normal` and `high`; date rules and allowed statuses are validated
+by the server.
 
 For richer requests, provide a JSON file or use `-` for stdin. Input is bounded
 to 1.1 MB; body files must be UTF-8. This works for existing `--json-file`,

@@ -126,3 +126,16 @@ loads milestones for a counter.
 The owner clarified that Add card is a floating button at the lower right;
 the editor itself stays centered. This changes presentation and view reads,
 not stored project data, pin order or source/API contracts.
+
+The owner subsequently moved the Focus workspace header/actions below the
+content as a footer and removed the source-of-truth slogan footer. Other views
+keep their workspace header at the top. In motion still means active cards
+outside the currently displayed pinned and attention results.
+
+## Card priorities — owner decision, 2026-09-22
+
+Keep only Normal and High throughout card UI, source/API contracts, CLI validation
+and filters. Remove Low and Urgent and their presentation branches. Existing Low
+would map to Normal and Urgent to High through conditional writes; all six cards
+in the two registered projects already use Normal, so no conversion is needed.
+Historical command records remain immutable; undo cannot restore invalid values.

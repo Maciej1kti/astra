@@ -144,7 +144,7 @@ test("focus card reads are bounded to active cards and ignore list-only filters"
         view: "focus",
         archived: true,
         status: "done",
-        priority: "urgent",
+        priority: "high",
         label: "retired",
       },
       "card",

@@ -454,7 +454,20 @@
     ondiagnostics={() => (diagnostics = true)}
   />
 {:else}
-  <div class="app">
+  {#snippet workspaceHeader(tag: "header" | "footer")}
+    <WorkspaceHeader
+      {tag}
+      project={routing.current.project}
+      projectName={selectedProject?.title}
+      {today}
+      ongit={() => (gitProject = routing.current.project)}
+      ondiagnostics={() => (diagnostics = true)}
+      onsettings={() => (settings = true)}
+      onrefresh={() => refresh().catch(message)}
+      {logout}
+    />
+  {/snippet}
+  <div class="app" class:focus-page={routing.current.view === "focus"}>
     <WorkspaceNavigation
       view={routing.current.view}
       {connected}
@@ -462,16 +475,9 @@
       onchange={routing.selectView}
     />
     <div class="workspace">
-      <WorkspaceHeader
-        project={routing.current.project}
-        projectName={selectedProject?.title}
-        {today}
-        ongit={() => (gitProject = routing.current.project)}
-        ondiagnostics={() => (diagnostics = true)}
-        onsettings={() => (settings = true)}
-        onrefresh={() => refresh().catch(message)}
-        {logout}
-      />
+      {#if routing.current.view !== "focus"}
+        {@render workspaceHeader("header")}
+      {/if}
       <main
         class="content"
         class:focus-content={routing.current.view === "focus"}
@@ -642,10 +648,10 @@
               disabled={loadingMore}
               onclick={() => more(kind, true)}>Previous page</button
             >{/if}{/if}
-        <footer class="pagefooter">
-          Your files are the source of truth. <span>Local Projects · v0.1</span>
-        </footer>
       </main>
+      {#if routing.current.view === "focus"}
+        {@render workspaceHeader("footer")}
+      {/if}
     </div>
   </div>
 {/if}

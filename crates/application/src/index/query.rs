@@ -17,6 +17,11 @@ impl Index {
         query: &Query,
         max: u32,
     ) -> Result<(Vec<Indexed>, Value, Vec<Value>), AppError> {
+        if query.priority.as_deref().is_some_and(|priority| {
+            serde_json::from_value::<project_domain::models::Priority>(json!(priority)).is_err()
+        }) {
+            return Err(AppError::reject(422, "INVALID_PRIORITY_FILTER"));
+        }
         match (&query.target_type, &query.target_id) {
             (None, None) => {}
             (Some(target_type), Some(target_id))

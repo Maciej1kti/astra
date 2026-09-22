@@ -24,12 +24,7 @@ wire_enum!(CardStatus {
     Done,
     Cancelled
 });
-wire_enum!(Priority {
-    Low,
-    Normal,
-    High,
-    Urgent
-});
+wire_enum!(Priority { Normal, High });
 wire_enum!(MilestoneStatus {
     Planned,
     Active,

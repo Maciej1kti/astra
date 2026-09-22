@@ -6,10 +6,8 @@ const labels: Record<string, string> = {
   review: "Review",
   done: "Done",
   cancelled: "Cancelled",
-  low: "Low",
   normal: "Normal",
   high: "High",
-  urgent: "Urgent",
   decision_needed: "Decision needed",
 };
 

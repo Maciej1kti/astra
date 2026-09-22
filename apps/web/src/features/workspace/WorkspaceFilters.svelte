@@ -79,8 +79,8 @@
         onchange={(event) => onchange({ priority: event.currentTarget.value })}
       >
         <option value="">All priorities</option
-        >{#each ["urgent", "high", "normal", "low"] as priority}<option
-            value={priority}>{resourceLabel(priority)}</option
+        >{#each ["normal", "high"] as priority}<option value={priority}
+            >{resourceLabel(priority)}</option
           >{/each}
       </select><input
         aria-label="Tag filter"

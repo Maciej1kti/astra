@@ -505,12 +505,31 @@ export async function runEditorChecks({
           { exact: true },
         );
       await open(card.id);
+      const priority = dialog().getByLabel("Priority", { exact: true });
+      assert.deepEqual(
+        await priority
+          .locator("option")
+          .evaluateAll((options) => options.map((option) => option.value)),
+        ["normal", "high"],
+      );
+      for (const value of ["normal", "high"]) {
+        await priority.selectOption(value);
+        await waitForAutosaveACK();
+        assert.equal(get(card.id).metadata.priority, value);
+      }
       await dialog().getByText("Card lifecycle", { exact: true }).click();
       await dialog().getByLabel("Archived", { exact: true }).check();
       await waitForAutosaveACK();
       assert.equal(get(card.id).metadata.archived, true);
       await route();
       await page.getByLabel("Search content", { exact: true }).fill(card.title);
+      assert.deepEqual(
+        await page
+          .getByLabel("Priority filter", { exact: true })
+          .locator("option")
+          .evaluateAll((options) => options.map((option) => option.value)),
+        ["", "normal", "high"],
+      );
       await expect(
         page.getByText(
           "No items match this selection. Try another project or clear the filters.",
@@ -533,7 +552,7 @@ export async function runEditorChecks({
       await expect(row()).toBeVisible();
       await page
         .getByLabel("Priority filter", { exact: true })
-        .selectOption("urgent");
+        .selectOption("normal");
       await expect(archivedEmpty()).toBeVisible();
       await expect(row()).not.toBeVisible();
       await page

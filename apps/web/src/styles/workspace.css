@@ -92,6 +92,13 @@
   margin-left: 218px;
   width: calc(100% - 218px);
 }
+.app.focus-page {
+  min-height: 100dvh;
+}
+.app.focus-page .workspace {
+  display: flex;
+  flex-direction: column;
+}
 .app .topbar {
   min-height: 60px;
   display: flex;
@@ -100,6 +107,12 @@
   border-bottom: 1px solid var(--line);
   padding: 0 24px;
   font-size: 12px;
+}
+.app footer.topbar {
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+  min-height: calc(60px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .app .topbar > div {
   display: flex;
@@ -120,12 +133,14 @@
   margin: auto;
 }
 .app .content.focus-content {
+  flex: 1;
+  width: 100%;
   padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
 }
 .app .focus-add-action {
   position: fixed;
   right: calc(24px + env(safe-area-inset-right, 0px));
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   z-index: 20;
   box-shadow: 0 8px 24px rgb(38 59 50 / 20%);
 }
@@ -307,15 +322,6 @@
     serif;
   color: var(--ink);
 }
-.app .pagefooter {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: #92998e;
-  border-top: 1px solid var(--line);
-  padding-top: 20px;
-  margin-top: 28px;
-}
 .app .board {
   display: flex;
   gap: 16px;
@@ -435,6 +441,13 @@
   .app {
     display: block;
   }
+  .app.focus-page {
+    display: flex;
+    flex-direction: column;
+  }
+  .app.focus-page .workspace {
+    flex: 1;
+  }
   .app aside .brand,
   .app aside .navlabel,
   .app .asidebottom {
@@ -474,7 +487,7 @@
   }
   .app .focus-add-action {
     right: calc(16px + env(safe-area-inset-right, 0px));
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
   }
   .app .heading {
     display: block;
@@ -504,9 +517,6 @@
   }
   .app .grid {
     grid-template-columns: 1fr;
-  }
-  .app .pagefooter span {
-    display: none;
   }
   .app .month {
     width: 100%;

@@ -100,7 +100,7 @@ export interface CardMetadata {
   updated_at: Instant;
   title: string;
   status: "planned" | "active" | "review" | "done" | "cancelled";
-  priority: "low" | "normal" | "high" | "urgent";
+  priority: "normal" | "high";
   position: Position;
   archived: boolean;
   schedule?: Schedule;

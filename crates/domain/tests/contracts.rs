@@ -68,6 +68,19 @@ fn examples_roundtrip_without_losing_optional_fields_or_body() {
 }
 
 #[test]
+fn card_priority_accepts_only_normal_and_high() {
+    let mut value = card();
+    for priority in ["normal", "high"] {
+        value["metadata"]["priority"] = json!(priority);
+        assert!(validate_document(value.clone()).is_ok(), "{priority}");
+    }
+    for priority in ["low", "urgent", "unknown"] {
+        value["metadata"]["priority"] = json!(priority);
+        assert!(validate_document(value.clone()).is_err(), "{priority}");
+    }
+}
+
+#[test]
 fn report_targets_reject_cards_but_retain_project_and_milestone_targets() {
     let mut report = read("examples/update.json");
     assert!(validate_document(report.clone()).is_ok());

@@ -986,8 +986,8 @@
                 aria-label="Priority"
                 bind:value={draft.fields.priority}
                 disabled={locked}
-                >{#each ["low", "normal", "high", "urgent"] as item}<option
-                    value={item}>{resourceLabel(item)}</option
+                >{#each ["normal", "high"] as item}<option value={item}
+                    >{resourceLabel(item)}</option
                   >{/each}</select
               ></label
             >{/if}

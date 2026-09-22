@@ -32,15 +32,9 @@
             >{resourceLabel(item.status)}</span
           >
         {/if}
-        {#if item.priority && item.priority !== "normal"}
+        {#if item.priority === "high"}
           <span class="badge priority" data-priority={item.priority}>
-            <span aria-hidden="true"
-              >{item.priority === "urgent"
-                ? "!!"
-                : item.priority === "high"
-                  ? "↑"
-                  : "↓"}</span
-            >
+            <span aria-hidden="true">↑</span>
             {resourceLabel(item.priority)} priority
           </span>
         {/if}
@@ -130,15 +124,10 @@
   .state[data-state="review"] {
     background: var(--review-bg);
   }
-  .priority[data-priority="high"],
-  .priority[data-priority="urgent"] {
+  .priority[data-priority="high"] {
     color: var(--notice-ink);
     border-color: var(--notice-line);
     background: var(--notice-bg);
-  }
-  .priority[data-priority="urgent"] {
-    border-width: 2px;
-    padding: 1px 5px;
   }
   .date-badges {
     column-gap: 10px;

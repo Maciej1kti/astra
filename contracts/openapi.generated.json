@@ -1453,8 +1453,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 120
+              "enum": [
+                "normal",
+                "high"
+              ]
             }
           },
           {
@@ -3725,8 +3727,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 120
+              "enum": [
+                "normal",
+                "high"
+              ]
             }
           },
           {
@@ -4416,10 +4420,8 @@
           "priority": {
             "type": "string",
             "enum": [
-              "low",
               "normal",
-              "high",
-              "urgent"
+              "high"
             ]
           },
           "position": {
@@ -5086,10 +5088,8 @@
                   "priority": {
                     "type": "string",
                     "enum": [
-                      "low",
                       "normal",
-                      "high",
-                      "urgent"
+                      "high"
                     ]
                   },
                   "archived": {
@@ -5187,10 +5187,8 @@
           "priority": {
             "type": "string",
             "enum": [
-              "low",
               "normal",
-              "high",
-              "urgent"
+              "high"
             ]
           },
           "archived": {
@@ -5803,8 +5801,10 @@
           },
           "priority": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 20
+            "enum": [
+              "normal",
+              "high"
+            ]
           },
           "schedule": {
             "$ref": "#/components/schemas/Schedule"
@@ -7417,10 +7417,8 @@
           "priority": {
             "type": "string",
             "enum": [
-              "low",
               "normal",
-              "high",
-              "urgent"
+              "high"
             ]
           },
           "target": {

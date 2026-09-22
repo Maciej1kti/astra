@@ -778,8 +778,9 @@ paths:
         in: query
         schema:
           type: string
-          minLength: 1
-          maxLength: 120
+          enum:
+          - normal
+          - high
       - name: label
         in: query
         schema:
@@ -1790,8 +1791,9 @@ paths:
         in: query
         schema:
           type: string
-          minLength: 1
-          maxLength: 120
+          enum:
+          - normal
+          - high
       - name: label
         in: query
         schema:
@@ -2259,10 +2261,8 @@ components:
         priority:
           type: string
           enum:
-          - low
           - normal
           - high
-          - urgent
         position:
           $ref: '#/components/schemas/Position'
         archived:
@@ -2729,10 +2729,8 @@ components:
               priority: &id012
                 type: string
                 enum:
-                - low
                 - normal
                 - high
-                - urgent
               archived: &id013
                 type: boolean
               schedule: &id014
@@ -3185,8 +3183,9 @@ components:
           maxLength: 30
         priority:
           type: string
-          minLength: 1
-          maxLength: 20
+          enum:
+          - normal
+          - high
         schedule:
           $ref: '#/components/schemas/Schedule'
         due:
@@ -4292,10 +4291,8 @@ components:
         priority:
           type: string
           enum:
-          - low
           - normal
           - high
-          - urgent
         target:
           $ref: '#/components/schemas/ReportTarget'
         recorded_at:

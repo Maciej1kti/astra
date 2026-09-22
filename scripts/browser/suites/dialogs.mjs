@@ -123,7 +123,7 @@ await runBrowserSuite(
         title:
           "Board metadata regression — a long synthetic title with readable planning and tag details",
         status: "active",
-        priority: "urgent",
+        priority: "high",
         labels: [
           "Research, discovery",
           "Zażółć gęślą jaźń",
@@ -134,7 +134,7 @@ await runBrowserSuite(
       const secondary = await mutate("POST", `${base}/cards`, {
         title: "Board target-date regression",
         status: "active",
-        priority: "low",
+        priority: "normal",
         schedule: { start: "2026-09-08", end: "2026-09-08" },
       });
       const primaryCard = page.locator(`[data-board-card="${primary.id}"]`);
@@ -153,7 +153,7 @@ await runBrowserSuite(
           await expect(
             page.locator(".astra-board .wx-theme"),
           ).not.toHaveAttribute("style");
-          await expect(primaryCard).toContainText("Urgent priority");
+          await expect(primaryCard).toContainText("High priority");
           for (const text of [
             "Plan",
             "2026-09-10",

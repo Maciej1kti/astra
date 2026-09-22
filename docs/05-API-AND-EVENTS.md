@@ -55,7 +55,8 @@ Report bodies remain detail-only. See [ADR-029](ADR-029-BOUNDED-REPORT-HISTORY.m
 
 Domyślnie 50 rekordów, max 200 dla list ogólnych. Calendar max 400 dni i 1000 elementów strony; Gantt domyślnie 200 wierszy i max 500. Limit przekroczenia wymaga stronicowania, nie ucięcia bez informacji. Body nie jest na listach.
 
-Filters are project, status, priority, label, archived and search. Sorting has
+Filters are project, status, priority, label, archived and search. Priority accepts
+only `normal` and `high`; other values return `422 INVALID_PRIORITY_FILTER`. Sorting has
 defined stability and an ID tie-breaker. An opaque cursor binds the query hash
 and projection revision. If a later page cannot remain consistent after a data
 change, return `CURSOR_STALE` and refresh instead of mixing rows. Do not hold

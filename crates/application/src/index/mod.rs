@@ -76,6 +76,14 @@ impl Indexed {
                 continue;
             }
             if let Some(value) = m.get(key) {
+                if key == "priority"
+                    && serde_json::from_value::<project_domain::models::Priority>(value.clone())
+                        .is_err()
+                {
+                    // The projection is disposable and can lag a source or schema update.
+                    // Do not publish retired priority values through the API summary.
+                    continue;
+                }
                 out[key] = value.clone();
             }
         }

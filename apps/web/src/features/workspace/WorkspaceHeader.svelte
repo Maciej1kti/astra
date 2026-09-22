@@ -1,5 +1,6 @@
 <script lang="ts">
   let {
+    tag = "header",
     project,
     projectName,
     today,
@@ -9,6 +10,7 @@
     onrefresh,
     logout,
   }: {
+    tag?: "header" | "footer";
     project: string;
     projectName?: string;
     today: string;
@@ -20,7 +22,7 @@
   } = $props();
 </script>
 
-<header class="topbar">
+<svelte:element this={tag} class="topbar">
   <span class="workspace-label" title={projectName || "All projects"}
     >Workspace <span class="slash">/</span>
     {projectName || "All projects"}</span
@@ -36,4 +38,4 @@
     ><button class="quiet" onclick={onrefresh} aria-label="Refresh">↻</button
     ><button class="quiet mobile-signout" onclick={logout}>Sign out</button>
   </div>
-</header>
+</svelte:element>

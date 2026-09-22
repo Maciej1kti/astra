@@ -60,7 +60,7 @@ export async function seed(host) {
     const payload = {
       title: titles[i] ?? `QA work package ${String(i + 1).padStart(2, "0")}`,
       status: ["planned", "active", "review", "done", "cancelled"][i % 5],
-      priority: ["urgent", "high", "normal", "low"][i % 4],
+      priority: ["high", "high", "normal", "normal"][i % 4],
       labels: i % 2 ? ["frontend", "qa"] : ["design", "launch"],
       body: `Synthetic fixture ${i + 1}.\n\nBody-only needle: nebula-${i + 1}.\n\n- [ ] Example item\n- [x] Complete item\n\n**Bold** and _emphasis_.`,
       ...(i % 6 !== 3

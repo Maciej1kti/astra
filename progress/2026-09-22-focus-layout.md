@@ -54,3 +54,19 @@ cards or focus selections are changed as part of synthetic verification.
 Environment: Linux, Rust 1.98.1 via `scripts/cargo-local` (pinned 1.92 unavailable),
 Node 24.11.0, Python 3.14.7 and Chromium 153.0.8010.52. Browser viewport emulation
 does not establish physical iPhone/Safari acceptance or full release acceptance.
+
+## Footer follow-up — 2026-09-22
+
+The owner moved the workspace/project/date/actions bar below Focus content and
+removed the decorative source-of-truth footer. The same action callbacks remain
+in use; other views keep their header at the top. The floating Add card action
+must leave the footer controls reachable at narrow widths. In motion retains its
+existing meaning: active cards outside the visible pinned and attention results.
+
+The footer-only local gate passes 209 Rust, 97 JavaScript and 12 Python tests.
+Visual checks at 1440, 390 and 320 pixels confirm no horizontal overflow and
+unobscured footer controls; settings and diagnostics open and close at every
+width. List retains its top header. Screenshots were reviewed and there are no
+page errors. Evidence belongs in `test-results/focus-footer-2026-09-22/`.
+Combined verification and runtime delivery with the subsequent priority change
+are recorded in [priority simplification](2026-09-22-priority-simplification.md).

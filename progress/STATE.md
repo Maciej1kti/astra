@@ -6,6 +6,15 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Priority simplification and Focus footer](2026-09-22-priority-simplification.md)
+keeps only Normal and High throughout UI, source/API contracts, shared CLI rules
+and filters. All six existing cards were already Normal. Focus workspace actions
+now follow its content as a footer, with the old slogan removed. The full local
+gate passes 212 Rust, 97 JavaScript and 12 Python tests; four relevant release
+browser suites pass. The updated manual runtime preserves source versions and
+Focus, with both projects validating cleanly. The evidence records the corrected
+local build sequencing error and browser/device coverage limits.
+
 [Focus layout](2026-09-22-focus-layout.md) removes the hero copy and counters,
 orders In focus, Needs my attention and In motion, and displays cards once per
 visible page with attention badges retained on pinned cards. Focus reads bounded

@@ -305,3 +305,11 @@ Project pages use local projection revisions while SSE keeps its global cursor.
 Indexed tag names serve bounded suggestions; rename previews still read current
 sources. Optional event metadata avoids unnecessary suggestion invalidations.
 See [ADR-032](ADR-032-SCOPED-PAGES-AND-TAG-SUGGESTIONS.md).
+
+## ADR-040 — Simplify card priorities
+
+Cards and priority filters accept only `normal | high`. The removed values map
+explicitly (`low` to `normal`, `urgent` to `high`) in versioned conditional
+writes before strict validation; parsers never perform that conversion. The
+current project inventory contains only `normal` priorities, so no migration is
+needed. See [ADR-040](ADR-040-PRIORITY-SIMPLIFICATION.md).

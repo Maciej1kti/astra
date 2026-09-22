@@ -13,6 +13,8 @@ fn strict_card_commands_reject_unsupported_metadata_without_writing() {
         json!({"title":"Rejected", "expected_result":"Legacy result"}),
         json!({"title":"Rejected", "owner":"Legacy owner"}),
         json!({"title":"Rejected", "x-owner-note":{"retained":true}}),
+        json!({"title":"Rejected", "priority":"low"}),
+        json!({"title":"Rejected", "priority":"urgent"}),
     ] {
         let reply = engine
             .mutate(Mutation {
@@ -38,11 +40,15 @@ fn strict_card_commands_reject_unsupported_metadata_without_writing() {
         json!({"set":{"expected_result":"Legacy result"}}),
         json!({"set":{"owner":"Legacy owner"}}),
         json!({"set":{"x-owner-note":{"retained":true}}}),
+        json!({"set":{"priority":"low"}}),
+        json!({"set":{"priority":"urgent"}}),
     ] {
         let reply = patch(&engine, &project, id, version, payload);
         assert_eq!(reply.http_status, 422, "{reply:?}");
     }
     let current = engine.get(&project, Kind::Card, id).unwrap();
+    assert_eq!(current["version"], version);
+    assert_eq!(current["metadata"]["priority"], "normal");
     for field in ["kind", "expected_result", "owner", "x-owner-note"] {
         assert!(current["metadata"].get(field).is_none(), "{field}");
     }
@@ -60,7 +66,7 @@ fn stale_card_projection_rows_do_not_expose_retired_fields() {
             "id":"card",
             "title":"Card",
             "status":"active",
-            "priority":"normal",
+            "priority":"urgent",
             "kind":"decision",
             "expected_result":"Legacy result",
             "owner":"Legacy owner",
@@ -72,6 +78,7 @@ fn stale_card_projection_rows_do_not_expose_retired_fields() {
     for field in ["kind", "expected_result", "owner"] {
         assert!(summary.get(field).is_none(), "stale summary field {field}");
     }
+    assert!(summary.get("priority").is_none(), "stale priority");
     assert_eq!(
         summary["acceptance_progress"],
         json!({"total":1,"completed":1})
@@ -113,6 +120,8 @@ fn card_undo_rejects_historical_unsupported_metadata_without_source_change() {
             ("owner", json!("Legacy owner")),
         ],
         vec![("x-owner-note", json!({"retained":true}))],
+        vec![("priority", json!("low"))],
+        vec![("priority", json!("urgent"))],
     ] {
         let mut legacy_metadata = created.body["result"]["resource"]["metadata"].clone();
         for (field, value) in legacy_fields {

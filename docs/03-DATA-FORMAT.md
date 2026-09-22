@@ -60,7 +60,7 @@ Tworzenie przez API potrzebuje tylko tytułu karty lub nazwy projektu; pola wyma
 
 - Project state: `active | paused | archived`.
 - Card status: `planned | active | review | done | cancelled`.
-- Priority: `low | normal | high | urgent`.
+- Priority: `normal | high`.
 - Milestone status: `planned | active | achieved | cancelled`.
 - Update kind: `result | blocker | decision_needed | note | correction | resolution`.
 - Author kind: `human | agent`; obserwacje Git nie udają raportów człowieka.

@@ -42,6 +42,9 @@ the introductory hero copy are removed.
 Add card is a floating button in the lower right, including on narrow screens.
 It opens the existing centered card editor for the selected project. Autosave,
 conditional command recovery and keyboard focus restoration remain unchanged.
+The workspace/project/date/actions bar follows Focus content as its footer;
+other views retain the bar at the top. The decorative source-of-truth slogan
+footer is removed.
 
 ## Kanban
 

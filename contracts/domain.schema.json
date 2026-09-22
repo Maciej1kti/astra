@@ -304,10 +304,8 @@
         "priority": {
           "type": "string",
           "enum": [
-            "low",
             "normal",
-            "high",
-            "urgent"
+            "high"
           ]
         },
         "position": {

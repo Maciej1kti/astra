@@ -219,7 +219,7 @@ export interface ApiContracts {
         set?: {
           title?: string;
           status?: "planned" | "active" | "review" | "done" | "cancelled";
-          priority?: "low" | "normal" | "high" | "urgent";
+          priority?: "normal" | "high";
           archived?: boolean;
           schedule?: Schedule;
           acceptance?: Acceptance;
@@ -365,7 +365,7 @@ export interface CardMetadata {
   updated_at: string;
   title: string;
   status: "planned" | "active" | "review" | "done" | "cancelled";
-  priority: "low" | "normal" | "high" | "urgent";
+  priority: "normal" | "high";
   position: string;
   archived: boolean;
   schedule?: Schedule;
@@ -470,7 +470,7 @@ export interface Placement {
 export interface CardCreate {
   title: string;
   status?: "planned" | "active" | "review" | "done" | "cancelled";
-  priority?: "low" | "normal" | "high" | "urgent";
+  priority?: "normal" | "high";
   archived?: boolean;
   schedule?: Schedule;
   /**
@@ -569,7 +569,7 @@ export interface Summary {
   title: string;
   version: string;
   status?: string;
-  priority?: string;
+  priority?: "normal" | "high";
   schedule?: Schedule;
   due?: Due;
   archived?: boolean;
@@ -876,7 +876,7 @@ export interface ContextEntry {
   status?: string;
   schedule?: Schedule;
   due?: Due;
-  priority?: "low" | "normal" | "high" | "urgent";
+  priority?: "normal" | "high";
   target?: ReportTarget;
   recorded_at?: string;
   acceptance?: Acceptance;

@@ -164,6 +164,56 @@ fn report_target_filter_requires_a_valid_pair_on_update_queries() {
 }
 
 #[test]
+fn priority_filter_rejects_retired_and_unknown_values() {
+    let temporary = tempfile::tempdir().unwrap();
+    let directory = Directory::open(&temporary.path().canonicalize().unwrap())
+        .unwrap()
+        .child("index", true)
+        .unwrap();
+    let index = Index::open(directory.path()).unwrap();
+
+    for priority in ["low", "urgent", "invalid"] {
+        let query = Query {
+            priority: Some(priority.into()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            index.query(Some("card"), &query, 200),
+            Err(AppError::Rejected(reply))
+                if reply.body["error"]["code"] == "INVALID_PRIORITY_FILTER"
+        ));
+    }
+    for priority in ["normal", "high"] {
+        let query = Query {
+            priority: Some(priority.into()),
+            ..Default::default()
+        };
+        assert!(index.query(Some("card"), &query, 200).is_ok());
+    }
+}
+
+#[test]
+fn stale_projection_summaries_omit_retired_priority_values() {
+    let indexed = Indexed {
+        project_id: "project".into(),
+        kind: "card".into(),
+        id: "card".into(),
+        version: "r1.version".into(),
+        metadata: json!({"title":"Stale card", "priority":"urgent"}),
+        validity: "stale".into(),
+    };
+    assert!(indexed.summary().get("priority").is_none());
+
+    for priority in ["normal", "high"] {
+        let indexed = Indexed {
+            metadata: json!({"title":"Current card", "priority":priority}),
+            ..indexed.clone()
+        };
+        assert_eq!(indexed.summary()["priority"], priority);
+    }
+}
+
+#[test]
 fn bundled_sqlite_seeks_composite_projection_and_report_target_keys() {
     let temporary = tempfile::tempdir().unwrap();
     let directory = Directory::open(&temporary.path().canonicalize().unwrap())
