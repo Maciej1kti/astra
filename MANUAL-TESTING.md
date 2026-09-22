@@ -52,6 +52,12 @@ card is created after entering a valid title. Add tags/checklist items with thei
 Add controls, and post reports separately. Invalid input, conflicts or uncertain
 commands keep the draft available for correction or explicit recovery.
 
+The project editor opens in a centered dialog over a dimmed, blurred workspace.
+Its description displays formatted Markdown; activate **Edit description** to
+edit the source, then leave the field to return to the formatted view. Project
+review dates, phases and extensions are also removed from the source and API
+contracts; card review dates remain available.
+
 ## Known limits
 
 - The launcher listens on localhost on the host computer. Phone access requires

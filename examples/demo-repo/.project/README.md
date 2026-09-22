@@ -3,9 +3,10 @@
 Ten folder jest źródłem prawdy o rezultatach, etapach i terminach projektu.
 Nie jest magazynem całej pracy agentów ani zależnością od otwartego UI.
 
-`project.md`: trwałe ID, nazwa, stan, faza i kontekst. `cards/<uuid>.md`:
-rezultat lub decyzja. `milestones/<uuid>.md`: kamień milowy. `updates/<uuid>.md`:
-istotny raport. Jedna karta to jeden plik. `.local` jest tylko wykonawcze.
+`project.md` contains the stable ID, name, state and context.
+`cards/<uuid>.md` describes an outcome or decision; `milestones/<uuid>.md`
+a milestone; `updates/<uuid>.md` a meaningful report. Each card has its own
+file. `.local` contains runtime state only.
 
 Pliki są UTF-8 z ograniczonym YAML front matter i body Markdown. Wersja
 schematu jest w project.md. Nie ma aliasów, duplicate keys i custom tags.
@@ -15,9 +16,9 @@ Normalny zapis wykonuje CLI przez lokalny serwer. Odczytuj zasób wraz z version
 przed edycją. Przy konflikcie nie pobieraj nowej version tylko po to, żeby
 nadpisać cudzą zmianę. Timeout nie dowodzi niepowodzenia; sprawdź request ID.
 
-Plan `schedule.start/end` ma obie daty włączne. Deadline `due` jest odrębny.
-`review_on` oznacza ponowne zajęcie się tematem. Zmiana planu nie przesuwa
-terminu. Daty są całodniowe i nie przesuwają się w strefie telefonu.
+Schedule start/end dates are inclusive. Deadlines and card review dates
+are independent of the schedule. Moving a schedule does not move the deadline.
+All-day dates do not shift with the phone timezone.
 
 Agent dodaje tylko nowy istotny rezultat/przeszkodę/decyzję. Korekta albo
 rozwiązanie jest nowym raportem odwołującym się do wcześniejszego. Odczyt

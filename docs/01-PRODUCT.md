@@ -29,7 +29,7 @@ Użytkownik dodaje folder przez CLI lub kontrolowany formularz hosta. Aplikacja 
 | Widok | Minimum v1 | Ważna reguła |
 |---|---|---|
 | Focus | Własna kolejność, szybkie dodanie/usunięcie, sygnały uwagi | Nie zmienia statusów i priorytetów |
-| Projekty | Cel, faza, następny milestone, stan dostępności, ostatnia istotna aktualizacja | Brak procentu postępu z commitów |
+| Projects | Goal, next milestone, availability, latest meaningful update | No progress percentage inferred from commits |
 | Kanban | Pięć stanów, ręczne sortowanie, dnd, filtr, karta szczegółów | Cancelled domyślnie zwinięte, archiwum osobno |
 | Kalendarz | Miesiąc, tydzień całodniowy, agenda, move/resize planu, osobne markery terminów | Plan i deadline są rozróżnione także ikoną/etykietą |
 | Gantt | Dni/tygodnie/miesiące, paski, milestones, zależności, niezaplanowane | Bez automatycznego przesuwania następców |

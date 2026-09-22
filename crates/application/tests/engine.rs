@@ -1,5 +1,9 @@
 use project_application::{
-    Mutation, Reply, engine::Engine, index::Query, now_millis, wire, workflow::Workflows,
+    Mutation, Reply,
+    engine::Engine,
+    index::{Indexed, Query},
+    now_millis, wire,
+    workflow::Workflows,
 };
 use project_store::{document::Kind, filesystem::Directory};
 use serde_json::{Value, json};
@@ -76,6 +80,42 @@ fn patch(engine: &Engine, project_id: &str, id: &str, expected: &str, payload: V
             expected: Some(expected.into()),
         })
         .unwrap()
+}
+
+#[test]
+fn project_summary_drops_retired_fields_but_card_review_dates_remain() {
+    let project = Indexed {
+        project_id: "project".into(),
+        kind: "project".into(),
+        id: "project".into(),
+        version: "r1.project".into(),
+        metadata: json!({
+            "id": "project",
+            "name": "Project",
+            "state": "active",
+            "phase": "Legacy",
+            "review_on": "2026-09-16",
+        }),
+        validity: "valid".into(),
+    };
+    let summary = project.summary();
+    assert!(summary.get("phase").is_none());
+    assert!(summary.get("review_on").is_none());
+
+    let card = Indexed {
+        project_id: "project".into(),
+        kind: "card".into(),
+        id: "card".into(),
+        version: "r1.card".into(),
+        metadata: json!({
+            "id": "card",
+            "title": "Card",
+            "status": "active",
+            "review_on": "2026-09-16",
+        }),
+        validity: "valid".into(),
+    };
+    assert_eq!(card.summary()["review_on"], "2026-09-16");
 }
 
 #[path = "engine/projections.rs"]

@@ -264,14 +264,6 @@
             "paused",
             "archived"
           ]
-        },
-        "phase": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 200
-        },
-        "review_on": {
-          "$ref": "#/$defs/LocalDate"
         }
       },
       "required": [
@@ -282,12 +274,7 @@
         "created_at",
         "updated_at"
       ],
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-[a-z0-9][a-z0-9_.-]{0,62}$": {
-          "$ref": "#/$defs/ExtensionValue"
-        }
-      }
+      "additionalProperties": false
     },
     "CardMetadata": {
       "type": "object",

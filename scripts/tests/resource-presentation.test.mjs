@@ -30,3 +30,10 @@ test("a target date never claims to be a hard deadline or substitutes a plan dat
   );
   assert.deepEqual(resourceDates({}), []);
 });
+
+test("project summaries do not present review dates", () => {
+  assert.deepEqual(
+    resourceDates({ type: "project", review_on: "2026-09-08" }),
+    [],
+  );
+});

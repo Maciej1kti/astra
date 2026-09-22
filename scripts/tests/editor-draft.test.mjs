@@ -129,12 +129,17 @@ test("each resource draft emits only its own fields", () => {
         state: "paused",
         phase: "Discovery",
         review_on: "2026-09-02",
+        "x-project": { retained: true },
       },
     }),
   );
-  project.fields.phase = "";
-  project.fields.review = "";
-  assert.deepEqual(editorPayload(project).clear, ["phase", "review_on"]);
+  project.common.advanced = '{"x-editor":{"ignored":true}}';
+  assert.deepEqual(editorPayload(project), {
+    set: { body: "", name: "Project", state: "paused" },
+  });
+  assert.equal("phase" in editorPayload(project).set, false);
+  assert.equal("review_on" in editorPayload(project).set, false);
+  assert.equal("x-editor" in editorPayload(project).set, false);
   cardDraft.fields.end = "";
   assert.throws(() => editorPayload(cardDraft), /both start and end/);
   cardDraft.common.advanced = "[]";

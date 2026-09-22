@@ -50,3 +50,15 @@ Existing archive and local administrative unregistration remain distinct.
 Conditional writes, durable recovery, dependency validation, authentication and
 the other architectural invariants still apply. No deletion is authorized against
 the owner's remaining live projects as part of implementation verification.
+
+## Project field simplification — owner decision, 2026-09-22
+
+Remove project `phase`, `review_on` and `x-*` extensions throughout the product,
+including source schemas, API, CLI, projections and editor drafts. The owner
+explicitly authorized clearing these fields in the two registered projects
+through conditional server writes. Project folders and unrelated content remain
+intact. Card review dates and card/milestone/report extensions remain supported.
+
+Project descriptions render Markdown automatically after editing; project
+editors are centered with a dimmed, blurred backdrop. Card and project autosave
+continues to apply. See [ADR-036](../docs/ADR-036-PROJECT-FIELD-REMOVAL.md).

@@ -2,8 +2,10 @@
 import { expect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { isMain, runBrowserSuite } from "../runtime.mjs";
+import { binaries } from "../host.mjs";
 
 export async function runAutosaveChecks({
   page,
@@ -25,7 +27,6 @@ export async function runAutosaveChecks({
   const dialog = () =>
     page.getByRole("dialog", { name: /^(Edit|Create) resource$/ });
   const title = () => dialog().getByLabel("Title", { exact: true });
-  const body = () => dialog().getByLabel(/^Description/);
   const owner = () => dialog().getByLabel(/^Owner/);
   const cardPath = (id) => `${base}/cards/${id}`;
   const projectPath = `${base}`;
@@ -538,8 +539,32 @@ export async function runAutosaveChecks({
 
   await check(
     "AS06",
-    "Project name, body and state autosave while the project modal stays open",
+    "Project name and description autosave while Markdown renders safely and retains its source",
     async () => {
+      const initialSource =
+        "Existing unknownsource marker\n\nThe original project source remains intact.";
+      const nextSource = [
+        initialSource,
+        "",
+        "## Rendered project Markdown",
+        "",
+        "**Strong project text**",
+        "",
+        "<script>alert('unsafe')</script>",
+        "",
+        "![remote image](https://example.invalid/project-image.png)",
+      ].join("\n");
+      const before = cli("get", projectPath);
+      await mutate(
+        "PATCH",
+        projectPath,
+        {
+          set: {
+            body: initialSource,
+          },
+        },
+        before.version,
+      );
       await openProject();
       await expect(
         dialog().getByRole("button", { name: "Save changes", exact: true }),
@@ -547,22 +572,72 @@ export async function runAutosaveChecks({
       await expect(
         dialog().getByRole("button", { name: "Cancel", exact: true }),
       ).toHaveCount(0);
+      await expect(
+        dialog().getByRole("button", {
+          name: "Preview Markdown",
+          exact: true,
+        }),
+      ).toHaveCount(0);
+      await expect(
+        dialog().getByLabel("Review on", { exact: true }),
+      ).toHaveCount(0);
+      await expect(dialog().getByLabel("Phase", { exact: true })).toHaveCount(
+        0,
+      );
+      await expect(
+        dialog().getByText("Additional fields", { exact: true }),
+      ).toHaveCount(0);
       const name = `Autosave project ${Date.now().toString(36)}`;
       const projectWrites = () => writesFor(projectPath, "PATCH").length;
       await dialog().getByLabel("Name", { exact: true }).fill(name);
       await waitForWrite(projectPath, "PATCH", 1);
       await waitForSaved(projectPath, (value) => value.metadata.name === name);
-      const nextBody = "Project body saved by autosave.";
-      await body().fill(nextBody);
+      const editDescription = dialog().getByRole("button", {
+        name: "Edit description",
+        exact: true,
+      });
+      await editDescription.click();
+      const sourceEditor = dialog().getByRole("textbox", {
+        name: "Project description",
+        exact: true,
+      });
+      await sourceEditor.focus();
+      await expect(sourceEditor).toHaveValue(initialSource);
+      const remoteImageRequests = [];
+      const onRemoteImageRequest = (request) => {
+        if (request.url().startsWith("https://example.invalid/"))
+          remoteImageRequests.push(request.url());
+      };
+      page.on("request", onRemoteImageRequest);
+      await sourceEditor.fill(nextSource);
+      await sourceEditor.blur();
+      const preview = dialog().locator(".project-description-rendered");
+      await expect(preview).toBeVisible();
+      await expect(preview).toContainText("Rendered project Markdown");
+      await expect(preview.locator("h2")).toContainText(
+        "Rendered project Markdown",
+      );
+      await expect(preview.locator("strong")).toContainText(
+        "Strong project text",
+      );
+      const rendered = await preview.evaluate((node) => node.innerHTML);
+      assert.doesNotMatch(rendered, /<(script|img|iframe|object|svg)\b/i);
+      assert.equal(await preview.locator("img").count(), 0);
+      assert.equal(remoteImageRequests.length, 0);
+      await editDescription.click();
+      await expect(sourceEditor).toHaveValue(nextSource);
+      await sourceEditor.blur();
       await waitForWrite(projectPath, "PATCH", 2);
-      await waitForSaved(projectPath, (value) => value.body === nextBody);
+      await waitForSaved(projectPath, (value) => value.body === nextSource);
+      await page.off("request", onRemoteImageRequest);
       await dialog()
         .getByLabel("Status", { exact: true })
         .selectOption("paused");
       await waitForWrite(projectPath, "PATCH", 3);
       await waitForSaved(
         projectPath,
-        (value) => value.metadata.state === "paused",
+        (value) =>
+          value.metadata.state === "paused" && value.body === nextSource,
       );
       assert.equal(projectWrites(), 3);
       await expect(dialog()).toBeVisible();
@@ -570,7 +645,165 @@ export async function runAutosaveChecks({
         .getByLabel("Status", { exact: true })
         .selectOption("active");
       await waitForWrite(projectPath, "PATCH", 4);
-      return { name: true, body: true, state: true, modalStayedOpen: true };
+      await waitForSaved(
+        projectPath,
+        (value) =>
+          value.metadata.state === "active" && value.body === nextSource,
+      );
+      const closeSource = `${nextSource}\n\nPointer close source is saved.`;
+      await editDescription.click();
+      await dialog()
+        .getByLabel("Project description", { exact: true })
+        .fill(closeSource);
+      await dialog()
+        .getByRole("button", { name: "Close editor", exact: true })
+        .click();
+      await waitForWrite(projectPath, "PATCH", 5);
+      await waitForSaved(projectPath, (value) => value.body === closeSource);
+      await expect(dialog()).toBeHidden();
+      return {
+        name: true,
+        descriptionSource: true,
+        markdownPreview: true,
+        sanitizedPreview: true,
+        pointerCloseFlushed: true,
+        modalStayedOpen: true,
+      };
+    },
+  );
+
+  await check(
+    "AS09",
+    "The project editor is centered, has a blurred backdrop, and fits a 390px viewport",
+    async () => {
+      await openProject();
+      const previousViewport = page.viewportSize() ?? {
+        width: 1440,
+        height: 1000,
+      };
+      try {
+        const desktop = await dialog().evaluate((node) => {
+          const rect = node.getBoundingClientRect();
+          const backdrop = getComputedStyle(node, "::backdrop");
+          return {
+            viewportWidth: innerWidth,
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+            centered:
+              Math.abs(rect.left + rect.width / 2 - innerWidth / 2) <= 2,
+            verticallyCentered:
+              Math.abs(rect.top + rect.height / 2 - innerHeight / 2) <= 2,
+            backdropFilter:
+              backdrop.backdropFilter || backdrop.webkitBackdropFilter || "",
+          };
+        });
+        assert(desktop.centered, JSON.stringify(desktop));
+        assert(desktop.verticallyCentered, JSON.stringify(desktop));
+        assert.match(desktop.backdropFilter, /blur\(/i);
+        await page.screenshot({
+          path: join(evidenceDir, "AS09-desktop.png"),
+          fullPage: true,
+        });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await expect(dialog()).toBeVisible();
+        const mobile = await dialog().evaluate((node) => {
+          const rect = node.getBoundingClientRect();
+          return {
+            viewportWidth: innerWidth,
+            documentWidth: document.documentElement.scrollWidth,
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+          };
+        });
+        assert(
+          mobile.documentWidth <= mobile.viewportWidth + 1,
+          JSON.stringify(mobile),
+        );
+        assert(mobile.left >= 8, JSON.stringify(mobile));
+        assert(
+          mobile.right <= mobile.viewportWidth - 8,
+          JSON.stringify(mobile),
+        );
+        assert(
+          mobile.width <= mobile.viewportWidth - 16,
+          JSON.stringify(mobile),
+        );
+        await page.screenshot({
+          path: join(evidenceDir, "AS09-mobile-390.png"),
+          fullPage: true,
+        });
+        return {
+          centeredDesktop: true,
+          verticallyCentered: true,
+          blurredBackdrop: true,
+          mobile390NoOverflow: true,
+        };
+      } finally {
+        await page.setViewportSize(previousViewport);
+      }
+    },
+  );
+
+  await check(
+    "AS10",
+    "The project command contract rejects removed fields without changing the source",
+    async () => {
+      const original = cli("get", projectPath);
+      async function expectRejected(payload) {
+        await writeFile(commandFile, JSON.stringify(payload), { mode: 0o600 });
+        const result = spawnSync(
+          join(binaries, "projectctl"),
+          [
+            "--socket",
+            config.socket,
+            "command",
+            "PATCH",
+            projectPath,
+            "--json-file",
+            commandFile,
+            "--if-version",
+            original.version,
+          ],
+          { encoding: "utf8", timeout: 30000 },
+        );
+        assert.ifError(result.error);
+        assert.equal(result.signal, null);
+        assert.notEqual(result.status, 0);
+        const envelope = JSON.parse(result.stdout);
+        assert.equal(envelope.ok, false);
+        assert.equal(envelope.http_status, 422);
+        assert.equal(envelope.error.code, "VALIDATION_FAILED");
+        const after = cli("get", projectPath);
+        assert.equal(after.version, original.version);
+        assert.equal(after.body, original.body);
+      }
+      for (const payload of [
+        { set: { phase: "removed" } },
+        { set: { review_on: "2026-12-31" } },
+        { set: { "x-modal-probe": { retained: true } } },
+        { clear: ["phase"] },
+        { clear: ["review_on"] },
+        { clear: ["x-modal-probe"] },
+      ])
+        await expectRejected(payload);
+
+      const validName = `CLI project contract probe ${Date.now().toString(36)}`;
+      await mutate(
+        "PATCH",
+        projectPath,
+        { set: { name: validName } },
+        original.version,
+      );
+      const updated = cli("get", projectPath);
+      assert.equal(updated.metadata.name, validName);
+      assert.equal(updated.body, original.body);
+      return {
+        removedFieldsRejected: true,
+        invalidWritesPreservedSource: true,
+        validEditReadBack: true,
+      };
     },
   );
 

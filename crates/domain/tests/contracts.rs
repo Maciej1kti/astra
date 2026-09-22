@@ -15,6 +15,39 @@ fn card() -> Value {
 }
 
 #[test]
+fn project_rejects_retired_phase_review_and_extensions() {
+    let mut project = read("examples/project.json");
+    project["metadata"].as_object_mut().unwrap().remove("phase");
+    project["metadata"]
+        .as_object_mut()
+        .unwrap()
+        .remove("review_on");
+    assert!(validate_document(project.clone()).is_ok());
+
+    for field in ["phase", "review_on", "x-owner-note"] {
+        let mut retired = project.clone();
+        retired["metadata"][field] = if field == "review_on" {
+            json!("2026-09-16")
+        } else if field == "phase" {
+            json!("Legacy phase")
+        } else {
+            json!({"retained": true})
+        };
+        assert!(
+            validate_document(retired).is_err(),
+            "retired project field {field} must be rejected"
+        );
+    }
+
+    let mut card = card();
+    card["metadata"]["x-owner-note"] = json!({"retained": true});
+    assert!(
+        validate_document(card).is_ok(),
+        "card extensions remain supported"
+    );
+}
+
+#[test]
 fn examples_roundtrip_without_losing_optional_fields_or_body() {
     for file in [
         "project.json",

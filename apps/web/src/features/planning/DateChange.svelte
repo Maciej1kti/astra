@@ -164,7 +164,9 @@
       </p>
     {:else if conflict?.current}<p>
         Current saved schedule: {JSON.stringify(
-          conflict.current.metadata.schedule ?? null,
+          conflict.current.type === "card"
+            ? (conflict.current.metadata.schedule ?? null)
+            : null,
         )}. Your proposed dates remain above. Reopen the card to start a new
         edit.
       </p>{/if}

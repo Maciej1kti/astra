@@ -188,7 +188,6 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
         "truncated": end<body.len(),
     });
     for key in [
-        "phase",
         "status",
         "schedule",
         "due",
@@ -201,6 +200,9 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
         "owner",
         "acceptance",
     ] {
+        if key == "review_on" && document["type"] == "project" {
+            continue;
+        }
         if let Some(value) = metadata.get(key) {
             out[key] = value.clone();
         }

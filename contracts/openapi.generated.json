@@ -4344,14 +4344,6 @@
               "paused",
               "archived"
             ]
-          },
-          "phase": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "review_on": {
-            "$ref": "#/components/schemas/LocalDate"
           }
         },
         "required": [
@@ -4362,12 +4354,7 @@
           "created_at",
           "updated_at"
         ],
-        "additionalProperties": false,
-        "patternProperties": {
-          "^x-[a-z0-9][a-z0-9_.-]{0,62}$": {
-            "$ref": "#/components/schemas/ExtensionValue"
-          }
-        }
+        "additionalProperties": false
       },
       "AcceptanceItem": {
         "type": "object",
@@ -5107,14 +5094,6 @@
                       "archived"
                     ]
                   },
-                  "phase": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 200
-                  },
-                  "review_on": {
-                    "$ref": "#/components/schemas/LocalDate"
-                  },
                   "body": {
                     "type": "string",
                     "minLength": 0,
@@ -5124,18 +5103,6 @@
                 "required": [],
                 "additionalProperties": false,
                 "minProperties": 1
-              },
-              "clear": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "phase",
-                    "review_on"
-                  ]
-                },
-                "maxItems": 20,
-                "uniqueItems": true
               }
             },
             "required": [],
@@ -6019,10 +5986,6 @@
             },
             "maxItems": 100
           },
-          "phase": {
-            "type": "string",
-            "maxLength": 200
-          },
           "kind": {
             "type": "string",
             "maxLength": 40
@@ -6112,8 +6075,7 @@
               "card_schedule",
               "card_due",
               "card_review",
-              "milestone_due",
-              "project_review"
+              "milestone_due"
             ]
           },
           "project_id": {
@@ -7754,10 +7716,6 @@
           },
           "truncated": {
             "type": "boolean"
-          },
-          "phase": {
-            "type": "string",
-            "maxLength": 200
           },
           "status": {
             "type": "string",

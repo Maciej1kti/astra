@@ -1,4 +1,63 @@
 use super::*;
+use rusqlite::params;
+
+#[test]
+fn project_undo_rejects_historical_retired_metadata_without_resurrection() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let source_path = env.root.join("project/.project/project.md");
+    let current = fs::read(&source_path).unwrap();
+    let current_version = project_store::document::version(&current);
+    let mut historical = String::from_utf8(current.clone()).unwrap();
+    historical = historical.replacen(
+        "\"state\": \"active\"\n",
+        "\"state\": \"active\"\n\"phase\": \"Legacy\"\n\"review_on\": \"2026-09-16\"\n",
+        1,
+    );
+    assert!(historical.contains("\"phase\": \"Legacy\""));
+    let historical = historical.into_bytes();
+    let historical_version = project_store::document::version(&historical);
+    let history_id = Uuid::new_v4().to_string();
+    let request_id = Uuid::now_v7().to_string();
+    engine
+        .journal
+        .db()
+        .unwrap()
+        .execute(
+            "INSERT INTO history(
+                id, project_id, target_kind, target_id, epoch, request_id,
+                before_hash, after_hash, before_bytes, after_bytes, recorded_at
+             ) VALUES (?1, ?2, 'project', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                history_id.clone(),
+                project.clone(),
+                engine.journal.epoch.clone(),
+                request_id,
+                historical_version,
+                current_version.clone(),
+                historical,
+                current.clone(),
+                "2026-09-22T00:00:00Z",
+            ],
+        )
+        .unwrap();
+
+    let reply = engine
+        .mutate(Mutation {
+            project_id: project.clone(),
+            kind: Kind::Project,
+            id: Some(project.clone()),
+            payload: json!({"undo":{"history_entry_id":history_id}}),
+            request_id: Uuid::now_v7().to_string(),
+            epoch: engine.journal.epoch.clone(),
+            expected: Some(current_version),
+        })
+        .unwrap();
+    assert_eq!(reply.http_status, 409, "{reply:?}");
+    assert_eq!(reply.body["error"]["code"], "HISTORY_UNAVAILABLE");
+    assert_eq!(fs::read(source_path).unwrap(), current);
+}
 
 #[test]
 fn stale_target_rejection_precedes_unrelated_collection_validation_and_replays() {

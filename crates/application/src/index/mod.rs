@@ -59,7 +59,6 @@ impl Indexed {
             "review_on",
             "archived",
             "position",
-            "phase",
             "kind",
             "recorded_at",
             "author",
@@ -69,6 +68,9 @@ impl Indexed {
             "milestone_id",
             "owner",
         ] {
+            if key == "review_on" && self.kind == "project" {
+                continue;
+            }
             if let Some(value) = m.get(key) {
                 out[key] = value.clone();
             }

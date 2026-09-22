@@ -25,7 +25,6 @@ export function detailSummary(
     const m = resource.metadata as ProjectMetadata;
     result.title = m.name;
     result.status = m.state;
-    if (m.review_on !== undefined) result.review_on = m.review_on;
   } else if (type === "update") {
     const m = resource.metadata as UpdateMetadata;
     result.title = m.summary;

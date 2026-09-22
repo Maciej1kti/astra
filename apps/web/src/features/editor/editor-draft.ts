@@ -10,7 +10,8 @@ import type {
 import type { AcceptanceItem } from "../cards/card-work";
 import type { EditorTarget } from "./editor-target";
 
-type Common = { title: string; body: string; advanced: string };
+type Common = { title: string; body: string };
+type EditableCommon = Common & { advanced: string };
 type DeadlineFields = { due: string; dueKind: "hard" | "target" };
 export type CardFields = DeadlineFields & {
   status: NonNullable<CardCreate["status"]>;
@@ -32,8 +33,6 @@ export type CardFields = DeadlineFields & {
 };
 export type ProjectFields = {
   status: "active" | "paused" | "archived";
-  phase: string;
-  review: string;
 };
 export type MilestoneFields = DeadlineFields & {
   status: NonNullable<MilestoneCreate["status"]>;
@@ -46,26 +45,30 @@ export type ReportFields = {
   resolves: string;
   supersedes: string;
 };
-type Draft<K extends Resource["type"], Fields> = {
+type Draft<
+  K extends Resource["type"],
+  Fields,
+  C extends Common = EditableCommon,
+> = {
   type: K;
   project: string;
   source: Extract<Resource, { type: K }> | null;
-  common: Common;
+  common: C;
   fields: Fields;
 };
-export type CardDraft = Draft<"card", CardFields>;
+export type CardDraft = Draft<"card", CardFields, EditableCommon>;
 export type EditorDraft =
   | CardDraft
-  | Draft<"project", ProjectFields>
-  | Draft<"milestone", MilestoneFields>
-  | Draft<"update", ReportFields>;
+  | Draft<"project", ProjectFields, Common>
+  | Draft<"milestone", MilestoneFields, EditableCommon>
+  | Draft<"update", ReportFields, EditableCommon>;
 
 export function createEditorDraft(target: EditorTarget): EditorDraft {
   const common: Common = {
     title: "",
     body: target.resource?.body ?? "",
-    advanced: "{}",
   };
+  const editableCommon = () => ({ ...common, advanced: "{}" });
   const project = target.project;
   switch (target.type) {
     case "card": {
@@ -75,7 +78,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         type: "card",
         project,
         source: target.resource,
-        common,
+        common: editableCommon(),
         fields: {
           status: m?.status ?? "planned",
           priority: m?.priority ?? "normal",
@@ -108,8 +111,6 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         common,
         fields: {
           status: m.state,
-          phase: m.phase ?? "",
-          review: m.review_on ?? "",
         },
       };
     }
@@ -120,7 +121,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         type: "milestone",
         project,
         source: target.resource,
-        common,
+        common: editableCommon(),
         fields: {
           status: m?.status ?? "planned",
           due: m?.due?.date ?? "",
@@ -135,7 +136,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         type: "update",
         project,
         source: target.resource,
-        common,
+        common: editableCommon(),
         fields: {
           kind: m?.kind ?? "note",
           author: m?.author?.label ?? "Owner",
@@ -173,8 +174,9 @@ function additionalFields(source: string): Record<string, unknown> {
 type PatchSet<T> = Extract<T, { set?: unknown }>;
 /** Translate an owned, per-kind draft into an explicit create or set/clear patch. */
 export function editorPayload(draft: EditorDraft) {
-  const { title, body, advanced } = draft.common;
-  const extra = additionalFields(advanced);
+  const { title, body } = draft.common;
+  const extra =
+    draft.type === "project" ? {} : additionalFields(draft.common.advanced);
   switch (draft.type) {
     case "card": {
       const d = draft.fields;
@@ -226,20 +228,11 @@ export function editorPayload(draft: EditorDraft) {
     }
     case "project": {
       const fields: NonNullable<PatchSet<ProjectPatch>["set"]> = {
-        ...extra,
         body,
         name: title,
         state: draft.fields.status,
       };
-      const clear: NonNullable<PatchSet<ProjectPatch>["clear"]> = [];
-      if (draft.fields.phase) fields.phase = draft.fields.phase;
-      else if (draft.source?.metadata.phase) clear.push("phase");
-      if (draft.fields.review) fields.review_on = draft.fields.review;
-      else if (draft.source?.metadata.review_on) clear.push("review_on");
-      return {
-        set: fields,
-        ...(clear.length ? { clear } : {}),
-      } satisfies ProjectPatch;
+      return { set: fields } satisfies ProjectPatch;
     }
     case "milestone": {
       const fields: MilestoneCreate = {

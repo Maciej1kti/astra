@@ -22,6 +22,49 @@
   padding: 28px;
   box-shadow: -12px 0 70px #10201b22;
 }
+.editor.project-editor {
+  inset: 50% auto auto 50%;
+  width: min(720px, calc(100vw - 32px));
+  height: auto;
+  max-height: min(88dvh, 900px);
+  margin: 0;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 24px 90px #10201b44;
+}
+.editor.project-editor::backdrop {
+  background: #152d2890;
+  backdrop-filter: blur(8px);
+}
+.editor.project-editor header {
+  top: -32px;
+}
+.editor .project-description-field {
+  margin: 20px 0;
+}
+.editor .project-description-field .field-label {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.editor .project-description-field .field-label span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.editor .project-description-rendered {
+  min-height: 80px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.editor .project-description-edit {
+  margin-top: 10px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
 .editor header,
 .editor footer,
 .editor .row {
@@ -169,6 +212,15 @@
 @media (max-width: 520px) {
   .editor {
     padding: 16px;
+  }
+  .editor.project-editor {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+    padding: 20px;
+    border-radius: 14px;
+  }
+  .editor.project-editor header {
+    top: -20px;
   }
   .editor header {
     top: -16px;

@@ -1,9 +1,6 @@
 /* Generated from contracts/openapi.generated.json. Run npm run contracts. */
 
 /**
- * This interface was referenced by `ProjectMetadata`'s JSON-Schema definition
- * via the `patternProperty` "^x-[a-z0-9][a-z0-9_.-]{0,62}$".
- *
  * This interface was referenced by `CardMetadata`'s JSON-Schema definition
  * via the `patternProperty` "^x-[a-z0-9][a-z0-9_.-]{0,62}$".
  *
@@ -214,14 +211,8 @@ export interface ApiContracts {
         set?: {
           name?: string;
           state?: "active" | "paused" | "archived";
-          phase?: string;
-          review_on?: string;
           body?: string;
         };
-        /**
-         * @maxItems 20
-         */
-        clear?: ("phase" | "review_on")[];
       }
     | {
         undo: {
@@ -388,9 +379,6 @@ export interface ProjectMetadata {
   schema_version: 1;
   name: string;
   state: "active" | "paused" | "archived";
-  phase?: string;
-  review_on?: string;
-  [k: string]: ExtensionValue | string | 1 | "active" | "paused" | "archived" | undefined;
 }
 export interface AcceptanceItem {
   id: string;
@@ -665,7 +653,6 @@ export interface Summary {
    * @maxItems 100
    */
   warning_codes?: string[];
-  phase?: string;
   kind?: string;
   recorded_at?: string;
   author?: Author;
@@ -694,7 +681,7 @@ export interface SummaryPage {
 }
 export interface CalendarItem {
   item_id: string;
-  kind: "card_schedule" | "card_due" | "card_review" | "milestone_due" | "project_review";
+  kind: "card_schedule" | "card_due" | "card_review" | "milestone_due";
   project_id: string;
   resource_id: string;
   version: string;
@@ -1000,7 +987,6 @@ export interface ContextEntry {
   version: string;
   excerpt: string;
   truncated: boolean;
-  phase?: string;
   status?: string;
   schedule?: Schedule;
   due?: Due;

@@ -19,6 +19,7 @@ FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
+AND entity_type='card'
 AND json_extract(metadata_json,'$.review_on')<=?1
 UNION ALL SELECT project_id,entity_id,entity_type,title,'blocked',NULL,1
 FROM documents d

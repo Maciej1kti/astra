@@ -78,8 +78,19 @@ JSON
 
 `create --input` cannot be combined with `--title` or `--body-file`.
 `set --patch-file` cannot be combined with field flags; this avoids ambiguous
-merge precedence. Unmentioned fields are preserved. Source extensions and
-advanced operations remain available through the existing JSON contracts.
+merge precedence. Unmentioned fields are preserved. Source extensions remain
+available for cards, milestones and reports through their JSON contracts.
+Projects support only `name`, `state` and Markdown `body` edits; project
+`phase`, `review_on` and `x-*` fields are rejected by the shared server rules.
+
+Project edits use the generic command with the version from a project read:
+
+```sh
+projectctl get /api/v1/projects/PROJECT_ID
+projectctl command PATCH /api/v1/projects/PROJECT_ID --if-version VERSION --json-file - <<'JSON'
+{"set":{"name":"Product development","body":"## Goal\nShip the first release."}}
+JSON
+```
 
 `milestone` supports `list`, `get`, `create`, `set`, `move`, `history` and `undo`.
 Its create/set input options follow the same pattern. Schedule editing is card-only.

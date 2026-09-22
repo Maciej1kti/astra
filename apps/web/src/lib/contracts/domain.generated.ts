@@ -7,12 +7,10 @@ export type LocalProjectsFileContract1 =
   ProjectDocument | CardDocument | MilestoneDocument | UpdateDocument | Workspace;
 export type UUID = string;
 export type Instant = string;
+export type Position = string;
 export type LocalDate = string;
 /**
  * Ograniczone JSON values; poza schema: max depth 12, 10000 nodes, brak niebezpiecznych kluczy prototypu w obiektach JS.
- *
- * This interface was referenced by `ProjectMetadata`'s JSON-Schema definition
- * via the `patternProperty` "^x-[a-z0-9][a-z0-9_.-]{0,62}$".
  *
  * This interface was referenced by `CardMetadata`'s JSON-Schema definition
  * via the `patternProperty` "^x-[a-z0-9][a-z0-9_.-]{0,62}$".
@@ -32,7 +30,6 @@ export type ExtensionValue =
   | {
       [k: string]: unknown;
     };
-export type Position = string;
 export type UpdateMetadata = {
   id: UUID;
   kind: "result" | "blocker" | "decision_needed" | "note" | "correction" | "resolution";
@@ -94,9 +91,6 @@ export interface ProjectMetadata {
   schema_version: 1;
   name: string;
   state: "active" | "paused" | "archived";
-  phase?: string;
-  review_on?: LocalDate;
-  [k: string]: ExtensionValue | UUID | 1 | "active" | "paused" | "archived" | undefined;
 }
 export interface CardDocument {
   type: "card";

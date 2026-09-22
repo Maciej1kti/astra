@@ -115,6 +115,7 @@ pub struct Evidence {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProjectMetadata {
     pub schema_version: u32,
     pub id: String,
@@ -122,12 +123,6 @@ pub struct ProjectMetadata {
     pub state: ProjectState,
     pub created_at: String,
     pub updated_at: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub phase: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub review_on: Option<String>,
-    #[serde(flatten)]
-    pub extensions: Extensions,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

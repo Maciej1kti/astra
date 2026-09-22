@@ -12,9 +12,9 @@ WHERE entity_type='card'
 UNION ALL SELECT project_id,entity_id,source_hash,title,'milestone_due',json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.date'),json_extract(metadata_json,'$.due.kind')
 FROM selected
 WHERE entity_type='milestone'
-UNION ALL SELECT project_id,entity_id,source_hash,title,CASE WHEN entity_type='project' THEN 'project_review' ELSE 'card_review' END,json_extract(metadata_json,'$.review_on'),json_extract(metadata_json,'$.review_on'),NULL
+UNION ALL SELECT project_id,entity_id,source_hash,title,'card_review',json_extract(metadata_json,'$.review_on'),json_extract(metadata_json,'$.review_on'),NULL
 FROM selected
-WHERE entity_type IN ('project','card')
+WHERE entity_type='card'
             ) SELECT project_id,entity_id,source_hash,title,kind,start,end,due_kind
 FROM dates
 WHERE start<=?3

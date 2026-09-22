@@ -48,7 +48,7 @@ export function resourceDates(item: Summary): ResourceDateBadge[] {
         : {}),
     });
   }
-  if (item.review_on) {
+  if (item.type !== "project" && item.review_on) {
     dates.push({ kind: "review", label: "Review", start: item.review_on });
   }
   return dates;

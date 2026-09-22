@@ -8,7 +8,7 @@ Plik UTF-8 rozpoczyna się dokładnie delimitrem `---` w pierwszej linii i zamyk
 
 Body zachowujemy bajt w bajt przy operacji niedotyczącej body, łącznie z pustymi liniami i końcowym newline. Wymiana body jest osobną świadomą zmianą. Pole tekstowe nie wykonuje skryptów ani komend. Parser MUSI odrzucać niepoprawny UTF-8, NUL i przekroczenie limitów zanim stworzy duży obiekt w pamięci.
 
-Nagłówek jest formatowany kanonicznie. Nieznane pola poza `x-*` blokują zwykły zapis. Rozszerzenia `x-*` zachowujemy jako ograniczone JSON values. Komentarz YAML, który zniknąłby podczas serializacji, powoduje `NORMALIZATION_REQUIRED`; użytkownik dostaje podgląd i jawną operację normalizacji, z backupem i If-Match. Serwer nie „akceptuje” normalizacji po cichu przez flagę frontendu.
+Headers use canonical formatting. Unknown fields block normal writes. Bounded `x-*` JSON extensions are supported only on cards, milestones and updates; project metadata has a closed field set. YAML comments that serialization would discard cause `NORMALIZATION_REQUIRED`; the user receives a preview and an explicit normalization operation with backup and If-Match. A frontend flag cannot silently authorize normalization.
 
 ## Lokalizacje i tożsamość
 
@@ -20,7 +20,7 @@ Puste katalogi można tworzyć leniwie. Inne pliki są ignorowane z diagnostyką
 
 | Obiekt | Pola wymagane w poprawnym pliku | Opcjonalne |
 |---|---|---|
-| Project | schema_version, id, name, state, created_at, updated_at | phase, review_on, x-* |
+| Project | schema_version, id, name, state, created_at, updated_at | — |
 | Card | id, title, kind, status, priority, position, archived, created_at, updated_at | schedule, due, review_on, milestone_id, blocked, depends_on, labels, expected_result, owner, acceptance, x-* |
 | Milestone | id, title, status, position, archived, created_at, updated_at | due, x-* |
 | Update | id, kind, target, summary, author, recorded_at | observed_at, supersedes, resolves, evidence, x-* |
@@ -71,7 +71,7 @@ Brak sztucznego workflow przechodzenia przez wszystkie stany. Done/cancelled mo�
 
 Daty całodniowe mają format `YYYY-MM-DD` i muszą istnieć w kalendarzu gregoriańskim. Sam regex nie odrzuci 30 lutego. `schedule` występuje z obiema granicami; `start <= end`, obie **włączne**. Jednodniowy plan ma tę samą datę start/end. Dodajemy dni kalendarzowe, nie stałe 86 400 000 ms. Nie wykonujemy `new Date('YYYY-MM-DD')` jako kanonicznego modelu daty.
 
-`due` to `{date, kind: hard|target}`. `review_on` jest niezależne. Gdy plan kończy się po due, zwracamy ostrzeżenie; nie odrzucamy realnego planu ani nie przesuwamy deadline'u. `due_today` to date == dziś w strefie workspace; overdue to date < dziś dla niezamkniętej karty. Telefon za granicą nie przesuwa dat. Oś czasu może użyć adaptera ze sztuczną reprezentacją biblioteki, ale musi wrócić do identycznych LocalDate.
+`due` is `{date, kind: hard|target}`. A card's `review_on` is independent of its schedule. A schedule ending after the deadline produces a warning without rejecting the schedule or moving the deadline. `due_today` means the date equals today in the workspace timezone; overdue means the date is earlier than today for an open card. Phone timezone changes do not move dates. Timeline library adapters must round-trip to identical LocalDate values.
 
 Finish-to-start: poprzednik zaplanowany do 18 września wymaga startu następcy co najmniej 19 września, jeśli przyjmujemy rozłączne dni. Nie ma kalendarza roboczego, weekendów jako blokad, lagów, leadów ani auto-schedulera. Brak planu którejkolwiek strony to stan nieoceniony, nie konflikt.
 

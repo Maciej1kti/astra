@@ -130,6 +130,8 @@
   );
 
   let preview = $state(false);
+  let projectDescriptionEditing = $state(false);
+  let projectDescriptionInput = $state<HTMLTextAreaElement>();
   let discard = $state(false);
   let closing = $state(false);
 
@@ -248,6 +250,28 @@
     discard = false;
     onkeepediting?.();
   }
+  function beginProjectDescriptionEdit() {
+    if (draft.type === "project" && !locked) projectDescriptionEditing = true;
+  }
+  function finishProjectDescriptionEdit() {
+    if (draft.type !== "project") return;
+    projectDescriptionEditing = false;
+    if (persistedDirty && !closing)
+      void flushAutosave().catch((cause) => {
+        autosaveError = cause instanceof Error ? cause.message : String(cause);
+      });
+  }
+  $effect(() => {
+    if (!projectDescriptionEditing || !projectDescriptionInput) return;
+    queueMicrotask(() => {
+      if (!projectDescriptionEditing || !projectDescriptionInput) return;
+      projectDescriptionInput.focus();
+      projectDescriptionInput.setSelectionRange(
+        projectDescriptionInput.value.length,
+        projectDescriptionInput.value.length,
+      );
+    });
+  });
   function focusDeleteAction(node: HTMLButtonElement) {
     node.focus({ preventScroll: true });
     node.scrollIntoView({ block: "center", inline: "nearest" });
@@ -831,6 +855,7 @@
 <dialog
   use:modal
   class="editor"
+  class:project-editor={draft.type === "project"}
   aria-label={resource ? "Edit resource" : "Create resource"}
   oncancel={(e) => {
     e.preventDefault();
@@ -891,6 +916,12 @@
       </div>
       <button
         aria-label="Close editor"
+        onpointerdown={(event) => {
+          // Keep the textarea focused until click closes the dialog. Rendering
+          // on blur could otherwise move a centered dialog under the pointer.
+          if (event.button === 0 && projectDescriptionEditing)
+            event.preventDefault();
+        }}
         onclick={close}
         disabled={busy || updateBusy || deleteBusy || closing}>✕</button
       >
@@ -947,10 +978,10 @@
           <p id="delete-card-description">
             {#if deleteConfirmation === "drafts"}
               Your unsaved card or report drafts will be discarded before
-              permanently deleting card “{resource?.metadata.title}”.
+              permanently deleting card “{draft.common.title}”.
             {:else}
-              Permanently delete card “{resource?.metadata.title}”? This removes
-              its source file and cannot be undone.
+              Permanently delete card “{draft.common.title}”? This removes its
+              source file and cannot be undone.
             {/if}
           </p>
           <div class="row">
@@ -1027,20 +1058,52 @@
           bind:fields={draft.fields}
           {locked}
         />{/if}
-      <label class="description-label"
-        >Description <span
-          >{draft.type === "card"
-            ? "Context and supporting details · Markdown"
-            : "Markdown source"}</span
-        ><textarea
-          bind:value={draft.common.body}
-          rows="8"
-          disabled={readonly || locked}></textarea></label
-      >
-      <button type="button" onclick={() => (preview = !preview)}
-        >{preview ? "Hide preview" : "Preview Markdown"}</button
-      >
-      {#if preview}<Markdown source={draft.common.body} />{/if}
+      {#if draft.type === "project"}
+        <section
+          class="project-description-field"
+          aria-labelledby="project-description-label"
+        >
+          <div class="field-label" id="project-description-label">
+            Description <span>Markdown</span>
+          </div>
+          {#if projectDescriptionEditing}
+            <textarea
+              bind:this={projectDescriptionInput}
+              bind:value={draft.common.body}
+              rows="8"
+              aria-label="Project description"
+              onblur={finishProjectDescriptionEdit}
+              disabled={locked}></textarea>
+          {:else}
+            <div class="project-description-rendered">
+              {#if draft.common.body.trim()}<Markdown
+                  source={draft.common.body}
+                />{:else}<p class="empty-context">No description yet.</p>{/if}
+            </div>
+            <button
+              type="button"
+              class="quiet project-description-edit"
+              onclick={beginProjectDescriptionEdit}
+              disabled={locked}>Edit description</button
+            >
+          {/if}
+        </section>
+      {:else}
+        <label class="description-label"
+          >Description <span
+            >{draft.type === "card"
+              ? "Context and supporting details · Markdown"
+              : "Markdown source"}</span
+          ><textarea
+            bind:value={draft.common.body}
+            rows="8"
+            disabled={readonly || locked}></textarea></label
+        >
+        <button type="button" onclick={() => (preview = !preview)}
+          >{preview ? "Hide preview" : "Preview Markdown"}</button
+        >
+        {#if preview}<Markdown source={draft.common.body} />{/if}
+      {/if}
       {#if draft.type === "card"}<CardPlanningFields
           bind:fields={draft.fields}
           {locked}
@@ -1065,7 +1128,7 @@
             ></label
           >
         </div>{/if}
-      {#if draft.type === "card" || draft.type === "project"}<label
+      {#if draft.type === "card"}<label
           >Review on<input
             type="date"
             bind:value={draft.fields.review}
@@ -1077,12 +1140,6 @@
             bind:value={draft.fields.author}
             required
             maxlength="120"
-            disabled={locked}
-          /></label
-        >{/if}
-      {#if draft.type === "project"}<label
-          >Phase<input
-            bind:value={draft.fields.phase}
             disabled={locked}
           /></label
         >{/if}
@@ -1122,7 +1179,7 @@
           disabled={accessLost}
         />
       {/if}
-      {#if !readonly}<details>
+      {#if !readonly && draft.type !== "project"}<details>
           <summary>Additional fields</summary>
           <p>
             Technical extensions and report evidence. Use the named fields above

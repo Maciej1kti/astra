@@ -58,7 +58,7 @@ Filtry: project, status, priority, label, milestone, archived, due range, search
 
 Search używa bezpiecznie związanych parametrów i jawnego składania zapytania FTS. Tekst użytkownika nie jest SQL ani dowolną komendą FTS. Limit długości 256 znaków; domyślnie literalne terminy/prefix, tytuł ważniejszy niż body, polskie znaki testowane. FTS5 dostarcza mechanizm, nie gotową semantykę produktu [S06].
 
-Calendar zwraca item_id osobny od resource_id, ponieważ karta może mieć plan, deadline i przegląd. Typy: `card_schedule`, `card_due`, `card_review`, `milestone_due`, `project_review`. Każdy marker wskazuje źródło i version. Gest planu nie zmienia markera due. Zależności Gantta referują ID kart; hidden target jest opisany, nie pomijany bez wyjaśnienia.
+Calendar returns an item_id separate from resource_id because a card can have a schedule, deadline and review date. Marker kinds are `card_schedule`, `card_due`, `card_review` and `milestone_due`; projects have no review date. Each marker identifies its source and version. Moving a schedule does not move its deadline marker. Gantt dependencies reference card IDs; hidden targets are described rather than silently omitted.
 
 ## SSE bez zgubionej zmiany
 

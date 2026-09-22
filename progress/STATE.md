@@ -6,6 +6,14 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Project editor simplification](2026-09-22-project-editor.md) centers the project
+modal and renders descriptions as Markdown after editing. Project phase, review
+date and extensions are removed across source/API contracts, CLI validation and
+projections; both registered projects were checked and the one legacy phase was
+cleared through a conditional CLI write. The local gate passes 213 Rust,
+95 JavaScript and 12 Python tests, with five relevant release browser suites.
+The existing manual runtime now serves the verified build.
+
 [Editor autosave](2026-09-22-editor-autosave.md) removes Save changes and Cancel
 from card/project editors, with serialized conditional writes, guarded close,
 stable recovery and preserved drafts. Its local gate passes 210 Rust, 93 JavaScript
