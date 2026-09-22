@@ -6,11 +6,18 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Editor autosave](2026-09-22-editor-autosave.md) removes Save changes and Cancel
+from card/project editors, with serialized conditional writes, guarded close,
+stable recovery and preserved drafts. Its local gate passes 210 Rust, 93 JavaScript
+and 12 Python tests. See the evidence record for browser coverage and limits.
+
 [Permanent deletion](2026-09-22-permanent-deletion.md) implements physical card-file
 and `.project/` removal through the browser and CLI, with conditional confirmation,
 durable recovery and stable retries. There is no restore. The local gate passes
 210 Rust, 85 JavaScript and 12 Python tests; the evidence record contains coverage
-and platform limits. The running owner service has not been redeployed.
+and platform limits. The owner subsequently requested the local service restart;
+the deletion feedback fix is recorded in
+[its follow-up](2026-09-22-deletion-feedback.md).
 
 The earlier 2026-09-08 checkpoint includes the completed
 [maintainability cleanup](maintainability-cleanup-2026-09-08/README.md), CLI work

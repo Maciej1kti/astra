@@ -45,6 +45,13 @@ its folder through the normal registration flow.
 Report the action, expected result and actual result. A screenshot helps with
 layout issues. This handoff is for practical feedback, not final release acceptance.
 
+Card and project fields save automatically. Text saves after a short pause;
+selections save immediately. Wait for **Saved** to confirm persistence. Use the
+header X to close the editor; there are no Save changes or Cancel buttons. A new
+card is created after entering a valid title. Add tags/checklist items with their
+Add controls, and post reports separately. Invalid input, conflicts or uncertain
+commands keep the draft available for correction or explicit recovery.
+
 ## Known limits
 
 - The launcher listens on localhost on the host computer. Phone access requires

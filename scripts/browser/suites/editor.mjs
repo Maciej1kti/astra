@@ -67,11 +67,8 @@ export async function runEditorChecks({
       }),
     ).toBeEnabled();
   }
-  async function save() {
-    await dialog()
-      .getByRole("button", { name: "Save changes", exact: true })
-      .click();
-    await dialog().waitFor({ state: "hidden" });
+  async function waitForAutosaveACK() {
+    await expect(dialog().getByTestId("autosave-status")).toHaveText("Saved");
   }
   async function screenshot(name) {
     await page.screenshot({
@@ -127,7 +124,7 @@ export async function runEditorChecks({
 
   await check(
     "A01",
-    "Pin and remove pin preserve an unsaved title and body",
+    "Pin and remove pin preserve autosaved title and body",
     async () => {
       const card = await create({
         title: "Repair draft probe",
@@ -137,7 +134,8 @@ export async function runEditorChecks({
       await title().fill("Repair draft — preserved after pin");
       await dialog()
         .getByLabel(/^Description/)
-        .fill("Unsaved body — Zażółć gęślą jaźń.");
+        .fill("Autosaved body — Zażółć gęślą jaźń.");
+      await waitForAutosaveACK();
       await dialog()
         .getByRole("button", { name: "Pin to focus", exact: true })
         .click();
@@ -148,7 +146,10 @@ export async function runEditorChecks({
         }),
       ).toBeEnabled();
       await expect(title()).toHaveValue("Repair draft — preserved after pin");
-      assert.equal(get(card.id).metadata.title, "Repair draft probe");
+      assert.equal(
+        get(card.id).metadata.title,
+        "Repair draft — preserved after pin",
+      );
       await dialog()
         .getByRole("button", { name: "Remove from focus", exact: true })
         .click();
@@ -156,16 +157,16 @@ export async function runEditorChecks({
         dialog().getByRole("button", { name: "Pin to focus", exact: true }),
       ).toBeEnabled();
       await expect(dialog().getByLabel(/^Description/)).toHaveValue(
-        "Unsaved body — Zażółć gęślą jaźń.",
+        "Autosaved body — Zażółć gęślą jaźń.",
       );
       await screenshot("A01-preserved-draft");
-      await save();
+      await waitForAutosaveACK();
       assert.equal(
         get(card.id).metadata.title,
         "Repair draft — preserved after pin",
       );
-      assert.equal(get(card.id).body, "Unsaved body — Zażółć gęślą jaźń.");
-      return { card: card.id, persistedOnlyOnSave: true };
+      assert.equal(get(card.id).body, "Autosaved body — Zażółć gęślą jaźń.");
+      return { card: card.id, persistedByAutosave: true };
     },
   );
 
@@ -175,7 +176,8 @@ export async function runEditorChecks({
     async () => {
       const card = await create({ title: "Repair focus recovery probe" });
       await open(card.id);
-      await title().fill("Unsaved after focus response loss");
+      await title().fill("Autosaved after focus response loss");
+      await waitForAutosaveACK();
       let writes = 0,
         requestId,
         epoch,
@@ -206,7 +208,9 @@ export async function runEditorChecks({
           dialog().getByRole("button", { name: "Check status", exact: true }),
         ).toBeEnabled();
         assert.equal(interceptionError, undefined);
-        await expect(title()).toHaveValue("Unsaved after focus response loss");
+        await expect(title()).toHaveValue(
+          "Autosaved after focus response loss",
+        );
         await expect(title()).toBeDisabled();
         assert(
           cli("get", "/api/v1/workspace/focus").items.some(
@@ -223,7 +227,9 @@ export async function runEditorChecks({
           }),
         ).toBeEnabled();
         await expect(title()).toBeEnabled();
-        await expect(title()).toHaveValue("Unsaved after focus response loss");
+        await expect(title()).toHaveValue(
+          "Autosaved after focus response loss",
+        );
         assert.equal(writes, 1);
         assert.equal(
           cli("get", `/api/v1/commands/${requestId}?epoch=${epoch}`).state,
@@ -231,7 +237,7 @@ export async function runEditorChecks({
         );
         assert.equal(
           get(card.id).metadata.title,
-          "Repair focus recovery probe",
+          "Autosaved after focus response loss",
         );
         await screenshot("A01-recovered-focus-draft");
         return { committedBeforeLostResponse: true, writes, requestId };
@@ -251,7 +257,8 @@ export async function runEditorChecks({
         otherProject,
       );
       await open(card.id);
-      await title().fill("Unsaved focus conflict draft");
+      await title().fill("Autosaved focus conflict draft");
+      await waitForAutosaveACK();
       const focus = cli("get", "/api/v1/workspace/focus");
       await mutate(
         "PUT",
@@ -270,7 +277,7 @@ export async function runEditorChecks({
       await expect(dialog().getByRole("alert")).toContainText(
         "Focus changed elsewhere",
       );
-      await expect(title()).toHaveValue("Unsaved focus conflict draft");
+      await expect(title()).toHaveValue("Autosaved focus conflict draft");
       await expect(
         dialog().getByText("Current saved version · your draft stays above", {
           exact: true,
@@ -279,8 +286,11 @@ export async function runEditorChecks({
       await expect(
         dialog().getByRole("button", { name: "Pin to focus", exact: true }),
       ).toBeEnabled();
-      assert.equal(get(card.id).metadata.title, "Repair focus conflict probe");
-      return "The conflicting workspace command never replaced the card draft.";
+      assert.equal(
+        get(card.id).metadata.title,
+        "Autosaved focus conflict draft",
+      );
+      return "The conflicting workspace command refreshed focus without replacing the autosaved card title.";
     },
   );
 
@@ -297,7 +307,7 @@ export async function runEditorChecks({
           .locator("li"),
       ).toHaveCount(labels.length);
       await title().fill("Repair literal tags — renamed");
-      await save();
+      await waitForAutosaveACK();
       assert.deepEqual(get(card.id).metadata.labels, labels);
       await open(card.id);
       await screenshot("A02-exact-tags");
@@ -325,9 +335,6 @@ export async function runEditorChecks({
         "already on the card",
       );
       await expect(tags()).toHaveAttribute("aria-invalid", "true");
-      await dialog()
-        .getByRole("button", { name: "Save changes", exact: true })
-        .click();
       assert.equal(get(card.id).version, before);
       await tags().fill("x".repeat(49));
       await tags().press("Enter");
@@ -353,7 +360,7 @@ export async function runEditorChecks({
         .getByRole("button", { name: "Remove tag qa", exact: true })
         .click();
       await screenshot("A10-tag-chips");
-      await save();
+      await waitForAutosaveACK();
       assert.deepEqual(get(card.id).metadata.labels, [
         "Existing, suggested tag",
         "Nowy, ważny tag",
@@ -403,7 +410,7 @@ export async function runEditorChecks({
           JSON.stringify(target),
         );
         await screenshot("A10-mobile-tag-limit");
-        await save();
+        await waitForAutosaveACK();
         assert.equal(get(card.id).metadata.labels.length, 20);
         assert.equal([...get(card.id).metadata.labels.at(-1)].length, 48);
         return { metrics, removalTarget: target };
@@ -415,43 +422,67 @@ export async function runEditorChecks({
 
   await check(
     "A01-undo",
-    "Dirty Undo cannot send a command; clean Undo still restores a saved edit",
+    "Undo waits for a held autosave before restoring the prior source",
     async () => {
       const card = await create({ title: "Repair undo baseline" });
       await open(card.id);
-      await title().fill("Repair undo saved edit");
-      await save();
-      await open(card.id);
-      await title().fill("Repair undo unsaved draft");
-      await dialog().getByText("Change history", { exact: true }).click();
-      await dialog()
-        .getByRole("button", { name: "First history page", exact: true })
-        .click();
-      await expect(
-        dialog()
+      await title().fill("Repair undo prior edit");
+      await waitForAutosaveACK();
+      const matcher = `${config.origin}${base}/cards/${card.id}`;
+      let resolveStarted;
+      const autosaveStarted = new Promise((resolve) => {
+        resolveStarted = resolve;
+      });
+      let releaseAutosave;
+      const autosaveReleased = new Promise((resolve) => {
+        releaseAutosave = resolve;
+      });
+      const writes = [];
+      await page.route(matcher, async (intercept) => {
+        if (intercept.request().method() !== "PATCH")
+          return intercept.continue();
+        writes.push(intercept.request().postData());
+        if (writes.length === 1) {
+          resolveStarted();
+          await autosaveReleased;
+        }
+        return intercept.continue();
+      });
+      try {
+        await title().fill("Repair undo saved edit");
+        await waitForSignal(autosaveStarted, "Undo autosave");
+        await dialog().getByText("Change history", { exact: true }).click();
+        await dialog()
+          .getByRole("button", { name: "First history page", exact: true })
+          .click();
+        const undo = dialog()
           .getByRole("button", { name: "Undo this change", exact: true })
-          .first(),
-      ).toBeDisabled();
-      await expect(
-        dialog().getByText(
-          "Save or discard your draft before undoing a saved change.",
-          { exact: true },
-        ),
-      ).toBeVisible();
-      assert.equal(get(card.id).metadata.title, "Repair undo saved edit");
-      await close();
-      await open(card.id);
-      await dialog().getByText("Change history", { exact: true }).click();
-      await dialog()
-        .getByRole("button", { name: "First history page", exact: true })
-        .click();
-      await dialog()
-        .getByRole("button", { name: "Undo this change", exact: true })
-        .first()
-        .click();
-      await dialog().waitFor({ state: "hidden" });
-      assert.equal(get(card.id).metadata.title, "Repair undo baseline");
-      return "Draft was explicitly discarded before the guarded source Undo.";
+          .first();
+        await expect(undo).toBeDisabled();
+        assert.equal(writes.length, 1);
+        releaseAutosave();
+        await waitForAutosaveACK();
+        await expect
+          .poll(() => get(card.id).metadata.title)
+          .toBe("Repair undo saved edit");
+        await dialog()
+          .getByRole("button", { name: "First history page", exact: true })
+          .click();
+        await expect(undo).toBeEnabled();
+        await undo.click();
+        await expect
+          .poll(() => get(card.id).metadata.title)
+          .toBe("Repair undo prior edit");
+        await expect(dialog()).toBeVisible();
+        await dialog()
+          .getByRole("button", { name: "Close editor", exact: true })
+          .click();
+        await dialog().waitFor({ state: "hidden" });
+        return "Undo stayed blocked during the held autosave, then restored the prior source after acknowledgement.";
+      } finally {
+        releaseAutosave();
+        await page.unroute(matcher);
+      }
     },
   );
 
@@ -501,7 +532,7 @@ export async function runEditorChecks({
       await open(card.id);
       await dialog().getByText("Card lifecycle", { exact: true }).click();
       await dialog().getByLabel("Archived", { exact: true }).check();
-      await save();
+      await waitForAutosaveACK();
       assert.equal(get(card.id).metadata.archived, true);
       await route();
       await page.getByLabel("Search content", { exact: true }).fill(card.title);
@@ -562,7 +593,7 @@ export async function runEditorChecks({
       await row().click();
       await dialog().getByText("Card lifecycle", { exact: true }).click();
       await dialog().getByLabel("Archived", { exact: true }).uncheck();
-      await save();
+      await waitForAutosaveACK();
       assert.equal(get(card.id).metadata.archived, false);
       await page
         .getByLabel("Card visibility", { exact: true })
@@ -733,7 +764,7 @@ export async function runEditorChecks({
 
   await check(
     "A07",
-    "Browser Back restores views and protects a dirty editor",
+    "Browser Back waits for an unresolved autosave before leaving the editor",
     async () => {
       await route("focus");
       await page.getByRole("button", { name: "Board", exact: true }).click();
@@ -752,26 +783,51 @@ export async function runEditorChecks({
       await route();
       await page.getByLabel("Search content", { exact: true }).fill(card.title);
       await page.locator("main").getByText(card.title, { exact: true }).click();
-      await title().fill("Unsaved browser Back draft");
-      const editorUrl = page.url();
-      await page.goBack();
-      await dialog()
-        .getByText("Discard your unsaved draft?", { exact: true })
-        .waitFor();
-      await dialog()
-        .getByRole("button", { name: "Keep editing", exact: true })
-        .click();
-      await expect(title()).toHaveValue("Unsaved browser Back draft");
-      assert.equal(page.url(), editorUrl);
-      assert.equal(get(card.id).metadata.title, card.title);
-      await screenshot("A07-kept-navigation-draft");
-      return "View history and dirty editor history use distinct guarded transitions.";
+      const path = `${config.origin}${base}/cards/${card.id}`;
+      let autosaveStartedResolve;
+      const autosaveStarted = new Promise(
+        (resolve) => (autosaveStartedResolve = resolve),
+      );
+      let releaseAutosave;
+      const autosaveReleased = new Promise(
+        (resolve) => (releaseAutosave = resolve),
+      );
+      await page.route(path, async (intercept) => {
+        if (intercept.request().method() !== "PATCH")
+          return intercept.continue();
+        autosaveStartedResolve();
+        await autosaveReleased;
+        return intercept.continue();
+      });
+      try {
+        await title().fill("Pending browser Back autosave");
+        await waitForSignal(autosaveStarted, "browser Back autosave");
+        await page.goBack();
+        await expect(dialog()).toBeVisible();
+        await expect(title()).toHaveValue("Pending browser Back autosave");
+        assert.equal(get(card.id).metadata.title, card.title);
+        releaseAutosave();
+        await expect
+          .poll(() => get(card.id).metadata.title)
+          .toBe("Pending browser Back autosave");
+        await expect(dialog()).toBeHidden();
+        await expect(page).toHaveURL(
+          (url) =>
+            url.searchParams.get("view") === "list" &&
+            !url.searchParams.has("resource"),
+        );
+        await screenshot("A07-kept-navigation-draft");
+        return "View history stays open until the pending autosave is acknowledged.";
+      } finally {
+        releaseAutosave();
+        await page.unroute(path);
+      }
     },
   );
 
   await check(
     "A07-save",
-    "Save after dirty Browser Back persists the draft and completes the queued navigation",
+    "Autosave before Browser Back persists the draft and completes navigation",
     async () => {
       const card = await create({ title: unique("Repair Back save probe") });
       await route();
@@ -779,11 +835,8 @@ export async function runEditorChecks({
       await page.locator("main").getByText(card.title, { exact: true }).click();
       const savedTitle = `${card.title} — saved after navigation request`;
       await title().fill(savedTitle);
+      await waitForAutosaveACK();
       await page.goBack();
-      await dialog()
-        .getByText("Discard your unsaved draft?", { exact: true })
-        .waitFor();
-      await save();
       assert.equal(get(card.id).metadata.title, savedTitle);
       await expect(page).toHaveURL(
         (url) =>
@@ -810,7 +863,7 @@ export async function runEditorChecks({
         (url) => url.searchParams.get("resource") === card.id,
       );
       await screenshot("A07-save-and-history");
-      return "The queued destination is applied after confirmed Save; subsequent view history and rapid clean card Back/Forward remain usable.";
+      return "The destination is applied after confirmed autosave; subsequent view history and rapid clean card Back/Forward remain usable.";
     },
   );
 

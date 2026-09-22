@@ -48,7 +48,7 @@
   import FocusOrder from "./features/workspace/FocusOrder.svelte";
   import GitObservation from "./features/host/GitObservation.svelte";
   import Diagnostics from "./features/host/Diagnostics.svelte";
-  import type { Summary } from "./lib/api/api";
+  import type { Resource, Summary } from "./lib/api/api";
   import { getResource, getProject } from "./lib/api/resources";
 
   const routing = navigationState(
@@ -250,6 +250,16 @@
   let editorInstance = $state<{ requestClose: () => boolean }>();
 
   let editor = $state<EditorTarget | null>(null);
+  // Keep the editor instance and its queued draft alive when a write is acknowledged.
+  let editorAcknowledgement = $state.raw<{
+    target: EditorTarget;
+    resource: Resource;
+  } | null>(null);
+  const editorResource = $derived(
+    editorAcknowledgement?.target === editor
+      ? editorAcknowledgement?.resource
+      : editor?.resource,
+  );
   let adding = $state(false);
   let projectDeletion = $state<Summary | null>(null);
 
@@ -330,8 +340,14 @@
     if (routing.pending) await restoreRoute(routing.pending);
     else await refresh().catch(message);
   }
+  function autosaved(target: EditorTarget, resource: Resource) {
+    if (editor !== target) return;
+    editorAcknowledgement = { target, resource };
+    void refresh().catch(message);
+  }
   async function deleted() {
     const removed = editor;
+    const removedResource = editorResource;
     const next = routing.pending;
     editor = null;
     if (next) {
@@ -339,7 +355,7 @@
       if (
         destination.get("project") === removed?.project &&
         destination.get("type") === "card" &&
-        destination.get("resource") === removed?.resource?.metadata.id
+        destination.get("resource") === removedResource?.metadata.id
       ) {
         destination.delete("type");
         destination.delete("resource");
@@ -378,11 +394,11 @@
   $effect(() => {
     if (!boot || loading || routing.restoring) return;
     routing.sync(
-      editor?.resource
+      editor && editorResource
         ? {
             project: editor.project,
             type: editor.type,
-            id: editor.resource.metadata.id,
+            id: editorResource.metadata.id,
           }
         : undefined,
     );
@@ -661,7 +677,7 @@
     onclose={() => (manageTags = false)}
     onchanged={() => void refresh().catch(message)}
   />{/if}
-{#if editor}{#key editor}<Editor
+{#if editor}{#key editor}{@const editorTarget = editor}<Editor
       target={editor}
       bind:this={editorInstance}
       onclose={closeEditor}
@@ -670,6 +686,7 @@
       }}
       onchanged={() => refresh().catch(message)}
       onsaved={() => void saved()}
+      onautosaved={(resource) => autosaved(editorTarget, resource)}
       ondeleted={() => void deleted()}
     />{/key}{/if}
 {#if projectDeletion}<ProjectDeletion

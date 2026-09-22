@@ -144,8 +144,11 @@ await runBrowserSuite(
             .getByLabel("Labels", { exact: true })
             .fill(name.slice(0, 10));
           await editor.getByRole("option", { name, exact: true }).click();
+          await expect(editor.getByTestId("autosave-status")).toHaveText(
+            "Saved",
+          );
           await editor
-            .getByRole("button", { name: "Save changes", exact: true })
+            .getByRole("button", { name: "Close editor", exact: true })
             .click();
           await editor.waitFor({ state: "hidden" });
           assert.deepEqual(

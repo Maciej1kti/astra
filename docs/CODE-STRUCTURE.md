@@ -52,6 +52,12 @@ Submission and status lookup use the same feature outcome handler. Conflict stat
 is recorded before fetching optional current details, so an unavailable read
 cannot make a stale proposal editable again.
 
+Card and project editors automatically save valid edits, serializing writes
+against the last acknowledged source/version while preserving newer typing.
+App keeps acknowledged resource routing separate from editor instance identity
+so refreshes cannot replace a queued draft. Reports retain explicit submission.
+See [ADR-035](ADR-035-EDITOR-AUTOSAVE.md) for queue and recovery behavior.
+
 All named OpenAPI schemas are exported by contract generation, including inline
 unions. New endpoint functions should use these types, as in
 [resources](../apps/web/src/lib/api/resources.ts). Extra JSON fields remain an

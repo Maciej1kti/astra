@@ -9,6 +9,7 @@
   import type {
     FocusResource,
     HistoryEntry,
+    CommandResponse,
   } from "../../lib/contracts/api.generated";
   import CardRelations from "./CardRelations.svelte";
   import ReportFields from "./ReportFields.svelte";
@@ -32,14 +33,18 @@
     cardPurposeValidation,
   } from "../cards/card-work";
   import { hasCardUpdateDraft, newCardUpdateDraft } from "../cards/card-update";
-  import { addTag, tagValidation } from "../tags/tags";
+  import { tagValidation } from "../tags/tags";
   import { canUndoDraft, type EditorIntent } from "./editor-actions";
   import {
+    type EditorDraft,
     editorPayload,
     createEditorDraft,
     draftSnapshot,
+    autosaveSnapshot,
+    detachedEditorDraft,
   } from "./editor-draft";
-  import type { EditorTarget } from "./editor-target";
+  import { EditorAutosave, type AutosaveState } from "./editor-autosave.ts";
+  import { editTarget, type EditorTarget } from "./editor-target";
 
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { modal } from "../../lib/ui/dialog";
@@ -59,6 +64,7 @@
     target,
     onclose,
     onsaved,
+    onautosaved,
     ondeleted,
     onchanged,
     onkeepediting,
@@ -66,13 +72,15 @@
     target: EditorTarget;
     onclose: () => void;
     onsaved: () => void;
+    onautosaved?: (resource: Resource) => void;
     ondeleted: () => void;
     onchanged?: () => void;
     onkeepediting?: () => void;
   } = $props();
 
   const project = $derived(target.project);
-  const resource = $derived(target.resource);
+  let currentResource = $state<Resource | null>(untrack(() => target.resource));
+  const resource = $derived(currentResource);
   const autoCreate = $derived(target.autoCreate ?? false);
   let draft = $state(createEditorDraft(untrack(() => target)));
   let acceptanceError = $state("");
@@ -97,15 +105,33 @@
   let deletePending = $derived(deleteOperation.pending);
   let deleteError = $state("");
   let deleteConflict = $state(false);
+  let deleteFlushing = $state(false);
   let deleteConfirmation = $state<"drafts" | "final" | null>(null);
   let deleteBlockers = $state<
     { id: string; title: string; archived: boolean }[]
   >([]);
   let deleteNotice = $state<HTMLDivElement>();
   let conflict = $state<{ current: Resource | null } | null>(null);
+  let autosaveState = $state<AutosaveState>({
+    phase: "idle",
+    pending: null,
+    queued: false,
+    error: null,
+  });
+  let autosaveError = $state("");
+  let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+  let autosaveCreated = false;
+  let disposed = false;
+  const autosaveBusy = $derived(
+    autosaveState.phase === "submitting" || autosaveState.phase === "checking",
+  );
+  const autosaveWork = $derived(
+    !!autosaveState.pending || autosaveState.queued,
+  );
 
   let preview = $state(false);
   let discard = $state(false);
+  let closing = $state(false);
 
   function snapshot() {
     return draftSnapshot(draft);
@@ -115,8 +141,21 @@
     operation.prepare(command);
     intent = Object.freeze(next);
   }
-  const baseline = untrack(snapshot);
-  let cardDirty = $derived(snapshot() !== baseline);
+  let baseline = $state(untrack(() => autosaveSnapshot(draft)));
+  const explicitBaseline = untrack(snapshot);
+  const autosaveResource = $derived(
+    draft.type === "card" || draft.type === "project",
+  );
+  const persistedDirty = $derived(
+    autosaveResource
+      ? autosaveSnapshot(draft) !== baseline
+      : snapshot() !== explicitBaseline,
+  );
+  const unfinishedEntry = $derived(
+    draft.type === "card" &&
+      (!!draft.fields.tagDraft.trim() || !!draft.fields.acceptanceDraft.trim()),
+  );
+  let cardDirty = $derived(persistedDirty || unfinishedEntry);
   let dirty = $derived(cardDirty || updateDirty || !!updatePending);
   let accessLost = $state(false);
   let locked = $derived(
@@ -127,7 +166,9 @@
       !!updatePending ||
       deleteBusy ||
       !!deletePending ||
-      !!deleteConfirmation,
+      !!deleteConfirmation ||
+      deleteFlushing ||
+      closing,
   );
 
   async function copyDraft() {
@@ -137,6 +178,7 @@
           {
             fields: JSON.parse(snapshot()),
             pending,
+            autosave_pending: autosave.pending,
             delete_pending: deletePending,
             card_update: { fields: updateDraft, pending: updatePending },
           },
@@ -152,7 +194,7 @@
   }
   onMount(() => {
     const ended = () => {
-      if (!dirty && !pending && !deletePending) {
+      if (!dirty && !pending && !deletePending && !autosave.hasWork) {
         onclose();
         return;
       }
@@ -172,17 +214,34 @@
     });
 
     return () => {
+      disposed = true;
+      clearAutosaveTimer();
       unsubscribeSession();
     };
   });
   function close() {
-    if (busy || updateBusy || deleteBusy) return;
+    if (closing || busy || updateBusy || deleteBusy) return;
+    if (autosaveResource && (autosave.hasWork || persistedDirty)) {
+      closing = true;
+      void flushAutosave()
+        .then(() => {
+          if (autosave.hasWork || dirty) discard = true;
+          else onclose();
+        })
+        .catch(() => {
+          discard = true;
+        })
+        .finally(() => {
+          closing = false;
+        });
+      return;
+    }
     if (dirty || pending || deletePending) discard = true;
     else onclose();
   }
   export function requestClose() {
     if (busy || updateBusy || deleteBusy) return false;
-    close();
+    void close();
     return true;
   }
   function keepEditing() {
@@ -194,7 +253,7 @@
     node.scrollIntoView({ block: "center", inline: "nearest" });
   }
   function beforeUnload(event: BeforeUnloadEvent) {
-    if (dirty || pending || deletePending) {
+    if (dirty || pending || deletePending || autosave.hasWork) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -203,6 +262,7 @@
   let focus = $state<FocusResource | null>(null);
   let history = $state<HistoryEntry[]>([]);
   let historyCursor = $state<string | null>(null);
+  let historyLoaded = false;
   let pinned = $derived(
     !!focus?.items.some(
       (item) =>
@@ -210,7 +270,13 @@
     ),
   );
   onMount(() => {
-    if (autoCreate && draft.type === "card" && !resource) void save();
+    if (
+      autoCreate &&
+      draft.type === "card" &&
+      !resource &&
+      draft.common.title.trim()
+    )
+      queueAutosave();
     if (draft.type === "card") {
       if (resource) void loadFocus();
     }
@@ -243,7 +309,8 @@
     await transmit();
   }
   async function toggleFocus() {
-    if (!focus || !resource || locked) return;
+    if (!focus || !resource || locked || persistedDirty || autosave.hasWork)
+      return;
     const items = pinned
       ? focus.items.filter(
           (item) =>
@@ -269,14 +336,20 @@
       );
       history = page.items;
       historyCursor = page.page.next_cursor;
+      historyLoaded = true;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
   }
   async function undo(id: string) {
     if (!resource) return;
-    if (locked || !canUndoDraft(dirty, !!pending, busy || updateBusy)) {
-      error = "Save or discard your draft before undoing a saved change.";
+    if (
+      locked ||
+      autosave.hasWork ||
+      !canUndoDraft(dirty, !!pending, busy || updateBusy)
+    ) {
+      error =
+        "Wait for changes to save, or resolve your draft before undoing a saved change.";
       return;
     }
     prepare(
@@ -308,44 +381,243 @@
       ? root
       : `${root}/${draft.type === "card" ? "cards" : draft.type === "milestone" ? "milestones" : "updates"}${resource ? `/${resource.metadata.id}` : ""}`;
   }
-  async function save() {
-    if (locked || readonly || conflict) return;
-    error = "";
-    statusMessage = "";
-    try {
-      if (draft.type === "card") {
-        if (updateDirty)
-          throw new Error(
-            "Post or discard your update draft before saving the card. Both drafts are preserved.",
+  function autosavePath(source: Resource | null) {
+    const root = `/api/v1/projects/${project}`;
+    if (draft.type === "project") return root;
+    return `${root}/cards${source ? `/${source.metadata.id}` : ""}`;
+  }
+  function draftForResource(next: Resource): EditorDraft {
+    return createEditorDraft(editTarget(project, next));
+  }
+  const autosave = new EditorAutosave<EditorDraft, Resource>({
+    source: untrack(() => target.resource),
+    buildPayload: (source, detached) => {
+      const next = {
+        ...detached,
+        source,
+      } as EditorDraft;
+      return editorPayload(next);
+    },
+    createPending: (source, payload) =>
+      command(
+        autosavePath(source),
+        source ? "PATCH" : "POST",
+        payload,
+        source?.version,
+      ),
+    resourceFromReply: (reply) => {
+      const next = reply.result.resource;
+      if (!next)
+        throw new Error("Autosave reply did not include the resource.");
+      return next;
+    },
+    allowed: () =>
+      !disposed &&
+      !accessLost &&
+      !deleteBusy &&
+      !deletePending &&
+      !deleteConfirmation &&
+      !pending,
+    oncommitted: (next, submittedSnapshot) => {
+      if (disposed) return;
+      const created = !currentResource;
+      currentResource = next;
+      // Keep the live draft object so a text caret and unfinished tag/checklist
+      // entries survive the ACK. The acknowledged source/version is still the
+      // base used to build the next patch.
+      (draft as EditorDraft & { source: Resource | null }).source = next;
+      baseline = submittedSnapshot;
+      autosaveError = "";
+      onautosaved?.(next);
+      if (created && next.type === "card" && !autoCreate) void loadFocus();
+      if (historyLoaded) void loadHistory();
+      if (autoCreate && !autosaveCreated) {
+        autosaveCreated = true;
+        onsaved();
+      }
+    },
+    onchange: (state) => {
+      if (disposed) return;
+      autosaveState = state;
+      if (state.phase === "saved") autosaveError = "";
+      else if (state.error) {
+        autosaveError = commandErrorMessage(state.error);
+        if (
+          state.phase === "conflict" &&
+          isRejectedConflict("rejected", state.error) &&
+          !conflict
+        ) {
+          conflict = { current: null };
+          void api<Resource>(path()).then(
+            (current) => {
+              if (!disposed) conflict = { current };
+            },
+            () => {},
           );
+        }
+      }
+    },
+  });
+  const autosaveStatus = $derived(
+    autosaveResource
+      ? accessLost ||
+        autosaveError ||
+        autosaveState.phase === "conflict" ||
+        autosaveState.phase === "uncertain" ||
+        autosaveState.phase === "not-saved"
+        ? "Not saved"
+        : autosaveState.phase === "submitting" ||
+            autosaveState.queued ||
+            persistedDirty
+          ? "Saving…"
+          : autosaveState.phase === "saved" || resource
+            ? "Saved"
+            : ""
+      : "",
+  );
+  function clearAutosaveTimer() {
+    if (autosaveTimer !== null) {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
+  }
+  function validateAutosave() {
+    if (!autosaveResource) return false;
+    try {
+      const title = draft.common.title.trim();
+      const maxTitle = draft.type === "project" ? 120 : 240;
+      if (!title) throw new Error("Enter a title before saving.");
+      if ([...title].length > maxTitle)
+        throw new Error(`Use ${maxTitle} characters or fewer for the title.`);
+      if (draft.type === "card") {
         const purposeError = cardPurposeValidation(
           draft.fields.expectedResult,
           draft.fields.owner,
         );
         if (purposeError) throw new Error(purposeError);
-        if (draft.fields.acceptanceDraft.trim()) {
-          draft.fields.acceptance = [
-            ...draft.fields.acceptance,
-            {
-              id: crypto.randomUUID(),
-              text: draft.fields.acceptanceDraft.trim(),
-              completed: false,
-            },
-          ];
-          draft.fields.acceptanceDraft = "";
-        }
         acceptanceError = acceptanceValidation(draft.fields.acceptance);
-        if (acceptanceError) return;
-        if (draft.fields.tagDraft.trim()) {
-          const added = addTag(draft.fields.labels, draft.fields.tagDraft);
-          tagError = added.error;
-          if (tagError) return;
-          draft.fields.labels = added.labels;
-          draft.fields.tagDraft = "";
-        }
+        if (acceptanceError) throw new Error(acceptanceError);
         tagError = tagValidation(draft.fields.labels);
-        if (tagError) return;
+        if (tagError) throw new Error(tagError);
       }
+      const detached = detachedEditorDraft(draft);
+      editorPayload({
+        ...detached,
+        source: resource,
+      } as EditorDraft);
+      autosaveError = "";
+      return true;
+    } catch (cause) {
+      autosaveError = cause instanceof Error ? cause.message : String(cause);
+      return false;
+    }
+  }
+  function queueAutosave() {
+    autosaveTimer = null;
+    if (!autosaveResource || conflict || deleteBusy || deletePending) return;
+    const snapshotValue = autosaveSnapshot(draft);
+    if (resource && snapshotValue === baseline && !autosave.hasWork) return;
+    if (!validateAutosave()) return;
+    const detached = detachedEditorDraft(draft);
+    void autosave.enqueue(detached, snapshotValue).catch((cause) => {
+      autosaveError = cause instanceof Error ? cause.message : String(cause);
+    });
+  }
+  function scheduleAutosave(immediate = false) {
+    if (!autosaveResource || conflict) return;
+    clearAutosaveTimer();
+    if (immediate) queueAutosave();
+    else autosaveTimer = setTimeout(queueAutosave, 400);
+  }
+  function autosaveRetry() {
+    void autosave.retry().catch((cause) => {
+      autosaveError = cause instanceof Error ? cause.message : String(cause);
+    });
+  }
+  function autosaveCheck() {
+    void autosave.check().catch((cause) => {
+      autosaveError = cause instanceof Error ? cause.message : String(cause);
+    });
+  }
+  async function flushAutosave() {
+    clearAutosaveTimer();
+    if (!autosaveResource) return;
+    if (autosave.hasWork || persistedDirty) {
+      if (!validateAutosave())
+        throw new Error(autosaveError || "The draft is not valid yet.");
+      await autosave.enqueue(
+        detachedEditorDraft(draft),
+        autosaveSnapshot(draft),
+      );
+    }
+    await autosave.flush();
+  }
+  function insideCardUpdate(target: EventTarget | null) {
+    return target instanceof Element && !!target.closest(".card-update");
+  }
+  let watchedAutosaveSnapshot = $state(untrack(() => autosaveSnapshot(draft)));
+  let immediateAutosave = $state(false);
+  function discreteAutosaveChange(previous: string, next: string) {
+    try {
+      const before = JSON.parse(previous) as Record<string, unknown>;
+      const after = JSON.parse(next) as Record<string, unknown>;
+      for (const key of [
+        "status",
+        "priority",
+        "kind",
+        "dueKind",
+        "milestoneId",
+        "archived",
+        "labels",
+        "dependencies",
+      ]) {
+        if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
+          return true;
+      }
+      const structure = (value: unknown) =>
+        Array.isArray(value)
+          ? value.map((item) => ({ id: item.id, completed: item.completed }))
+          : [];
+      return (
+        JSON.stringify(structure(before.acceptance)) !==
+        JSON.stringify(structure(after.acceptance))
+      );
+    } catch {
+      return false;
+    }
+    return false;
+  }
+  $effect(() => {
+    if (!autosaveResource) return;
+    const current = autosaveSnapshot(draft);
+    if (current === watchedAutosaveSnapshot) return;
+    const previous = watchedAutosaveSnapshot;
+    watchedAutosaveSnapshot = current;
+    const immediate =
+      immediateAutosave || discreteAutosaveChange(previous, current);
+    immediateAutosave = false;
+    untrack(() => scheduleAutosave(immediate));
+  });
+  function handleChange(event: Event) {
+    if (insideCardUpdate(event.target)) return;
+    const target = event.target;
+    const immediate =
+      target instanceof HTMLSelectElement ||
+      (target instanceof HTMLInputElement &&
+        ["checkbox", "date", "radio"].includes(target.type));
+    if (immediate) immediateAutosave = true;
+  }
+  async function save() {
+    if (autosaveResource) {
+      await flushAutosave().catch((cause) => {
+        autosaveError = cause instanceof Error ? cause.message : String(cause);
+      });
+      return;
+    }
+    if (locked || readonly || conflict) return;
+    error = "";
+    statusMessage = "";
+    try {
       const payload = editorPayload(draft);
       prepare(
         { kind: "resource" },
@@ -362,15 +634,28 @@
     }
   }
 
-  function requestDelete() {
+  async function requestDelete() {
     if (
       draft.type !== "card" ||
       !resource ||
       locked ||
       conflict ||
-      deleteConflict
+      deleteConflict ||
+      deleteFlushing
     )
       return;
+    if (autosaveResource && (autosave.hasWork || persistedDirty)) {
+      deleteFlushing = true;
+      try {
+        await flushAutosave();
+      } catch (cause) {
+        autosaveError = cause instanceof Error ? cause.message : String(cause);
+        return;
+      } finally {
+        deleteFlushing = false;
+      }
+      if (autosave.hasWork || persistedDirty) return;
+    }
     deleteError = "";
     deleteConflict = false;
     deleteBlockers = [];
@@ -475,9 +760,11 @@
     const submitted = intent;
     error = "";
     try {
-      if (action === "status") await operation.confirm();
-      else await operation.commit();
-      await completeCommand(submitted);
+      const reply =
+        action === "status"
+          ? await operation.confirm()
+          : await operation.commit();
+      await completeCommand(submitted, reply);
     } catch (cause) {
       const reason = commandErrorMessage(cause);
       error = reason;
@@ -497,9 +784,26 @@
       }
     }
   }
-  async function completeCommand(submitted: EditorIntent) {
+  async function completeCommand(
+    submitted: EditorIntent,
+    reply: CommandResponse,
+  ) {
     if (submitted.kind === "resource") {
-      onsaved();
+      const next = reply.result.resource;
+      if (autosaveResource) {
+        if (!next) throw new Error("The saved resource was not returned.");
+        currentResource = next;
+        draft = draftForResource(next);
+        baseline = autosaveSnapshot(draft);
+        watchedAutosaveSnapshot = baseline;
+        autosave.reset(next);
+        onautosaved?.(next);
+        if (historyLoaded) void loadHistory();
+        statusMessage = "Saved";
+        onchanged?.();
+      } else {
+        onsaved();
+      }
       return;
     }
     if (submitted.kind === "focus") {
@@ -533,10 +837,18 @@
     close();
   }}
 >
-  {#if autoCreate && !error && !conflict && !discard}<p role="status">
+  {#if autoCreate && !error && !autosaveError && !conflict && !discard}<p
+      role="status"
+    >
       Creating card…
     </p>{/if}
-  <div class:quick-pending={autoCreate && !error && !conflict && !discard}>
+  <div
+    class:quick-pending={autoCreate &&
+      !error &&
+      !autosaveError &&
+      !conflict &&
+      !discard}
+  >
     <header>
       <div>
         <p class="eyebrow">
@@ -551,7 +863,10 @@
               ? draft.common.title || "Untitled"
               : `Create ${draft.type}`}
         </h2>
-        {#if !readonly}<p class="draft-state" role="status">
+        {#if !readonly && !autosaveResource}<p
+            class="draft-state"
+            role="status"
+          >
             {busy
               ? "Saving…"
               : updateBusy
@@ -566,14 +881,22 @@
                         ? "Saved version"
                         : "New draft"}
           </p>{/if}
+        {#if autosaveStatus}<p
+            class="draft-state"
+            data-testid="autosave-status"
+            role="status"
+          >
+            {autosaveStatus}
+          </p>{/if}
       </div>
       <button
         aria-label="Close editor"
         onclick={close}
-        disabled={busy || updateBusy || deleteBusy}>✕</button
+        disabled={busy || updateBusy || deleteBusy || closing}>✕</button
       >
     </header>
     <form
+      onchange={handleChange}
       onsubmit={(e) => {
         e.preventDefault();
         void save();
@@ -581,14 +904,15 @@
     >
       {#if discard}<div role="alert" class="notice">
           <p>
-            {pending || updatePending || deletePending
+            {pending || updatePending || deletePending || autosaveWork
               ? "The command result may still be unknown. Keep its request ID before closing."
               : "Discard your unsaved draft?"}
           </p>
           <button
             type="button"
             onclick={onclose}
-            disabled={busy || updateBusy || deleteBusy}>Discard draft</button
+            disabled={busy || updateBusy || deleteBusy || autosaveBusy}
+            >Discard draft</button
           ><button type="button" onclick={keepEditing}>Keep editing</button>
         </div>{/if}
       {#if readonly}<button type="button" onclick={toggleRead} disabled={locked}
@@ -597,7 +921,7 @@
       {#if draft.type === "card" && resource}<button
           type="button"
           onclick={toggleFocus}
-          disabled={!focus || locked}
+          disabled={!focus || locked || persistedDirty || autosaveWork}
           >{pinned ? "Remove from focus" : "Pin to focus"}</button
         >{#if !focus && !busy}<button
             type="button"
@@ -784,7 +1108,8 @@
             accessLost ||
             deleteBusy ||
             !!deletePending ||
-            !!deleteConfirmation}
+            !!deleteConfirmation ||
+            deleteFlushing}
           onposted={() => {
             void cardActivity?.refresh();
             onchanged?.();
@@ -816,13 +1141,15 @@
             onclick={() => loadHistory()}
             disabled={busy || accessLost}>First history page</button
           >{#if dirty}<p class="empty-context">
-              Save or discard your draft before undoing a saved change.
+              Wait for changes to save, or resolve your draft before undoing a
+              saved change.
             </p>{/if}{#each history as entry}<div class="historyentry">
               <small>{entry.recorded_at}</small>
               <p>{entry.changed_fields.join(", ")}</p>
               <button
                 type="button"
                 disabled={locked ||
+                  autosaveWork ||
                   !entry.can_undo ||
                   !canUndoDraft(dirty, !!pending, busy || updateBusy) ||
                   accessLost}
@@ -864,10 +1191,24 @@
             disabled={busy || accessLost}>Retry same command</button
           >
         </div>{/if}
-      {#if dirty || pending || deletePending}<button
+      {#if dirty || pending || deletePending || autosaveState.pending}<button
           type="button"
           onclick={copyDraft}>Copy draft</button
         >{/if}
+      {#if autosaveResource && autosaveError}<div class="notice" role="alert">
+          {autosaveError}
+        </div>{/if}
+      {#if autosaveResource && autosaveState.pending && (autosaveState.phase === "uncertain" || autosaveState.phase === "conflict")}<p
+        >
+          Autosave request <code>{autosaveState.pending.requestId}</code>
+        </p>
+        <div class="row">
+          <button type="button" onclick={autosaveCheck} disabled={accessLost}
+            >Check status</button
+          ><button type="button" onclick={autosaveRetry} disabled={accessLost}
+            >Retry same command</button
+          >
+        </div>{/if}
       {#if deleteError}<div
           bind:this={deleteNotice}
           class="notice"
@@ -902,19 +1243,19 @@
           Post or discard the update draft before saving this card. Copy draft
           includes both drafts and any unresolved request.
         </p>{/if}
-      <footer>
-        <button
-          type="button"
-          onclick={close}
-          disabled={busy || updateBusy || deleteBusy}
-          >{readonly ? "Close" : "Cancel"}</button
-        >{#if !readonly}<button
-            class="primary"
-            type="submit"
-            disabled={locked || !!conflict || updateDirty}
-            >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</button
-          >{/if}
-      </footer>
+      {#if !autosaveResource}<footer>
+          <button
+            type="button"
+            onclick={close}
+            disabled={busy || updateBusy || deleteBusy}
+            >{readonly ? "Close" : "Cancel"}</button
+          >{#if !readonly}<button
+              class="primary"
+              type="submit"
+              disabled={locked || !!conflict || updateDirty}
+              >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</button
+            >{/if}
+        </footer>{/if}
     </form>
   </div>
 </dialog>

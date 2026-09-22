@@ -14,7 +14,10 @@ safety, board/settings/focus dialogs, planning navigation, bounded view/activity
 reads, real stale-page recovery in all five paged views, and direct/status command
 outcomes with preserved drafts and unavailable conflict details. The deletion
 suite covers permanent card and project metadata deletion, confirmation safety,
-command uncertainty, conflicts and current-project navigation:
+command uncertainty, conflicts and current-project navigation.
+
+The autosave suite covers automatic card/project writes, queued edits, creation,
+close flushing and recovery without replacing the original command identity.
 
 ```sh
 ASTRA_TEST_PROFILE=release npm run test:browser:regressions

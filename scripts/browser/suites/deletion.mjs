@@ -40,6 +40,22 @@ await runBrowserSuite(
         return false;
       }
     }
+    async function waitForSignal(signal, label) {
+      let timeout;
+      try {
+        return await Promise.race([
+          signal,
+          new Promise((_, reject) => {
+            timeout = setTimeout(
+              () => reject(new Error(`Timed out waiting for ${label}`)),
+              12000,
+            );
+          }),
+        ]);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
     async function route(page, view, projectId = project, extra = {}) {
       await page.goto(
         `${config.origin}/?${new URLSearchParams({ view, project: projectId, ...extra })}`,
@@ -213,16 +229,102 @@ await runBrowserSuite(
       );
 
       await check(
+        "D02-autosave-delete",
+        "Card deletion waits for a held autosave and previews the latest version",
+        async () => {
+          const card = await createCard(`Delete autosave ${Date.now()}`);
+          await openCard(page, card);
+          const dialog = editor(page);
+          const path = `${config.origin}${base}/cards/${card.id}`;
+          let resolveStarted;
+          const autosaveStarted = new Promise((resolve) => {
+            resolveStarted = resolve;
+          });
+          let releaseAutosave;
+          const autosaveReleased = new Promise((resolve) => {
+            releaseAutosave = resolve;
+          });
+          const writes = [];
+          const deletes = [];
+          await page.route(path, async (route) => {
+            const method = route.request().method();
+            if (method === "PATCH") {
+              writes.push(route.request().postData());
+              if (writes.length === 1) {
+                resolveStarted();
+                await autosaveReleased;
+              }
+              return route.continue();
+            }
+            if (method === "DELETE") {
+              deletes.push(route.request().postData());
+              return route.abort("failed");
+            }
+            return route.continue();
+          });
+          try {
+            const latestTitle = "Delete after autosave acknowledgement";
+            await dialog.getByLabel("Title", { exact: true }).fill(latestTitle);
+            await dialog
+              .getByLabel(/^Description/)
+              .fill("The delete preview must use the acknowledged source.");
+            await waitForSignal(autosaveStarted, "delete autosave");
+            const deleteButton = dialog.getByRole("button", {
+              name: "Delete card",
+              exact: true,
+            });
+            const final = page
+              .getByRole("alert")
+              .filter({ hasText: "Permanently delete card?" });
+            await deleteButton.click();
+            await expect.poll(() => deletes.length).toBe(0);
+            const autosaveStatus = dialog.getByTestId("autosave-status");
+            await expect
+              .poll(async () => {
+                const status = (await autosaveStatus.textContent()) ?? "";
+                return (await deleteButton.isDisabled()) || status !== "Saved";
+              })
+              .toBe(true);
+            await expect(final).toHaveCount(0);
+            assert.equal(writes.length, 1);
+            releaseAutosave();
+            await expect(autosaveStatus).toHaveText("Saved");
+            const updated = cli("get", `${base}/cards/${card.id}`);
+            assert.equal(updated.metadata.title, latestTitle);
+            assert.notEqual(updated.version, card.version);
+            await expect(final).toContainText(latestTitle);
+            await final
+              .getByRole("button", { name: "Keep editing", exact: true })
+              .click();
+            await expect(final).toBeHidden();
+            assert.equal(deletes.length, 0);
+            return {
+              card: card.id,
+              autosaveWrites: writes.length,
+              sourceVersionAdvanced: true,
+              deleteRequestsBeforeCancel: deletes.length,
+            };
+          } finally {
+            releaseAutosave();
+            await page.unroute(path);
+          }
+        },
+      );
+
+      await check(
         "D02",
-        "Card deletion names the card and discards drafts only after explicit confirmation",
+        "Card deletion keeps an explicit report draft behind a discard confirmation",
         async () => {
           const card = await createCard(`Delete draft ${Date.now()}`);
           await openCard(page, card, "board");
           const dialog = editor(page);
           await dialog
             .getByLabel("Title", { exact: true })
-            .fill("Unsaved delete title");
-          await dialog.getByLabel(/^Description/).fill("Unsaved report draft");
+            .fill("Autosaved delete title");
+          await dialog.getByLabel(/^Description/).fill("Autosaved report body");
+          await expect(dialog.getByTestId("autosave-status")).toHaveText(
+            "Saved",
+          );
           const report = dialog.getByRole("region", {
             name: "Add an update to this card",
             exact: true,
@@ -239,7 +341,7 @@ await runBrowserSuite(
           const draftWarning = page
             .getByRole("alert")
             .filter({ hasText: "Discard drafts before deleting?" });
-          await expect(draftWarning).toContainText(card.title);
+          await expect(draftWarning).toContainText("Autosaved delete title");
           await expect(
             dialog.getByLabel("Title", { exact: true }),
           ).toBeDisabled();
@@ -253,14 +355,11 @@ await runBrowserSuite(
               exact: true,
             }),
           ).toBeDisabled();
-          await expect(
-            dialog.getByRole("button", { name: "Save changes", exact: true }),
-          ).toBeDisabled();
           await draftWarning
             .getByRole("button", { name: "Keep editing", exact: true })
             .click();
           await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
-            "Unsaved delete title",
+            "Autosaved delete title",
           );
           await dialog
             .getByRole("button", { name: "Delete card", exact: true })
@@ -276,7 +375,7 @@ await runBrowserSuite(
           const final = page
             .getByRole("alert")
             .filter({ hasText: "Permanently delete card?" });
-          await expect(final).toContainText(card.title);
+          await expect(final).toContainText("Autosaved delete title");
           await final
             .getByRole("button", {
               name: "Permanently delete card",
@@ -295,7 +394,7 @@ await runBrowserSuite(
             ),
             false,
           );
-          return { card: card.id, draftsRequiredExplicitDiscard: true };
+          return { card: card.id, reportDraftRequiredExplicitDiscard: true };
         },
       );
 
@@ -599,8 +698,8 @@ await runBrowserSuite(
             await expect(deleteButton).toBeDisabled();
             await clickAtVisiblePoint(
               page,
-              dialog.getByRole("button", { name: "Save changes", exact: true }),
-              "Save changes after rejected deletion",
+              dialog.getByRole("button", { name: "Close editor", exact: true }),
+              "Close editor after rejected deletion",
             );
             await expect(dialog).toBeHidden();
             assert.equal(

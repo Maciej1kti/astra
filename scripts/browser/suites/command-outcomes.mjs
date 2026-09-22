@@ -46,7 +46,15 @@ await runBrowserSuite(
     /** A competing CLI write causes the real rejection; only its transport reply is lost. */
     async function rejectCommand(
       page,
-      { path, method, lost, before, code, unavailable = false },
+      {
+        path,
+        method,
+        lost,
+        before,
+        code,
+        unavailable = false,
+        autosave = false,
+      },
     ) {
       const attempts = [];
       const statusReads = [];
@@ -102,13 +110,20 @@ await runBrowserSuite(
         async recover(dialog) {
           if (lost) {
             const check = dialog.getByRole("button", {
-              name: "Check status",
-              exact: true,
+              name: autosave
+                ? /^(Check autosave status|Check status)$/
+                : "Check status",
+              exact: !autosave,
             });
             await expect(check).toBeEnabled();
             assert.equal(interceptionError, undefined);
             await dialog
-              .getByRole("button", { name: "Retry same command", exact: true })
+              .getByRole("button", {
+                name: autosave
+                  ? /^(Retry same autosave|Retry same command)$/
+                  : "Retry same command",
+                exact: !autosave,
+              })
               .click();
             await expect.poll(() => attempts.length).toBe(2);
             await expect(check).toBeEnabled();
@@ -164,8 +179,6 @@ await runBrowserSuite(
       await expect(
         dialog.getByRole("button", { name: "Pin to focus", exact: true }),
       ).toBeEnabled();
-      await title.fill("Unsaved title — Zażółć");
-      await body.fill("Unsaved body\nSecond line");
       const focusBefore = focus ? cli("get", "/api/v1/workspace/focus") : null;
       const code = archived ? "FOCUS_TARGET_ARCHIVED" : "VERSION_CONFLICT";
       const rejected = await rejectCommand(page, {
@@ -174,13 +187,14 @@ await runBrowserSuite(
         lost,
         code,
         unavailable,
+        autosave: !focus,
         before: async () => {
           if (archived)
             await mutate(
               "PATCH",
               path,
               { set: { archived: true } },
-              card.version,
+              cli("get", path).version,
             );
           else if (focus)
             await mutate(
@@ -203,15 +217,17 @@ await runBrowserSuite(
             );
         },
       });
-      await dialog
-        .getByRole("button", {
-          name: focus ? "Pin to focus" : "Save changes",
-          exact: true,
-        })
-        .click();
+      await title.fill("Autosaved title — Zażółć");
+      await body.fill("Autosaved body\nSecond line");
+      if (focus) {
+        await expect(dialog.getByTestId("autosave-status")).toHaveText("Saved");
+        await dialog
+          .getByRole("button", { name: "Pin to focus", exact: true })
+          .click();
+      }
       await rejected.recover(dialog);
-      await expect(title).toHaveValue("Unsaved title — Zażółć");
-      await expect(body).toHaveValue("Unsaved body\nSecond line");
+      await expect(title).toHaveValue("Autosaved title — Zażółć");
+      await expect(body).toHaveValue("Autosaved body\nSecond line");
       if (focus) {
         await expect(dialog).toContainText(
           "Focus changed elsewhere. Your draft is preserved.",
@@ -225,7 +241,10 @@ await runBrowserSuite(
         if (archived)
           await expect(dialog).toContainText("FOCUS_TARGET_ARCHIVED");
         await expect(title).toBeEnabled();
-        assert.equal(cli("get", path).metadata.title, card.metadata.title);
+        assert.equal(
+          cli("get", path).metadata.title,
+          "Autosaved title — Zażółć",
+        );
       } else {
         if (unavailable)
           await expect(dialog).toContainText(
@@ -241,12 +260,15 @@ await runBrowserSuite(
             "Changed elsewhere",
           );
         }
-        await expect(
-          dialog.getByRole("button", { name: "Save changes", exact: true }),
-        ).toBeDisabled();
+        await expect(dialog.getByTestId("autosave-status")).toHaveText(
+          "Not saved",
+        );
         assert.equal(cli("get", path).metadata.title, "Changed elsewhere");
       }
-      assert.equal(cli("get", path).body, "Saved body");
+      assert.equal(
+        cli("get", path).body,
+        focus ? "Autosaved body\nSecond line" : "Saved body",
+      );
       assert.equal(
         rejected.attempts[0].version,
         `"${focus ? focusBefore.version : card.version}"`,

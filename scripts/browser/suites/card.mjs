@@ -114,11 +114,8 @@ export async function runCardChecks({
       (url) => url.searchParams.get("resource") === card.id,
     );
   }
-  async function save() {
-    await dialog()
-      .getByRole("button", { name: "Save changes", exact: true })
-      .click();
-    await dialog().waitFor({ state: "hidden" });
+  async function waitForAutosaveACK() {
+    await expect(dialog().getByTestId("autosave-status")).toHaveText("Saved");
   }
   async function screenshot(name) {
     await page.screenshot({
@@ -177,8 +174,10 @@ export async function runCardChecks({
         .getByRole("button", { name: /Add card$/ })
         .click();
       await title().fill(name);
+      await waitForAutosaveACK();
+      await expect(dialog()).toBeVisible();
       await dialog()
-        .getByRole("button", { name: "Create", exact: true })
+        .getByRole("button", { name: "Close editor", exact: true })
         .click();
       await dialog().waitFor({ state: "hidden" });
       const matches = all(
@@ -195,7 +194,7 @@ export async function runCardChecks({
 
   await check(
     "C02-model",
-    "Purpose, owner and reordered acceptance items persist through save and reload without accepting the card",
+    "Purpose, owner and reordered acceptance items persist through autosave and reload without accepting the card",
     async () => {
       const card = await create({
         title: unique("acceptance workflow"),
@@ -242,7 +241,7 @@ export async function runCardChecks({
       );
       await checklist().scrollIntoViewIfNeeded();
       await screenshot("C02-acceptance-draft");
-      await save();
+      await waitForAutosaveACK();
       const saved = get(card.id);
       assert.equal(
         saved.metadata.expected_result,
@@ -285,7 +284,7 @@ export async function runCardChecks({
       await expect(dialog().getByLabel("Status", { exact: true })).toHaveValue(
         "active",
       );
-      await save();
+      await waitForAutosaveACK();
       const completed = get(card.id);
       assert.deepEqual(
         completed.metadata.acceptance.map((entry) => entry.id),
@@ -345,7 +344,7 @@ export async function runCardChecks({
       await dialog()
         .getByRole("button", { name: "Remove acceptance item 1", exact: true })
         .click();
-      await save();
+      await waitForAutosaveACK();
       const saved = get(card.id);
       for (const field of ["expected_result", "owner", "acceptance"])
         assert.equal(Object.hasOwn(saved.metadata, field), false, field);
@@ -367,7 +366,7 @@ export async function runCardChecks({
 
   await check(
     "C04-update",
-    "A real card-targeted update posts once while the unsaved card remains editable",
+    "A real card-targeted update posts once while the autosaved card remains editable",
     async () => {
       const card = await create({
         title: unique("dirty card update"),
@@ -378,11 +377,12 @@ export async function runCardChecks({
       const before = get(card.id);
       const summary = unique("recorded result");
       await open(card.id);
-      await title().fill(`${card.title} — unsaved card draft`);
-      await expectedResult().fill("Unsaved expected result");
+      await title().fill(`${card.title} — autosaved card draft`);
+      await expectedResult().fill("Autosaved expected result");
       await dialog()
         .getByLabel(/^Description/)
-        .fill("Unsaved description with preserved context.");
+        .fill("Autosaved description with preserved context.");
+      await waitForAutosaveACK();
       await composer()
         .getByRole("button", { name: "Add card update", exact: true })
         .click();
@@ -400,24 +400,18 @@ export async function runCardChecks({
       await composer()
         .getByLabel("Update author", { exact: true })
         .fill("Synthetic card QA");
-      await expect(
-        dialog().getByRole("button", { name: "Save changes", exact: true }),
-      ).toBeDisabled();
       await composer()
         .getByRole("button", { name: "Post card update", exact: true })
         .click();
       await expect(composer().getByRole("status")).toContainText(
         "Update recorded for this card",
       );
-      await expect(title()).toHaveValue(`${card.title} — unsaved card draft`);
-      await expect(expectedResult()).toHaveValue("Unsaved expected result");
+      await expect(title()).toHaveValue(`${card.title} — autosaved card draft`);
+      await expect(expectedResult()).toHaveValue("Autosaved expected result");
       await expect(dialog().getByLabel(/^Description/)).toHaveValue(
-        "Unsaved description with preserved context.",
+        "Autosaved description with preserved context.",
       );
-      await expect(
-        dialog().getByRole("button", { name: "Save changes", exact: true }),
-      ).toBeEnabled();
-      assert.equal(get(card.id).version, before.version);
+      assert.notEqual(get(card.id).version, before.version);
       const reports = updatesFor(card.id).filter(
         (update) => update.title === summary,
       );
@@ -441,10 +435,10 @@ export async function runCardChecks({
         }),
       ).toBeVisible();
       await screenshot("C04-update-with-card-draft");
-      await save();
+      await waitForAutosaveACK();
       assert.equal(
         get(card.id).metadata.expected_result,
-        "Unsaved expected result",
+        "Autosaved expected result",
       );
       assert.equal(get(card.id).metadata.status, "active");
       assert.equal(
@@ -454,7 +448,7 @@ export async function runCardChecks({
       return {
         card: card.id,
         update: reports[0].id,
-        originalCardVersionUnchangedUntilSave: true,
+        cardAutosavedBeforeUpdate: true,
         duplicateUpdates: 0,
       };
     },
@@ -523,7 +517,7 @@ export async function runCardChecks({
   for (const recovery of ["retry", "status"]) {
     await check(
       `C06-update-${recovery}`,
-      `A committed update with a lost response recovers by ${recovery} without a duplicate or card draft loss`,
+      `A committed update with a lost response recovers by ${recovery} without a duplicate or editor state loss`,
       async () => {
         const card = await create({
           title: unique(`update ${recovery} recovery`),
@@ -531,6 +525,7 @@ export async function runCardChecks({
         const summary = unique(`response loss ${recovery}`);
         await open(card.id);
         await title().fill(`${card.title} — preserved draft`);
+        await waitForAutosaveACK();
         await composer()
           .getByRole("button", { name: "Add card update", exact: true })
           .click();
@@ -605,7 +600,10 @@ export async function runCardChecks({
               .length,
             1,
           );
-          assert.equal(get(card.id).metadata.title, card.title);
+          assert.equal(
+            get(card.id).metadata.title,
+            `${card.title} — preserved draft`,
+          );
           await composer().scrollIntoViewIfNeeded();
           await screenshot(`C06-update-${recovery}-recovered`);
           return {
@@ -639,30 +637,24 @@ export async function runCardChecks({
       const before = get(card.id);
       await open(card.id);
       await item(1).fill("  ");
-      await dialog()
-        .getByRole("button", { name: "Save changes", exact: true })
-        .click();
       await expect(checklist().getByRole("alert")).toContainText(
         "Add text to acceptance item 1",
       );
       assert.equal(get(card.id).version, before.version);
       await item(1).fill("x".repeat(501));
-      await dialog()
-        .getByRole("button", { name: "Save changes", exact: true })
-        .click();
       await expect(checklist().getByRole("alert")).toContainText(
         "500 characters",
       );
       assert.equal(get(card.id).version, before.version);
       await item(1).fill("A valid condition after local feedback");
-      await save();
+      await waitForAutosaveACK();
       assert.equal(
         get(card.id).metadata.acceptance[0].id,
         before.metadata.acceptance[0].id,
       );
       return {
         card: card.id,
-        rejectedDraftsPersisted: false,
+        invalidDraftsPersisted: false,
         itemIdentityPreserved: true,
       };
     },
@@ -731,7 +723,7 @@ export async function runCardChecks({
           card.acceptance?.[1]?.text ??
             "Every move and remove action is reachable from the keyboard and viewport.",
         );
-        await save();
+        await waitForAutosaveACK();
         await open(card.id);
         await composer()
           .getByRole("button", { name: "Add card update", exact: true })

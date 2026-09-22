@@ -199,7 +199,9 @@ try {
     await page.locator(".markdown script, .markdown img").count(),
     0,
   );
-  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Close editor", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "Board", exact: true }).click();
   await page.getByRole("heading", { name: "Ship the field guide" }).waitFor();
@@ -231,12 +233,13 @@ try {
   await page
     .getByLabel("Title", { exact: true })
     .fill("Ship the revised guide");
-  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
+  await page.getByRole("button", { name: "Close editor", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   await mobile
     .getByLabel("Title", { exact: true })
     .fill("Keep my mobile draft");
-  await mobile.getByRole("button", { name: "Save changes" }).click();
+  await expect(mobile.getByTestId("autosave-status")).toHaveText("Not saved");
   await mobile
     .getByText("Current saved version · your draft stays above")
     .waitFor();
@@ -264,9 +267,19 @@ try {
     .filter({ hasText: /^Undo this change$/ })
     .first()
     .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.getByRole("dialog")).toBeVisible();
   assert.equal(cli("get", path).metadata.title, "Ship the field guide");
-  await page.getByRole("heading", { name: "Ship the field guide" }).click();
+  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  const reopenedCard = page.locator(
+    `[data-board-card="${cards[0].id}"] .title`,
+  );
+  await expect(reopenedCard).toBeEnabled();
+  await reopenedCard.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Pin to focus", exact: true }),
+  ).toBeEnabled();
   await page.getByRole("button", { name: "Pin to focus", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Remove from focus", exact: true }),
@@ -655,7 +668,8 @@ try {
   ).toHaveCount(0);
   await page.locator(`[data-board-card="${typedId}"] .title`).click();
   await page.getByLabel("Status", { exact: true }).selectOption("planned");
-  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
+  await page.getByRole("button", { name: "Close editor", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   assert.equal(
     cli("--project", folder, "card", "get", typedId).metadata.status,
@@ -709,7 +723,9 @@ try {
   await expect(
     page.locator('[data-board-status="planned"]').first(),
   ).toHaveAttribute("data-board-card", typedId);
-  await boardHandle.press("Alt+ArrowDown");
+  await boardHandle.focus();
+  await expect(boardHandle).toBeFocused();
+  await page.keyboard.press("Alt+ArrowDown");
   try {
     await expect
       .poll(
@@ -1047,16 +1063,13 @@ try {
     .getByLabel("New card title in active", { exact: true })
     .press("Enter");
   await page
-    .getByRole("button", { name: "Retry same command", exact: true })
+    .getByRole("button", { name: /Retry same (autosave|command)/ })
     .waitFor();
   await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
     "Quick retry card",
   );
-  await expect(
-    page.getByRole("button", { name: "Create", exact: true }),
-  ).toBeDisabled();
   await page
-    .getByRole("button", { name: "Retry same command", exact: true })
+    .getByRole("button", { name: /Retry same (autosave|command)/ })
     .click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   assert.equal(quickAttempts.length, 2);
@@ -1217,7 +1230,8 @@ try {
   );
   await page.getByLabel("Title", { exact: true }).fill("Waterfall successor");
   await page.getByLabel("End", { exact: true }).fill("2026-09-11");
-  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
+  await page.getByRole("button", { name: "Close editor", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   const waterfall = cli(
     "get",
@@ -1354,9 +1368,30 @@ try {
     "dark",
   );
   await page.getByText("Competing timeline edit", { exact: true }).click();
+  let revocationAutosaveStarted = 0;
+  let revocationAutosaveFinished = false;
+  let revocationRouteError;
+  let releaseRevocationAutosave;
+  const revocationAutosaveReleased = new Promise(
+    (resolve) => (releaseRevocationAutosave = resolve),
+  );
+  const revocationMatcher = `**${path}`;
+  await page.route(revocationMatcher, async (route) => {
+    if (route.request().method() !== "PATCH") return route.continue();
+    revocationAutosaveStarted++;
+    if (revocationAutosaveStarted === 1) await revocationAutosaveReleased;
+    try {
+      await route.continue();
+    } catch (cause) {
+      revocationRouteError = cause;
+    } finally {
+      revocationAutosaveFinished = true;
+    }
+  });
   await page
     .getByLabel("Title", { exact: true })
-    .fill("Unsaved revocation draft");
+    .fill("Queued revocation autosave");
+  await expect.poll(() => revocationAutosaveStarted).toBe(1);
   await mobile.getByRole("button", { name: "Timeline", exact: true }).click();
   await mobile
     .getByLabel("Project", { exact: true })
@@ -1397,9 +1432,13 @@ try {
     .waitFor({ state: "hidden", timeout: 5000 });
   assert.equal(
     await page.getByLabel("Title", { exact: true }).inputValue(),
-    "Unsaved revocation draft",
+    "Queued revocation autosave",
   );
   await page.getByRole("button", { name: "Copy draft", exact: true }).waitFor();
+  releaseRevocationAutosave();
+  await expect.poll(() => revocationAutosaveFinished).toBe(true);
+  assert.equal(revocationRouteError, undefined);
+  await page.unroute(revocationMatcher);
   assert.equal(
     await mobile.getByLabel("Planned end", { exact: true }).inputValue(),
     "2026-09-16",

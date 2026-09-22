@@ -153,6 +153,17 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
 export function draftSnapshot(draft: EditorDraft): string {
   return JSON.stringify({ ...draft.common, ...draft.fields });
 }
+/** Snapshot of persisted fields; unfinished tag/checklist entries stay local. */
+export function autosaveSnapshot(draft: EditorDraft): string {
+  const value = JSON.parse(draftSnapshot(draft)) as Record<string, unknown>;
+  delete value.tagDraft;
+  delete value.acceptanceDraft;
+  return JSON.stringify(value);
+}
+/** Detach a draft from Svelte's reactive proxy before queueing it. */
+export function detachedEditorDraft(draft: EditorDraft): EditorDraft {
+  return JSON.parse(JSON.stringify(draft)) as EditorDraft;
+}
 function additionalFields(source: string): Record<string, unknown> {
   const extra: unknown = JSON.parse(source);
   if (!extra || Array.isArray(extra) || typeof extra !== "object")
