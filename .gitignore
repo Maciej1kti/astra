@@ -6,9 +6,7 @@ target/
 dist/
 __pycache__/
 *.log
-.project/
-!examples/demo-repo/.project/
-!examples/demo-repo/.project/**
+!examples/demo-repo/!examples/demo-repo/.project/**
 .env
 .env.*
 !.env.example

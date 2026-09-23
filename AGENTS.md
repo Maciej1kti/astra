@@ -18,8 +18,10 @@ implementation references, not contributor onboarding.
 
 The owner authorized the source repository at https://github.com/Maciej1kti/astra
 and regular commits/pushes of verified work. Respect later task-specific requests
-to keep work local. Never commit unrelated changes, project data, credentials,
-local environments or runtime state. Do not deploy a service, change network
+to keep work local. Never commit unrelated changes, credentials, local
+environments or runtime state. Track persistent `.project/` source data so
+project state travels with the repository; keep `.project/.local/` runtime
+files excluded. Do not deploy a service, change network
 settings or install privileged services without explicit direction. The project
 license remains deferred to the owner.
 

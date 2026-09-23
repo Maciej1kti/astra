@@ -1,0 +1,8 @@
+---
+"author": {"kind":"human","label":"Codex"}
+"id": "2ced4bc5-837c-4cf3-af4d-1fa1a3154bba"
+"kind": "result"
+"recorded_at": "2026-09-07T20:16:32.190Z"
+"summary": "Integrated lazy SVAR Kanban with Astra cards, collapse, column-default creation and report actions. Preserved versioned writes and pagination. Release browser tests passed, including held-drag conflict and 51-card page boundaries. Initial JS is 91.64 kB gzip; lazy Board adds 25.65 kB JS and 7.73 kB CSS gzip. Local host updated. Evidence: progress/E022-svar-kanban.md. Commit 3139ca5. Physical iPhone and macOS remain untested."
+"target": {"id":"00066296-2e5b-4d19-ac4c-50cfa829ab1c","type":"project"}
+---
