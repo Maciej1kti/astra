@@ -2,10 +2,25 @@
 import { mkdir, readFile, access } from "node:fs/promises";
 import { execFileSync, spawn } from "node:child_process";
 import { join, resolve } from "node:path";
+import { isIP } from "node:net";
 import https from "node:https";
 import http from "node:http";
 import { seedSampleProject } from "./try-seed.mjs";
 const root = resolve(import.meta.dirname, "..");
+const bindHost = process.env.ASTRA_TRY_TAILSCALE_IP || "127.0.0.1";
+if (bindHost !== "127.0.0.1" && isIP(bindHost) !== 4)
+  throw new Error("ASTRA_TRY_TAILSCALE_IP must be a Tailscale IPv4 address");
+const remote = bindHost !== "127.0.0.1";
+if (remote) {
+  const tailscaleIP = execFileSync("tailscale", ["ip", "-4"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+  if (bindHost !== tailscaleIP)
+    throw new Error(
+      "ASTRA_TRY_TAILSCALE_IP must match this host's Tailscale IPv4 address",
+    );
+}
 const data = join(root, ".manual", "state"),
   project = join(root, ".manual", "Sample project");
 await mkdir(data, { recursive: true, mode: 0o700 });
@@ -19,8 +34,8 @@ try {
     "Build first: npm run build && scripts/cargo-local build --workspace --release",
   );
 }
-const cert = join(data, "cert.pem"),
-  key = join(data, "key.pem");
+const cert = join(data, remote ? `cert-${bindHost}.pem` : "cert.pem"),
+  key = join(data, remote ? `key-${bindHost}.pem` : "key.pem");
 try {
   await access(cert);
 } catch {
@@ -39,14 +54,14 @@ try {
       "-subj",
       "/CN=localhost",
       "-addext",
-      "subjectAltName=DNS:localhost,IP:127.0.0.1",
+      `subjectAltName=DNS:localhost,IP:127.0.0.1${remote ? `,IP:${bindHost}` : ""}`,
       "-days",
       "30",
     ],
     { stdio: "ignore" },
   );
 }
-const origin = "https://localhost:47832",
+const origin = `https://${remote ? bindHost : "localhost"}:47832`,
   socket = join(data, "projectd.sock");
 const child = spawn(
   binary,
@@ -115,7 +130,7 @@ try {
     }
   }
   await seedSampleProject(cli, project, join(data, "sample-seeded"));
-  proxy.listen(47832, "127.0.0.1", () => {
+  proxy.listen(47832, bindHost, () => {
     console.log(
       `\nOpen ${origin}\nAccept the local test certificate warning, then request browser access.\nIn another terminal, list and approve the displayed matching challenge:\n`,
     );

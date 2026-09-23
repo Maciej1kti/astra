@@ -6,6 +6,12 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Manual tailnet access](2026-09-23-manual-tailnet-access.md) lets the test
+launcher bind HTTPS to this Mac's verified Tailscale IPv4 address for phone
+testing. Mac-side HTTPS and CLI checks pass; phone access is not yet verified.
+The full gate reaches Clippy but stops at an existing macOS `mkfifoat` test
+compile error.
+
 [Inline Focus ordering](2026-09-22-focus-inline-order.md) replaces Arrange focus
 with a vertical card stack, direct drag/drop saving and Alt+Up/Down ordering.
 Hidden pins, observed versions and uncertain commands are preserved. The full

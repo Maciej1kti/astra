@@ -103,7 +103,7 @@ fn open_directory(path: &Path) -> Result<File, StoreError> {
 
 fn identity(file: &File) -> Result<(u64, u64), StoreError> {
     let stat = fs::fstat(file)?;
-    Ok((stat.st_dev, stat.st_ino))
+    Ok((stat.st_dev as u64, stat.st_ino as u64))
 }
 
 fn is_directory(parent: &File, name: &str) -> Result<bool, StoreError> {
@@ -172,7 +172,7 @@ fn regular_file(parent: &File, name: &str) -> Result<File, StoreError> {
 fn file_entry(parent: &File, name: &str, path: Vec<String>) -> Result<Entry, StoreError> {
     let mut file = regular_file(parent, name)?;
     let before = fs::fstat(&file)?;
-    let identity = (before.st_dev, before.st_ino);
+    let identity = (before.st_dev as u64, before.st_ino as u64);
     if before.st_size < 0 || before.st_size as u64 > MAX_BYTES {
         return Err(StoreError::Invalid("PROJECT_TREE_BYTES_LIMIT"));
     }

@@ -26,6 +26,21 @@ stay in the ignored `.manual/` directory. Your edits persist after stopping and
 restarting. Ctrl+C in the launch terminal stops the host and local HTTPS proxy.
 Do not delete `.manual/` if you want to keep these test edits.
 
+To open the same manual workspace on a phone connected to this Mac through
+Tailscale, stop the local launcher and start it with the Mac's Tailscale IPv4
+address:
+
+```sh
+ASTRA_TRY_TAILSCALE_IP="$(tailscale ip -4)" npm run try
+```
+
+Open the HTTPS URL printed by the launcher on both the phone and the Mac. The
+proxy binds only to this Mac's Tailscale address, and the certificate includes
+that IP address. The test certificate is self-signed, so accept its warning on
+each device. Pair the phone separately using its displayed challenge and
+`npm run pair:try -- "CHALLENGE_FROM_BROWSER"`. Both devices must be connected to
+the same tailnet. No Tailscale Serve setting is required.
+
 The launcher remembers the sample in `.manual/state/sample-seeded`. Removing its
 registration or physically deleting its `.project` directory does not create a
 new sample on restart. Existing sample metadata is also recognized when upgrading
