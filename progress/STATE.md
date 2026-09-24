@@ -6,6 +6,10 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Resolve decision action](2026-09-24-decision-resolution-action.md) opens a
+prefilled resolution from the update record; the full local gate and all 11
+release Chromium regression suites pass.
+
 [Update details and Focus decision navigation](2026-09-24-update-details.md)
 render existing Updates as readable records and open decision reports directly
 from Needs my attention. The full local gate, all 11 release Chromium regression

@@ -896,7 +896,7 @@ await runBrowserSuite(
 
       await check(
         "F09",
-        "A decision in Needs my attention opens its update record",
+        "A decision can be resolved from its update record",
         async () => {
           const created = await mutate("POST", `${base}/updates`, {
             kind: "decision_needed",
@@ -938,9 +938,32 @@ await runBrowserSuite(
             reportId,
           );
           await dialog
-            .getByRole("button", { name: "Close", exact: true })
+            .getByRole("button", { name: "Resolve decision" })
             .click();
-          return { reportId, opensUpdate: true };
+          const resolution = editor(page);
+          await expect(
+            resolution.getByRole("combobox", { name: "Kind" }),
+          ).toHaveValue("resolution");
+          await expect(
+            resolution.getByRole("textbox", {
+              name: "Resolved report IDs, separated by commas",
+            }),
+          ).toHaveValue(reportId);
+          await resolution
+            .getByRole("button", { name: "Create", exact: true })
+            .click();
+          await expect(row).toHaveCount(0);
+          await expect(
+            attention.getByRole("button", {
+              name: new RegExp(`Second decision probe ${suffix}`),
+            }),
+          ).toBeVisible();
+          const remaining = cli(
+            "get",
+            `/api/v1/views/attention?project_id=${project.id}&limit=200`,
+          ).items;
+          assert(!remaining.some((item) => item.report_id === reportId));
+          return { reportId, resolvedFromUpdate: true };
         },
         page,
       );

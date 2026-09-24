@@ -40,6 +40,24 @@ export function editTarget(project: string, resource: Resource): EditorTarget {
       return { project, type: resource.type, resource };
   }
 }
+
+export function resolutionTarget(
+  project: string,
+  decision: Extract<Resource, { type: "update" }>,
+): EditorTarget {
+  return {
+    project,
+    type: "update",
+    resource: null,
+    initialMetadata: {
+      kind: "resolution",
+      summary: `Resolved: ${decision.metadata.summary}`.slice(0, 500),
+      target: decision.metadata.target,
+      resolves: [decision.metadata.id],
+    },
+  };
+}
+
 export function createTarget(
   project: string,
   type: CreateType,

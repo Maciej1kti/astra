@@ -15,5 +15,8 @@ The browser groups report signals by `report_id`, so two decisions about one
 target remain separate, and a pinned card does not hide a report about it.
 Existing reports remain append-only. Their detail modal presents the saved
 content and metadata as a record rather than a disabled edit form; read receipts
-remain actionable. The optional response field is additive to API v1 and does
-not change stored project data or command semantics.
+remain actionable. A decision record offers Resolve decision, which opens a new
+resolution draft with the decision ID and target prefilled. Saving that report
+removes the decision from attention without changing the original report. The
+optional response field is additive to API v1 and does not change stored project
+data or command semantics.

@@ -11,6 +11,7 @@
   import {
     editTarget,
     createTarget,
+    resolutionTarget,
     type EditorTarget,
     type CreateType,
   } from "./features/editor/editor-target";
@@ -900,6 +901,10 @@
         if (routing.pending) keepEditing();
       }}
       onchanged={() => refresh().catch(message)}
+      onresolve={(decision) => {
+        routing.startDraft();
+        editor = resolutionTarget(editorTarget.project, decision);
+      }}
       onsaved={() => void saved()}
       onautosaved={(resource) => autosaved(editorTarget, resource)}
       ondeleted={() => void deleted()}

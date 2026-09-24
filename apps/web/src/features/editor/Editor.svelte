@@ -52,6 +52,7 @@
     ondeleted,
     onchanged,
     onkeepediting,
+    onresolve,
   }: {
     target: EditorTarget;
     onclose: () => void;
@@ -60,6 +61,7 @@
     ondeleted: () => void;
     onchanged?: () => void;
     onkeepediting?: () => void;
+    onresolve?: (decision: Extract<Resource, { type: "update" }>) => void;
   } = $props();
 
   const project = $derived(target.project);
@@ -870,6 +872,11 @@
         </div>{/if}
       {#if readonly}<button type="button" onclick={toggleRead} disabled={locked}
           >{read ? "Mark unread" : "Mark read"}</button
+        >{/if}
+      {#if resource?.type === "update" && resource.metadata.kind === "decision_needed"}<button
+          type="button"
+          onclick={() => onresolve?.(resource)}
+          disabled={locked}>Resolve decision</button
         >{/if}
       {#if draft.type === "card" && resource}<button
           type="button"
