@@ -15,3 +15,11 @@ JavaScript tests, frontend typing, formatting, the frontend build and bundle
 budget, then stopped at Clippy because the existing macOS application test uses
 `rustix::fs::mkfifoat`, which is unavailable in this build. No phone connection
 or browser pairing has been observed yet.
+
+On 2026-09-24, restarting the Mac manual host with Homebrew Node 26.0.0 made
+TCP connections to the HTTPS proxy succeed but left the TLS handshake waiting,
+including requests made on the Mac itself. Restarting the same build and state
+with the Mac's existing Node 22.16.0 restored HTTP 200 from both Mac Mini and
+Linux. The daemon CLI remained healthy, including all three Focus cards. The
+manual Mac launcher currently needs Node 22.16.0 first on `PATH`; the exact
+cause of the Node 26 TLS stall was not established. No network setting changed.
