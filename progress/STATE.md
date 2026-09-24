@@ -1,10 +1,16 @@
 # Current implementation state
 
-Updated 2026-09-22. The application is implemented and under verification;
+Updated 2026-09-24. The application is implemented and under verification;
 full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 [release checklist](../delivery/RELEASE-CHECKLIST.md).
 
 ## Current work and verification
+
+[Cross-host project source sync](2026-09-24-cross-host-project-sync.md) tracks the
+shared `loai` project data in Git on Linux and Mac Mini. Both daemons validate
+the same project source and report healthy indexes. Focus pin membership still
+lives in host-local workspace state and differs across hosts; a source-backed
+design remains open.
 
 [Manual tailnet access](2026-09-23-manual-tailnet-access.md) lets the test
 launcher bind HTTPS to this Mac's verified Tailscale IPv4 address for phone
