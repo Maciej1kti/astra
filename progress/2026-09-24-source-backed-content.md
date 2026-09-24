@@ -24,7 +24,7 @@ their three former host-local Focus pins was written through versioned card
 patches to `.project/cards/*.md`, committed and synchronized. Both daemons now
 return the same three Focus card IDs; their order differs as an intentionally
 local preference. Both return the same project tag catalog and catalog version
-(`cokolwiek`: 2 cards; `flaga-test`: 1 card). Source validation reports 43
+(`cokolwiek`: 2 cards; `flaga-test`: 1 card). Source validation reports 44
 checked documents, no issues on each host. Mac Mini's web and Rust release
 builds pass. Browser tests ran on Linux Chromium; no physical iPhone or Safari
 check was performed.
