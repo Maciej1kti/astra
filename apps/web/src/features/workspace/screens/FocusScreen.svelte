@@ -7,6 +7,7 @@
   import { resourceLabel } from "../../../lib/resources/resource-presentation";
   import type { Attention } from "../view-queries";
   import {
+    attentionKey,
     focusSections,
     type FocusAttention,
     type FocusCard,
@@ -115,8 +116,8 @@
   function openAttention(item: FocusAttention) {
     return open({
       project_id: item.project_id,
-      type: item.target.type,
-      id: item.target.id,
+      type: item.report_id ? "update" : item.target.type,
+      id: item.report_id ?? item.target.id,
     });
   }
 </script>
@@ -217,7 +218,7 @@
     <h2 id="attention-section-title">Needs my attention</h2>
     <span>{attention.length} visible items</span>
   </div>
-  {#each attention as item (item.project_id + ":" + item.target.type + ":" + item.target.id)}<button
+  {#each attention as item (attentionKey(item))}<button
       class="listrow"
       onclick={() => openAttention(item)}
       ><span class="priority"></span>

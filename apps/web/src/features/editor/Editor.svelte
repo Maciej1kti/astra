@@ -10,6 +10,7 @@
     CommandResponse,
   } from "../../lib/contracts/api.generated";
   import ReportFields from "./ReportFields.svelte";
+  import UpdateDetails from "./UpdateDetails.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
   import "../../styles/editor.css";
   import { subscribeSession } from "../../lib/api/session-events";
@@ -776,7 +777,11 @@
   class="editor"
   class:resource-editor={draft.type === "project" || draft.type === "card"}
   class:project-editor={draft.type === "project"}
-  aria-label={resource ? "Edit resource" : "Create resource"}
+  aria-label={readonly
+    ? "Update details"
+    : resource
+      ? "Edit resource"
+      : "Create resource"}
   oncancel={(e) => {
     e.preventDefault();
     close();
@@ -920,153 +925,159 @@
       {#if statusMessage}<p class="action-status" role="status">
           {statusMessage}
         </p>{/if}
-      <label
-        >{draft.type === "project"
-          ? "Name"
-          : draft.type === "update"
-            ? "Summary"
-            : "Title"}<input
-          bind:value={draft.common.title}
-          required
-          maxlength={draft.type === "project"
-            ? 120
+      {#if resource?.type === "update"}<UpdateDetails
+          {resource}
+          {projectName}
+          {project}
+        />{:else}
+        <label
+          >{draft.type === "project"
+            ? "Name"
             : draft.type === "update"
-              ? 500
-              : 240}
-          disabled={readonly || locked}
-        /></label
-      >
-      {#if draft.type !== "update"}<div class="row">
-          <label
-            >Status<select
-              aria-label="Status"
-              bind:value={draft.fields.status}
-              disabled={locked}
-              >{#each statuses as item}<option value={item}
-                  >{resourceLabel(item)}</option
-                >{/each}</select
-            ></label
-          >{#if draft.type === "card"}<label
-              >Priority<select
-                aria-label="Priority"
-                bind:value={draft.fields.priority}
+              ? "Summary"
+              : "Title"}<input
+            bind:value={draft.common.title}
+            required
+            maxlength={draft.type === "project"
+              ? 120
+              : draft.type === "update"
+                ? 500
+                : 240}
+            disabled={readonly || locked}
+          /></label
+        >
+        {#if draft.type !== "update"}<div class="row">
+            <label
+              >Status<select
+                aria-label="Status"
+                bind:value={draft.fields.status}
                 disabled={locked}
-                >{#each ["normal", "high"] as item}<option value={item}
+                >{#each statuses as item}<option value={item}
                     >{resourceLabel(item)}</option
                   >{/each}</select
               ></label
-            >{/if}
-        </div>{/if}
-      {#if draft.type === "update"}<label
-          >Kind<select
-            aria-label="Kind"
-            bind:value={draft.fields.kind}
-            disabled={readonly || locked}
-            >{#each ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
-                value={item}>{resourceLabel(item)}</option
-              >{/each}</select
-          ></label
-        >{/if}
-      {#if draft.type === "project" || draft.type === "card"}
-        <section
-          class="resource-description-field"
-          aria-labelledby="resource-description-label"
-        >
-          <div class="field-label" id="resource-description-label">
-            Description <span
-              >{draft.type === "card"
-                ? "Context and supporting details · Markdown"
-                : "Markdown"}</span
-            >
-          </div>
-          {#if descriptionEditing}
-            <textarea
-              bind:this={descriptionInput}
+            >{#if draft.type === "card"}<label
+                >Priority<select
+                  aria-label="Priority"
+                  bind:value={draft.fields.priority}
+                  disabled={locked}
+                  >{#each ["normal", "high"] as item}<option value={item}
+                      >{resourceLabel(item)}</option
+                    >{/each}</select
+                ></label
+              >{/if}
+          </div>{/if}
+        {#if draft.type === "update"}<label
+            >Kind<select
+              aria-label="Kind"
+              bind:value={draft.fields.kind}
+              disabled={readonly || locked}
+              >{#each ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
+                  value={item}>{resourceLabel(item)}</option
+                >{/each}</select
+            ></label
+          >{/if}
+        {#if draft.type === "project" || draft.type === "card"}
+          <section
+            class="resource-description-field"
+            aria-labelledby="resource-description-label"
+          >
+            <div class="field-label" id="resource-description-label">
+              Description <span
+                >{draft.type === "card"
+                  ? "Context and supporting details · Markdown"
+                  : "Markdown"}</span
+              >
+            </div>
+            {#if descriptionEditing}
+              <textarea
+                bind:this={descriptionInput}
+                bind:value={draft.common.body}
+                rows="8"
+                aria-label="Description"
+                onblur={blurDescription}
+                disabled={locked}></textarea>
+            {:else}
+              <div
+                class="resource-description-rendered"
+                role="button"
+                tabindex={locked ? -1 : 0}
+                aria-label={`Edit ${draft.type} description`}
+                aria-disabled={locked}
+                onclick={beginDescriptionEdit}
+                onkeydown={(event) => {
+                  if (
+                    event.target instanceof Element &&
+                    event.target.closest("a")
+                  )
+                    return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    beginDescriptionEdit(event);
+                  }
+                }}
+              >
+                {#if draft.common.body.trim()}<Markdown
+                    source={draft.common.body}
+                  />{:else}<p class="empty-context">No description yet.</p>{/if}
+              </div>
+            {/if}
+          </section>
+        {:else}
+          <label class="description-label"
+            >Description <span>Markdown source</span><textarea
               bind:value={draft.common.body}
               rows="8"
-              aria-label="Description"
-              onblur={blurDescription}
-              disabled={locked}></textarea>
-          {:else}
-            <div
-              class="resource-description-rendered"
-              role="button"
-              tabindex={locked ? -1 : 0}
-              aria-label={`Edit ${draft.type} description`}
-              aria-disabled={locked}
-              onclick={beginDescriptionEdit}
-              onkeydown={(event) => {
-                if (
-                  event.target instanceof Element &&
-                  event.target.closest("a")
-                )
-                  return;
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  beginDescriptionEdit(event);
-                }
-              }}
+              disabled={readonly || locked}></textarea></label
+          >
+          <button type="button" onclick={() => (preview = !preview)}
+            >{preview ? "Hide preview" : "Preview Markdown"}</button
+          >
+          {#if preview}<Markdown source={draft.common.body} />{/if}
+        {/if}
+        {#if draft.type === "card"}<CardPlanningFields
+            {project}
+            bind:fields={draft.fields}
+            {locked}
+            bind:acceptanceError
+            bind:tagError
+          />{/if}
+        {#if draft.type === "milestone"}<div class="row">
+            <label
+              >Due date<input
+                type="date"
+                bind:value={draft.fields.due}
+                disabled={locked}
+              /></label
             >
-              {#if draft.common.body.trim()}<Markdown
-                  source={draft.common.body}
-                />{:else}<p class="empty-context">No description yet.</p>{/if}
-            </div>
-          {/if}
-        </section>
-      {:else}
-        <label class="description-label"
-          >Description <span>Markdown source</span><textarea
-            bind:value={draft.common.body}
-            rows="8"
-            disabled={readonly || locked}></textarea></label
-        >
-        <button type="button" onclick={() => (preview = !preview)}
-          >{preview ? "Hide preview" : "Preview Markdown"}</button
-        >
-        {#if preview}<Markdown source={draft.common.body} />{/if}
-      {/if}
-      {#if draft.type === "card"}<CardPlanningFields
-          {project}
-          bind:fields={draft.fields}
-          {locked}
-          bind:acceptanceError
-          bind:tagError
-        />{/if}
-      {#if draft.type === "milestone"}<div class="row">
-          <label
-            >Due date<input
-              type="date"
-              bind:value={draft.fields.due}
+          </div>{/if}
+        {#if draft.type === "update" && !readonly}<label
+            >Author<input
+              bind:value={draft.fields.author}
+              required
+              maxlength="120"
               disabled={locked}
             /></label
-          >
-        </div>{/if}
-      {#if draft.type === "update" && !readonly}<label
-          >Author<input
-            bind:value={draft.fields.author}
-            required
-            maxlength="120"
-            disabled={locked}
-          /></label
-        >{/if}
-      {#if draft.type === "card"}<details>
-          <summary>Card lifecycle</summary>
-          <label
-            ><input
-              type="checkbox"
-              bind:checked={draft.fields.archived}
-              disabled={locked}
-            /> Archived</label
-          >
-          <p class="empty-context">
-            Archived cards remain in the project and can be restored from the
-            archive filter.
-          </p>
-        </details>{/if}
-      {#if draft.type === "update"}<ReportFields
-          bind:fields={draft.fields}
-          locked={readonly || locked}
-        />{/if}
+          >{/if}
+        {#if draft.type === "card"}<details>
+            <summary>Card lifecycle</summary>
+            <label
+              ><input
+                type="checkbox"
+                bind:checked={draft.fields.archived}
+                disabled={locked}
+              /> Archived</label
+            >
+            <p class="empty-context">
+              Archived cards remain in the project and can be restored from the
+              archive filter.
+            </p>
+          </details>{/if}
+        {#if draft.type === "update"}<ReportFields
+            bind:fields={draft.fields}
+            locked={readonly || locked}
+          />{/if}
+      {/if}
       {#if !readonly && (draft.type === "milestone" || draft.type === "update")}<details
         >
           <summary>Additional fields</summary>

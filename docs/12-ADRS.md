@@ -313,3 +313,10 @@ explicitly (`low` to `normal`, `urgent` to `high`) in versioned conditional
 writes before strict validation; parsers never perform that conversion. The
 current project inventory contains only `normal` priorities, so no migration is
 needed. See [ADR-040](ADR-040-PRIORITY-SIMPLIFICATION.md).
+
+## ADR-042 — Open decision reports from Focus attention
+
+Decision attention includes the source `report_id` alongside its subject
+`target`. Focus opens the report, and its existing update modal presents a
+read-only record instead of disabled form fields. See
+[ADR-042](ADR-042-ATTENTION-REPORT-NAVIGATION.md).

@@ -87,9 +87,7 @@ try {
   const pending = cli("pairings").items[0];
   cli("approve", pending.id, "--challenge", pending.challenge);
   await page.getByRole("button", { name: "I approved this browser" }).click();
-  await page
-    .getByRole("region", { name: "In focus", exact: true })
-    .waitFor();
+  await page.getByRole("region", { name: "In focus", exact: true }).waitFor();
 
   page.setDefaultTimeout(10000);
   const commandFile = join(temp, "command.json");

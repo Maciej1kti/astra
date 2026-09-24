@@ -356,6 +356,45 @@ await runBrowserSuite(
       );
 
       await check(
+        "updates-detail",
+        "Existing updates open as readable records with working read state",
+        async () => {
+          await mutate("POST", `${base}/updates`, {
+            kind: "result",
+            summary: "Report detail probe",
+            body: "**Visible report body**",
+            author: { kind: "human", label: "QA owner" },
+            target: { type: "project", id: project },
+            evidence: [{ type: "commit", value: "abc1234", label: "Review" }],
+          });
+          await route("updates");
+          const card = page.getByRole("button", {
+            name: /Report detail probe/,
+          });
+          await expect(card).toBeVisible();
+          await card.click();
+          const dialog = page.getByRole("dialog", { name: "Update details" });
+          await expect(dialog).toBeVisible();
+          await expect(dialog.getByText("Visible report body")).toBeVisible();
+          await expect(dialog.getByText("QA owner")).toBeVisible();
+          await expect(dialog.getByText("abc1234")).toBeVisible();
+          await expect(dialog.locator("input, textarea, select")).toHaveCount(
+            0,
+          );
+          await snapshot("updates-detail");
+          await dialog.getByRole("button", { name: "Mark read" }).click();
+          await expect(
+            dialog.getByRole("button", { name: "Mark unread" }),
+          ).toBeVisible();
+          await dialog
+            .getByRole("button", { name: "Close", exact: true })
+            .click();
+          await expect(dialog).toBeHidden();
+          await expect(card).toContainText("Read");
+        },
+      );
+
+      await check(
         "A08",
         "Mobile Sign out directly ends the synthetic browser session",
         async () => {

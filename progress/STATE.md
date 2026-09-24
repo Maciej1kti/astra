@@ -6,6 +6,11 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Update details and Focus decision navigation](2026-09-24-update-details.md)
+render existing Updates as readable records and open decision reports directly
+from Needs my attention. The full local gate, all 11 release Chromium regression
+suites, broad HTTPS smoke on retry and planning browser test pass.
+
 [Source-backed Focus and project tags](2026-09-24-source-backed-content.md)
 move pin membership into card source files and derive each project's tag catalog
 from card labels. Rename/merge is one recoverable project job. The local gate,

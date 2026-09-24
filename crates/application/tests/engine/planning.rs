@@ -71,13 +71,18 @@ fn attention_uses_card_schedule_end_and_milestone_due() {
             &engine.journal.epoch,
         )
         .unwrap();
-    assert_eq!(
-        engine.attention(None, 200, now).unwrap()["items"]
-            .as_array()
-            .unwrap()
-            .len(),
-        3
-    );
+    let attention = engine.attention(None, 200, now).unwrap();
+    wire::validate("AttentionPage", &attention).unwrap();
+    assert_eq!(attention["items"].as_array().unwrap().len(), 3);
+    let decision = attention["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["reason"] == "decision_needed")
+        .unwrap();
+    assert_eq!(decision["report_id"], id);
+    assert_eq!(decision["target"]["type"], "project");
+    assert_eq!(decision["target"]["id"], project);
     let result = engine
         .mutate(Mutation {
             project_id: project.clone(),

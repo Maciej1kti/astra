@@ -13,6 +13,7 @@ export function resourceKey(
 }
 
 export function attentionKey(item: Attention): string {
+  if (item.report_id) return `${item.project_id}:update:${item.report_id}`;
   return `${item.project_id}:${item.target.type}:${item.target.id}`;
 }
 

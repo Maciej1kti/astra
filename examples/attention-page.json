@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111:55555555-5555-4555-8555-555555555555:decision_needed",
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "target": {
+        "type": "project",
+        "id": "11111111-1111-4111-8111-111111111111"
+      },
+      "report_id": "55555555-5555-4555-8555-555555555555",
+      "reason": "decision_needed",
+      "label": "Choose the release scope"
+    }
+  ],
+  "page": {
+    "next_cursor": null,
+    "snapshot_cursor": "example-snapshot",
+    "has_more": false,
+    "freshness": "index_snapshot"
+  },
+  "warnings": []
+}

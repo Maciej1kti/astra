@@ -50,7 +50,7 @@ impl Engine {
                 )?
                 .collect::<Result<Vec<_>, _>>()?;
             for item in &mut items {
-                if let Some(id) = item.as_object_mut().unwrap().remove("report_id") {
+                if let Some(id) = item["report_id"].as_str().map(str::to_owned) {
                     let text: String = db.query_row(
                         "SELECT json_extract(metadata_json,
     '$.target')
@@ -58,7 +58,7 @@ FROM documents
 WHERE project_id=?1
 AND entity_id=?2
 AND entity_type='update'",
-                        params![item["project_id"].as_str().unwrap(), id.as_str().unwrap()],
+                        params![item["project_id"].as_str().unwrap(), id],
                         |row| row.get(0),
                     )?;
                     item["target"] = serde_json::from_str(&text)

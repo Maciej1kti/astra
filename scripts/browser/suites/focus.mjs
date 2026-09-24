@@ -893,6 +893,57 @@ await runBrowserSuite(
         },
         page,
       );
+
+      await check(
+        "F09",
+        "A decision in Needs my attention opens its update record",
+        async () => {
+          const created = await mutate("POST", `${base}/updates`, {
+            kind: "decision_needed",
+            summary: `Decision report probe ${suffix}`,
+            body: "Decision details",
+            author: { kind: "human", label: "QA owner" },
+            target: { type: "project", id: project.id },
+          });
+          const reportId = created.resource.metadata.id;
+          await mutate("POST", `${base}/updates`, {
+            kind: "decision_needed",
+            summary: `Second decision probe ${suffix}`,
+            body: "Another decision",
+            author: { kind: "human", label: "QA owner" },
+            target: { type: "project", id: project.id },
+          });
+          const decisionRow = cli(
+            "get",
+            `/api/v1/views/attention?project_id=${project.id}&limit=200`,
+          ).items.find((item) => item.report_id === reportId);
+          assert.equal(decisionRow?.target.type, "project");
+          await routeFocus(page, { project: project.id });
+          const attention = section(page, "Needs my attention");
+          await expect(
+            attention.getByRole("button", {
+              name: new RegExp(`Second decision probe ${suffix}`),
+            }),
+          ).toBeVisible();
+          const row = attention.getByRole("button", {
+            name: new RegExp(`Decision report probe ${suffix}`),
+          });
+          await expect(row).toBeVisible();
+          await row.click();
+          const dialog = page.getByRole("dialog", { name: "Update details" });
+          await expect(dialog).toBeVisible();
+          await expect(dialog.getByText("Decision details")).toBeVisible();
+          assert.equal(
+            new URL(page.url()).searchParams.get("resource"),
+            reportId,
+          );
+          await dialog
+            .getByRole("button", { name: "Close", exact: true })
+            .click();
+          return { reportId, opensUpdate: true };
+        },
+        page,
+      );
     } finally {
       await page.close();
       await context.close();

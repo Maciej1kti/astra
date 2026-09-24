@@ -6971,6 +6971,10 @@
           "target": {
             "$ref": "#/components/schemas/Target"
           },
+          "report_id": {
+            "description": "Source update ID for a decision-needed item. Open this report to read or resolve the signal; target remains the report's subject.",
+            "$ref": "#/components/schemas/UUID"
+          },
           "reason": {
             "type": "string",
             "enum": [
