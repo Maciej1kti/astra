@@ -376,7 +376,7 @@ fn rejected_command_status_preserves_the_original_error() {
         .unwrap();
     for (command, rejected, code) in [
         (&stale, version_conflict, "VERSION_CONFLICT"),
-        (&focus, archived_target, "FOCUS_TARGET_ARCHIVED"),
+        (&focus, archived_target, "FOCUS_MEMBERSHIP_CHANGED"),
     ] {
         assert_eq!(rejected.body["error"]["code"], code);
         assert_eq!(rejected.body["error"]["request_id"], command.request_id);

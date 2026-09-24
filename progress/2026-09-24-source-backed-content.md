@@ -1,0 +1,23 @@
+# Source-backed Focus and project tags — 2026-09-24
+
+Focus pin membership is now the optional `pinned` card metadata field in
+`.project/cards/*.md`; `workspace.focus` only ranks source-pinned cards. The
+card editor and CLI use versioned card patches, and deletion checks the same
+source field. A second workspace reading the same project sees the same pins.
+
+Project tag names are derived from exact labels on that project's cards. The
+browser and typed CLI read a project catalog rather than the legacy workspace
+vocabulary. Rename/merge prepares one bounded, durable project workflow and
+submits it with one command identity. Preflight checks all source bytes and
+card filenames before the first write. A change after preview rejects the
+plan without writing; a conflict during execution stops the recoverable job
+for review. No all-or-nothing filesystem transaction is claimed.
+
+The local automated gate passed on Linux: schemas/examples/OpenAPI, Python,
+98 JavaScript tests, Rust tests, formatting, Clippy, bundle budget and release
+build. The release Chromium broad HTTPS smoke, planning browser test and all
+11 maintained regression suites passed. This is browser emulation, not a
+physical iPhone or Safari test.
+
+The migration of the three different host-local pins to source cards and
+cross-host verification remain to be recorded here after deployment.

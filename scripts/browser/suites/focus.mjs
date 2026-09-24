@@ -41,6 +41,20 @@ await runBrowserSuite(
 
     async function setFocus(items) {
       const current = cli("focus", "get");
+      const key = (item) => `${item.project_id}:${item.card_id}`;
+      const desired = new Set(items.map(key));
+      const existing = new Set(current.items.map(key));
+      for (const item of [...current.items, ...items]) {
+        if (desired.has(key(item)) === existing.has(key(item))) continue;
+        const path = `/api/v1/projects/${item.project_id}/cards/${item.card_id}`;
+        const card = cli("get", path);
+        await mutate(
+          "PATCH",
+          path,
+          { set: { pinned: desired.has(key(item)) } },
+          card.version,
+        );
+      }
       await writeFile(focusFile, JSON.stringify({ items }), { mode: 0o600 });
       cli(
         "focus",

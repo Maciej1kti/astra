@@ -883,6 +883,9 @@
     }}
   />{/if}
 {#if manageTags}<TagManager
+    initialProject={routing.current.project ??
+      routing.current.resource?.project ??
+      ""}
     projectNames={Object.fromEntries(
       projects.map((item) => [item.id, item.title]),
     )}

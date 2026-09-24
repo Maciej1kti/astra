@@ -174,7 +174,7 @@ export async function runEditorChecks({
 
   await check(
     "A01-recovery",
-    "A real committed focus command with its browser response lost recovers without closing",
+    "A committed card pin with its browser response lost recovers without closing",
     async () => {
       const card = await create({ title: "Repair focus recovery probe" });
       await open(card.id);
@@ -184,9 +184,13 @@ export async function runEditorChecks({
         requestId,
         epoch,
         interceptionError;
-      const matcher = "**/api/v1/workspace/focus";
+      const matcher = `**/api/v1/projects/${project}/cards/${card.id}`;
       await page.route(matcher, async (intercept) => {
-        if (intercept.request().method() !== "PUT") return intercept.continue();
+        if (
+          intercept.request().method() !== "PATCH" ||
+          intercept.request().postDataJSON()?.set?.pinned !== true
+        )
+          return intercept.continue();
         writes++;
         requestId = intercept.request().headers()["x-request-id"];
         epoch = intercept.request().headers()["x-command-epoch"];
@@ -251,48 +255,35 @@ export async function runEditorChecks({
 
   await check(
     "A01-conflict",
-    "A focus conflict preserves the draft and refreshes only focus state",
+    "A card pin conflict preserves the autosaved draft",
     async () => {
       const card = await create({ title: "Repair focus conflict probe" });
-      const competing = await create(
-        { title: "Repair competing pin" },
-        otherProject,
-      );
       await open(card.id);
       await title().fill("Autosaved focus conflict draft");
       await waitForAutosaveACK();
-      const focus = cli("get", "/api/v1/workspace/focus");
       await mutate(
-        "PUT",
-        "/api/v1/workspace/focus",
-        {
-          items: [
-            ...focus.items,
-            { project_id: otherProject, card_id: competing.id },
-          ],
-        },
-        focus.version,
+        "PATCH",
+        `/api/v1/projects/${project}/cards/${card.id}`,
+        { set: { pinned: true } },
+        get(card.id).version,
       );
       await dialog()
         .getByRole("button", { name: "Pin to focus", exact: true })
         .click();
       await expect(dialog().getByRole("alert")).toContainText(
-        "Focus changed elsewhere",
+        "changed since you opened it",
       );
       await expect(title()).toHaveValue("Autosaved focus conflict draft");
       await expect(
         dialog().getByText("Current saved version · your draft stays above", {
           exact: true,
         }),
-      ).toHaveCount(0);
-      await expect(
-        dialog().getByRole("button", { name: "Pin to focus", exact: true }),
-      ).toBeEnabled();
+      ).toBeVisible();
       assert.equal(
         get(card.id).metadata.title,
         "Autosaved focus conflict draft",
       );
-      return "The conflicting workspace command refreshed focus without replacing the autosaved card title.";
+      return "A competing card pin kept the autosaved title and displayed the source conflict.";
     },
   );
 
@@ -872,21 +863,20 @@ export async function runEditorChecks({
         { title: unique("Repair focus other project") },
         otherProject,
       );
-      const focus = cli("get", "/api/v1/workspace/focus");
-      await mutate(
-        "PUT",
-        "/api/v1/workspace/focus",
-        {
-          items: [
-            ...focus.items,
-            { project_id: project, card_id: own.id },
-            { project_id: otherProject, card_id: other.id },
-          ],
-        },
-        focus.version,
-      );
+      for (const [projectId, card] of [
+        [project, own],
+        [otherProject, other],
+      ]) {
+        const path = `/api/v1/projects/${projectId}/cards/${card.id}`;
+        await mutate(
+          "PATCH",
+          `/api/v1/projects/${projectId}/cards/${card.id}`,
+          { set: { pinned: true } },
+          cli("get", path).version,
+        );
+      }
       await route("focus");
-      const pins = page.locator("main .grid");
+      const pins = page.getByRole("region", { name: "In focus", exact: true });
       await expect(
         pins.getByRole("heading", { name: own.title, exact: true }),
       ).toBeVisible();

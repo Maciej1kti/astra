@@ -11,6 +11,7 @@ pub(crate) enum WorkflowKind {
     Unregister,
     Relocate,
     IndexRebuild,
+    TagRename,
 }
 
 impl WorkflowKind {
@@ -22,6 +23,7 @@ impl WorkflowKind {
             Self::Unregister => "unregister",
             Self::Relocate => "relocate",
             Self::IndexRebuild => "index_rebuild",
+            Self::TagRename => "tag_rename",
         }
     }
     pub fn parse(value: &str) -> Result<Self, AppError> {
@@ -32,6 +34,7 @@ impl WorkflowKind {
             "unregister" => Ok(Self::Unregister),
             "relocate" => Ok(Self::Relocate),
             "index_rebuild" => Ok(Self::IndexRebuild),
+            "tag_rename" => Ok(Self::TagRename),
             _ => Err(AppError::invariant("stored workflow kind")),
         }
     }

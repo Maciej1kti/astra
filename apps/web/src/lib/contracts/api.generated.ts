@@ -221,6 +221,7 @@ export interface ApiContracts {
           status?: "planned" | "active" | "review" | "done" | "cancelled";
           priority?: "normal" | "high";
           archived?: boolean;
+          pinned?: boolean;
           schedule?: Schedule;
           acceptance?: Acceptance;
           /**
@@ -287,6 +288,7 @@ export interface ApiContracts {
   TagSuggestions: TagSuggestions;
   TagCatalog: TagCatalog;
   TagPreviewRequest: TagPreviewRequest;
+  ProjectTagRenamePlan: ProjectTagRenamePlan;
   TagChange: TagChange;
   TagPreview: TagPreview;
   PreferencesResource: PreferencesResource;
@@ -368,6 +370,7 @@ export interface CardMetadata {
   priority: "normal" | "high";
   position: string;
   archived: boolean;
+  pinned?: boolean;
   schedule?: Schedule;
   acceptance?: Acceptance;
   /**
@@ -710,6 +713,37 @@ export interface TagCatalog {
 export interface TagPreviewRequest {
   source: string;
   target: string;
+}
+export interface ProjectTagRenamePlan {
+  plan_id: string;
+  project_id: string;
+  source: string;
+  target: string;
+  expires_at: string;
+  /**
+   * @minItems 1
+   * @maxItems 50000
+   */
+  changes: [
+    {
+      card_id: string;
+      title: string;
+      version: string;
+      /**
+       * @maxItems 20
+       */
+      labels: string[];
+    },
+    ...{
+      card_id: string;
+      title: string;
+      version: string;
+      /**
+       * @maxItems 20
+       */
+      labels: string[];
+    }[]
+  ];
 }
 export interface TagChange {
   project_id: string;

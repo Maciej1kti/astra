@@ -163,3 +163,6 @@ mod maintenance;
 
 #[path = "engine/git.rs"]
 mod git;
+
+#[path = "engine/tags.rs"]
+mod tags;

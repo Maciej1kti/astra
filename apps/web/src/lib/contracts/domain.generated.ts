@@ -103,6 +103,7 @@ export interface CardMetadata {
   priority: "normal" | "high";
   position: Position;
   archived: boolean;
+  pinned?: boolean;
   schedule?: Schedule;
   /**
    * @maxItems 20

@@ -15,6 +15,7 @@ use project_store::{
 };
 use rusqlite::params;
 use serde_json::{Value, json};
+use std::collections::HashSet;
 impl Engine {
     pub fn mutate_workspace(
         &self,
@@ -115,6 +116,16 @@ impl Engine {
         let mut references = Vec::new();
         match WorkspaceChange::decode(section, payload)? {
             WorkspaceChange::Focus(items) => {
+                let current = self.source_focus(&workspace)?;
+                let keys = |values: &[project_domain::models::FocusRef]| {
+                    values
+                        .iter()
+                        .map(|item| (item.project_id.clone(), item.card_id.clone()))
+                        .collect::<HashSet<_>>()
+                };
+                if keys(&items) != keys(&current) {
+                    return reject(409, "FOCUS_MEMBERSHIP_CHANGED");
+                }
                 for item in &items {
                     let project = item.project_id.as_str();
                     let id = item.card_id.as_str();
@@ -129,14 +140,6 @@ impl Engine {
                         Ok(card) => card,
                         Err(error) => return self.journal.reject_error(&command, error, now),
                     };
-                    let project_domain::models::Document::Card { metadata, .. } =
-                        card.document.get()
-                    else {
-                        return Err(AppError::invariant("focus source kind"));
-                    };
-                    if metadata.archived {
-                        return reject(409, "FOCUS_TARGET_ARCHIVED");
-                    }
                     references.push(json!({"project_id":project,"card_id":id,"version":card.version,"path":store.directory.path()}));
                 }
                 workspace.focus = items;

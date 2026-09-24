@@ -6,11 +6,16 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Source-backed Focus and project tags](2026-09-24-source-backed-content.md)
+move pin membership into card source files and derive each project's tag catalog
+from card labels. Rename/merge is one recoverable project job. The local gate,
+broad HTTPS smoke, planning browser check and all 11 release Chromium regression
+suites pass. Cross-host source pin migration and verification remain in progress.
+
 [Cross-host project source sync](2026-09-24-cross-host-project-sync.md) tracks the
 shared `loai` project data in Git on Linux and Mac Mini. Both daemons validate
-the same project source and report healthy indexes. Focus pin membership still
-lives in host-local workspace state and differs across hosts; a source-backed
-design remains open.
+the same project source and report healthy indexes. Its original Focus pin
+lists differed across hosts; migration to source pins is tracked above.
 
 [Manual tailnet access](2026-09-23-manual-tailnet-access.md) lets the test
 launcher bind HTTPS to this Mac's verified Tailscale IPv4 address for phone

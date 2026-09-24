@@ -64,7 +64,7 @@ pub enum Action {
         #[command(subcommand)]
         action: Focus,
     },
-    /// Manage the workspace tag vocabulary and preview versioned card changes.
+    /// Read and rename tags used by the explicitly selected project.
     Tags {
         #[command(subcommand)]
         action: Tags,
@@ -248,21 +248,18 @@ pub enum Focus {
 }
 #[derive(Subcommand)]
 pub enum Tags {
-    /// Read exact names and source usage, including archived cards.
+    /// Read exact names and source usage, including archived cards in this project.
     List,
-    /// Preview only. Apply reviewed rows using card set and their returned versions.
+    /// Prepare one project-wide rename or merge; returns a short-lived plan ID.
     Preview {
         #[arg(long)]
         source: String,
         #[arg(long)]
         target: String,
     },
-    /// Replace only the vocabulary using a JSON object containing tags.
-    Set {
-        #[arg(long)]
-        input: PathBuf,
-        #[arg(long)]
-        if_version: String,
+    /// Apply a reviewed plan as one recoverable project job.
+    Rename {
+        plan_id: String,
         #[command(flatten)]
         identity: Identity,
     },
@@ -299,34 +296,6 @@ impl Action {
         project: Option<&Path>,
     ) -> Result<Request, Error> {
         match self {
-            Self::Tags { action: Tags::List } => {
-                return Ok(read("/api/v1/workspace/tags".into()));
-            }
-            Self::Tags {
-                action: Tags::Preview { source, target },
-            } => {
-                return Ok(Request::query(
-                    "POST",
-                    "/api/v1/workspace/tags/preview",
-                    Some(json!({"source":source,"target":target})),
-                ));
-            }
-            Self::Tags {
-                action:
-                    Tags::Set {
-                        input,
-                        if_version,
-                        identity,
-                    },
-            } => {
-                return Ok(write(
-                    "PUT",
-                    "/api/v1/workspace/tags".into(),
-                    input::json(&input)?,
-                    Some(if_version),
-                    identity,
-                ));
-            }
             Self::Focus { action: Focus::Get } => {
                 return Ok(read("/api/v1/workspace/focus".into()));
             }
@@ -371,6 +340,26 @@ impl Action {
             Self::Git => read(format!("{root}/git")),
             Self::Validate { .. } => read(format!("{root}/validation")),
             Self::Context { max_bytes } => read(format!("{root}/context?max_bytes={max_bytes}")),
+            Self::Tags { action: Tags::List } => read(format!("{root}/tags")),
+            Self::Tags {
+                action: Tags::Preview { source, target },
+            } => Request::query(
+                "POST",
+                format!("{root}/tags/preview"),
+                Some(json!({"source":source,"target":target})),
+            ),
+            Self::Tags {
+                action: Tags::Rename { plan_id, identity },
+            } => {
+                super::uuid4(&plan_id)?;
+                write(
+                    "POST",
+                    format!("{root}/tags/rename"),
+                    json!({"plan_id":plan_id}),
+                    None,
+                    identity,
+                )
+            }
             Self::Cards { page: p } => read(page(format!("{root}/cards"), p)),
             Self::Reports { page: p } => read(page(format!("{root}/updates"), p)),
             Self::Card { action } => card(format!("{root}/cards"), action)?,

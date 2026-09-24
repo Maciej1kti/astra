@@ -73,11 +73,11 @@ and Gantt keep their own pagination policy. Typed widget adapters convert inclus
 domain dates into vendor events/tasks without modifying
 source rows. Gantt gesture activity is passed through its instance context.
 
-[Tag review](../apps/web/src/features/tags/tag-review.svelte.ts) owns catalog
-commands, preview, individual card retries and completion. `TagManager` owns
-rendering, filtering, focus and close/clipboard presentation. A partially completed
-batch retains independent command identities and never reports completion merely
-because one card saved.
+`TagManager` reads exact labels from the selected project's cards and prepares
+one durable rename workflow for that project. The workflow checks source bytes
+before each write and retains its command identity through retries. `TagPicker`
+suggests labels from the current project. The older workspace vocabulary API
+remains available for existing clients but is not used by the current UI.
 
 ## Rust application
 

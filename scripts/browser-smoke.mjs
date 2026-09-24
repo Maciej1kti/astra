@@ -1180,6 +1180,20 @@ try {
     },
     { project_id: plan.project_id, card_id: typedId },
   ];
+  const pinFile = join(temp, "focus-pin.json");
+  await writeFile(pinFile, JSON.stringify({ set: { pinned: true } }));
+  for (const cardId of [focusNeighbor.result.resource.metadata.id, typedId]) {
+    const path = `/api/v1/projects/${plan.project_id}/cards/${cardId}`;
+    cli(
+      "command",
+      "PATCH",
+      path,
+      "--json-file",
+      pinFile,
+      "--if-version",
+      cli("get", path).version,
+    );
+  }
   const focusFile = join(temp, "focus.json");
   await writeFile(focusFile, JSON.stringify({ items: focusItems }));
   cli(

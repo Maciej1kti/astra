@@ -10,6 +10,14 @@ fn workspace_writes_replay_and_recover_without_overwriting_external_changes() {
     let id = card.body["result"]["resource"]["metadata"]["id"]
         .as_str()
         .unwrap();
+    let pinned = patch(
+        &engine,
+        &project,
+        id,
+        card.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":true}}),
+    );
+    assert_eq!(pinned.http_status, 200);
     let project_application::Versioned { value: _, version } = engine.workspace().unwrap();
     let request = Uuid::now_v7().to_string();
     let epoch = engine.journal.epoch.clone();
@@ -77,6 +85,51 @@ fn workspace_writes_replay_and_recover_without_overwriting_external_changes() {
         "calendar"
     );
     assert!(engine.journal.has_pending("workspace").unwrap());
+}
+
+#[test]
+fn source_pin_is_visible_in_another_workspace_and_local_order_cannot_change_membership() {
+    let env = Environment::new();
+    let first = env.engine();
+    let project = register(&first, &env.path());
+    let created = create(&first, &project, "Shared pin");
+    let card = created.body["result"]["id"].as_str().unwrap();
+    let pinned = patch(
+        &first,
+        &project,
+        card,
+        created.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":true}}),
+    );
+    assert_eq!(pinned.http_status, 200);
+    assert_eq!(
+        first.focus_resource().unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+
+    Directory::open(&env.root)
+        .unwrap()
+        .child("other-state", true)
+        .unwrap();
+    drop(first);
+    let other = Engine::open(&env.root.join("other-state")).unwrap();
+    assert_eq!(register(&other, &env.path()), project);
+    let remote = other.focus_resource().unwrap();
+    assert_eq!(remote["items"][0]["card_id"], card);
+    let rejected = other
+        .mutate_workspace(
+            "focus",
+            &json!({"items":[]}),
+            &Uuid::now_v7().to_string(),
+            &other.journal.epoch,
+            remote["version"].as_str(),
+        )
+        .unwrap();
+    assert_eq!(rejected.body["error"]["code"], "FOCUS_MEMBERSHIP_CHANGED");
+    assert_eq!(other.focus_resource().unwrap()["items"][0]["card_id"], card);
 }
 
 #[test]

@@ -1234,7 +1234,7 @@ paths:
       tags:
       - workspace
       summary: getFocus
-      description: ''
+      description: Membership comes from pinned card source metadata; workspace entries only rank the returned cards.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -1258,7 +1258,7 @@ paths:
       tags:
       - workspace
       summary: replaceFocus
-      description: ''
+      description: Reorder exactly the current source-pinned card set. Pin or unpin through a versioned CardPatch.
       responses:
         '408':
           $ref: '#/components/responses/RequestTimeout'
@@ -1345,6 +1345,87 @@ paths:
         '409': *id001
         '412': *id006
         '428': *id007
+        '410': *id002
+        '422': *id003
+        '503': *id004
+        '507': *id005
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/projects/{project_id}/tags:
+    get:
+      operationId: getProjectTags
+      tags: [projects]
+      summary: Read exact label usage from this project's card sources
+      parameters:
+      - $ref: '#/components/parameters/project_id'
+      responses:
+        '200':
+          description: Project tag catalog
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TagCatalog'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/projects/{project_id}/tags/preview:
+    post:
+      operationId: planProjectTagRename
+      tags: [projects]
+      summary: Prepare one durable project-wide tag rename or merge
+      description: The plan records expected card bytes and collection membership. Applying it starts one recoverable job; an external source conflict stops the job for review.
+      parameters:
+      - $ref: '#/components/parameters/project_id'
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/TagPreviewRequest'}
+      responses:
+        '200':
+          description: Planned card changes
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProjectTagRenamePlan'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/projects/{project_id}/tags/rename:
+    post:
+      operationId: applyProjectTagRename
+      tags: [projects]
+      summary: Apply a reviewed project tag rename as one recoverable job
+      parameters:
+      - $ref: '#/components/parameters/project_id'
+      - $ref: '#/components/parameters/RequestID'
+      - $ref: '#/components/parameters/CommandEpoch'
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RegistrationCommit'}
+      responses:
+        '200':
+          description: Durable job result
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommandResponse'}
+        '202':
+          description: Durable accepted job; inspect its status before reporting completion
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Accepted'}
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '409': *id001
         '410': *id002
         '422': *id003
         '503': *id004
@@ -2267,6 +2348,8 @@ components:
           $ref: '#/components/schemas/Position'
         archived:
           type: boolean
+        pinned:
+          type: boolean
         schedule:
           $ref: '#/components/schemas/Schedule'
         acceptance:
@@ -2732,6 +2815,8 @@ components:
                 - normal
                 - high
               archived: &id013
+                type: boolean
+              pinned:
                 type: boolean
               schedule: &id014
                 $ref: '#/components/schemas/Schedule'
@@ -3485,6 +3570,33 @@ components:
       properties:
         source: {$ref: '#/components/schemas/TagName'}
         target: {$ref: '#/components/schemas/TagName'}
+    ProjectTagRenamePlan:
+      type: object
+      additionalProperties: false
+      required: [plan_id, project_id, source, target, changes, expires_at]
+      properties:
+        plan_id: {$ref: '#/components/schemas/UUID'}
+        project_id: {$ref: '#/components/schemas/UUID'}
+        source: {$ref: '#/components/schemas/TagName'}
+        target: {$ref: '#/components/schemas/TagName'}
+        expires_at: {$ref: '#/components/schemas/Instant'}
+        changes:
+          type: array
+          minItems: 1
+          maxItems: 50000
+          items:
+            type: object
+            additionalProperties: false
+            required: [card_id, title, version, labels]
+            properties:
+              card_id: {$ref: '#/components/schemas/UUID'}
+              title: {type: string}
+              version: {$ref: '#/components/schemas/Version'}
+              labels:
+                type: array
+                maxItems: 20
+                uniqueItems: true
+                items: {$ref: '#/components/schemas/TagName'}
     TagChange:
       type: object
       additionalProperties: false

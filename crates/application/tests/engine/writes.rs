@@ -405,16 +405,13 @@ fn card_delete_requires_explicit_focus_removal() {
     let project = register(&engine, &env.path());
     let created = create(&engine, &project, "Focused card");
     let id = created.body["result"]["id"].as_str().unwrap();
-    let workspace = engine.workspace().unwrap();
-    engine
-        .mutate_workspace(
-            "focus",
-            &json!({"items":[{"project_id":project,"card_id":id}]}),
-            &Uuid::now_v7().to_string(),
-            &engine.journal.epoch,
-            Some(&workspace.version),
-        )
-        .unwrap();
+    let pinned = patch(
+        &engine,
+        &project,
+        id,
+        created.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":true}}),
+    );
     let blocked = engine
         .delete_card(
             &project,
@@ -423,7 +420,7 @@ fn card_delete_requires_explicit_focus_removal() {
             &Uuid::now_v7().to_string(),
             &engine.journal.epoch,
             Some(
-                created.body["result"]["version"]
+                pinned.body["result"]["version"]
                     .as_str()
                     .unwrap()
                     .to_owned(),

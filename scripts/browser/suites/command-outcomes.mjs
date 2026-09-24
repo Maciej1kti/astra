@@ -188,71 +188,68 @@ await runBrowserSuite(
       await expect(
         dialog.getByRole("button", { name: "Pin to focus", exact: true }),
       ).toBeEnabled();
-      const focusBefore = focus ? cli("get", "/api/v1/workspace/focus") : null;
-      const code = archived ? "FOCUS_TARGET_ARCHIVED" : "VERSION_CONFLICT";
-      const rejected = await rejectCommand(page, {
-        path: focus ? "/api/v1/workspace/focus" : path,
-        method: focus ? "PUT" : "PATCH",
-        lost,
-        code,
-        unavailable,
-        autosave: !focus,
-        before: async () => {
-          if (archived)
-            await mutate(
-              "PATCH",
-              path,
-              { set: { archived: true } },
-              cli("get", path).version,
-            );
-          else if (focus)
-            await mutate(
-              "PUT",
-              "/api/v1/workspace/focus",
-              {
-                items: [
-                  ...focusBefore.items,
-                  { project_id: project, card_id: card.metadata.id },
-                ],
-              },
-              focusBefore.version,
-            );
-          else
-            await mutate(
-              "PATCH",
-              path,
-              { set: { title: "Changed elsewhere" } },
-              card.version,
-            );
-        },
-      });
+      const code = "VERSION_CONFLICT";
+      const prepareRejection = () =>
+        rejectCommand(page, {
+          path,
+          method: "PATCH",
+          lost,
+          code,
+          unavailable,
+          autosave: !focus,
+          before: async () => {
+            if (archived)
+              await mutate(
+                "PATCH",
+                path,
+                { set: { archived: true } },
+                cli("get", path).version,
+              );
+            else if (focus)
+              await mutate(
+                "PATCH",
+                path,
+                { set: { pinned: true } },
+                cli("get", path).version,
+              );
+            else
+              await mutate(
+                "PATCH",
+                path,
+                { set: { title: "Changed elsewhere" } },
+                card.version,
+              );
+          },
+        });
+      let rejected = focus ? null : await prepareRejection();
       await title.fill("Autosaved title — Zażółć");
       await renderedBody.click();
       await body.fill("Autosaved body\nSecond line");
       if (focus) {
         await expect(dialog.getByTestId("autosave-status")).toHaveText("Saved");
+        rejected = await prepareRejection();
+        const observed = cli("get", path);
         await dialog
           .getByRole("button", { name: "Pin to focus", exact: true })
           .click();
+        await rejected.recover(dialog);
+        assert.equal(rejected.attempts[0].version, `"${observed.version}"`);
+      } else {
+        await rejected.recover(dialog);
       }
       // Keep Description focused for resource cases: clicking recovery must
       // still work when leaving Markdown editing changes the dialog's height.
-      await rejected.recover(dialog);
       await expect(title).toHaveValue("Autosaved title — Zażółć");
       await expectBodyDraft();
       if (focus) {
         await expect(dialog).toContainText(
-          "Focus changed elsewhere. Your draft is preserved.",
+          "This resource changed since you opened it. Your draft has been kept.",
         );
         await expect(
-          dialog.getByRole("button", {
-            name: archived ? "Pin to focus" : "Remove from focus",
+          dialog.getByText("Current saved version · your draft stays above", {
             exact: true,
           }),
-        ).toBeEnabled();
-        if (archived)
-          await expect(dialog).toContainText("FOCUS_TARGET_ARCHIVED");
-        await expect(title).toBeEnabled();
+        ).toBeVisible();
         assert.equal(
           cli("get", path).metadata.title,
           "Autosaved title — Zażółć",
@@ -281,10 +278,8 @@ await runBrowserSuite(
         cli("get", path).body,
         focus ? "Autosaved body\nSecond line" : "Saved body",
       );
-      assert.equal(
-        rejected.attempts[0].version,
-        `"${focus ? focusBefore.version : card.version}"`,
-      );
+      if (!focus)
+        assert.equal(rejected.attempts[0].version, `"${card.version}"`);
       return { code, attempts: rejected.attempts, draftPreserved: true };
     }
 

@@ -1,10 +1,7 @@
 <script lang="ts">
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
-  import {
-    loadTagSuggestions,
-    invalidateTagSuggestions,
-  } from "./tag-suggestions";
+  import { getProjectTags } from "../../lib/api/tags";
   import { isAbortError } from "../../lib/api/read-requests";
   import { addTag, matchingTags, TAG_LIMIT, TAG_LENGTH_LIMIT } from "./tags";
 
@@ -13,38 +10,42 @@
     draft = $bindable(""),
     error = $bindable(""),
     disabled = false,
+    project,
   }: {
     labels?: string[];
     draft?: string;
     error?: string;
     disabled?: boolean;
+    project: string;
   } = $props();
   const id = $props.id();
   let input = $state<HTMLInputElement>();
   let expanded = $state(false);
   let active = $state(-1);
   let announcement = $state("");
-  let workspaceOptions = $state<string[]>([]);
+  let projectOptions = $state<string[]>([]);
   let catalogError = $state("");
   let catalogLoading = $state(false);
+  let catalogLoaded = false;
   let generation = 0;
   let accessLost = false;
-  const suggestions = $derived(matchingTags(workspaceOptions, labels, draft));
-  async function loadCatalog() {
-    if (accessLost) return;
+  const suggestions = $derived(matchingTags(projectOptions, labels, draft));
+  async function loadCatalog(force = false) {
+    if (accessLost || catalogLoading || (catalogLoaded && !force)) return;
     const current = ++generation;
     catalogLoading = true;
     catalogError = "";
     try {
-      const catalog = await loadTagSuggestions();
+      const catalog = await getProjectTags(project);
       if (current !== generation || accessLost) return;
-      workspaceOptions = catalog.names;
+      projectOptions = catalog.tags.map((tag) => tag.name);
+      catalogLoaded = true;
       if (!catalog.complete)
         catalogError =
           "Some project tags are unavailable. Available suggestions are shown.";
     } catch (error) {
       if (current === generation && !isAbortError(error))
-        catalogError = "Workspace tag suggestions could not be loaded.";
+        catalogError = "Project tags could not be loaded.";
     } finally {
       if (current === generation) catalogLoading = false;
     }
@@ -54,17 +55,20 @@
     const ended = () => {
       generation++;
       accessLost = true;
-      workspaceOptions = [];
+      projectOptions = [];
+      catalogLoaded = false;
       catalogLoading = false;
-      invalidateTagSuggestions(false);
     };
     const restored = () => {
       accessLost = false;
       void loadCatalog();
     };
     const changed = () => {
+      generation++;
+      catalogLoading = false;
+      catalogLoaded = false;
       if (expanded) void loadCatalog();
-      else workspaceOptions = [];
+      else projectOptions = [];
     };
     const unsubscribeSession = subscribeSession({
       ended: ended,
@@ -223,11 +227,11 @@
     </ul>
   {/if}
   {#if catalogLoading}<p class="hint" role="status">
-      Loading workspace tags…
+      Loading project tags…
     </p>{:else if catalogError}<p class="hint">
       {catalogError}
-      <button type="button" {disabled} onclick={loadCatalog}
-        >Retry workspace tags</button
+      <button type="button" {disabled} onclick={() => void loadCatalog()}
+        >Retry project tags</button
       >
     </p>{/if}
   <p class="sr-only" role="status" aria-live="polite">{announcement}</p>

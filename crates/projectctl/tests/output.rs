@@ -272,6 +272,16 @@ fn tag_preview_sends_one_read_only_post_and_classifies_failures_as_reads() {
         let socket = temp.path().join("server.sock");
         let listener = UnixListener::bind(&socket).unwrap();
         let worker = std::thread::spawn(move || {
+            let (mut resolve, _) = listener.accept().unwrap();
+            resolve
+                .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                .unwrap();
+            let mut first = [0; 8192];
+            let count = resolve.read(&mut first).unwrap();
+            assert!(first[..count].starts_with(b"POST /local/v1/projects/resolve HTTP/1.1\r\n"));
+            let body = json!({"project_id":"11111111-1111-4111-8111-111111111111"}).to_string();
+            write!(resolve,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
+            drop(resolve);
             let (mut stream, _) = listener.accept().unwrap();
             stream
                 .set_read_timeout(Some(std::time::Duration::from_secs(5)))
@@ -302,7 +312,7 @@ fn tag_preview_sends_one_read_only_post_and_classifies_failures_as_reads() {
                 .unwrap();
             let headers = String::from_utf8_lossy(&request[..end]).to_lowercase();
             assert!(
-                headers.starts_with("post /api/v1/workspace/tags/preview http/1.1\r\n"),
+                headers.starts_with("post /api/v1/projects/11111111-1111-4111-8111-111111111111/tags/preview http/1.1\r\n"),
                 "{headers}"
             );
             assert!(!headers.contains("x-request-id:"));
@@ -315,7 +325,7 @@ fn tag_preview_sends_one_read_only_post_and_classifies_failures_as_reads() {
             let body = if malformed {
                 "not JSON".into()
             } else {
-                json!({"version":"w1.example","source":"Research, discovery","target":"Reviewed","complete":true,"issues":[],"changes":[]}).to_string()
+                json!({"plan_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","project_id":"11111111-1111-4111-8111-111111111111","source":"Research, discovery","target":"Reviewed","expires_at":"2026-09-24T12:00:00Z","changes":[]}).to_string()
             };
             write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
         });
@@ -323,6 +333,8 @@ fn tag_preview_sends_one_read_only_post_and_classifies_failures_as_reads() {
             .args([
                 "--socket",
                 socket.to_str().unwrap(),
+                "--project",
+                temp.path().to_str().unwrap(),
                 "tags",
                 "preview",
                 "--source",
@@ -354,6 +366,8 @@ fn tag_preview_sends_one_read_only_post_and_classifies_failures_as_reads() {
         .args([
             "--socket",
             temp.path().join("missing.sock").to_str().unwrap(),
+            "--project",
+            temp.path().to_str().unwrap(),
             "tags",
             "preview",
             "--source",

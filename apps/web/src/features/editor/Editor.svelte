@@ -1,13 +1,11 @@
 <script lang="ts">
   import {
     getProject,
-    getFocus,
-    replaceFocus,
+    patchCard,
     markRead,
     getHistory,
   } from "../../lib/api/resources";
   import type {
-    FocusResource,
     HistoryEntry,
     CommandResponse,
   } from "../../lib/contracts/api.generated";
@@ -177,7 +175,6 @@
       }
       accessLost = true;
       history = [];
-      focus = null;
       conflict = null;
       error =
         "Your session ended. Your draft is preserved; copy it before closing, then reconnect.";
@@ -287,15 +284,11 @@
     }
   }
 
-  let focus = $state<FocusResource | null>(null);
   let history = $state<HistoryEntry[]>([]);
   let historyCursor = $state<string | null>(null);
   let historyLoaded = false;
   let pinned = $derived(
-    !!focus?.items.some(
-      (item) =>
-        item.project_id === project && item.card_id === resource?.metadata.id,
-    ),
+    resource?.type === "card" && resource.metadata.pinned === true,
   );
   onMount(() => {
     if (
@@ -305,21 +298,11 @@
       draft.common.title.trim()
     )
       queueAutosave();
-    if (draft.type === "card") {
-      if (resource) void loadFocus();
-    }
     if (draft.type !== "project")
       void getProject(project)
         .then((value) => (projectName = value.metadata.name))
         .catch(() => {});
   });
-  async function loadFocus() {
-    try {
-      focus = await getFocus();
-    } catch {
-      error = "Focus could not be refreshed. Your draft is preserved.";
-    }
-  }
   async function toggleRead() {
     if (!resource || locked) return;
     prepare(
@@ -337,21 +320,21 @@
     await transmit();
   }
   async function toggleFocus() {
-    if (!focus || !resource || locked || persistedDirty || autosave.hasWork)
+    if (
+      resource?.type !== "card" ||
+      locked ||
+      persistedDirty ||
+      autosave.hasWork
+    )
       return;
-    const items = pinned
-      ? focus.items.filter(
-          (item) =>
-            item.project_id !== project ||
-            item.card_id !== resource.metadata.id,
-        )
-      : [
-          ...focus.items,
-          { project_id: project, card_id: resource.metadata.id },
-        ];
     prepare(
-      { kind: "focus", pinned: !pinned },
-      replaceFocus({ items }, focus.version),
+      { kind: "resource" },
+      patchCard(
+        project,
+        resource.metadata.id,
+        { set: { pinned: !pinned } },
+        resource.version,
+      ),
     );
     await transmit();
   }
@@ -444,7 +427,6 @@
       !pending,
     oncommitted: (next, submittedSnapshot) => {
       if (disposed) return;
-      const created = !currentResource;
       currentResource = next;
       // Keep the live draft object so a text caret and unfinished tag/checklist
       // entries survive the ACK. The acknowledged source/version is still the
@@ -453,7 +435,6 @@
       baseline = submittedSnapshot;
       autosaveError = "";
       onautosaved?.(next);
-      if (created && next.type === "card" && !autoCreate) void loadFocus();
       if (historyLoaded) void loadHistory();
       if (autoCreate && !autosaveCreated) {
         autosaveCreated = true;
@@ -743,11 +724,7 @@
       const reason = commandErrorMessage(cause);
       error = reason;
       if (isRejectedConflict(operation.phase, cause)) {
-        if (submitted.kind === "focus") {
-          focus = null;
-          await loadFocus();
-          error = `${reason} Focus changed elsewhere. Your draft is preserved. Review the current pin state before trying again.`;
-        } else if (submitted.kind === "resource") {
+        if (submitted.kind === "resource") {
           conflict = { current: null };
           try {
             conflict = { current: await api<Resource>(path()) };
@@ -780,16 +757,8 @@
       }
       return;
     }
-    if (submitted.kind === "focus") {
-      statusMessage = submitted.pinned
-        ? "Pinned to focus. Your draft is preserved."
-        : "Removed from focus. Your draft is preserved.";
-      focus = null;
-      await loadFocus();
-    } else {
-      read = submitted.read;
-      statusMessage = read ? "Marked as read." : "Marked as unread.";
-    }
+    read = submitted.read;
+    statusMessage = read ? "Marked as read." : "Marked as unread.";
     onchanged?.();
   }
   $effect(() => {
@@ -900,13 +869,9 @@
       {#if draft.type === "card" && resource}<button
           type="button"
           onclick={toggleFocus}
-          disabled={!focus || locked || persistedDirty || autosaveWork}
+          disabled={locked || persistedDirty || autosaveWork}
           >{pinned ? "Remove from focus" : "Pin to focus"}</button
-        >{#if !focus && !busy}<button
-            type="button"
-            onclick={loadFocus}
-            disabled={locked}>Refresh focus state</button
-          >{/if}{/if}
+        >{/if}
       {#if draft.type === "card" && resource}<button
           type="button"
           onclick={requestDelete}
@@ -1061,6 +1026,7 @@
         {#if preview}<Markdown source={draft.common.body} />{/if}
       {/if}
       {#if draft.type === "card"}<CardPlanningFields
+          {project}
           bind:fields={draft.fields}
           {locked}
           bind:acceptanceError

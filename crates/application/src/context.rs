@@ -12,18 +12,17 @@ impl Engine {
             .gate
             .read()
             .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let workspace = self.workspace()?.value;
+        let focus = self
+            .source_focus_in(&workspace, Some(project))?
+            .into_iter()
+            .filter(|r| r.project_id == project)
+            .collect::<Vec<_>>();
         let handle = self.store(project)?;
         let store = handle
             .lock()
             .map_err(|_| AppError::LockPoisoned("project store"))?;
         let document = read(&store, Kind::Project, project)?;
-        let workspace = self.workspace()?.value;
-        let focus = workspace
-            .focus
-            .iter()
-            .filter(|r| r.project_id == project)
-            .cloned()
-            .collect::<Vec<_>>();
         let (counts, candidates) = self.index.with_snapshot(|db, _| {
             let mut counts = serde_json::Map::new();
             let mut candidates = Vec::new();

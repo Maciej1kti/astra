@@ -1,0 +1,9 @@
+---
+"author": {"kind":"human","label":"Codex"}
+"id": "846effb8-a91d-4bfd-93ef-d478ff81ab0b"
+"kind": "result"
+"recorded_at": "2026-09-24T11:18:28.741Z"
+"summary": "Source-backed Focus and project tags verified locally"
+"target": {"id":"00066296-2e5b-4d19-ac4c-50cfa829ab1c","type":"project"}
+---
+Focus membership now comes from the card pinned field in .project; workspace focus stores only local order. The project tag list is derived from card labels. Rename/merge uses one recoverable project workflow with source conflict checks. The full local gate, broad HTTPS smoke, planning browser test, and all 11 browser regression suites pass on Linux Chromium. Existing host-local pins still need migration to card sources on both computers before cross-host content parity is confirmed.

@@ -1,6 +1,16 @@
-//! Workspace vocabulary augments literal card labels; it never replaces their
-//! meaning or authority. Preview reads source versions and performs no writes.
-use crate::{AppError, engine::Engine, source::read, wire};
+//! Project tag names come from literal card labels. The workspace vocabulary is
+//! retained for older clients but does not govern project labels.
+use crate::{
+    AppError, Reply,
+    engine::Engine,
+    instant, now_millis,
+    source::{collection, read},
+    wire,
+    workflow::{Plan, PlanLocation, Step, Workflows},
+    workflow_kind::WorkflowKind,
+};
+use project_domain::{models::Document, validate_document};
+use project_store::document;
 use project_store::{StoreError, document::Kind};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
@@ -57,6 +67,204 @@ struct SourceCard<'a> {
 }
 
 impl Engine {
+    /// Project labels are the catalog. No second vocabulary is written.
+    pub fn project_tag_catalog(&self, project_id: &str) -> Result<Value, AppError> {
+        let _gate = self
+            .gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let mut workspace = self.workspace()?.value;
+        workspace
+            .projects
+            .retain(|entry| entry.project_id == project_id);
+        if workspace.projects.is_empty() {
+            return Err(AppError::reject(404, "PROJECT_NOT_REGISTERED"));
+        }
+        let handle = self.store(project_id)?;
+        let store = handle
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let project = read(&store, Kind::Project, project_id)?;
+        drop(store);
+        let mut tags = BTreeMap::<String, TagUsage>::new();
+        let mut catalog_limited = false;
+        let mut issues = self.scan_tag_cards(&workspace, |card| {
+            for label in card.labels {
+                if !tags.contains_key(&label) && tags.len() >= MAX_CATALOG_NAMES {
+                    catalog_limited = true;
+                    continue;
+                }
+                let tag = tags.entry(label).or_default();
+                tag.usage += 1;
+                tag.managed = true;
+                tag.projects
+                    .entry(card.project_id.to_owned())
+                    .or_insert_with(|| (card.project_name.to_owned(), 0))
+                    .1 += 1;
+            }
+        })?;
+        if catalog_limited {
+            issues.add(Some(project_id), None, "The project tag catalog reached 10,000 distinct names; additional names are not shown.");
+        }
+        let issues = issues.finish();
+        let tags = tags.into_iter().map(|(name, tag)| json!({
+            "name":name,
+            "managed":true,
+            "usage":tag.usage,
+            "projects":tag.projects.into_iter().map(|(project_id,(project_name,count))|
+                json!({"project_id":project_id,"project_name":project_name,"count":count})).collect::<Vec<_>>(),
+        })).collect::<Vec<_>>();
+        Ok(
+            json!({"version":project.version,"tags":tags,"complete":issues.is_empty(),"issues":issues}),
+        )
+    }
+
+    pub fn project_tag_rename_plan(
+        &self,
+        project_id: &str,
+        payload: &Value,
+    ) -> Result<Value, AppError> {
+        wire::validate("TagPreviewRequest", payload)?;
+        let source = payload["source"]
+            .as_str()
+            .ok_or(AppError::invariant("tag source"))?;
+        let target = payload["target"]
+            .as_str()
+            .ok_or(AppError::invariant("tag target"))?;
+        if source == target {
+            return Err(AppError::reject(422, "TAG_NAMES_IDENTICAL"));
+        }
+        if target.contains('\0') {
+            return Err(AppError::reject(422, "TAG_NAME_INVALID"));
+        }
+        let _gate = self
+            .gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let workspace = self.workspace()?.value;
+        let registration = workspace
+            .projects
+            .iter()
+            .find(|entry| entry.project_id == project_id)
+            .ok_or_else(|| AppError::reject(404, "PROJECT_NOT_REGISTERED"))?;
+        let handle = self.store(project_id)?;
+        let store = handle
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let project = read(&store, Kind::Project, project_id)?;
+        if project.document.get().status() == Some("archived") {
+            return Err(AppError::reject(409, "PROJECT_ARCHIVED"));
+        }
+        let cards = collection(&store, Kind::Card)?;
+        if cards.len() > MAX_SCANNED_CARDS {
+            return Err(AppError::reject(422, "TAG_SOURCE_LIMIT"));
+        }
+        if target.trim() != target
+            && !cards.iter().any(|card| {
+                matches!(card.document.get(), Document::Card { metadata, .. }
+                    if metadata.labels.as_ref().is_some_and(|labels| labels.iter().any(|label| label == target)))
+            })
+        {
+            return Err(AppError::reject(422, "TAG_NAME_INVALID"));
+        }
+        let cards_dir = store.directory.child("cards", false)?;
+        let mut filenames = cards_dir.names()?;
+        filenames.retain(|name| name.ends_with(".md"));
+        filenames.sort();
+        let mut changes = Vec::new();
+        let mut steps = Vec::new();
+        let now = now_millis();
+        for card in cards {
+            let Document::Card { metadata, .. } = card.document.get() else {
+                continue;
+            };
+            let Some(labels) = &metadata.labels else {
+                continue;
+            };
+            if !labels.iter().any(|name| name == source) {
+                continue;
+            }
+            let target_exists = labels.iter().any(|name| name == target);
+            let next = labels
+                .iter()
+                .filter_map(|name| {
+                    if name != source {
+                        Some(name.clone())
+                    } else if target_exists {
+                        None
+                    } else {
+                        Some(target.to_owned())
+                    }
+                })
+                .collect::<Vec<_>>();
+            let mut value = serde_json::to_value(card.document.get())
+                .map_err(|error| AppError::stored("tag rename source", error))?;
+            value["metadata"]["labels"] = json!(next);
+            value["metadata"]["updated_at"] = json!(instant(now));
+            let validated =
+                validate_document(value).map_err(|error| AppError::SourceValidation {
+                    context: "tag rename candidate",
+                    source: error,
+                })?;
+            let bytes = document::serialize(&validated)?;
+            let filename = format!("{}.md", metadata.id);
+            steps.push(Step::plan(&store.directory, &["cards", &filename], bytes)?);
+            changes.push(json!({"card_id":metadata.id,"title":metadata.title,"version":card.version,"labels":next}));
+        }
+        if changes.is_empty() {
+            return Err(AppError::reject(404, "TAG_NOT_FOUND"));
+        }
+        if steps
+            .iter()
+            .map(|step| step.after.len() + step.before.as_ref().map_or(0, Vec::len))
+            .sum::<usize>()
+            > 32 * 1024 * 1024
+        {
+            return Err(AppError::reject(422, "TAG_RENAME_TOO_LARGE"));
+        }
+        let id = Uuid::new_v4().to_string();
+        let expires_at = now + 300_000;
+        let presentation = json!({
+            "plan_id":id,"project_id":project_id,"source":source,"target":target,
+            "changes":changes,"expires_at":instant(expires_at),
+        });
+        let plan = Plan {
+            id,
+            kind: WorkflowKind::TagRename,
+            project_id: project_id.to_owned(),
+            expires_at,
+            steps,
+            collection_guard: Some((cards_dir.path().to_string_lossy().into_owned(), filenames)),
+            location: PlanLocation::maintenance(
+                &registration.path,
+                &registration.path,
+                presentation.clone(),
+            )?,
+            approved_root: None,
+        };
+        Workflows {
+            journal: &self.journal,
+        }
+        .save(&plan)?;
+        Ok(presentation)
+    }
+
+    pub fn commit_project_tag_rename(
+        &self,
+        project_id: &str,
+        plan_id: &str,
+        request: &str,
+        epoch: &str,
+    ) -> Result<Reply, AppError> {
+        let plan = Workflows {
+            journal: &self.journal,
+        }
+        .plan(plan_id)?;
+        if plan.kind != WorkflowKind::TagRename || plan.project_id != project_id {
+            return Err(AppError::reject(422, "PLAN_KIND_MISMATCH"));
+        }
+        self.commit_maintenance(plan_id, request, epoch)
+    }
     /// Lightweight suggestions use explicitly indexed observations, never rename authority.
     pub fn tag_suggestions(&self) -> Result<Value, AppError> {
         let _gate = self

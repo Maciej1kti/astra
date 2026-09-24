@@ -88,7 +88,7 @@ try {
   cli("approve", pending.id, "--challenge", pending.challenge);
   await page.getByRole("button", { name: "I approved this browser" }).click();
   await page
-    .getByRole("heading", { name: "Make room for what matters." })
+    .getByRole("region", { name: "In focus", exact: true })
     .waitFor();
 
   page.setDefaultTimeout(10000);

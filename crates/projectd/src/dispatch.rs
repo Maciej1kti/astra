@@ -159,6 +159,24 @@ pub(super) fn run(
             parameters(&input, &[])?;
             engine.tag_catalog()?
         }
+        ("GET", ["api", "v1", "projects", project, "tags"]) => {
+            parameters(&input, &[])?;
+            engine.project_tag_catalog(project)?
+        }
+        ("POST", ["api", "v1", "projects", project, "tags", "preview"]) => {
+            parameters(&input, &[])?;
+            engine.project_tag_rename_plan(project, &input.body)?
+        }
+        ("POST", ["api", "v1", "projects", project, "tags", "rename"]) => {
+            parameters(&input, &[])?;
+            wire::validate("RegistrationCommit", &input.body)?;
+            let plan = input.body["plan_id"]
+                .as_str()
+                .ok_or_else(|| AppError::reject(422, "VALIDATION_FAILED"))?;
+            return Ok(response(
+                engine.commit_project_tag_rename(project, plan, request_id, epoch)?,
+            ));
+        }
         ("POST", ["api", "v1", "workspace", "tags", "preview"]) => {
             parameters(&input, &[])?;
             engine.tag_preview(&input.body)?
@@ -409,13 +427,7 @@ pub(super) fn run(
         {
             return mutate(engine, &input, project, kind(collection)?, Some(id));
         }
-        ("GET", ["api", "v1", "workspace", "focus"]) => {
-            let project_application::Versioned {
-                value: workspace,
-                version,
-            } = engine.workspace()?;
-            json!({"items":workspace.focus,"version":version})
-        }
+        ("GET", ["api", "v1", "workspace", "focus"]) => engine.focus_resource()?,
         ("GET", ["api", "v1", "workspace", "preferences"]) => {
             let project_application::Versioned {
                 value: workspace,

@@ -1,4 +1,4 @@
-/** Real paired browser -> HTTPS daemon -> synthetic source files. */
+/** Project-scoped tags through a paired browser and real source files. */
 import { runBrowserSuite } from "../runtime.mjs";
 import { expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
@@ -7,103 +7,71 @@ import assert from "node:assert/strict";
 
 await runBrowserSuite(
   async ({ config, cli, runtime, evidence, browser, newContext, pair }) => {
-    const commandFile = join(runtime, "stage2-tag-command.json");
+    const project = config.projects[0].id;
+    const other = config.projects[1].id;
+    const base = `/api/v1/projects/${project}`;
+    const commandFile = join(runtime, "tag-command.json");
+    const results = [];
+    const errors = [];
+    const context = await newContext();
+    const page = await context.newPage();
+    page.setDefaultTimeout(15000);
+    page.on("pageerror", (error) => errors.push(error.message));
+    const manager = () =>
+      page.getByRole("dialog", { name: "Manage project tags" });
+    const get = (id) => cli("get", `${base}/cards/${id}`);
+    const catalog = (id = project) => cli("get", `/api/v1/projects/${id}/tags`);
+    const unique = (name) => `${name} ${Date.now().toString(36)}`;
+
     async function mutate(method, path, payload, version) {
       await writeFile(commandFile, JSON.stringify(payload), { mode: 0o600 });
       const args = ["command", method, path, "--json-file", commandFile];
       if (version) args.push("--if-version", version);
       return cli(...args).result;
     }
-    const project = config.projects[0].id;
-    const base = `/api/v1/projects/${project}`;
-    const get = (id) => cli("get", `${base}/cards/${id}`);
-    const create = async (payload) =>
-      (await mutate("POST", `${base}/cards`, payload)).id;
-    const catalog = () => cli("tags", "list");
-    const unique = (label) => `${label} ${Date.now().toString(36)}`;
-    const results = [],
-      errors = [];
-    const context = await newContext();
-    const page = await context.newPage();
-    page.setDefaultTimeout(15000);
-    page.on("pageerror", (error) => errors.push(error.message));
-    const manager = () =>
-      page.getByRole("dialog", { name: "Manage tags", exact: true });
-    async function shot(name) {
-      await page.screenshot({
-        path: join(evidence, `${name}.png`),
-        fullPage: false,
-      });
+    async function create(projectId, payload) {
+      return (
+        await mutate("POST", `/api/v1/projects/${projectId}/cards`, payload)
+      ).id;
     }
-    async function open() {
-      await page.goto(`${config.origin}/?view=list&project=${project}`);
-      await page.getByLabel("Project", { exact: true }).waitFor();
-      await page
-        .getByRole("button", { name: "Workspace settings", exact: true })
-        .click();
-      await page
-        .getByRole("button", { name: "Manage tags", exact: true })
-        .click();
-      await manager().getByLabel("Find tags", { exact: true }).waitFor();
+    async function open(projectId = project) {
+      await page.goto(`${config.origin}/?view=list&project=${projectId}`);
+      await page.getByRole("button", { name: "Workspace settings" }).click();
+      await page.getByRole("button", { name: "Manage tags" }).click();
+      await expect(
+        manager().getByLabel("Project", { exact: true }),
+      ).toHaveValue(projectId);
+      await expect(
+        manager().getByRole("list", { name: "Project tags" }),
+      ).toBeVisible();
     }
     async function close() {
       if (!(await manager().count())) return;
       await manager()
-        .getByRole("button", { name: "Close tag manager", exact: true })
+        .getByRole("button", { name: "Close tag manager" })
         .click();
-      const discard = manager().getByRole("button", {
-        name: "Close review",
-        exact: true,
-      });
-      if (await discard.isVisible()) await discard.click();
       await manager().waitFor({ state: "hidden" });
     }
-    async function add(name) {
-      await manager().getByLabel("New catalog tag", { exact: true }).fill(name);
-      await manager()
-        .getByRole("button", { name: "Create tag", exact: true })
-        .click();
-      await expect(
-        manager().getByLabel("New catalog tag", { exact: true }),
-      ).toHaveValue("");
-      assert(catalog().tags.some((tag) => tag.name === name && tag.managed));
-    }
     async function preview(source, target) {
-      await manager().getByLabel("Find tags", { exact: true }).fill(source);
       await manager()
-        .getByRole("button", {
-          name: `Rename or merge tag ${source}`,
-          exact: true,
-        })
+        .getByRole("listitem")
+        .filter({ hasText: source })
+        .getByRole("button", { name: "Rename / merge" })
         .click();
-      await manager()
-        .getByLabel("Destination tag", { exact: true })
-        .fill(target);
-      await manager()
-        .getByRole("button", { name: "Preview changes", exact: true })
-        .click();
-      await manager()
-        .getByRole("region", { name: "Tag change preview" })
-        .waitFor();
-    }
-    async function apply(count) {
-      await manager()
-        .getByRole("button", {
-          name: `Apply to ${count} ${count === 1 ? "card" : "cards"}`,
-          exact: true,
-        })
-        .click();
+      await manager().getByLabel("Destination tag").fill(target);
+      await manager().getByRole("button", { name: "Preview changes" }).click();
       await expect(
-        manager().getByRole("button", { name: "Close tag manager" }),
-      ).toBeEnabled();
+        manager().getByRole("region", { name: "Tag rename preview" }),
+      ).toBeVisible();
     }
     async function check(id, name, run) {
       try {
-        const detail = await run();
-        results.push({ id, name, status: "pass", detail });
+        results.push({ id, name, status: "pass", detail: await run() });
       } catch (cause) {
         results.push({ id, name, status: "fail", error: String(cause) });
-        await shot(`${id}-failure`).catch(() => {});
+        await page
+          .screenshot({ path: join(evidence, `${id}-failure.png`) })
+          .catch(() => {});
       } finally {
         await close().catch(() => {});
         console.log(JSON.stringify(results.at(-1)));
@@ -116,344 +84,122 @@ await runBrowserSuite(
 
     try {
       await pair(page);
-      await context.storageState({ path: join(runtime, "browser-state.json") });
-
       await check(
         "T01",
-        "Catalog create and workspace suggestion on another project",
+        "Project catalog and suggestions do not leak across projects",
         async () => {
-          const name = unique("Reusable design, QA");
-          await open();
-          await add(name);
-          await shot("T01-catalog");
-          await close();
-          const other = config.projects[1].id;
-          const card = (
-            await mutate("POST", `/api/v1/projects/${other}/cards`, {
-              title: unique("Workspace suggestion probe"),
-            })
-          ).id;
-          await page.goto(
-            `${config.origin}/?view=list&project=${other}&type=card&resource=${card}`,
-          );
-          const editor = page.getByRole("dialog", {
-            name: "Edit resource",
-            exact: true,
+          const name = unique("Local tag");
+          const card = await create(project, {
+            title: unique("Tag owner"),
+            labels: [name],
           });
-          await editor
-            .getByLabel("Labels", { exact: true })
-            .fill(name.slice(0, 10));
-          await editor.getByRole("option", { name, exact: true }).click();
-          await expect(editor.getByTestId("autosave-status")).toHaveText(
-            "Saved",
+          assert(
+            catalog().tags.some((tag) => tag.name === name && tag.usage === 1),
           );
-          await editor
-            .getByRole("button", { name: "Close editor", exact: true })
-            .click();
-          await editor.waitFor({ state: "hidden" });
-          assert.deepEqual(
-            cli("get", `/api/v1/projects/${other}/cards/${card}`).metadata
-              .labels,
-            [name],
+          assert(
+            cli(
+              "--project",
+              config.projects[0].folder,
+              "tags",
+              "list",
+            ).tags.some((tag) => tag.name === name && tag.usage === 1),
           );
-          return { name, crossProjectSuggestion: true };
+          assert(!catalog(other).tags.some((tag) => tag.name === name));
+          await open(other);
+          const otherCard = await create(other, {
+            title: unique("Suggestion probe"),
+          });
+          await close();
+          await page.goto(
+            `${config.origin}/?view=list&project=${other}&type=card&resource=${otherCard}`,
+          );
+          const editor = page.getByRole("dialog", { name: "Edit resource" });
+          await editor
+            .getByRole("combobox", { name: "Labels" })
+            .fill(name.slice(0, 8));
+          await expect(
+            editor.getByRole("option", { name, exact: true }),
+          ).toHaveCount(0);
+          assert.deepEqual(get(card).metadata.labels, [name]);
+          return { name, isolated: true };
         },
       );
 
       await check(
         "T02",
-        "Merge preserves unrelated labels, includes archived cards and finishes catalog",
+        "One project job merges active and archived card labels",
         async () => {
-          const source = unique("Merge source"),
-            target = unique("Merge target");
-          const a = await create({
-            title: unique("Merge active card"),
-            labels: [source, target, "Design, research", "Cafe\u0301"],
+          const source = unique("Source");
+          const target = unique("Target");
+          const first = await create(project, {
+            title: unique("Active"),
+            labels: [source, target, "Keep"],
           });
-          const b = await create({
-            title: unique("Merge archived card"),
-            labels: [" preserved ", source],
+          const second = await create(project, {
+            title: unique("Archived"),
+            labels: ["Before", source],
             archived: true,
           });
+          const otherCard = await create(other, {
+            title: unique("Other"),
+            labels: [source],
+          });
           await open();
-          await add(source);
-          await add(target);
           await preview(source, target);
           await expect(
             manager().getByRole("heading", { name: "2 affected cards" }),
           ).toBeVisible();
-          await shot("T02-merge-preview");
-          await apply(2);
           await manager()
-            .getByRole("button", { name: "Finish catalog change", exact: true })
+            .getByRole("button", { name: "Rename in this project" })
             .click();
           await expect(
-            manager().getByText("Tag change complete.", { exact: true }),
-          ).toBeVisible();
-          assert.deepEqual(get(a).metadata.labels, [
-            target,
-            "Design, research",
-            "Cafe\u0301",
-          ]);
-          assert.deepEqual(get(b).metadata.labels, [" preserved ", target]);
-          assert.equal(get(b).metadata.archived, true);
-          assert(!catalog().tags.some((tag) => tag.name === source));
-          assert(
-            catalog().tags.some(
-              (tag) => tag.name === target && tag.managed && tag.usage === 2,
-            ),
+            manager().getByRole("button", { name: "Close tag manager" }),
+          ).toBeEnabled();
+          assert.deepEqual(get(first).metadata.labels, [target, "Keep"]);
+          assert.deepEqual(get(second).metadata.labels, ["Before", target]);
+          assert.equal(get(second).metadata.archived, true);
+          assert.deepEqual(
+            cli("get", `/api/v1/projects/${other}/cards/${otherCard}`).metadata
+              .labels,
+            [source],
           );
-          await shot("T02-merge-complete");
-          return { cards: [a, b], archivedPreserved: true };
+          assert(!catalog().tags.some((tag) => tag.name === source));
+          return { first, second, otherCard };
         },
       );
 
       await check(
         "T03",
-        "Concurrent card edit produces partial result without overwrite and requires new preview",
+        "An edit after preview rejects the job before changing any card",
         async () => {
-          const source = unique("Conflict source"),
-            target = unique("Conflict target");
-          const a = await create({
-            title: unique("Conflict card"),
-            labels: [source, "Keep"],
+          const source = unique("Conflict");
+          const target = unique("Renamed");
+          const first = await create(project, {
+            title: unique("First"),
+            labels: [source],
           });
-          const b = await create({
-            title: unique("Unaffected concurrent card"),
+          const second = await create(project, {
+            title: unique("Second"),
             labels: [source],
           });
           await open();
-          await add(source);
           await preview(source, target);
-          const before = get(a);
+          const before = get(second);
           await mutate(
             "PATCH",
-            `${base}/cards/${a}`,
-            {
-              set: {
-                labels: [...before.metadata.labels, "Concurrent addition"],
-                title: "External title preserved",
-              },
-            },
-            before.version,
-          );
-          await apply(2);
-          await expect(
-            manager().getByText(
-              "Card changed since preview. Review a new preview before retrying.",
-              { exact: true },
-            ),
-          ).toBeVisible();
-          assert.equal(get(a).metadata.title, "External title preserved");
-          assert.deepEqual(get(a).metadata.labels, [
-            source,
-            "Keep",
-            "Concurrent addition",
-          ]);
-          assert.deepEqual(get(b).metadata.labels, [target]);
-          assert(
-            catalog().tags.some((tag) => tag.name === source && tag.managed),
-          );
-          await expect(
-            manager().getByRole("button", {
-              name: "Finish catalog change",
-              exact: true,
-            }),
-          ).toHaveCount(0);
-          await shot("T03-partial-conflict");
-          await manager()
-            .getByRole("button", { name: "Review new preview", exact: true })
-            .click();
-          await manager()
-            .getByRole("button", { name: "Preview changes", exact: true })
-            .click();
-          await expect(
-            manager().getByRole("heading", { name: "1 affected card" }),
-          ).toBeVisible();
-          await apply(1);
-          await manager()
-            .getByRole("button", { name: "Finish catalog change", exact: true })
-            .click();
-          await expect(
-            manager().getByText("Tag change complete.", { exact: true }),
-          ).toBeVisible();
-          assert.deepEqual(get(a).metadata.labels, [
-            target,
-            "Keep",
-            "Concurrent addition",
-          ]);
-          return { conflictPreserved: true, explicitRepreview: true };
-        },
-      );
-
-      await check(
-        "T04",
-        "Lost card response recovers with same command identity and one history entry",
-        async () => {
-          const source = unique("Uncertain source"),
-            target = unique("Uncertain target");
-          const a = await create({
-            title: unique("Uncertain merge card"),
-            labels: [source],
-          });
-          const historyBefore = cli("get", `${base}/cards/${a}/history`).items
-            .length;
-          await open();
-          await add(source);
-          await preview(source, target);
-          const seen = [];
-          const matcher = `**${base}/cards/${a}`;
-          await page.route(matcher, async (route) => {
-            if (route.request().method() !== "PATCH") return route.continue();
-            seen.push({
-              id: route.request().headers()["x-request-id"],
-              epoch: route.request().headers()["x-command-epoch"],
-              body: route.request().postData(),
-              version: route.request().headers()["if-match"],
-            });
-            const response = await route.fetch();
-            if (seen.length === 1) {
-              assert(response.ok());
-              return route.abort("failed");
-            }
-            return route.fulfill({ response });
-          });
-          try {
-            await apply(1);
-            await expect(
-              manager().getByRole("button", {
-                name: "Retry same card command",
-                exact: true,
-              }),
-            ).toBeEnabled();
-            assert.deepEqual(get(a).metadata.labels, [target]);
-            await manager()
-              .getByRole("button", {
-                name: "Retry same card command",
-                exact: true,
-              })
-              .click();
-            await expect(
-              manager().getByRole("button", {
-                name: "Finish catalog change",
-                exact: true,
-              }),
-            ).toBeEnabled();
-            assert.equal(seen.length, 2);
-            assert.deepEqual(seen[0], seen[1]);
-            assert.equal(
-              cli("get", `${base}/cards/${a}/history`).items.length,
-              historyBefore + 1,
-            );
-            await shot("T04-idempotent-recovery");
-            return {
-              retries: seen.length,
-              sameIdentity: true,
-              oneHistoryEntry: true,
-            };
-          } finally {
-            await page.unroute(matcher);
-          }
-        },
-      );
-
-      await check(
-        "T05",
-        "Workspace version conflict preserves new tag draft until explicit refresh",
-        async () => {
-          const name = unique("Catalog conflict draft");
-          await open();
-          const before = cli("get", "/api/v1/workspace/preferences");
-          await mutate(
-            "PATCH",
-            "/api/v1/workspace/preferences",
-            {
-              preferences: {
-                week_start:
-                  before.preferences.week_start === "sunday"
-                    ? "monday"
-                    : "sunday",
-              },
-            },
+            `${base}/cards/${second}`,
+            { set: { title: "External edit" } },
             before.version,
           );
           await manager()
-            .getByLabel("New catalog tag", { exact: true })
-            .fill(name);
-          await manager()
-            .getByRole("button", { name: "Create tag", exact: true })
+            .getByRole("button", { name: "Rename in this project" })
             .click();
           await expect(manager().getByRole("alert")).toContainText(
-            "workspace changed",
+            "PLAN_STALE",
           );
-          await expect(
-            manager().getByLabel("New catalog tag", { exact: true }),
-          ).toHaveValue(name);
-          assert(!catalog().tags.some((tag) => tag.name === name));
-          await manager()
-            .getByRole("button", { name: "Refresh catalog", exact: true })
-            .click();
-          await expect(
-            manager().getByRole("button", { name: "Create tag", exact: true }),
-          ).toBeEnabled();
-          await manager()
-            .getByRole("button", { name: "Create tag", exact: true })
-            .click();
-          await expect(
-            manager().getByLabel("New catalog tag", { exact: true }),
-          ).toHaveValue("");
-          assert(
-            catalog().tags.some((tag) => tag.name === name && tag.managed),
-          );
-          return { staleRejected: true, draftPreserved: true };
-        },
-      );
-
-      await check(
-        "T06",
-        "Historical destination spelling and mobile dark layout remain usable",
-        async () => {
-          const source = unique("Exact source"),
-            target = ` Historical ${Date.now().toString(36)} `;
-          const a = await create({
-            title: unique("Literal destination card"),
-            labels: [source, target, "Unrelated"],
-          });
-          await page.setViewportSize({ width: 390, height: 844 });
-          await page.emulateMedia({ colorScheme: "dark" });
-          await open();
-          await add(source);
-          await preview(source, target);
-          await expect(
-            manager().getByLabel("Destination tag", { exact: true }),
-          ).toHaveValue(target);
-          assert.equal(
-            await manager().evaluate(
-              (element) => element.scrollWidth <= element.clientWidth + 1,
-            ),
-            true,
-          );
-          await shot("T06-mobile-dark-preview");
-          await apply(1);
-          assert.deepEqual(get(a).metadata.labels, [target, "Unrelated"]);
-          await manager()
-            .getByRole("button", { name: "Close tag manager", exact: true })
-            .click();
-          await expect(
-            manager().getByRole("button", {
-              name: "Keep reviewing",
-              exact: true,
-            }),
-          ).toBeFocused();
-          await manager()
-            .getByRole("button", { name: "Keep reviewing", exact: true })
-            .click();
-          await expect(manager()).toBeVisible();
-          return {
-            exactDestination: true,
-            horizontalOverflow: false,
-            closeGuard: true,
-          };
+          assert.deepEqual(get(first).metadata.labels, [source]);
+          assert.deepEqual(get(second).metadata.labels, [source]);
+          return { staleRejected: true };
         },
       );
     } finally {
@@ -464,14 +210,6 @@ await runBrowserSuite(
           null,
           2,
         ),
-      );
-      console.log(
-        JSON.stringify({
-          passed: results.filter((item) => item.status === "pass").length,
-          total: results.length,
-          errors,
-          browser: browser.version(),
-        }),
       );
       if (results.some((item) => item.status !== "pass") || errors.length)
         process.exitCode = 1;

@@ -28,8 +28,7 @@ impl Engine {
         epoch: &str,
         expected: Option<String>,
     ) -> Result<Reply, AppError> {
-        // A deletion changes source membership and is guarded by workspace
-        // focus state, so the complete operation uses the exclusive gate.
+        // A deletion changes source membership and must recheck the card pin.
         let _gate = self
             .gate
             .write()
@@ -73,11 +72,11 @@ impl Engine {
         if let Err(error) = preflight_card(&store, card_id, command.expected.as_deref()) {
             return self.journal.reject_error(&command, error, now);
         }
-        let workspace = self.workspace()?.value;
-        let focused = workspace
-            .focus
-            .iter()
-            .any(|focus| focus.project_id == project_id && focus.card_id == card_id);
+        let focused = matches!(
+            read(&store, Kind::Card, card_id)?.document.get(),
+            project_domain::models::Document::Card { metadata, .. }
+                if metadata.pinned == Some(true)
+        );
         if focused {
             return reject(focus_blocker(request_id, project_id, card_id));
         }
@@ -150,7 +149,7 @@ fn focus_blocker(request_id: &str, project_id: &str, card_id: &str) -> Reply {
     reply.body["error"]["details"] = json!({
         "project_id": project_id,
         "card_id": card_id,
-        "message": "Remove the card from workspace focus before deleting it.",
+        "message": "Unpin the card before deleting it.",
     });
     reply
 }
@@ -181,10 +180,10 @@ fn preflight_card(
 }
 
 /// Called by the startup owner while holding the exclusive workspace gate.
-/// It rechecks focus after a crash. Returning false makes Writer mark the
+/// It rechecks the source pin after a crash. Returning false makes Writer mark the
 /// intent needs_review.
 pub(crate) fn recovery_guard(
-    engine: &Engine,
+    _engine: &Engine,
     store: &ProjectStore,
     intent: &Intent,
 ) -> Result<bool, AppError> {
@@ -196,13 +195,14 @@ pub(crate) fn recovery_guard(
         // after-state must stop for explicit operational handling.
         return Ok(false);
     }
-    let workspace = engine.workspace()?.value;
-    if workspace.focus.iter().any(|focus| {
-        focus.project_id == intent.command.target.project_id
-            && focus.card_id == intent.command.target.id
-    }) {
-        return Ok(false);
+    match read(store, Kind::Card, &intent.command.target.id) {
+        Ok(card) if matches!(card.document.get(), project_domain::models::Document::Card { metadata, .. } if metadata.pinned == Some(true)) =>
+        {
+            return Ok(false);
+        }
+        Err(AppError::Rejected(reply)) if reply.http_status == 404 => {}
+        Err(error) => return Err(error),
+        _ => {}
     }
-    let _ = store;
     Ok(true)
 }

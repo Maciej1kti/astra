@@ -314,6 +314,9 @@
         "archived": {
           "type": "boolean"
         },
+        "pinned": {
+          "type": "boolean"
+        },
         "schedule": {
           "$ref": "#/$defs/Schedule"
         },

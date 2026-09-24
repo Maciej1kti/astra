@@ -95,9 +95,7 @@ await runBrowserSuite(
       await expect
         .poll(
           () =>
-            requests
-              .slice(start)
-              .filter((path) => path === "/api/v1/workspace/tag-suggestions")
+            requests.slice(start).filter((path) => path === `${base}/tags`)
               .length,
         )
         .toBe(1);
@@ -144,7 +142,7 @@ await runBrowserSuite(
         .click();
       await dialog.waitFor({ state: "hidden" });
       const tagReads = requests.filter(
-        (path) => path === "/api/v1/workspace/tag-suggestions",
+        (path) => path === `${base}/tags`,
       ).length;
       await row.click();
       await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
@@ -157,15 +155,14 @@ await runBrowserSuite(
         dialog.getByRole("option", { name: "frontend", exact: true }),
       ).toBeVisible();
       await expect(
-        dialog.getByText("Loading workspace tags…", { exact: true }),
+        dialog.getByText("Loading project tags…", { exact: true }),
       ).toHaveCount(0);
       assert.equal(
-        requests.filter((path) => path === "/api/v1/workspace/tag-suggestions")
-          .length,
-        tagReads,
+        requests.filter((path) => path === `${base}/tags`).length,
+        tagReads + 1,
       );
       results.push({
-        check: "Reopening editor reuses fresh workspace tag suggestions",
+        check: "Reopening editor reads current project tag names",
         tagReads,
       });
       assert.deepEqual(errors, []);

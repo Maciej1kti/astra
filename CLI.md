@@ -75,6 +75,11 @@ JSON
 projectctl --project /absolute/project card set CARD_ID --patch-file - --if-version VERSION <<'JSON'
 {"set":{"schedule":{"start":"2026-09-10","end":"2026-09-20"},"labels":["docs","review"]}}
 JSON
+
+# Focus membership is a versioned card field stored in .project/cards/.
+projectctl --project /absolute/project card set CARD_ID --patch-file - --if-version VERSION <<'JSON'
+{"set":{"pinned":true}}
+JSON
 ```
 
 `create --input` cannot be combined with `--title` or `--body-file`.
@@ -110,8 +115,8 @@ projectctl --project /absolute/project card get CARD_ID
 projectctl --project /absolute/project card delete CARD_ID --if-version CARD_VERSION
 ```
 
-Workspace focus blocks card removal. Remove the card from focus explicitly
-first. There is no undo or restore for a deleted card. Reports can target projects or milestones; card targets are
+Focus blocks card removal. Set `pinned` to `false` on the card first.
+There is no undo or restore for a deleted card. Reports can target projects or milestones; card targets are
 rejected.
 
 Project deletion uses an explicit project ID and a reviewed directory snapshot:
@@ -206,9 +211,11 @@ resource edits, workflow submissions and status reads have distinct reply checks
 ## Other commands and scope
 
 Use `report`, `focus`, `tags`, `sessions`, `pairings`, `approve`, `deny`,
-`registration-plan` and `register` for their named workflows. `tags preview`
-does not apply a batch: review returned changes and write each card with its
-returned version. `focus set` replaces the explicitly supplied ordered list.
+`registration-plan` and `register` for their named workflows. `tags list`
+reads names used on cards in the selected project. `tags preview --source OLD
+--target NEW` returns a reviewed plan, and `tags rename PLAN_ID` submits it as
+one recoverable project job. Check the returned job before reporting completion.
+`focus set` changes only the host-local order of source-pinned cards.
 
 `add-root`/`remove-root` and `maintenance-plan`/`maintenance-apply` are local
 administrative operations. Maintenance includes normalization, order rebalance,

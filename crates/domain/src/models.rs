@@ -129,6 +129,8 @@ pub struct CardMetadata {
     pub priority: Priority,
     pub position: String,
     pub archived: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pinned: Option<bool>,
     pub created_at: String,
     pub updated_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
