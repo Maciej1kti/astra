@@ -17,3 +17,9 @@ checks for the Update modal, read state, Focus decision navigation and two
 decisions about one project. Broad HTTPS smoke passed on retry after one Board
 focus assertion failed without a code change; the planning browser test passed.
 These runs use Chromium emulation, not a physical iPhone or Safari.
+
+The verified release build was started on Linux and built and started on Mac
+Mini with its existing Node 22 runtime. Both manual HTTPS endpoints returned
+HTTP 200, and both daemons exposed `report_id` for the existing decision row in
+Focus attention. Mac Mini's web and Rust release builds passed. Both working
+trees were clean at deployment.

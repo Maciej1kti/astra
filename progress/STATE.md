@@ -10,6 +10,8 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 render existing Updates as readable records and open decision reports directly
 from Needs my attention. The full local gate, all 11 release Chromium regression
 suites, broad HTTPS smoke on retry and planning browser test pass.
+The release build runs on Linux and Mac Mini; both HTTPS endpoints and the
+decision attention response were checked after restart.
 
 [Source-backed Focus and project tags](2026-09-24-source-backed-content.md)
 move pin membership into card source files and derive each project's tag catalog
