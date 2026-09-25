@@ -1,136 +1,109 @@
 .editor .quick-pending {
   display: none;
 }
-.editor .historyentry {
-  padding: var(--space-6) 0;
+.editor-layout {
+  overflow: hidden;
+}
+.editor-context {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-label);
+  min-width: 0;
+}
+.editor-context > span:first-of-type {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.context-kind {
+  flex-shrink: 0;
+}
+.editor .draft-state {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.editor .unsaved {
+  color: var(--danger);
+}
+.editor .focus-toggle.pinned {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.editor .editor-properties {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  padding-bottom: var(--space-9);
   border-bottom: var(--stroke) solid var(--line);
 }
-.editor {
-  margin: 0 0 0 auto;
-  max-height: 100dvh;
-  max-width: 100vw;
-  height: 100dvh;
-  border: 0;
-  color: var(--ink);
-  position: fixed;
-  inset: 0 0 0 auto;
-  width: min(100%, var(--dialog-medium));
-  box-sizing: border-box;
-  background: var(--paper);
-  z-index: 21;
-  overflow: auto;
-  padding: var(--space-11);
-  box-shadow: var(--shadow-dialog);
+.editor .card-properties {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
-.editor.resource-editor {
-  inset: 50% auto auto 50%;
-  width: min(var(--dialog-large), calc(100vw - var(--space-12)));
-  height: auto;
-  max-height: min(88dvh, var(--dialog-max-height));
+.editor .editor-properties label {
   margin: 0;
-  padding: var(--space-12);
-  border: var(--stroke) solid var(--line);
-  border-radius: var(--radius-panel);
-  transform: translate(-50%, -50%);
-  box-shadow: var(--shadow-dialog);
+  color: var(--muted);
 }
-.editor.resource-editor::backdrop {
-  background: var(--backdrop);
-  backdrop-filter: blur(var(--space-4));
-}
-.editor.resource-editor header {
-  top: calc(-1 * var(--space-12));
+.editor .editor-properties input,
+.editor .editor-properties select {
+  background: var(--soft);
+  border-color: transparent;
 }
 .editor .resource-description-field {
-  margin: var(--space-9) 0;
+  margin: var(--space-10) 0;
 }
-.editor .resource-description-field .field-label {
+.editor .field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
   margin-bottom: var(--space-4);
   font-size: var(--text-label);
   font-weight: var(--weight-semibold);
 }
-.editor .resource-description-field .field-label span {
+.editor .field-label span {
   color: var(--muted);
+  font-size: var(--text-sm);
   font-weight: var(--weight-normal);
 }
 .editor .resource-description-rendered {
-  min-height: var(--description-min-height);
-  padding: var(--space-6);
-  border: var(--stroke) solid var(--line);
+  min-height: var(--tap-target);
+  padding: var(--space-4);
+  border: var(--stroke) solid transparent;
   border-radius: var(--radius-control);
-  background: var(--bg);
   cursor: text;
 }
+.editor .resource-description-rendered:hover {
+  background: var(--soft);
+}
 .editor .resource-description-rendered:focus-visible {
-  outline: var(--focus-width) solid currentColor;
+  outline: var(--focus-width) solid var(--accent-ink);
   outline-offset: var(--space-2);
 }
-.editor header,
-.editor footer,
-.editor .row {
-  display: flex;
-  gap: var(--space-8);
-  align-items: center;
-  justify-content: space-between;
-}
-.editor header {
-  position: sticky;
-  top: calc(-1 * var(--space-11));
-  z-index: 2;
-  background: var(--paper);
-  padding: var(--space-8) 0;
-  margin-bottom: var(--space-6);
-  border-bottom: var(--stroke) solid var(--line);
-}
-.editor header > div {
-  min-width: 0;
-}
-.editor header .eyebrow {
-  overflow-wrap: anywhere;
-  margin: 0 0 var(--space-2);
-}
-.editor .draft-state,
 .editor .action-status,
 .editor .empty-context {
   color: var(--muted);
-  font-size: var(--text-sm);
+  font-size: var(--text-label);
   line-height: var(--leading-body);
 }
-.editor .draft-state {
-  margin: var(--space-3) 0 0;
+.editor .empty-context {
+  margin: 0;
 }
 .editor .action-status {
   padding: var(--space-4) var(--space-5);
-  background: var(--bg);
+  background: var(--soft);
   border-radius: var(--radius-sm);
 }
-.editor h3 {
-  font-size: var(--text-card);
-  margin: var(--space-11) 0 var(--space-6);
-}
-.editor .field-title {
-  font-size: var(--text-label);
-  font-weight: var(--weight-semibold);
-  margin: var(--space-8) 0 var(--space-4);
-}
-.editor .relation-row {
+.editor .row {
   display: flex;
+  gap: var(--space-6);
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  border-bottom: var(--stroke) solid var(--line);
-  padding: var(--space-4) 0;
-  font-size: var(--text-label);
 }
-.editor .relation-row span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.editor .relation-row button {
-  flex-shrink: 0;
-}
-.editor header button {
-  font-size: var(--text-section);
+.editor .delete-confirmation .row {
+  flex-wrap: wrap;
 }
 .editor .row > label {
   flex: 1;
@@ -140,7 +113,7 @@
   display: block;
   margin: var(--space-8) 0;
   font-size: var(--text-label);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
 }
 .editor label span {
   font-weight: var(--weight-normal);
@@ -150,64 +123,70 @@
 .editor select,
 .editor textarea {
   width: 100%;
-  box-sizing: border-box;
   margin-top: var(--space-4);
 }
 .editor input[type="checkbox"] {
   width: auto;
-  margin: 0 var(--space-4) 0 0;
+  margin: 0;
 }
 .editor textarea {
   resize: vertical;
   font-family: inherit;
   line-height: var(--leading-body);
 }
-.editor fieldset {
-  min-width: 0;
-  border: var(--stroke) solid var(--line);
-  border-radius: var(--radius-control);
-  padding: 0 var(--space-7);
+.editor h3 {
+  font-size: var(--text-card);
+  margin: var(--space-10) 0 var(--space-6);
 }
-.editor legend {
-  font-size: var(--text-sm);
-  color: var(--muted);
+.editor .delete-confirmation h3 {
+  margin-top: 0;
 }
 .editor details {
   margin: var(--space-9) 0;
   font-size: var(--text-label);
 }
-.editor summary {
-  cursor: pointer;
-}
 .editor pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: var(--text-sm);
-  background: var(--bg);
+  background: var(--soft);
   padding: var(--space-6);
-}
-.editor footer {
-  position: sticky;
-  bottom: calc(-1 * var(--space-11));
-  background: var(--paper);
-  padding: var(--space-9) 0;
-  border-top: var(--stroke) solid var(--line);
-  margin-top: var(--space-10);
 }
 .editor code {
   overflow-wrap: anywhere;
   font-size: var(--text-xs);
 }
+.editor .historyentry {
+  padding: var(--space-6) 0;
+  border-bottom: var(--stroke) solid var(--line);
+}
+.editor .dialog-footer {
+  position: sticky;
+  bottom: calc(-1 * var(--space-10));
+  margin: var(--space-10) calc(-1 * var(--space-10)) calc(-1 * var(--space-10));
+}
+.editor .record-title {
+  font-size: var(--text-title);
+  margin: 0 0 var(--space-6);
+  overflow-wrap: anywhere;
+}
+.editor .record-actions {
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
 .editor .update-record-note {
   color: var(--muted);
-  font-size: var(--text-label);
+  font-size: var(--text-sm);
   line-height: var(--leading-body);
 }
 .editor .update-record dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-7);
-  margin: var(--space-10) 0;
+  margin: var(--space-9) 0;
+  padding: var(--space-8);
+  background: var(--soft);
+  border-radius: var(--radius-control);
 }
 .editor .update-record dt {
   color: var(--muted);
@@ -219,51 +198,57 @@
 }
 .editor .update-record-body {
   padding: var(--space-2) 0;
-  border-top: var(--stroke) solid var(--line);
 }
 .editor .update-record ul {
   padding-left: var(--space-9);
   overflow-wrap: anywhere;
 }
-.editor h2 {
-  margin: var(--space-2) 0;
-  font-size: var(--text-section);
-  line-height: var(--leading-tight);
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+@media (max-width: 640px) {
+  .editor .card-properties {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 520px) {
+  .editor .context-kind,
+  .editor .context-separator {
+    display: none;
+  }
+  .editor-context {
+    gap: var(--space-2);
+  }
+  .editor .draft-state {
+    font-size: var(--text-xs);
+  }
+  .editor .dialog-header-actions {
+    gap: 0;
+  }
   .editor .update-record dl {
     grid-template-columns: 1fr;
   }
-  .editor {
-    padding: var(--space-8);
-  }
-  .editor.resource-editor {
-    width: calc(100vw - var(--space-9));
-    max-height: calc(100dvh - var(--space-9));
-    padding: var(--space-9);
-    border-radius: var(--radius-card);
-  }
-  .editor.resource-editor header {
-    top: calc(-1 * var(--space-9));
-  }
-  .editor header {
-    top: calc(-1 * var(--space-8));
-  }
-  .editor footer {
+  .editor .dialog-footer {
     bottom: calc(-1 * var(--space-8));
-    padding-bottom: max(var(--space-8), env(safe-area-inset-bottom));
+    margin: var(--space-8) calc(-1 * var(--space-8)) calc(-1 * var(--space-8));
   }
-  .editor .row {
-    gap: var(--space-5);
-  }
-  .editor .relation-row {
-    align-items: flex-start;
-    flex-wrap: wrap;
+}
+
+.editor fieldset {
+  min-width: 0;
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 0 var(--space-7);
+}
+.editor legend {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.editor .editable-title textarea {
+  margin: 0;
+  resize: none;
+  line-height: var(--leading-tight);
+}
+@media (max-width: 360px) {
+  .editor .card-properties label:has(input[type="date"]) {
+    grid-column: 1 / -1;
   }
 }

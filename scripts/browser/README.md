@@ -23,6 +23,11 @@ focus suite covers the three Focus sections, active-only bounded reads, pinned
 card precedence, filters, inline pointer ordering and the viewport anchored card
 action.
 
+The responsive suite checks all seven views at 320, 390, 768 and 1024px, readable
+List filters with reload persistence, Calendar navigation, diagonal touch swipes
+inside a long modal and the system reduced-motion preference. These checks use
+the real release app and ordinary pairing, with synthetic source data.
+
 ```sh
 ASTRA_TEST_PROFILE=release npm run test:browser:regressions
 ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs card tags

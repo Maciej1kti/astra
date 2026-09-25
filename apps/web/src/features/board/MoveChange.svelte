@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Button from "../../lib/ui/Button.svelte";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
   import {
@@ -108,7 +110,7 @@
 </script>
 
 <dialog
-  class="app-dialog"
+  class="app-dialog dialog-small"
   use:modal
   aria-label="Move card"
   oncancel={(event) => {
@@ -116,64 +118,70 @@
     if (!busy && !pending) onclose();
   }}
 >
-  <h2>Move card</h2>
-  <p><strong>{item.title}</strong> → {status}</p>
-  <label
-    >Position<select
-      aria-label="Position"
-      bind:value={before}
-      disabled={busy || !!pending || conflict}
-    >
-      <option value="" disabled={!lastPage && status === item.status}
-        >End of column</option
+  <DialogHeader
+    title="Move card"
+    {onclose}
+    disabled={busy || !!pending}
+    closeLabel="Close move card"
+  />
+  <div class="dialog-body">
+    <p><strong>{item.title}</strong> → {status}</p>
+    <label
+      >Position<select
+        aria-label="Position"
+        bind:value={before}
+        disabled={busy || !!pending || conflict}
       >
-      {#each neighbors as neighbor, index}
-        <option value={neighbor.id} disabled={index === 0 && !firstPage}
-          >Before {neighbor.title}</option
+        <option value="" disabled={!lastPage && status === item.status}
+          >End of column</option
         >
-      {/each}
-    </select></label
-  >
-  {#if error}<p role="alert">{error}</p>{/if}{#if conflict}<p>
-      The card or its neighbors changed. Close this proposal and review the
-      current board.
-    </p>{/if}
-  {#if pending}<p>Request: {pending.requestId}</p>
-    <button onclick={check} disabled={busy}>Check status</button><button
-      onclick={transmit}
-      disabled={busy}>Retry same command</button
-    >{/if}
-  <button type="button" onclick={copyDraft}>Copy draft</button>
-  {#if accessLost && pending}<details>
-      <summary>Close without resolving</summary>
-      <p>
-        Copy the request ID and proposal first. The operation may already have
-        committed.
-      </p>
-      <button type="button" onclick={onclose}>Discard this proposal</button>
-    </details>{/if}
-  <footer>
+        {#each neighbors as neighbor, index}
+          <option value={neighbor.id} disabled={index === 0 && !firstPage}
+            >Before {neighbor.title}</option
+          >
+        {/each}
+      </select></label
+    >
+    {#if error}<p role="alert">{error}</p>{/if}{#if conflict}<p>
+        The card or its neighbors changed. Close this proposal and review the
+        current board.
+      </p>{/if}
+    {#if pending}<p>Request: {pending.requestId}</p>
+      <button onclick={check} disabled={busy}>Check status</button><button
+        onclick={transmit}
+        disabled={busy}>Retry same command</button
+      >{/if}
+    {#if error || pending || accessLost}<button
+        type="button"
+        onclick={copyDraft}>Copy draft</button
+      >{/if}
+    {#if accessLost && pending}<details>
+        <summary>Close without resolving</summary>
+        <p>
+          Copy the request ID and proposal first. The operation may already have
+          committed.
+        </p>
+        <button type="button" onclick={onclose}>Discard this proposal</button>
+      </details>{/if}
+  </div>
+  <footer class="dialog-footer">
     <button onclick={onclose} disabled={busy || !!pending}>Cancel</button
-    ><button
+    ><Button
+      variant="primary"
       onclick={save}
       disabled={busy ||
         !!pending ||
         conflict ||
         accessLost ||
-        (!before && !lastPage && status === item.status)}>Confirm move</button
+        (!before && !lastPage && status === item.status)}>Confirm move</Button
     >
   </footer>
 </dialog>
 
 <style>
-  dialog {
-    max-width: calc(100vw - var(--space-12));
-    width: var(--dialog-small);
-  }
-  footer {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-6);
-    margin-top: var(--space-10);
+  label {
+    display: grid;
+    gap: var(--space-4);
+    margin: var(--space-8) 0;
   }
 </style>

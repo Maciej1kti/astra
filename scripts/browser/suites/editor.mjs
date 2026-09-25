@@ -508,7 +508,9 @@ export async function runEditorChecks({
         await waitForAutosaveACK();
         assert.equal(get(card.id).metadata.priority, value);
       }
-      await dialog().getByText("Card lifecycle", { exact: true }).click();
+      await dialog()
+        .getByRole("button", { name: "Card actions", exact: true })
+        .click();
       await dialog().getByLabel("Archived", { exact: true }).check();
       await waitForAutosaveACK();
       assert.equal(get(card.id).metadata.archived, true);
@@ -576,7 +578,9 @@ export async function runEditorChecks({
         .getByLabel("Tag filter", { exact: true })
         .fill("Archive, literal");
       await row().click();
-      await dialog().getByText("Card lifecycle", { exact: true }).click();
+      await dialog()
+        .getByRole("button", { name: "Card actions", exact: true })
+        .click();
       await dialog().getByLabel("Archived", { exact: true }).uncheck();
       await waitForAutosaveACK();
       assert.equal(get(card.id).metadata.archived, false);

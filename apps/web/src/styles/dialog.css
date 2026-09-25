@@ -1,25 +1,237 @@
+html:has(dialog[open]),
+body:has(dialog[open]) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 .app-dialog {
+  --dialog-width: var(--dialog-medium);
+  width: min(var(--dialog-width), calc(100vw - var(--space-12)));
+  max-width: calc(100vw - var(--space-12));
+  max-height: min(92dvh, var(--dialog-max-height));
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: pan-y pinch-zoom;
   background: var(--paper);
   color: var(--ink);
   border: var(--stroke) solid var(--line);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-dialog);
 }
+.app-dialog[open],
+.dialog-form,
+.editor-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.app-dialog.dialog-small {
+  --dialog-width: var(--dialog-small);
+}
+.app-dialog.dialog-large {
+  --dialog-width: var(--dialog-large);
+}
 dialog::backdrop {
   background: var(--backdrop);
   backdrop-filter: blur(var(--space-2));
 }
-
-.app-dialog footer,
-.editor footer,
-.editor .delete-confirmation .row {
-  flex-wrap: wrap;
+.dialog-header,
+.dialog-footer {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-10);
+  background: var(--paper);
 }
-.app-dialog button,
-.editor button {
+.dialog-header {
+  position: relative;
+  z-index: 2;
+  border-bottom: var(--stroke) solid var(--line);
+}
+.dialog-heading {
+  min-width: 0;
+}
+.dialog-heading h2 {
+  margin: 0;
+  font-size: var(--text-section);
+  overflow-wrap: anywhere;
+}
+.dialog-heading p {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+.dialog-header-actions,
+.record-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+.dialog-body {
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none contain;
+  padding: var(--space-10);
+  scrollbar-gutter: stable;
+}
+.dialog-body > :first-child {
+  margin-top: 0;
+}
+.dialog-body > :last-child {
+  margin-bottom: 0;
+}
+.dialog-footer {
+  border-top: var(--stroke) solid var(--line);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
+}
+.app-dialog button {
   max-width: 100%;
 }
-.app-dialog .primary,
-.editor .primary {
+.app-dialog .primary {
   white-space: normal;
+}
+.app-dialog p,
+.app-dialog code,
+.app-dialog li,
+.app-dialog a {
+  overflow-wrap: anywhere;
+}
+.app-dialog pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.app-dialog .markdown table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  overflow: visible;
+}
+.app-dialog input,
+.app-dialog select,
+.app-dialog textarea {
+  max-width: 100%;
+}
+.app-dialog label {
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+}
+.app-dialog summary {
+  min-height: var(--tap-target);
+  display: list-item;
+  align-content: center;
+  cursor: pointer;
+  font-weight: var(--weight-medium);
+}
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  padding: 0;
+}
+.action-menu {
+  position: relative;
+}
+.action-menu-panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: var(--field-width);
+  max-width: calc(100vw - var(--space-16));
+  padding: var(--space-4);
+  background: var(--paper);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-floating);
+}
+.action-menu-panel button {
+  width: 100%;
+  text-align: left;
+}
+.action-menu-panel .archive-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--tap-target);
+  padding: var(--space-4);
+  margin: 0;
+}
+.action-menu-panel .menu-hint {
+  margin: 0 var(--space-4) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.destructive-action {
+  color: var(--danger);
+}
+.destructive-action:hover {
+  background: var(--danger-bg);
+}
+.editable-title {
+  margin: 0 0 var(--space-9);
+}
+.editable-title textarea {
+  display: block;
+  width: 100%;
+  min-height: var(--tap-target);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-color: transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  resize: none;
+  overflow: hidden;
+  cursor: text;
+}
+.editable-title textarea:hover {
+  background: var(--soft);
+}
+.editable-title textarea:focus {
+  background: var(--soft);
+}
+@media (max-width: 520px) {
+  .app-dialog {
+    width: calc(100vw - var(--space-8));
+    max-width: calc(100vw - var(--space-8));
+    max-height: calc(100dvh - var(--space-8));
+    border-radius: var(--radius-card);
+  }
+  .dialog-header,
+  .dialog-footer {
+    padding: var(--space-4) var(--space-6);
+  }
+  .dialog-header {
+    gap: var(--space-4);
+  }
+  .dialog-body {
+    padding: var(--space-8);
+  }
+  .dialog-footer {
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  }
+  .dialog-heading h2 {
+    font-size: var(--text-xl);
+  }
+  .app-dialog input:not([type="checkbox"]),
+  .app-dialog select,
+  .app-dialog textarea:not(.editable-title textarea) {
+    font-size: var(--text-lg);
+  }
 }

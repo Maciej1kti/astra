@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from "../../lib/ui/Icon.svelte";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
 
   import { onMount, untrack } from "svelte";
@@ -169,24 +170,31 @@
 </script>
 
 <dialog
-  class="app-dialog"
+  class="app-dialog dialog-large"
   use:modal
   aria-label="Manage project tags"
   oncancel={(event) => {
-    if (!canClose) event.preventDefault();
+    event.preventDefault();
+    if (canClose) onclose();
   }}
 >
-  <header>
-    <div>
-      <h2>Project tags</h2>
-      <p>Names used on cards in this project.</p>
-    </div>
-    <button
-      aria-label="Close tag manager"
-      disabled={!canClose}
-      onclick={onclose}><Icon name="close" small /></button
-    >
-  </header>
+  <DialogHeader
+    title="Project tags"
+    description="Rename or merge tags used in a project."
+    {onclose}
+    disabled={!canClose}
+    closeLabel="Close tag manager"
+  >
+    {#snippet actions()}
+      <button
+        class="quiet icon-button"
+        aria-label="Refresh project tags"
+        title="Refresh project tags"
+        disabled={busy || !!pending || !!job}
+        onclick={() => void load()}><Icon name="refresh" small /></button
+      >
+    {/snippet}
+  </DialogHeader>
   <div class="dialog-body">
     {#if error}<p class="notice" role="alert">{error}</p>{/if}
     <label for="tag-manager-project">Project</label>
@@ -281,50 +289,12 @@
         >{/if}
     {:else if busy}<p role="status">Loading tags…</p>{/if}
   </div>
-  <footer>
-    <button disabled={busy || !!pending || !!job} onclick={() => void load()}
-      >Refresh</button
-    ><button onclick={() => void copy()}>Copy details</button><button
-      disabled={!canClose}
-      onclick={onclose}>Close</button
-    >
-  </footer>
+  {#if pending || job || error}<footer class="dialog-footer">
+      <button onclick={() => void copy()}>Copy details</button>
+    </footer>{/if}
 </dialog>
 
 <style>
-  dialog {
-    width: min(var(--dialog-large), calc(100vw - var(--space-10)));
-    max-height: 92dvh;
-    padding: 0;
-    border-radius: var(--radius-card);
-  }
-  header,
-  footer {
-    display: flex;
-    gap: var(--space-6);
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-8) var(--space-9);
-  }
-  header {
-    border-bottom: var(--stroke) solid var(--line);
-  }
-  footer {
-    border-top: var(--stroke) solid var(--line);
-  }
-  h2,
-  header p {
-    margin: 0;
-  }
-  header p,
-  small {
-    color: var(--muted);
-  }
-  .dialog-body {
-    overflow-y: auto;
-    max-height: calc(92dvh - var(--field-min-width));
-    padding: var(--space-9);
-  }
   label {
     display: grid;
     gap: var(--space-4);
@@ -340,15 +310,20 @@
   }
   .tag-list li {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-6);
     align-items: center;
     padding: var(--space-4) 0;
     border-bottom: var(--stroke) solid var(--line);
   }
+  .tag-list strong {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .tag-list small {
+    color: var(--muted);
+  }
   .tag-list li :global(button) {
     margin-left: auto;
-  }
-  .notice {
-    padding: var(--space-5);
   }
 </style>

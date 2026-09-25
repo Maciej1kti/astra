@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "../../lib/ui/Icon.svelte";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
 
   import type {
@@ -170,24 +170,23 @@
   }
 </script>
 
-{#if open}<div class="modalshade">
-    <dialog
-      use:modal
-      class="app-dialog modal"
-      aria-label="Add project"
-      oncancel={(e) => {
-        e.preventDefault();
-        if (!busy) open = false;
-      }}
-    >
-      <header>
-        <h2>Add a project</h2>
-        <button
-          onclick={() => (open = false)}
-          aria-label="Close"
-          disabled={busy}><Icon name="close" small /></button
-        >
-      </header>
+{#if open}
+  <dialog
+    use:modal
+    class="app-dialog modal"
+    aria-label="Add project"
+    oncancel={(e) => {
+      e.preventDefault();
+      if (!busy) open = false;
+    }}
+  >
+    <DialogHeader
+      title="Add a project"
+      onclose={() => (open = false)}
+      disabled={busy}
+      closeLabel="Close"
+    />
+    <div class="dialog-body">
       <p>Choose the project folder on this host. Files stay in that folder.</p>
       {#if !roots.length}<p>
           No directories have been approved yet. On the host, run:
@@ -278,50 +277,22 @@
             disabled={busy || browsing || !directoryReady}
             >Choose this folder</Button
           >{/if}{/if}{#if error}<p class="notice">{error}</p>{/if}
-    </dialog>
-  </div>{/if}
+    </div>
+  </dialog>
+{/if}
 
 <style>
-  .modalshade {
-    position: fixed;
-    inset: 0;
-    z-index: 25;
-    background: var(--backdrop);
-    display: grid;
-    place-items: center;
-    padding: var(--space-9);
-  }
-  .modal {
-    border: var(--stroke) solid var(--line);
-    color: var(--ink);
-    background: var(--paper);
-    border-radius: var(--radius-card);
-    padding: var(--space-11);
-    width: min(100%, var(--dialog-medium));
-    max-height: 90vh;
-    overflow: auto;
-  }
-  .modal header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .modal h2 {
-    font: var(--weight-semibold) var(--text-title)/var(--leading-tight)
-      var(--font-sans);
-  }
-  .modal label {
+  label {
     display: block;
-    font-size: var(--text-sm);
     margin: var(--space-8) 0;
   }
-  .modal input:not([type="checkbox"]),
-  .modal select {
+  input:not([type="checkbox"]),
+  select {
     display: block;
     width: 100%;
     margin-top: var(--space-4);
   }
-  .modal .check {
+  .check {
     display: flex;
     align-items: center;
     gap: var(--space-5);
@@ -343,21 +314,13 @@
     overflow-wrap: anywhere;
     color: var(--muted);
   }
-  .modal details {
+  details {
     margin: var(--space-9) 0;
   }
-  .modal code {
+  code {
     display: block;
     font-size: var(--text-xs);
     overflow-wrap: anywhere;
     line-height: var(--leading-body);
-  }
-  @media (max-width: 760px) {
-    .modalshade {
-      padding: var(--space-5);
-    }
-    .modal {
-      padding: var(--space-9);
-    }
   }
 </style>

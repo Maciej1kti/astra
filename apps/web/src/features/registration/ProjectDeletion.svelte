@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "../../lib/ui/Icon.svelte";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
 
   import { onMount } from "svelte";
@@ -142,51 +142,51 @@
     close();
   }}
 >
-  <header>
-    <div>
-      <p class="eyebrow">Project removal</p>
-      <h2>Delete project “{project.title}” permanently?</h2>
-    </div>
-    <button
-      aria-label="Close delete project"
-      onclick={close}
-      disabled={busy || !!pending}><Icon name="close" small /></button
-    >
-  </header>
-  <p>
-    This permanently deletes the project’s <code>.project</code> folder, including
-    its cards, milestones and reports. Files elsewhere in the repository are preserved.
-    There is no restore.
-  </p>
-  {#if loading}<p role="status">Reading the deletion preview…</p>{/if}
-  {#if plan && !conflict}<section class="notice" aria-label="Deletion preview">
-      <strong>Deletion preview</strong>
-      <p class="breadcrumb">{plan.display_path}</p>
-      <p>{plan.file_count} files · {bytes(plan.total_bytes)}</p>
-    </section>{/if}
-  {#if conflict}<section class="notice" role="alert">
-      <p>The deletion preview is no longer current.</p>
-      <button onclick={() => void loadPlan()} disabled={busy || !!pending}
-        >Load a new deletion preview</button
+  <DialogHeader
+    title={`Delete “${project.title}”?`}
+    onclose={close}
+    disabled={busy || !!pending}
+    closeLabel="Close delete project"
+  />
+  <div class="dialog-body">
+    <p>
+      This permanently deletes the project’s <code>.project</code> folder, including
+      its cards, milestones and reports. Files elsewhere in the repository are preserved.
+      There is no restore.
+    </p>
+    {#if loading}<p role="status">Reading the deletion preview…</p>{/if}
+    {#if plan && !conflict}<section
+        class="notice"
+        aria-label="Deletion preview"
       >
-    </section>{/if}
-  {#if pending}<section class="notice" role="alert">
-      <p>
-        Deletion is awaiting confirmation. Keep this request ID while checking
-        its result.
-      </p>
-      <p>Request: <code>{pending.requestId}</code></p>
-      <button onclick={() => void copyDetails()} disabled={busy}
-        >Copy deletion details</button
-      >
-      <button onclick={() => void check()} disabled={busy || accessLost}
-        >Check deletion status</button
-      ><button onclick={() => void retry()} disabled={busy || accessLost}
-        >Retry same deletion</button
-      >
-    </section>{/if}
-  {#if error}<p class="notice" role="alert">{error}</p>{/if}
-  <footer>
+        <strong>Deletion preview</strong>
+        <p class="breadcrumb">{plan.display_path}</p>
+        <p>{plan.file_count} files · {bytes(plan.total_bytes)}</p>
+      </section>{/if}
+    {#if conflict}<section class="notice" role="alert">
+        <p>The deletion preview is no longer current.</p>
+        <button onclick={() => void loadPlan()} disabled={busy || !!pending}
+          >Load a new deletion preview</button
+        >
+      </section>{/if}
+    {#if pending}<section class="notice" role="alert">
+        <p>
+          Deletion is awaiting confirmation. Keep this request ID while checking
+          its result.
+        </p>
+        <p>Request: <code>{pending.requestId}</code></p>
+        <button onclick={() => void copyDetails()} disabled={busy}
+          >Copy deletion details</button
+        >
+        <button onclick={() => void check()} disabled={busy || accessLost}
+          >Check deletion status</button
+        ><button onclick={() => void retry()} disabled={busy || accessLost}
+          >Retry same deletion</button
+        >
+      </section>{/if}
+    {#if error}<p class="notice" role="alert">{error}</p>{/if}
+  </div>
+  <footer class="dialog-footer">
     <button onclick={close} disabled={busy || !!pending}>Keep project</button>
     <Button
       variant="danger"
@@ -198,27 +198,8 @@
 </dialog>
 
 <style>
-  .project-deletion {
-    width: min(var(--dialog-medium), calc(100vw - var(--space-10)));
-    max-height: 90dvh;
-    overflow: auto;
-    padding: var(--space-10);
-  }
-  .project-deletion header,
-  .project-deletion footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-6);
-  }
-  .project-deletion footer {
-    justify-content: flex-end;
-    margin-top: var(--space-10);
-  }
-  .project-deletion h2 {
-    max-width: 28ch;
-  }
-  .project-deletion code {
-    overflow-wrap: anywhere;
+  .breadcrumb {
+    color: var(--muted);
+    font-size: var(--text-label);
   }
 </style>

@@ -191,6 +191,13 @@ h3 {
   font-weight: var(--weight-semibold);
   line-height: var(--leading-tight);
 }
+@media (max-width: 700px) {
+  input,
+  select,
+  textarea {
+    font-size: var(--text-lg);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

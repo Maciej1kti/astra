@@ -22,6 +22,7 @@
   const id = $props.id();
   let input = $state<HTMLInputElement>();
   let expanded = $state(false);
+  let pointerOutside = false;
   let active = $state(-1);
   let announcement = $state("");
   let projectOptions = $state<string[]>([]);
@@ -89,6 +90,33 @@
       input.focus();
       input.scrollIntoView({ block: "nearest" });
     }
+  });
+
+  function collapse() {
+    expanded = false;
+    active = -1;
+    pointerOutside = false;
+  }
+  $effect(() => {
+    if (!expanded) return;
+    const pointerDown = (event: PointerEvent) => {
+      pointerOutside = event.target !== input;
+    };
+    const pointerEnd = () => {
+      if (!pointerOutside) return;
+      pointerOutside = false;
+      if (document.activeElement !== input) collapse();
+    };
+    // Suggestions change the dialog height. Keep a pointer target in place
+    // through its click, including Add, Remove and the editor close control.
+    document.addEventListener("pointerdown", pointerDown, true);
+    document.addEventListener("click", pointerEnd);
+    document.addEventListener("pointercancel", pointerEnd);
+    return () => {
+      document.removeEventListener("pointerdown", pointerDown, true);
+      document.removeEventListener("click", pointerEnd);
+      document.removeEventListener("pointercancel", pointerEnd);
+    };
   });
 
   function add(value = draft, fromSuggestion = false) {
@@ -182,12 +210,12 @@
         expanded = true;
       }}
       onfocus={() => {
+        pointerOutside = false;
         expanded = true;
         void loadCatalog();
       }}
       onblur={() => {
-        expanded = false;
-        active = -1;
+        if (!pointerOutside) collapse();
       }}
       onkeydown={keydown}
     />
@@ -198,8 +226,10 @@
     >
   </div>
   <p id={`${id}-hint`} class="hint">
-    Enter adds one tag. Commas stay in its name. Up to {TAG_LENGTH_LIMIT} characters;
-    names are case-sensitive.
+    Enter adds a tag. Names are case-sensitive.
+    <span class="sr-only"
+      >Commas stay in its name. Up to {TAG_LENGTH_LIMIT} characters.</span
+    >
   </p>
   {#if error}<p id={`${id}-error`} role="alert" class="tag-error">
       {error}

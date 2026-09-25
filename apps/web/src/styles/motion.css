@@ -1,0 +1,74 @@
+/* Entrance motion never blocks input or changes layout. */
+@keyframes astra-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes astra-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .view-content {
+    animation: astra-reveal var(--motion-enter) var(--motion-ease);
+  }
+  .app-dialog[open] {
+    animation: astra-reveal var(--motion-dialog) var(--motion-ease);
+  }
+  .app-dialog[open]::backdrop {
+    animation: astra-fade var(--motion-dialog) var(--motion-ease);
+  }
+  .action-menu-panel,
+  .list-filter-fields.expanded {
+    animation: astra-reveal var(--motion-quick) var(--motion-ease);
+  }
+  :where(button, input, select, textarea, .resource-description-rendered) {
+    transition:
+      background-color var(--motion-quick) ease,
+      border-color var(--motion-quick) ease,
+      color var(--motion-quick) ease,
+      box-shadow var(--motion-quick) ease;
+  }
+  .ui-button:active:not(:disabled),
+  .icon-button:active:not(:disabled) {
+    transform: translateY(var(--stroke));
+  }
+  .editor .focus-toggle .ui-icon {
+    transition: transform var(--motion-enter) var(--motion-ease);
+  }
+  .editor .focus-toggle.pinned .ui-icon {
+    transform: rotate(-12deg);
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .app .resource-card:not(.focus-card),
+  .app .update {
+    transition:
+      transform var(--motion-quick) var(--motion-ease),
+      box-shadow var(--motion-quick) ease,
+      border-color var(--motion-quick) ease;
+  }
+  .app .resource-card:not(.focus-card):hover,
+  .app .update:hover {
+    transform: translateY(calc(-1 * var(--motion-lift)));
+    box-shadow: var(--shadow-floating);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

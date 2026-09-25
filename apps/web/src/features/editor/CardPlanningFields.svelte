@@ -31,23 +31,3 @@
   bind:error={tagError}
   disabled={locked}
 />
-<h3>Planning</h3>
-<fieldset>
-  <legend>Planned work · inclusive dates</legend>
-  <div class="row">
-    <label
-      >Start<input
-        type="date"
-        bind:value={fields.start}
-        disabled={locked}
-      /></label
-    ><label
-      >End<input
-        type="date"
-        bind:value={fields.end}
-        min={fields.start}
-        disabled={locked}
-      /></label
-    >
-  </div>
-</fieldset>

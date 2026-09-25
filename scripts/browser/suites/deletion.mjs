@@ -181,6 +181,9 @@ await runBrowserSuite(
           const card = await createCard(`Delete cancel ${Date.now()}`);
           await openCard(page, card);
           await editor(page)
+            .getByRole("button", { name: "Card actions", exact: true })
+            .click();
+          await editor(page)
             .getByRole("button", { name: "Delete card", exact: true })
             .click();
           const confirmation = page
@@ -242,6 +245,9 @@ await runBrowserSuite(
               .getByLabel("Description", { exact: true })
               .fill("The delete preview must use the acknowledged source.");
             await waitForSignal(autosaveStarted, "delete autosave");
+            await dialog
+              .getByRole("button", { name: "Card actions", exact: true })
+              .click();
             const deleteButton = dialog.getByRole("button", {
               name: "Delete card",
               exact: true,
@@ -255,7 +261,11 @@ await runBrowserSuite(
             await expect
               .poll(async () => {
                 const status = (await autosaveStatus.textContent()) ?? "";
-                return (await deleteButton.isDisabled()) || status !== "Saved";
+                return (
+                  (await dialog
+                    .getByRole("button", { name: "Card actions", exact: true })
+                    .isDisabled()) || status !== "Saved"
+                );
               })
               .toBe(true);
             await expect(final).toHaveCount(0);
@@ -304,6 +314,9 @@ await runBrowserSuite(
           const newItem = dialog.getByLabel("New item", { exact: true });
           await newItem.fill("Unfinished checklist item");
           await dialog
+            .getByRole("button", { name: "Card actions", exact: true })
+            .click();
+          await dialog
             .getByRole("button", { name: "Delete card", exact: true })
             .click();
           const draftWarning = page
@@ -323,6 +336,9 @@ await runBrowserSuite(
           await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
             "Autosaved delete title",
           );
+          await dialog
+            .getByRole("button", { name: "Card actions", exact: true })
+            .click();
           await dialog
             .getByRole("button", { name: "Delete card", exact: true })
             .click();
@@ -382,6 +398,9 @@ await runBrowserSuite(
             return route.fulfill({ response });
           });
           await editor(page)
+            .getByRole("button", { name: "Card actions", exact: true })
+            .click();
+          await editor(page)
             .getByRole("button", { name: "Delete card", exact: true })
             .click();
           await page
@@ -427,6 +446,9 @@ await runBrowserSuite(
             await route.fetch();
             await route.abort("failed").catch(() => {});
           });
+          await editor(page)
+            .getByRole("button", { name: "Card actions", exact: true })
+            .click();
           await editor(page)
             .getByRole("button", { name: "Delete card", exact: true })
             .click();
@@ -491,6 +513,9 @@ await runBrowserSuite(
               });
             return route.continue();
           });
+          await editor(page)
+            .getByRole("button", { name: "Card actions", exact: true })
+            .click();
           await editor(page)
             .getByRole("button", { name: "Delete card", exact: true })
             .click();
@@ -564,6 +589,9 @@ await runBrowserSuite(
             return route.continue();
           });
           await editor(page)
+            .getByRole("button", { name: "Card actions", exact: true })
+            .click();
+          await editor(page)
             .getByRole("button", { name: "Delete card", exact: true })
             .click();
           await page
@@ -577,6 +605,9 @@ await runBrowserSuite(
           await expect(editor(page)).toContainText(
             "Close and reopen the card before trying again.",
           );
+          await editor(page)
+            .getByRole("button", { name: "Card actions", exact: true })
+            .click();
           await expect(
             editor(page).getByRole("button", {
               name: "Delete card",

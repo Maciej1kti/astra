@@ -223,7 +223,14 @@ export async function runAutosaveChecks({
           response.request().method() === "PATCH" &&
           response.url().endsWith(`/cards/${id}`),
       );
+      await expect(dialog().locator(".editable-title textarea")).toHaveCount(1);
+      await expect(dialog().locator("header h2")).toHaveCount(0);
+      await title().click();
+      await expect(title()).toBeFocused();
       await title().fill(later);
+      await title().press("Enter");
+      await expect(dialog()).toBeVisible();
+      await expect(title()).not.toBeFocused();
       const patchResponse = await patch;
       assert.equal(patchResponse.status(), 200);
       await waitForWrite(cardPath(id), "PATCH", 1);
@@ -255,6 +262,9 @@ export async function runAutosaveChecks({
         (value) =>
           value.metadata.title === later && value.metadata.status === "active",
       );
+      await dialog()
+        .getByRole("button", { name: "Card actions", exact: true })
+        .click();
       await dialog()
         .getByRole("button", { name: "Delete card", exact: true })
         .click();
@@ -611,9 +621,7 @@ export async function runAutosaveChecks({
       };
       page.on("request", onRemoteImageRequest);
       await sourceEditor.fill(nextSource);
-      await dialog()
-        .locator("header")
-        .click({ position: { x: 2, y: 2 } });
+      await dialog().locator(".editor-context").click();
       const preview = dialog().locator(".resource-description-rendered");
       await expect(sourceEditor).toBeHidden();
       await expect(preview).toBeVisible();
@@ -700,6 +708,11 @@ export async function runAutosaveChecks({
     "The project editor is centered, has a blurred backdrop, and fits a 390px viewport",
     async () => {
       await openProject();
+      await dialog().evaluate((node) =>
+        Promise.all(
+          node.getAnimations().map((animation) => animation.finished),
+        ),
+      );
       const previousViewport = page.viewportSize() ?? {
         width: 1440,
         height: 1000,

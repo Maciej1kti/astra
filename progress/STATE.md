@@ -6,6 +6,15 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Dialog editing, responsive controls and motion](2026-09-25-dialogs-responsive-motion.md)
+unifies modal structure, makes card/project titles directly editable, repairs
+mobile List and Calendar controls, contains modal touch scrolling vertically and
+adds shared reduced-motion-aware animations. Broad HTTPS smoke, planning and all
+12 browser suites pass across the final run and a focused animation-aware
+autosave rerun. The running app was reviewed at 320–1440px, including tablets.
+Verification follows the owner's E2E direction; physical-device and full release
+acceptance remain open.
+
 [Shared Astra UI system](2026-09-25-ui-system.md) applies common visual tokens
 and small components across all views and dialogs, with a compact card checklist
 and responsive navigation. The broad HTTPS smoke, planning browser check and all

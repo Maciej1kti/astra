@@ -1,5 +1,6 @@
 <script lang="ts">
-  import Icon from "../../lib/ui/Icon.svelte";
+  import { formatTimestamp } from "../../lib/resources/resource-presentation";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
 
   import type {
@@ -223,12 +224,12 @@
     close();
   }}
 >
-  <header>
-    <h2>Workspace settings</h2>
-    <button onclick={close} disabled={busy} aria-label="Close settings"
-      ><Icon name="close" small /></button
-    >
-  </header>
+  <DialogHeader
+    title="Workspace settings"
+    onclose={close}
+    disabled={busy}
+    closeLabel="Close settings"
+  />
   <div class="dialog-body">
     {#if loading}<p role="status">Loading workspace settings…</p>{/if}
     {#if error}<div class="notice" role="alert">{error}</div>{/if}
@@ -307,10 +308,7 @@
     </form>
     <section class="appearance">
       <h3>Tags</h3>
-      <p>
-        Create reusable names, inspect usage across projects, and preview
-        renames or merges.
-      </p>
+      <p>Rename or merge tags used on cards in a project.</p>
       <button
         disabled={dirty || busy || !!pending || accessLost}
         onclick={ontags}>Manage tags</button
@@ -342,9 +340,7 @@
               >{session.device_label}{session.current
                 ? " · this browser"
                 : ""}</strong
-            ><small
-              >Last seen {session.last_seen_at.slice(0, 16).replace("T", " ")} UTC</small
-            >
+            ><small>Last seen {formatTimestamp(session.last_seen_at)}</small>
           </div>
           <button
             aria-label={session.current
@@ -401,7 +397,7 @@
         </p>{/each}
     </details>
   </div>
-  <footer>
+  <footer class="dialog-footer">
     <p class="save-state" role="status">
       {info ||
         (busy
@@ -437,18 +433,6 @@
 </dialog>
 
 <style>
-  dialog {
-    width: min(var(--dialog-medium), calc(100vw - var(--space-10)));
-    max-width: calc(100vw - var(--space-10));
-    max-height: 90dvh;
-    padding: 0;
-    overflow: hidden;
-  }
-  dialog[open] {
-    display: flex;
-    flex-direction: column;
-  }
-  header,
   .row,
   .item {
     display: flex;
@@ -456,37 +440,12 @@
     justify-content: space-between;
     gap: var(--space-6);
   }
-  header,
-  footer {
-    flex-shrink: 0;
-    padding: var(--space-8) var(--space-9);
-    background: var(--paper);
-  }
-  header {
-    border-bottom: var(--stroke) solid var(--line);
-  }
-  footer {
-    border-top: var(--stroke) solid var(--line);
-    padding-bottom: max(var(--space-8), env(safe-area-inset-bottom));
-  }
-  .dialog-body {
-    padding: 0 var(--space-9) var(--space-9);
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  h2 {
-    margin: 0;
-    font-size: var(--text-section);
-    line-height: var(--leading-tight);
-  }
   h3 {
     margin: 0;
-    font-size: var(--text-lg);
+    font-size: var(--text-card);
   }
   label {
     display: block;
-    font-size: var(--text-label);
     margin: var(--space-8) 0;
     flex: 1;
     min-width: 0;
@@ -529,13 +488,6 @@
   }
   .notice {
     margin: var(--space-8) 0;
-    overflow-wrap: anywhere;
-  }
-  .discard {
-    padding: var(--space-6);
-    border: var(--stroke) solid var(--notice-line);
-    background: var(--notice-bg);
-    border-radius: var(--radius-control);
   }
   .appearance,
   .access-section {
@@ -543,46 +495,24 @@
     padding-top: var(--space-8);
     margin-top: var(--space-9);
   }
-  summary {
-    min-height: var(--tap-target);
-    padding: var(--space-5) 0;
-    cursor: pointer;
-    font-weight: var(--weight-semibold);
-  }
   .actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-4);
   }
   .save-state {
-    margin: 0 0 var(--space-5);
-  }
-  :global(button) {
-    min-height: var(--tap-target);
-  }
-  header :global(button) {
-    min-width: var(--tap-target);
-    flex-shrink: 0;
+    margin: 0;
+    flex: 1;
   }
   @media (max-width: 520px) {
-    header,
-    footer {
-      padding-left: var(--space-8);
-      padding-right: var(--space-8);
-    }
-    .dialog-body {
-      padding-left: var(--space-8);
-      padding-right: var(--space-8);
-    }
     .row {
       display: block;
     }
     .item {
       flex-wrap: wrap;
     }
-    input,
-    select {
-      font-size: var(--text-lg);
+    .save-state {
+      flex-basis: 100%;
     }
   }
 </style>

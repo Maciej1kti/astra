@@ -266,9 +266,7 @@ export async function runCardChecks({
         "**Strong card context**",
       ].join("\n");
       await description().fill(nextSource);
-      await dialog()
-        .locator("header")
-        .click({ position: { x: 2, y: 2 } });
+      await dialog().locator(".editor-context").click();
       await expect(description()).toBeHidden();
       const rendered = descriptionRendered();
       await expect(rendered).toBeVisible();
@@ -636,7 +634,9 @@ export async function runCardChecks({
       await open(card.id);
       await grip(1).scrollIntoViewIfNeeded();
       const before = get(card.id);
-      const startScroll = await dialog().evaluate((node) => node.scrollTop);
+      const startScroll = await dialog()
+        .locator(".dialog-body")
+        .evaluate((node) => node.scrollTop);
       const handle = await grip(1).boundingBox();
       const modal = await dialog().boundingBox();
       assert(handle && modal);
@@ -653,9 +653,15 @@ export async function runCardChecks({
           { steps: 6 },
         );
         await expect
-          .poll(() => dialog().evaluate((node) => node.scrollTop), {
-            timeout: 5000,
-          })
+          .poll(
+            () =>
+              dialog()
+                .locator(".dialog-body")
+                .evaluate((node) => node.scrollTop),
+            {
+              timeout: 5000,
+            },
+          )
           .toBeGreaterThan(startScroll + 30);
         assert.equal(cardWrites(card.id).length, initialWrites);
         await page.keyboard.press("Escape");

@@ -1,6 +1,9 @@
 <script lang="ts">
   import Icon from "../../lib/ui/Icon.svelte";
   import Button from "../../lib/ui/Button.svelte";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
+  import EditableTitle from "../../lib/ui/EditableTitle.svelte";
+  import ActionMenu from "../../lib/ui/ActionMenu.svelte";
 
   import {
     getProject,
@@ -170,7 +173,7 @@
       error = "Draft copied.";
     } catch {
       error =
-        "Clipboard access is unavailable. Select and copy your draft draft.fields.";
+        "Clipboard access is unavailable. Select and copy your draft fields.";
     }
   }
   onMount(() => {
@@ -233,6 +236,12 @@
     if (target instanceof Element && target.closest("a")) return;
     if ((draft.type === "project" || draft.type === "card") && !locked)
       descriptionEditing = true;
+  }
+  function finishTitleEdit() {
+    if (autosaveResource && persistedDirty && !closing)
+      void flushAutosave().catch((cause) => {
+        autosaveError = cause instanceof Error ? cause.message : String(cause);
+      });
   }
   function finishDescriptionEdit() {
     if (draft.type !== "project" && draft.type !== "card") return;
@@ -779,7 +788,8 @@
 <svelte:window onbeforeunload={beforeUnload} />
 <dialog
   use:modal
-  class="editor"
+  class="app-dialog editor"
+  class:dialog-large={draft.type !== "project"}
   class:resource-editor={draft.type === "project" || draft.type === "card"}
   class:project-editor={draft.type === "project"}
   aria-label={readonly
@@ -798,64 +808,85 @@
       Creating card…
     </p>{/if}
   <div
+    class="editor-layout"
     class:quick-pending={autoCreate &&
       !error &&
       !autosaveError &&
       !conflict &&
       !discard}
   >
-    <header>
-      <div>
-        <p class="eyebrow">
-          {projectName ? `${projectName} · ` : ""}{draft.type} · {resource
-            ? "Details"
-            : "New"}
-        </p>
-        <h2>
-          {readonly
-            ? draft.common.title || "Update record"
-            : resource
-              ? draft.common.title || "Untitled"
-              : `Create ${draft.type}`}
-        </h2>
-        {#if !readonly && !autosaveResource}<p
-            class="draft-state"
-            role="status"
+    <DialogHeader
+      onclose={close}
+      closeLabel="Close editor"
+      disabled={busy || deleteBusy || closing}
+      bind:closeButton={descriptionCloseButton}
+      onclosepointerdown={(event) => {
+        // Preserve the clicked target while a description edit changes height.
+        if (event.button === 0 && descriptionEditing) event.preventDefault();
+      }}
+    >
+      {#snippet heading()}
+        <div class="editor-context">
+          <Icon
+            name={draft.type === "project"
+              ? "projects"
+              : draft.type === "update"
+                ? "updates"
+                : "board"}
+            small
+          />
+          <span
+            >{projectName ||
+              (draft.type === "project"
+                ? "Project"
+                : resourceLabel(draft.type))}</span
           >
-            {busy
-              ? "Saving…"
-              : pending
-                ? "Awaiting command confirmation"
-                : conflict
-                  ? "Conflict · draft preserved"
-                  : dirty
-                    ? "Unsaved changes"
-                    : resource
-                      ? "Saved version"
-                      : "New draft"}
-          </p>{/if}
-        {#if autosaveStatus}<p
+          {#if projectName}<span class="context-separator">/</span><span
+              class="context-kind">{resourceLabel(draft.type)}</span
+            >{/if}
+        </div>
+      {/snippet}
+      {#snippet actions()}
+        {#if autosaveStatus}<span
             class="draft-state"
+            class:unsaved={autosaveStatus === "Not saved"}
             data-testid="autosave-status"
-            role="status"
+            role="status">{autosaveStatus}</span
+          >{/if}
+        {#if draft.type === "card" && resource}
+          <button
+            type="button"
+            class="quiet icon-button focus-toggle"
+            class:pinned
+            aria-label={pinned ? "Remove from focus" : "Pin to focus"}
+            title={pinned ? "Remove from focus" : "Pin to focus"}
+            aria-pressed={pinned}
+            onclick={toggleFocus}
+            disabled={locked || persistedDirty || autosaveWork}
+            ><Icon name="pin" small /></button
           >
-            {autosaveStatus}
-          </p>{/if}
-      </div>
-      <button
-        bind:this={descriptionCloseButton}
-        aria-label="Close editor"
-        onpointerdown={(event) => {
-          // Keep the textarea focused until close() starts its flush. Moving
-          // focus first can reflow the centered dialog under the pointer.
-          if (event.button === 0 && descriptionEditing) event.preventDefault();
-        }}
-        onclick={close}
-        disabled={busy || deleteBusy || closing}
-        ><Icon name="close" small /></button
-      >
-    </header>
+          <ActionMenu label="Card actions" disabled={locked}>
+            <label class="archive-action"
+              ><input
+                type="checkbox"
+                bind:checked={draft.fields.archived}
+                disabled={locked}
+              /> Archived</label
+            >
+            <p class="menu-hint">Archived cards stay in the project.</p>
+            <button
+              type="button"
+              class="quiet destructive-action"
+              onclick={requestDelete}
+              disabled={locked || !!conflict || deleteConflict}
+              >Delete card</button
+            >
+          </ActionMenu>
+        {/if}
+      {/snippet}
+    </DialogHeader>
     <form
+      class="dialog-body editor-form"
       onchange={handleChange}
       onsubmit={(e) => {
         e.preventDefault();
@@ -874,25 +905,6 @@
             disabled={busy || deleteBusy || autosaveBusy}>Discard draft</button
           ><button type="button" onclick={keepEditing}>Keep editing</button>
         </div>{/if}
-      {#if readonly}<button type="button" onclick={toggleRead} disabled={locked}
-          >{read ? "Mark unread" : "Mark read"}</button
-        >{/if}
-      {#if resource?.type === "update" && resource.metadata.kind === "decision_needed"}<button
-          type="button"
-          onclick={() => onresolve?.(resource)}
-          disabled={locked}>Resolve decision</button
-        >{/if}
-      {#if draft.type === "card" && resource}<button
-          type="button"
-          onclick={toggleFocus}
-          disabled={locked || persistedDirty || autosaveWork}
-          >{pinned ? "Remove from focus" : "Pin to focus"}</button
-        >{/if}
-      {#if draft.type === "card" && resource}<button
-          type="button"
-          onclick={requestDelete}
-          disabled={locked || !!conflict || deleteConflict}>Delete card</button
-        >{/if}
       {#if deleteConfirmation}<section
           class="notice delete-confirmation"
           role="alert"
@@ -922,7 +934,7 @@
                 disabled={deleteBusy}>Discard drafts and continue</button
               >{:else}<button
                 type="button"
-                class="primary"
+                class="danger"
                 onclick={() => void deleteSavedCard()}
                 use:focusDeleteAction
                 disabled={deleteBusy || accessLost}
@@ -936,28 +948,69 @@
       {#if statusMessage}<p class="action-status" role="status">
           {statusMessage}
         </p>{/if}
+      {#if readonly}
+        <h2 class="record-title">{draft.common.title || "Update record"}</h2>
+        <div class="record-actions">
+          <Button
+            type="button"
+            variant="quiet"
+            onclick={toggleRead}
+            disabled={locked}>{read ? "Mark unread" : "Mark read"}</Button
+          >
+          {#if resource?.type === "update" && resource.metadata.kind === "decision_needed"}<Button
+              type="button"
+              variant="primary"
+              onclick={() => onresolve?.(resource)}
+              disabled={locked}>Resolve decision</Button
+            >{/if}
+        </div>
+      {:else}
+        <EditableTitle
+          bind:value={draft.common.title}
+          label={draft.type === "project"
+            ? "Name"
+            : draft.type === "update"
+              ? "Summary"
+              : "Title"}
+          placeholder={draft.type === "project"
+            ? "Project name"
+            : draft.type === "update"
+              ? "Write a summary…"
+              : draft.type === "milestone"
+                ? "Milestone title"
+                : "Card title"}
+          maxlength={draft.type === "project"
+            ? 120
+            : draft.type === "update"
+              ? 500
+              : 240}
+          disabled={locked}
+          focus={!resource && !autoCreate}
+          onfinish={finishTitleEdit}
+        />
+        {#if !autosaveResource}<p class="draft-state" role="status">
+            {busy
+              ? "Saving…"
+              : pending
+                ? "Awaiting command confirmation"
+                : conflict
+                  ? "Conflict · draft preserved"
+                  : dirty
+                    ? "Unsaved changes"
+                    : resource
+                      ? "Saved version"
+                      : "New draft"}
+          </p>{/if}
+      {/if}
       {#if resource?.type === "update"}<UpdateDetails
           {resource}
           {projectName}
           {project}
         />{:else}
-        <label
-          >{draft.type === "project"
-            ? "Name"
-            : draft.type === "update"
-              ? "Summary"
-              : "Title"}<input
-            bind:value={draft.common.title}
-            required
-            maxlength={draft.type === "project"
-              ? 120
-              : draft.type === "update"
-                ? 500
-                : 240}
-            disabled={readonly || locked}
-          /></label
-        >
-        {#if draft.type !== "update"}<div class="row">
+        {#if draft.type !== "update"}<div
+            class="editor-properties"
+            class:card-properties={draft.type === "card"}
+          >
             <label
               >Status<select
                 aria-label="Status"
@@ -967,7 +1020,9 @@
                     >{resourceLabel(item)}</option
                   >{/each}</select
               ></label
-            >{#if draft.type === "card"}<label
+            >
+            {#if draft.type === "card"}
+              <label
                 >Priority<select
                   aria-label="Priority"
                   bind:value={draft.fields.priority}
@@ -976,7 +1031,23 @@
                       >{resourceLabel(item)}</option
                     >{/each}</select
                 ></label
-              >{/if}
+              >
+              <label
+                >Start<input
+                  type="date"
+                  bind:value={draft.fields.start}
+                  disabled={locked}
+                /></label
+              >
+              <label
+                >End<input
+                  type="date"
+                  bind:value={draft.fields.end}
+                  min={draft.fields.start}
+                  disabled={locked}
+                /></label
+              >
+            {/if}
           </div>{/if}
         {#if draft.type === "update"}<label
             >Kind<select
@@ -991,14 +1062,11 @@
         {#if draft.type === "project" || draft.type === "card"}
           <section
             class="resource-description-field"
-            aria-labelledby="resource-description-label"
+            aria-label={`${resourceLabel(draft.type)} description`}
           >
-            <div class="field-label" id="resource-description-label">
-              Description <span
-                >{draft.type === "card"
-                  ? "Context and supporting details · Markdown"
-                  : "Markdown"}</span
-              >
+            <div class="field-label">
+              Description
+              {#if descriptionEditing}<span>Markdown supported</span>{/if}
             </div>
             {#if descriptionEditing}
               <textarea
@@ -1030,7 +1098,7 @@
               >
                 {#if draft.common.body.trim()}<Markdown
                     source={draft.common.body}
-                  />{:else}<p class="empty-context">No description yet.</p>{/if}
+                  />{:else}<p class="empty-context">Add a description…</p>{/if}
               </div>
             {/if}
           </section>
@@ -1070,20 +1138,6 @@
               disabled={locked}
             /></label
           >{/if}
-        {#if draft.type === "card"}<details>
-            <summary>Card lifecycle</summary>
-            <label
-              ><input
-                type="checkbox"
-                bind:checked={draft.fields.archived}
-                disabled={locked}
-              /> Archived</label
-            >
-            <p class="empty-context">
-              Archived cards remain in the project and can be restored from the
-              archive filter.
-            </p>
-          </details>{/if}
         {#if draft.type === "update"}<ReportFields
             bind:fields={draft.fields}
             locked={readonly || locked}
@@ -1160,7 +1214,7 @@
             disabled={busy || accessLost}>Retry same command</button
           >
         </div>{/if}
-      {#if dirty || pending || deletePending || autosaveState.pending}<button
+      {#if (dirty || pending || deletePending || autosaveState.pending) && (!autosaveResource || discard || accessLost || !!error || !!autosaveError || !!conflict || !!pending || !!deletePending)}<button
           type="button"
           onclick={copyDraft}>Copy draft</button
         >{/if}
@@ -1200,9 +1254,9 @@
             disabled={deleteBusy || accessLost}>Retry same deletion</button
           >
         </div>{/if}
-      {#if !autosaveResource}<footer>
+      {#if !autosaveResource && !readonly}<footer class="dialog-footer">
           <button type="button" onclick={close} disabled={busy || deleteBusy}
-            >{readonly ? "Close" : "Cancel"}</button
+            >Cancel</button
           >{#if !readonly}<Button
               variant="primary"
               type="submit"

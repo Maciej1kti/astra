@@ -706,95 +706,107 @@
             changeMonth={routing.changeMonth}
           />
         {/if}
-        {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
-          <div class="empty" role="status">Loading resources…</div>
-        {:else if routing.current.view === "focus"}
-          <FocusScreen
-            route={routing.current}
-            {projects}
-            {cards}
-            focusCards={orderedFocusCards}
-            focusCount={focusOrder.length}
-            {focusOrder}
-            {focusVersion}
-            focusPending={!!focusPending}
-            {focusBusy}
-            {focusConflict}
-            focusRefreshing={focusReloading}
-            {focusError}
-            {focusCopyMessage}
-            {focusCanRetry}
-            {focusCanReload}
-            focusRequestId={focusPending?.requestId ?? ""}
-            {attentionRows}
-            {attentionCursor}
-            {attentionPaged}
-            activeCardCursor={pageCursors.card ?? null}
-            activeCardPaged={(pageHistory.card?.length ?? 0) > 1}
-            {loadingMore}
-            {open}
-            onreorder={reorderFocus}
-            onretry={retryFocus}
-            onretrynew={retryRejectedFocus}
-            onreload={reloadFocus}
-            oncopycommand={copyFocusCommand}
-            {moreAttention}
-            moreActiveCards={(back = false) => more("card", back)}
-          />
-        {:else if routing.current.view === "projects"}
-          <ProjectsScreen
-            route={routing.current}
-            {projects}
-            {cards}
-            {updates}
-            {open}
-            {addProject}
-            onremove={deleteProject}
-          />
-        {:else if routing.current.view === "board" && routing.current.project}{#if Board}{#key routing.current.project}<Board
-                project={routing.current.project}
-                search={routing.current.search}
-                revision={viewRevision}
+        {#key routing.current.view}<div class="view-content">
+            {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
+              <div class="empty" role="status">Loading resources…</div>
+            {:else if routing.current.view === "focus"}
+              <FocusScreen
+                route={routing.current}
+                {projects}
+                {cards}
+                focusCards={orderedFocusCards}
+                focusCount={focusOrder.length}
+                {focusOrder}
+                {focusVersion}
+                focusPending={!!focusPending}
+                {focusBusy}
+                {focusConflict}
+                focusRefreshing={focusReloading}
+                {focusError}
+                {focusCopyMessage}
+                {focusCanRetry}
+                {focusCanReload}
+                focusRequestId={focusPending?.requestId ?? ""}
+                {attentionRows}
+                {attentionCursor}
+                {attentionPaged}
+                activeCardCursor={pageCursors.card ?? null}
+                activeCardPaged={(pageHistory.card?.length ?? 0) > 1}
+                {loadingMore}
                 {open}
-                onpropose={(proposal) => (moveDraft = proposal)}
-                oncreate={create}
-              />{/key}{:else if boardLoadError}<p role="alert">
-              {boardLoadError}
-              <button onclick={loadBoard}>Retry loading board</button>
-            </p>{:else}<p role="status">Loading board…</p>{/if}
-        {:else if routing.current.view === "board"}
-          <BoardOverview route={routing.current} {projects} {cards} {open} />
-        {:else if routing.current.view === "calendar" || routing.current.view === "gantt"}{#if DateViews}<DateViews
-              project={routing.current.project}
-              month={routing.current.month}
-              view={routing.current.view}
-              revision={viewRevision}
-              {weekStart}
-              calendarDate={routing.current.calendarDate}
-              calendarLayout={routing.current.calendarLayout}
-              workspaceToday={today}
-              onCalendarNavigate={routing.navigateCalendar}
-              search={routing.current.search}
-              {open}
-              onpropose={(proposal) => (dateDraft = proposal)}
-              oncreate={(schedule) => create("card", { schedule })}
-            />{:else if dateViewLoadError}<p role="alert">
-              {dateViewLoadError}
-              <button onclick={loadDateViews}
-                >Retry loading planning view</button
-              >
-            </p>{:else}<p role="status">Loading date views…</p>{/if}
-        {:else if routing.current.view === "updates"}
-          <UpdatesScreen route={routing.current} {projects} {updates} {open} />
-        {:else}
-          <ResourceListScreen
-            route={routing.current}
-            {projects}
-            {cards}
-            {milestones}
-            {open}
-          />
-        {/if}
+                onreorder={reorderFocus}
+                onretry={retryFocus}
+                onretrynew={retryRejectedFocus}
+                onreload={reloadFocus}
+                oncopycommand={copyFocusCommand}
+                {moreAttention}
+                moreActiveCards={(back = false) => more("card", back)}
+              />
+            {:else if routing.current.view === "projects"}
+              <ProjectsScreen
+                route={routing.current}
+                {projects}
+                {cards}
+                {updates}
+                {open}
+                {addProject}
+                onremove={deleteProject}
+              />
+            {:else if routing.current.view === "board" && routing.current.project}{#if Board}{#key routing.current.project}<Board
+                    project={routing.current.project}
+                    search={routing.current.search}
+                    revision={viewRevision}
+                    {open}
+                    onpropose={(proposal) => (moveDraft = proposal)}
+                    oncreate={create}
+                  />{/key}{:else if boardLoadError}<p role="alert">
+                  {boardLoadError}
+                  <button onclick={loadBoard}>Retry loading board</button>
+                </p>{:else}<p role="status">Loading board…</p>{/if}
+            {:else if routing.current.view === "board"}
+              <BoardOverview
+                route={routing.current}
+                {projects}
+                {cards}
+                {open}
+              />
+            {:else if routing.current.view === "calendar" || routing.current.view === "gantt"}{#if DateViews}<DateViews
+                  project={routing.current.project}
+                  month={routing.current.month}
+                  view={routing.current.view}
+                  revision={viewRevision}
+                  {weekStart}
+                  calendarDate={routing.current.calendarDate}
+                  calendarLayout={routing.current.calendarLayout}
+                  workspaceToday={today}
+                  onCalendarNavigate={routing.navigateCalendar}
+                  search={routing.current.search}
+                  {open}
+                  onpropose={(proposal) => (dateDraft = proposal)}
+                  oncreate={(schedule) => create("card", { schedule })}
+                />{:else if dateViewLoadError}<p role="alert">
+                  {dateViewLoadError}
+                  <button onclick={loadDateViews}
+                    >Retry loading planning view</button
+                  >
+                </p>{:else}<p role="status">Loading date views…</p>{/if}
+            {:else if routing.current.view === "updates"}
+              <UpdatesScreen
+                route={routing.current}
+                {projects}
+                {updates}
+                {open}
+              />
+            {:else}
+              <ResourceListScreen
+                route={routing.current}
+                {projects}
+                {cards}
+                {milestones}
+                {open}
+              />
+            {/if}
+          </div>{/key}
         {#if routing.current.view === "focus"}
           <div class="focus-filters">
             <WorkspaceFilters
@@ -861,7 +873,6 @@
 {#if diagnostics}<Diagnostics onclose={() => (diagnostics = false)} />{/if}
 {#if settings}<Settings
     ontags={() => {
-      settings = false;
       manageTags = true;
     }}
     onclose={() => (settings = false)}

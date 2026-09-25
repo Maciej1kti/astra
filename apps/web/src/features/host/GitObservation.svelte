@@ -1,5 +1,6 @@
 <script lang="ts">
-  import Icon from "../../lib/ui/Icon.svelte";
+  import { formatTimestamp } from "../../lib/resources/resource-presentation";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
   import { api } from "../../lib/api/api";
@@ -60,54 +61,56 @@
     onclose();
   }}
 >
-  <header>
-    <h2>Git observation</h2>
-    <button onclick={onclose} aria-label="Close Git observation"
-      ><Icon name="close" small /></button
+  <DialogHeader
+    title="Git observation"
+    {onclose}
+    closeLabel="Close Git observation"
+  />
+  <div class="dialog-body">
+    <p>
+      HEAD and staged index only. Working-tree changes and untracked files are
+      not checked.
+    </p>
+    <button onclick={load} disabled={busy}
+      >{busy ? "Checking…" : "Check again"}</button
     >
-  </header>
-  <p>
-    HEAD and staged index only. Working-tree changes and untracked files are not
-    checked.
-  </p>
-  <button onclick={load} disabled={busy}
-    >{busy ? "Checking…" : "Check again"}</button
-  >
-  {#if error}<p role="alert">{error}</p>{/if}
-  {#if data}
-    {#if data.stale}<p role="status">Observation unavailable: {data.error}</p>
-    {:else}<dl>
-        <dt>Branch</dt>
-        <dd>{data.branch ?? "Detached HEAD"}</dd>
-        <dt>Commit</dt>
-        <dd><code>{data.commit ?? "No commits yet"}</code></dd>
-        <dt>Staged paths</dt>
-        <dd>{data.staged_paths}</dd>
-        <dt>Conflicted paths</dt>
-        <dd>{data.conflicted_paths}</dd>
-      </dl>{/if}
-    <small>Checked {data.observed_at}. Counts exclude .project files.</small>
-  {/if}
+    {#if error}<p role="alert">{error}</p>{/if}
+    {#if data}
+      {#if data.stale}<p role="status">Observation unavailable: {data.error}</p>
+      {:else}<dl>
+          <dt>Branch</dt>
+          <dd>{data.branch ?? "Detached HEAD"}</dd>
+          <dt>Commit</dt>
+          <dd><code>{data.commit ?? "No commits yet"}</code></dd>
+          <dt>Staged paths</dt>
+          <dd>{data.staged_paths}</dd>
+          <dt>Conflicted paths</dt>
+          <dd>{data.conflicted_paths}</dd>
+        </dl>{/if}
+      <small
+        >Checked {formatTimestamp(data.observed_at)}. Counts exclude .project
+        files.</small
+      >
+    {/if}
+  </div>
 </dialog>
 
 <style>
-  dialog {
-    width: min(var(--dialog-medium), calc(100vw - var(--space-10)));
-    max-height: 90dvh;
-    overflow: auto;
+  dl {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-6);
+    padding: var(--space-8);
+    background: var(--soft);
+    border-radius: var(--radius-control);
   }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-8);
-  }
-  dd,
-  code {
+  dd {
+    margin: 0;
     overflow-wrap: anywhere;
   }
-  dt {
-    margin-top: var(--space-6);
-    font-weight: var(--weight-semibold);
+  dt,
+  small {
+    color: var(--muted);
+    font-size: var(--text-label);
   }
 </style>

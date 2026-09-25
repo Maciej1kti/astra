@@ -195,10 +195,7 @@ try {
   await page
     .getByLabel("Description", { exact: true })
     .fill('A real browser write.\n\n<script>alert("untrusted")</script>');
-  await page
-    .getByRole("dialog")
-    .locator("header")
-    .click({ position: { x: 2, y: 2 } });
+  await page.getByRole("dialog").locator(".editor-context").click();
   assert.equal(
     await page.locator(".markdown script, .markdown img").count(),
     0,

@@ -14,6 +14,7 @@ const suites = [
   "editor",
   "autosave",
   "dialogs",
+  "responsive",
   "planning",
   "code-health",
   "protocol",

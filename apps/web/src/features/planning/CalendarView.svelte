@@ -501,6 +501,7 @@
   }
   .navigation button {
     min-width: var(--tap-target);
+    flex-shrink: 0;
   }
   .create-scheduled {
     margin-left: auto;
@@ -678,9 +679,13 @@
     }
     .navigation {
       order: 0;
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: var(--tap-target) minmax(0, 1fr) var(--tap-target);
     }
     .create-scheduled {
-      order: 1;
+      order: 3;
+      grid-column: 1 / -1;
       margin-left: 0;
       padding-inline: var(--space-4);
     }

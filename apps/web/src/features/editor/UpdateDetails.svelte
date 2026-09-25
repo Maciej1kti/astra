@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { Resource } from "../../lib/api/api";
   import Markdown from "../../lib/ui/Markdown.svelte";
-  import { resourceLabel } from "../../lib/resources/resource-presentation";
+  import {
+    resourceLabel,
+    formatTimestamp,
+  } from "../../lib/resources/resource-presentation";
 
   let {
     resource,
@@ -19,10 +22,6 @@
 </script>
 
 <section class="update-record" aria-label="Report content">
-  <p class="update-record-note">
-    Updates are permanent records. Add a correction or resolution to change a
-    previous update.
-  </p>
   <dl>
     <div>
       <dt>Kind</dt>
@@ -34,11 +33,19 @@
     </div>
     <div>
       <dt>Recorded</dt>
-      <dd>{metadata.recorded_at}</dd>
+      <dd>
+        <time datetime={metadata.recorded_at} title={metadata.recorded_at}
+          >{formatTimestamp(metadata.recorded_at)}</time
+        >
+      </dd>
     </div>
     {#if metadata.observed_at}<div>
         <dt>Observed</dt>
-        <dd>{metadata.observed_at}</dd>
+        <dd>
+          <time datetime={metadata.observed_at} title={metadata.observed_at}
+            >{formatTimestamp(metadata.observed_at)}</time
+          >
+        </dd>
       </div>{/if}
     <div>
       <dt>Target</dt>
@@ -83,4 +90,8 @@
       <summary>Additional fields</summary>
       <pre>{JSON.stringify(Object.fromEntries(extensions), null, 2)}</pre>
     </details>{/if}
+  <p class="update-record-note">
+    Updates are permanent records. Add a correction or resolution to change a
+    previous update.
+  </p>
 </section>

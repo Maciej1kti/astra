@@ -387,10 +387,45 @@ await runBrowserSuite(
             dialog.getByRole("button", { name: "Mark unread" }),
           ).toBeVisible();
           await dialog
-            .getByRole("button", { name: "Close", exact: true })
+            .getByRole("button", { name: "Close editor", exact: true })
             .click();
           await expect(dialog).toBeHidden();
           await expect(card).toContainText("Read");
+        },
+      );
+
+      await check(
+        "A14",
+        "Escape closes the tag manager and allows it to reopen with focus restored",
+        async () => {
+          await page.setViewportSize({ width: 390, height: 844 });
+          await route("board");
+          await settings();
+          await page
+            .getByRole("button", { name: "Manage tags", exact: true })
+            .click();
+          const tags = page.getByRole("dialog", {
+            name: "Manage project tags",
+          });
+          await expect(
+            tags.getByLabel("Project", { exact: true }),
+          ).toBeEnabled();
+          await page.keyboard.press("Escape");
+          await expect(tags).toHaveCount(0);
+          await expect(
+            page.getByRole("button", { name: "Manage tags", exact: true }),
+          ).toBeFocused();
+          await page
+            .getByRole("button", { name: "Manage tags", exact: true })
+            .click();
+          await expect(tags).toBeVisible();
+          await tags.getByRole("button", { name: "Close tag manager" }).click();
+          await expect(tags).toHaveCount(0);
+          return {
+            escapeUnmounts: true,
+            reopenWorks: true,
+            settingsFocusRestored: true,
+          };
         },
       );
 

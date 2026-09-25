@@ -109,6 +109,12 @@
   --board-height: 68vh;
   --drag-opacity: 0.28;
   --disabled-opacity: 0.5;
+  --motion-quick: 140ms;
+  --motion-enter: 240ms;
+  --motion-dialog: 280ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-distance: var(--space-4);
+  --motion-lift: var(--space-1);
   --layer-navigation: 10;
   --layer-floating: 20;
   --layer-dialog: 21;

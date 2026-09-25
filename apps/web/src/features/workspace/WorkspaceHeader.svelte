@@ -28,7 +28,8 @@
 
 <svelte:element this={tag} class="topbar">
   <span class="workspace-label" title={projectName || "All projects"}
-    >Workspace <span class="slash">/</span>
+    ><span class="workspace-prefix">Workspace <span class="slash">/</span></span
+    >
     {projectName || "All projects"}</span
   >
   <div>

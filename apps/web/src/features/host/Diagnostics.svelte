@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "../../lib/ui/Icon.svelte";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
   import { api } from "../../lib/api/api";
@@ -58,63 +58,58 @@
     onclose();
   }}
 >
-  <header>
-    <h2>Host diagnostics</h2>
-    <button onclick={onclose} aria-label="Close diagnostics"
-      ><Icon name="close" small /></button
+  <DialogHeader
+    title="Host diagnostics"
+    {onclose}
+    closeLabel="Close diagnostics"
+  />
+  <div class="dialog-body">
+    <button onclick={load} disabled={busy}
+      >{busy ? "Checking…" : "Refresh diagnostics"}</button
     >
-  </header>
-  <button onclick={load} disabled={busy}
-    >{busy ? "Checking…" : "Refresh diagnostics"}</button
-  >
-  {#if error}<p role="alert">{error}</p>{/if}
-  {#if data}
-    <p>Host: <strong>{data.state}</strong> · Index: {data.index_state}</p>
-    <p>
-      {data.invalid_documents} source issues · {data.pending_commands} unresolved
-      commands
-    </p>
-    {#each data.warnings as warning}<section class="notice">
-        <strong>{warning.code}</strong>
-        <p>{warning.message}</p>
-      </section>{/each}
-    <h3>History</h3>
-    <p>
-      {data.history.entries} entries · {(data.history.bytes / 1048576).toFixed(
-        1,
-      )} MiB. Optional history is retained for {data.history.retention_days} days
-      or up to {(data.history.byte_budget / 1048576).toFixed(0)} MiB. Pending operations
-      and live retry records remain protected.
-    </p>
-    {#if data.issues.length}<h3>Source issues · first 100</h3>
-      {#each data.issues as issue}<p>
-          <code>{issue.path}</code><br />{issue.code} · Project {issue.project_id}
-        </p>{/each}{/if}
-    {#if data.jobs.length}<h3>Unresolved jobs · first 50</h3>
-      {#each data.jobs as job}<p>
-          <code>{job.id}</code> · {job.state}<br />Project {job.project_id}
-        </p>{/each}{/if}
-    <small
-      >Instance: {data.instance_id ??
-        "Unavailable until the workspace is repaired"}</small
-    >
-  {/if}
+    {#if error}<p role="alert">{error}</p>{/if}
+    {#if data}
+      <p>Host: <strong>{data.state}</strong> · Index: {data.index_state}</p>
+      <p>
+        {data.invalid_documents} source issues · {data.pending_commands} unresolved
+        commands
+      </p>
+      {#each data.warnings as warning}<section class="notice">
+          <strong>{warning.code}</strong>
+          <p>{warning.message}</p>
+        </section>{/each}
+      <h3>History</h3>
+      <p>
+        {data.history.entries} entries · {(
+          data.history.bytes / 1048576
+        ).toFixed(1)} MiB. Optional history is retained for {data.history
+          .retention_days} days or up to {(
+          data.history.byte_budget / 1048576
+        ).toFixed(0)} MiB. Pending operations and live retry records remain protected.
+      </p>
+      {#if data.issues.length}<h3>Source issues · first 100</h3>
+        {#each data.issues as issue}<p>
+            <code>{issue.path}</code><br />{issue.code} · Project {issue.project_id}
+          </p>{/each}{/if}
+      {#if data.jobs.length}<h3>Unresolved jobs · first 50</h3>
+        {#each data.jobs as job}<p>
+            <code>{job.id}</code> · {job.state}<br />Project {job.project_id}
+          </p>{/each}{/if}
+      <small
+        >Instance: {data.instance_id ??
+          "Unavailable until the workspace is repaired"}</small
+      >
+    {/if}
+  </div>
 </dialog>
 
 <style>
-  dialog {
-    width: min(var(--dialog-large), calc(100vw - var(--space-10)));
-    max-height: 90dvh;
-    overflow: auto;
+  h3 {
+    font-size: var(--text-card);
+    margin-top: var(--space-10);
   }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-8);
-  }
-  p,
-  code {
-    overflow-wrap: anywhere;
+  small {
+    color: var(--muted);
+    font-size: var(--text-sm);
   }
 </style>

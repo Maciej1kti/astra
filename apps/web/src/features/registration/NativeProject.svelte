@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "../../lib/ui/Icon.svelte";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
 
   import type {
@@ -202,106 +202,96 @@
     close();
   }}
 >
-  <header>
-    <h2>Add a project</h2>
-    <button onclick={close} disabled={busy} aria-label="Close add project"
-      ><Icon name="close" small /></button
-    >
-  </header>
-  <p>
-    Choose your repository using the host's system folder dialog. The folder can
-    be anywhere on the host.
-  </p>
-  <label
-    >Project name <input
-      bind:value={name}
-      placeholder="Use folder name"
-      disabled={choosing || busy || !!selection || !!pending || !!plan}
-    /></label
-  >
-  <label class="check"
-    ><input
-      type="checkbox"
-      bind:checked={tracked}
-      disabled={choosing || busy || !!selection || !!pending || !!plan}
-    /> Track .project files in Git</label
-  >
-  <Button
-    variant="primary"
-    onclick={choose}
-    disabled={choosing || busy || !!pending || accessLost}
-    >{choosing
-      ? "Choose a folder in the system window…"
-      : selection
-        ? "Check folder selection"
-        : plan
-          ? "Choose a different folder…"
-          : "Choose folder…"}</Button
-  >
-  {#if choosing}<p role="status">
-      The system window opens on the computer running Local Projects. Select a
-      folder or press Cancel there.
-    </p>{/if}
-  {#if plan}<section class="notice">
-      <strong>Selected repository</strong>
-      <p>{plan.display_path}</p>
-      <p>
-        Adding creates .project planning files and a managed AGENTS.md block.
-        Existing content is preserved.
-      </p>
-      {#each plan.warnings as warning}<p>{warning.message}</p>{/each}
-      <details>
-        <summary>Files to update</summary
-        >{#each plan.changes.filter((c) => c.action !== "no_change") as change}<p
-          >
-            {change.path}
-          </p>{/each}
-      </details>
-      <Button variant="primary" onclick={add} disabled={busy || accessLost}
-        >{job
-          ? "Check registration"
-          : pending
-            ? "Retry same registration"
-            : "Add project"}</Button
-      >
-    </section>{/if}
-  {#if pending}<p>Request: {pending.requestId}</p>
-    <button onclick={copy}>Copy registration details</button>{/if}
-  {#if error}<p role="alert">{error}</p>{/if}
-  {#if confirmClose}<section class="notice" role="alert">
-      <p>
-        Closing does not cancel an uncertain registration. Copy its request
-        details first.
-      </p>
-      <button onclick={() => (confirmClose = false)}>Keep open</button><button
-        onclick={onclose}>Close registration</button
-      >
-    </section>{/if}
-  <details>
-    <summary>Remote host without a desktop?</summary>
+  <DialogHeader
+    title="Add a project"
+    onclose={close}
+    disabled={busy}
+    closeLabel="Close add project"
+  />
+  <div class="dialog-body">
     <p>
-      You can browse directories explicitly approved by the host owner instead.
+      Choose your repository using the host's system folder dialog. The folder
+      can be anywhere on the host.
     </p>
-    <button onclick={onbrowse} disabled={choosing || busy || !!pending}
-      >Browse approved folders</button
+    <label
+      >Project name <input
+        bind:value={name}
+        placeholder="Use folder name"
+        disabled={choosing || busy || !!selection || !!pending || !!plan}
+      /></label
     >
-  </details>
+    <label class="check"
+      ><input
+        type="checkbox"
+        bind:checked={tracked}
+        disabled={choosing || busy || !!selection || !!pending || !!plan}
+      /> Track .project files in Git</label
+    >
+    <Button
+      variant="primary"
+      onclick={choose}
+      disabled={choosing || busy || !!pending || accessLost}
+      >{choosing
+        ? "Choose a folder in the system window…"
+        : selection
+          ? "Check folder selection"
+          : plan
+            ? "Choose a different folder…"
+            : "Choose folder…"}</Button
+    >
+    {#if choosing}<p role="status">
+        The system window opens on the computer running Local Projects. Select a
+        folder or press Cancel there.
+      </p>{/if}
+    {#if plan}<section class="notice">
+        <strong>Selected repository</strong>
+        <p>{plan.display_path}</p>
+        <p>
+          Adding creates .project planning files and a managed AGENTS.md block.
+          Existing content is preserved.
+        </p>
+        {#each plan.warnings as warning}<p>{warning.message}</p>{/each}
+        <details>
+          <summary>Files to update</summary
+          >{#each plan.changes.filter((c) => c.action !== "no_change") as change}<p
+            >
+              {change.path}
+            </p>{/each}
+        </details>
+        <Button variant="primary" onclick={add} disabled={busy || accessLost}
+          >{job
+            ? "Check registration"
+            : pending
+              ? "Retry same registration"
+              : "Add project"}</Button
+        >
+      </section>{/if}
+    {#if pending}<p>Request: {pending.requestId}</p>
+      <button onclick={copy}>Copy registration details</button>{/if}
+    {#if error}<p role="alert">{error}</p>{/if}
+    {#if confirmClose}<section class="notice" role="alert">
+        <p>
+          Closing does not cancel an uncertain registration. Copy its request
+          details first.
+        </p>
+        <button onclick={() => (confirmClose = false)}>Keep open</button><button
+          onclick={onclose}>Close registration</button
+        >
+      </section>{/if}
+    <details>
+      <summary>Remote host without a desktop?</summary>
+      <p>
+        You can browse directories explicitly approved by the host owner
+        instead.
+      </p>
+      <button onclick={onbrowse} disabled={choosing || busy || !!pending}
+        >Browse approved folders</button
+      >
+    </details>
+  </div>
 </dialog>
 
 <style>
-  dialog {
-    width: min(var(--dialog-medium), calc(100vw - var(--space-10)));
-    max-height: 90dvh;
-    overflow: auto;
-    border-radius: var(--radius-card);
-    padding: var(--space-10);
-  }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-6);
-  }
   label {
     display: block;
     margin: var(--space-8) 0;
@@ -314,12 +304,12 @@
     display: flex;
     align-items: center;
     gap: var(--space-4);
-  }
-  p {
-    overflow-wrap: anywhere;
-    line-height: var(--leading-body);
+    min-height: var(--tap-target);
   }
   details {
     margin-top: var(--space-9);
+  }
+  .notice {
+    margin-top: var(--space-8);
   }
 </style>

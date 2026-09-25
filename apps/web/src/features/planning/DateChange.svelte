@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Button from "../../lib/ui/Button.svelte";
+  import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
   import {
@@ -110,7 +112,7 @@
 </script>
 
 <dialog
-  class="app-dialog"
+  class="app-dialog dialog-small"
   use:modal
   aria-label="Change planned dates"
   oncancel={(event) => {
@@ -118,86 +120,99 @@
     if (!busy && !pending) onclose();
   }}
 >
-  <h2>Change planned dates</h2>
-  {#if title}<p>{title}</p>{/if}
-  <p>Recorded dates are updated using the version you opened.</p>
+  <DialogHeader
+    title="Change planned dates"
+    {onclose}
+    disabled={busy || !!pending}
+    closeLabel="Close planned dates"
+  />
   <form
+    class="dialog-form"
     onsubmit={(event) => {
       event.preventDefault();
       void save();
     }}
   >
-    <label
-      >Planned start<input
-        type="date"
-        bind:value={start}
-        required
-        disabled={busy || !!pending || !!conflict || accessLost}
-      /></label
-    >
-    <label
-      >Planned end<input
-        type="date"
-        bind:value={end}
-        min={start}
-        required
-        disabled={busy || !!pending || !!conflict || accessLost}
-      /></label
-    >
-    {#if error}<p role="alert">{error}</p>{/if}
-    {#if conflict?.current}<p>
-        Current saved schedule: {JSON.stringify(
-          conflict.current.type === "card"
-            ? (conflict.current.metadata.schedule ?? null)
-            : null,
-        )}. Your proposed dates remain above. Reopen the card to start a new
-        edit.
-      </p>{/if}
-    {#if pending}<p>Request: {pending.requestId}</p>
-      <button type="button" onclick={status} disabled={busy}
-        >Check status</button
-      ><button type="button" onclick={transmit} disabled={busy}
-        >Retry same command</button
-      >{/if}
-    <button type="button" onclick={copyDraft}>Copy draft</button>
-    {#if accessLost && pending}<details>
-        <summary>Close without resolving</summary>
-        <p>
-          Copy the request ID and proposal first. The operation may already have
-          committed.
-        </p>
-        <button type="button" onclick={onclose}>Discard this proposal</button>
-      </details>{/if}
-    <footer>
+    <div class="dialog-body">
+      {#if title}<p>{title}</p>{/if}
+      <div class="date-fields">
+        <label
+          >Planned start<input
+            type="date"
+            bind:value={start}
+            required
+            disabled={busy || !!pending || !!conflict || accessLost}
+          /></label
+        >
+        <label
+          >Planned end<input
+            type="date"
+            bind:value={end}
+            min={start}
+            required
+            disabled={busy || !!pending || !!conflict || accessLost}
+          /></label
+        >
+      </div>
+      {#if error}<p role="alert">{error}</p>{/if}
+      {#if conflict?.current}<p>
+          Current saved schedule: {JSON.stringify(
+            conflict.current.type === "card"
+              ? (conflict.current.metadata.schedule ?? null)
+              : null,
+          )}. Your proposed dates remain above. Reopen the card to start a new
+          edit.
+        </p>{/if}
+      {#if pending}<p>Request: {pending.requestId}</p>
+        <button type="button" onclick={status} disabled={busy}
+          >Check status</button
+        ><button type="button" onclick={transmit} disabled={busy}
+          >Retry same command</button
+        >{/if}
+      {#if error || pending || accessLost}<button
+          type="button"
+          onclick={copyDraft}>Copy draft</button
+        >{/if}
+      {#if accessLost && pending}<details>
+          <summary>Close without resolving</summary>
+          <p>
+            Copy the request ID and proposal first. The operation may already
+            have committed.
+          </p>
+          <button type="button" onclick={onclose}>Discard this proposal</button>
+        </details>{/if}
+    </div>
+    <footer class="dialog-footer">
       <button type="button" onclick={onclose} disabled={busy || !!pending}
         >Cancel</button
-      ><button
+      ><Button
+        variant="primary"
         type="submit"
         disabled={busy || !!pending || !!conflict || accessLost}
-        >Save planned dates</button
+        >Save planned dates</Button
       >
     </footer>
   </form>
 </dialog>
 
 <style>
-  dialog {
-    width: min(var(--dialog-small), calc(100vw - var(--space-12)));
-    max-height: 90dvh;
-    overflow: auto;
-  }
   label {
     display: grid;
     gap: var(--space-4);
     margin: var(--space-8) 0;
+    min-width: 0;
+  }
+  .date-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6);
   }
   input {
-    min-height: var(--tap-target);
+    width: 100%;
   }
-  footer {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-6);
-    margin-top: var(--space-10);
+  @media (max-width: 360px) {
+    .date-fields {
+      grid-template-columns: 1fr;
+    }
   }
 </style>

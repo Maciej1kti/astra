@@ -159,22 +159,72 @@
   font-size: var(--text-label);
   color: var(--muted);
 }
-.app .toolbar {
+.app .workspace-filters .toolbar {
   display: flex;
   align-items: center;
   gap: var(--space-4);
   margin-bottom: var(--space-10);
   flex-wrap: wrap;
 }
-.app .toolbar select {
+.app .workspace-filters .toolbar select {
   min-width: var(--field-min-width);
-}
-.app .toolbar > input {
   max-width: 100%;
 }
-.app .search {
+.app .filter-search-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
   margin-left: auto;
+  min-width: 0;
+}
+.app .search {
   width: var(--field-width);
+  max-width: 100%;
+}
+.app .list-filters {
+  margin-bottom: var(--space-10);
+}
+.app .list-filters .toolbar {
+  margin-bottom: var(--space-6);
+}
+.app .list-filter-toggle {
+  display: none;
+  flex-shrink: 0;
+}
+.app .list-filter-toggle.active {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.app .filter-count {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.app .list-filter-fields {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, var(--field-min-width)), 1fr)
+  );
+  align-items: end;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--soft);
+}
+.app .list-filter-fields label {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.app .list-filter-fields input,
+.app .list-filter-fields select {
+  width: 100%;
+}
+.app .clear-filters {
+  justify-self: start;
 }
 .app .focus-filters {
   margin-top: var(--space-10);
@@ -387,11 +437,11 @@
   color: var(--muted);
   text-align: center;
 }
-.app .toolbar .month {
+.app .workspace-filters .toolbar .month {
   display: flex;
   gap: var(--space-3);
 }
-.app .toolbar .month input {
+.app .workspace-filters .toolbar .month input {
   width: var(--field-min-width);
 }
 .app .table {
@@ -576,6 +626,9 @@
   .app .workspace-label {
     font-size: var(--text-xs);
   }
+  .app .workspace-prefix {
+    display: none;
+  }
   .app .mobile-signout {
     display: inline-flex;
     align-items: center;
@@ -602,26 +655,52 @@
   .app .heading p {
     font-size: var(--text-sm);
   }
-  .app .toolbar {
+  .app .workspace-filters .toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-4);
   }
-  .app .toolbar select {
+  .app .workspace-filters .toolbar select {
     min-width: 0;
     max-width: 100%;
-    flex: 1;
+    width: 100%;
+  }
+  .app .workspace-filters input,
+  .app .workspace-filters select {
+    font-size: var(--text-lg);
+  }
+  .app .filter-search-group {
+    width: 100%;
+    margin: 0;
+  }
+  .app .filter-search-group:only-child,
+  .app .list-filters .filter-search-group {
+    grid-column: 1 / -1;
   }
   .app .search {
-    width: var(--field-min-width);
+    width: 100%;
+    min-width: 0;
     flex: 1;
     margin: 0;
+  }
+  .app .list-filter-toggle {
+    display: inline-flex;
+  }
+  .app .list-filter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: var(--space-6);
+  }
+  .app .list-filter-fields:not(.expanded) {
+    display: none;
   }
   .app .grid {
     grid-template-columns: 1fr;
   }
-  .app .toolbar .month {
+  .app .workspace-filters .toolbar .month {
     width: 100%;
+    grid-column: 1 / -1;
   }
-  .app .toolbar .month input {
+  .app .workspace-filters .toolbar .month input {
     flex: 1;
   }
   .app .tablehead {
@@ -643,10 +722,6 @@
   }
   .app .attention-reasons {
     max-width: 38%;
-  }
-  .app .toolbar > input[aria-label="Tag filter"] {
-    flex: 1 1 var(--field-min-width);
-    width: var(--field-min-width);
   }
   .app .card,
   [data-focus-drag-preview] {
@@ -683,9 +758,9 @@
   white-space: nowrap;
 }
 @media (max-width: 700px) {
-  .app .updates-toolbar .search {
+  .app .updates-toolbar .filter-search-group {
     order: 1;
-    flex-basis: 100%;
+    grid-column: 1 / -1;
   }
 }
 @media (max-width: 360px) {
@@ -698,5 +773,8 @@
 @media (max-width: 360px) {
   .app aside nav button {
     font-size: var(--text-compact);
+  }
+  .app .list-filter-fields {
+    grid-template-columns: 1fr;
   }
 }

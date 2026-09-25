@@ -21,6 +21,7 @@ export const iconPaths = {
   pin: "m9 3 6 0v5l3 3v3H6v-3l3-3V3ZM12 14v7",
   check: "m5 12 4 4L19 6",
   more: "M5 12h.01M12 12h.01M19 12h.01",
+  filter: "M4 7h9M17 7h3M4 17h3M11 17h9M13 4v6M7 14v6",
   flag: "M5 21V4c5-4 9 4 14 0v10c-5 4-9-4-14 0",
 } as const;
 export type IconName = keyof typeof iconPaths;
