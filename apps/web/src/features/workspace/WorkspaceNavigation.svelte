@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Brand from "../../lib/ui/Brand.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
 
   import { tick } from "svelte";
@@ -21,11 +20,13 @@
     const selectedView = view,
       navigation = navElement;
     if (!navigation) return;
+    const sidebar = navigation.parentElement;
     const reveal = () => {
       const active = navigation.querySelector<HTMLElement>(
         `button[data-view="${selectedView}"]`,
       );
-      if (active && navigation.scrollWidth > navigation.clientWidth)
+      if (!active) return;
+      if (navigation.scrollWidth > navigation.clientWidth) {
         navigation.scrollTo({
           left: Math.max(
             0,
@@ -35,17 +36,35 @@
           ),
           behavior: "instant",
         });
+      } else if (sidebar && sidebar.scrollHeight > sidebar.clientHeight) {
+        const item = active.getBoundingClientRect();
+        const bounds = sidebar.getBoundingClientRect();
+        const style = getComputedStyle(sidebar);
+        const top =
+          bounds.top + sidebar.clientTop + parseFloat(style.paddingTop);
+        const bottom =
+          bounds.top +
+          sidebar.clientTop +
+          sidebar.clientHeight -
+          parseFloat(style.paddingBottom);
+        const offset =
+          item.top < top
+            ? item.top - top
+            : item.bottom > bottom
+              ? item.bottom - bottom
+              : 0;
+        if (offset) sidebar.scrollBy({ top: offset, behavior: "instant" });
+      }
     };
     void tick().then(reveal);
     const observer = new ResizeObserver(reveal);
     observer.observe(navigation);
+    if (sidebar) observer.observe(sidebar);
     return () => observer.disconnect();
   });
 </script>
 
 <aside>
-  <Brand />
-  <p class="navlabel">WORKSPACE</p>
   <nav bind:this={navElement} aria-label="Workspace views">
     {#each views as item}<button
         aria-label={viewLabel(item)}

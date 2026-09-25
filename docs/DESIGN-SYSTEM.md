@@ -33,6 +33,9 @@ card's status automatically.
 ## Layout rules
 
 Desktop has an inset sidebar and white workspace. Mobile has a fixed bottom navigation with a target for every view.
+The sidebar starts directly with Focus. On short viewports, including landscape
+phones, the whole sidebar scrolls vertically so all views and Sign out remain
+reachable. Rotation reveals the active view within the new navigation axis.
 The navigation can still scroll when larger browser text requires more space. Workspace content clears the navigation and floating action.
 
 Card metadata wraps without losing dates, priority, checklist totals or tags.

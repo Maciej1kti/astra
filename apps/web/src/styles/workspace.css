@@ -15,19 +15,15 @@
   background: var(--soft);
   display: flex;
   flex-direction: column;
-}
-.app aside .brand {
-  padding: 0 var(--space-6);
-}
-.app .navlabel {
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking-label);
-  color: var(--muted);
-  margin: var(--space-14) var(--space-6) var(--space-6);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y pinch-zoom;
 }
 .app aside nav {
   display: grid;
   gap: var(--space-3);
+  flex-shrink: 0;
 }
 .app aside nav button {
   display: flex;
@@ -48,6 +44,7 @@
   font-weight: var(--weight-semibold);
 }
 .app .asidebottom {
+  flex-shrink: 0;
   margin-top: auto;
   padding: var(--space-8) var(--space-6) 0;
   font-size: var(--text-xs);
@@ -577,9 +574,9 @@
     background: var(--paper);
     box-shadow: var(--shadow-floating);
     border-radius: var(--radius-panel);
+    overflow: visible;
+    touch-action: pan-x pinch-zoom;
   }
-  .app aside .brand,
-  .app aside .navlabel,
   .app .asidebottom {
     display: none;
   }

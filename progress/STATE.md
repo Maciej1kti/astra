@@ -6,6 +6,10 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Compact workspace navigation](2026-09-25-sidebar-landscape.md) starts directly
+with Focus and makes the sidebar scrollable on landscape phones. Touch scrolling,
+rotation and reload pass responsive E2E; Focus and dialog suites also pass.
+
 [Dialog editing, responsive controls and motion](2026-09-25-dialogs-responsive-motion.md)
 unifies modal structure, makes card/project titles directly editable, repairs
 mobile List and Calendar controls, contains modal touch scrolling vertically and

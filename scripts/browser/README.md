@@ -27,6 +27,8 @@ The responsive suite checks all seven views at 320, 390, 768 and 1024px, readabl
 List filters with reload persistence, Calendar navigation, diagonal touch swipes
 inside a long modal and the system reduced-motion preference. These checks use
 the real release app and ordinary pairing, with synthetic source data.
+It also checks sidebar touch scrolling at 844 × 390 and 740 × 320, and keeps the
+active view visible after rotation between portrait and landscape and reload.
 
 ```sh
 ASTRA_TEST_PROFILE=release npm run test:browser:regressions

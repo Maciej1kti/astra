@@ -108,6 +108,74 @@ await runBrowserSuite(
           results.push({ width, view, noPageOverflow: true });
         }
       }
+      for (const [width, height] of [
+        [844, 390],
+        [740, 320],
+      ]) {
+        await page.setViewportSize({ width, height });
+        await route("focus");
+        const sidebar = page.locator("aside");
+        await expect(sidebar.getByText("Astra", { exact: true })).toHaveCount(
+          0,
+        );
+        await expect(
+          sidebar.getByText("WORKSPACE", { exact: true }),
+        ).toHaveCount(0);
+        await expect(sidebar.getByRole("button").first()).toHaveText("Focus");
+        await expect(
+          sidebar.getByRole("button", { name: "Focus", exact: true }),
+        ).toBeInViewport({ ratio: 1 });
+        const initial = await sidebar.evaluate((el) => el.scrollTop);
+        const bounds = await sidebar.boundingBox();
+        const x = bounds.x + bounds.width / 2;
+        const y = bounds.y + bounds.height - 40;
+        const touch = await context.newCDPSession(page);
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x, y }],
+        });
+        for (let step = 1; step <= 10; step++) {
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchMove",
+            touchPoints: [{ x, y: y - (200 * step) / 10 }],
+          });
+        }
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
+        await expect
+          .poll(() => sidebar.evaluate((el) => el.scrollTop))
+          .toBeGreaterThan(initial);
+        await expect(
+          sidebar.getByRole("button", { name: "Sign out", exact: true }),
+        ).toBeInViewport({ ratio: 1 });
+        await sidebar
+          .getByRole("button", { name: "Updates", exact: true })
+          .click();
+        await expect(
+          page.getByRole("heading", { name: "Updates", exact: true }),
+        ).toBeVisible();
+        await screenshot(`${width}-${height}-sidebar`);
+        await page.setViewportSize({ width: 390, height: 844 });
+        const active = sidebar.getByRole("button", {
+          name: "Updates",
+          exact: true,
+        });
+        await expect(active).toBeInViewport({ ratio: 1 });
+        await page.setViewportSize({ width, height });
+        await expect(active).toBeInViewport({ ratio: 1 });
+        await page.reload();
+        await expect(active).toHaveAttribute("aria-current", "page");
+        await expect(active).toBeInViewport({ ratio: 1 });
+        await touch.detach();
+        results.push({
+          width,
+          height,
+          sidebarTouchScroll: true,
+          rotationAndReloadRevealActiveView: true,
+        });
+      }
       const payload = join(runtime, "vertical-modal.json");
       await writeFile(
         payload,
