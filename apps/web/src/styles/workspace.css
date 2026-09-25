@@ -87,6 +87,7 @@
   padding: var(--space-4) var(--space-10);
   font-size: var(--text-sm);
   gap: var(--space-6);
+  background: var(--paper);
 }
 .app .workspace-actions,
 .app .desktop-workspace-actions {
@@ -326,22 +327,27 @@
   border-radius: var(--radius-control);
   font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
-  margin-bottom: var(--space-6);
 }
-.app .projectcard .projectopen > .badge {
-  float: right;
+.app .projectcard {
+  position: relative;
+}
+.app .projectcard:has(.action-menu-panel) {
+  z-index: var(--layer-navigation);
 }
 .app .projectcard h2 {
   font-size: var(--text-section);
   letter-spacing: var(--tracking-tight);
-  margin: var(--space-4) 0;
+  margin: 0;
 }
 .app .projectcard p {
   font-size: var(--text-sm);
   color: var(--muted);
+  margin: var(--space-3) 0 0;
 }
 .app .projectcard .projectopen {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -350,10 +356,46 @@
   text-align: left;
   width: 100%;
 }
-.app .projectcard .project-delete {
-  margin-top: var(--space-6);
+.app .projectcard .projectinitial {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.app .projectcard .projectcopy {
+  min-width: 0;
+  flex: 1;
+}
+.app .projectcard .projectopen-icon {
+  color: var(--muted);
+  font-size: var(--text-xl);
+}
+.app .projectcard .project-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  margin-top: var(--space-7);
+  padding-top: var(--space-7);
+  border-top: var(--stroke) solid var(--line);
   font-size: var(--text-sm);
   color: var(--muted);
+}
+.app .projectcard .project-meta .badge {
+  flex: 0 0 auto;
+}
+.app .projectcard .project-availability {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.app .projectcard .project-meta .action-menu {
+  margin-left: auto;
+}
+.app .projectcard .project-meta .action-menu-panel {
+  z-index: var(--layer-floating);
+}
+.app .projectcard .project-delete {
+  color: var(--danger);
 }
 .app .listrow {
   display: flex;
@@ -554,9 +596,13 @@
   }
 }
 @media (max-width: 700px) {
+  :root {
+    background: var(--paper);
+  }
   .app {
     display: block;
-    padding: 0 0 calc(var(--dock-height) + env(safe-area-inset-bottom, 0px));
+    padding: env(safe-area-inset-top, 0px) 0
+      calc(var(--dock-height) + env(safe-area-inset-bottom, 0px));
   }
   .app aside {
     position: fixed;
@@ -601,9 +647,17 @@
     box-shadow: none;
   }
   .app .topbar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
     min-height: var(--header-height);
     padding: var(--space-3) var(--space-6);
     gap: var(--space-2);
+  }
+  .app .topbar::before {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * env(safe-area-inset-top, 0px)) 0 100%;
+    background: var(--paper);
   }
   .app .workspace-actions {
     gap: 0;
@@ -617,6 +671,8 @@
   .app .workspace-project {
     max-width: none;
     font-size: var(--text-lg);
+    line-height: var(--leading-body);
+    padding-block: 0;
   }
   .app .content {
     padding: var(--space-9) var(--space-8);
@@ -671,6 +727,31 @@
   }
   .app .grid {
     grid-template-columns: 1fr;
+  }
+  .app .projectcard {
+    padding: var(--space-8);
+  }
+  .app .projectcard .projectinitial {
+    width: var(--tap-target);
+    height: var(--tap-target);
+    font-size: var(--text-base);
+  }
+  .app .projectcard .project-meta {
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+  }
+  .app .board-overview {
+    display: grid;
+    overflow: visible;
+    padding: 0;
+  }
+  .app .board-overview .column {
+    width: 100%;
+    min-width: 0;
+    padding: var(--space-4);
+  }
+  .app .board-overview .column.mobile-empty {
+    display: none;
   }
   .app .workspace-filters .toolbar .month {
     width: 100%;

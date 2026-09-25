@@ -49,6 +49,7 @@
   let restoring = false;
   let saveTimer = 0;
   let quickStatus = $state<string | null>(null);
+  let visibleStatus = $state<string>("planned");
   let quickTitles = $state<Record<string, string>>({});
   function focusTitle(node: HTMLInputElement) {
     node.focus();
@@ -71,7 +72,35 @@
     {
       if (!boardRoot || current !== generation) return;
       const scroll = boardRoot.querySelector<HTMLElement>(".date-scroll");
-      if (scroll) scroll.scrollLeft = viewState.horizontal;
+      if (scroll) {
+        let horizontal = viewState.horizontal;
+        if (
+          initialView &&
+          horizontal === 0 &&
+          matchMedia("(max-width: 700px)").matches
+        ) {
+          const query = search.trim().toLowerCase();
+          const firstWithCards =
+            (query &&
+              columns.find((column) =>
+                column.items.some((item) =>
+                  item.title.toLowerCase().includes(query),
+                ),
+              )) ||
+            columns.find((column) => column.total > 0);
+          const first = scroll.querySelector<HTMLElement>(".wx-column");
+          const target =
+            firstWithCards &&
+            scroll.querySelector<HTMLElement>(
+              `.astra-column-${firstWithCards.status}`,
+            );
+          if (first && target) {
+            horizontal = target.offsetLeft - first.offsetLeft;
+            visibleStatus = firstWithCards.status;
+          }
+        }
+        scroll.scrollLeft = horizontal;
+      }
       for (const node of boardRoot.querySelectorAll<HTMLElement>(
         "[data-kanban-column-cards]",
       )) {
@@ -368,15 +397,34 @@
     boardRoot = node;
     node.querySelector(".wx-scroll")?.classList.add("date-scroll");
     const scrolled = (event: Event) => {
-      if (restoring || search || !(event.target instanceof HTMLElement)) return;
+      if (restoring || !(event.target instanceof HTMLElement)) return;
       const target = event.target;
-      if (target.classList.contains("date-scroll"))
-        viewState.horizontal = target.scrollLeft;
-      else if (target.matches("[data-kanban-column-cards]")) {
+      if (target.classList.contains("date-scroll")) {
+        if (!search) viewState.horizontal = target.scrollLeft;
+        const first = target.querySelector<HTMLElement>(".wx-column");
+        const closest = columns.reduce<{
+          status: string;
+          distance: number;
+        } | null>((result, column) => {
+          const element = target.querySelector<HTMLElement>(
+            `.astra-column-${column.status}`,
+          );
+          if (!element || !first) return result;
+          const distance = Math.abs(
+            element.offsetLeft - first.offsetLeft - target.scrollLeft,
+          );
+          return !result || distance < result.distance
+            ? { status: column.status, distance }
+            : result;
+        }, null);
+        if (closest) visibleStatus = closest.status;
+      } else if (target.matches("[data-kanban-column-cards]")) {
+        if (search) return;
         const status =
           target.dataset.kanbanColumnCards?.replace(/^:/, "") ?? "";
         if (pageStarts[status]) viewState.vertical[status] = target.scrollTop;
       } else return;
+      if (search) return;
       window.clearTimeout(saveTimer);
       saveTimer = window.setTimeout(saveView, 150);
     };
@@ -389,6 +437,21 @@
         boardRoot = undefined;
       },
     };
+  }
+  function showColumn(status: string) {
+    const scroll = boardRoot?.querySelector<HTMLElement>(".date-scroll");
+    const first = scroll?.querySelector<HTMLElement>(".wx-column");
+    const column = scroll?.querySelector<HTMLElement>(
+      `.astra-column-${status}`,
+    );
+    if (!scroll || !first || !column) return;
+    visibleStatus = status;
+    scroll.scrollTo({
+      left: column.offsetLeft - first.offsetLeft,
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
   }
   function initialize(store: KanbanInstanceApi) {
     // SVAR is a view adapter. It never commits or optimistically changes cards.
@@ -440,6 +503,13 @@
     filtering.
     {#if !busy && !boardCards.length}No matching cards in the loaded pages.{/if}
   </p>{/if}
+{#if columns.length}<nav class="board-column-nav" aria-label="Board columns">
+    {#each columns as column}<button
+        aria-current={visibleStatus === column.status ? "true" : undefined}
+        onclick={() => showColumn(column.status)}
+        >{column.status} <span>{column.total}</span></button
+      >{/each}
+  </nav>{/if}
 <div class="astra-board" aria-busy={busy} use:scrolling>
   <Willow fonts={false} children={undefined} />
   <div class="board-theme wx-theme wx-willow-theme">
@@ -520,6 +590,9 @@
 </div>
 
 <style>
+  .board-column-nav {
+    display: none;
+  }
   .astra-board {
     min-width: 0;
     height: clamp(
@@ -633,5 +706,40 @@
     flex: 1;
     padding: var(--space-3);
     font-size: var(--text-label);
+  }
+  @media (max-width: 700px) {
+    .board-column-nav {
+      display: flex;
+      gap: var(--space-2);
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-1);
+      touch-action: pan-x;
+    }
+    .board-column-nav button {
+      flex: 0 0 auto;
+      min-height: var(--tap-target);
+      padding: var(--space-4) var(--space-6);
+      text-transform: capitalize;
+      white-space: nowrap;
+      background: var(--soft);
+    }
+    .board-column-nav button[aria-current="true"] {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .board-column-nav span {
+      color: var(--muted);
+      margin-left: var(--space-1);
+    }
+    .astra-board {
+      height: clamp(320px, 52dvh, 520px);
+    }
+    .astra-board :global(.wx-column:not(.wx-collapsed)) {
+      flex-basis: calc(100vw - var(--space-20) - var(--space-4));
+      min-width: calc(100vw - var(--space-20) - var(--space-4));
+    }
   }
 </style>

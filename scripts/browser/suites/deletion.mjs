@@ -66,6 +66,14 @@ await runBrowserSuite(
         "Connected to host",
       );
     }
+    async function openProjectDeletion(page, title) {
+      await page
+        .getByRole("button", { name: `More actions for ${title}` })
+        .click();
+      await page
+        .getByRole("button", { name: "Delete project", exact: true })
+        .click();
+    }
     function editor(page) {
       return page.getByRole("dialog", { name: "Edit resource", exact: true });
     }
@@ -630,12 +638,7 @@ await runBrowserSuite(
         async () => {
           const candidate = config.projects[2];
           await route(page, "projects", candidate.id);
-          await page
-            .getByRole("button", {
-              name: `Delete project ${candidate.title}`,
-              exact: true,
-            })
-            .click();
+          await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
             name: "Delete project",
             exact: true,
@@ -676,12 +679,7 @@ await runBrowserSuite(
             await route.abort("failed").catch(() => {});
           });
           await route(page, "projects", candidate.id);
-          await page
-            .getByRole("button", {
-              name: `Delete project ${candidate.title}`,
-              exact: true,
-            })
-            .click();
+          await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
             name: "Delete project",
             exact: true,
@@ -743,12 +741,7 @@ await runBrowserSuite(
         async () => {
           const candidate = config.projects[1];
           await route(page, "projects", candidate.id);
-          await page
-            .getByRole("button", {
-              name: `Delete project ${candidate.title}`,
-              exact: true,
-            })
-            .click();
+          await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
             name: "Delete project",
             exact: true,
@@ -811,12 +804,7 @@ await runBrowserSuite(
           const candidate = config.projects[1];
           const projectPath = `${config.origin}/api/v1/projects/${candidate.id}`;
           await route(page, "projects", candidate.id);
-          await page
-            .getByRole("button", {
-              name: `Delete project ${candidate.title}`,
-              exact: true,
-            })
-            .click();
+          await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
             name: "Delete project",
             exact: true,
@@ -902,12 +890,7 @@ await runBrowserSuite(
             return route.continue();
           });
           await route(page, "projects", candidate.id);
-          await page
-            .getByRole("button", {
-              name: `Delete project ${candidate.title}`,
-              exact: true,
-            })
-            .click();
+          await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
             name: "Delete project",
             exact: true,
@@ -950,12 +933,7 @@ await runBrowserSuite(
         async () => {
           const candidate = config.projects[0];
           await route(page, "projects", candidate.id);
-          await page
-            .getByRole("button", {
-              name: `Delete project ${candidate.title}`,
-              exact: true,
-            })
-            .click();
+          await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
             name: "Delete project",
             exact: true,

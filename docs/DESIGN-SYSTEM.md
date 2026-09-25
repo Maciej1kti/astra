@@ -43,8 +43,10 @@ Calendar, board and timeline overflow stays inside their own surfaces. Calendar
 defaults to its existing agenda layout on narrow screens. The native modal
 retains focus handling, autosave recovery and keyboard dismissal.
 
-The shared header stays above every view, including Focus. Project-scoped views
-choose their project in this header; do not repeat the selector in view filters.
+The shared header stays above every view, including Focus. On phones it remains
+opaque and sticky below the top safe area, so its text stays clear while content
+scrolls. Project-scoped views choose their project in this header; do not repeat
+the selector in view filters.
 Projects remains the full workspace overview. Narrow headers retain settings
 and refresh buttons, with Git, diagnostics and Sign out in the shared action menu.
 Long project names truncate inside the native selector without expanding the page.
@@ -54,6 +56,15 @@ secondary filters expand in place; the trigger shows the number of active filter
 even when collapsed. Route state remains authoritative across reload and navigation.
 Never let a row of selects shrink to unreadable arrows. Workspace toolbar styles
 are scoped to `WorkspaceFilters` so they cannot override planning widget controls.
+
+On phones, Calendar places period navigation and date/layout controls in two
+compact rows. Its month agenda/grid choice sits just above the dated items;
+instructions and the plan/due legend follow the calendar instead of delaying
+its content. Board's all-project overview stacks populated statuses vertically.
+Within a project, a small status strip jumps between horizontally scrolling
+columns and opens on the first column with cards when no position was saved.
+Projects uses compact cards with a separate actions menu; deletion remains a
+deliberate action in that menu.
 
 CSS media-query breakpoints and structural proportions are layout rules, not
 theme values. `lib/ui/planning-metrics.ts` centralizes numeric dimensions required

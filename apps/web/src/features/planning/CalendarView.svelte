@@ -371,15 +371,16 @@
       >
     </div>
     <label class="date-control"
-      >Go to date<input
+      ><span class="control-caption">Go to date</span><input
         type="date"
+        aria-label="Go to date"
         value={date}
         onchange={(e) => changeDate(e.currentTarget)}
         required
       /></label
     >
     <label
-      >Calendar layout<select
+      ><span class="control-caption">Calendar layout</span><select
         aria-label="Calendar layout"
         value={mode}
         onchange={(e) => changeLayout(e.currentTarget.value as CalendarLayout)}
@@ -389,39 +390,21 @@
         ></select
       ></label
     >
-    <button
-      class="create-scheduled"
-      disabled={!project || !isCalendarDate(date)}
-      onclick={() => oncreate({ start: date, end: date })}
-      >New scheduled card</button
-    >
-  </div>
-  <div class="view-meta">
-    <p class="legend">
-      <span>▬ Plan</span><span>◆ Due</span>
-    </p>
-    <details class="help">
-      <summary>Calendar shortcuts & editing</summary>
-      <p>
-        Drag planned work to move it; drag either edge to resize. On touch, hold
-        a plan to select it. Click a day or select a range to create a card.
-        Enter opens a focused item. Alt+←/→ on a plan moves it one day; Shift
-        changes a week. Elsewhere in this view, Alt+←/→ navigates, Alt+T opens
-        today, and Alt+1/2/3/4 selects day/week/month/agenda. Escape cancels a
-        gesture.
-      </p>
-    </details>
+    {#if project}<button
+        class="create-scheduled"
+        disabled={!isCalendarDate(date)}
+        onclick={() => oncreate({ start: date, end: date })}
+        >New scheduled card</button
+      >{/if}
   </div>
   {#if compact && mode === "month"}<div class="mobile-month-mode">
-      <span>{monthAgenda ? "Month agenda" : "Month grid"}</span>
-      <button onclick={() => (mobileMonthGrid = !mobileMonthGrid)}>
-        {monthAgenda ? "Show month grid" : "Show month agenda"}
-      </button>
+      <button
+        aria-pressed={monthAgenda}
+        onclick={() => (mobileMonthGrid = false)}>Agenda</button
+      ><button aria-pressed={monthGrid} onclick={() => (mobileMonthGrid = true)}
+        >Month grid</button
+      >
     </div>{/if}
-  {#if !project}<p>
-      Select a project to create a card. Existing items from all projects can be
-      edited.
-    </p>{/if}
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
   {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
   {#if error}<p role="alert">
@@ -466,6 +449,22 @@
           {/if}
         {/snippet}
       </Calendar>{/key}
+  </div>
+  <div class="view-meta">
+    <p class="legend">
+      <span>▬ Plan</span><span>◆ Due</span>
+    </p>
+    <details class="help">
+      <summary>Calendar shortcuts & editing</summary>
+      <p>
+        Drag planned work to move it; drag either edge to resize. On touch, hold
+        a plan to select it. Click a day or select a range to create a card.
+        Enter opens a focused item. Alt+←/→ on a plan moves it one day; Shift
+        changes a week. Elsewhere in this view, Alt+←/→ navigates, Alt+T opens
+        today, and Alt+1/2/3/4 selects day/week/month/agenda. Escape cancels a
+        gesture.
+      </p>
+    </details>
   </div>
   {#if cursor}<button disabled={loading} onclick={() => load(true)}
       >Next page of dated resources</button
@@ -512,7 +511,7 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: var(--space-2) var(--space-8);
-    margin-bottom: var(--space-6);
+    margin-top: var(--space-6);
   }
   label {
     display: grid;
@@ -546,13 +545,21 @@
     line-height: var(--leading-body);
   }
   .mobile-month-mode {
-    display: flex;
+    display: none;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-    margin: 0 0 var(--space-5);
+    gap: var(--space-2);
+    margin: 0 0 var(--space-4);
     font-size: var(--text-sm);
     color: var(--muted);
+  }
+  .mobile-month-mode button {
+    flex: 1;
+    min-height: var(--tap-target);
+  }
+  .mobile-month-mode button[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
   }
   .calendar-surface {
     position: relative;
@@ -659,6 +666,21 @@
   .agenda :global(.ec-day) {
     min-height: 0;
   }
+  .agenda :global(.ec-day-head) {
+    align-items: baseline;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .agenda :global(.ec-day-head time) {
+    font-family: var(--font-sans);
+    font-weight: var(--weight-semibold);
+  }
+  .agenda :global(.ec-day-head .ec-day-side) {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--muted);
+  }
   .agenda :global(.ec-main) {
     display: block;
     min-height: 0;
@@ -676,6 +698,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: var(--space-4);
+      margin-bottom: var(--space-4);
     }
     .navigation {
       order: 0;
@@ -692,12 +715,18 @@
     .toolbar label {
       order: 2;
     }
+    .toolbar .control-caption {
+      display: none;
+    }
     .toolbar input,
     .toolbar select {
       width: 100%;
     }
     .view-meta {
       gap: var(--space-4);
+    }
+    .mobile-month-mode {
+      display: flex;
     }
     .legend {
       gap: var(--space-6);

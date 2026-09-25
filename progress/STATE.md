@@ -6,6 +6,13 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Mobile Calendar, Board and Projects polish](2026-09-25-mobile-calendar-board-projects.md)
+brings dated items higher on phone screens, replaces empty-first Board navigation
+with populated sections and column jumps, compacts project cards, and keeps the
+mobile header opaque beneath the top safe area. Relevant E2E suites pass, and
+the running HTTPS app was reviewed at 320–1440px. Native iPhone status-bar
+confirmation and full release acceptance remain open.
+
 [Project selection in the shared header](2026-09-25-header-project.md) removes
 duplicate project controls and restores the Focus bar above its content.
 Responsive, Focus, dialogs and editor E2E pass; the running app was reviewed at

@@ -86,7 +86,9 @@ export async function verifyPlanningFixes(
   await date.press("Tab");
   await layout.selectOption("month");
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByText("Month agenda", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Agenda", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(calendar.locator(".ec-list.ec-month-view")).toBeVisible();
   await expect
     .poll(async () =>
@@ -117,9 +119,7 @@ export async function verifyPlanningFixes(
     element.scrollTop = 0;
   });
   await onCheckpoint("mobile-390-calendar-agenda", page);
-  await page
-    .getByRole("button", { name: "Show month grid", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Month grid", exact: true }).click();
   await expect(calendar.locator(".ec-day-grid.ec-month-view")).toBeVisible();
   await expect
     .poll(async () =>
@@ -127,9 +127,7 @@ export async function verifyPlanningFixes(
     )
     .toBeLessThan(800);
   await onCheckpoint("mobile-390-calendar-grid", page);
-  await page
-    .getByRole("button", { name: "Show month agenda", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Agenda", exact: true }).click();
 
   if (timelineUrl && timelineCardId && timelineCardTitle) {
     await page.goto(timelineUrl);

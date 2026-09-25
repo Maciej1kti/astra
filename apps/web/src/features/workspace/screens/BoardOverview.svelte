@@ -19,17 +19,26 @@
   } = $props();
   const statuses = ["planned", "active", "review", "done", "cancelled"];
   const filtered = $derived(visibleCards(cards, route));
+  const counts = $derived(
+    Object.fromEntries(
+      statuses.map((status) => [
+        status,
+        filtered.filter((card) => card.status === status).length,
+      ]),
+    ),
+  );
+  const hasCards = $derived(filtered.length > 0);
 </script>
 
-<p role="status">
-  All projects is an overview. Select a project above to drag and reorder cards.
+<p role="status" class="board-overview-hint">
+  Choose a project above to move cards.
 </p>
-<div class="board">
-  {#each statuses as status}<section class="column">
-      <SectionHeading
-        title={status}
-        count={filtered.filter((c) => c.status === status).length}
-      />
+<div class="board board-overview">
+  {#each statuses as status}<section
+      class="column"
+      class:mobile-empty={hasCards && !counts[status]}
+    >
+      <SectionHeading title={status} count={counts[status]} />
       {#each filtered
         .filter((c) => c.status === status)
         .sort( (a, b) => (a.position ?? "").localeCompare(b.position ?? "") ) as item}<ResourceCard
