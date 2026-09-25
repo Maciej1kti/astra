@@ -92,10 +92,15 @@ test("typed search replaces an entry while semantic navigation creates one", () 
     );
 });
 
-test("list collection cannot contaminate create actions in other views", () => {
-  for (const view of ["focus", "board", "calendar", "gantt", "projects"])
-    assert.equal(primaryResource(view, "milestones"), "card");
-  assert.equal(primaryResource("list", "milestones"), "milestone");
-  assert.equal(primaryResource("list", "cards"), "card");
-  assert.equal(primaryResource("updates", "milestones"), "update");
+test("view create actions select cards or updates", () => {
+  for (const view of [
+    "focus",
+    "board",
+    "calendar",
+    "gantt",
+    "projects",
+    "list",
+  ])
+    assert.equal(primaryResource(view), "card");
+  assert.equal(primaryResource("updates"), "update");
 });

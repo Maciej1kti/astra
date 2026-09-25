@@ -13,7 +13,6 @@ export type RouteFilters = Pick<
   WorkspaceRoute,
   | "project"
   | "search"
-  | "collection"
   | "archived"
   | "status"
   | "priority"
@@ -117,14 +116,7 @@ export function navigationState(
   function changeFilters(patch: Partial<RouteFilters>) {
     if (patch.project !== undefined && patch.project !== current.project)
       invalidateResourceRead();
-    current = {
-      ...current,
-      ...patch,
-      ...(patch.collection !== undefined &&
-      patch.collection !== current.collection
-        ? { status: "" }
-        : {}),
-    };
+    current = { ...current, ...patch };
   }
   async function openResource(target: ResourceRoute) {
     invalidateResourceRead();

@@ -17,20 +17,13 @@ export type ViewQuery = {
   view: View;
   project: string;
   search: string;
-  collection: "cards" | "milestones";
   archived: boolean;
   status: string;
   priority: string;
   label: string;
 };
 export type Section =
-  | "projects"
-  | "focus"
-  | "attention"
-  | "card"
-  | "milestone"
-  | "update"
-  | "planning";
+  "projects" | "focus" | "attention" | "card" | "update" | "planning";
 export type {
   FocusRef,
   AttentionItem as Attention,
@@ -47,7 +40,7 @@ export function viewSections(query: ViewQuery): Section[] {
     case "projects":
       return ["projects", "card", "update"];
     case "list":
-      return ["projects", query.collection === "cards" ? "card" : "milestone"];
+      return ["projects", "card"];
     case "updates":
       return ["projects", "update"];
     case "board":
@@ -64,13 +57,7 @@ export function viewQueryKey(query: ViewQuery) {
     query.view === "projects" ? "" : query.project,
     ["list", "updates"].includes(query.view) ? query.search.trim() : "",
     ...(query.view === "list"
-      ? [
-          query.collection,
-          query.archived,
-          query.status,
-          query.priority,
-          query.label,
-        ]
+      ? [query.archived, query.status, query.priority, query.label]
       : []),
   ]);
 }
@@ -101,7 +88,7 @@ export function affectedSections(
     kind === "card"
       ? ["focus", "attention", "card", "planning"]
       : kind === "milestone"
-        ? ["attention", "milestone", "planning"]
+        ? ["attention", "planning"]
         : kind === "update"
           ? ["attention", "update"]
           : kind === "project"
@@ -126,16 +113,11 @@ export function resourceListPath(
     params.set("q", query.search.trim());
   if (query.project && query.view !== "projects")
     params.set("project_id", query.project);
-  if (
-    query.view === "list" &&
-    type === (query.collection === "cards" ? "card" : "milestone")
-  ) {
+  if (query.view === "list" && type === "card") {
     if (query.status) params.set("status", query.status);
-    if (type === "card") {
-      if (query.archived) params.set("archived", "true");
-      if (query.priority) params.set("priority", query.priority);
-      if (query.label) params.set("label", query.label);
-    }
+    if (query.archived) params.set("archived", "true");
+    if (query.priority) params.set("priority", query.priority);
+    if (query.label) params.set("label", query.label);
   }
   if (query.view === "focus" && type === "card") params.set("status", "active");
   if (cursor) params.set("cursor", cursor);
@@ -177,10 +159,7 @@ export type LoadedView = {
   focusCards?: Summary[];
   attention?: { value: Page<Attention>; reset: boolean };
   pages: Partial<
-    Record<
-      "card" | "milestone" | "update",
-      { value: Page<Summary>; reset: boolean }
-    >
+    Record<"card" | "update", { value: Page<Summary>; reset: boolean }>
   >;
   notices: Partial<Record<Section, string>>;
 };

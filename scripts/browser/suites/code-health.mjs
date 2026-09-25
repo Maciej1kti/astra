@@ -84,6 +84,37 @@ await runBrowserSuite(
       });
 
       start = requests.length;
+      await page.goto(
+        `${config.origin}/?${new URLSearchParams({
+          view: "list",
+          project,
+          collection: "milestones",
+          status: "achieved",
+        })}`,
+      );
+      await expect(row).toBeVisible();
+      await expect(page).not.toHaveURL(/collection=|status=/);
+      await expect(
+        page.getByLabel("Resource type", { exact: true }),
+      ).toHaveCount(0);
+      const legacyReads = requests
+        .slice(start)
+        .filter((path) => path.startsWith("/api/v1/views/list?"));
+      assert.ok(legacyReads.length > 0);
+      assert.ok(
+        legacyReads.every((path) => {
+          const params = new URL(path, config.origin).searchParams;
+          return params.get("type") === "card" && !params.has("status");
+        }),
+        JSON.stringify(legacyReads),
+      );
+      results.push({
+        check:
+          "Legacy milestone List links read only cards and discard milestone status",
+        requests: legacyReads,
+      });
+
+      start = requests.length;
       await row.click();
       const dialog = page.getByRole("dialog", {
         name: "Edit resource",

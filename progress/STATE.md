@@ -6,6 +6,11 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Cards-only List](2026-09-25-list-cards.md) removes the Cards/Milestones selector
+and its unused frontend state. Legacy milestone-list links resolve to cards;
+mobile project selection fills its row. Editor, responsive, request-scope and
+pagination E2E pass, with the updated dev app checked at 320–1440px.
+
 [Compact workspace navigation](2026-09-25-sidebar-landscape.md) starts directly
 with Focus and makes the sidebar scrollable on landscape phones. Touch scrolling,
 rotation and reload pass responsive E2E; Focus and dialog suites also pass.

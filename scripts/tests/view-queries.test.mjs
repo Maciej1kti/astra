@@ -25,7 +25,6 @@ const query = {
   view: "list",
   project: "p",
   search: "",
-  collection: "cards",
   archived: false,
   status: "",
   priority: "",
@@ -47,10 +46,6 @@ test("planning routes only load shared project context; list and reports fetch t
     "projects",
     "update",
   ]);
-  assert.deepEqual(
-    viewSections({ ...query, view: "list", collection: "milestones" }),
-    ["projects", "milestone"],
-  );
   assert.deepEqual(viewSections({ ...query, view: "focus" }), [
     "projects",
     "focus",

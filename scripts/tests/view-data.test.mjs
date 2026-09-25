@@ -6,7 +6,6 @@ const query = {
   view: "list",
   project: "first",
   search: "",
-  collection: "cards",
   archived: false,
   status: "",
   priority: "",

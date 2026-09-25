@@ -134,15 +134,14 @@ test("latest resource wins and an obsolete read failure cannot replace its resul
   assert.deepEqual(errors, []);
 });
 
-test("route owner resets collection status and preserves exact filters and calendar navigation", () => {
+test("route owner preserves exact filters and calendar navigation", () => {
   const { routing } = fixture();
   routing.changeFilters({
     status: "review",
     label: " QA, exact ",
     archived: true,
   });
-  routing.changeFilters({ collection: "milestones" });
-  assert.equal(routing.current.status, "");
+  assert.equal(routing.current.status, "review");
   assert.equal(routing.current.label, " QA, exact ");
   routing.changeFilters({ month: "2026-12" });
   routing.changeMonth(1);

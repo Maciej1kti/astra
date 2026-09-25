@@ -454,13 +454,20 @@ export async function runEditorChecks({
 
   await check(
     "A03",
-    "A milestone List selection cannot change Board, Calendar or Timeline creation type",
+    "Legacy milestone List links open cards and all planning views create card drafts",
     async () => {
-      await route();
-      await page
-        .getByLabel("Resource type", { exact: true })
-        .selectOption("milestones");
-      for (const view of ["Board", "Calendar", "Timeline"]) {
+      await route("list", { collection: "milestones", status: "achieved" });
+      await expect(
+        page.getByLabel("Resource type", { exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByLabel("Status filter", { exact: true }),
+      ).toHaveValue("");
+      await expect(page.locator(".listrow").first()).toBeVisible();
+      await expect(page).not.toHaveURL(/collection=|status=/);
+      await page.reload();
+      await expect(page.locator(".listrow").first()).toBeVisible();
+      for (const view of ["List", "Board", "Calendar", "Timeline"]) {
         await page.getByRole("button", { name: view, exact: true }).click();
         await expect(
           page.locator(".heading").getByRole("button", { name: /Add card$/ }),
@@ -474,7 +481,7 @@ export async function runEditorChecks({
         );
         await close();
       }
-      return "All three planning views create card drafts.";
+      return "Legacy links resolve to cards after reload; List and all three planning views create card drafts.";
     },
   );
 
@@ -525,7 +532,7 @@ export async function runEditorChecks({
       );
       await expect(
         page.getByText(
-          "No items match this selection. Try another project or clear the filters.",
+          "No cards match this selection. Try another project or clear the filters.",
           { exact: true },
         ),
       ).toBeVisible();
@@ -638,7 +645,7 @@ export async function runEditorChecks({
       await page.getByLabel("Tag filter", { exact: true }).fill("QA");
       await expect(
         page.getByText(
-          "No items match this selection. Try another project or clear the filters.",
+          "No cards match this selection. Try another project or clear the filters.",
           { exact: true },
         ),
       ).toBeVisible();

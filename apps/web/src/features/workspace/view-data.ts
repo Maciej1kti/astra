@@ -16,7 +16,6 @@ import type { Summary } from "../../lib/api/api.ts";
 export type ViewDataState = {
   projects: Summary[];
   cards: Summary[];
-  milestones: Summary[];
   updates: Summary[];
   focus: FocusRef[];
   focusVersion: string;
@@ -36,7 +35,6 @@ export type ViewDataState = {
 const emptyState = (): ViewDataState => ({
   projects: [],
   cards: [],
-  milestones: [],
   updates: [],
   focus: [],
   focusVersion: "",
@@ -207,7 +205,6 @@ export class ViewData {
   }
   private setRows(kind: string, rows: Summary[]) {
     if (kind === "card") this.snapshot.cards = rows;
-    else if (kind === "milestone") this.snapshot.milestones = rows;
     else this.snapshot.updates = rows;
   }
   async more(kind: string, back = false) {

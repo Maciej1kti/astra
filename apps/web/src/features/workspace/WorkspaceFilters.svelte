@@ -20,12 +20,8 @@
   const id = $props.id();
   let filtersExpanded = $state(false);
   const filterCount = $derived(
-    [
-      route.status,
-      ...(route.collection === "cards"
-        ? [route.priority, route.label, route.archived]
-        : []),
-    ].filter(Boolean).length,
+    [route.status, route.priority, route.label, route.archived].filter(Boolean)
+      .length,
   );
 </script>
 
@@ -40,20 +36,6 @@
         <option value="">All projects</option>
         {#each projects as item}<option value={item.id}>{item.title}</option
           >{/each}
-      </select>
-    {/if}
-    {#if route.view === "list"}
-      <select
-        aria-label="Resource type"
-        value={route.collection}
-        onchange={(event) =>
-          onchange({
-            collection: event.currentTarget.value as RouteFilters["collection"],
-          })}
-      >
-        <option value="cards">Cards</option><option value="milestones"
-          >Milestones</option
-        >
       </select>
     {/if}
     <div class="filter-search-group">
@@ -116,46 +98,44 @@
           onchange={(event) => onchange({ status: event.currentTarget.value })}
         >
           <option value="">All statuses</option>
-          {#each route.collection === "cards" ? statuses : ["planned", "active", "achieved", "cancelled"] as status}<option
-              value={status}>{resourceLabel(status)}</option
+          {#each statuses as status}<option value={status}
+              >{resourceLabel(status)}</option
             >{/each}
         </select></label
       >
-      {#if route.collection === "cards"}
-        <label
-          >Visibility<select
-            aria-label="Card visibility"
-            value={String(route.archived)}
-            onchange={(event) =>
-              onchange({ archived: event.currentTarget.value === "true" })}
+      <label
+        >Visibility<select
+          aria-label="Card visibility"
+          value={String(route.archived)}
+          onchange={(event) =>
+            onchange({ archived: event.currentTarget.value === "true" })}
+        >
+          <option value="false">Active cards</option><option value="true"
+            >Archived cards</option
           >
-            <option value="false">Active cards</option><option value="true"
-              >Archived cards</option
-            >
-          </select></label
+        </select></label
+      >
+      <label
+        >Priority<select
+          aria-label="Priority filter"
+          value={route.priority}
+          onchange={(event) =>
+            onchange({ priority: event.currentTarget.value })}
         >
-        <label
-          >Priority<select
-            aria-label="Priority filter"
-            value={route.priority}
-            onchange={(event) =>
-              onchange({ priority: event.currentTarget.value })}
-          >
-            <option value="">All priorities</option>
-            {#each ["normal", "high"] as priority}<option value={priority}
-                >{resourceLabel(priority)}</option
-              >{/each}
-          </select></label
-        >
-        <label
-          >Tag<input
-            aria-label="Tag filter"
-            placeholder="Exact tag…"
-            value={route.label}
-            oninput={(event) => onchange({ label: event.currentTarget.value })}
-          /></label
-        >
-      {/if}
+          <option value="">All priorities</option>
+          {#each ["normal", "high"] as priority}<option value={priority}
+              >{resourceLabel(priority)}</option
+            >{/each}
+        </select></label
+      >
+      <label
+        >Tag<input
+          aria-label="Tag filter"
+          placeholder="Exact tag…"
+          value={route.label}
+          oninput={(event) => onchange({ label: event.currentTarget.value })}
+        /></label
+      >
       {#if filterCount}
         <button
           class="quiet clear-filters"

@@ -43,9 +43,9 @@ Calendar, board and timeline overflow stays inside their own surfaces. Calendar
 defaults to its existing agenda layout on narrow screens. The native modal
 retains focus handling, autosave recovery and keyboard dismissal.
 
-List keeps project, resource type and search visible on mobile. Its secondary
-filters expand in place; the trigger shows the number of active filters even
-when collapsed. Route state remains authoritative across reload and navigation.
+List shows cards only and keeps project and search visible on mobile. Its
+secondary filters expand in place; the trigger shows the number of active filters
+even when collapsed. Route state remains authoritative across reload and navigation.
 Never let a row of selects shrink to unreadable arrows. Workspace toolbar styles
 are scoped to `WorkspaceFilters` so they cannot override planning widget controls.
 

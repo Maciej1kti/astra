@@ -242,7 +242,6 @@
 
   const projects = $derived(data.state.projects);
   const cards = $derived(data.state.cards);
-  const milestones = $derived(data.state.milestones);
   const updates = $derived(data.state.updates);
   const focus = $derived(data.state.focus);
   const focusCommand = commandOperation(() => !!boot);
@@ -455,7 +454,6 @@
       view: routing.current.view,
       project: routing.current.project,
       search: routing.current.search,
-      collection: routing.current.collection,
       archived: routing.current.archived,
       status: routing.current.status,
       priority: routing.current.priority,
@@ -670,16 +668,10 @@
               variant="primary"
               onclick={routing.current.view === "projects"
                 ? addProject
-                : () =>
-                    create(
-                      primaryResource(
-                        routing.current.view,
-                        routing.current.collection,
-                      ),
-                    )}
+                : () => create(primaryResource(routing.current.view))}
               >＋ {routing.current.view === "projects"
                 ? "Add project"
-                : `Add ${primaryResource(routing.current.view, routing.current.collection)}`}</Button
+                : `Add ${primaryResource(routing.current.view)}`}</Button
             >
           </PageHeading>
         {/if}
@@ -802,7 +794,6 @@
                 route={routing.current}
                 {projects}
                 {cards}
-                {milestones}
                 {open}
               />
             {/if}
@@ -825,10 +816,7 @@
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =
             routing.current.view === "updates"
               ? "update"
-              : routing.current.view === "list" &&
-                  routing.current.collection === "milestones"
-                ? "milestone"
-                : "card"}{#if pageCursors[kind]}<div class="sectiontitle">
+              : "card"}{#if pageCursors[kind]}<div class="sectiontitle">
               <span>More resources are available.</span><button
                 disabled={loadingMore}
                 onclick={() => more(kind)}>Next page</button
@@ -837,9 +825,7 @@
         {#if queryReady && ["list", "updates"].includes(routing.current.view)}{@const kind =
             routing.current.view === "updates"
               ? "update"
-              : routing.current.collection === "milestones"
-                ? "milestone"
-                : "card"}{#if (pageHistory[kind]?.length ?? 0) > 1}<button
+              : "card"}{#if (pageHistory[kind]?.length ?? 0) > 1}<button
               disabled={loadingMore}
               onclick={() => more(kind, true)}>Previous page</button
             >{/if}{/if}

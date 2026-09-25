@@ -75,12 +75,19 @@ await runBrowserSuite(
             await expect(
               page.getByLabel("Status filter", { exact: true }),
             ).toBeHidden();
-            for (const name of ["Project", "Resource type"]) {
-              const box = await page
-                .getByLabel(name, { exact: true })
-                .boundingBox();
-              assert.ok(box.width >= 130, `${name} must remain readable`);
-            }
+            await expect(
+              page.getByLabel("Resource type", { exact: true }),
+            ).toHaveCount(0);
+            const projectBox = await page
+              .getByLabel("Project", { exact: true })
+              .boundingBox();
+            const toolbarBox = await page
+              .locator(".workspace-filters .toolbar")
+              .boundingBox();
+            assert.ok(
+              projectBox.width >= toolbarBox.width - 1,
+              "Project must fill the mobile toolbar row",
+            );
             await toggle.click();
             await page
               .getByLabel("Status filter", { exact: true })

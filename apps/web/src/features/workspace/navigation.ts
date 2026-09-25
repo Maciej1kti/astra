@@ -20,7 +20,6 @@ export type WorkspaceRoute = {
   view: View;
   project: string;
   search: string;
-  collection: "cards" | "milestones";
   archived: boolean;
   status: string;
   priority: string;
@@ -58,10 +57,12 @@ export function readRoute(
       : defaultView,
     project,
     search: params.get("q") ?? "",
-    collection:
-      params.get("collection") === "milestones" ? "milestones" : "cards",
     archived: params.get("archived") === "true",
-    status: params.get("status") ?? "",
+    // Legacy milestone lists now open cards without milestone status filters.
+    status:
+      params.get("collection") === "milestones"
+        ? ""
+        : (params.get("status") ?? ""),
     priority: params.get("priority") ?? "",
     label: params.get("label") ?? "",
     unreadOnly: params.get("unread") === "true",
@@ -89,15 +90,10 @@ export function writeRoute(state: WorkspaceRoute): URLSearchParams {
   if (state.project) params.set("project", state.project);
   if (state.search) params.set("q", state.search);
   if (state.view === "list") {
-    if (state.collection !== "cards")
-      params.set("collection", state.collection);
-    if (state.archived && state.collection === "cards")
-      params.set("archived", "true");
+    if (state.archived) params.set("archived", "true");
     if (state.status) params.set("status", state.status);
-    if (state.priority && state.collection === "cards")
-      params.set("priority", state.priority);
-    if (state.label && state.collection === "cards")
-      params.set("label", state.label);
+    if (state.priority) params.set("priority", state.priority);
+    if (state.label) params.set("label", state.label);
   }
   if (state.view === "updates" && state.unreadOnly)
     params.set("unread", "true");
@@ -127,13 +123,6 @@ export function searchOnlyNavigation(
   return before.toString() === after.toString();
 }
 
-export function primaryResource(
-  view: View,
-  collection: string,
-): "card" | "milestone" | "update" {
-  return view === "updates"
-    ? "update"
-    : view === "list" && collection === "milestones"
-      ? "milestone"
-      : "card";
+export function primaryResource(view: View): "card" | "update" {
+  return view === "updates" ? "update" : "card";
 }

@@ -671,6 +671,7 @@
     margin: 0;
   }
   .app .filter-search-group:only-child,
+  .app .list-filters .toolbar > select,
   .app .list-filters .filter-search-group {
     grid-column: 1 / -1;
   }

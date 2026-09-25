@@ -10,22 +10,14 @@
     route,
     projects,
     cards,
-    milestones,
     open,
   }: {
     route: Readonly<WorkspaceRoute>;
     projects: Summary[];
     cards: Summary[];
-    milestones: Summary[];
     open: OpenResource;
   } = $props();
-  const items = $derived(
-    route.collection === "cards"
-      ? visibleCards(cards, route)
-      : milestones.filter(
-          (item) => !route.project || item.project_id === route.project,
-        ),
-  );
+  const items = $derived(visibleCards(cards, route));
 </script>
 
 <div class="table">
@@ -42,8 +34,8 @@
         <ResourceMetadata {item} showStatus compact />
       </div></button
     >{:else}<EmptyState>
-      {route.archived && route.collection === "cards"
+      {route.archived
         ? "No archived cards match this selection. Clear filters to see more archived cards."
-        : "No items match this selection. Try another project or clear the filters."}
+        : "No cards match this selection. Try another project or clear the filters."}
     </EmptyState>{/each}
 </div>
