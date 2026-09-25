@@ -58,6 +58,65 @@ await runBrowserSuite(
             layout.scroll <= width + 1,
             `${view}: ${JSON.stringify(layout)}`,
           );
+          const header = page.locator("header.topbar");
+          await expect(header).toHaveCount(1);
+          await expect(page.locator("footer.topbar")).toHaveCount(0);
+          const headerBox = await header.boundingBox();
+          const mainBox = await page.locator("main").boundingBox();
+          assert.ok(
+            headerBox.y + headerBox.height <= mainBox.y + 1,
+            "Workspace header must precede every view, including Focus",
+          );
+          await expect(
+            page.locator("main").getByLabel("Project", { exact: true }),
+          ).toHaveCount(0);
+          if (view !== "projects") {
+            const picker = header.getByLabel("Project", { exact: true });
+            await expect(
+              page.getByLabel("Project", { exact: true }),
+            ).toHaveCount(1);
+            await expect(picker).toHaveValue(project);
+            await expect(picker).toBeInViewport({ ratio: 1 });
+            const box = await picker.boundingBox();
+            assert.ok(
+              box.width >= 130 && box.height >= 44,
+              "Header project picker must remain readable and tappable",
+            );
+          }
+          if (view === "focus" && width <= 700) {
+            const actions = header.getByRole("button", {
+              name: "Workspace actions",
+              exact: true,
+            });
+            await actions.click();
+            await expect(
+              header.getByRole("button", {
+                name: "Host diagnostics",
+                exact: true,
+              }),
+            ).toBeInViewport({ ratio: 1 });
+            await expect(
+              header.getByRole("button", { name: "Sign out", exact: true }),
+            ).toBeInViewport({ ratio: 1 });
+            await page.keyboard.press("Escape");
+            await expect(actions).toBeFocused();
+            await expect(actions).toHaveAttribute("aria-expanded", "false");
+            await actions.click();
+            await header
+              .getByRole("button", { name: "Host diagnostics", exact: true })
+              .click();
+            await expect(
+              page.getByRole("dialog", {
+                name: "Host diagnostics",
+                exact: true,
+              }),
+            ).toBeVisible();
+            await page
+              .getByRole("button", { name: "Close diagnostics", exact: true })
+              .click();
+            await expect(actions).toBeFocused();
+            await expect(actions).toHaveAttribute("aria-expanded", "false");
+          }
           if (view === "calendar") {
             const today = await page
               .getByRole("button", { name: "Today", exact: true })
@@ -78,16 +137,6 @@ await runBrowserSuite(
             await expect(
               page.getByLabel("Resource type", { exact: true }),
             ).toHaveCount(0);
-            const projectBox = await page
-              .getByLabel("Project", { exact: true })
-              .boundingBox();
-            const toolbarBox = await page
-              .locator(".workspace-filters .toolbar")
-              .boundingBox();
-            assert.ok(
-              projectBox.width >= toolbarBox.width - 1,
-              "Project must fill the mobile toolbar row",
-            );
             await toggle.click();
             await page
               .getByLabel("Status filter", { exact: true })
@@ -112,9 +161,47 @@ await runBrowserSuite(
             ).toHaveValue("");
           }
           await screenshot(`${width}-${view}`);
-          results.push({ width, view, noPageOverflow: true });
+          results.push({
+            width,
+            view,
+            noPageOverflow: true,
+            headerAboveContent: true,
+            singleProjectPicker: view !== "projects",
+          });
         }
       }
+      await route("list", { project: "" });
+      const picker = page
+        .locator("header.topbar")
+        .getByLabel("Project", { exact: true });
+      await expect(page.locator(".listrow").first()).toBeVisible();
+      await picker.selectOption(config.projects[2].id);
+      await expect(page).toHaveURL(
+        new RegExp(`project=${config.projects[2].id}`),
+      );
+      await expect(
+        page.getByText(
+          "No cards match this selection. Try another project or clear the filters.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await page.reload();
+      await expect(picker).toHaveValue(config.projects[2].id);
+      await page.goBack();
+      await expect(picker).toHaveValue("");
+      await expect(page.locator(".listrow").first()).toBeVisible();
+      await page.goForward();
+      await expect(picker).toHaveValue(config.projects[2].id);
+      await picker.selectOption(project);
+      await expect(page.locator(".listrow").first()).toBeVisible();
+      await page.getByRole("button", { name: "Focus", exact: true }).click();
+      await expect(picker).toHaveValue(project);
+      await expect(page).toHaveURL(/view=focus/);
+      results.push({
+        headerProjectSelection: true,
+        reloadAndHistory: true,
+        viewNavigationPreservesProject: true,
+      });
       for (const [width, height] of [
         [844, 390],
         [740, 320],

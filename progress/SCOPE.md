@@ -131,6 +131,7 @@ The owner subsequently moved the Focus workspace header/actions below the
 content as a footer and removed the source-of-truth slogan footer. Other views
 keep their workspace header at the top. In motion still means active cards
 outside the currently displayed pinned and attention results.
+The header placement is superseded by the 2026-09-25 decision below.
 
 ## Card priorities — owner decision, 2026-09-22
 
@@ -148,3 +149,10 @@ the left mouse button and dragging up/down changes order; release saves it.
 Retain ordinary click-to-open, a keyboard alternative, conditional conflict
 handling and unchanged retries. Filtering must preserve hidden pinned entries.
 This changes the browser interaction, not the Focus source/API contract.
+
+## Shared workspace header — owner decision, 2026-09-25
+
+Project filtering belongs in the shared header, with no duplicate project
+selector in the view content. Restore the Focus workspace bar above the content,
+superseding the earlier footer placement. Keep ordinary project scope, filters,
+browser history and the floating Focus Add card action.

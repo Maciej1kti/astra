@@ -431,10 +431,13 @@ await runBrowserSuite(
 
       await check(
         "A08",
-        "Mobile Sign out directly ends the synthetic browser session",
+        "Mobile workspace actions expose Sign out and end the synthetic browser session",
         async () => {
           await page.setViewportSize({ width: 390, height: 844 });
           await route("board");
+          await page
+            .getByRole("button", { name: "Workspace actions", exact: true })
+            .click();
           const signOut = page.getByRole("button", {
             name: "Sign out",
             exact: true,
@@ -456,7 +459,7 @@ await runBrowserSuite(
           );
           await snapshot("mobile-signed-out");
           return {
-            directMobileSignOut: true,
+            mobileMenuSignOut: true,
             pairedWorkspaceNoLongerVisible: true,
           };
         },

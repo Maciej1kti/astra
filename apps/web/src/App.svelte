@@ -462,9 +462,6 @@
   }
   let queryKey = $derived(viewQueryKey(currentQuery()));
   let queryReady = $derived(loadedQueryKey === queryKey);
-  let selectedProject = $derived(
-    projects.find((p) => p.id === routing.current.project),
-  );
   function sessionEnded() {
     invalidateTagSuggestions(false);
     routing.reset();
@@ -632,20 +629,7 @@
     ondiagnostics={() => (diagnostics = true)}
   />
 {:else}
-  {#snippet workspaceHeader(tag: "header" | "footer")}
-    <WorkspaceHeader
-      {tag}
-      project={routing.current.project}
-      projectName={selectedProject?.title}
-      {today}
-      ongit={() => (gitProject = routing.current.project)}
-      ondiagnostics={() => (diagnostics = true)}
-      onsettings={() => (settings = true)}
-      onrefresh={() => refresh().catch(message)}
-      {logout}
-    />
-  {/snippet}
-  <div class="app" class:focus-page={routing.current.view === "focus"}>
+  <div class="app">
     <WorkspaceNavigation
       view={routing.current.view}
       {connected}
@@ -653,9 +637,18 @@
       onchange={routing.selectView}
     />
     <div class="workspace">
-      {#if routing.current.view !== "focus"}
-        {@render workspaceHeader("header")}
-      {/if}
+      <WorkspaceHeader
+        project={routing.current.project}
+        {projects}
+        selectable={routing.current.view !== "projects"}
+        {today}
+        onprojectchange={(project) => routing.changeFilters({ project })}
+        ongit={() => (gitProject = routing.current.project)}
+        ondiagnostics={() => (diagnostics = true)}
+        onsettings={() => (settings = true)}
+        onrefresh={() => refresh().catch(message)}
+        {logout}
+      />
       <main
         class="content"
         class:focus-content={routing.current.view === "focus"}
@@ -690,14 +683,11 @@
             {projectionMessage}
           </p>{/if}
         {#if queryNotice}<p role="status" class="notice">{queryNotice}</p>{/if}
-        {#if routing.current.view !== "focus"}
-          <WorkspaceFilters
-            route={routing.current}
-            {projects}
-            onchange={routing.changeFilters}
-            changeMonth={routing.changeMonth}
-          />
-        {/if}
+        <WorkspaceFilters
+          route={routing.current}
+          onchange={routing.changeFilters}
+          changeMonth={routing.changeMonth}
+        />
         {#key routing.current.view}<div class="view-content">
             {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
               <div class="empty" role="status">Loading resources…</div>
@@ -799,14 +789,6 @@
             {/if}
           </div>{/key}
         {#if routing.current.view === "focus"}
-          <div class="focus-filters">
-            <WorkspaceFilters
-              route={routing.current}
-              {projects}
-              onchange={routing.changeFilters}
-              changeMonth={routing.changeMonth}
-            />
-          </div>
           <Button
             variant="primary"
             class="focus-add-action"
@@ -830,9 +812,6 @@
               onclick={() => more(kind, true)}>Previous page</button
             >{/if}{/if}
       </main>
-      {#if routing.current.view === "focus"}
-        {@render workspaceHeader("footer")}
-      {/if}
     </div>
   </div>
 {/if}

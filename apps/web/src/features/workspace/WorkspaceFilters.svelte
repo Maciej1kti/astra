@@ -1,18 +1,15 @@
 <script lang="ts">
   import type { WorkspaceRoute } from "./navigation";
   import type { RouteFilters } from "./navigation-state.svelte";
-  import type { Summary } from "../../lib/api/api";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import Icon from "../../lib/ui/Icon.svelte";
 
   let {
     route,
-    projects,
     onchange,
     changeMonth,
   }: {
     route: Readonly<WorkspaceRoute>;
-    projects: Summary[];
     onchange: (patch: Partial<RouteFilters>) => void;
     changeMonth: (delta: number) => void;
   } = $props();
@@ -26,18 +23,7 @@
 </script>
 
 <div class="workspace-filters" class:list-filters={route.view === "list"}>
-  <div class="toolbar" class:updates-toolbar={route.view === "updates"}>
-    {#if route.view !== "projects"}
-      <select
-        aria-label="Project"
-        value={route.project}
-        onchange={(event) => onchange({ project: event.currentTarget.value })}
-      >
-        <option value="">All projects</option>
-        {#each projects as item}<option value={item.id}>{item.title}</option
-          >{/each}
-      </select>
-    {/if}
+  <div class="toolbar">
     <div class="filter-search-group">
       <input
         class="search"

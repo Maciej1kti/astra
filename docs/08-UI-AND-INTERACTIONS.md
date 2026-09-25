@@ -24,7 +24,7 @@ textarea with a safe preview; v1 is not WYSIWYG.
 
 Pole tytułu ma Save/Cancel oraz skrót zatwierdzenia; pełny formularz zbiera intencję do jednego patcha. Nawigacja z brudnym formularzem ostrzega. Równoczesna zewnętrzna zmiana pokazuje niewymuszające ostrzeżenie, nie przepisuje body.
 
-## Focus — current layout, 2026-09-22
+## Focus — current layout, 2026-09-25
 
 Focus shows In focus, Needs my attention and In motion, in that order. Pinned
 cards retain their explicit workspace order. A pinned card's attention reasons
@@ -42,9 +42,9 @@ the introductory hero copy are removed.
 Add card is a floating button in the lower right, including on narrow screens.
 It opens the existing centered card editor for the selected project. Autosave,
 conditional command recovery and keyboard focus restoration remain unchanged.
-The workspace/project/date/actions bar follows Focus content as its footer;
-other views retain the bar at the top. The decorative source-of-truth slogan
-footer is removed.
+The shared workspace bar stays above Focus content, as it does in other views.
+Project selection belongs to this header; title filtering appears above the
+Focus sections. The decorative source-of-truth slogan footer remains removed.
 
 In focus uses one vertical stack of cards styled like Kanban cards. Hold the
 primary mouse button on a card, drag up or down and release to save its order.

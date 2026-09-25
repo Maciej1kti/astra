@@ -1,51 +1,95 @@
 <script lang="ts">
+  import type { Summary } from "../../lib/api/api";
+  import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
-
   import Icon from "../../lib/ui/Icon.svelte";
 
   let {
-    tag = "header",
     project,
-    projectName,
+    projects,
+    selectable,
     today,
+    onprojectchange,
     ongit,
     ondiagnostics,
     onsettings,
     onrefresh,
     logout,
   }: {
-    tag?: "header" | "footer";
     project: string;
-    projectName?: string;
+    projects: Summary[];
+    selectable: boolean;
     today: string;
+    onprojectchange: (project: string) => void;
     ongit: () => void;
     ondiagnostics: () => void;
     onsettings: () => void;
     onrefresh: () => void;
     logout: () => void;
   } = $props();
+  const projectName = $derived(
+    projects.find((item) => item.id === project)?.title ?? "All projects",
+  );
 </script>
 
-<svelte:element this={tag} class="topbar">
-  <span class="workspace-label" title={projectName || "All projects"}
-    ><span class="workspace-prefix">Workspace <span class="slash">/</span></span
+<header class="topbar">
+  {#if selectable}
+    <select
+      class="workspace-project"
+      aria-label="Project"
+      title={projectName}
+      value={project}
+      onchange={(event) => onprojectchange(event.currentTarget.value)}
     >
-    {projectName || "All projects"}</span
-  >
-  <div>
-    {#if project}<Button variant="quiet" onclick={ongit}>Git</Button>{/if}
-    <span class="date">{today}</span><Button
-      variant="quiet"
-      aria-label="Host diagnostics"
-      onclick={ondiagnostics}><Icon name="info" /></Button
-    ><Button
-      variant="quiet"
-      aria-label="Workspace settings"
-      onclick={onsettings}><Icon name="settings" /></Button
+      <option value="">All projects</option>
+      {#each projects as item}<option value={item.id}>{item.title}</option
+        >{/each}
+    </select>
+  {:else}
+    <span class="workspace-label">All projects</span>
+  {/if}
+  <div class="workspace-actions">
+    <div class="desktop-workspace-actions">
+      {#if project && selectable}<Button variant="quiet" onclick={ongit}
+          >Git</Button
+        >{/if}
+      <span class="date">{today}</span><Button
+        variant="quiet"
+        aria-label="Host diagnostics"
+        onclick={ondiagnostics}><Icon name="info" /></Button
+      >
+    </div>
+    <Button variant="quiet" aria-label="Workspace settings" onclick={onsettings}
+      ><Icon name="settings" /></Button
     ><Button variant="quiet" onclick={onrefresh} aria-label="Refresh"
       ><Icon name="refresh" /></Button
-    ><Button variant="quiet" class="mobile-signout" onclick={logout}
-      >Sign out</Button
     >
+    <div class="mobile-workspace-actions">
+      <ActionMenu label="Workspace actions">
+        {#snippet children(close)}
+          {#if project && selectable}<Button
+              variant="quiet"
+              onclick={() => {
+                close();
+                ongit();
+              }}>Git</Button
+            >{/if}
+          <Button
+            variant="quiet"
+            onclick={() => {
+              close();
+              ondiagnostics();
+            }}>Host diagnostics</Button
+          >
+          <Button
+            variant="quiet"
+            onclick={() => {
+              close();
+              logout();
+            }}>Sign out</Button
+          >
+        {/snippet}
+      </ActionMenu>
+    </div>
   </div>
-</svelte:element>
+</header>

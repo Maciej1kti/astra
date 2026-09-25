@@ -6,10 +6,15 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Project selection in the shared header](2026-09-25-header-project.md) removes
+duplicate project controls and restores the Focus bar above its content.
+Responsive, Focus, dialogs and editor E2E pass; the running app was reviewed at
+320–1440px, including landscape and both themes.
+
 [Cards-only List](2026-09-25-list-cards.md) removes the Cards/Milestones selector
-and its unused frontend state. Legacy milestone-list links resolve to cards;
-mobile project selection fills its row. Editor, responsive, request-scope and
-pagination E2E pass, with the updated dev app checked at 320–1440px.
+and its unused frontend state. Legacy milestone-list links resolve to cards.
+Editor, responsive, request-scope and pagination E2E pass, with the updated dev
+app checked at 320–1440px.
 
 [Compact workspace navigation](2026-09-25-sidebar-landscape.md) starts directly
 with Focus and makes the sidebar scrollable on landscape phones. Touch scrolling,

@@ -43,7 +43,13 @@ Calendar, board and timeline overflow stays inside their own surfaces. Calendar
 defaults to its existing agenda layout on narrow screens. The native modal
 retains focus handling, autosave recovery and keyboard dismissal.
 
-List shows cards only and keeps project and search visible on mobile. Its
+The shared header stays above every view, including Focus. Project-scoped views
+choose their project in this header; do not repeat the selector in view filters.
+Projects remains the full workspace overview. Narrow headers retain settings
+and refresh buttons, with Git, diagnostics and Sign out in the shared action menu.
+Long project names truncate inside the native selector without expanding the page.
+
+List shows cards only and keeps search visible on mobile. Its
 secondary filters expand in place; the trigger shows the number of active filters
 even when collapsed. Route state remains authoritative across reload and navigation.
 Never let a row of selects shrink to unreadable arrows. Workspace toolbar styles

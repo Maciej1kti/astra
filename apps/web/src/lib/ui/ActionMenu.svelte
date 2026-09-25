@@ -6,11 +6,19 @@
     label = "More actions",
     disabled = false,
     children,
-  }: { label?: string; disabled?: boolean; children: Snippet } = $props();
+  }: {
+    label?: string;
+    disabled?: boolean;
+    children: Snippet<[close: () => void]>;
+  } = $props();
   let open = $state(false);
   let root: HTMLDivElement;
   let trigger: HTMLButtonElement;
   const id = $props.id();
+  function close() {
+    open = false;
+    trigger.focus();
+  }
   $effect(() => {
     if (disabled) open = false;
   });
@@ -24,8 +32,7 @@
       if (event.key !== "Escape") return;
       event.preventDefault();
       event.stopPropagation();
-      open = false;
-      trigger.focus();
+      close();
     };
     document.addEventListener("pointerdown", outside);
     root.addEventListener("keydown", escape);
@@ -59,6 +66,6 @@
     onclick={() => (open = !open)}><Icon name="more" /></button
   >
   {#if open}<div class="action-menu-panel" {id}>
-      {@render children()}
+      {@render children(close)}
     </div>{/if}
 </div>
