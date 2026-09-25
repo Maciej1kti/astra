@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
+  import Button from "../../lib/ui/Button.svelte";
+
   import type {
     PreferencesResource as Preferences,
     Session,
@@ -223,7 +226,7 @@
   <header>
     <h2>Workspace settings</h2>
     <button onclick={close} disabled={busy} aria-label="Close settings"
-      >✕</button
+      ><Icon name="close" small /></button
     >
   </header>
   <div class="dialog-body">
@@ -417,8 +420,8 @@
       {#if dirty || pending}<button type="button" onclick={copyDraft}
           >Copy settings draft</button
         >{/if}
-      <button
-        class="primary"
+      <Button
+        variant="primary"
         type="submit"
         form="workspace-preferences"
         aria-keyshortcuts="Control+Enter Meta+Enter"
@@ -427,7 +430,7 @@
           busy ||
           !!pending ||
           accessLost ||
-          confirmClose}>Save preferences</button
+          confirmClose}>Save preferences</Button
       >
     </div>
   </footer>
@@ -435,8 +438,8 @@
 
 <style>
   dialog {
-    width: min(600px, calc(100vw - 24px));
-    max-width: calc(100vw - 24px);
+    width: min(var(--dialog-medium), calc(100vw - var(--space-10)));
+    max-width: calc(100vw - var(--space-10));
     max-height: 90dvh;
     padding: 0;
     overflow: hidden;
@@ -451,62 +454,62 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--space-6);
   }
   header,
   footer {
     flex-shrink: 0;
-    padding: 16px 20px;
+    padding: var(--space-8) var(--space-9);
     background: var(--paper);
   }
   header {
-    border-bottom: 1px solid var(--line);
+    border-bottom: var(--stroke) solid var(--line);
   }
   footer {
-    border-top: 1px solid var(--line);
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    border-top: var(--stroke) solid var(--line);
+    padding-bottom: max(var(--space-8), env(safe-area-inset-bottom));
   }
   .dialog-body {
-    padding: 0 20px 20px;
+    padding: 0 var(--space-9) var(--space-9);
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
   h2 {
     margin: 0;
-    font-size: 21px;
-    line-height: 1.3;
+    font-size: var(--text-section);
+    line-height: var(--leading-tight);
   }
   h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--text-lg);
   }
   label {
     display: block;
-    font-size: 13px;
-    margin: 16px 0;
+    font-size: var(--text-label);
+    margin: var(--space-8) 0;
     flex: 1;
     min-width: 0;
   }
   input,
   select {
     width: 100%;
-    margin-top: 8px;
+    margin-top: var(--space-4);
   }
   p,
   small {
     color: var(--muted);
-    font-size: 13px;
-    line-height: 1.6;
+    font-size: var(--text-label);
+    line-height: var(--leading-body);
   }
   small,
   code {
     display: block;
   }
   .item {
-    padding: 15px 0;
-    border-top: 1px solid var(--line);
-    font-size: 13px;
+    padding: var(--space-8) 0;
+    border-top: var(--stroke) solid var(--line);
+    font-size: var(--text-label);
   }
   .item > div {
     flex: 1;
@@ -516,60 +519,60 @@
   .item > .actions {
     flex: 0 1 auto;
   }
-  .item button {
-    font-size: 12px;
+  .item :global(button) {
+    font-size: var(--text-sm);
   }
   code {
-    margin-top: 8px;
-    font-size: 15px;
+    margin-top: var(--space-4);
+    font-size: var(--text-card);
     overflow-wrap: anywhere;
   }
   .notice {
-    margin: 16px 0;
+    margin: var(--space-8) 0;
     overflow-wrap: anywhere;
   }
   .discard {
-    padding: 12px;
-    border: 1px solid var(--notice-line);
+    padding: var(--space-6);
+    border: var(--stroke) solid var(--notice-line);
     background: var(--notice-bg);
-    border-radius: 8px;
+    border-radius: var(--radius-control);
   }
   .appearance,
   .access-section {
-    border-top: 1px solid var(--line);
-    padding-top: 16px;
-    margin-top: 20px;
+    border-top: var(--stroke) solid var(--line);
+    padding-top: var(--space-8);
+    margin-top: var(--space-9);
   }
   summary {
-    min-height: 44px;
-    padding: 10px 0;
+    min-height: var(--tap-target);
+    padding: var(--space-5) 0;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
   .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-4);
   }
   .save-state {
-    margin: 0 0 10px;
+    margin: 0 0 var(--space-5);
   }
-  button {
-    min-height: 44px;
+  :global(button) {
+    min-height: var(--tap-target);
   }
-  header button {
-    min-width: 44px;
+  header :global(button) {
+    min-width: var(--tap-target);
     flex-shrink: 0;
   }
   @media (max-width: 520px) {
     header,
     footer {
-      padding-left: 16px;
-      padding-right: 16px;
+      padding-left: var(--space-8);
+      padding-right: var(--space-8);
     }
     .dialog-body {
-      padding-left: 16px;
-      padding-right: 16px;
+      padding-left: var(--space-8);
+      padding-right: var(--space-8);
     }
     .row {
       display: block;
@@ -579,7 +582,7 @@
     }
     input,
     select {
-      font-size: 16px;
+      font-size: var(--text-lg);
     }
   }
 </style>

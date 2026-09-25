@@ -1,9 +1,14 @@
 <script lang="ts">
+  import EmptyState from "../../../lib/ui/EmptyState.svelte";
+
+  import ResourceCard from "../../../lib/ui/ResourceCard.svelte";
+  import SectionHeading from "../../../lib/ui/SectionHeading.svelte";
+  import Icon from "../../../lib/ui/Icon.svelte";
+
   import type { Summary } from "../../../lib/api/api";
   import type { FocusRef } from "../../../lib/contracts/api.generated";
   import type { WorkspaceRoute } from "../navigation";
   import { projectLabel, type OpenResource } from "./screen-data";
-  import ResourceMetadata from "../../../lib/ui/ResourceMetadata.svelte";
   import { resourceLabel } from "../../../lib/resources/resource-presentation";
   import type { Attention } from "../view-queries";
   import {
@@ -127,17 +132,22 @@
   aria-labelledby="focus-section-title"
   data-focus-section="focus"
 >
-  <div class="sectiontitle">
-    <h2 id="focus-section-title">In focus</h2>
-    <span>{displayedFocus.length} visible cards</span>
-  </div>
+  <SectionHeading
+    id="focus-section-title"
+    title="In focus"
+    count={`${displayedFocus.length} visible cards`}
+  />
   {#if focusCount > 1}<p class="sr" id="focus-order-help">
       Drag a card to reorder it, or focus it and press Alt+↑ / Alt+↓. Click a
       card to open it.
     </p>{/if}
   <div class="focus-stack" use:focusOrderGesture={focusGestureOptions()}>
-    {#each displayedFocus as item (item.project_id + ":" + item.id)}<button
-        class="card title focus-card"
+    {#each displayedFocus as item (item.project_id + ":" + item.id)}<ResourceCard
+        {item}
+        showStatus
+        pinned
+        projectName={projectLabel(projects, item.project_id)}
+        class="title focus-card"
         data-focus-card={item.id}
         data-focus-project={item.project_id}
         data-focus-key={`${item.project_id}:${item.id}`}
@@ -150,21 +160,19 @@
           ? undefined
           : "Alt+ArrowUp Alt+ArrowDown"}
         onclick={() => open(item)}
-        ><small>{projectLabel(projects, item.project_id)}</small>
-        <h3>{item.title}</h3>
-        <ResourceMetadata {item} showStatus />
+      >
         {#if item.attentionReasons.length}<span
             class="attention-reasons"
             aria-label="Attention reasons"
             >{#each item.attentionReasons as reason}<span class="badge"
                 >{resourceLabel(reason)}</span
               >{/each}</span
-          >{/if}</button
-      >{:else}<div class="empty">
+          >{/if}</ResourceCard
+      >{:else}<EmptyState>
         {route.project || route.search
           ? "No pinned cards match this selection. Change the project or clear the title filter."
           : "No pinned cards yet. Open a card and pin it to keep it here."}
-      </div>{/each}
+      </EmptyState>{/each}
   </div>
   {#if focusBusy}<p role="status" class="focus-order-status">
       Saving focus order…
@@ -214,14 +222,15 @@
   aria-labelledby="attention-section-title"
   data-focus-section="attention"
 >
-  <div class="sectiontitle">
-    <h2 id="attention-section-title">Needs my attention</h2>
-    <span>{attention.length} visible items</span>
-  </div>
+  <SectionHeading
+    id="attention-section-title"
+    title="Needs my attention"
+    count={`${attention.length} visible items`}
+  />
   {#each attention as item (attentionKey(item))}<button
       class="listrow"
       onclick={() => openAttention(item)}
-      ><span class="priority"></span>
+      ><span class="priority"><Icon name="flag" /></span>
       <div>
         <strong>{item.label}</strong><small
           >{projectLabel(projects, item.project_id)}</small
@@ -231,11 +240,11 @@
         >{#each item.reasons as reason}<span class="badge"
             >{resourceLabel(reason)}</span
           >{/each}</span
-      ><span aria-hidden="true">↗</span></button
-    >{:else}<div class="empty">
+      ><Icon name="arrow" /></button
+    >{:else}<EmptyState>
       <strong>A little breathing room.</strong>
       <p>No additional items need attention on this page.</p>
-    </div>{/each}
+    </EmptyState>{/each}
   {#if attentionCursor}<button
       disabled={loadingMore}
       onclick={() => moreAttention()}>Next attention page</button
@@ -247,20 +256,20 @@
 </section>
 
 <section aria-labelledby="motion-section-title" data-focus-section="motion">
-  <div class="sectiontitle">
-    <h2 id="motion-section-title">In motion</h2>
-    <span>{activeCards.length} visible active cards</span>
-  </div>
+  <SectionHeading
+    id="motion-section-title"
+    title="In motion"
+    count={`${activeCards.length} visible active cards`}
+  />
   <div class="grid">
-    {#each activeCards as item (item.project_id + ":" + item.id)}<button
-        class="card"
+    {#each activeCards as item (item.project_id + ":" + item.id)}<ResourceCard
+        {item}
+        showStatus
+        projectName={projectLabel(projects, item.project_id)}
         onclick={() => open(item)}
-        ><small>{projectLabel(projects, item.project_id)}</small>
-        <h3>{item.title}</h3>
-        <ResourceMetadata {item} showStatus /></button
-      >{:else}<div class="empty">
+      />{:else}<EmptyState>
         No other active cards on this page.
-      </div>{/each}
+      </EmptyState>{/each}
   </div>
   {#if activeCardCursor}<button
       disabled={loadingMore}
@@ -271,65 +280,3 @@
       onclick={() => moreActiveCards(true)}>Previous active cards</button
     >{/if}
 </section>
-
-<style>
-  .focus-stack {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-    width: min(100%, 900px);
-  }
-  .focus-card {
-    min-width: 0;
-    width: 100%;
-    padding: 16px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--paper);
-    color: var(--ink);
-    touch-action: pan-y;
-    user-select: none;
-    cursor: grab;
-    text-align: left;
-  }
-  .focus-card small {
-    color: var(--muted);
-    font-size: 10px;
-  }
-  .focus-card:active,
-  :global(.focus-card[data-dragging="true"]) {
-    cursor: grabbing;
-  }
-  :global(.focus-card[data-dragging="true"]) {
-    opacity: 0.28;
-  }
-  .focus-card h3 {
-    margin: 8px 0 12px;
-    font-size: 15px;
-    line-height: 1.45;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-  }
-  .focus-order-status {
-    width: min(100%, 900px);
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  .focus-order-status {
-    margin: 12px 0 8px;
-  }
-  .focus-save-details {
-    display: grid;
-    justify-items: start;
-    gap: 8px;
-    margin-top: 10px;
-    font-size: 12px;
-  }
-  .focus-save-details code {
-    overflow-wrap: anywhere;
-  }
-  :global([data-focus-drop-indicator]) {
-    transform: translateY(-1px);
-  }
-</style>

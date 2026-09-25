@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
+  import Button from "../../lib/ui/Button.svelte";
+
   import {
     getProject,
     patchCard,
@@ -848,7 +851,8 @@
           if (event.button === 0 && descriptionEditing) event.preventDefault();
         }}
         onclick={close}
-        disabled={busy || deleteBusy || closing}>✕</button
+        disabled={busy || deleteBusy || closing}
+        ><Icon name="close" small /></button
       >
     </header>
     <form
@@ -1199,11 +1203,11 @@
       {#if !autosaveResource}<footer>
           <button type="button" onclick={close} disabled={busy || deleteBusy}
             >{readonly ? "Close" : "Cancel"}</button
-          >{#if !readonly}<button
-              class="primary"
+          >{#if !readonly}<Button
+              variant="primary"
               type="submit"
               disabled={locked || !!conflict}
-              >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</button
+              >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</Button
             >{/if}
         </footer>{/if}
     </form>

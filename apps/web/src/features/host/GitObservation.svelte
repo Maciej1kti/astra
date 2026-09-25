@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
   import { api } from "../../lib/api/api";
@@ -61,7 +62,9 @@
 >
   <header>
     <h2>Git observation</h2>
-    <button onclick={onclose} aria-label="Close Git observation">✕</button>
+    <button onclick={onclose} aria-label="Close Git observation"
+      ><Icon name="close" small /></button
+    >
   </header>
   <p>
     HEAD and staged index only. Working-tree changes and untracked files are not
@@ -89,7 +92,7 @@
 
 <style>
   dialog {
-    width: min(600px, calc(100vw - 24px));
+    width: min(var(--dialog-medium), calc(100vw - var(--space-10)));
     max-height: 90dvh;
     overflow: auto;
   }
@@ -97,14 +100,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-8);
   }
   dd,
   code {
     overflow-wrap: anywhere;
   }
   dt {
-    margin-top: 12px;
-    font-weight: 600;
+    margin-top: var(--space-6);
+    font-weight: var(--weight-semibold);
   }
 </style>

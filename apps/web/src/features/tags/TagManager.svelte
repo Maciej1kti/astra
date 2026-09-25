@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
+  import Button from "../../lib/ui/Button.svelte";
+
   import { onMount, untrack } from "svelte";
   import { modal } from "../../lib/ui/dialog";
   import { api } from "../../lib/api/api";
@@ -181,7 +184,7 @@
     <button
       aria-label="Close tag manager"
       disabled={!canClose}
-      onclick={onclose}>✕</button
+      onclick={onclose}><Icon name="close" small /></button
     >
   </header>
   <div class="dialog-body">
@@ -262,10 +265,10 @@
           <ul>
             {#each plan.changes as change}<li>{change.title}</li>{/each}
           </ul>
-          <button
-            class="primary"
+          <Button
+            variant="primary"
             disabled={busy || !!pending || !!job || accessLost}
-            onclick={() => void apply()}>Rename in this project</button
+            onclick={() => void apply()}>Rename in this project</Button
           >
         </section>
       {/if}
@@ -290,24 +293,24 @@
 
 <style>
   dialog {
-    width: min(760px, calc(100vw - 24px));
+    width: min(var(--dialog-large), calc(100vw - var(--space-10)));
     max-height: 92dvh;
     padding: 0;
-    border-radius: 14px;
+    border-radius: var(--radius-card);
   }
   header,
   footer {
     display: flex;
-    gap: 12px;
+    gap: var(--space-6);
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: var(--space-8) var(--space-9);
   }
   header {
-    border-bottom: 1px solid var(--line);
+    border-bottom: var(--stroke) solid var(--line);
   }
   footer {
-    border-top: 1px solid var(--line);
+    border-top: var(--stroke) solid var(--line);
   }
   h2,
   header p {
@@ -319,13 +322,13 @@
   }
   .dialog-body {
     overflow-y: auto;
-    max-height: calc(92dvh - 160px);
-    padding: 20px;
+    max-height: calc(92dvh - var(--field-min-width));
+    padding: var(--space-9);
   }
   label {
     display: grid;
-    gap: 7px;
-    margin-bottom: 12px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
   }
   select,
   input {
@@ -337,15 +340,15 @@
   }
   .tag-list li {
     display: flex;
-    gap: 12px;
+    gap: var(--space-6);
     align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line);
+    padding: var(--space-4) 0;
+    border-bottom: var(--stroke) solid var(--line);
   }
-  .tag-list li button {
+  .tag-list li :global(button) {
     margin-left: auto;
   }
   .notice {
-    padding: 10px;
+    padding: var(--space-5);
   }
 </style>

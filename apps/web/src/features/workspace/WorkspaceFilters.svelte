@@ -18,7 +18,7 @@
   const statuses = ["planned", "active", "review", "done", "cancelled"];
 </script>
 
-<div class="toolbar">
+<div class="toolbar" class:updates-toolbar={route.view === "updates"}>
   {#if route.view !== "projects"}<label class="sr" for="project">Project</label
     ><select
       id="project"
@@ -37,7 +37,7 @@
     placeholder={["list", "updates"].includes(route.view)
       ? "Search content…"
       : "Filter loaded titles…"}
-  />{#if route.view === "updates"}<label
+  />{#if route.view === "updates"}<label class="filter-check"
       ><input
         type="checkbox"
         checked={route.unreadOnly}

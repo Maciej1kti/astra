@@ -1,4 +1,6 @@
 <script lang="ts">
+  import EmptyState from "../../../lib/ui/EmptyState.svelte";
+
   import type { Summary } from "../../../lib/api/api";
   import type { WorkspaceRoute } from "../navigation";
   import { projectLabel, type OpenResource } from "./screen-data";
@@ -39,9 +41,9 @@
       <div class="row-metadata">
         <ResourceMetadata {item} showStatus compact />
       </div></button
-    >{:else}<div class="empty">
+    >{:else}<EmptyState>
       {route.archived && route.collection === "cards"
         ? "No archived cards match this selection. Clear filters to see more archived cards."
         : "No items match this selection. Try another project or clear the filters."}
-    </div>{/each}
+    </EmptyState>{/each}
 </div>

@@ -77,21 +77,21 @@
   .title {
     display: block;
     width: 100%;
-    min-height: 64px;
-    padding: 14px;
+    min-height: var(--space-20);
+    padding: var(--space-7);
     text-align: left;
     border: 0;
     background: none;
     cursor: inherit;
     color: inherit;
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
   }
   .title:focus-visible {
-    outline: 2px solid var(--ink);
-    outline-offset: 2px;
+    outline: var(--focus-width) solid var(--ink);
+    outline-offset: var(--focus-width);
   }
   h3 {
-    font-size: 15px;
+    font-size: var(--text-card);
     margin: 0;
     overflow-wrap: anywhere;
   }

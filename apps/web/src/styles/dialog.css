@@ -1,9 +1,25 @@
 .app-dialog {
   background: var(--paper);
   color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-dialog);
 }
 dialog::backdrop {
-  background: #152d2860;
+  background: var(--backdrop);
+  backdrop-filter: blur(var(--space-2));
+}
+
+.app-dialog footer,
+.editor footer,
+.editor .delete-confirmation .row {
+  flex-wrap: wrap;
+}
+.app-dialog button,
+.editor button {
+  max-width: 100%;
+}
+.app-dialog .primary,
+.editor .primary {
+  white-space: normal;
 }

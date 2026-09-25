@@ -30,6 +30,16 @@ export async function verifyPlanningFixes(
 
   const calendar = page.locator(".calendar-surface");
   await expect
+    .poll(() =>
+      calendar.evaluate((element) => {
+        const grid = element.querySelector(".ec");
+        return grid
+          ? Math.abs(element.clientWidth - grid.getBoundingClientRect().width)
+          : Infinity;
+      }),
+    )
+    .toBeLessThanOrEqual(2);
+  await expect
     .poll(async () =>
       calendar.evaluate((el) => el.getBoundingClientRect().height),
     )

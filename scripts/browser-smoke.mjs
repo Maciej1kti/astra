@@ -358,9 +358,9 @@ try {
     "list",
   );
   await page.goto(origin);
-  await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "List", exact: true }).waitFor();
   await page.reload();
-  await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "List", exact: true }).waitFor();
   const cardFile = join(folder, ".project", "cards", `${cards[0].id}.md`);
   const source = await readFile(cardFile, "utf8");
   await writeFile(
@@ -1391,7 +1391,7 @@ try {
     fullPage: true,
   });
   await page.reload();
-  await page.getByRole("heading", { name: "List.", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "List", exact: true }).waitFor();
   assert.equal(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).colorScheme,
@@ -1459,7 +1459,7 @@ try {
   for (const session of cli("sessions").items)
     cli("revoke-session", session.id);
   await page
-    .getByRole("heading", { name: "List.", exact: true })
+    .getByRole("heading", { name: "List", exact: true })
     .waitFor({ state: "hidden", timeout: 5000 });
   assert.equal(
     await page.getByLabel("Title", { exact: true }).inputValue(),

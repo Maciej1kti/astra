@@ -1,4 +1,8 @@
 <script lang="ts">
+  import Button from "../../lib/ui/Button.svelte";
+
+  import Icon from "../../lib/ui/Icon.svelte";
+
   let {
     tag = "header",
     project,
@@ -28,14 +32,19 @@
     {projectName || "All projects"}</span
   >
   <div>
-    {#if project}<button class="quiet" onclick={ongit}>Git</button>{/if}
-    <span class="date">{today}</span><button
-      class="quiet"
+    {#if project}<Button variant="quiet" onclick={ongit}>Git</Button>{/if}
+    <span class="date">{today}</span><Button
+      variant="quiet"
       aria-label="Host diagnostics"
-      onclick={ondiagnostics}>ⓘ</button
-    ><button class="quiet" aria-label="Workspace settings" onclick={onsettings}
-      >⚙</button
-    ><button class="quiet" onclick={onrefresh} aria-label="Refresh">↻</button
-    ><button class="quiet mobile-signout" onclick={logout}>Sign out</button>
+      onclick={ondiagnostics}><Icon name="info" /></Button
+    ><Button
+      variant="quiet"
+      aria-label="Workspace settings"
+      onclick={onsettings}><Icon name="settings" /></Button
+    ><Button variant="quiet" onclick={onrefresh} aria-label="Refresh"
+      ><Icon name="refresh" /></Button
+    ><Button variant="quiet" class="mobile-signout" onclick={logout}
+      >Sign out</Button
+    >
   </div>
 </svelte:element>

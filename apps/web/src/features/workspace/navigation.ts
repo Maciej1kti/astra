@@ -13,6 +13,9 @@ export const workspaceViews = [
   "updates",
 ] as const;
 export type View = (typeof workspaceViews)[number];
+export function viewLabel(view: View): string {
+  return view === "gantt" ? "Timeline" : view[0].toUpperCase() + view.slice(1);
+}
 export type WorkspaceRoute = {
   view: View;
   project: string;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
   import { getProjectTags } from "../../lib/api/tags";
@@ -152,7 +153,7 @@
             type="button"
             aria-label={`Remove tag ${label}`}
             {disabled}
-            onclick={() => remove(label)}>×</button
+            onclick={() => remove(label)}><Icon name="close" small /></button
           >
         </li>
       {/each}
@@ -239,21 +240,21 @@
 
 <style>
   .tags {
-    margin: 20px 0;
+    margin: var(--space-9) 0;
   }
   .heading,
   .input-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-4);
   }
   .heading {
     justify-content: space-between;
-    font-size: 13px;
-    margin-bottom: 8px;
+    font-size: var(--text-label);
+    margin-bottom: var(--space-4);
   }
   label {
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
   .heading span,
   .hint,
@@ -262,9 +263,9 @@
   }
   .hint,
   .empty {
-    font-size: 12px;
-    line-height: 1.5;
-    margin: 7px 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-body);
+    margin: var(--space-4) 0;
   }
   .input-row input {
     flex: 1;
@@ -277,40 +278,40 @@
   .chips,
   .suggestions {
     list-style: none;
-    margin: 0 0 8px;
+    margin: 0 0 var(--space-4);
     padding: 0;
   }
   .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-3);
   }
   .chips li {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-2);
     max-width: 100%;
     background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding-left: 10px;
-    font-size: 12px;
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
+    padding-left: var(--space-5);
+    font-size: var(--text-sm);
   }
   .chips li span {
     overflow-wrap: anywhere;
     white-space: pre-wrap;
   }
   .chips button {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap-target);
+    min-height: var(--tap-target);
     padding: 0;
     border: 0;
     background: transparent;
-    font-size: 18px;
+    font-size: var(--text-xl);
   }
   .suggestions {
-    border: 1px solid var(--line);
-    border-radius: 8px;
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
     overflow: hidden;
   }
   .suggestions button {
@@ -323,17 +324,17 @@
   }
   .suggestions button[aria-selected="true"] {
     background: var(--bg);
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+    outline: var(--focus-width) solid var(--accent);
+    outline-offset: calc(-1 * var(--focus-width));
   }
   .tag-error {
-    color: var(--danger, #b3261e);
-    font-size: 13px;
+    color: var(--danger);
+    font-size: var(--text-label);
   }
   .sr-only {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    width: var(--stroke);
+    height: var(--stroke);
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;

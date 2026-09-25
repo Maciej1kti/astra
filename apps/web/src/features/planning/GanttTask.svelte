@@ -99,15 +99,15 @@
     height: 100%;
     align-items: center;
     color: var(--ink);
-    border-radius: 5px;
-    background: color-mix(in srgb, var(--accent) 22%, var(--paper));
+    border-radius: var(--radius-sm);
+    background: var(--accent);
   }
   button {
     color: inherit;
     border: 0;
     background: transparent;
-    min-height: 44px;
-    padding: 0 4px;
+    min-height: var(--tap-target);
+    padding: 0 var(--space-2);
     font: inherit;
   }
   .handle {
@@ -115,8 +115,8 @@
     cursor: grab;
   }
   .edge {
-    min-width: 16px;
-    flex: 0 0 16px;
+    min-width: var(--space-8);
+    flex: 0 0 var(--space-8);
   }
   .move {
     min-width: 0;
@@ -130,17 +130,17 @@
     white-space: nowrap;
   }
   button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline: var(--focus-width) solid var(--accent);
+    outline-offset: var(--focus-width);
   }
   button:global([data-dragging]) {
     z-index: 5;
     background: var(--paper);
-    box-shadow: 0 3px 12px #0003;
+    box-shadow: var(--shadow-floating);
   }
   @media (pointer: coarse) {
     .edge {
-      min-width: 44px;
+      min-width: var(--tap-target);
     }
   }
 </style>

@@ -182,22 +182,22 @@
 
 <style>
   dialog {
-    width: min(440px, calc(100vw - 32px));
+    width: min(var(--dialog-small), calc(100vw - var(--space-12)));
     max-height: 90dvh;
     overflow: auto;
   }
   label {
     display: grid;
-    gap: 8px;
-    margin: 16px 0;
+    gap: var(--space-4);
+    margin: var(--space-8) 0;
   }
   input {
-    min-height: 44px;
+    min-height: var(--tap-target);
   }
   footer {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
-    margin-top: 24px;
+    gap: var(--space-6);
+    margin-top: var(--space-10);
   }
 </style>

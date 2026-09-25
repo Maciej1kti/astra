@@ -79,9 +79,9 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
       opacity: "1",
       background: "var(--paper)",
       color: "var(--ink)",
-      border: "1px solid var(--line)",
-      borderRadius: "8px",
-      boxShadow: "0 12px 28px #0003",
+      border: "var(--stroke) solid var(--line)",
+      borderRadius: "var(--radius-card)",
+      boxShadow: "var(--shadow-floating)",
     });
     indicator = document.createElement("div");
     indicator.setAttribute("data-board-drop-indicator", "");
@@ -90,8 +90,8 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
       position: "fixed",
       pointerEvents: "none",
       zIndex: "10001",
-      height: "4px",
-      borderRadius: "2px",
+      height: "var(--space-2)",
+      borderRadius: "var(--radius-sm)",
       background: "var(--ink)",
       display: "none",
     });

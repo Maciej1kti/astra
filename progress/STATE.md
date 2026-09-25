@@ -1,10 +1,17 @@
 # Current implementation state
 
-Updated 2026-09-24. The application is implemented and under verification;
+Updated 2026-09-25. The application is implemented and under verification;
 full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 [release checklist](../delivery/RELEASE-CHECKLIST.md).
 
 ## Current work and verification
+
+[Shared Astra UI system](2026-09-25-ui-system.md) applies common visual tokens
+and small components across all views and dialogs, with a compact card checklist
+and responsive navigation. The broad HTTPS smoke, planning browser check and all
+11 Chromium regression suites pass. The updated manual app was reviewed at
+1440px, 390px and 320px. Validation follows the owner's E2E-focused direction;
+this does not establish physical-device or full release acceptance.
 
 [Resolve decision action](2026-09-24-decision-resolution-action.md) opens a
 prefilled resolution from the update record; the full local gate and all 11

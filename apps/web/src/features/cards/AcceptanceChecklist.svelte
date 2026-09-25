@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
   import { onMount, tick } from "svelte";
   import {
     ACCEPTANCE_LIMIT,
@@ -347,26 +348,37 @@
 </script>
 
 <section class="checklist" aria-label="Checklist">
-  <h3>Checklist</h3>
+  <div class="checklist-heading">
+    <h3><Icon name="check" small /> Checklist</h3>
+    <span
+      class="checklist-count"
+      aria-label={`${items.filter((item) => item.completed).length} of ${items.length} checklist items completed`}
+    >
+      {items.filter((item) => item.completed).length} / {items.length}
+    </span>
+  </div>
   <ul bind:this={list}>
     {#each displayedItems as item, index (item.id)}
       <li
         data-checklist-item={item.id}
         class:dragging={activeDrag?.id === item.id}
+        class:completed={item.completed}
       >
-        <input
-          type="checkbox"
-          checked={item.completed}
-          {disabled}
-          aria-label={`Complete checklist item ${index + 1}: ${item.text}`}
-          onchange={(event) => {
-            items = items.map((value) =>
-              value.id === item.id
-                ? { ...value, completed: event.currentTarget.checked }
-                : value,
-            );
-          }}
-        />
+        <label class="check-toggle">
+          <input
+            type="checkbox"
+            checked={item.completed}
+            {disabled}
+            aria-label={`Complete checklist item ${index + 1}: ${item.text}`}
+            onchange={(event) => {
+              items = items.map((value) =>
+                value.id === item.id
+                  ? { ...value, completed: event.currentTarget.checked }
+                  : value,
+              );
+            }}
+          />
+        </label>
         <textarea
           rows="1"
           value={item.text}
@@ -389,7 +401,7 @@
             items = items.filter((value) => value.id !== item.id);
             error = "";
             announcement = `Removed checklist item ${index + 1}.`;
-          }}><span aria-hidden="true">×</span></button
+          }}><Icon name="close" small /></button
         >
         <button
           class="handle"
@@ -399,7 +411,7 @@
           aria-pressed={activeDrag?.id === item.id}
           onpointerdown={(event) => beginPointerDrag(event, item.id)}
           onkeydown={(event) => handleKeydown(event, item.id)}
-          ><span aria-hidden="true">⠿</span></button
+          ><Icon name="grip" small /></button
         >
       </li>
     {/each}
@@ -412,6 +424,7 @@
       bind:value={draft}
       {disabled}
       aria-label="New item"
+      placeholder="Add a checklist item…"
       aria-describedby={error ? `${id}-error` : undefined}
       aria-invalid={!!error}
       oninput={() => (error = "")}
@@ -425,7 +438,10 @@
     <button
       type="button"
       disabled={disabled || !draft.trim() || items.length >= ACCEPTANCE_LIMIT}
-      onclick={add}>Add item</button
+      class="add-item"
+      aria-label="Add item"
+      title="Add item"
+      onclick={add}><Icon name="plus" /></button
     >
   </div>
   {#if error}<p role="alert" id={`${id}-error`} class="error">{error}</p>{/if}
@@ -436,97 +452,159 @@
 
 <style>
   .checklist {
-    margin: 24px 0;
+    margin: var(--space-10) 0;
+    padding: var(--space-4);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--soft);
   }
-  h3 {
+  .checklist-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: var(--space-4) var(--space-4) var(--space-6);
+  }
+  .checklist h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
     margin: 0;
-    font-size: 15px;
+    font-size: var(--text-base);
+  }
+  .checklist-count {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
   ul {
     list-style: none;
-    margin: 12px 0 0;
-    padding: 0;
+    margin: 0;
+    padding: 0 var(--space-2);
+    background: var(--paper);
+    border-radius: var(--radius-control);
   }
   li {
-    margin: 8px 0;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 8px;
-    background: var(--bg);
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) 44px 44px;
-    align-items: center;
-    gap: 8px;
+    grid-template-columns:
+      var(--tap-target) minmax(0, 1fr) var(--tap-target)
+      var(--tap-target);
+    align-items: start;
+    gap: 0;
+    padding: var(--space-2) 0;
+    border-bottom: var(--stroke) solid var(--line);
+  }
+  li:last-child {
+    border-bottom: 0;
   }
   li.dragging {
-    opacity: 0.55;
-    border-color: var(--ink);
+    opacity: var(--disabled-opacity);
+    background: var(--accent);
   }
-  li > input {
-    justify-self: center;
-    width: 22px;
-    height: 22px;
-    accent-color: var(--green);
+  .checklist .check-toggle {
+    display: grid;
+    place-items: center;
+    width: var(--tap-target);
+    min-height: var(--tap-target);
+    margin: 0;
+    cursor: pointer;
   }
-  textarea {
+  .checklist .check-toggle input {
+    width: var(--icon-size);
+    height: var(--icon-size);
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--accent-ink);
+    cursor: pointer;
+  }
+  .checklist textarea {
     min-width: 0;
     width: 100%;
-    min-height: 44px;
-    box-sizing: border-box;
-    font-family: inherit;
-    line-height: 1.4;
-    resize: vertical;
+    min-height: var(--tap-target);
+    margin: 0;
+    padding: var(--space-5) var(--space-2);
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    font: inherit;
+    line-height: var(--leading-body);
+    resize: none;
+    field-sizing: content;
+  }
+  .checklist textarea:focus {
+    background: var(--soft);
+  }
+  .completed textarea {
+    color: var(--muted);
   }
   .icon-button,
-  .handle {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
-    padding: 0;
+  .handle,
+  .add-item {
     display: inline-grid;
     place-items: center;
+    width: var(--tap-target);
+    min-width: var(--tap-target);
+    height: var(--tap-target);
+    min-height: var(--tap-target);
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted);
   }
-  .icon-button {
-    font-size: 22px;
-    line-height: 1;
+  .icon-button:hover {
+    color: var(--danger);
+    background: var(--danger-bg);
   }
   .handle {
     cursor: grab;
     touch-action: none;
-    color: var(--muted);
-    font-size: 20px;
-    line-height: 1;
+  }
+  .handle:hover,
+  .add-item:hover {
+    color: var(--ink);
+    background: var(--hover);
   }
   .handle:active,
   li.dragging .handle {
     cursor: grabbing;
   }
-  .add-row {
+  .checklist .add-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 12px;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    padding: 0 var(--space-2) 0 var(--space-4);
+    background: var(--paper);
+    border-radius: var(--radius-control);
   }
-  .add-row input {
+  .checklist .add-row input {
     flex: 1;
     min-width: 0;
     width: 100%;
-  }
-  .add-row button {
-    flex-shrink: 0;
-    min-height: 44px;
+    margin: 0;
+    border-color: transparent;
+    background: transparent;
+    padding-left: var(--space-4);
   }
   .error {
-    font-size: 13px;
+    font-size: var(--text-label);
     color: var(--notice-ink);
+    padding: 0 var(--space-4);
   }
   .sr-only {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    width: var(--stroke);
+    height: var(--stroke);
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+  @supports not (field-sizing: content) {
+    .checklist textarea {
+      resize: vertical;
+    }
   }
 </style>

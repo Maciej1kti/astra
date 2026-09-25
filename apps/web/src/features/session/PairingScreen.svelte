@@ -1,4 +1,8 @@
 <script lang="ts">
+  import Brand from "../../lib/ui/Brand.svelte";
+
+  import Button from "../../lib/ui/Button.svelte";
+
   import type { Pairing } from "../../lib/contracts/api.generated";
 
   let {
@@ -25,7 +29,7 @@
 </script>
 
 <main class="welcome">
-  <div class="brand"><span class="brandmark">lp</span> LOCAL PROJECTS</div>
+  <Brand />
   <p class="eyebrow">Your work, on your own machine</p>
   <h1>A clearer view<br />of what’s next.</h1>
   <p class="lead">
@@ -42,15 +46,15 @@
       <code
         >projectctl --socket /path/to/projectd.sock approve {pairing.id} --challenge
         "{pairing.challenge}"</code
-      ><button class="primary" onclick={checkPairing} disabled={busy}
-        >I approved this browser</button
-      ><button class="quiet" onclick={onrestart}>Start again</button
+      ><Button variant="primary" onclick={checkPairing} disabled={busy}
+        >I approved this browser</Button
+      ><Button variant="quiet" onclick={onrestart}>Start again</Button
       >{:else}<label
         >Device name<input bind:value={device} maxlength="120" /></label
-      ><button
-        class="primary"
+      ><Button
+        variant="primary"
         onclick={startPairing}
-        disabled={busy || !device.trim()}>Request access <span>↗</span></button
+        disabled={busy || !device.trim()}>Request access <span>↗</span></Button
       >
       <p class="small">
         Approval is required on the host. This app does not grant access from a
@@ -61,131 +65,68 @@
 </main>
 
 <style>
-  .brand {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.07em;
-    line-height: 1.5;
-  }
-  .brandmark {
-    background: var(--green);
-    color: var(--accent);
-    font-family: Georgia, serif;
-    font-size: 28px;
-    line-height: 42px;
-    width: 42px;
-    text-align: center;
-    border-radius: 12px;
-    letter-spacing: -3px;
-    padding-right: 3px;
-  }
   .welcome {
-    max-width: 1040px;
-    margin: 8vh auto;
-    padding: 32px;
-    position: relative;
+    max-width: var(--reading-width);
+    margin: var(--space-20) auto;
+    padding: var(--space-12);
   }
   .welcome > .eyebrow {
-    margin-top: 90px;
+    margin-top: var(--space-16);
   }
   .welcome h1 {
-    font:
-      normal clamp(42px, 5vw, 64px)/1.08 Georgia,
-      serif;
-    letter-spacing: -2px;
+    font-size: var(--text-display);
+    letter-spacing: var(--tracking-tight);
+    margin: var(--space-8) 0;
   }
   .lead {
-    font-size: 18px;
+    font-size: var(--text-lg);
     color: var(--muted);
-    line-height: 1.7;
   }
   .pairbox {
-    position: absolute;
-    width: 380px;
-    right: 32px;
-    top: 155px;
+    max-width: var(--dialog-small);
     background: var(--paper);
-    border: 1px solid var(--line);
-    padding: 30px;
-    border-radius: 18px;
+    border: var(--stroke) solid var(--line);
+    padding: var(--space-10);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-card);
+    margin-top: var(--space-12);
   }
   .pairbox h2 {
-    font-size: 21px;
+    font-size: var(--text-section);
+    margin-top: 0;
   }
   .pairbox label {
     display: block;
   }
   .pairbox input {
     width: 100%;
-    margin: 10px 0 18px;
+    margin: var(--space-4) 0 var(--space-8);
   }
-  .pairbox > .primary {
+  .pairbox :global(> .primary) {
     width: 100%;
-    margin: 12px 0;
+    margin: var(--space-6) 0;
   }
   .small {
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--muted);
-    line-height: 1.6;
   }
   .challenge {
-    font-size: 25px;
-    letter-spacing: 3px;
-    background: var(--bg);
-    padding: 16px;
+    font-size: var(--text-title);
+    background: var(--soft);
+    padding: var(--space-8);
     text-align: center;
-    font-family: monospace;
+    font-family: var(--font-mono);
+    border-radius: var(--radius-control);
   }
   .pairbox code {
     display: block;
-    font-size: 11px;
+    font-size: var(--text-xs);
     overflow-wrap: anywhere;
-    line-height: 1.7;
-  }
-
-  h1 {
-    font:
-      650 26px/1.25 Inter,
-      ui-sans-serif,
-      system-ui,
-      sans-serif;
-    letter-spacing: -0.5px;
-    margin: 10px 0;
-  }
-
-  @media (max-width: 1100px) {
-    h1 {
-      font-size: 26px;
-    }
-    .pairbox {
-      position: static;
-      width: auto;
-      max-width: 430px;
-      margin-top: 36px;
-    }
-    .welcome > .eyebrow {
-      margin-top: 45px;
-    }
   }
   @media (max-width: 700px) {
     .welcome {
-      padding: 24px;
+      padding: var(--space-10);
       margin: 0;
     }
-    .welcome h1 {
-      font-size: 44px;
-    }
-    .pairbox {
-      padding: 22px;
-    }
-    .welcome > .eyebrow {
-      margin-top: 40px;
-    }
-  }
-
-  @media (max-width: 700px) {
   }
 </style>

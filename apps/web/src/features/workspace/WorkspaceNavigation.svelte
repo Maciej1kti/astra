@@ -1,6 +1,9 @@
 <script lang="ts">
+  import Brand from "../../lib/ui/Brand.svelte";
+  import Icon from "../../lib/ui/Icon.svelte";
+
   import { tick } from "svelte";
-  import { workspaceViews as views, type View } from "./navigation";
+  import { workspaceViews as views, viewLabel, type View } from "./navigation";
 
   let {
     view,
@@ -41,26 +44,16 @@
 </script>
 
 <aside>
-  <div class="brand">
-    <span class="brandmark">lp</span><span>LOCAL<br />PROJECTS</span>
-  </div>
+  <Brand />
   <p class="navlabel">WORKSPACE</p>
   <nav bind:this={navElement} aria-label="Workspace views">
-    {#each views as item, i}<button
-        aria-label={item === "gantt"
-          ? "Timeline"
-          : item[0].toUpperCase() + item.slice(1)}
+    {#each views as item}<button
+        aria-label={viewLabel(item)}
         data-view={item}
         aria-current={view === item ? "page" : undefined}
         class:chosen={view === item}
         onclick={() => onchange(item)}
-        ><span class="navicon" aria-hidden="true"
-          >{["◉", "▦", "▥", "▦", "≋", "☷", "◷"][i]}</span
-        ><span
-          >{item === "gantt"
-            ? "Timeline"
-            : item[0].toUpperCase() + item.slice(1)}</span
-        ></button
+        ><Icon name={item} /><span>{viewLabel(item)}</span></button
       >{/each}
   </nav>
   <div class="asidebottom">

@@ -522,7 +522,11 @@
 <style>
   .astra-board {
     min-width: 0;
-    height: clamp(360px, 68vh, 900px);
+    height: clamp(
+      var(--board-min-height),
+      var(--board-height),
+      var(--dialog-max-height)
+    );
   }
   .board-theme {
     height: 100%;
@@ -542,35 +546,35 @@
     --wx-border-color: var(--line);
     --wx-color-primary: var(--ink);
     --wx-icon-color: var(--ink);
-    --wx-border-radius: 8px;
-    --wx-kanban-card-shadow: 0 1px 2px #0000000a;
-    --wx-kanban-card-shadow-hover: 0 2px 6px #00000012;
+    --wx-border-radius: var(--radius-control);
+    --wx-kanban-card-shadow: var(--shadow-sm);
+    --wx-kanban-card-shadow-hover: var(--shadow-card);
   }
   .astra-board :global(.wx-column) {
-    border: 1px solid var(--line);
+    border: var(--stroke) solid var(--line);
   }
   .astra-board :global(.wx-column-header) {
-    padding: 4px;
-    gap: 2px;
+    padding: var(--space-2);
+    gap: var(--space-1);
   }
   .astra-board :global(.wx-column-header button),
   .astra-board :global(.wx-expand) {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap-target);
+    min-height: var(--tap-target);
   }
   .astra-board :global(.wx-collapsed) {
-    flex-basis: 44px;
-    min-width: 44px;
-    max-width: 44px;
+    flex-basis: var(--tap-target);
+    min-width: var(--tap-target);
+    max-width: var(--tap-target);
   }
   .astra-board :global(.wx-title) {
     text-transform: capitalize;
-    font-size: 14px;
+    font-size: var(--text-base);
   }
   .astra-board :global(.wx-card) {
     touch-action: pan-y;
     padding: 0;
-    border: 1px solid var(--line);
+    border: var(--stroke) solid var(--line);
   }
   .astra-board :global(.wx-card:hover),
   .astra-board :global(.wx-card:focus-within) {
@@ -581,7 +585,7 @@
     margin-top: 0;
   }
   .astra-board :global(.wx-icon::before) {
-    font-family: sans-serif;
+    font-family: var(--font-sans);
     font-style: normal;
   }
   .astra-board :global(.wxi-plus::before) {
@@ -595,10 +599,10 @@
   }
   .column-footer {
     flex-shrink: 0;
-    padding: 8px;
-    border-top: 1px solid var(--line);
+    padding: var(--space-4);
+    border-top: var(--stroke) solid var(--line);
     display: grid;
-    gap: 6px;
+    gap: var(--space-3);
     background: var(--soft);
   }
   .astra-board :global(.wx-collapsed .column-footer) {
@@ -606,7 +610,7 @@
   }
   .quick-add {
     display: grid;
-    gap: 6px;
+    gap: var(--space-3);
   }
   .quick-add input {
     width: 100%;
@@ -623,11 +627,11 @@
   }
   .pagination {
     display: flex;
-    gap: 6px;
+    gap: var(--space-3);
   }
   .pagination button {
     flex: 1;
-    padding: 6px;
-    font-size: 13px;
+    padding: var(--space-3);
+    font-size: var(--text-label);
   }
 </style>

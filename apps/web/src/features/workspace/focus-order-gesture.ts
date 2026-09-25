@@ -146,7 +146,7 @@ export function focusOrderGesture(node: HTMLElement, initial: Options) {
       boxSizing: "border-box",
       opacity: "1",
       background: "var(--paper)",
-      boxShadow: "0 12px 28px #0003",
+      boxShadow: "var(--shadow-floating)",
     });
     indicator = document.createElement("div");
     indicator.setAttribute("data-focus-drop-indicator", "");
@@ -155,8 +155,8 @@ export function focusOrderGesture(node: HTMLElement, initial: Options) {
       position: "fixed",
       pointerEvents: "none",
       zIndex: "10001",
-      height: "3px",
-      borderRadius: "2px",
+      height: "var(--space-2)",
+      borderRadius: "var(--radius-sm)",
       background: "var(--green)",
     });
     document.body.append(ghost, indicator);

@@ -167,13 +167,13 @@
 
 <style>
   dialog {
-    max-width: calc(100vw - 32px);
-    width: 440px;
+    max-width: calc(100vw - var(--space-12));
+    width: var(--dialog-small);
   }
   footer {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
-    margin-top: 24px;
+    gap: var(--space-6);
+    margin-top: var(--space-10);
   }
 </style>

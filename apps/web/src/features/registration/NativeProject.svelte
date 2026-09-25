@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
+  import Button from "../../lib/ui/Button.svelte";
+
   import type {
     RegistrationPlan as Plan,
     NativeFolderSelection as Selection,
@@ -202,7 +205,7 @@
   <header>
     <h2>Add a project</h2>
     <button onclick={close} disabled={busy} aria-label="Close add project"
-      >✕</button
+      ><Icon name="close" small /></button
     >
   </header>
   <p>
@@ -223,8 +226,8 @@
       disabled={choosing || busy || !!selection || !!pending || !!plan}
     /> Track .project files in Git</label
   >
-  <button
-    class="primary"
+  <Button
+    variant="primary"
     onclick={choose}
     disabled={choosing || busy || !!pending || accessLost}
     >{choosing
@@ -233,7 +236,7 @@
         ? "Check folder selection"
         : plan
           ? "Choose a different folder…"
-          : "Choose folder…"}</button
+          : "Choose folder…"}</Button
   >
   {#if choosing}<p role="status">
       The system window opens on the computer running Local Projects. Select a
@@ -254,12 +257,12 @@
             {change.path}
           </p>{/each}
       </details>
-      <button class="primary" onclick={add} disabled={busy || accessLost}
+      <Button variant="primary" onclick={add} disabled={busy || accessLost}
         >{job
           ? "Check registration"
           : pending
             ? "Retry same registration"
-            : "Add project"}</button
+            : "Add project"}</Button
       >
     </section>{/if}
   {#if pending}<p>Request: {pending.requestId}</p>
@@ -287,36 +290,36 @@
 
 <style>
   dialog {
-    width: min(620px, calc(100vw - 24px));
+    width: min(var(--dialog-medium), calc(100vw - var(--space-10)));
     max-height: 90dvh;
     overflow: auto;
-    border-radius: 14px;
-    padding: 24px;
+    border-radius: var(--radius-card);
+    padding: var(--space-10);
   }
   header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-6);
   }
   label {
     display: block;
-    margin: 16px 0;
+    margin: var(--space-8) 0;
   }
   label:not(.check) input {
     width: 100%;
-    margin-top: 8px;
+    margin-top: var(--space-4);
   }
   .check {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-4);
   }
   p {
     overflow-wrap: anywhere;
-    line-height: 1.5;
+    line-height: var(--leading-body);
   }
   details {
-    margin-top: 20px;
+    margin-top: var(--space-9);
   }
 </style>

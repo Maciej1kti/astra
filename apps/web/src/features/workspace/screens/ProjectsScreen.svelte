@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { resourceLabel } from "../../../lib/resources/resource-presentation";
+  import Badge from "../../../lib/ui/Badge.svelte";
+  import EmptyState from "../../../lib/ui/EmptyState.svelte";
+
   import type { Summary } from "../../../lib/api/api";
   import type { WorkspaceRoute } from "../navigation";
   import { type OpenResource } from "./screen-data";
@@ -32,7 +36,9 @@
         <div class="projectinitial">
           {item.title.slice(0, 2).toUpperCase()}
         </div>
-        <span class="badge">{item.status}</span>
+        <Badge data-state={item.status}
+          >{resourceLabel(item.status ?? "")}</Badge
+        >
         <h2>{item.title}</h2>
         <p>
           {cards.filter(
@@ -48,16 +54,16 @@
         </footer>
       </button>
       <button
-        class="project-delete"
+        class="project-delete quiet"
         aria-label={`Delete project ${item.title}`}
         onclick={(event) => {
           event.stopPropagation();
           onremove(item);
         }}>Delete project</button
       >
-    </article>{:else}<div class="empty">
+    </article>{:else}<EmptyState>
       <strong>Start with a folder.</strong>
       <p>Add a project from an approved directory to begin.</p>
       <button onclick={addProject}>Add your first project</button>
-    </div>{/each}
+    </EmptyState>{/each}
 </div>

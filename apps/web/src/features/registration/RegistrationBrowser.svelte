@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
+  import Button from "../../lib/ui/Button.svelte";
+
   import type {
     Root,
     RegistrationPlan,
@@ -182,7 +185,7 @@
         <button
           onclick={() => (open = false)}
           aria-label="Close"
-          disabled={busy}>✕</button
+          disabled={busy}><Icon name="close" small /></button
         >
       </header>
       <p>Choose the project folder on this host. Files stay in that folder.</p>
@@ -261,19 +264,19 @@
                 </p>{/each}
             </details>
           </section>
-          <button class="primary" onclick={register} disabled={busy}
+          <Button variant="primary" onclick={register} disabled={busy}
             >{registrationJob
               ? "Check registration"
               : registrationPending
                 ? "Retry same registration"
-                : "Add selected project"}</button
+                : "Add selected project"}</Button
           >{#if registrationPending}<p>
               Request: {registrationPending.requestId}
-            </p>{/if}{:else}<button
-            class="primary"
+            </p>{/if}{:else}<Button
+            variant="primary"
             onclick={preview}
             disabled={busy || browsing || !directoryReady}
-            >Choose this folder</button
+            >Choose this folder</Button
           >{/if}{/if}{#if error}<p class="notice">{error}</p>{/if}
     </dialog>
   </div>{/if}
@@ -283,18 +286,18 @@
     position: fixed;
     inset: 0;
     z-index: 25;
-    background: #152d2860;
+    background: var(--backdrop);
     display: grid;
     place-items: center;
-    padding: 20px;
+    padding: var(--space-9);
   }
   .modal {
-    border: 1px solid var(--line);
+    border: var(--stroke) solid var(--line);
     color: var(--ink);
     background: var(--paper);
-    border-radius: 16px;
-    padding: 28px;
-    width: min(100%, 580px);
+    border-radius: var(--radius-card);
+    padding: var(--space-11);
+    width: min(100%, var(--dialog-medium));
     max-height: 90vh;
     overflow: auto;
   }
@@ -304,58 +307,57 @@
     align-items: center;
   }
   .modal h2 {
-    font:
-      28px Georgia,
-      serif;
+    font: var(--weight-semibold) var(--text-title)/var(--leading-tight)
+      var(--font-sans);
   }
   .modal label {
     display: block;
-    font-size: 12px;
-    margin: 16px 0;
+    font-size: var(--text-sm);
+    margin: var(--space-8) 0;
   }
   .modal input:not([type="checkbox"]),
   .modal select {
     display: block;
     width: 100%;
-    margin-top: 8px;
+    margin-top: var(--space-4);
   }
   .modal .check {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-5);
   }
   .directories {
-    max-height: 180px;
+    max-height: var(--suggestions-height);
     overflow: auto;
-    margin: 10px 0;
+    margin: var(--space-5) 0;
   }
-  .directories button {
+  .directories :global(button) {
     display: flex;
     width: 100%;
     text-align: left;
     justify-content: space-between;
-    margin: 4px 0;
+    margin: var(--space-2) 0;
   }
   .breadcrumb {
-    font-size: 12px;
+    font-size: var(--text-sm);
     overflow-wrap: anywhere;
     color: var(--muted);
   }
   .modal details {
-    margin: 20px 0;
+    margin: var(--space-9) 0;
   }
   .modal code {
     display: block;
-    font-size: 11px;
+    font-size: var(--text-xs);
     overflow-wrap: anywhere;
-    line-height: 1.7;
+    line-height: var(--leading-body);
   }
   @media (max-width: 760px) {
     .modalshade {
-      padding: 10px;
+      padding: var(--space-5);
     }
     .modal {
-      padding: 20px;
+      padding: var(--space-9);
     }
   }
 </style>

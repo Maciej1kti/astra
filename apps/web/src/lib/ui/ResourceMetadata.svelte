@@ -78,19 +78,21 @@
 
 <style>
   .resource-metadata {
-    display: grid;
-    gap: 7px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4) var(--space-6);
     min-width: 0;
-    margin-top: 9px;
+    margin-top: var(--space-4);
     color: var(--ink);
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.4;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-normal);
+    line-height: var(--leading-body);
     text-align: left;
   }
   .resource-metadata.compact {
-    gap: 5px;
-    margin-top: 6px;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
   }
   .state-badges,
   .work-badges,
@@ -98,61 +100,31 @@
   .tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: var(--space-3);
     min-width: 0;
   }
-  .badge,
-  .tag {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 4px;
-    max-width: 100%;
-    padding: 2px 6px;
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    overflow-wrap: anywhere;
-    background: var(--soft);
-  }
-  .state,
-  .priority {
-    font-weight: 600;
-  }
-  .state[data-state="active"],
-  .state[data-state="done"] {
-    background: var(--plan-bg);
-  }
-  .state[data-state="review"] {
-    background: var(--review-bg);
-  }
-  .priority[data-priority="high"] {
-    color: var(--notice-ink);
-    border-color: var(--notice-line);
-    background: var(--notice-bg);
-  }
   .date-badges {
-    column-gap: 10px;
+    column-gap: var(--space-5);
+    color: var(--muted);
   }
   .date {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 2px 5px;
+    gap: var(--space-1) var(--space-3);
     min-width: 0;
   }
   .date-label {
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
   .date[data-date-kind="due"] {
     color: var(--notice-ink);
     background: var(--notice-bg);
-    border-radius: 4px;
-    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    padding: var(--stroke) var(--space-2);
   }
   .date-value {
     font-variant-numeric: tabular-nums;
-  }
-  .tag {
-    background: var(--paper);
   }
   .tag-symbol {
     color: var(--muted);

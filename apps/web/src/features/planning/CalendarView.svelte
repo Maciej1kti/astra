@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { compactCalendarQuery } from "../../lib/ui/planning-metrics";
   import { onMount, untrack } from "svelte";
   import { Calendar, DayGrid, List, Interaction } from "@event-calendar/core";
   import "@event-calendar/core/index.css";
@@ -130,10 +131,10 @@
     // An auto-height uniform month instead grows every week to its busiest day.
     options.height = monthGrid
       ? compact
-        ? "740px"
-        : "clamp(600px, calc(100dvh - 260px), 820px)"
+        ? "var(--calendar-mobile-grid-height)"
+        : "var(--calendar-grid-height)"
       : monthAgenda
-        ? "clamp(400px, calc(100dvh - 240px), 680px)"
+        ? "var(--calendar-agenda-height)"
         : "auto";
     options.dayMaxEvents = monthGrid;
   });
@@ -342,7 +343,7 @@
     };
   }
   onMount(() => {
-    const media = window.matchMedia("(max-width: 720px)");
+    const media = window.matchMedia(compactCalendarQuery);
     const update = () => (compact = media.matches);
     update();
     media.addEventListener("change", update);
@@ -480,26 +481,26 @@
 
 <style>
   .calendar-region {
-    --calendar-plan-bg: color-mix(in srgb, var(--accent) 18%, var(--paper));
-    --calendar-due-bg: color-mix(in srgb, #ad6b35 18%, var(--paper));
+    --calendar-plan-bg: var(--accent);
+    --calendar-due-bg: var(--notice-bg);
   }
   .toolbar,
   .navigation,
   .legend {
     display: flex;
-    gap: 10px;
+    gap: var(--space-5);
     flex-wrap: wrap;
     align-items: end;
   }
   .toolbar {
-    margin-bottom: 10px;
+    margin-bottom: var(--space-5);
   }
   .navigation {
-    gap: 4px;
+    gap: var(--space-2);
     flex-wrap: nowrap;
   }
   .navigation button {
-    min-width: 44px;
+    min-width: var(--tap-target);
   }
   .create-scheduled {
     margin-left: auto;
@@ -509,13 +510,13 @@
     align-items: baseline;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 4px 16px;
-    margin-bottom: 12px;
+    gap: var(--space-2) var(--space-8);
+    margin-bottom: var(--space-6);
   }
   label {
     display: grid;
-    gap: 5px;
-    font-size: 12px;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
     min-width: 0;
   }
   input,
@@ -526,49 +527,49 @@
   input,
   select,
   button {
-    min-height: 44px;
+    min-height: var(--tap-target);
   }
   .legend {
     color: var(--muted);
-    font-size: 12px;
-    gap: 14px;
+    font-size: var(--text-sm);
+    gap: var(--space-7);
     margin: 0;
   }
   .help {
-    font-size: 13px;
+    font-size: var(--text-label);
     color: var(--muted);
     margin: 0;
   }
   .help p {
-    max-width: 850px;
-    line-height: 1.6;
+    max-width: var(--reading-width);
+    line-height: var(--leading-body);
   }
   .mobile-month-mode {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin: 0 0 10px;
-    font-size: 12px;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-5);
+    font-size: var(--text-sm);
     color: var(--muted);
   }
   .calendar-surface {
     position: relative;
     overflow: auto;
-    border: 1px solid var(--line);
-    border-radius: 10px;
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
     background: var(--paper);
   }
   .loading-indicator {
     position: absolute;
-    top: 4px;
-    right: 8px;
+    top: var(--space-2);
+    right: var(--space-4);
     z-index: 5;
     margin: 0;
-    padding: 4px 8px;
+    padding: var(--space-2) var(--space-4);
     background: var(--paper);
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--text-sm);
     pointer-events: none;
   }
   .calendar-surface :global(.ec) {
@@ -583,68 +584,68 @@
     --ec-button-text-color: var(--ink);
     --ec-list-day-bg-color: var(--wash);
     font: inherit;
-    min-height: 400px;
+    min-height: var(--agenda-min-height);
   }
   .calendar-surface :global(.ec-day:has([data-workspace-today="true"])) {
     background-color: color-mix(in srgb, var(--accent) 7%, var(--paper));
   }
   .calendar-surface :global([data-workspace-today="true"]) {
     color: var(--ink);
-    font-weight: 700;
+    font-weight: var(--weight-bold);
   }
   .month :global(.ec) {
-    min-width: 640px;
+    min-width: var(--calendar-min-height);
   }
   .calendar-surface :global(.ec-day) {
-    min-height: 115px;
+    min-height: var(--calendar-cell-height);
   }
   .month :global(.ec-day) {
     min-height: 0;
   }
   .month :global(.ec-day-foot a) {
     display: inline-flex;
-    min-height: 28px;
+    min-height: var(--tap-target);
     align-items: center;
-    padding: 0 4px;
+    padding: 0 var(--space-2);
     color: var(--ink);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-underline-offset: var(--space-1);
   }
   .calendar-surface :global(.ec-popup) {
-    min-inline-size: min(300px, 80vw);
-    max-inline-size: min(440px, 90vw);
-    border-radius: 8px;
+    min-inline-size: min(var(--card-min-width), 80vw);
+    max-inline-size: min(var(--dialog-small), 90vw);
+    border-radius: var(--radius-control);
     z-index: 5;
   }
   .calendar-surface :global(.ec-popup .ec-day-head a) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap-target);
+    min-height: var(--tap-target);
   }
   .calendar-surface :global(.ec-event) {
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     box-shadow: none;
-    border-left: 3px solid color-mix(in srgb, var(--accent) 65%, var(--paper));
+    border-left: var(--space-2) solid var(--accent-ink);
   }
   .calendar-surface :global(.ec-event-title) {
-    padding: 2px 4px;
+    padding: var(--space-1) var(--space-2);
   }
   .calendar-item {
-    min-height: 38px;
+    min-height: var(--tap-target);
     overflow: hidden;
     cursor: pointer;
   }
   small {
     display: block;
-    font-size: 10px;
+    font-size: var(--text-xs);
     opacity: 0.8;
   }
   strong {
-    font-size: 12px;
-    font-weight: 550;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
     white-space: nowrap;
   }
   .agenda strong,
@@ -652,7 +653,7 @@
     display: block;
     white-space: normal;
     overflow-wrap: anywhere;
-    line-height: 1.4;
+    line-height: var(--leading-body);
   }
   .agenda :global(.ec-day) {
     min-height: 0;
@@ -666,14 +667,14 @@
     display: none;
   }
   .calendar-item:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+    outline: var(--focus-width) solid var(--accent);
+    outline-offset: calc(-1 * var(--focus-width));
   }
   @media (max-width: 720px) {
     .toolbar {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 8px;
+      gap: var(--space-4);
     }
     .navigation {
       order: 0;
@@ -681,7 +682,7 @@
     .create-scheduled {
       order: 1;
       margin-left: 0;
-      padding-inline: 8px;
+      padding-inline: var(--space-4);
     }
     .toolbar label {
       order: 2;
@@ -691,19 +692,19 @@
       width: 100%;
     }
     .view-meta {
-      gap: 8px;
+      gap: var(--space-4);
     }
     .legend {
-      gap: 12px;
+      gap: var(--space-6);
     }
     .calendar-surface:not(.month) :global(.ec) {
       min-width: 0;
     }
     .calendar-item {
-      min-height: 44px;
+      min-height: var(--tap-target);
     }
     .month :global(.ec-day-foot a) {
-      min-height: 44px;
+      min-height: var(--tap-target);
     }
   }
 </style>

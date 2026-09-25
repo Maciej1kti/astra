@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
+  import Button from "../../lib/ui/Button.svelte";
+
   import { onMount } from "svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
@@ -147,7 +150,7 @@
     <button
       aria-label="Close delete project"
       onclick={close}
-      disabled={busy || !!pending}>✕</button
+      disabled={busy || !!pending}><Icon name="close" small /></button
     >
   </header>
   <p>
@@ -185,40 +188,37 @@
   {#if error}<p class="notice" role="alert">{error}</p>{/if}
   <footer>
     <button onclick={close} disabled={busy || !!pending}>Keep project</button>
-    <button
-      class="primary danger"
+    <Button
+      variant="danger"
       onclick={() => void remove()}
       disabled={!plan || loading || busy || !!pending || accessLost || conflict}
-      >Permanently delete project</button
+      >Permanently delete project</Button
     >
   </footer>
 </dialog>
 
 <style>
   .project-deletion {
-    width: min(620px, calc(100vw - 24px));
+    width: min(var(--dialog-medium), calc(100vw - var(--space-10)));
     max-height: 90dvh;
     overflow: auto;
-    padding: 24px;
+    padding: var(--space-10);
   }
   .project-deletion header,
   .project-deletion footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-6);
   }
   .project-deletion footer {
     justify-content: flex-end;
-    margin-top: 24px;
+    margin-top: var(--space-10);
   }
   .project-deletion h2 {
     max-width: 28ch;
   }
   .project-deletion code {
     overflow-wrap: anywhere;
-  }
-  .project-deletion .danger {
-    background: #8c3028;
   }
 </style>

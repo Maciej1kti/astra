@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { timelineMetrics as metrics } from "../../lib/ui/planning-metrics";
   import { onMount, setContext, untrack, tick } from "svelte";
   import {
     Gantt,
@@ -78,12 +79,12 @@
           ],
   );
   const columns = $derived<IColumnConfig[]>(
-    chartWidth < 650
-      ? [{ id: "text", header: "Card / milestone", width: 170 }]
+    chartWidth < metrics.compactWidth
+      ? [{ id: "text", header: "Card / milestone", width: metrics.compactGrid }]
       : [
-          { id: "text", header: "Card / milestone", width: 230 },
-          { id: "plannedStart", header: "Start", width: 100 },
-          { id: "plannedEnd", header: "End", width: 110 },
+          { id: "text", header: "Card / milestone", width: metrics.grid },
+          { id: "plannedStart", header: "Start", width: metrics.startColumn },
+          { id: "plannedEnd", header: "End", width: metrics.endColumn },
         ],
   );
   const axisStart = $derived(
@@ -184,13 +185,13 @@
     if (!task || !widgetApi) return;
     widgetApi.exec("select-task", { id });
     widgetApi.exec("scroll-chart", {
-      left: Math.max(0, Number(widgetApi.getTask(id)?.$x ?? 0) - 48),
-      top: tasks.indexOf(task) * 60,
+      left: Math.max(0, Number(widgetApi.getTask(id)?.$x ?? 0) - metrics.day),
+      top: tasks.indexOf(task) * metrics.row,
     });
   }
   $effect(() => {
     const widget = widgetApi;
-    const key = `${project}:${month}:${scale}:${chartWidth < 650}`;
+    const key = `${project}:${month}:${scale}:${chartWidth < metrics.compactWidth}`;
     const task =
       tasks.find((t) =>
         (t.astra.schedule?.start ?? t.astra.due?.date ?? "").startsWith(month),
@@ -207,7 +208,10 @@
       .then(() => {
         if (widget === widgetApi && key === lastNavigation)
           widget.exec("scroll-chart", {
-            left: Math.max(0, Number(widget.getTask(task.id!)?.$x ?? 0) - 48),
+            left: Math.max(
+              0,
+              Number(widget.getTask(task.id!)?.$x ?? 0) - metrics.day,
+            ),
           });
       });
   });
@@ -321,7 +325,7 @@
     <Willow fonts={false} />
     <div
       class="chart wx-theme wx-willow-theme"
-      class:compact={chartWidth < 650}
+      class:compact={chartWidth < metrics.compactWidth}
       bind:clientWidth={chartWidth}
       bind:this={chartRoot}
     >
@@ -333,15 +337,17 @@
         taskTemplate={GanttTask}
         readonly={true}
         cellWidth={scale === "days"
-          ? chartWidth < 650
-            ? 144
-            : 48
+          ? chartWidth < metrics.compactWidth
+            ? metrics.compactDay
+            : metrics.day
           : scale === "weeks"
-            ? 140
-            : 160}
-        cellHeight={60}
-        scaleHeight={32}
-        gridWidth={chartWidth < 650 ? 170 : 230}
+            ? metrics.week
+            : metrics.month}
+        cellHeight={metrics.row}
+        scaleHeight={metrics.scale}
+        gridWidth={chartWidth < metrics.compactWidth
+          ? metrics.compactGrid
+          : metrics.grid}
         start={axisStart}
         end={axisEnd}
       />
@@ -378,26 +384,26 @@
 
 <style>
   strong {
-    font-size: 15px;
+    font-size: var(--text-card);
   }
   .toolbar,
   .selection-bar,
   nav {
     display: flex;
-    gap: 12px;
+    gap: var(--space-6);
     align-items: end;
     flex-wrap: wrap;
-    margin: 16px 0;
+    margin: var(--space-8) 0;
   }
   .selection-bar {
-    padding: 12px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
+    padding: var(--space-6);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
     background: var(--paper);
-    margin: 12px 0;
+    margin: var(--space-6) 0;
   }
   .selection-bar label {
-    flex: 1 1 210px;
+    flex: 1 1 var(--field-width);
   }
   .selection-bar select {
     max-width: 100%;
@@ -406,49 +412,49 @@
   .selected-summary {
     flex-basis: 100%;
     display: grid;
-    gap: 4px;
+    gap: var(--space-2);
     min-width: 0;
     overflow-wrap: anywhere;
   }
   .selected-summary span {
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--muted);
-    line-height: 1.5;
+    line-height: var(--leading-body);
   }
   .timeline-help {
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--muted);
-    margin: 8px 0;
+    margin: var(--space-4) 0;
   }
   label {
     display: grid;
-    gap: 5px;
+    gap: var(--space-3);
     max-width: 100%;
     min-width: 0;
-    font-size: 12px;
+    font-size: var(--text-sm);
   }
   select {
-    max-width: 330px;
-    min-height: 44px;
+    max-width: var(--field-max-width);
+    min-height: var(--tap-target);
   }
   .hint,
   .notice {
-    font-size: 13px;
+    font-size: var(--text-label);
     color: var(--muted);
   }
   .notice {
-    border-left: 3px solid #b36b20;
-    padding: 8px 12px;
+    border-left: var(--space-2) solid var(--notice-ink);
+    padding: var(--space-4) var(--space-6);
   }
   .chart {
-    height: 480px;
+    height: var(--chart-height);
     min-width: 0;
     overflow-x: auto;
   }
   /* SVAR 2.7.2 compact chart mode assumes a writable action column.
      Keep its read-only renderer above that breakpoint inside a scroll viewport. */
   .chart :global(.wx-gantt) {
-    min-width: 720px;
+    min-width: var(--gantt-min-width);
   }
   .compact :global(.wx-resizer) {
     visibility: hidden;
@@ -464,8 +470,8 @@
     -webkit-box-orient: vertical;
   }
   .astra-gantt {
-    border: 1px solid var(--line);
-    border-radius: 10px;
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
     overflow: hidden;
   }
   .astra-gantt :global(.wx-willow-theme) {
@@ -474,7 +480,7 @@
     --wx-color-secondary-font: var(--muted);
     --wx-background: var(--paper);
     --wx-background-alt: var(--paper);
-    --wx-gantt-border: 1px solid var(--line);
+    --wx-gantt-border: var(--stroke) solid var(--line);
     --wx-gantt-border-color: var(--line);
     --wx-gantt-select-color: var(--wash);
     --wx-gantt-task-color: var(--paper);
@@ -491,22 +497,22 @@
   }
   .unscheduled {
     display: flex;
-    gap: 8px;
+    gap: var(--space-4);
     flex-wrap: wrap;
   }
   section h3 {
-    margin-top: 24px;
+    margin-top: var(--space-10);
   }
   @media (max-width: 720px) {
     .chart {
-      height: 430px;
+      height: var(--chart-mobile-height);
     }
     .toolbar {
-      gap: 8px;
-      margin: 12px 0;
+      gap: var(--space-4);
+      margin: var(--space-6) 0;
     }
     .selection-bar {
-      gap: 8px;
+      gap: var(--space-4);
     }
     .selection-bar label {
       flex-basis: 100%;

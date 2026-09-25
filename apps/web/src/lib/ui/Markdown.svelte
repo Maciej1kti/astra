@@ -10,13 +10,19 @@
 <style>
   .markdown {
     overflow-wrap: anywhere;
-    line-height: 1.6;
+    line-height: var(--leading-body);
   }
   .markdown :global(pre) {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     background: var(--bg);
-    padding: 12px;
+    padding: var(--space-6);
+  }
+  .markdown :global(> :first-child) {
+    margin-top: 0;
+  }
+  .markdown :global(> :last-child) {
+    margin-bottom: 0;
   }
   .markdown :global(table) {
     display: block;
@@ -24,10 +30,11 @@
   }
   .markdown :global(th),
   .markdown :global(td) {
-    padding: 6px;
-    border: 1px solid var(--line);
+    padding: var(--space-3);
+    border: var(--stroke) solid var(--line);
   }
   .markdown :global(a) {
     text-decoration: underline;
+    color: var(--accent-ink);
   }
 </style>

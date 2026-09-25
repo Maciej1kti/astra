@@ -30,8 +30,9 @@ the generation that cancels obsolete resource reads and history restoration.
 planning/tag endpoints and command execution. Feature code should use a named
 endpoint when one exists; response types are asserted only at transport boundaries. `lib/contracts` contains generated types; `lib/resources` contains
 shared resource presentation; `lib/ui` contains shared rendering and dialog
-behavior. Global theme tokens and dialog defaults live in `styles/`. Workspace
-and editor styles belong to their own presentation surfaces.
+behavior and the small shared component set. Visual values live in
+`styles/tokens.css`; workspace and editor styles consume those tokens. See the
+[UI design system](DESIGN-SYSTEM.md) for component and layout ownership.
 
 ### Commands and editor drafts
 

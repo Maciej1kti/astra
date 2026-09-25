@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
   import { api } from "../../lib/api/api";
@@ -59,7 +60,9 @@
 >
   <header>
     <h2>Host diagnostics</h2>
-    <button onclick={onclose} aria-label="Close diagnostics">✕</button>
+    <button onclick={onclose} aria-label="Close diagnostics"
+      ><Icon name="close" small /></button
+    >
   </header>
   <button onclick={load} disabled={busy}
     >{busy ? "Checking…" : "Refresh diagnostics"}</button
@@ -100,7 +103,7 @@
 
 <style>
   dialog {
-    width: min(680px, calc(100vw - 24px));
+    width: min(var(--dialog-large), calc(100vw - var(--space-10)));
     max-height: 90dvh;
     overflow: auto;
   }
@@ -108,7 +111,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-8);
   }
   p,
   code {

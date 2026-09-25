@@ -1,4 +1,8 @@
 <script lang="ts">
+  import PageHeading from "./lib/ui/PageHeading.svelte";
+  import { viewLabel } from "./features/workspace/navigation";
+  import Button from "./lib/ui/Button.svelte";
+
   import WorkspaceNavigation from "./features/workspace/WorkspaceNavigation.svelte";
   import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
   import WorkspaceFilters from "./features/workspace/WorkspaceFilters.svelte";
@@ -616,12 +620,7 @@
   });
 </script>
 
-<svelte:head
-  ><title>Local Projects</title><meta
-    name="theme-color"
-    content="#f5f5ef"
-  /></svelte:head
->
+<svelte:head><title>Astra</title></svelte:head>
 {#if !boot}
   <PairingScreen
     {pairing}
@@ -666,32 +665,9 @@
         {#if routing.current.view === "focus"}
           <h1 class="sr">Focus</h1>
         {:else}
-          <div class="heading">
-            <div>
-              <p class="eyebrow">A LITTLE CLARITY, EVERY DAY</p>
-              <h1>
-                {routing.current.view === "gantt"
-                  ? "The bigger picture."
-                  : routing.current.view === "projects"
-                    ? "Your projects."
-                    : routing.current.view === "updates"
-                      ? "The latest from your work."
-                      : routing.current.view[0].toUpperCase() +
-                        routing.current.view.slice(1) +
-                        "."}
-              </h1>
-              <p>
-                {routing.current.view === "projects"
-                  ? "Real folders. Shared context. One place to see progress."
-                  : routing.current.view === "calendar"
-                    ? "Planned work and milestone dates, kept clear."
-                    : routing.current.view === "gantt"
-                      ? "See the sequence of planned work."
-                      : "Keep the next step visible."}
-              </p>
-            </div>
-            <button
-              class="primary"
+          <PageHeading title={viewLabel(routing.current.view)}>
+            <Button
+              variant="primary"
               onclick={routing.current.view === "projects"
                 ? addProject
                 : () =>
@@ -703,15 +679,15 @@
                     )}
               >＋ {routing.current.view === "projects"
                 ? "Add project"
-                : `Add ${primaryResource(routing.current.view, routing.current.collection)}`}</button
+                : `Add ${primaryResource(routing.current.view, routing.current.collection)}`}</Button
             >
-          </div>
+          </PageHeading>
         {/if}
         {#if error}<div class="notice" role="alert">
-            {error}<button
-              class="quiet"
+            {error}<Button
+              variant="quiet"
               onclick={() => (error = "")}
-              aria-label="Dismiss error">✕</button
+              aria-label="Dismiss error">✕</Button
             >
           </div>{/if}
         {#if !connected}<div class="connection">
@@ -722,12 +698,14 @@
             {projectionMessage}
           </p>{/if}
         {#if queryNotice}<p role="status" class="notice">{queryNotice}</p>{/if}
-        <WorkspaceFilters
-          route={routing.current}
-          {projects}
-          onchange={routing.changeFilters}
-          changeMonth={routing.changeMonth}
-        />
+        {#if routing.current.view !== "focus"}
+          <WorkspaceFilters
+            route={routing.current}
+            {projects}
+            onchange={routing.changeFilters}
+            changeMonth={routing.changeMonth}
+          />
+        {/if}
         {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
           <div class="empty" role="status">Loading resources…</div>
         {:else if routing.current.view === "focus"}
@@ -818,9 +796,18 @@
           />
         {/if}
         {#if routing.current.view === "focus"}
-          <button
-            class="focus-add-action primary"
-            onclick={() => create("card")}>＋ Add card</button
+          <div class="focus-filters">
+            <WorkspaceFilters
+              route={routing.current}
+              {projects}
+              onchange={routing.changeFilters}
+              changeMonth={routing.changeMonth}
+            />
+          </div>
+          <Button
+            variant="primary"
+            class="focus-add-action"
+            onclick={() => create("card")}>＋ Add card</Button
           >
         {/if}
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =
