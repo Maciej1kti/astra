@@ -43,6 +43,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .editor .editor-properties label {
+  min-width: 0;
   margin: 0;
   color: var(--muted);
 }
@@ -50,6 +51,21 @@
 .editor .editor-properties select {
   background: var(--soft);
   border-color: transparent;
+}
+.editor .editor-properties input[type="date"],
+.editor .editor-properties input[type="time"] {
+  appearance: none;
+  display: block;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.editor .editor-properties input::-webkit-date-and-time-value {
+  min-height: 1lh;
+  text-align: left;
+}
+.editor .card-properties .field-hint {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 .editor .resource-description-field {
   margin: var(--space-10) 0;
@@ -207,6 +223,9 @@
   .editor .card-properties {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .editor .card-properties label:has(input) {
+    grid-column: 1 / -1;
+  }
 }
 @media (max-width: 520px) {
   .editor .context-kind,
@@ -246,9 +265,4 @@
   margin: 0;
   resize: none;
   line-height: var(--leading-tight);
-}
-@media (max-width: 360px) {
-  .editor .card-properties label:has(input[type="date"]) {
-    grid-column: 1 / -1;
-  }
 }

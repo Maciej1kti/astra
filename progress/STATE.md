@@ -6,6 +6,12 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Phone editor time fields](2026-09-26-iphone-editor-time.md) correct the layout
+reported in the owner's iPhone screenshot. Mobile date/time fields use separate
+rows and bounded native controls. The full gate, four Chromium suites and the
+WebKit input suite pass; the manual HTTPS app is restarted. Physical iPhone
+confirmation remains open.
+
 [Project folder chips](2026-09-26-folder-chips.md) make folder assignment behave
 like card tags: explicit addition, suggestions, removable chips and protected
 unfinished input. One folder per project remains the contract. The full gate and

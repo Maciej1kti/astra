@@ -27,6 +27,19 @@ The events suite covers event autosave, conversion to/from date plans, hourly
 calendar movement, duration edits, slot creation, mobile layout and browser
 timezone independence.
 
+The editor-inputs suite checks date/time control bounds, touch targets, empty
+time fields, event autosave/reload and conversion back to a plan at 320–1440px.
+For WebKit coverage, install the matching Playwright browser and select it:
+
+```sh
+npx playwright install webkit
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs editor-inputs
+```
+
+Chromium remains the default. WebKit on macOS does not reproduce native iOS
+pickers or establish physical iPhone acceptance. The suite records WebKit's
+deferred ResizeObserver notifications separately from application errors.
+
 The responsive suite checks all seven views at 320, 390, 768 and 1024px, readable
 List filters with reload persistence, Calendar navigation, diagonal touch swipes
 inside a long modal and the system reduced-motion preference. These checks use

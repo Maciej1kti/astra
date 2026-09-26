@@ -1,5 +1,5 @@
 /** Maintained suites receive an explicit synthetic runtime from regressions.mjs. */
-import { chromium } from "@playwright/test";
+import { chromium, webkit } from "@playwright/test";
 import { mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -41,11 +41,15 @@ export async function withHost(run, { create = createHost } = {}) {
 export async function withBrowser(
   run,
   {
-    launch = () =>
-      chromium.launch({
+    launch = () => {
+      const engine = process.env.ASTRA_TEST_BROWSER ?? "chromium";
+      if (engine === "webkit") return webkit.launch({ headless: true });
+      if (engine !== "chromium") throw new Error(`Unknown browser: ${engine}`);
+      return chromium.launch({
         headless: true,
         executablePath: process.env.ASTRA_TEST_CHROMIUM || undefined,
-      }),
+      });
+    },
   } = {},
 ) {
   const browser = await launch();

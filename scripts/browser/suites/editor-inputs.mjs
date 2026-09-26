@@ -1,0 +1,167 @@
+/** Native date/time controls must remain visible and usable in phone editors. */
+import { expect } from "@playwright/test";
+import assert from "node:assert/strict";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { runBrowserSuite } from "../runtime.mjs";
+
+await runBrowserSuite(
+  async ({ config, cli, runtime, evidence, newContext }) => {
+    const context = await newContext({
+      isMobile: true,
+      hasTouch: true,
+      colorScheme: "dark",
+      reducedMotion: "reduce",
+      locale: "en-US",
+      viewport: { width: 390, height: 844 },
+    });
+    const page = await context.newPage();
+    const errors = [];
+    const resizeNotifications = [];
+    page.on("pageerror", (error) => {
+      // WebKit reports deferred ResizeObserver delivery during viewport changes.
+      if (
+        error.message ===
+        "ResizeObserver loop completed with undelivered notifications."
+      )
+        resizeNotifications.push(error.message);
+      else errors.push(error.message);
+    });
+    const project = config.projects[2].id;
+    const base = `/api/v1/projects/${project}/cards`;
+    const file = join(runtime, "editor-inputs.json");
+    await writeFile(
+      file,
+      JSON.stringify({
+        title: "Phone date and time",
+        schedule: { start: "2026-09-13", end: "2026-09-14" },
+      }),
+    );
+    const id = cli("command", "POST", base, "--json-file", file).result.resource
+      .metadata.id;
+    const get = () => cli("get", `${base}/${id}`).metadata;
+    const dialog = page.getByRole("dialog", {
+      name: "Edit resource",
+      exact: true,
+    });
+    const time = dialog.getByLabel("Start time", { exact: true });
+    const duration = dialog.getByLabel("Duration (minutes)", { exact: true });
+    async function checkControls() {
+      const fields = dialog.locator(".editor-properties input");
+      for (const field of await fields.all()) {
+        await field.scrollIntoViewIfNeeded();
+        const geometry = await field.evaluate((el) => {
+          const rect = el.getBoundingClientRect();
+          const label = el.closest("label").getBoundingClientRect();
+          return {
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+            height: rect.height,
+            labelLeft: label.left,
+            labelRight: label.right,
+            hit:
+              document.elementFromPoint(
+                rect.x + rect.width / 2,
+                rect.y + rect.height / 2,
+              ) === el,
+            overflows: el.scrollWidth > el.clientWidth + 1,
+          };
+        });
+        assert.ok(
+          geometry.left >= geometry.labelLeft - 1 &&
+            geometry.right <= geometry.labelRight + 1,
+          `Control exceeds its column: ${JSON.stringify(geometry)}`,
+        );
+        assert.ok(
+          geometry.width >= 44 && geometry.height >= 44,
+          `Visible touch target: ${JSON.stringify(geometry)}`,
+        );
+        assert.ok(geometry.hit, "Control center is not obscured");
+        assert.equal(geometry.overflows, false, "Native value fits its input");
+      }
+      assert.ok(
+        await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+      );
+      await time.scrollIntoViewIfNeeded();
+      await time.tap();
+      await expect(time).toBeFocused();
+    }
+    try {
+      await page.goto(
+        `${config.origin}/?${new URLSearchParams({ view: "list", project, type: "card", resource: id })}`,
+      );
+      await expect(time).toHaveValue("");
+      for (const width of [390, 320, 430, 768, 1440]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await checkControls();
+        if (width <= 640) {
+          const startBox = await dialog
+            .getByLabel("Start", { exact: true })
+            .boundingBox();
+          const timeBox = await time.boundingBox();
+          assert.ok(
+            timeBox.y >= startBox.y + startBox.height,
+            "Phone date and time occupy separate rows",
+          );
+        }
+        await page.screenshot({
+          path: join(evidence, `plan-${width}.png`),
+          fullPage: true,
+        });
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await time.fill("09:30");
+      await duration.fill("90");
+      await expect
+        .poll(() => get().event)
+        .toEqual({ start: "2026-09-13T09:30", duration_minutes: 90 });
+      await page.reload();
+      await expect(time).toHaveValue("09:30");
+      await expect(duration).toHaveValue("90");
+      for (const width of [320, 390, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        await checkControls();
+        await page.screenshot({
+          path: join(evidence, `event-${width}.png`),
+          fullPage: true,
+        });
+      }
+      await time.fill("");
+      await expect
+        .poll(() => get().schedule)
+        .toEqual({ start: "2026-09-13", end: "2026-09-13" });
+      assert.equal(get().event, undefined);
+      await checkControls();
+      assert.deepEqual(errors, []);
+      await writeFile(
+        join(evidence, "results.json"),
+        JSON.stringify(
+          {
+            status: "pass",
+            engine: process.env.ASTRA_TEST_BROWSER ?? "chromium",
+            checks: [
+              "native control bounds and hit targets",
+              "empty and populated time",
+              "320–1440px",
+              "event autosave and reload",
+              "clear time to plan",
+            ],
+            errors,
+            resizeNotifications,
+          },
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      await page.screenshot({
+        path: join(evidence, "failure.png"),
+        fullPage: true,
+      });
+      throw error;
+    } finally {
+      await context.close();
+    }
+  },
+);
