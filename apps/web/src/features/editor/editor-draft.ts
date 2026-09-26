@@ -29,6 +29,7 @@ export type CardFields = {
 };
 export type ProjectFields = {
   folder: string;
+  folderDraft: string;
   status: "active" | "paused" | "archived";
 };
 export type MilestoneFields = {
@@ -103,6 +104,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         fields: {
           status: m.state,
           folder: m.folder ?? "",
+          folderDraft: "",
         },
       };
     }
@@ -145,10 +147,11 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
 export function draftSnapshot(draft: EditorDraft): string {
   return JSON.stringify({ ...draft.common, ...draft.fields });
 }
-/** Snapshot of persisted fields; unfinished tag/checklist entries stay local. */
+/** Snapshot of persisted fields; unfinished picker/checklist entries stay local. */
 export function autosaveSnapshot(draft: EditorDraft): string {
   const value = JSON.parse(draftSnapshot(draft)) as Record<string, unknown>;
   delete value.tagDraft;
+  delete value.folderDraft;
   delete value.acceptanceDraft;
   return JSON.stringify(value);
 }

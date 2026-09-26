@@ -6,6 +6,12 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Project folder chips](2026-09-26-folder-chips.md) make folder assignment behave
+like card tags: explicit addition, suggestions, removable chips and protected
+unfinished input. One folder per project remains the contract. The full gate and
+Focus, tags, editor and autosave browser regressions pass; the manual app is
+restarted for remote testing.
+
 [Timed events](2026-09-26-timed-events.md) add start time and duration to cards,
 with hourly calendar views, conditional conversion, Focus attention and durable
 source/API support. Date-only cards remain plans and milestones remain separate.

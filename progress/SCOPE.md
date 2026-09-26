@@ -178,3 +178,9 @@ After each verified application change, rebuild and restart the current manual
 app so the owner can inspect it remotely. Preserve its data, origin, certificates
 and network configuration. This authorization does not request deployment or
 changes to host networking.
+
+## Project folder input — owner direction, 2026-09-26
+
+Make setting a project's folder work like adding tags to a card: confirm a name
+or suggestion, show a removable chip, and preserve unadded input as a draft.
+This changes the editor interaction; the project retains one optional folder.

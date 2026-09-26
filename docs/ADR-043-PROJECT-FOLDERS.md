@@ -27,8 +27,10 @@ views retain their project selectors. The browser stores the Focus folder in
 the URL; a project parameter no longer limits Focus but retains the selected
 project for other views after reload.
 
-The project editor autosaves Folder alongside existing metadata; an empty input
-explicitly clears it. Project overview cards show the category. Adding a card
+The project editor uses the same chip picker as card tags. Enter, Add/Set folder
+or a suggestion confirms one folder and triggers autosave; the remove button
+explicitly clears it. Unconfirmed typing stays in the draft and is protected on
+close. Choosing a new folder replaces the previous one. Project overview cards show the category. Adding a card
 from Focus uses the only available project in the selected folder, or asks the
 owner to choose among matching projects. It never silently uses a hidden project
 selection from another view.

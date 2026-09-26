@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { all } from "../../lib/api/api";
   import Icon from "../../lib/ui/Icon.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
@@ -11,15 +12,19 @@
     draft = $bindable(""),
     error = $bindable(""),
     disabled = false,
-    project,
+    project = "",
+    kind = "tag",
   }: {
     labels?: string[];
     draft?: string;
     error?: string;
     disabled?: boolean;
-    project: string;
+    project?: string;
+    kind?: "tag" | "folder";
   } = $props();
   const id = $props.id();
+  const folder = $derived(kind === "folder");
+  const catalogLabel = $derived(folder ? "folders" : "project tags");
   let input = $state<HTMLInputElement>();
   let expanded = $state(false);
   let pointerOutside = false;
@@ -38,16 +43,23 @@
     catalogLoading = true;
     catalogError = "";
     try {
-      const catalog = await getProjectTags(project);
+      const catalog = folder
+        ? {
+            names: await all<string>("/api/v1/views/folders"),
+            complete: true,
+          }
+        : await getProjectTags(project).then((result) => ({
+            names: result.tags.map((tag) => tag.name),
+            complete: result.complete,
+          }));
       if (current !== generation || accessLost) return;
-      projectOptions = catalog.tags.map((tag) => tag.name);
+      projectOptions = catalog.names;
       catalogLoaded = true;
       if (!catalog.complete)
-        catalogError =
-          "Some project tags are unavailable. Available suggestions are shown.";
+        catalogError = `Some ${catalogLabel} are unavailable. Available suggestions are shown.`;
     } catch (error) {
       if (current === generation && !isAbortError(error))
-        catalogError = "Project tags could not be loaded.";
+        catalogError = `${folder ? "Folders" : "Project tags"} could not be loaded.`;
     } finally {
       if (current === generation) catalogLoading = false;
     }
@@ -120,12 +132,28 @@
   });
 
   function add(value = draft, fromSuggestion = false) {
-    const result = addTag(labels, value, fromSuggestion);
+    const name = value.trim();
+    const result = folder
+      ? {
+          labels: [name],
+          error: !name
+            ? "Enter a folder name."
+            : [...name].length > 48
+              ? "A folder can contain up to 48 characters."
+              : /[\r\n\0]/.test(name)
+                ? "Use a single-line folder name."
+                : labels.includes(name)
+                  ? "This folder is already assigned."
+                  : "",
+        }
+      : addTag(labels, value, fromSuggestion);
     error = result.error;
     if (!error) {
       labels = result.labels;
       draft = "";
-      announcement = `Added tag ${labels.at(-1)}.`;
+      announcement = folder
+        ? `Set folder ${labels[0]}.`
+        : `Added tag ${labels.at(-1)}.`;
       active = -1;
     }
     input?.focus();
@@ -134,7 +162,9 @@
   function remove(label: string) {
     labels = labels.filter((item) => item !== label);
     error = "";
-    announcement = `Removed tag ${label} from this card.`;
+    announcement = folder
+      ? `Removed folder ${label} from this project.`
+      : `Removed tag ${label} from this card.`;
     input?.focus();
   }
 
@@ -167,26 +197,28 @@
   }
 </script>
 
-<section class="tags" aria-label="Card tags">
+<section class="tags" aria-label={folder ? "Project folder" : "Card tags"}>
   <div class="heading">
-    <label for={`${id}-input`}>Labels</label><span
-      >{labels.length}/{TAG_LIMIT}</span
+    <label for={`${id}-input`}>{folder ? "Folder" : "Labels"}</label><span
+      >{labels.length}/{folder ? 1 : TAG_LIMIT}</span
     >
   </div>
   {#if labels.length}
-    <ul class="chips" aria-label="Selected tags">
+    <ul class="chips" aria-label={folder ? "Selected folder" : "Selected tags"}>
       {#each labels as label (label)}
         <li>
           <span>{label}</span><button
             type="button"
-            aria-label={`Remove tag ${label}`}
+            aria-label={`Remove ${kind} ${label}`}
             {disabled}
             onclick={() => remove(label)}><Icon name="close" small /></button
           >
         </li>
       {/each}
     </ul>
-  {:else}<p class="empty">No tags on this card.</p>{/if}
+  {:else}<p class="empty">
+      {folder ? "No folder on this project." : "No tags on this card."}
+    </p>{/if}
   <div class="input-row">
     <input
       bind:this={input}
@@ -201,7 +233,7 @@
         : undefined}
       aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`}
       aria-invalid={!!error}
-      placeholder="Find or create a tag"
+      placeholder={folder ? "Find or create a folder" : "Find or create a tag"}
       autocomplete="off"
       {disabled}
       oninput={() => {
@@ -222,11 +254,18 @@
     <button
       type="button"
       disabled={disabled || !draft.trim()}
-      onclick={() => add()}>Add tag</button
+      onclick={() => add()}
+      >{folder
+        ? labels.length
+          ? "Set folder"
+          : "Add folder"
+        : "Add tag"}</button
     >
   </div>
   <p id={`${id}-hint`} class="hint">
-    Enter adds a tag. Names are case-sensitive.
+    {folder
+      ? "Enter sets the folder. One folder per project."
+      : "Enter adds a tag. Names are case-sensitive."}
     <span class="sr-only"
       >Commas stay in its name. Up to {TAG_LENGTH_LIMIT} characters.</span
     >
@@ -239,7 +278,7 @@
       id={`${id}-options`}
       class="suggestions"
       role="listbox"
-      aria-label="Existing tags"
+      aria-label={folder ? "Existing folders" : "Existing tags"}
     >
       {#each suggestions as label, index}
         <li role="presentation">
@@ -258,11 +297,11 @@
     </ul>
   {/if}
   {#if catalogLoading}<p class="hint" role="status">
-      Loading project tags…
+      Loading {catalogLabel}…
     </p>{:else if catalogError}<p class="hint">
       {catalogError}
       <button type="button" {disabled} onclick={() => void loadCatalog()}
-        >Retry project tags</button
+        >Retry {catalogLabel}</button
       >
     </p>{/if}
   <p class="sr-only" role="status" aria-live="polite">{announcement}</p>

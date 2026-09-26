@@ -143,8 +143,11 @@
       : snapshot() !== explicitBaseline,
   );
   const unfinishedEntry = $derived(
-    draft.type === "card" &&
-      (!!draft.fields.tagDraft.trim() || !!draft.fields.acceptanceDraft.trim()),
+    draft.type === "project"
+      ? !!draft.fields.folderDraft.trim()
+      : draft.type === "card" &&
+          (!!draft.fields.tagDraft.trim() ||
+            !!draft.fields.acceptanceDraft.trim()),
   );
   let dirty = $derived(persistedDirty || unfinishedEntry);
   let accessLost = $state(false);
@@ -446,7 +449,7 @@
     oncommitted: (next, submittedSnapshot) => {
       if (disposed) return;
       currentResource = next;
-      // Keep the live draft object so a text caret and unfinished tag/checklist
+      // Keep the live draft object so a text caret and unfinished picker/checklist
       // entries survive the ACK. The acknowledged source/version is still the
       // base used to build the next patch.
       (draft as EditorDraft & { source: Resource | null }).source = next;
@@ -576,7 +579,14 @@
     try {
       const before = JSON.parse(previous) as Record<string, unknown>;
       const after = JSON.parse(next) as Record<string, unknown>;
-      for (const key of ["status", "priority", "kind", "archived", "labels"]) {
+      for (const key of [
+        "status",
+        "priority",
+        "kind",
+        "archived",
+        "labels",
+        "folder",
+      ]) {
         if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
           return true;
       }
@@ -1024,10 +1034,6 @@
                   >{/each}</select
               ></label
             >
-            {#if draft.type === "project"}<FolderPicker
-                bind:value={draft.fields.folder}
-                disabled={locked}
-              />{/if}
             {#if draft.type === "card"}
               <label
                 >Priority<select
@@ -1095,6 +1101,11 @@
                 >{/each}</select
             ></label
           >{/if}
+        {#if draft.type === "project"}<FolderPicker
+            bind:value={draft.fields.folder}
+            bind:draft={draft.fields.folderDraft}
+            disabled={locked}
+          />{/if}
         {#if draft.type === "project" || draft.type === "card"}
           <section
             class="resource-description-field"

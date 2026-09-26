@@ -365,7 +365,62 @@ await runBrowserSuite(
           );
           const modal = editor(page);
           await expect(modal).toBeVisible();
-          await modal.getByLabel("Folder", { exact: true }).fill("Work");
+          const folderInput = modal.getByLabel("Folder", { exact: true });
+          const original = cli("get", `/api/v1/projects/${otherProject.id}`);
+          await folderInput.fill("Unadded folder");
+          await modal
+            .getByLabel("Name", { exact: true })
+            .fill(`${original.metadata.name} edited`);
+          await expect
+            .poll(
+              () =>
+                cli("get", `/api/v1/projects/${otherProject.id}`).metadata.name,
+            )
+            .toBe(`${original.metadata.name} edited`);
+          assert.equal(
+            cli("get", `/api/v1/projects/${otherProject.id}`).metadata.folder,
+            original.metadata.folder,
+          );
+          await modal
+            .getByRole("button", { name: "Close editor", exact: true })
+            .click();
+          await expect(
+            modal.getByRole("button", { name: "Discard draft", exact: true }),
+          ).toBeVisible();
+          await modal
+            .getByRole("button", { name: "Keep editing", exact: true })
+            .click();
+          await expect(folderInput).toHaveValue("Unadded folder");
+          await folderInput.fill("Home");
+          await modal
+            .getByRole("button", { name: "Add folder", exact: true })
+            .click();
+          await expect
+            .poll(
+              () =>
+                cli("get", `/api/v1/projects/${otherProject.id}`).metadata
+                  .folder,
+            )
+            .toBe("Home");
+          await expect(
+            modal.getByRole("button", {
+              name: "Remove folder Home",
+              exact: true,
+            }),
+          ).toBeVisible();
+          await folderInput.fill("x".repeat(49));
+          await folderInput.press("Enter");
+          await expect(modal.getByRole("alert")).toContainText("48 characters");
+          assert.equal(
+            cli("get", `/api/v1/projects/${otherProject.id}`).metadata.folder,
+            "Home",
+          );
+          await folderInput.fill("Wor");
+          await expect(
+            modal.getByRole("option", { name: "Work", exact: true }),
+          ).toBeVisible();
+          await folderInput.press("ArrowDown");
+          await folderInput.press("Enter");
           await expect(modal.getByTestId("autosave-status")).toHaveText(
             "Saved",
           );
@@ -378,8 +433,30 @@ await runBrowserSuite(
             .toBe("Work");
           await page.reload();
           await expect(
+            editor(page).getByRole("button", {
+              name: "Remove folder Work",
+              exact: true,
+            }),
+          ).toBeVisible();
+          await expect(
             editor(page).getByLabel("Folder", { exact: true }),
-          ).toHaveValue("Work");
+          ).toHaveValue("");
+          await page.setViewportSize({ width: 390, height: 844 });
+          const chip = editor(page).getByRole("button", {
+            name: "Remove folder Work",
+            exact: true,
+          });
+          await chip.scrollIntoViewIfNeeded();
+          assert.ok((await chip.boundingBox()).width >= 44);
+          assert.ok(
+            await editor(page).evaluate(
+              (el) => el.scrollWidth <= el.clientWidth + 1,
+            ),
+          );
+          await page.screenshot({
+            path: join(evidence, "project-folder-chip-mobile.png"),
+          });
+          await page.setViewportSize({ width: 1440, height: 1000 });
           await routeFocus(page, { folder: "Work", project: otherProject.id });
           await expect(focusCard(page, pinned.metadata.id)).toBeVisible();
           await expect(focusCard(page, otherPinned.metadata.id)).toBeVisible();
@@ -409,7 +486,9 @@ await runBrowserSuite(
           await page.goto(
             `${config.origin}/?view=projects&resource_project=${otherProject.id}&type=project&resource=${otherProject.id}`,
           );
-          await editor(page).getByLabel("Folder", { exact: true }).fill("");
+          await editor(page)
+            .getByRole("button", { name: "Remove folder Work", exact: true })
+            .click();
           await expect(editor(page).getByTestId("autosave-status")).toHaveText(
             "Saved",
           );
