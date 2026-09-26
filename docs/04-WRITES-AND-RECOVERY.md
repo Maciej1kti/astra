@@ -62,6 +62,11 @@ W razie częściowego wykonania nie usuwaj w rollbacku pliku, który użytkownik
 
 ## Undo, historia, retencja
 
+Explicit report deletion uses the same conditional durable unlink path as card
+deletion; see [ADR-047](ADR-047-REPORT-DELETION.md). It is a separate command,
+not Undo. Incoming correction/resolution references block deletion.
+
+
 Undo to nowa intencja z aktualną oczekiwaną wersją. Może odwrócić pojedynczą własną zmianę, ale jeżeli zasób się później zmienił, pokazuje konflikt. Nie cofamy update do nieistnienia jako zwykłej operacji; dodajemy correction/resolution. No-op nie dodaje kolejnej treści do historii.
 
 Retencja wyników 7 dni jest minimalnym gwarantowanym oknem. Historia treści: docelowo 30 dni, do 1 GiB, z jawnym wskaźnikiem i możliwym wcześniejszym usunięciem starej opcjonalnej historii. Dane wymagane przez retry i unresolved recovery nie podlegają takiemu usuwaniu. Przy presji dysku odmawiamy nowych zapisów, zamiast osłabiać gwarancję. Nie logujemy treści dokumentów ani sekretów do zwykłych logów.

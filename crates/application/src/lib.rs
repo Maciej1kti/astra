@@ -1,10 +1,10 @@
 pub mod auth;
-mod card_deletion;
 mod command_state;
 mod context;
 mod diagnostics;
 mod focus;
 mod project_deletion;
+mod source_deletion;
 pub use diagnostics::{record_failure, record_worker_failure};
 pub mod engine;
 mod git;

@@ -28,7 +28,7 @@ pub struct Writer<'a> {
     pub journal: &'a Journal,
 }
 impl Writer<'_> {
-    /// Execute a physical card deletion through the same journal and durable
+    /// Execute a physical source deletion through the same journal and durable
     /// filesystem sequence as ordinary source writes. The caller performs the
     /// domain guards and supplies a reference snapshot; `guard` runs again
     /// after admission and before the unlink.

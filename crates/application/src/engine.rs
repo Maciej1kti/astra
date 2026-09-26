@@ -194,7 +194,7 @@ SET value=excluded.value",
                         id,
                         now_millis(),
                         |store, intent| {
-                            crate::card_deletion::recovery_guard(&engine, store, intent)
+                            crate::source_deletion::recovery_guard(&engine, store, intent)
                         },
                     ) {
                         crate::diagnostics::record_failure(

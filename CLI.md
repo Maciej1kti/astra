@@ -210,6 +210,18 @@ resource edits, workflow submissions and status reads have distinct reply checks
 
 ## Other commands and scope
 
+Reports support explicit conditional deletion:
+
+```sh
+projectctl --project /absolute/project report get REPORT_ID
+projectctl --project /absolute/project report delete REPORT_ID --if-version REPORT_VERSION
+```
+
+The command sends an empty DELETE payload and preserves request ID, epoch and
+version on retries. `REPORT_REFERENCED` identifies a correction/resolution that
+must be deleted first. Deletion is permanent; deleting a resolution can reopen
+its decision. Report contents cannot be patched.
+
 Use `report`, `focus`, `tags`, `sessions`, `pairings`, `approve`, `deny`,
 `registration-plan` and `register` for their named workflows. `tags list`
 reads names used on cards in the selected project. `tags preview --source OLD

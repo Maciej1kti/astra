@@ -119,6 +119,11 @@ existing durable prepare/write/commit sequence. Original command JSON stays in
 the journal. Source serialization retains canonical key ordering; no-op writes
 retain the original bytes. The JSON source format is described in [ADR-046](ADR-046-JSON-SOURCES.md).
 
+[Source deletion](../crates/application/src/source_deletion.rs) coordinates card
+and report removal through the shared durable writer. Card pins and report
+references are checked against source files before unlink and during recovery;
+see [ADR-047](ADR-047-REPORT-DELETION.md).
+
 The index separates lifecycle/storage, reconciliation, projection updates,
 queries and event replay. Board, calendar, attention and timeline projections
 have separate modules under `views/`; substantial static queries have adjacent

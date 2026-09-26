@@ -1,4 +1,4 @@
-/** Browser regressions for irreversible card and project metadata deletion. */
+/** Browser regressions for irreversible report, card and project metadata deletion. */
 import { expect } from "@playwright/test";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -182,6 +182,47 @@ await runBrowserSuite(
     page.setDefaultTimeout(12000);
     page.on("pageerror", (error) => errors.push(error.message));
     try {
+      await check(
+        "D00-report",
+        "Typed report deletion removes its source and refreshes the Updates view",
+        async () => {
+          const summary = `Disposable report ${Date.now()}`;
+          const result = await mutate("POST", `${base}/updates`, {
+            kind: "note",
+            summary,
+            target: { type: "project", id: project },
+            author: { kind: "human", label: "Owner" },
+          });
+          const report = result.resource;
+          const id = report.metadata.id;
+          await route(page, "updates");
+          await expect(page.getByText(summary, { exact: true })).toBeVisible();
+          const deleted = cli(
+            "--project",
+            config.projects[0].folder,
+            "report",
+            "delete",
+            id,
+            "--if-version",
+            report.version,
+          );
+          assert.equal(deleted.status, "committed");
+          assert.equal(deleted.result.deleted, true);
+          assert.equal(
+            await exists(
+              join(config.projects[0].folder, ".project/updates", `${id}.json`),
+            ),
+            false,
+          );
+          await expect(page.getByText(summary, { exact: true })).toHaveCount(0);
+          await page.reload();
+          await expect(page.locator(".asidebottom")).toContainText(
+            "Connected to host",
+          );
+          await expect(page.getByText(summary, { exact: true })).toHaveCount(0);
+          return { report: id, sourceRemoved: true, viewRefreshed: true };
+        },
+      );
       await check(
         "D01",
         "Cancelling card deletion keeps the saved card",

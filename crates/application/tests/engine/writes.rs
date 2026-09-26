@@ -525,7 +525,7 @@ fn card_delete_recovery_does_not_scan_incoming_cards() {
         journal: &engine.journal,
     }
     .recover_with_guard(&mut store, &project, now_millis(), |store, intent| {
-        crate::card_deletion::recovery_guard(&engine, store, intent)
+        crate::source_deletion::recovery_guard(&engine, store, intent)
     })
     .unwrap();
     assert_eq!(recovered, 1);

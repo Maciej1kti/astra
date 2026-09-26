@@ -338,86 +338,87 @@ fn subprocess_crashes_at_every_durability_boundary_recover_once() {
 }
 
 #[test]
-fn subprocess_crashes_at_each_delete_boundary_and_never_recreates_the_card() {
-    for point in ["Prepared", "Unlinked", "DirectorySynced", "Committed"] {
-        let env = Environment::new();
-        let (journal, mut store) = env.open();
-        create(&journal, &mut store);
-        let card = "22222222-2222-4222-8222-222222222222";
-        let (directory, name) = store.location(Kind::Card, card, true).unwrap();
-        let bytes = project_store::document::serialize(
-            &project_domain::validate_document(json!({
-                "type":"card",
-                "metadata": {
-                    "id":card, "title":"Delete boundary",
-                    "status":"planned", "priority":"normal", "position":"80000000000000000000000000000000",
-                    "archived":false, "created_at":instant(now_millis()-1000), "updated_at":instant(now_millis()-1000)
-                },
-                "body":""
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-        directory.replace(&name, &bytes, None).unwrap();
-        let cmd = Command {
-            request_id: Uuid::now_v7().to_string(),
-            epoch: journal.epoch.clone(),
-            method: "DELETE".into(),
-            target: Target {
-                project_id: PROJECT.into(),
-                kind: Kind::Card,
-                id: card.into(),
-            },
-            expected: Some(document::version(&bytes)),
-            payload: json!({}),
-        };
-        fs::write(
-            env.root.join("command.json"),
-            serde_json::to_vec(&cmd).unwrap(),
-        )
-        .unwrap();
-        let epoch = journal.epoch.clone();
-        drop(store);
-        drop(journal);
-        let status = process::Command::new(std::env::current_exe().unwrap())
-            .args([
-                "--exact",
-                "durability_tests::fault_delete_child",
-                "--nocapture",
-            ])
-            .env("ASTRA_FAULT_HOME", &env.root)
-            .env("ASTRA_FAULT_POINT", point)
-            .stdout(process::Stdio::null())
-            .stderr(process::Stdio::null())
-            .status()
-            .unwrap();
-        assert_eq!(status.code(), Some(77), "{point}");
-        let (journal, mut store) = env.open();
-        assert_eq!(journal.epoch, epoch);
-        let recovered = Writer { journal: &journal }
-            .recover_with_guard(&mut store, PROJECT, now_millis(), |_, _| Ok(true))
-            .unwrap();
-        assert_eq!(
-            recovered,
-            if point == "Committed" { 0 } else { 1 },
-            "{point}"
-        );
-        assert_eq!(directory.read(&name).unwrap(), None);
-        assert_eq!(
-            journal.state(&cmd).unwrap(),
-            crate::command_state::CommandState::Committed
-        );
-        let replay = Writer { journal: &journal }
-            .execute_delete(
-                &mut store,
-                &cmd,
-                vec![],
-                now_millis(),
-                |_| Ok(()),
-                |_| Ok(()),
+fn subprocess_crashes_at_each_delete_boundary_and_never_recreates_the_source() {
+    for kind in [Kind::Card, Kind::Update] {
+        for point in ["Prepared", "Unlinked", "DirectorySynced", "Committed"] {
+            let env = Environment::new();
+            let (journal, mut store) = env.open();
+            create(&journal, &mut store);
+            let card = "22222222-2222-4222-8222-222222222222";
+            let (directory, name) = store.location(kind, card, true).unwrap();
+            let metadata = if kind == Kind::Card {
+                json!({"id":card,"title":"Delete boundary","status":"planned","priority":"normal","position":"80000000000000000000000000000000","archived":false,"created_at":instant(now_millis()-1000),"updated_at":instant(now_millis()-1000)})
+            } else {
+                json!({"id":card,"summary":"Delete report boundary","kind":"note","target":{"type":"project","id":PROJECT},"author":{"kind":"human","label":"Owner"},"recorded_at":instant(now_millis()-1000)})
+            };
+            let bytes = project_store::document::serialize(
+                &project_domain::validate_document(
+                    json!({"type":kind.as_str(),"metadata":metadata,"body":""}),
+                )
+                .unwrap(),
             )
             .unwrap();
-        assert_eq!(replay.body["replayed"], true);
+            directory.replace(&name, &bytes, None).unwrap();
+            let cmd = Command {
+                request_id: Uuid::now_v7().to_string(),
+                epoch: journal.epoch.clone(),
+                method: "DELETE".into(),
+                target: Target {
+                    project_id: PROJECT.into(),
+                    kind,
+                    id: card.into(),
+                },
+                expected: Some(document::version(&bytes)),
+                payload: json!({}),
+            };
+            fs::write(
+                env.root.join("command.json"),
+                serde_json::to_vec(&cmd).unwrap(),
+            )
+            .unwrap();
+            let epoch = journal.epoch.clone();
+            drop(store);
+            drop(journal);
+            let status = process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "durability_tests::fault_delete_child",
+                    "--nocapture",
+                ])
+                .env("ASTRA_FAULT_HOME", &env.root)
+                .env("ASTRA_FAULT_POINT", point)
+                .stdout(process::Stdio::null())
+                .stderr(process::Stdio::null())
+                .status()
+                .unwrap();
+            assert_eq!(status.code(), Some(77), "{point}");
+            let (journal, mut store) = env.open();
+            assert_eq!(journal.epoch, epoch);
+            let recovered = Writer { journal: &journal }
+                .recover_with_guard(&mut store, PROJECT, now_millis(), |_, _| Ok(true))
+                .unwrap();
+            assert_eq!(
+                recovered,
+                if point == "Committed" { 0 } else { 1 },
+                "{point}"
+            );
+            assert_eq!(directory.read(&name).unwrap(), None);
+            assert_eq!(
+                journal.state(&cmd).unwrap(),
+                crate::command_state::CommandState::Committed
+            );
+            let replay = Writer { journal: &journal }
+                .execute_delete(
+                    &mut store,
+                    &cmd,
+                    vec![],
+                    now_millis(),
+                    |_| Ok(()),
+                    |_| Ok(()),
+                )
+                .unwrap();
+            assert_eq!(replay.body["replayed"], true);
+        }
     }
 }
 

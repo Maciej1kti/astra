@@ -403,6 +403,48 @@ fn card_delete_translates_to_empty_conditional_delete_command() {
 }
 
 #[test]
+fn report_delete_translates_to_empty_conditional_delete_command() {
+    let host = Host::new(vec![
+        (200, json!({"project_id":PROJECT})),
+        (
+            412,
+            json!({"api_version":"1", "error":{
+                "code":"VERSION_CONFLICT", "message":"The observed version changed.",
+                "request_id":REQUEST, "details":{}}
+            }),
+        ),
+    ]);
+    let project_path = host.directory.path().canonicalize().unwrap();
+    let mut command = host.scoped_command();
+    command.args([
+        "report",
+        "delete",
+        RESOURCE,
+        "--if-version",
+        VERSION,
+        "--request-id",
+        REQUEST,
+        "--epoch",
+        EPOCH,
+    ]);
+    let output = invoke(&mut command, None);
+    let requests = host.finish();
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0].path, "/local/v1/projects/resolve");
+    assert_eq!(requests[0].body, json!({"absolute_path":project_path}));
+    assert_eq!(requests[1].method, "DELETE");
+    assert_eq!(
+        requests[1].path,
+        format!("/api/v1/projects/{PROJECT}/updates/{RESOURCE}")
+    );
+    assert_eq!(requests[1].body, json!({}));
+    assert_eq!(requests[1].headers["if-match"], format!("\"{VERSION}\""));
+    assert_eq!(requests[1].headers["x-request-id"], REQUEST);
+    assert_eq!(requests[1].headers["x-command-epoch"], EPOCH);
+}
+
+#[test]
 fn incompatible_or_incomplete_arguments_fail_before_connecting() {
     let directory = tempfile::tempdir().unwrap();
     let socket = directory.path().join("must-not-connect.sock");

@@ -107,7 +107,9 @@ date shifting.
 
 ## Relacje i raporty
 
-Updates are append-only in the normal API. Report targets have type
+Report contents are immutable. Explicit conditional deletion is supported by
+[ADR-047](ADR-047-REPORT-DELETION.md); corrections and resolutions still append
+new reports. Report targets have type
 `project|milestone` and the ID of an existing resource in the same project;
 card targets are rejected. Corrections refer to earlier reports through
 `supersedes`; resolutions refer to earlier reports through `resolves`.

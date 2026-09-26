@@ -169,3 +169,6 @@ mod tags;
 
 #[path = "engine/comments.rs"]
 mod comments;
+
+#[path = "engine/report_deletion.rs"]
+mod report_deletion;

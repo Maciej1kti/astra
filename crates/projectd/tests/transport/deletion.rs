@@ -203,6 +203,34 @@ async fn browser_project_delete_requires_pairing_and_csrf() {
 }
 
 #[tokio::test]
+async fn browser_report_delete_requires_pairing_and_csrf() {
+    let app = Running::new().await;
+    let project = Uuid::now_v7().to_string();
+    let request = || {
+        app.browser(
+            "DELETE",
+            &format!("/api/v1/projects/{project}/updates/22222222-2222-4222-8222-222222222222"),
+        )
+        .header("origin", "https://projects.test")
+        .header("x-request-id", Uuid::now_v7().to_string())
+        .header("x-command-epoch", Uuid::now_v7().to_string())
+        .header("if-match", format!("\"r1.{}\"", "a".repeat(64)))
+        .json(&json!({}))
+    };
+    assert_eq!(request().send().await.unwrap().status(), 401);
+    let (cookie, _) = browser_session(&app).await;
+    assert_eq!(
+        request()
+            .header("cookie", cookie)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        403
+    );
+}
+
+#[tokio::test]
 async fn deletion_transport_rejects_missing_stale_and_extra_preconditions() {
     let app = Running::new().await;
     let (project, epoch) = register(&app).await;
@@ -314,6 +342,60 @@ async fn card_delete_over_unix_removes_source_and_replays_original_identity() {
     assert!(
         !Path::new(&app.project)
             .join(".project/cards")
+            .join(format!("{card}.json"))
+            .exists()
+    );
+    let replay: Value = delete().send().await.unwrap().json().await.unwrap();
+    project_application::wire::validate("CommandResponse", &replay).unwrap();
+    assert_eq!(replay["replayed"], true);
+    let status: Value = app
+        .local(
+            "GET",
+            &format!("/api/v1/commands/{request_id}?epoch={epoch}"),
+        )
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    project_application::wire::validate("CommandStatus", &status).unwrap();
+    assert_eq!(status["state"], "committed");
+}
+
+#[tokio::test]
+async fn report_delete_over_unix_removes_source_and_replays_original_identity() {
+    let app = Running::new().await;
+    let (project, epoch) = register(&app).await;
+    let response = app.local("POST", &format!("/api/v1/projects/{project}/updates"))
+        .header("x-request-id", Uuid::now_v7().to_string()).header("x-command-epoch", &epoch)
+        .json(&json!({"kind":"note","summary":"Disposable report","target":{"type":"project","id":project},"author":{"kind":"human","label":"Owner"}})).send().await.unwrap();
+    assert_eq!(response.status(), 200);
+    let created: Value = response.json().await.unwrap();
+    let card = created["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    let version = created["result"]["resource"]["version"].as_str().unwrap();
+    let path = format!("/api/v1/projects/{project}/updates/{card}");
+    let request_id = Uuid::now_v7().to_string();
+    let delete = || {
+        app.local("DELETE", &path)
+            .header("x-request-id", &request_id)
+            .header("x-command-epoch", &epoch)
+            .header("if-match", format!("\"{version}\""))
+            .json(&json!({}))
+    };
+    let response = delete().send().await.unwrap();
+    assert_eq!(response.status(), 200);
+    let value: Value = response.json().await.unwrap();
+    project_application::wire::validate("CommandResponse", &value).unwrap();
+    assert_eq!(
+        value["result"],
+        json!({"type":"update","id":card,"deleted":true})
+    );
+    assert!(
+        !Path::new(&app.project)
+            .join(".project/updates")
             .join(format!("{card}.json"))
             .exists()
     );

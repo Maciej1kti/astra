@@ -1228,6 +1228,52 @@ paths:
       parameters:
       - $ref: '#/components/parameters/project_id'
       - $ref: '#/components/parameters/update_id'
+    delete:
+      operationId: deleteUpdate
+      tags: [updates]
+      summary: Permanently delete a report source file
+      description: >-
+        Requires the observed report version and an empty JSON object. Reports that
+        supersede or resolve this report must be deleted first (409 REPORT_REFERENCED).
+        Report contents remain immutable; deletion is explicit and has no undo.
+        Operational history is retained. A lost reply is uncertain: retain the
+        original request ID, epoch, version and payload when retrying.
+      parameters:
+      - $ref: '#/components/parameters/project_id'
+      - $ref: '#/components/parameters/update_id'
+      - $ref: '#/components/parameters/RequestID'
+      - $ref: '#/components/parameters/CommandEpoch'
+      - $ref: '#/components/parameters/CSRF'
+      - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DeleteInput'}
+      responses:
+        '200':
+          description: Source deletion and its command result are durably committed.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommandResponse'}
+        '202':
+          description: Deletion is unresolved. Check the original command status.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommandStatus'}
+        '408': {$ref: '#/components/responses/RequestTimeout'}
+        '409': *id001
+        '412': *id006
+        '428': *id007
+        '410': *id002
+        '422': *id003
+        '503': *id004
+        '507': *id005
+        default:
+          description: Controlled error; referenced, changed or unsafe sources are preserved.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
   /api/v1/workspace/focus:
     get:
       operationId: getFocus

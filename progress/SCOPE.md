@@ -201,3 +201,11 @@ possible, including comment history. This authorizes the current one-time format
 conversion; it does not add a general migration framework to v1. Documentation
 and descriptions remain Markdown where appropriate, with descriptions stored as
 JSON string values. Rebuild and restart the existing manual app after verification.
+
+## Report deletion — owner decision, 2026-09-26
+
+Provide explicit permanent report deletion through the API as well as the CLI.
+Report contents remain immutable, and corrections/resolutions remain separate
+reports. Deletion requires the observed version and normal command identity;
+referencing reports must be deleted first. See ADR-047. This replaces the need
+for manual stopped-daemon cleanup of report sources.

@@ -6,6 +6,11 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Report deletion API](2026-09-26-report-deletion-api.md) adds conditional permanent
+report removal through HTTP and the typed CLI. Source reference guards, durable
+replay/recovery and projection updates are verified. The full gate and release
+deletion browser suite pass; the manual app is restarted with Updates still empty.
+
 [Cleared test updates](2026-09-26-clear-test-updates.md) removes the 64 existing
 reports from both live projects at the owner’s request. All 7 cards, comments
 and both project documents are preserved; Updates is empty after restart.

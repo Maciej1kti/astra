@@ -424,6 +424,18 @@ pub(super) fn run(
                 expected,
             )?));
         }
+        ("DELETE", ["api", "v1", "projects", project, "updates", id]) => {
+            parameters(&input, &[])?;
+            let expected = expected_version(&input)?;
+            return Ok(response(engine.delete_report(
+                project,
+                id,
+                input.body.clone(),
+                request_id,
+                epoch,
+                expected,
+            )?));
+        }
         ("POST", ["api", "v1", "projects", project, collection]) => {
             return mutate(engine, &input, project, kind(collection)?, None);
         }

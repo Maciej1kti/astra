@@ -54,7 +54,7 @@ pub enum Action {
         #[command(flatten)]
         page: Page,
     },
-    /// Append project reports and explicit resolutions.
+    /// Read, append, resolve and permanently delete project reports.
     Report {
         #[command(subcommand)]
         action: Report,
@@ -221,6 +221,14 @@ pub enum Resource {
 }
 #[derive(Subcommand)]
 pub enum Report {
+    /// Permanently remove a report using its observed version.
+    Delete {
+        id: String,
+        #[arg(long)]
+        if_version: String,
+        #[command(flatten)]
+        identity: Identity,
+    },
     Get {
         id: String,
     },
@@ -378,6 +386,23 @@ impl Action {
             Self::Reports { page: p } => read(page(format!("{root}/updates"), p)),
             Self::Card { action } => card(format!("{root}/cards"), action)?,
             Self::Milestone { action } => resource(format!("{root}/milestones"), action)?,
+            Self::Report {
+                action:
+                    Report::Delete {
+                        id,
+                        if_version,
+                        identity,
+                    },
+            } => {
+                super::uuid4(&id)?;
+                write(
+                    "DELETE",
+                    format!("{root}/updates/{id}"),
+                    json!({}),
+                    Some(if_version),
+                    identity,
+                )
+            }
             Self::Report {
                 action: Report::Get { id },
             } => {
