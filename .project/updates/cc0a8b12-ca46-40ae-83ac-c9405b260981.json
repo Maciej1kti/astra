@@ -1,0 +1,18 @@
+{
+  "body": "Sample update for **astra**, added at the owner’s request to populate the Updates view for manual testing.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "cc0a8b12-ca46-40ae-83ac-c9405b260981",
+    "kind": "note",
+    "recorded_at": "2026-09-26T13:59:42.861Z",
+    "summary": "astra — sample project update",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
