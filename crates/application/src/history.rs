@@ -129,6 +129,7 @@ LIMIT ?5",
             if previous.as_ref().map(|p| &p["body"]) != after.as_ref().map(|p| &p["body"]) {
                 fields.insert("body".into());
             }
+            let comment_change = kind == Kind::Card && fields.contains("comments");
             items.push(json!({
                 "id": id,
                 "request_id": request,
@@ -136,7 +137,7 @@ LIMIT ?5",
                 "before_version": before_hash,
                 "after_version": after_hash,
                 "changed_fields": fields.into_iter().take(100).collect::<Vec<_>>(),
-                "can_undo": previous.is_some()
+                "can_undo": !comment_change && previous.is_some()
                     && kind != Kind::Update
                     && after_hash.is_some()
                     && after_hash.as_ref() == current.as_ref(),

@@ -85,6 +85,20 @@ pub enum Action {
 pub enum Card {
     #[command(flatten)]
     Resource(Resource),
+    /// Append a Markdown comment with a declared human or bot author.
+    Comment {
+        id: String,
+        #[arg(long)]
+        body_file: PathBuf,
+        #[arg(long)]
+        author: String,
+        #[arg(long, value_parser = ["human", "agent"])]
+        author_kind: String,
+        #[arg(long)]
+        if_version: String,
+        #[command(flatten)]
+        identity: Identity,
+    },
     /// Permanently remove one card source after an explicit version check.
     Delete {
         id: String,
@@ -518,6 +532,23 @@ fn resource(root: String, action: Resource) -> Result<Request, Error> {
 fn card(root: String, action: Card) -> Result<Request, Error> {
     match action {
         Card::Resource(action) => resource(root, action),
+        Card::Comment {
+            id,
+            body_file,
+            author,
+            author_kind,
+            if_version,
+            identity,
+        } => {
+            super::uuid4(&id)?;
+            Ok(write(
+                "PATCH",
+                format!("{root}/{id}"),
+                json!({"append_comment":{"body":input::body(Some(&body_file))?,"author":{"kind":author_kind,"label":author}}}),
+                Some(if_version),
+                identity,
+            ))
+        }
         Card::Delete {
             id,
             if_version,

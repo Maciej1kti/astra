@@ -189,6 +189,8 @@ export interface ApiContracts {
   AcceptanceItem: AcceptanceItem;
   Acceptance: Acceptance;
   AcceptanceProgress: AcceptanceProgress;
+  CardCommentInput: CardCommentInput;
+  CardComment: CardComment;
   CardMetadata: CardMetadata;
   MilestoneMetadata: MilestoneMetadata;
   UpdateMetadata: UpdateMetadata;
@@ -224,6 +226,9 @@ export interface ApiContracts {
         };
       };
   CardPatch:
+    | {
+        append_comment: CardCommentInput;
+      }
     | {
         set?: {
           event?: TimedEvent;
@@ -396,7 +401,21 @@ export interface AcceptanceProgress {
   total: number;
   completed: number;
 }
+export interface CardCommentInput {
+  author: Author;
+  body: string;
+}
+export interface CardComment {
+  id: string;
+  author: Author;
+  recorded_at: string;
+  body: string;
+}
 export interface CardMetadata {
+  /**
+   * @maxItems 200
+   */
+  comments?: CardComment[];
   event?: TimedEvent;
   id: string;
   created_at: string;
@@ -592,6 +611,7 @@ export interface Accepted {
   status: "running";
 }
 export interface Summary {
+  comment_count?: number;
   event?: TimedEvent;
   folder?: string;
   type: "project" | "card" | "milestone" | "update";
@@ -931,6 +951,10 @@ export interface Context {
   }[];
 }
 export interface ContextEntry {
+  /**
+   * @maxItems 200
+   */
+  comments?: CardComment[];
   event?: TimedEvent;
   folder?: string;
   type: "project" | "card" | "milestone" | "update";

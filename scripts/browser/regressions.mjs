@@ -13,6 +13,7 @@ const suites = [
   "tags",
   "editor",
   "editor-inputs",
+  "comments",
   "autosave",
   "dialogs",
   "responsive",

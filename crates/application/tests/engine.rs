@@ -166,3 +166,6 @@ mod git;
 
 #[path = "engine/tags.rs"]
 mod tags;
+
+#[path = "engine/comments.rs"]
+mod comments;

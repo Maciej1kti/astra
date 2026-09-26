@@ -19,6 +19,7 @@
   import ReportFields from "./ReportFields.svelte";
   import UpdateDetails from "./UpdateDetails.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
+  import CardComments from "../cards/CardComments.svelte";
   import "../../styles/editor.css";
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
@@ -80,6 +81,7 @@
   let draft = $state(createEditorDraft(untrack(() => target)));
   let acceptanceError = $state("");
   let tagError = $state("");
+  let commentFlushing = $state(false);
 
   let projectName = $state("");
   let statusMessage = $state("");
@@ -147,6 +149,7 @@
       ? !!draft.fields.folderDraft.trim()
       : draft.type === "card" &&
           (!!draft.fields.tagDraft.trim() ||
+            !!draft.fields.commentDraft.trim() ||
             !!draft.fields.acceptanceDraft.trim()),
   );
   let dirty = $derived(persistedDirty || unfinishedEntry);
@@ -159,6 +162,7 @@
       !!deletePending ||
       !!deleteConfirmation ||
       deleteFlushing ||
+      commentFlushing ||
       closing,
   );
 
@@ -209,7 +213,7 @@
     };
   });
   function close() {
-    if (closing || busy || deleteBusy) return;
+    if (closing || busy || deleteBusy || commentFlushing) return;
     if (autosaveResource && (autosave.hasWork || persistedDirty)) {
       closing = true;
       void flushAutosave()
@@ -358,6 +362,38 @@
       ),
     );
     await transmit();
+  }
+  async function addComment() {
+    if (draft.type !== "card" || locked || conflict || !resource) return;
+    if (!draft.fields.commentDraft.trim() || !draft.fields.commentAuthor.trim())
+      return;
+    commentFlushing = true;
+    try {
+      await flushAutosave();
+      if (autosave.hasWork || persistedDirty || conflict || accessLost) return;
+      prepare(
+        { kind: "comment" },
+        patchCard(
+          project,
+          resource.metadata.id,
+          {
+            append_comment: {
+              body: draft.fields.commentDraft,
+              author: {
+                kind: draft.fields.commentAuthorKind,
+                label: draft.fields.commentAuthor.trim(),
+              },
+            },
+          },
+          resource.version,
+        ),
+      );
+      await transmit();
+    } catch (cause) {
+      error = commandErrorMessage(cause);
+    } finally {
+      commentFlushing = false;
+    }
   }
   async function loadHistory(more = false) {
     try {
@@ -752,7 +788,7 @@
       const reason = commandErrorMessage(cause);
       error = reason;
       if (isRejectedConflict(operation.phase, cause)) {
-        if (submitted.kind === "resource") {
+        if (submitted.kind === "resource" || submitted.kind === "comment") {
           conflict = { current: null };
           try {
             conflict = { current: await api<Resource>(path()) };
@@ -767,12 +803,31 @@
     submitted: EditorIntent,
     reply: CommandResponse,
   ) {
+    if (submitted.kind === "comment") {
+      const next = reply.result.resource;
+      if (next?.type !== "card" || draft.type !== "card")
+        throw new Error("The saved card was not returned.");
+      currentResource = next;
+      draft.source = next;
+      draft.fields.commentDraft = "";
+      autosave.reset(next);
+      onautosaved?.(next);
+      statusMessage = "Comment added.";
+      onchanged?.();
+      return;
+    }
     if (submitted.kind === "resource") {
       const next = reply.result.resource;
       if (autosaveResource) {
         if (!next) throw new Error("The saved resource was not returned.");
         currentResource = next;
+        const previousFields = draft.type === "card" ? draft.fields : null;
         draft = draftForResource(next);
+        if (draft.type === "card" && previousFields) {
+          draft.fields.commentDraft = previousFields.commentDraft;
+          draft.fields.commentAuthor = previousFields.commentAuthor;
+          draft.fields.commentAuthorKind = previousFields.commentAuthorKind;
+        }
         baseline = autosaveSnapshot(draft);
         watchedAutosaveSnapshot = baseline;
         autosave.reset(next);
@@ -1168,6 +1223,19 @@
             bind:acceptanceError
             bind:tagError
           />{/if}
+        {#if draft.type === "card"}
+          <CardComments
+            comments={resource?.type === "card"
+              ? (resource.metadata.comments ?? [])
+              : []}
+            bind:body={draft.fields.commentDraft}
+            bind:author={draft.fields.commentAuthor}
+            bind:authorKind={draft.fields.commentAuthorKind}
+            disabled={locked || !!conflict}
+            saved={!!resource}
+            onadd={addComment}
+          />
+        {/if}
         {#if draft.type === "milestone"}<div class="row">
             <label
               >Due date<input

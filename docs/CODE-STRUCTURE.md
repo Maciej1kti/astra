@@ -59,6 +59,12 @@ App keeps acknowledged resource routing separate from editor instance identity
 so refreshes cannot replace a queued draft. Reports retain explicit submission.
 See [ADR-035](ADR-035-EDITOR-AUTOSAVE.md) for queue and recovery behavior.
 
+`CardComments` renders source-owned conversations and an explicit comment draft.
+The editor flushes autosave before a conditional append, keeps uncertain comment
+commands in the shared controller, and preserves unsubmitted comment text across
+ordinary writes. The server owns comment IDs/timestamps, append-only validation
+and projections; see [ADR-045](ADR-045-CARD-COMMENTS.md).
+
 All named OpenAPI schemas are exported by contract generation, including inline
 unions. New endpoint functions should use these types, as in
 [resources](../apps/web/src/lib/api/resources.ts). Extra JSON fields for

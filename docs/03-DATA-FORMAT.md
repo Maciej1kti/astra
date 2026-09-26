@@ -26,11 +26,21 @@ Puste katalogi można tworzyć leniwie. Inne pliki są ignorowane z diagnostyką
 | Obiekt | Pola wymagane w poprawnym pliku | Opcjonalne |
 |---|---|---|
 | Project | schema_version, id, name, state, created_at, updated_at | folder |
-| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule or event, labels, acceptance |
+| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule or event, labels, acceptance, comments |
 | Milestone | id, title, status, position, archived, created_at, updated_at | due, x-* |
 | Update | id, kind, target, summary, author, recorded_at | observed_at, supersedes, resolves, evidence, x-* |
 
 Project bodies describe the goal and context. Card and milestone bodies retain their Markdown description, including any existing result or acceptance headings. No headings are parsed or converted automatically. Card structured fields are independently optional. Update bodies contain result details, rather than a full agent transcript.
+
+### Card comments
+
+`comments` is an ordered history in the card's Markdown front matter. Entries
+contain `id`, `author`, `recorded_at` and Markdown `body`; the card description is
+unchanged. Human and bot attribution reuses `author.kind: human | agent`.
+Normal clients append with `CardPatch.append_comment`, using the observed card
+version. Set/clear and undo cannot rewrite this history. List summaries expose
+`comment_count`; full resources and bounded agent context provide the entries.
+See [ADR-045](ADR-045-CARD-COMMENTS.md) for validation, limits and replay rules.
 
 ### Structured card content
 

@@ -2388,9 +2388,43 @@ components:
       - total
       - completed
       additionalProperties: false
+    CardCommentInput:
+      type: object
+      properties:
+        author:
+          $ref: '#/components/schemas/Author'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          pattern: '\S'
+      required: [author, body]
+      additionalProperties: false
+    CardComment:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        author:
+          $ref: '#/components/schemas/Author'
+        recorded_at:
+          $ref: '#/components/schemas/Instant'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          pattern: '\S'
+      required: [id, author, recorded_at, body]
+      additionalProperties: false
     CardMetadata:
       type: object
       properties:
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardComment'
+          maxItems: 200
+          description: Ordered source-owned comment history, appended through append_comment.
         event:
           $ref: '#/components/schemas/TimedEvent'
         id:
@@ -2876,6 +2910,12 @@ components:
       oneOf:
       - type: object
         properties:
+          append_comment:
+            $ref: '#/components/schemas/CardCommentInput'
+        required: [append_comment]
+        additionalProperties: false
+      - type: object
+        properties:
           set:
             type: object
             properties:
@@ -3334,6 +3374,11 @@ components:
     Summary:
       type: object
       properties:
+        comment_count:
+          type: integer
+          minimum: 0
+          maximum: 200
+          description: Number of comments in the card source; comment bodies require a resource read.
         event:
           $ref: '#/components/schemas/TimedEvent'
         folder:
@@ -4473,6 +4518,11 @@ components:
     ContextEntry:
       type: object
       properties:
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardComment'
+          maxItems: 200
         event:
           $ref: '#/components/schemas/TimedEvent'
         folder:

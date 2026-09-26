@@ -184,3 +184,10 @@ changes to host networking.
 Make setting a project's folder work like adding tags to a card: confirm a name
 or suggestion, show a removable chip, and preserve unadded input as a draft.
 This changes the editor interaction; the project retains one optional folder.
+
+## Card comments — owner direction, 2026-09-26
+
+Add card conversations in the editor, visible comment indicators on cards and
+CLI/API access for bots. Distinguish human and bot authors and retain the complete
+comment history in each card's Markdown source. This is separate from the removed
+card reports and does not restore card-targeted project reports.

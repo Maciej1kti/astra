@@ -56,6 +56,23 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
         return Err(DomainError::Invalid("body byte limit or NUL"));
     }
     if let Some(m) = value.get("metadata") {
+        if let Some(comments) = m.get("comments").and_then(Value::as_array) {
+            let mut ids = HashSet::new();
+            for comment in comments {
+                if !ids.insert(comment["id"].as_str().unwrap()) {
+                    return Err(DomainError::Invalid("duplicate comment ID"));
+                }
+                if comment["body"].as_str().unwrap().trim().is_empty()
+                    || comment["author"]["label"]
+                        .as_str()
+                        .unwrap()
+                        .trim()
+                        .is_empty()
+                {
+                    return Err(DomainError::Invalid("blank comment or author"));
+                }
+            }
+        }
         if let Some(items) = m.get("acceptance").and_then(Value::as_array) {
             let mut ids = HashSet::new();
             for item in items {

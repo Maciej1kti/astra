@@ -15,6 +15,12 @@ test("Focus detail fallback has the same source-derived badges as an indexed car
         { id: "a", text: "One", completed: true },
         { id: "b", text: "Two", completed: false },
       ],
+      comments: [
+        {
+          body: "Not summary content",
+          author: { kind: "agent", label: "Codex" },
+        },
+      ],
       "x-secret": "Not summary data",
     },
     body: "Never in the summary",
@@ -32,6 +38,7 @@ test("Focus detail fallback has the same source-derived badges as an indexed car
     labels: ["Review, exact"],
     archived: false,
     acceptance_progress: { total: 2, completed: 1 },
+    comment_count: 1,
   });
   assert.equal(resource.metadata.acceptance.length, 2);
 });

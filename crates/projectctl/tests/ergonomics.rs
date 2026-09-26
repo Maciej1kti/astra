@@ -679,3 +679,26 @@ fn a_valid_committed_source_reply_is_successful_with_the_original_identity() {
         json!({"title":"Open source", "body":body})
     );
 }
+
+#[test]
+fn card_comments_translate_declared_authors_and_keep_version_preconditions() {
+    for kind in ["human", "agent"] {
+        assert_scoped_mutation(
+            &[
+                "card",
+                "comment",
+                RESOURCE,
+                "--body-file",
+                "-",
+                "--author",
+                "Codex",
+                "--author-kind",
+                kind,
+            ],
+            Some(b"A Markdown **comment**\n"),
+            "cards",
+            json!({"append_comment":{"body":"A Markdown **comment**\n","author":{"kind":kind,"label":"Codex"}}}),
+            false,
+        );
+    }
+}

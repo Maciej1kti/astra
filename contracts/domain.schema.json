@@ -349,6 +349,13 @@
         },
         "event": {
           "$ref": "#/$defs/TimedEvent"
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardComment"
+          },
+          "maxItems": 200
         }
       },
       "required": [
@@ -816,6 +823,33 @@
       "required": [
         "start",
         "duration_minutes"
+      ],
+      "additionalProperties": false
+    },
+    "CardComment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "author": {
+          "$ref": "#/$defs/Author"
+        },
+        "recorded_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "pattern": "\\S"
+        }
+      },
+      "required": [
+        "id",
+        "author",
+        "recorded_at",
+        "body"
       ],
       "additionalProperties": false
     }

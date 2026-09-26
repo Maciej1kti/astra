@@ -46,6 +46,7 @@ export function detailSummary(
     if (type === "card") {
       const card = m as CardMetadata;
       result.priority = card.priority;
+      result.comment_count = card.comments?.length ?? 0;
       if (card.event !== undefined) result.event = card.event;
       if (card.schedule !== undefined) result.schedule = card.schedule;
       if (card.archived !== undefined) result.archived = card.archived;

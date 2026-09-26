@@ -23,7 +23,7 @@
   );
 </script>
 
-{#if hasState || dates.length || item.labels?.length || item.acceptance_progress?.total}
+{#if hasState || dates.length || item.labels?.length || item.acceptance_progress?.total || item.comment_count}
   <span class="resource-metadata" class:compact>
     {#if hasState}
       <span class="state-badges">
@@ -49,6 +49,15 @@
           >Checklist {item.acceptance_progress.completed}/{item
             .acceptance_progress.total}</span
         >
+      </span>
+    {/if}
+    {#if item.comment_count}
+      <span
+        class="badge comments"
+        aria-label={`${item.comment_count} comments`}
+      >
+        {item.comment_count}
+        {item.comment_count === 1 ? "comment" : "comments"}
       </span>
     {/if}
     {#if dates.length}

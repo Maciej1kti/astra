@@ -1,0 +1,6 @@
+{
+  "append_comment": {
+    "author": { "kind": "agent", "label": "Codex" },
+    "body": "Implemented the change.\n\n- Browser checks passed.\n- Ready for your review."
+  }
+}

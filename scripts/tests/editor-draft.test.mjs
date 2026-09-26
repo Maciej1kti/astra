@@ -196,3 +196,28 @@ test("timed event edits retain timing and convert atomically to and from date pl
   plan.fields.duration = 0;
   assert.throws(() => editorPayload(plan), /duration/);
 });
+
+test("unsent comments stay in exported drafts but never leak into card autosave", async () => {
+  const { autosaveSnapshot } =
+    await import("../../apps/web/src/features/editor/editor-draft.ts");
+  const source = card({
+    comments: [
+      {
+        id: "c",
+        body: "Saved",
+        author: { kind: "agent", label: "Bot" },
+        recorded_at: "2026-09-26T12:00:00Z",
+      },
+    ],
+  });
+  const draft = createEditorDraft(editTarget("p", source));
+  const before = autosaveSnapshot(draft);
+  draft.fields.commentDraft = "Unsent reply";
+  draft.fields.commentAuthor = "Someone";
+  draft.fields.commentAuthorKind = "agent";
+  assert.equal(autosaveSnapshot(draft), before);
+  assert.equal(JSON.parse(draftSnapshot(draft)).commentDraft, "Unsent reply");
+  const payload = editorPayload(draft);
+  assert.equal("comments" in payload.set, false);
+  assert.equal("append_comment" in payload, false);
+});

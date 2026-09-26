@@ -162,7 +162,7 @@ fn prepare(
     };
     let mut next = match &previous {
         None => create_document(command, now),
-        Some(previous) => patch_document(journal, command, previous)?,
+        Some(previous) => patch_document(journal, command, previous, now)?,
     };
     let reorders = matches!(kind, Kind::Card | Kind::Milestone)
         && (create
@@ -230,6 +230,7 @@ fn patch_document(
     journal: &crate::journal::Journal,
     command: &Command,
     previous: &project_store::document::ParsedDocument,
+    now: i64,
 ) -> Result<Value, AppError> {
     let payload = &command.payload;
     let mut next = previous.value();
@@ -244,6 +245,26 @@ fn patch_document(
                 .ok_or(AppError::invariant("validated undo history entry ID"))?,
             current,
         )?;
+        if command.target.kind == Kind::Card
+            && next["metadata"]["comments"] != previous.value()["metadata"]["comments"]
+        {
+            return Err(AppError::reject(409, "UNDO_COMMENT_NOT_SUPPORTED"));
+        }
+    }
+    if let Some(comment) = payload.get("append_comment") {
+        let comments = next["metadata"]
+            .as_object_mut()
+            .unwrap()
+            .entry("comments")
+            .or_insert_with(|| json!([]))
+            .as_array_mut()
+            .unwrap();
+        comments.push(json!({
+            "id": Uuid::new_v4().to_string(),
+            "author": comment["author"],
+            "recorded_at": instant(now),
+            "body": comment["body"],
+        }));
     }
     if let Some(set) = payload["set"].as_object() {
         for (key, value) in set {

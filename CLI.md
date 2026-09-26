@@ -239,3 +239,21 @@ project with `get /api/v1/projects/PROJECT_ID`, then use `command PATCH` with
 with `{"clear":["folder"]}`. Folder is project metadata, not a path or a card tag.
 `get '/api/v1/views/list?type=card&folder=Work'` and
 `get '/api/v1/views/attention?folder=Work'` filter across projects before pagination.
+
+## Card comments
+
+Read the card to obtain its observed version, then append a Markdown comment:
+
+```sh
+projectctl --project /absolute/project card get CARD_ID
+projectctl --project /absolute/project card comment CARD_ID --body-file comment.md --author "Owner" --author-kind human --if-version VERSION
+projectctl --project /absolute/project card comment CARD_ID --body-file comment.md --author "Codex" --author-kind agent --if-version VERSION
+```
+
+`agent` is displayed as **Bot**. The author kind/name are explicit attribution.
+`--body-file -` reads stdin; `--request-id` and `--epoch` retain the normal retry
+identity. Read a new version for a new comment; an uncertain retry retains the
+original version and payload. `card get` and bounded `context` include history,
+which lives in `comments` in the card's `.md` front matter. Comments cannot be
+replaced by `card set` or removed by undo. See [ADR-045](docs/ADR-045-CARD-COMMENTS.md)
+for limits and conflict handling.

@@ -23,6 +23,10 @@ focus suite covers the three Focus sections, active-only bounded reads, pinned
 card precedence, filters, inline pointer ordering and the viewport anchored card
 action.
 
+The comments suite covers human/browser and bot/CLI attribution, source history,
+Markdown rendering, unsent draft protection, comment counts and editor access
+from every card view, mobile layout, response-loss retries and concurrent conflicts.
+
 The events suite covers event autosave, conversion to/from date plans, hourly
 calendar movement, duration edits, slot creation, mobile layout and browser
 timezone independence.

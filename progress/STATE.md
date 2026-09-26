@@ -6,6 +6,11 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Card comments](2026-09-26-card-comments.md) add human/bot conversations to the
+shared editor, source Markdown, conditional CLI/API writes, search and context.
+List, Board and Focus show comment counts. The full gate, six relevant Chromium
+suites and broad HTTPS smoke pass; the manual app is rebuilt and restarted.
+
 [Phone editor time fields](2026-09-26-iphone-editor-time.md) correct the layout
 reported in the owner's iPhone screenshot. Mobile date/time fields use separate
 rows and bounded native controls. The full gate, four Chromium suites and the

@@ -93,6 +93,13 @@ impl Indexed {
         if self.kind == "project" {
             out["status"] = m["state"].clone();
         }
+        if self.kind == "card" {
+            out["comment_count"] = json!(
+                m.get("comments")
+                    .and_then(Value::as_array)
+                    .map_or(0, Vec::len)
+            );
+        }
         if let Some(items) = m.get("acceptance").and_then(Value::as_array) {
             out["acceptance_progress"] = json!({
                 "total": items.len(),
@@ -114,6 +121,16 @@ fn search_text(body: &str, metadata: &Value) -> String {
             }
         }
     }
+    if let Some(comments) = metadata.get("comments").and_then(Value::as_array) {
+        for comment in comments {
+            for value in [&comment["body"], &comment["author"]["label"]] {
+                if let Some(value) = value.as_str() {
+                    text.push('\n');
+                    text.push_str(value);
+                }
+            }
+        }
+    }
     text
 }
 
@@ -125,7 +142,7 @@ fn upgrade_search_projection(connection: &mut Connection) -> Result<(), AppError
             |r| r.get(0),
         )
         .optional()?;
-    if version.as_deref() == Some("3") {
+    if version.as_deref() == Some("4") {
         return Ok(());
     }
     let tx = connection.transaction()?;
@@ -170,9 +187,9 @@ fn upgrade_search_projection(connection: &mut Connection) -> Result<(), AppError
         "INSERT INTO projection_meta(key,
     value)
 VALUES ('search_format',
-    '3')
+    '4')
 ON CONFLICT (key) DO UPDATE
-SET value='3'",
+SET value='4'",
         [],
     )?;
     tx.commit()?;

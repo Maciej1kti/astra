@@ -131,6 +131,8 @@ pub struct ProjectMetadata {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CardMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comments: Option<Vec<CardComment>>,
     pub id: String,
     pub title: String,
     pub status: CardStatus,
@@ -149,6 +151,15 @@ pub struct CardMetadata {
     pub labels: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acceptance: Option<Vec<AcceptanceItem>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CardComment {
+    pub id: String,
+    pub author: Author,
+    pub recorded_at: String,
+    pub body: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -49,6 +49,7 @@ fn project_rejects_retired_phase_review_and_extensions() {
 #[test]
 fn examples_roundtrip_without_losing_optional_fields_or_body() {
     for file in [
+        "card-comments.json",
         "project.json",
         "card-22222222-2222-4222-8222-222222222222.json",
         "card-33333333-3333-4333-8333-333333333333.json",
@@ -347,4 +348,25 @@ fn events_validate_clock_duration_and_exclude_all_day_schedules() {
     value["metadata"]["event"] = json!({"start":"2026-09-30T12:00","duration_minutes":60});
     value["metadata"]["schedule"] = json!({"start":"2026-09-30","end":"2026-09-30"});
     assert!(validate_document(value).is_err());
+}
+
+#[test]
+fn card_comments_validate_authors_unique_ids_and_content() {
+    let mut value = card();
+    let comment = json!({"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","author":{"kind":"human","label":"Owner"},"recorded_at":"2026-09-26T12:00:00Z","body":"**A comment**\n\nWith Markdown."});
+    value["metadata"]["comments"] = json!([comment.clone()]);
+    assert!(validate_document(value.clone()).is_ok());
+    for invalid in [json!(""), json!("   "), json!("x".repeat(4001))] {
+        let mut bad = value.clone();
+        bad["metadata"]["comments"][0]["body"] = invalid;
+        assert!(validate_document(bad).is_err());
+    }
+    let mut bad = value.clone();
+    bad["metadata"]["comments"] = json!([comment.clone(), comment.clone()]);
+    assert!(validate_document(bad).is_err());
+    let mut bad = value.clone();
+    bad["metadata"]["comments"][0]["author"]["kind"] = json!("unknown");
+    assert!(validate_document(bad).is_err());
+    value["metadata"]["comments"][0]["author"]["kind"] = json!("agent");
+    assert!(validate_document(value).is_ok());
 }
