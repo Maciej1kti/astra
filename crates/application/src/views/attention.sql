@@ -74,8 +74,17 @@ FROM json_each(r.metadata_json,'$.resolves') edge
 WHERE edge.value=d.entity_id))
 OR (json_extract(r.metadata_json,'$.kind')='correction'
 AND json_extract(r.metadata_json,'$.supersedes')=d.entity_id)))
+UNION ALL SELECT d.project_id,d.entity_id,d.entity_type,d.title,'unread_report',NULL,2
+FROM documents d
+WHERE ?8=1 AND {ACTIVE}
+AND entity_type='update'
+AND json_extract(metadata_json,'$.kind')!='decision_needed'
+AND (?5 IS NULL OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
+AND NOT EXISTS(SELECT 1 FROM json_each(?9) WHERE value=d.project_id || ':' || d.entity_id)
             ) SELECT project_id,entity_id,entity_type,title,reason,date
 FROM candidates
+WHERE (?8=0 OR reason!='due_soon')
 ORDER BY weight,date,project_id,entity_id,reason
 LIMIT ?3
 OFFSET ?4

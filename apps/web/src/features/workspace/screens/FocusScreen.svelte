@@ -23,6 +23,7 @@
     route,
     projects,
     cards,
+    events,
     focusCards,
     focusCount,
     focusOrder,
@@ -41,6 +42,8 @@
     attentionPaged,
     activeCardCursor,
     activeCardPaged,
+    eventCursor,
+    eventPaged,
     loadingMore,
     open,
     onreorder,
@@ -50,10 +53,12 @@
     oncopycommand,
     moreAttention,
     moreActiveCards,
+    moreEvents,
   }: {
     route: Readonly<WorkspaceRoute>;
     projects: Summary[];
     cards: Summary[];
+    events: Summary[];
     focusCards: Summary[];
     focusCount: number;
     focusOrder: FocusRef[];
@@ -72,6 +77,8 @@
     attentionPaged: boolean;
     activeCardCursor: string | null;
     activeCardPaged: boolean;
+    eventCursor: string | null;
+    eventPaged: boolean;
     loadingMore: boolean;
     open: OpenResource;
     onreorder: (
@@ -85,10 +92,11 @@
     oncopycommand: () => void;
     moreAttention: (first?: boolean) => Promise<void>;
     moreActiveCards: (back?: boolean) => Promise<void>;
+    moreEvents: (back?: boolean) => Promise<void>;
   } = $props();
 
   const sections = $derived(
-    focusSections(cards, focusCards, attentionRows, route, projects),
+    focusSections(cards, focusCards, attentionRows, route, projects, events),
   );
   let gestureFocus = $state<FocusCard[] | null>(null);
   const visibleFocus = $derived<FocusCard[]>(sections.focusCards);
@@ -259,7 +267,7 @@
   <SectionHeading
     id="motion-section-title"
     title="In motion"
-    count={`${activeCards.length} visible active cards`}
+    count={`${activeCards.length} visible plans`}
   />
   <div class="grid">
     {#each activeCards as item (item.project_id + ":" + item.id)}<ResourceCard
@@ -268,15 +276,42 @@
         projectName={projectLabel(projects, item.project_id)}
         onclick={() => open(item)}
       />{:else}<EmptyState>
-        No other active cards on this page.
+        No other plans are scheduled for today on this page.
       </EmptyState>{/each}
   </div>
   {#if activeCardCursor}<button
       disabled={loadingMore}
-      onclick={() => moreActiveCards()}>Next active cards</button
+      onclick={() => moreActiveCards()}>Next plans</button
     >{/if}
   {#if activeCardPaged}<button
       disabled={loadingMore}
-      onclick={() => moreActiveCards(true)}>Previous active cards</button
+      onclick={() => moreActiveCards(true)}>Previous plans</button
+    >{/if}
+</section>
+
+<section aria-labelledby="events-section-title" data-focus-section="events">
+  <SectionHeading
+    id="events-section-title"
+    title="Events"
+    count={`${sections.eventCards.length} visible events`}
+  />
+  <div class="grid">
+    {#each sections.eventCards as item (item.project_id + ":" + item.id)}
+      <ResourceCard
+        {item}
+        showStatus
+        projectName={projectLabel(projects, item.project_id)}
+        onclick={() => open(item)}
+      />
+    {:else}<EmptyState
+        >No other events are scheduled for today on this page.</EmptyState
+      >{/each}
+  </div>
+  {#if eventCursor}<button disabled={loadingMore} onclick={() => moreEvents()}
+      >Next events</button
+    >{/if}
+  {#if eventPaged}<button
+      disabled={loadingMore}
+      onclick={() => moreEvents(true)}>Previous events</button
     >{/if}
 </section>

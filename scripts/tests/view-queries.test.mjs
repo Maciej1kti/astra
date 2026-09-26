@@ -51,6 +51,7 @@ test("planning routes only load shared project context; list and reports fetch t
     "focus",
     "attention",
     "card",
+    "event",
   ]);
 });
 
@@ -131,7 +132,7 @@ test("loaded-title filters retain queries and pagination, while server filters r
   assert.equal(url.searchParams.get("archived"), "true");
 });
 
-test("focus card reads are bounded to active cards and ignore list-only filters", () => {
+test("focus card reads are bounded to daily plans and ignore list-only filters", () => {
   const url = new URL(
     resourceListPath(
       {
@@ -146,7 +147,9 @@ test("focus card reads are bounded to active cards and ignore list-only filters"
     ),
     "https://local.test",
   );
-  assert.equal(url.searchParams.get("status"), "active");
+  assert.equal(url.pathname, "/api/v1/views/focus-cards");
+  assert.equal(url.searchParams.get("section"), "motion");
+  assert.equal(url.searchParams.get("status"), null);
   assert.equal(url.searchParams.get("archived"), null);
   assert.equal(url.searchParams.get("priority"), null);
   assert.equal(url.searchParams.get("label"), null);
@@ -319,6 +322,6 @@ test("Focus queries use folders across projects and invalidate when project fold
       { kind: "changed", project_id: "other", target: { type: "project" } },
       focus,
     ),
-    ["projects", "focus", "attention", "card"],
+    ["projects", "focus", "attention", "card", "event"],
   );
 });

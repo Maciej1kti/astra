@@ -23,6 +23,18 @@ impl Engine {
         limit: u32,
         now: i64,
     ) -> Result<Value, AppError> {
+        self.attention_mode(project, folder, cursor, limit, now, false)
+    }
+
+    pub fn attention_mode(
+        &self,
+        project: Option<&str>,
+        folder: Option<&str>,
+        cursor: Option<&str>,
+        limit: u32,
+        now: i64,
+        focus: bool,
+    ) -> Result<Value, AppError> {
         bounded(limit, 200)?;
         if let Some(folder) = folder {
             validate_folder(folder)?;
@@ -40,6 +52,16 @@ impl Engine {
         let soon = today
             .checked_add_days(Days::new(7))
             .ok_or_else(|| AppError::invariant("attention date range"))?;
+        // Release the journal lock before reading the disposable index.
+        let receipts: String = if focus {
+            self.journal.db()?.query_row(
+                "SELECT json_group_array(project_id || ':' || update_id) FROM (SELECT project_id,update_id FROM read_receipts ORDER BY project_id,update_id)",
+                [], |r| r.get(0),
+            )?
+        } else {
+            "[]".into()
+        };
+        let receipts_version = project_store::document::version(receipts.as_bytes());
         self.index.with_snapshot(|db, revision| {
             let projection = ProjectionStatus::read(db, project)?;
             let scope = json!([
@@ -48,6 +70,8 @@ impl Engine {
                 project,
                 folder,
                 clock,
+                focus,
+                receipts_version,
                 limit
             ]);
             let start = offset(cursor, &scope)?;
@@ -66,7 +90,9 @@ impl Engine {
                         start as i64,
                         project,
                         folder,
-                        clock
+                        clock,
+                        focus,
+                        receipts
                     ],
                     attention_item,
                 )?

@@ -209,3 +209,12 @@ Report contents remain immutable, and corrections/resolutions remain separate
 reports. Deletion requires the observed version and normal command identity;
 referencing reports must be deleted first. See ADR-047. This replaces the need
 for manual stopped-daemon cleanup of report sources.
+
+## Daily Focus sections — owner decision, 2026-09-26
+
+Keep pinned cards first regardless of dates or status. Needs my attention contains
+reports and items needing action. In motion means date-only work whose inclusive
+schedule contains today, rather than cards selected only by Active status. Add
+Events after In motion for timed cards scheduled to start today. This supersedes
+the earlier status-based In motion definition. Pin ordering and project folder
+filtering remain unchanged.

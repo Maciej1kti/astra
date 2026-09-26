@@ -133,3 +133,29 @@ test("one folder includes multiple projects while All folders also includes unas
     4,
   );
 });
+
+test("pins retain archived and completed cards and outrank today's events", () => {
+  const archived = card("p", "archive", "Archived pin", {
+    archived: true,
+    status: "done",
+  });
+  const event = card("p", "event", "Pinned event", {
+    event: { start: "2026-10-01T10:00", duration_minutes: 60 },
+  });
+  const visibleEvent = card("p", "visible", "Today's event", {
+    status: "planned",
+  });
+  const result = focusSections(
+    [],
+    [archived, event],
+    [],
+    route(),
+    [],
+    [event, visibleEvent],
+  );
+  assert.deepEqual(
+    result.focusCards.map((i) => i.id),
+    ["archive", "event"],
+  );
+  assert.deepEqual(result.eventCards, [visibleEvent]);
+});

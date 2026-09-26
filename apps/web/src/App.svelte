@@ -614,7 +614,7 @@
         routing.current.view === "focus" &&
         document.visibilityState === "visible"
       )
-        void refresh(["attention"]).catch(message);
+        void refresh(["attention", "card", "event"]).catch(message);
     }, 60_000);
     window.addEventListener("popstate", historyNavigation);
     window.addEventListener("command-warning", commandWarning);
@@ -720,6 +720,10 @@
                 route={routing.current}
                 {projects}
                 {cards}
+                events={data.state.events}
+                eventCursor={pageCursors.event ?? null}
+                eventPaged={(pageHistory.event?.length ?? 0) > 1}
+                moreEvents={(back = false) => more("event", back)}
                 focusCards={orderedFocusCards}
                 focusCount={focusOrder.length}
                 {focusOrder}

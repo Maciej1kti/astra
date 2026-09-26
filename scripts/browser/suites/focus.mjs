@@ -71,8 +71,7 @@ await runBrowserSuite(
     }
 
     function cardListRequest(url) {
-      if (url.pathname !== "/api/v1/views/list") return false;
-      return url.searchParams.get("type") === "card";
+      return url.pathname === "/api/v1/views/focus-cards";
     }
 
     function focusButton(page) {
@@ -199,9 +198,25 @@ await runBrowserSuite(
       status: "review",
       schedule: { start: "2025-12-03", end: "2026-01-03" },
     });
-    const ordinary = await createCard(project.id, {
-      title: `Ordinary active ${suffix}`,
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Warsaw",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    const event = await createCard(project.id, {
+      title: `Today event ${suffix}`,
+      status: "planned",
+      event: { start: `${today}T23:59`, duration_minutes: 60 },
+    });
+    const unscheduled = await createCard(project.id, {
+      title: `Undated active ${suffix}`,
       status: "active",
+    });
+    const ordinary = await createCard(project.id, {
+      title: `Ordinary planned today ${suffix}`,
+      status: "planned",
+      schedule: { start: today, end: today },
     });
     const planned = await createCard(project.id, {
       title: `Planned excluded ${suffix}`,
@@ -267,13 +282,13 @@ await runBrowserSuite(
     try {
       await check(
         "F01",
-        "Focus has three ordered sections with precedence and preserved reasons",
+        "Focus has four ordered sections with precedence and preserved reasons",
         async () => {
           requests.length = 0;
           await routeFocus(page);
           assert.deepEqual(
             await page.locator("[data-focus-section] h2").allTextContents(),
-            ["In focus", "Needs my attention", "In motion"],
+            ["In focus", "Needs my attention", "In motion", "Events"],
           );
 
           const focus = section(page, "In focus");
@@ -285,6 +300,11 @@ await runBrowserSuite(
           await expect(cardText(attention, review)).toBeVisible();
           await expect(cardText(attention, reviewOverdue)).toBeVisible();
           await expect(cardText(motion, ordinary)).toBeVisible();
+          await expect(cardText(motion, unscheduled)).toHaveCount(0);
+          await expect(cardText(section(page, "Events"), event)).toBeVisible();
+          await expect(cardText(attention, event)).toHaveCount(0);
+          await expect(cardText(attention, ordinary)).toHaveCount(0);
+          await expect(cardText(motion, event)).toHaveCount(0);
 
           await expect(cardText(attention, pinned)).toHaveCount(0);
           await expect(cardText(motion, pinned)).toHaveCount(0);
@@ -316,7 +336,7 @@ await runBrowserSuite(
             fullPage: true,
           });
           return {
-            sections: ["In focus", "Needs my attention", "In motion"],
+            sections: ["In focus", "Needs my attention", "In motion", "Events"],
             pinnedReason: "Overdue",
             groupedReasons: ["Overdue", "Review"],
           };
@@ -326,12 +346,15 @@ await runBrowserSuite(
 
       await check(
         "F02",
-        "Focus reads active cards with bounded pagination and skips milestones",
+        "Focus reads daily plans and events with bounded pagination and skips milestones",
         async () => {
           const cardReads = requests.filter(cardListRequest);
-          assert(cardReads.length > 0, "Focus must read an active card page");
+          assert(cardReads.length > 0, "Focus must read daily card pages");
           for (const url of cardReads) {
-            assert.equal(url.searchParams.get("status"), "active");
+            assert(
+              ["motion", "events"].includes(url.searchParams.get("section")),
+            );
+            assert.equal(url.searchParams.get("status"), null);
             assert(
               Number(url.searchParams.get("limit")) <= 200,
               `Card read must stay bounded: ${url}`,
@@ -1084,8 +1107,10 @@ await runBrowserSuite(
               name: new RegExp(`Second decision probe ${suffix}`),
             }),
           ).toBeVisible();
-          const row = attention.getByRole("button", {
-            name: new RegExp(`Decision report probe ${suffix}`),
+          const row = attention.getByRole("button").filter({
+            has: page.getByText(`Decision report probe ${suffix}`, {
+              exact: true,
+            }),
           });
           await expect(row).toBeVisible();
           await row.click();
@@ -1123,6 +1148,53 @@ await runBrowserSuite(
           ).items;
           assert(!remaining.some((item) => item.report_id === reportId));
           return { reportId, resolvedFromUpdate: true };
+        },
+        page,
+      );
+      await check(
+        "F10",
+        "Archived completed pins remain visible and unread reports clear after reading",
+        async () => {
+          const archivedPin = await createCard(project.id, {
+            title: `Archived completed pin ${suffix}`,
+            status: "done",
+            schedule: { start: "2099-01-01", end: "2099-01-02" },
+          });
+          await mutate(
+            "PATCH",
+            `${base}/cards/${archivedPin.metadata.id}`,
+            { set: { archived: true, pinned: true } },
+            archivedPin.version,
+          );
+          const report = await mutate("POST", `${base}/updates`, {
+            kind: "note",
+            summary: `Unread Focus report ${suffix}`,
+            author: { kind: "human", label: "QA owner" },
+            target: { type: "project", id: project.id },
+          });
+          await routeFocus(page, { folder: "Work" });
+          await expect(
+            cardText(section(page, "In focus"), archivedPin),
+          ).toBeVisible();
+          const attention = section(page, "Needs my attention");
+          const row = attention.getByRole("button", {
+            name: new RegExp(`Unread Focus report ${suffix}`),
+          });
+          await expect(row).toBeVisible();
+          await row.click();
+          const dialog = page.getByRole("dialog", { name: "Update details" });
+          await dialog
+            .getByRole("button", { name: "Mark read", exact: true })
+            .click();
+          await expect(
+            dialog.getByRole("button", { name: "Mark unread", exact: true }),
+          ).toBeVisible();
+          await routeFocus(page, { folder: "Work" });
+          await expect(row).toHaveCount(0);
+          return {
+            archivedPin: archivedPin.metadata.id,
+            readReport: report.resource.metadata.id,
+          };
         },
         page,
       );

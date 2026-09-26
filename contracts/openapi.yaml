@@ -1766,13 +1766,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/views/focus-cards:
+    get:
+      operationId: getFocusCards
+      tags: [views]
+      summary: Read today's planned work or timed events
+      description: Workspace-local daily membership, filtered before pagination. Motion includes inclusive date plans; events start today and have not ended. Pinned, review, completed, cancelled and archived cards and archived projects are excluded. Event order follows start time. Cursors expire when the workspace clock minute or projection changes.
+      parameters:
+      - name: section
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [motion, events]
+      - name: folder
+        in: query
+        schema:
+          $ref: '#/components/schemas/Folder'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A bounded page of card summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryPage'
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/views/attention:
     get:
       operationId: getAttention
       tags:
       - views
       summary: getAttention
-      description: ''
+      description: Focus mode omits due-soon reminders and adds unread non-decision reports. Unresolved decisions remain even when read.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -1787,6 +1819,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - name: focus
+        in: query
+        schema:
+          type: boolean
+          default: false
       - name: folder
         in: query
         schema:
@@ -4076,6 +4113,7 @@ components:
           enum:
           - overdue
           - due_soon
+          - unread_report
           - decision_needed
           - review
         label:

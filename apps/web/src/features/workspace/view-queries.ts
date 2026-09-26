@@ -24,7 +24,7 @@ export type ViewQuery = {
   label: string;
 };
 export type Section =
-  "projects" | "focus" | "attention" | "card" | "update" | "planning";
+  "projects" | "focus" | "attention" | "card" | "event" | "update" | "planning";
 export type {
   FocusRef,
   AttentionItem as Attention,
@@ -37,7 +37,7 @@ import type {
 export function viewSections(query: ViewQuery): Section[] {
   switch (query.view) {
     case "focus":
-      return ["projects", "focus", "attention", "card"];
+      return ["projects", "focus", "attention", "card", "event"];
     case "projects":
       return ["projects", "card", "update"];
     case "list":
@@ -89,13 +89,13 @@ export function affectedSections(
     return kind === "project" ? ["projects"] : [];
   const changed: Section[] =
     kind === "card"
-      ? ["focus", "attention", "card", "planning"]
+      ? ["focus", "attention", "card", "event", "planning"]
       : kind === "milestone"
         ? ["attention", "planning"]
         : kind === "update"
           ? ["attention", "update"]
           : kind === "project"
-            ? ["projects", "focus", "card", "attention", "planning"]
+            ? ["projects", "focus", "card", "event", "attention", "planning"]
             : needed;
   return needed.filter((section) => changed.includes(section));
 }
@@ -111,6 +111,15 @@ export function resourceListPath(
   type: string,
   cursor: string | null = null,
 ) {
+  if (query.view === "focus" && (type === "card" || type === "event")) {
+    const params = new URLSearchParams({
+      section: type === "card" ? "motion" : "events",
+      limit: "200",
+    });
+    if (query.folder) params.set("folder", query.folder);
+    if (cursor) params.set("cursor", cursor);
+    return `/api/v1/views/focus-cards?${params}`;
+  }
   const params = new URLSearchParams({ type, limit: "200" });
   if (["list", "updates"].includes(query.view) && query.search.trim())
     params.set("q", query.search.trim());
@@ -123,7 +132,6 @@ export function resourceListPath(
     if (query.label) params.set("label", query.label);
   }
   if (query.view === "focus") {
-    if (type === "card") params.set("status", "active");
     if (query.folder) params.set("folder", query.folder);
   }
   if (cursor) params.set("cursor", cursor);
@@ -149,6 +157,7 @@ export function attentionPage(
 ) {
   const params = new URLSearchParams({ limit: "200" });
   if (query.view === "focus") {
+    params.set("focus", "true");
     if (query.folder) params.set("folder", query.folder);
   } else if (query.project) params.set("project_id", query.project);
   if (cursor) params.set("cursor", cursor);
@@ -167,7 +176,10 @@ export type LoadedView = {
   focusCards?: Summary[];
   attention?: { value: Page<Attention>; reset: boolean };
   pages: Partial<
-    Record<"card" | "update", { value: Page<Summary>; reset: boolean }>
+    Record<
+      "card" | "event" | "update",
+      { value: Page<Summary>; reset: boolean }
+    >
   >;
   notices: Partial<Record<Section, string>>;
 };

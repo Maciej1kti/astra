@@ -6,6 +6,12 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Daily Focus sections](2026-09-26-focus-daily-sections.md) retain pins regardless
+of status/dates, show actionable attention and unread reports, select today's
+inclusive plans for In motion and add timed Events. The full gate and four release
+browser suites pass. The existing HTTPS app is rebuilt, restarted and verified
+with source versions, pins and certificates preserved.
+
 [Report deletion API](2026-09-26-report-deletion-api.md) adds conditional permanent
 report removal through HTTP and the typed CLI. Source reference guards, durable
 replay/recovery and projection updates are verified. The full gate and release

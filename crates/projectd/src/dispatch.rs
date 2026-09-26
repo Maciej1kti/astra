@@ -120,7 +120,8 @@ pub(super) fn run(
                 match *view {
                     "calendar" => &["project_id", "from", "to", "cursor", "limit"][..],
                     "board" | "gantt" => &["project_id", "cursor", "limit"],
-                    "attention" => &["cursor", "limit", "project_id", "folder"],
+                    "attention" => &["cursor", "limit", "project_id", "folder", "focus"],
+                    "focus-cards" => &["cursor", "limit", "folder", "section"],
                     "folders" => &["cursor", "limit"],
                     _ => return Err(AppError::reject(404, "NOT_FOUND")),
                 },
@@ -137,12 +138,28 @@ pub(super) fn run(
             )?;
             match *view {
                 "folders" => engine.folders(cursor, limit)?,
-                "attention" => engine.attention_folder(
+                "focus-cards" => engine.focus_cards(
+                    parameter(&fields, "section")?,
+                    fields.get("folder").map(String::as_str),
+                    cursor,
+                    limit,
+                    now,
+                )?,
+                "attention" => engine.attention_mode(
                     fields.get("project_id").map(String::as_str),
                     fields.get("folder").map(String::as_str),
                     cursor,
                     limit,
                     now,
+                    fields
+                        .get("focus")
+                        .map(|value| {
+                            value
+                                .parse::<bool>()
+                                .map_err(|_| AppError::reject(400, "INVALID_QUERY"))
+                        })
+                        .transpose()?
+                        .unwrap_or(false),
                 )?,
                 "calendar" => engine.calendar(
                     fields.get("project_id").map(String::as_str),

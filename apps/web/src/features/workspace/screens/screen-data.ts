@@ -17,6 +17,7 @@ export function visibleCards(
   cards: Summary[],
   route: Readonly<WorkspaceRoute>,
   projects: Summary[] = [],
+  includeArchived = false,
 ): Summary[] {
   return cards.filter(
     (card) =>
@@ -28,7 +29,7 @@ export function visibleCards(
         : !route.project || card.project_id === route.project) &&
       (route.view === "list"
         ? !!card.archived === route.archived
-        : !card.archived) &&
+        : includeArchived || !card.archived) &&
       (route.view === "list" ||
         card.title.toLowerCase().includes(route.search.trim().toLowerCase())),
   );

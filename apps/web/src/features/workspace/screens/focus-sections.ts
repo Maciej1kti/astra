@@ -50,6 +50,7 @@ export type FocusSections = {
   focusCards: FocusCard[];
   attention: FocusAttention[];
   activeCards: Summary[];
+  eventCards: Summary[];
 };
 
 /**
@@ -62,8 +63,9 @@ export function focusSections(
   attentionRows: Attention[],
   route: Readonly<WorkspaceRoute>,
   projects: Summary[] = [],
+  eventCards: Summary[] = [],
 ): FocusSections {
-  const visibleFocus = visibleCards(pinnedCards, route, projects);
+  const visibleFocus = visibleCards(pinnedCards, route, projects, true);
   const attention = groupedAttention(attentionRows, route, projects);
   const pinnedKeys = new Set(visibleFocus.map(resourceKey));
   const attentionCardKeys = new Set(
@@ -78,9 +80,14 @@ export function focusSections(
   return {
     focusCards: focus,
     attention: attention.filter((item) => !pinnedKeys.has(attentionKey(item))),
+    // Daily eligibility has already been applied by the server before pagination.
     activeCards: visibleCards(cards, route, projects).filter(
       (item) =>
-        item.status === "active" &&
+        !pinnedKeys.has(resourceKey(item)) &&
+        !attentionCardKeys.has(resourceKey(item)),
+    ),
+    eventCards: visibleCards(eventCards, route, projects).filter(
+      (item) =>
         !pinnedKeys.has(resourceKey(item)) &&
         !attentionCardKeys.has(resourceKey(item)),
     ),

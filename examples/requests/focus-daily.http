@@ -1,0 +1,8 @@
+# Daily plans across the Work folder; today comes from the workspace timezone.
+GET /api/v1/views/focus-cards?section=motion&folder=Work&limit=200
+
+# Today's timed events, ordered by their start time, with an independent cursor.
+GET /api/v1/views/focus-cards?section=events&folder=Work&limit=200
+
+# Actionable attention and unread reports without due-soon reminders.
+GET /api/v1/views/attention?focus=true&folder=Work&limit=200

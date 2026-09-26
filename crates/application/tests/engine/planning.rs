@@ -429,3 +429,197 @@ fn timed_events_survive_restart_project_across_midnight_and_expire_at_end() {
             .is_empty()
     );
 }
+
+#[test]
+fn focus_daily_membership_filters_before_paging_in_workspace_time() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let other_path = env.root.join("other");
+    fs::create_dir(&other_path).unwrap();
+    let other = register(&engine, other_path.to_str().unwrap());
+    let project_source = engine.get(&project, Kind::Project, &project).unwrap();
+    let changed = engine
+        .mutate(Mutation {
+            project_id: project.clone(),
+            kind: Kind::Project,
+            id: Some(project.clone()),
+            payload: json!({"set":{"folder":"Work"}}),
+            request_id: Uuid::now_v7().to_string(),
+            epoch: engine.journal.epoch.clone(),
+            expected: Some(project_source["version"].as_str().unwrap().into()),
+        })
+        .unwrap();
+    assert_eq!(changed.http_status, 200);
+    for (title, fields) in [
+        ("No dates", json!({"status":"active"})),
+        (
+            "Future",
+            json!({"schedule":{"start":"2026-10-02","end":"2026-10-03"}}),
+        ),
+        (
+            "Overdue",
+            json!({"schedule":{"start":"2026-09-29","end":"2026-09-30"}}),
+        ),
+        (
+            "A planned today",
+            json!({"status":"planned","schedule":{"start":"2026-10-01","end":"2026-10-01"}}),
+        ),
+        (
+            "B ends today",
+            json!({"schedule":{"start":"2026-09-29","end":"2026-10-01"}}),
+        ),
+        (
+            "Done",
+            json!({"status":"done","schedule":{"start":"2026-10-01","end":"2026-10-01"}}),
+        ),
+        (
+            "Review",
+            json!({"status":"review","schedule":{"start":"2026-10-01","end":"2026-10-01"}}),
+        ),
+        (
+            "Archived",
+            json!({"archived":true,"schedule":{"start":"2026-10-01","end":"2026-10-01"}}),
+        ),
+        (
+            "Pinned",
+            json!({"pinned":true,"schedule":{"start":"2026-10-01","end":"2026-10-01"}}),
+        ),
+        (
+            "Later event",
+            json!({"event":{"start":"2026-10-01T14:00","duration_minutes":60}}),
+        ),
+        (
+            "Earlier event",
+            json!({"event":{"start":"2026-10-01T01:00","duration_minutes":60}}),
+        ),
+        (
+            "Ended event",
+            json!({"event":{"start":"2026-10-01T00:00","duration_minutes":30}}),
+        ),
+        (
+            "Tomorrow event",
+            json!({"event":{"start":"2026-10-02T01:00","duration_minutes":60}}),
+        ),
+    ] {
+        let created = create(&engine, &project, title);
+        let resource = &created.body["result"]["resource"];
+        patch(
+            &engine,
+            &project,
+            resource["metadata"]["id"].as_str().unwrap(),
+            resource["version"].as_str().unwrap(),
+            json!({"set":fields}),
+        );
+    }
+    let created = create(&engine, &other, "Other folder plan");
+    let resource = &created.body["result"]["resource"];
+    patch(
+        &engine,
+        &other,
+        resource["metadata"]["id"].as_str().unwrap(),
+        resource["version"].as_str().unwrap(),
+        json!({"set":{"schedule":{"start":"2026-10-01","end":"2026-10-01"}}}),
+    );
+    // Still September 30 UTC, already October 1 at 00:30 in Warsaw.
+    let now = chrono::DateTime::parse_from_rfc3339("2026-09-30T22:30:00Z")
+        .unwrap()
+        .timestamp_millis();
+    let first = engine
+        .focus_cards("motion", Some("Work"), None, 1, now)
+        .unwrap();
+    wire::validate("SummaryPage", &first).unwrap();
+    assert_eq!(first["items"][0]["title"], "A planned today");
+    let cursor = first["page"]["next_cursor"].as_str().unwrap();
+    let second = engine
+        .focus_cards("motion", Some("Work"), Some(cursor), 1, now)
+        .unwrap();
+    assert_eq!(second["items"][0]["title"], "B ends today");
+    assert!(second["page"]["next_cursor"].is_null());
+    assert!(
+        engine
+            .focus_cards("motion", Some("Work"), Some(cursor), 1, now + 60_000)
+            .is_err()
+    );
+    assert!(
+        engine
+            .focus_cards("events", Some("Work"), Some(cursor), 1, now)
+            .is_err()
+    );
+    let events = engine
+        .focus_cards("events", Some("Work"), None, 200, now)
+        .unwrap();
+    assert_eq!(
+        events["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|i| i["title"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        ["Earlier event", "Later event"]
+    );
+    let attention = engine
+        .attention_mode(None, Some("Work"), None, 200, now, true)
+        .unwrap();
+    wire::validate("AttentionPage", &attention).unwrap();
+    assert!(
+        attention["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["reason"] != "due_soon")
+    );
+    assert!(
+        attention["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["label"] == "Ended event" && i["reason"] == "overdue")
+    );
+}
+
+#[test]
+fn focus_unread_reports_leave_attention_when_read_but_decisions_remain() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    for kind in ["note", "decision_needed"] {
+        let reply = engine.mutate(Mutation {
+            project_id: project.clone(), kind: Kind::Update, id: None,
+            payload: json!({"kind":kind,"summary":kind,"target":{"type":"project","id":project},"author":{"kind":"human","label":"Owner"}}),
+            request_id: Uuid::now_v7().to_string(), epoch: engine.journal.epoch.clone(), expected: None,
+        }).unwrap();
+        assert_eq!(reply.http_status, 200);
+        let id = reply.body["result"]["resource"]["metadata"]["id"]
+            .as_str()
+            .unwrap();
+        let page = engine
+            .attention_mode(None, None, None, 200, now_millis(), true)
+            .unwrap();
+        assert!(
+            page["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|i| i["report_id"] == id)
+        );
+        engine
+            .receipts(
+                &json!({"items":[{"project_id":project,"update_id":id,"read":true}]}),
+                &Uuid::now_v7().to_string(),
+                &engine.journal.epoch,
+            )
+            .unwrap();
+        let page = engine
+            .attention_mode(None, None, None, 200, now_millis(), true)
+            .unwrap();
+        assert_eq!(
+            page["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|i| i["report_id"] == id),
+            kind == "decision_needed"
+        );
+    }
+}

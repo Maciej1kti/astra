@@ -19,7 +19,7 @@ command uncertainty, conflicts and current-project navigation.
 
 The autosave suite covers automatic card/project writes, queued edits, creation,
 close flushing and recovery without replacing the original command identity. The
-focus suite covers the three Focus sections, active-only bounded reads, pinned
+focus suite covers the four Focus sections, daily plan/event bounded reads, pinned
 card precedence, filters, inline pointer ordering and the viewport anchored card
 action.
 

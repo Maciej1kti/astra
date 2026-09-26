@@ -894,7 +894,7 @@ export interface AttentionItem {
   project_id: string;
   target: Target;
   report_id?: string;
-  reason: "overdue" | "due_soon" | "decision_needed" | "review";
+  reason: "overdue" | "due_soon" | "unread_report" | "decision_needed" | "review";
   label: string;
   date?: string;
 }
