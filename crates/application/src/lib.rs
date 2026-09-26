@@ -6,6 +6,7 @@ mod focus;
 mod project_deletion;
 mod source_deletion;
 pub use diagnostics::{record_failure, record_worker_failure};
+mod counters;
 pub mod engine;
 mod git;
 mod history;

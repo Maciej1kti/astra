@@ -23,6 +23,10 @@ export type ExtensionValue =
  * @maxItems 100
  */
 export type Acceptance = AcceptanceItem[];
+/**
+ * @maxItems 20
+ */
+export type CardCounters = CardCounter[];
 export type UpdateMetadata = {
   id: string;
   kind: "result" | "blocker" | "decision_needed" | "note" | "correction" | "resolution";
@@ -191,6 +195,12 @@ export interface ApiContracts {
   AcceptanceProgress: AcceptanceProgress;
   CardCommentInput: CardCommentInput;
   CardComment: CardComment;
+  CounterValue: number;
+  CounterValues: CounterValues;
+  CardCounter: CardCounter;
+  CardCounters: CardCounters;
+  CounterConfiguration: CounterConfiguration;
+  CounterRecord: CounterRecord;
   CardMetadata: CardMetadata;
   MilestoneMetadata: MilestoneMetadata;
   UpdateMetadata: UpdateMetadata;
@@ -226,6 +236,12 @@ export interface ApiContracts {
         };
       };
   CardPatch:
+    | {
+        configure_counter: CounterConfiguration;
+      }
+    | {
+        record_counter: CounterRecord;
+      }
     | {
         append_comment: CardCommentInput;
       }
@@ -411,7 +427,31 @@ export interface CardComment {
   recorded_at: string;
   body: string;
 }
+export interface CounterValues {
+  [k: string]: number;
+}
+export interface CardCounter {
+  id: string;
+  name: string;
+  unit: string;
+  step: number;
+  archived: boolean;
+  values: CounterValues;
+}
+export interface CounterConfiguration {
+  id?: string;
+  name: string;
+  unit: string;
+  step: number;
+  archived: boolean;
+}
+export interface CounterRecord {
+  id: string;
+  date: string;
+  value: number;
+}
 export interface CardMetadata {
+  counters?: CardCounters;
   /**
    * @maxItems 200
    */
@@ -611,6 +651,7 @@ export interface Accepted {
   status: "running";
 }
 export interface Summary {
+  counter_count?: number;
   comment_count?: number;
   event?: TimedEvent;
   folder?: string;
@@ -951,6 +992,7 @@ export interface Context {
   }[];
 }
 export interface ContextEntry {
+  counters?: CardCounters;
   /**
    * @maxItems 200
    */
@@ -1164,6 +1206,8 @@ export type LocalDateTime = ApiContracts["LocalDateTime"];
 export type Evidence = ApiContracts["Evidence"];
 
 export type Folder = ApiContracts["Folder"];
+
+export type CounterValue = ApiContracts["CounterValue"];
 
 export type ProjectPatch = ApiContracts["ProjectPatch"];
 

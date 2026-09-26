@@ -219,3 +219,27 @@ test("unsent comments stay in exported drafts but never leak into card autosave"
   assert.equal("comments" in payload.set, false);
   assert.equal("append_comment" in payload, false);
 });
+
+test("counter drafts are exported and excluded from ordinary autosave", async () => {
+  const { autosaveSnapshot } =
+    await import("../../apps/web/src/features/editor/editor-draft.ts");
+  const draft = createEditorDraft(editTarget("p", card({})));
+  const before = autosaveSnapshot(draft);
+  draft.fields.counterDrafts.values.c = {
+    id: "c",
+    date: "2026-09-26",
+    value: 15,
+  };
+  draft.fields.counterDrafts.configuration = {
+    name: "Sit-ups",
+    unit: "reps",
+    step: 5,
+    archived: false,
+  };
+  assert.equal(autosaveSnapshot(draft), before);
+  assert.equal(
+    JSON.parse(draftSnapshot(draft)).counterDrafts.values.c.value,
+    15,
+  );
+  assert.equal("counters" in editorPayload(draft).set, false);
+});

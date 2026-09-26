@@ -4964,9 +4964,131 @@
         ],
         "additionalProperties": false
       },
+      "CounterValue": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 1000000000
+      },
+      "CounterValues": {
+        "type": "object",
+        "propertyNames": {
+          "$ref": "#/components/schemas/LocalDate"
+        },
+        "additionalProperties": {
+          "$ref": "#/components/schemas/CounterValue"
+        },
+        "maxProperties": 3660
+      },
+      "CardCounter": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5,
+            "pattern": "\\S"
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "values": {
+            "$ref": "#/components/schemas/CounterValues"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "step",
+          "archived",
+          "values"
+        ],
+        "additionalProperties": false
+      },
+      "CardCounters": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/CardCounter"
+        },
+        "maxItems": 20
+      },
+      "CounterConfiguration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5,
+            "pattern": "\\S"
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "unit",
+          "step",
+          "archived"
+        ],
+        "additionalProperties": false,
+        "description": "Omit id to create a counter. Existing IDs update configuration; unit cannot change after a daily value is recorded. Archive instead of removing history."
+      },
+      "CounterRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "date": {
+            "$ref": "#/components/schemas/LocalDate"
+          },
+          "value": {
+            "$ref": "#/components/schemas/CounterValue"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "value"
+        ],
+        "additionalProperties": false,
+        "description": "Replace the total for this explicit calendar date, conditionally on the observed card version. Other dates remain unchanged."
+      },
       "CardMetadata": {
         "type": "object",
         "properties": {
+          "counters": {
+            "$ref": "#/components/schemas/CardCounters"
+          },
           "comments": {
             "type": "array",
             "items": {
@@ -5670,6 +5792,30 @@
       },
       "CardPatch": {
         "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "configure_counter": {
+                "$ref": "#/components/schemas/CounterConfiguration"
+              }
+            },
+            "required": [
+              "configure_counter"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "record_counter": {
+                "$ref": "#/components/schemas/CounterRecord"
+              }
+            },
+            "required": [
+              "record_counter"
+            ],
+            "additionalProperties": false
+          },
           {
             "type": "object",
             "properties": {
@@ -6405,6 +6551,11 @@
       "Summary": {
         "type": "object",
         "properties": {
+          "counter_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20
+          },
           "comment_count": {
             "type": "integer",
             "minimum": 0,
@@ -8096,6 +8247,9 @@
       "ContextEntry": {
         "type": "object",
         "properties": {
+          "counters": {
+            "$ref": "#/components/schemas/CardCounters"
+          },
           "comments": {
             "type": "array",
             "items": {

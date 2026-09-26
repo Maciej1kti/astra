@@ -6,6 +6,11 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Daily card counters](2026-09-26-daily-card-counters.md) add configurable steps,
+explicit daily result confirmation, retained history and protected drafts in the
+shared card modal. The full gate and five release browser suites pass; the manual
+HTTPS app is rebuilt, restarted and verified with source versions and pins preserved.
+
 [Card modal layout](2026-09-26-card-modal-layout.md) moves the title and status
 menu into a two-row header, adds the priority toggle, flattens Checklist and puts
 the Owner comment composer before history. The full gate, ten release browser

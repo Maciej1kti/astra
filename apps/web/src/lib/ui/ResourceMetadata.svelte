@@ -23,7 +23,7 @@
   );
 </script>
 
-{#if hasState || dates.length || item.labels?.length || item.acceptance_progress?.total || item.comment_count}
+{#if hasState || dates.length || item.labels?.length || item.acceptance_progress?.total || item.comment_count || item.counter_count}
   <span class="resource-metadata" class:compact>
     {#if hasState}
       <span class="state-badges">
@@ -51,6 +51,10 @@
         >
       </span>
     {/if}
+    {#if item.counter_count}<span class="badge"
+        >{item.counter_count}
+        {item.counter_count === 1 ? "counter" : "counters"}</span
+      >{/if}
     {#if item.comment_count}
       <span
         class="badge comments"

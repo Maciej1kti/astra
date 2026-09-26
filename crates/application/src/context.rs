@@ -196,6 +196,7 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
         "recorded_at",
         "acceptance",
         "comments",
+        "counters",
         "folder",
     ] {
         if key == "due" && document["type"] != "milestone" {

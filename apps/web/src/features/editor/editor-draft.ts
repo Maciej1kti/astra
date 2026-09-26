@@ -12,6 +12,11 @@ import type { EditorTarget } from "./editor-target";
 
 import { eventEnd } from "../../lib/resources/timed-event.ts";
 
+import {
+  emptyCounterDrafts,
+  type CounterDrafts,
+} from "../cards/card-counters.ts";
+
 type Common = { title: string; body: string };
 type EditableCommon = Common & { advanced: string };
 export type CardFields = {
@@ -26,6 +31,7 @@ export type CardFields = {
   acceptance: AcceptanceItem[];
   acceptanceDraft: string;
   commentDraft: string;
+  counterDrafts: CounterDrafts;
   archived: boolean;
 };
 export type ProjectFields = {
@@ -91,6 +97,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
           acceptance: (m?.acceptance ?? []).map((item) => ({ ...item })),
           acceptanceDraft: "",
           commentDraft: "",
+          counterDrafts: emptyCounterDrafts(),
           archived: m?.archived ?? false,
         },
       };
@@ -156,6 +163,7 @@ export function autosaveSnapshot(draft: EditorDraft): string {
   delete value.folderDraft;
   delete value.acceptanceDraft;
   delete value.commentDraft;
+  delete value.counterDrafts;
   return JSON.stringify(value);
 }
 /** Detach a draft from Svelte's reactive proxy before queueing it. */

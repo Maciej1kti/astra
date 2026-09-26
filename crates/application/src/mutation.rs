@@ -250,6 +250,14 @@ fn patch_document(
         {
             return Err(AppError::reject(409, "UNDO_COMMENT_NOT_SUPPORTED"));
         }
+        if command.target.kind == Kind::Card
+            && next["metadata"]["counters"] != previous.value()["metadata"]["counters"]
+        {
+            return Err(AppError::reject(409, "UNDO_COUNTER_NOT_SUPPORTED"));
+        }
+    }
+    if payload.get("configure_counter").is_some() || payload.get("record_counter").is_some() {
+        crate::counters::patch(&mut next, payload)?;
     }
     if let Some(comment) = payload.get("append_comment") {
         let comments = next["metadata"]

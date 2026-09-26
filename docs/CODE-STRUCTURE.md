@@ -65,6 +65,11 @@ commands in the shared controller, and preserves unsubmitted comment text across
 ordinary writes. The server owns comment IDs/timestamps, append-only validation
 and projections; see [ADR-045](ADR-045-CARD-COMMENTS.md).
 
+`CardCounters` keeps explicit configuration/value drafts in the editor state;
+`card-counters.ts` owns daily selection and local increments. Application
+`counters.rs` prepares conditional configuration/recording changes inside the
+normal writer transaction. See [ADR-049](ADR-049-DAILY-CARD-COUNTERS.md).
+
 All named OpenAPI schemas are exported by contract generation, including inline
 unions. New endpoint functions should use these types, as in
 [resources](../apps/web/src/lib/api/resources.ts). Extra JSON fields for

@@ -94,6 +94,14 @@ impl Indexed {
             out["status"] = m["state"].clone();
         }
         if self.kind == "card" {
+            out["counter_count"] = json!(
+                m.get("counters")
+                    .and_then(Value::as_array)
+                    .map_or(0, |items| items
+                        .iter()
+                        .filter(|c| c["archived"] != true)
+                        .count())
+            );
             out["comment_count"] = json!(
                 m.get("comments")
                     .and_then(Value::as_array)

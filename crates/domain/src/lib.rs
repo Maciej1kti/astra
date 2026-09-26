@@ -56,6 +56,22 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
         return Err(DomainError::Invalid("body byte limit or NUL"));
     }
     if let Some(m) = value.get("metadata") {
+        if let Some(counters) = m.get("counters").and_then(Value::as_array) {
+            let mut ids = HashSet::new();
+            for counter in counters {
+                if !ids.insert(counter["id"].as_str().unwrap()) {
+                    return Err(DomainError::Invalid("duplicate counter ID"));
+                }
+                if counter["name"].as_str().unwrap().trim().is_empty()
+                    || counter["unit"].as_str().unwrap().trim().is_empty()
+                {
+                    return Err(DomainError::Invalid("blank counter name or unit"));
+                }
+                for date in counter["values"].as_object().unwrap().keys() {
+                    local_date(date)?;
+                }
+            }
+        }
         if let Some(comments) = m.get("comments").and_then(Value::as_array) {
             let mut ids = HashSet::new();
             for comment in comments {

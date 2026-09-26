@@ -356,6 +356,9 @@
             "$ref": "#/$defs/CardComment"
           },
           "maxItems": 200
+        },
+        "counters": {
+          "$ref": "#/$defs/CardCounters"
         }
       },
       "required": [
@@ -852,6 +855,68 @@
         "body"
       ],
       "additionalProperties": false
+    },
+    "CounterValue": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000
+    },
+    "CounterValues": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/LocalDate"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/CounterValue"
+      },
+      "maxProperties": 3660
+    },
+    "CardCounter": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/UUID"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "\\S"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5,
+          "pattern": "\\S"
+        },
+        "step": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "values": {
+          "$ref": "#/$defs/CounterValues"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "unit",
+        "step",
+        "archived",
+        "values"
+      ],
+      "additionalProperties": false
+    },
+    "CardCounters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CardCounter"
+      },
+      "maxItems": 20
     }
   }
 }

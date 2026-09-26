@@ -13,12 +13,15 @@
     getHistory,
   } from "../../lib/api/resources";
   import type {
+    CardPatch,
     HistoryEntry,
     CommandResponse,
   } from "../../lib/contracts/api.generated";
   import ReportFields from "./ReportFields.svelte";
   import UpdateDetails from "./UpdateDetails.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
+  import CardCounters from "../cards/CardCounters.svelte";
+  import { countersDirty } from "../cards/card-counters";
   import CardComments from "../cards/CardComments.svelte";
   import "../../styles/editor.css";
   import { subscribeSession } from "../../lib/api/session-events";
@@ -54,7 +57,7 @@
 
   let {
     target,
-    workspaceTimezone = "workspace time",
+    workspaceTimezone = "UTC",
     onclose,
     onsaved,
     onautosaved,
@@ -150,6 +153,7 @@
       : draft.type === "card" &&
           (!!draft.fields.tagDraft.trim() ||
             !!draft.fields.commentDraft.trim() ||
+            countersDirty(draft.fields.counterDrafts) ||
             !!draft.fields.acceptanceDraft.trim()),
   );
   let dirty = $derived(persistedDirty || unfinishedEntry);
@@ -386,6 +390,23 @@
           },
           resource.version,
         ),
+      );
+      await transmit();
+    } catch (cause) {
+      error = commandErrorMessage(cause);
+    } finally {
+      commentFlushing = false;
+    }
+  }
+  async function saveCounter(payload: CardPatch, counterId?: string) {
+    if (draft.type !== "card" || locked || conflict || !resource) return;
+    commentFlushing = true;
+    try {
+      await flushAutosave();
+      if (autosave.hasWork || persistedDirty || conflict || accessLost) return;
+      prepare(
+        { kind: "counter", counterId },
+        patchCard(project, resource.metadata.id, payload, resource.version),
       );
       await transmit();
     } catch (cause) {
@@ -794,7 +815,7 @@
       const reason = commandErrorMessage(cause);
       error = reason;
       if (isRejectedConflict(operation.phase, cause)) {
-        if (submitted.kind === "resource" || submitted.kind === "comment") {
+        if (submitted.kind !== "read") {
           conflict = { current: null };
           try {
             conflict = { current: await api<Resource>(path()) };
@@ -809,16 +830,20 @@
     submitted: EditorIntent,
     reply: CommandResponse,
   ) {
-    if (submitted.kind === "comment") {
+    if (submitted.kind === "comment" || submitted.kind === "counter") {
       const next = reply.result.resource;
       if (next?.type !== "card" || draft.type !== "card")
         throw new Error("The saved card was not returned.");
       currentResource = next;
       draft.source = next;
-      draft.fields.commentDraft = "";
+      if (submitted.kind === "comment") draft.fields.commentDraft = "";
+      else if (submitted.counterId)
+        delete draft.fields.counterDrafts.values[submitted.counterId];
+      else draft.fields.counterDrafts.configuration = null;
       autosave.reset(next);
       onautosaved?.(next);
-      statusMessage = "Comment added.";
+      statusMessage =
+        submitted.kind === "comment" ? "Comment added." : "Counter saved.";
       onchanged?.();
       return;
     }
@@ -831,6 +856,7 @@
         draft = draftForResource(next);
         if (draft.type === "card" && previousFields) {
           draft.fields.commentDraft = previousFields.commentDraft;
+          draft.fields.counterDrafts = previousFields.counterDrafts;
         }
         baseline = autosaveSnapshot(draft);
         watchedAutosaveSnapshot = baseline;
@@ -1275,6 +1301,16 @@
             bind:tagError
           />{/if}
         {#if draft.type === "card"}
+          <CardCounters
+            counters={resource?.type === "card"
+              ? (resource.metadata.counters ?? [])
+              : []}
+            bind:draft={draft.fields.counterDrafts}
+            timezone={workspaceTimezone}
+            disabled={locked || !!conflict}
+            saved={!!resource}
+            onsubmit={saveCounter}
+          />
           <CardComments
             comments={resource?.type === "card"
               ? (resource.metadata.comments ?? [])

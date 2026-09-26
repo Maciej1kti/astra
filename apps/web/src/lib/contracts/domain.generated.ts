@@ -11,6 +11,218 @@ export type Position = string;
 export type LocalDate = string;
 export type LocalDateTime = string;
 /**
+ * @maxItems 20
+ */
+export type CardCounters =
+  | []
+  | [CardCounter]
+  | [CardCounter, CardCounter]
+  | [CardCounter, CardCounter, CardCounter]
+  | [CardCounter, CardCounter, CardCounter, CardCounter]
+  | [CardCounter, CardCounter, CardCounter, CardCounter, CardCounter]
+  | [CardCounter, CardCounter, CardCounter, CardCounter, CardCounter, CardCounter]
+  | [CardCounter, CardCounter, CardCounter, CardCounter, CardCounter, CardCounter, CardCounter]
+  | [CardCounter, CardCounter, CardCounter, CardCounter, CardCounter, CardCounter, CardCounter, CardCounter]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ]
+  | [
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter,
+      CardCounter
+    ];
+export type CounterValue = number;
+/**
  * Ograniczone JSON values; poza schema: max depth 12, 10000 nodes, brak niebezpiecznych kluczy prototypu w obiektach JS.
  *
  * This interface was referenced by `MilestoneMetadata`'s JSON-Schema definition
@@ -254,6 +466,7 @@ export interface CardMetadata {
    * @maxItems 200
    */
   comments?: CardComment[];
+  counters?: CardCounters;
 }
 export interface Schedule {
   start: LocalDate;
@@ -278,6 +491,17 @@ export interface Author {
   kind: "human" | "agent";
   label: string;
   session_id?: string;
+}
+export interface CardCounter {
+  id: UUID;
+  name: string;
+  unit: string;
+  step: number;
+  archived: boolean;
+  values: CounterValues;
+}
+export interface CounterValues {
+  [k: string]: CounterValue;
 }
 export interface MilestoneDocument {
   type: "milestone";

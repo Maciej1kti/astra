@@ -172,3 +172,6 @@ mod comments;
 
 #[path = "engine/report_deletion.rs"]
 mod report_deletion;
+
+#[path = "engine/counters.rs"]
+mod counters;

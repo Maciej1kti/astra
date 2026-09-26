@@ -1,0 +1,17 @@
+# Counter configuration: omit id to create; include it to edit or hide.
+PATCH /api/v1/projects/11111111-1111-4111-8111-111111111111/cards/22222222-2222-4222-8222-222222222222
+Content-Type: application/json
+If-Match: "r1.OBSERVED_SOURCE_HASH"
+X-Request-Id: 01990000-0000-7000-8000-000000000049
+X-Command-Epoch: CURRENT_COMMAND_EPOCH
+
+{"configure_counter":{"name":"Push-ups","unit":"reps","step":5,"archived":false}}
+
+# Read the returned card version and counter ID before the next command.
+PATCH /api/v1/projects/11111111-1111-4111-8111-111111111111/cards/22222222-2222-4222-8222-222222222222
+Content-Type: application/json
+If-Match: "r1.NEXT_OBSERVED_SOURCE_HASH"
+X-Request-Id: 01990000-0000-7000-8000-000000000050
+X-Command-Epoch: CURRENT_COMMAND_EPOCH
+
+{"record_counter":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","date":"2026-09-26","value":15}}

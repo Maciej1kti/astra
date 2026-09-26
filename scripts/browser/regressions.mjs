@@ -14,6 +14,7 @@ const suites = [
   "editor",
   "editor-inputs",
   "comments",
+  "counters",
   "autosave",
   "dialogs",
   "responsive",

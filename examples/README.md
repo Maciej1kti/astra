@@ -16,3 +16,6 @@ nie dowodzi, że działa zapis, drag-and-drop, SSE ani backup.
 show both human and bot comments retained in a card. The matching
 [append request](requests/card-comment.json) uses a versioned CardPatch; see the
 [HTTP example](requests/card-comment.http).
+
+`card-counters.json` shows source-owned daily totals; `requests/card-counter.http`
+shows conditional configuration and recording. See [ADR-049](../docs/ADR-049-DAILY-CARD-COUNTERS.md).

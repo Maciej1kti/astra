@@ -269,3 +269,28 @@ original version and payload. `card get` and bounded `context` include history,
 which lives in `comments` in the card's `.json` metadata. Comments cannot be
 replaced by `card set` or removed by undo. See [ADR-045](docs/ADR-045-CARD-COMMENTS.md)
 for limits and conflict handling.
+
+## Daily card counters
+
+Use the observed card version for each counter operation. Definitions and dated
+totals are saved inside the card JSON; ordinary card edits preserve them.
+
+```sh
+projectctl --project /absolute/project card set CARD_ID --patch-file - --if-version VERSION <<'JSON'
+{"configure_counter":{"name":"Push-ups","unit":"reps","step":5,"archived":false}}
+JSON
+```
+
+Read the returned counter ID, then record the absolute total for an explicit day:
+
+```sh
+projectctl --project /absolute/project card set CARD_ID --patch-file - --if-version VERSION <<'JSON'
+{"record_counter":{"id":"COUNTER_UUID","date":"2026-09-26","value":15}}
+JSON
+```
+
+Another confirmed record updates that day's total and keeps other dates. Missing
+days display zero. Configuration with an existing `id` changes name/step or hides
+the counter (`archived: true`); units are fixed after the first recorded result.
+There is no destructive clear or undo of counter data. See
+[ADR-049](docs/ADR-049-DAILY-CARD-COUNTERS.md) for limits and retry semantics.

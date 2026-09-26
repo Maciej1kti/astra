@@ -129,7 +129,8 @@ LIMIT ?5",
             if previous.as_ref().map(|p| &p["body"]) != after.as_ref().map(|p| &p["body"]) {
                 fields.insert("body".into());
             }
-            let comment_change = kind == Kind::Card && fields.contains("comments");
+            let comment_change =
+                kind == Kind::Card && (fields.contains("comments") || fields.contains("counters"));
             items.push(json!({
                 "id": id,
                 "request_id": request,
