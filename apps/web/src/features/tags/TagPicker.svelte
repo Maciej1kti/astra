@@ -5,7 +5,7 @@
   import { onMount } from "svelte";
   import { getProjectTags } from "../../lib/api/tags";
   import { isAbortError } from "../../lib/api/read-requests";
-  import { addTag, matchingTags, TAG_LIMIT, TAG_LENGTH_LIMIT } from "./tags";
+  import { addTag, matchingTags, TAG_LIMIT } from "./tags";
 
   let {
     labels = $bindable<string[]>([]),
@@ -231,7 +231,9 @@
       aria-activedescendant={expanded && active >= 0 && suggestions[active]
         ? `${id}-option-${active}`
         : undefined}
-      aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`}
+      aria-describedby={[folder ? `${id}-hint` : "", error ? `${id}-error` : ""]
+        .filter(Boolean)
+        .join(" ") || undefined}
       aria-invalid={!!error}
       placeholder={folder ? "Find or create a folder" : "Find or create a tag"}
       autocomplete="off"
@@ -262,14 +264,9 @@
         : "Add tag"}</button
     >
   </div>
-  <p id={`${id}-hint`} class="hint">
-    {folder
-      ? "Enter sets the folder. One folder per project."
-      : "Enter adds a tag. Names are case-sensitive."}
-    <span class="sr-only"
-      >Commas stay in its name. Up to {TAG_LENGTH_LIMIT} characters.</span
-    >
-  </p>
+  {#if folder}<p id={`${id}-hint`} class="hint">
+      Enter sets the folder. One folder per project.
+    </p>{/if}
   {#if error}<p id={`${id}-error`} role="alert" class="tag-error">
       {error}
     </p>{/if}

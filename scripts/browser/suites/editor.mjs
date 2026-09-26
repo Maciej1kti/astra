@@ -503,15 +503,17 @@ export async function runEditorChecks({
           { exact: true },
         );
       await open(card.id);
-      const priority = dialog().getByLabel("Priority", { exact: true });
-      assert.deepEqual(
-        await priority
-          .locator("option")
-          .evaluateAll((options) => options.map((option) => option.value)),
-        ["normal", "high"],
-      );
+      const priority = dialog().getByRole("button", {
+        name: "High priority",
+        exact: true,
+      });
+      await expect(priority).toHaveAttribute("aria-pressed", "true");
       for (const value of ["normal", "high"]) {
-        await priority.selectOption(value);
+        await priority.click();
+        await expect(priority).toHaveAttribute(
+          "aria-pressed",
+          String(value === "high"),
+        );
         await waitForAutosaveACK();
         assert.equal(get(card.id).metadata.priority, value);
       }

@@ -92,9 +92,102 @@ await runBrowserSuite(
         `${config.origin}/?${new URLSearchParams({ view: "list", project, type: "card", resource: id })}`,
       );
       await expect(time).toHaveValue("");
-      for (const width of [390, 320, 430, 768, 1440]) {
+      const header = dialog.locator(".dialog-header");
+      const title = header.getByRole("textbox", { name: "Title", exact: true });
+      await expect(title).toHaveCount(1);
+      await expect(
+        dialog
+          .locator(".dialog-body")
+          .getByRole("textbox", { name: "Title", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        dialog.getByRole("combobox", { name: "Status", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        dialog.getByRole("combobox", { name: "Priority", exact: true }),
+      ).toHaveCount(0);
+      await expect(dialog.getByText(/Plan · dates only/)).toHaveCount(0);
+      await expect(dialog.getByText(/Enter adds a tag/)).toHaveCount(0);
+      const paths = new Set();
+      for (const status of [
+        "active",
+        "review",
+        "done",
+        "cancelled",
+        "planned",
+      ]) {
+        await header.getByRole("button", { name: /^Status:/ }).click();
+        const name = status[0].toUpperCase() + status.slice(1);
+        await header.getByRole("button", { name, exact: true }).click();
+        await expect.poll(() => get().status).toBe(status);
+        const trigger = header.getByRole("button", {
+          name: `Status: ${name}`,
+          exact: true,
+        });
+        paths.add(await trigger.locator("path").getAttribute("d"));
+        await expect(trigger).toBeFocused();
+      }
+      assert.equal(paths.size, 5, "Every status has its own icon");
+      const statusTrigger = header.getByRole("button", {
+        name: "Status: Planned",
+        exact: true,
+      });
+      await statusTrigger.press("Enter");
+      await expect(statusTrigger).toHaveAttribute("aria-expanded", "true");
+      await statusTrigger.press("Tab");
+      await page.keyboard.press("Escape");
+      await expect(statusTrigger).toHaveAttribute("aria-expanded", "false");
+      await expect(statusTrigger).toBeFocused();
+      await expect(dialog).toBeVisible();
+      const priority = header.getByRole("button", {
+        name: "High priority",
+        exact: true,
+      });
+      for (const value of ["high", "normal"]) {
+        await priority.click();
+        await expect.poll(() => get().priority).toBe(value);
+        await expect(priority).toHaveAttribute(
+          "aria-pressed",
+          String(value === "high"),
+        );
+      }
+      await title.fill("Phone date and time — editable header");
+      await expect
+        .poll(() => get().title)
+        .toBe("Phone date and time — editable header");
+
+      for (const width of [390, 320, 430, 768, 1024, 1440]) {
         await page.setViewportSize({ width, height: 1000 });
         await checkControls();
+        const layout = await header.evaluate((el) => {
+          const box = (selector) =>
+            el.querySelector(selector).getBoundingClientRect();
+          const title = box("textarea"),
+            context = box(".card-context"),
+            close = box(".dialog-close");
+          const header = el.getBoundingClientRect();
+          return {
+            titleBottom: title.bottom,
+            contextTop: context.top,
+            titleRight: title.right,
+            closeLeft: close.left,
+            overflow: el.scrollWidth > el.clientWidth + 1,
+            headerHeight: header.height,
+          };
+        });
+        assert.ok(
+          layout.contextTop >= layout.titleBottom,
+          `Two header rows: ${JSON.stringify(layout)}`,
+        );
+        assert.ok(
+          layout.titleRight <= layout.closeLeft,
+          "Title keeps the close action clear",
+        );
+        assert.equal(layout.overflow, false);
+        assert.ok(
+          layout.headerHeight < 220,
+          "Header leaves room for card content",
+        );
         if (width <= 640) {
           const startBox = await dialog
             .getByLabel("Start", { exact: true })

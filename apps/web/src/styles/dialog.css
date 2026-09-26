@@ -235,3 +235,30 @@ dialog::backdrop {
     font-size: var(--text-lg);
   }
 }
+
+.dialog-header-two-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.dialog-header-two-rows .dialog-heading {
+  grid-column: 1 / -1;
+  padding-right: calc(var(--tap-target) + var(--space-4));
+}
+.dialog-header-secondary {
+  min-width: 0;
+}
+.dialog-header-two-rows .dialog-close {
+  position: absolute;
+  top: var(--space-6);
+  right: var(--space-10);
+}
+.action-menu.align-start .action-menu-panel {
+  left: 0;
+  right: auto;
+}
+@media (max-width: 520px) {
+  .dialog-header-two-rows .dialog-close {
+    top: var(--space-4);
+    right: var(--space-6);
+  }
+}

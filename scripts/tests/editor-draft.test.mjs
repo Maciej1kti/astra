@@ -213,8 +213,6 @@ test("unsent comments stay in exported drafts but never leak into card autosave"
   const draft = createEditorDraft(editTarget("p", source));
   const before = autosaveSnapshot(draft);
   draft.fields.commentDraft = "Unsent reply";
-  draft.fields.commentAuthor = "Someone";
-  draft.fields.commentAuthorKind = "agent";
   assert.equal(autosaveSnapshot(draft), before);
   assert.equal(JSON.parse(draftSnapshot(draft)).commentDraft, "Unsent reply");
   const payload = editorPayload(draft);

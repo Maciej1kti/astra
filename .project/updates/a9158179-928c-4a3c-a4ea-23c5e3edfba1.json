@@ -1,0 +1,18 @@
+{
+  "body": "Rearranged the card modal: editable title and status-icon menu in a two-row header, High priority toggle, peer-level Checklist, fewer helper lines, and the comment composer before history. Browser comments use human/Owner without author controls. Full local gate, ten release Chromium suites and broad HTTPS smoke pass. The manual app is rebuilt and restarted at its existing HTTPS address with source versions, pins and certificate preserved. Evidence: progress/2026-09-26-card-modal-layout.md. Physical-device acceptance remains open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "a9158179-928c-4a3c-a4ea-23c5e3edfba1",
+    "kind": "result",
+    "recorded_at": "2026-09-26T17:06:45.620Z",
+    "summary": "Card modal reorganized around title, status and comments",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

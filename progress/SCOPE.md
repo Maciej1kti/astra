@@ -218,3 +218,14 @@ schedule contains today, rather than cards selected only by Active status. Add
 Events after In motion for timed cards scheduled to start today. This supersedes
 the earlier status-based In motion definition. Pin ordering and project folder
 filtering remain unchanged.
+
+## Card modal rearrangement — owner direction, 2026-09-26
+
+Move the editable card title into a two-row header. Replace the card status
+select with a status-icon disclosure and Priority select with an on/off High
+priority button beside project context. Retain save state, pin and card actions.
+Promote Checklist to the same visual level as Description. Remove the date-plan
+and label-entry helper sentences. Place the comment composer before history,
+remove visible author controls and redundant comment/helper labels, and default
+browser comments to human/Owner. Existing history and CLI/API author options stay
+intact; this changes presentation and browser defaults, not the source contract.

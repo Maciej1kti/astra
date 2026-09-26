@@ -40,7 +40,7 @@
   border-bottom: var(--stroke) solid var(--line);
 }
 .editor .card-properties {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .editor .editor-properties label {
   min-width: 0;
@@ -265,4 +265,58 @@
   margin: 0;
   resize: none;
   line-height: var(--leading-tight);
+}
+
+.editor .card-heading,
+.editor .card-context {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.editor .card-heading {
+  align-items: flex-start;
+}
+.editor .card-heading .editable-title {
+  flex: 1;
+  min-width: 0;
+}
+.editor .card-heading textarea {
+  max-height: 3lh;
+  overflow-y: auto;
+}
+.editor .card-project-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+.editor .priority-toggle,
+.editor .status-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.editor .priority-toggle {
+  flex-shrink: 0;
+}
+.editor .priority-toggle.high,
+.editor .status-option[aria-pressed="true"] {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+@media (max-width: 520px) {
+  .editor .priority-toggle {
+    width: var(--tap-target);
+    padding: 0;
+    justify-content: center;
+  }
+  .editor .priority-toggle span {
+    display: none;
+  }
+  .editor .card-heading textarea {
+    font-size: var(--text-xl);
+  }
 }

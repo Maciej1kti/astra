@@ -1,14 +1,19 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import Icon from "./Icon.svelte";
+  import type { IconName } from "./icons";
 
   let {
     label = "More actions",
     disabled = false,
+    icon = "more",
+    align = "end",
     children,
   }: {
     label?: string;
     disabled?: boolean;
+    icon?: IconName;
+    align?: "start" | "end";
     children: Snippet<[close: () => void]>;
   } = $props();
   let open = $state(false);
@@ -45,6 +50,7 @@
 
 <div
   class="action-menu"
+  class:align-start={align === "start"}
   bind:this={root}
   onfocusout={(event) => {
     if (
@@ -63,7 +69,7 @@
     aria-expanded={open}
     aria-controls={id}
     {disabled}
-    onclick={() => (open = !open)}><Icon name="more" /></button
+    onclick={() => (open = !open)}><Icon name={icon} /></button
   >
   {#if open}<div class="action-menu-panel" {id}>
       {@render children(close)}

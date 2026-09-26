@@ -27,7 +27,9 @@ through normal APIs, not tamper-proof against explicit source-file edits.
 The editor flushes valid autosaves before adding a comment, preserves unfinished
 comment text during ordinary saves and navigation guards, and clears it only on
 confirmed commit. Existing uncertainty/status controls govern comment commands.
-Both human and bot attribution are available in the form and CLI. Lists, Focus
+The browser now supplies human/Owner attribution without author fields (owner
+direction, 2026-09-26); both human and bot attribution remain available through
+the CLI/API. The composer appears before saved history. Lists, Focus
 and Board show comment counts; all card editors show the conversation. Search
 indexes comment bodies/author labels, and bounded agent context includes comments
 or an explicit next resource read. Calendar/Timeline cards open the same editor.

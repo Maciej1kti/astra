@@ -224,7 +224,7 @@ export async function runAutosaveChecks({
           response.url().endsWith(`/cards/${id}`),
       );
       await expect(dialog().locator(".editable-title textarea")).toHaveCount(1);
-      await expect(dialog().locator("header h2")).toHaveCount(0);
+      await expect(dialog().locator("header h2")).toHaveCount(1);
       await title().click();
       await expect(title()).toBeFocused();
       await title().fill(later);
@@ -245,8 +245,11 @@ export async function runAutosaveChecks({
           response.url().endsWith(`/cards/${id}`),
       );
       await dialog()
-        .getByLabel("Status", { exact: true })
-        .selectOption("active");
+        .getByRole("button", { name: /^Status:/ })
+        .click();
+      await dialog()
+        .getByRole("button", { name: "Active", exact: true })
+        .click();
       const immediateResponse = await immediate;
       assert.equal(immediateResponse.status(), 200);
       assert(

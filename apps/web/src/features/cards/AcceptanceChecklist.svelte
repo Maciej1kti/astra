@@ -349,7 +349,7 @@
 
 <section class="checklist" aria-label="Checklist">
   <div class="checklist-heading">
-    <h3><Icon name="check" small /> Checklist</h3>
+    <h3>Checklist</h3>
     <span
       class="checklist-count"
       aria-label={`${items.filter((item) => item.completed).length} of ${items.length} checklist items completed`}
@@ -453,24 +453,20 @@
 <style>
   .checklist {
     margin: var(--space-10) 0;
-    padding: var(--space-4);
-    border: var(--stroke) solid var(--line);
-    border-radius: var(--radius-card);
-    background: var(--soft);
   }
   .checklist-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-6);
-    padding: var(--space-4) var(--space-4) var(--space-6);
+    padding: 0 0 var(--space-4);
   }
   .checklist h3 {
     display: flex;
     align-items: center;
     gap: var(--space-4);
     margin: 0;
-    font-size: var(--text-base);
+    font-size: var(--text-label);
   }
   .checklist-count {
     color: var(--muted);

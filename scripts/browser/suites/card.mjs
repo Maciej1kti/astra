@@ -266,7 +266,7 @@ export async function runCardChecks({
         "**Strong card context**",
       ].join("\n");
       await description().fill(nextSource);
-      await dialog().locator(".editor-context").click();
+      await dialog().locator(".card-project-name").click();
       await expect(description()).toBeHidden();
       const rendered = descriptionRendered();
       await expect(rendered).toBeVisible();
@@ -367,9 +367,9 @@ export async function runCardChecks({
           name: /^Complete checklist item 2:/,
         }),
       ).toBeChecked();
-      await expect(dialog().getByLabel("Status", { exact: true })).toHaveValue(
-        "active",
-      );
+      await expect(
+        dialog().getByRole("button", { name: "Status: Active", exact: true }),
+      ).toBeVisible();
       await checklist().scrollIntoViewIfNeeded();
       await screenshot("C02-acceptance-draft");
       await waitForAutosaveACK();
@@ -413,9 +413,9 @@ export async function runCardChecks({
       await dialog()
         .getByRole("checkbox", { name: /^Complete checklist item 1:/ })
         .check();
-      await expect(dialog().getByLabel("Status", { exact: true })).toHaveValue(
-        "active",
-      );
+      await expect(
+        dialog().getByRole("button", { name: "Status: Active", exact: true }),
+      ).toBeVisible();
       await waitForAutosaveACK();
       const completed = get(card.id);
       assert.deepEqual(

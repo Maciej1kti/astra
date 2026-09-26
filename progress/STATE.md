@@ -6,6 +6,12 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Card modal layout](2026-09-26-card-modal-layout.md) moves the title and status
+menu into a two-row header, adds the priority toggle, flattens Checklist and puts
+the Owner comment composer before history. The full gate, ten release browser
+suites and broad HTTPS smoke pass; the existing manual app is restarted and
+verified with source versions, pins and certificates preserved.
+
 [Daily Focus sections](2026-09-26-focus-daily-sections.md) retain pins regardless
 of status/dates, show actionable attention and unread reports, select today's
 inclusive plans for In motion and add timed Events. The full gate and four release

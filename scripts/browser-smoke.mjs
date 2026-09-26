@@ -198,7 +198,7 @@ try {
   await page
     .getByLabel("Description", { exact: true })
     .fill('A real browser write.\n\n<script>alert("untrusted")</script>');
-  await page.getByRole("dialog").locator(".editor-context").click();
+  await page.getByRole("dialog").locator(".card-project-name").click();
   assert.equal(
     await page.locator(".markdown script, .markdown img").count(),
     0,
@@ -687,7 +687,8 @@ try {
     ),
   ).toHaveCount(0);
   await page.locator(`[data-board-card="${typedId}"] .title`).click();
-  await page.getByLabel("Status", { exact: true }).selectOption("planned");
+  await page.getByRole("button", { name: /^Status:/ }).click();
+  await page.getByRole("button", { name: "Planned", exact: true }).click();
   await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });

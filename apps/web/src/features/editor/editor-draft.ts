@@ -26,8 +26,6 @@ export type CardFields = {
   acceptance: AcceptanceItem[];
   acceptanceDraft: string;
   commentDraft: string;
-  commentAuthor: string;
-  commentAuthorKind: "human" | "agent";
   archived: boolean;
 };
 export type ProjectFields = {
@@ -93,8 +91,6 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
           acceptance: (m?.acceptance ?? []).map((item) => ({ ...item })),
           acceptanceDraft: "",
           commentDraft: "",
-          commentAuthor: "Owner",
-          commentAuthorKind: "human",
           archived: m?.archived ?? false,
         },
       };
@@ -160,8 +156,6 @@ export function autosaveSnapshot(draft: EditorDraft): string {
   delete value.folderDraft;
   delete value.acceptanceDraft;
   delete value.commentDraft;
-  delete value.commentAuthor;
-  delete value.commentAuthorKind;
   return JSON.stringify(value);
 }
 /** Detach a draft from Svelte's reactive proxy before queueing it. */

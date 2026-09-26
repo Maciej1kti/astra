@@ -43,7 +43,10 @@ await runBrowserSuite(
       name: "Card comments",
       exact: true,
     });
-    const input = section.getByLabel("New comment", { exact: true });
+    const input = section.getByRole("textbox", {
+      name: "Write a comment",
+      exact: true,
+    });
     const add = section.getByRole("button", {
       name: "Add comment",
       exact: true,
@@ -59,9 +62,16 @@ await runBrowserSuite(
       await input.fill(
         "**Human reply**\n\n<script>window.commentExecuted = true</script>",
       );
-      await section
-        .getByLabel("Comment author", { exact: true })
-        .fill("Maciek");
+      await expect(
+        section.getByLabel("Comment author", { exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        section.getByLabel("Author type", { exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        section.getByText("New comment", { exact: true }),
+      ).toHaveCount(0);
+      await expect(section.getByText(/Markdown supported/)).toHaveCount(0);
       await dialog
         .getByLabel("Title", { exact: true })
         .fill("Conversation preserved");
@@ -114,6 +124,18 @@ await runBrowserSuite(
       await expect(section.locator("li").last()).toContainText("Bot");
       await expect(section.locator("li").last()).toContainText("Codex");
       assert.equal(comments()[0].author.kind, "human");
+      assert.equal(comments()[0].author.label, "Owner");
+      assert.ok(
+        await input.evaluate(
+          (el) =>
+            !!(
+              el.compareDocumentPosition(
+                el.closest("section").querySelector("ol"),
+              ) & Node.DOCUMENT_POSITION_FOLLOWING
+            ),
+        ),
+        "Composer precedes comment history",
+      );
       assert.equal(comments()[1].author.kind, "agent");
       const source = await readFile(
         join(project.folder, ".project", "cards", `${id}.json`),

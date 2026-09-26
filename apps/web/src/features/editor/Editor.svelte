@@ -365,8 +365,7 @@
   }
   async function addComment() {
     if (draft.type !== "card" || locked || conflict || !resource) return;
-    if (!draft.fields.commentDraft.trim() || !draft.fields.commentAuthor.trim())
-      return;
+    if (!draft.fields.commentDraft.trim()) return;
     commentFlushing = true;
     try {
       await flushAutosave();
@@ -380,8 +379,8 @@
             append_comment: {
               body: draft.fields.commentDraft,
               author: {
-                kind: draft.fields.commentAuthorKind,
-                label: draft.fields.commentAuthor.trim(),
+                kind: "human",
+                label: "Owner",
               },
             },
           },
@@ -432,12 +431,19 @@
     if (error) notice?.scrollIntoView({ block: "center" });
   });
   let readonly = $derived(draft.type === "update" && !!resource);
+  const cardStatuses = [
+    "planned",
+    "active",
+    "review",
+    "done",
+    "cancelled",
+  ] as const;
   const statuses = $derived(
     draft.type === "project"
       ? ["active", "paused", "archived"]
       : draft.type === "milestone"
         ? ["planned", "active", "achieved", "cancelled"]
-        : ["planned", "active", "review", "done", "cancelled"],
+        : cardStatuses,
   );
   function path() {
     const root = `/api/v1/projects/${project}`;
@@ -825,8 +831,6 @@
         draft = draftForResource(next);
         if (draft.type === "card" && previousFields) {
           draft.fields.commentDraft = previousFields.commentDraft;
-          draft.fields.commentAuthor = previousFields.commentAuthor;
-          draft.fields.commentAuthorKind = previousFields.commentAuthorKind;
         }
         baseline = autosaveSnapshot(draft);
         watchedAutosaveSnapshot = baseline;
@@ -883,7 +887,31 @@
       !conflict &&
       !discard}
   >
+    {#snippet cardHeaderSecondary()}
+      {#if draft.type === "card"}
+        <div class="card-context">
+          <span class="card-project-name" title={projectName}
+            >{projectName || "Card"}</span
+          >
+          <button
+            type="button"
+            class="quiet priority-toggle"
+            class:high={draft.fields.priority === "high"}
+            aria-label="High priority"
+            title="High priority"
+            aria-pressed={draft.fields.priority === "high"}
+            disabled={locked}
+            onclick={() => {
+              if (draft.type === "card")
+                draft.fields.priority =
+                  draft.fields.priority === "high" ? "normal" : "high";
+            }}><Icon name="flag" small /><span>High priority</span></button
+          >
+        </div>
+      {/if}
+    {/snippet}
     <DialogHeader
+      secondary={draft.type === "card" ? cardHeaderSecondary : undefined}
       onclose={close}
       closeLabel="Close editor"
       disabled={busy || deleteBusy || closing}
@@ -894,25 +922,59 @@
       }}
     >
       {#snippet heading()}
-        <div class="editor-context">
-          <Icon
-            name={draft.type === "project"
-              ? "projects"
-              : draft.type === "update"
-                ? "updates"
-                : "board"}
-            small
-          />
-          <span
-            >{projectName ||
-              (draft.type === "project"
-                ? "Project"
-                : resourceLabel(draft.type))}</span
-          >
-          {#if projectName}<span class="context-separator">/</span><span
-              class="context-kind">{resourceLabel(draft.type)}</span
-            >{/if}
-        </div>
+        {#if draft.type === "card"}
+          <div class="card-heading">
+            <ActionMenu
+              label={`Status: ${resourceLabel(draft.fields.status)}`}
+              icon={draft.fields.status}
+              align="start"
+              disabled={locked}
+            >
+              {#snippet children(closeStatus)}
+                {#each cardStatuses as status}
+                  <button
+                    type="button"
+                    class="quiet status-option"
+                    aria-pressed={draft.type === "card" &&
+                      draft.fields.status === status}
+                    onclick={() => {
+                      if (draft.type === "card") draft.fields.status = status;
+                      closeStatus();
+                    }}><Icon name={status} />{resourceLabel(status)}</button
+                  >
+                {/each}
+              {/snippet}
+            </ActionMenu>
+            <EditableTitle
+              bind:value={draft.common.title}
+              label="Title"
+              placeholder="Card title"
+              disabled={locked}
+              focus={!resource && !autoCreate}
+              onfinish={finishTitleEdit}
+            />
+          </div>
+        {:else}
+          <div class="editor-context">
+            <Icon
+              name={draft.type === "project"
+                ? "projects"
+                : draft.type === "update"
+                  ? "updates"
+                  : "board"}
+              small
+            />
+            <span
+              >{projectName ||
+                (draft.type === "project"
+                  ? "Project"
+                  : resourceLabel(draft.type))}</span
+            >
+            {#if projectName}<span class="context-separator">/</span><span
+                class="context-kind">{resourceLabel(draft.type)}</span
+              >{/if}
+          </div>
+        {/if}
       {/snippet}
       {#snippet actions()}
         {#if autosaveStatus}<span
@@ -1032,7 +1094,7 @@
               disabled={locked}>Resolve decision</Button
             >{/if}
         </div>
-      {:else}
+      {:else if draft.type !== "card"}
         <EditableTitle
           bind:value={draft.common.title}
           label={draft.type === "project"
@@ -1079,27 +1141,18 @@
             class="editor-properties"
             class:card-properties={draft.type === "card"}
           >
-            <label
-              >Status<select
-                aria-label="Status"
-                bind:value={draft.fields.status}
-                disabled={locked}
-                >{#each statuses as item}<option value={item}
-                    >{resourceLabel(item)}</option
-                  >{/each}</select
-              ></label
-            >
-            {#if draft.type === "card"}
-              <label
-                >Priority<select
-                  aria-label="Priority"
-                  bind:value={draft.fields.priority}
+            {#if draft.type !== "card"}<label
+                >Status<select
+                  aria-label="Status"
+                  bind:value={draft.fields.status}
                   disabled={locked}
-                  >{#each ["normal", "high"] as item}<option value={item}
+                  >{#each statuses as item}<option value={item}
                       >{resourceLabel(item)}</option
                     >{/each}</select
                 ></label
               >
+            {/if}
+            {#if draft.type === "card"}
               <label
                 >Start<input
                   type="date"
@@ -1139,11 +1192,9 @@
                   /></label
                 >
               {/if}
-              <p class="field-hint">
-                {draft.fields.time
-                  ? `Event · ${workspaceTimezone}`
-                  : "Plan · dates only. Add a start time to make an event."}
-              </p>
+              {#if draft.fields.time}<p class="field-hint">
+                  Event · {workspaceTimezone}
+                </p>{/if}
             {/if}
           </div>{/if}
         {#if draft.type === "update"}<label
@@ -1229,8 +1280,6 @@
               ? (resource.metadata.comments ?? [])
               : []}
             bind:body={draft.fields.commentDraft}
-            bind:author={draft.fields.commentAuthor}
-            bind:authorKind={draft.fields.commentAuthorKind}
             disabled={locked || !!conflict}
             saved={!!resource}
             onadd={addComment}

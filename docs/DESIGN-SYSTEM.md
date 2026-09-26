@@ -108,3 +108,19 @@ Entrances use a brief fade and small vertical movement, without delaying input.
 View motion runs on navigation, not on each data refresh or keystroke. Card hover
 lift applies only to fine pointers and excludes draggable Focus cards; existing
 drag transforms remain owned by their gesture implementation.
+
+## Card modal hierarchy
+
+Cards use a two-row DialogHeader: status-icon disclosure and editable title on
+the first row with Close, then project context, High priority toggle, save state,
+pin and card actions. The title stays available as the body scrolls and is bounded
+to three visible lines. Mobile keeps the same order with an icon-only priority
+button whose accessible name remains High priority. The status disclosure uses
+ordinary keyboard-focusable buttons; Escape closes it and restores its trigger.
+
+Card body order is planning dates, Description, Checklist, Labels and Comments.
+Checklist is a peer section without an enclosing inset panel. Comments start with
+the explicit draft and Add comment button, then saved history. Browser comments
+use human/Owner attribution without author controls; existing attribution and
+CLI/API bot comments remain visible in history. The date-plan and label-entry
+helper sentences are omitted from the card form.
