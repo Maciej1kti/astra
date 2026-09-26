@@ -1,7 +1,7 @@
 # Astra
 
 Astra is a local planner tied to explicitly selected folders. Project content lives in
-Markdown/YAML under `.project/`; a Rust daemon coordinates conditional, durable
+JSON under `.project/`; a Rust daemon coordinates conditional, durable
 writes. A Svelte browser interface and a Unix-socket CLI use the same application
 engine. SQLite provides a rebuildable search index and separate operational state
 for sessions, command retries, receipts and history.

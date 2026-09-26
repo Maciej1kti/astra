@@ -63,4 +63,4 @@ Linux: usługa użytkownika systemd, macOS: LaunchAgent, plus foreground do deve
 
 ## Granice błędów
 
-Uszkodzony dokument jest izolowany. Błędny `project.md` blokuje zwykłe zapisy całego projektu, nie całej instancji. Problem indeksu oznacza degraded projections, nie cofnięcie zatwierdzonego zapisu. Niejasny stan recovery blokuje dany target/projekt. Brak serwera zwraca błąd CLI bez trybu awaryjnego pisania.
+Uszkodzony dokument jest izolowany. Błędny `project.json` blokuje zwykłe zapisy całego projektu, nie całej instancji. Problem indeksu oznacza degraded projections, nie cofnięcie zatwierdzonego zapisu. Niejasny stan recovery blokuje dany target/projekt. Brak serwera zwraca błąd CLI bez trybu awaryjnego pisania.

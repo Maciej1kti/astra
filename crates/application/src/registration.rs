@@ -37,7 +37,7 @@ impl Engine {
         } = self.workspace()?;
         let existing_project = match root.child(".project", false) {
             Ok(directory) => {
-                let bytes = directory.read("project.md")?;
+                let bytes = directory.read("project.json")?;
                 if bytes.is_none() && directory.names()?.iter().any(|name| name != ".local") {
                     return Err(AppError::reject(409, "PROJECT_DOCUMENT_MISSING"));
                 }
@@ -115,7 +115,7 @@ impl Engine {
         };
         let mut steps = vec![Step::plan(
             &root,
-            &[".project", "project.md"],
+            &[".project", "project.json"],
             project_bytes,
         )?];
         for (filename, template) in [

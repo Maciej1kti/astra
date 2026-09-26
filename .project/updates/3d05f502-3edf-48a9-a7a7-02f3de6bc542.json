@@ -1,0 +1,18 @@
+{
+  "body": "",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "CLI user"
+    },
+    "id": "3d05f502-3edf-48a9-a7a7-02f3de6bc542",
+    "kind": "result",
+    "recorded_at": "2026-09-08T17:01:07.496Z",
+    "summary": "Started the existing local release binaries with the manual launcher and preserved existing runtime data. Verified HTTPS localhost:47832 returned HTTP 200 and project context was readable through the daemon. Opened the URL in the desktop browser. No rebuild or release acceptance was performed.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

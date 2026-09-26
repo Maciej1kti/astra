@@ -81,7 +81,7 @@ fn comments_are_source_owned_conditional_replayable_and_preserved() {
     let bytes = fs::read(
         env.root
             .join("project/.project/cards")
-            .join(format!("{id}.md")),
+            .join(format!("{id}.json")),
     )
     .unwrap();
     let source = project_store::document::parse(Kind::Card, Some(id), &bytes)

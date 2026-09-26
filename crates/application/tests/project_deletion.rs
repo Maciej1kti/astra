@@ -540,7 +540,7 @@ fn project_deletion_rejects_another_registered_root_inside_project_tree() {
         rejection_code(engine.project_deletion_plan(&project)),
         "PROJECT_CONTAINS_REGISTERED_PROJECT"
     );
-    assert!(nested.join(".project/project.md").exists());
+    assert!(nested.join(".project/project.json").exists());
 }
 
 #[test]

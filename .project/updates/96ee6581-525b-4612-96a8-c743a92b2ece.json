@@ -1,0 +1,18 @@
+{
+  "body": "",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "96ee6581-525b-4612-96a8-c743a92b2ece",
+    "kind": "result",
+    "recorded_at": "2026-09-07T18:47:25.926Z",
+    "summary": "Fixed Linux folder selection using XDG Desktop Portal. Verified desktop dialog opening and timeout cleanup, projectd tests, frontend checks and release build. Restarted the local host. Commit 0701c16.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

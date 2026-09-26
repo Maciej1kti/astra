@@ -6,6 +6,12 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[JSON sources](2026-09-26-json-sources.md) replace all project resource Markdown
+files with the shared `{type, metadata, body}` JSON envelope. The existing test
+data is preserved and converted; source comments/descriptions remain Markdown
+strings. Full local checks, all 15 browser suites across documented runs, HTTPS
+smoke and planning checks pass. Both live projects validate after restart.
+
 [Card comments](2026-09-26-card-comments.md) add human/bot conversations to the
 shared editor, source Markdown, conditional CLI/API writes, search and context.
 List, Board and Focus show comment counts. The full gate, six relevant Chromium

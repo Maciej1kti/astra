@@ -57,7 +57,7 @@ fn stale_registration_plan_does_not_overwrite_user_edits() {
         fs::read(env.root.join("project/AGENTS.md")).unwrap(),
         b"user edit"
     );
-    assert!(!env.root.join("project/.project/project.md").exists());
+    assert!(!env.root.join("project/.project/project.json").exists());
     assert!(
         json!(engine.workspace().unwrap().value)["projects"]
             .as_array()
@@ -133,5 +133,5 @@ fn browser_registration_plan_cannot_outlive_root_revocation() {
         rejected,
         "Revoked browser authority must prevent new registration"
     );
-    assert!(!env.root.join("project/.project/project.md").exists());
+    assert!(!env.root.join("project/.project/project.json").exists());
 }

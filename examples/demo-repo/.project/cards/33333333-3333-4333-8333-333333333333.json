@@ -1,0 +1,19 @@
+{
+  "body": "Decyzja po obejrzeniu wyników demonstracji.\n",
+  "metadata": {
+    "archived": false,
+    "created_at": "2026-09-05T10:00:00Z",
+    "id": "33333333-3333-4333-8333-333333333333",
+    "labels": [],
+    "position": "80000000000000000000000000000000",
+    "priority": "normal",
+    "schedule": {
+      "end": "2026-09-19",
+      "start": "2026-09-19"
+    },
+    "status": "planned",
+    "title": "Wybrać format końcowy pliku",
+    "updated_at": "2026-09-05T10:00:00Z"
+  },
+  "type": "card"
+}

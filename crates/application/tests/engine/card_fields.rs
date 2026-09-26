@@ -33,7 +33,7 @@ fn strict_card_commands_reject_unsupported_metadata_without_writing() {
     let created = create(&engine, &project, "Clean card");
     let id = created.body["result"]["id"].as_str().unwrap();
     let version = created.body["result"]["version"].as_str().unwrap();
-    let source_path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let source_path = env.root.join(format!("project/.project/cards/{id}.json"));
     let source_bytes = fs::read(&source_path).unwrap();
     for payload in [
         json!({"set":{"kind":"decision"}}),
@@ -111,7 +111,7 @@ fn card_undo_rejects_historical_unsupported_metadata_without_source_change() {
         .as_str()
         .unwrap()
         .to_owned();
-    let source_path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let source_path = env.root.join(format!("project/.project/cards/{id}.json"));
     let current_bytes = fs::read(&source_path).unwrap();
     for legacy_fields in [
         vec![
@@ -127,12 +127,7 @@ fn card_undo_rejects_historical_unsupported_metadata_without_source_change() {
         for (field, value) in legacy_fields {
             legacy_metadata[field] = value;
         }
-        let historical = format!(
-            "---\n{}\n---\n{}",
-            serde_json::to_string(&legacy_metadata).unwrap(),
-            created.body["result"]["resource"]["body"].as_str().unwrap()
-        )
-        .into_bytes();
+        let historical = serde_json::to_vec_pretty(&json!({"type":"card", "metadata":legacy_metadata,"body":created.body["result"]["resource"]["body"]})).unwrap();
         assert!(document::parse(Kind::Card, Some(&id), &historical).is_err());
         let history_id = Uuid::new_v4().to_string();
         engine

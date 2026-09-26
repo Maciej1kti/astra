@@ -1,5 +1,8 @@
 # 13. Ryzyka, kontrole i decyzje delegowane
 
+Current source storage uses the JSON envelope defined in [ADR-046](ADR-046-JSON-SOURCES.md).
+References to YAML below describe the historical handoff and are superseded.
+
 | Ryzyko | Dlaczego istotne | Wczesny dowód / kontrola |
 |---|---|---|
 | Journal SQLite + plik to nie jedna transakcja | Utrata lub podwójne wykonanie po awarii | Fault injection G1 na każdym kroku, jawne recovery |

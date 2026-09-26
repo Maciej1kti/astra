@@ -24,7 +24,7 @@ Przy cofnięciu zegara hosta nie można przedłużać ważności usuniętych klu
 
 1. Auth/CSRF/limity/API epoch i lookup request. Znany committed → zwróć oryginalny wynik; rejected → oryginalny błąd; unresolved → status, nie drugi wykonawca.
 2. Globalna bramka utrzymania w trybie shared, potem lock projektu, potem kolejka state DB. Nie trzymaj globalnego mutexa nad całym dyskiem przy zwykłym zapisie innego projektu.
-3. Zweryfikuj lease, katalog i typ pliku. Odczytaj aktualne bajty. Waliduj front matter i oczekiwaną wersję. Odczytaj wymagane referencje i sprawdź domenę.
+3. Verify the lease, directory and file type. Read current bytes. Validate the JSON envelope and expected version, then read required references and validate domain rules.
 4. Wylicz wynik bez skutków ubocznych. No-op zapisuje wynik komendy bez zmiany dokumentu. Konflikt walidacji nie zmienia pliku.
 5. Zapisz `PREPARED` w `state.sqlite`: target logiczny i bezpieczna lokalizacja, przed/po hash, pełne potrzebne bajty, rodzaj operacji, digest i rezultat planowany. Użyj trwałej transakcji. Nie wykonuj rename, jeśli ten krok się nie udał.
 6. Utwórz unikalny plik tymczasowy obok celu, bez podążania za symlinkami, z odpowiednimi prawami. Zapisz całe bajty, sprawdź wynik i zsynchronizuj plik. Przy create wymagaj braku istniejącego targetu; nie stosuj zwykłego overwrite-rename do istniejącego obcego pliku.

@@ -1,23 +1,25 @@
 # Project planning data
 
-This directory is the source of truth for project outcomes, milestones and dates.
-`project.md` contains the project's stable ID and context. `cards/<uuid>.md`
-describes an outcome or decision, `milestones/<uuid>.md` a milestone, and
-`updates/<uuid>.md` an append-only report. `.local/` contains runtime files only.
+This directory is the source of truth for project work, milestones and dates.
+`project.json` contains the project's stable ID and context. `cards/<uuid>.json`
+describes a card work item, `milestones/<uuid>.json` a milestone, and
+`updates/<uuid>.json` an append-only report. `.local/` contains runtime files only.
 
-Documents use UTF-8, restricted YAML front matter and Markdown bodies. Names and
-IDs are stable; the body does not encode status or deadlines. Anchors, aliases,
-duplicate keys and custom tags are forbidden. Comments require an explicit
-normalization preview and backup before rewriting a header.
+Every source uses the same UTF-8 JSON envelope: `type`, `metadata`, `body`.
+Metadata follows the per-kind schema; `body` and comment bodies contain Markdown
+strings. IDs, dates, comments and checklist items are structured values. Duplicate
+keys, unknown fields and mismatched types/filenames are rejected. Names and IDs
+are stable; descriptions never encode status or deadlines. Files use canonical
+JSON with two-space indentation and LF. BOM/CRLF normalization remains explicit.
 
 Normal edits go through `projectctl` and the local server. Read a resource and its
 version before editing. A conflict requires reconciling intent, not fetching a
 new version just to overwrite it. A timeout is an uncertain result: inspect the
 original request ID instead of submitting a new command.
 
-Schedule start/end dates are inclusive. Deadlines and review dates are separate;
-moving a schedule never moves a deadline. All-day dates are independent of the
-phone's timezone. Reading a decision report does not resolve it.
+Card schedule start/end dates are inclusive and are the only card planning
+dates. Milestones may have a separate date, without a deadline type. All-day
+dates are independent of the phone's timezone. Reading a decision report does not resolve it.
 
 Keep detailed agent plans and transcripts outside this directory. Add reports
 only for meaningful outcomes, blockers or decisions. Corrections and resolutions

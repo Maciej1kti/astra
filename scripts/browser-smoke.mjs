@@ -130,7 +130,7 @@ try {
     .getByRole("button", { name: "Choose folder…", exact: true })
     .click();
   await page.getByText(nativeFolder, { exact: true }).waitFor();
-  await assert.rejects(readFile(join(nativeFolder, ".project/project.md")), {
+  await assert.rejects(readFile(join(nativeFolder, ".project/project.json")), {
     code: "ENOENT",
   });
   await page
@@ -139,7 +139,7 @@ try {
     .click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   assert.match(
-    await readFile(join(nativeFolder, ".project/project.md"), "utf8"),
+    await readFile(join(nativeFolder, ".project/project.json"), "utf8"),
     /Native-selected project/,
   );
   await page.unroute("**/api/v1/native-folder-selections");
@@ -165,9 +165,12 @@ try {
     .getByRole("button", { name: "Choose this folder", exact: true })
     .click();
   await page.getByText("Selected folder", { exact: true }).waitFor();
-  await assert.rejects(readFile(join(selectedFolder, ".project/project.md")), {
-    code: "ENOENT",
-  });
+  await assert.rejects(
+    readFile(join(selectedFolder, ".project/project.json")),
+    {
+      code: "ENOENT",
+    },
+  );
   await page
     .getByRole("button", { name: "Add selected project", exact: true })
     .click();
@@ -177,7 +180,7 @@ try {
     true,
   );
   assert.match(
-    await readFile(join(selectedFolder, ".project/project.md"), "utf8"),
+    await readFile(join(selectedFolder, ".project/project.json"), "utf8"),
     /Chosen in browser/,
   );
   await page
@@ -358,7 +361,7 @@ try {
   await page.getByRole("heading", { name: "List", exact: true }).waitFor();
   await page.reload();
   await page.getByRole("heading", { name: "List", exact: true }).waitFor();
-  const cardFile = join(folder, ".project", "cards", `${cards[0].id}.md`);
+  const cardFile = join(folder, ".project", "cards", `${cards[0].id}.json`);
   const source = await readFile(cardFile, "utf8");
   await writeFile(
     cardFile,

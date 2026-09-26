@@ -1,14 +1,16 @@
 # Project planning data
 
 This directory is the source of truth for project work, milestones and dates.
-`project.md` contains the project's stable ID and context. `cards/<uuid>.md`
-describes a card work item, `milestones/<uuid>.md` a milestone, and
-`updates/<uuid>.md` an append-only report. `.local/` contains runtime files only.
+`project.json` contains the project's stable ID and context. `cards/<uuid>.json`
+describes a card work item, `milestones/<uuid>.json` a milestone, and
+`updates/<uuid>.json` an append-only report. `.local/` contains runtime files only.
 
-Documents use UTF-8, restricted YAML front matter and Markdown bodies. Names and
-IDs are stable; the body does not encode status or deadlines. Anchors, aliases,
-duplicate keys and custom tags are forbidden. Comments require an explicit
-normalization preview and backup before rewriting a header.
+Every source uses the same UTF-8 JSON envelope: `type`, `metadata`, `body`.
+Metadata follows the per-kind schema; `body` and comment bodies contain Markdown
+strings. IDs, dates, comments and checklist items are structured values. Duplicate
+keys, unknown fields and mismatched types/filenames are rejected. Names and IDs
+are stable; descriptions never encode status or deadlines. Files use canonical
+JSON with two-space indentation and LF. BOM/CRLF normalization remains explicit.
 
 Normal edits go through `projectctl` and the local server. Read a resource and its
 version before editing. A conflict requires reconciling intent, not fetching a

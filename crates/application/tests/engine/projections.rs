@@ -136,7 +136,7 @@ fn invalid_external_source_preserves_stale_projection_without_repairing_files() 
     let project = register(&engine, &env.path());
     let created = create(&engine, &project, "Last valid title");
     let id = created.body["result"]["id"].as_str().unwrap();
-    let source = env.root.join(format!("project/.project/cards/{id}.md"));
+    let source = env.root.join(format!("project/.project/cards/{id}.json"));
     fs::write(&source, b"broken document").unwrap();
     engine.refresh_all().unwrap();
     let page = engine.list(Some("card"), &Query::default()).unwrap();
@@ -161,9 +161,9 @@ fn invalid_filenames_are_isolated_by_collection_and_publish_health_changes() {
     let project = register(&engine, &env.path());
     let created = create(&engine, &project, "Readable neighbor");
     let id = created.body["result"]["id"].as_str().unwrap();
-    let source = env.root.join(format!("project/.project/cards/{id}.md"));
+    let source = env.root.join(format!("project/.project/cards/{id}.json"));
     let original = fs::read(&source).unwrap();
-    let malformed = ["cards/foo.md", "milestones/foo.md"];
+    let malformed = ["cards/foo.json", "milestones/foo.json"];
     let cursor = engine.index.cursor().unwrap();
     for relative in malformed {
         let path = env.root.join("project/.project").join(relative);
@@ -216,10 +216,10 @@ fn invalid_unindexed_target_emits_health_without_changing_other_issues() {
     let id = Uuid::new_v4().to_string();
     let cards = env.root.join("project/.project/cards");
     fs::create_dir_all(&cards).unwrap();
-    fs::write(cards.join("unrelated.md"), b"Preserved unrelated issue").unwrap();
+    fs::write(cards.join("unrelated.json"), b"Preserved unrelated issue").unwrap();
     engine.refresh_project(&project, None).unwrap();
     let cursor = engine.index.cursor().unwrap();
-    let source = cards.join(format!("{id}.md"));
+    let source = cards.join(format!("{id}.json"));
     fs::write(&source, b"Unfinished external document").unwrap();
     let targets = [(Kind::Card, id.clone()), (Kind::Card, id)];
     engine.refresh_project(&project, Some(&targets)).unwrap();
@@ -400,7 +400,7 @@ fn service_reopen_finishes_recovery_before_readiness_and_keeps_conflicts_blocked
             )
             .unwrap();
         assert_eq!(pending.http_status, 202);
-        let source = env.root.join(format!("project/.project/cards/{id}.md"));
+        let source = env.root.join(format!("project/.project/cards/{id}.json"));
         if conflicting_external_edit {
             let before = fs::read_to_string(&source).unwrap();
             fs::write(
@@ -462,7 +462,7 @@ fn run_search_upgrade(body_only: bool) {
         }}),
     );
     assert_eq!(edited.http_status, 200);
-    let source_path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let source_path = env.root.join(format!("project/.project/cards/{id}.json"));
     let bytes = fs::read(&source_path).unwrap();
     drop(engine);
 
@@ -611,7 +611,7 @@ fn incremental_projection_preserves_other_sources_and_handles_invalid_delete_rec
     let other = second.body["result"]["resource"]["metadata"]["id"]
         .as_str()
         .unwrap();
-    let path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let path = env.root.join(format!("project/.project/cards/{id}.json"));
     let original = fs::read(&path).unwrap();
     let targets = [(Kind::Card, id.to_owned())];
     fs::write(&path, b"unfinished external edit").unwrap();
@@ -703,7 +703,7 @@ fn foreground_project_read_reconciles_external_changes_with_a_bounded_ttl() {
     let id = card.body["result"]["resource"]["metadata"]["id"]
         .as_str()
         .unwrap();
-    let path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let path = env.root.join(format!("project/.project/cards/{id}.json"));
     let original = fs::read_to_string(&path).unwrap();
     fs::write(
         &path,

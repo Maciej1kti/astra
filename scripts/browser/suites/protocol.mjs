@@ -30,8 +30,12 @@ await runBrowserSuite(
         schedule: { start: "2026-09-07", end: "2026-09-09" },
       };
       await writeFile(
-        join(project.folder, ".project", "cards", `${id}.md`),
-        `---\n${JSON.stringify(metadata)}\n---\nSynthetic content.\n`,
+        join(project.folder, ".project", "cards", `${id}.json`),
+        JSON.stringify(
+          { type: "card", metadata, body: "Synthetic content.\n" },
+          null,
+          2,
+        ) + "\n",
       );
     }
     const target = `/api/v1/projects/${project.id}/cards/${ids[0]}`;

@@ -229,16 +229,16 @@ fn missing_precondition_and_invalid_source_never_write() {
     assert_eq!(reply.http_status, 428);
     assert_eq!(source(&store), before);
     fs::write(
-        store.directory.path().join("project.md"),
-        b"invalid YAML source",
+        store.directory.path().join("project.json"),
+        b"invalid JSON source",
     )
     .unwrap();
-    let cmd = command(&journal, Some(document::version(b"invalid YAML source")));
+    let cmd = command(&journal, Some(document::version(b"invalid JSON source")));
     let reply = Writer { journal: &journal }
         .execute(&mut store, &cmd, vec![], now_millis(), rename)
         .unwrap();
     assert_eq!(reply.body["error"]["code"], "DOCUMENT_INVALID");
-    assert_eq!(source(&store), b"invalid YAML source");
+    assert_eq!(source(&store), b"invalid JSON source");
 }
 
 #[test]
@@ -488,7 +488,7 @@ fn external_edits_after_prepared_are_not_overwritten() {
     assert_eq!(reply.http_status, 202);
     assert_contract(&reply, "CommandStatus");
     fs::write(
-        store.directory.path().join("project.md"),
+        store.directory.path().join("project.json"),
         b"external edit must survive",
     )
     .unwrap();
@@ -616,7 +616,7 @@ fn replacement_symlink_after_prepared_requires_review() {
             }
         })
         .unwrap();
-    let target = store.directory.path().join("project.md");
+    let target = store.directory.path().join("project.json");
     fs::remove_file(&target).unwrap();
     fs::write(env.root.join("outside"), b"untouchable").unwrap();
     std::os::unix::fs::symlink(env.root.join("outside"), &target).unwrap();

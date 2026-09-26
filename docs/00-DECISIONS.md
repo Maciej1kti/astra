@@ -1,5 +1,8 @@
 # 00. Decyzje, status i reguły interpretacji
 
+Current source storage uses the JSON envelope defined in [ADR-046](ADR-046-JSON-SOURCES.md).
+References to YAML below describe the historical handoff and are superseded.
+
 Pakiet jest specyfikacją wykonawczą. **MUSI** określa wymóg, **POWINIEN** preferencję wymagającą uzasadnienia odstępstwa, **MOŻE** element fakultatywny. [U] to ustalenie użytkownika; [B] to przyjęty baseline projektowy dla Astry; [S] to wybór po próbie. Odmienne znaczenie etykiet UI nie może zmieniać wartości maszynowych.
 
 ## Zamrożone wymagania [U]

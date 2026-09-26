@@ -178,7 +178,7 @@ fn classify(root: &Path, path: &Path, project: &str) -> Option<Option<(Kind, Str
     let parts: Vec<_> = relative.iter().filter_map(|part| part.to_str()).collect();
     match parts.as_slice() {
         [] | ["cards" | "milestones" | "updates"] => None,
-        ["project.md"] => Some(Some((Kind::Project, project.into()))),
+        ["project.json"] => Some(Some((Kind::Project, project.into()))),
         [directory, filename] => {
             let kind = match *directory {
                 "cards" => Kind::Card,
@@ -186,7 +186,7 @@ fn classify(root: &Path, path: &Path, project: &str) -> Option<Option<(Kind, Str
                 "updates" => Kind::Update,
                 _ => return Some(None),
             };
-            let Some(id) = filename.strip_suffix(".md") else {
+            let Some(id) = filename.strip_suffix(".json") else {
                 return Some(None);
             };
             if uuid::Uuid::parse_str(id)
@@ -254,12 +254,12 @@ mod tests {
             ".project/.local/state.sqlite",
             ".project/cards/.tmp-write",
             "src/main.rs",
-            ".project/cards/invalid.md",
+            ".project/cards/invalid.json",
         ] {
             assert_eq!(classify(root, &root.join(suffix), id), Some(None));
         }
         assert_eq!(
-            classify(root, &root.join(format!(".project/cards/{id}.md")), id),
+            classify(root, &root.join(format!(".project/cards/{id}.json")), id),
             Some(Some((Kind::Card, id.into())))
         );
         assert_eq!(classify(root, &root.join(".project/cards"), id), None);

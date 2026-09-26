@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local-projects.invalid/schemas/domain-v1.json",
   "title": "Local Projects — file contract 1",
-  "description": "Walidacja sparsowanych dokumentów; reguły domenowe i limity bajtów są osobne.",
+  "description": "Canonical JSON project sources use the shared type, metadata, body envelope. Markdown content is stored as string values; source location and type must match.",
   "oneOf": [
     {
       "$ref": "#/$defs/ProjectDocument"

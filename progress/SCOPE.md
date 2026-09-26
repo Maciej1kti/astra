@@ -191,3 +191,13 @@ Add card conversations in the editor, visible comment indicators on cards and
 CLI/API access for bots. Distinguish human and bot authors and retain the complete
 comment history in each card's Markdown source. This is separate from the removed
 card reports and does not restore card-targeted project reports.
+
+## JSON project sources — owner direction, 2026-09-26
+
+Replace Markdown/YAML source containers with JSON for every project resource,
+using one schema-defined type/metadata/body envelope. The owner explicitly
+permits rewriting or recreating the small test dataset. Preserve it where
+possible, including comment history. This authorizes the current one-time format
+conversion; it does not add a general migration framework to v1. Documentation
+and descriptions remain Markdown where appropriate, with descriptions stored as
+JSON string values. Rebuild and restart the existing manual app after verification.

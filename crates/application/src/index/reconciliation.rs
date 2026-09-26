@@ -123,7 +123,7 @@ AND validity!='unavailable'",
             "SELECT EXISTS(SELECT 1
 FROM projection_issues
 WHERE project_id=?1
-AND path='project.md'
+AND path='project.json'
 AND code=?2)",
             params![project_id, code],
             |r| r.get(0),
@@ -133,7 +133,7 @@ AND code=?2)",
     path,
     code)
 VALUES (?1,
-    'project.md',
+    'project.json',
     ?2)
 ON CONFLICT (project_id,
     path) DO UPDATE

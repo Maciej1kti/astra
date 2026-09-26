@@ -249,7 +249,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(reply.http_status, 202);
-        assert!(folder.path().join(".project/project.md").is_file());
+        assert!(folder.path().join(".project/project.json").is_file());
         let cancelled_id = Uuid::new_v4().to_string();
         picker
             .start_with(

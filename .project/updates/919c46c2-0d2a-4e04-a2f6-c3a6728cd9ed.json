@@ -1,0 +1,21 @@
+{
+  "body": "",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Owner"
+    },
+    "id": "919c46c2-0d2a-4e04-a2f6-c3a6728cd9ed",
+    "kind": "resolution",
+    "recorded_at": "2026-09-24T12:42:20.433Z",
+    "resolves": [
+      "45081f70-ce33-43dc-b15c-e09b9ef94d18"
+    ],
+    "summary": "Resolved: Astra and loai project source is tracked in Git across Linux and Mac Mini. The loai project now has one shared ID and matching source on both hosts. Focus membership still differs because it lives in each host workspace.json (Linux has two Astra pins; Mac has one other pin). Owner preference: derive pin membership from project files while allowing local order; design and protocol change remain open.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

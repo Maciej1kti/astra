@@ -1,0 +1,18 @@
+{
+  "body": "",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "CLI user"
+    },
+    "id": "776bccbc-08b4-4b85-b6c4-379b8fbc9535",
+    "kind": "result",
+    "recorded_at": "2026-09-23T08:05:21.870Z",
+    "summary": "Removed the stale Try Local Projects registration and its local synthetic folder. Unregistered the missing olek path and removed its orphaned Focus reference without deleting project source files. The project list now contains only ready astra and loai entries with index_snapshot freshness.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

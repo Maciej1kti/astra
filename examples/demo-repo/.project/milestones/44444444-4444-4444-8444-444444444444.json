@@ -1,0 +1,16 @@
+{
+  "body": "## Warunek osiągnięcia\n\nUżytkownik samodzielnie wykonuje eksport i sprawdza wynik.\n",
+  "metadata": {
+    "archived": false,
+    "created_at": "2026-09-05T10:00:00Z",
+    "due": {
+      "date": "2026-09-25"
+    },
+    "id": "44444444-4444-4444-8444-444444444444",
+    "position": "80000000000000000000000000000000",
+    "status": "active",
+    "title": "Demonstracja kompletnego eksportu",
+    "updated_at": "2026-09-05T10:00:00Z"
+  },
+  "type": "milestone"
+}

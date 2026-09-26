@@ -27,7 +27,7 @@ Awaria: proces zabity przed i po każdym kroku intent/temp/sync/rename/journal/i
 
 Events: zmiana między snapshot a subscribe, stream epoch reset, overflow, reconnect po długiej przerwie, nieaktualny cursor strony, slow client backpressure, odwołanie sesji podczas SSE, indeks degraded po committed.
 
-Security: unauth read/write, CSRF i Origin, DNS rebinding Host, local-only route na TCP, cookie revoke, token w URL/logu, path traversal/symlink, skrypt Markdown, nieautoryzowany registration root, nadmiarowy YAML, złośliwy backup i niekontrolowana konfiguracja Git.
+Security: unauth read/write, CSRF i Origin, DNS rebinding Host, local-only route na TCP, cookie revoke, token w URL/logu, path traversal/symlink, skrypt Markdown, nieautoryzowany registration root, oversized or deeply nested JSON, złośliwy backup i niekontrolowana konfiguracja Git.
 
 UI: keyboard-only, screen reader, 200% zoom, reduced motion, długi polski tytuł, dark/light, touch resize/move, scroll conflict, pointercancel, podgląd podczas incoming event, uncertain write, old frontend version i safe reload. Wszystkie siedem widoków z pełnym przepływem danych.
 

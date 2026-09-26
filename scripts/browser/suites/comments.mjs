@@ -116,7 +116,7 @@ await runBrowserSuite(
       assert.equal(comments()[0].author.kind, "human");
       assert.equal(comments()[1].author.kind, "agent");
       const source = await readFile(
-        join(project.folder, ".project", "cards", `${id}.md`),
+        join(project.folder, ".project", "cards", `${id}.json`),
         "utf8",
       );
       assert.ok(

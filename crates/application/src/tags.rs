@@ -169,7 +169,7 @@ impl Engine {
         }
         let cards_dir = store.directory.child("cards", false)?;
         let mut filenames = cards_dir.names()?;
-        filenames.retain(|name| name.ends_with(".md"));
+        filenames.retain(|name| name.ends_with(".json"));
         filenames.sort();
         let mut changes = Vec::new();
         let mut steps = Vec::new();
@@ -207,7 +207,7 @@ impl Engine {
                     source: error,
                 })?;
             let bytes = document::serialize(&validated)?;
-            let filename = format!("{}.md", metadata.id);
+            let filename = format!("{}.json", metadata.id);
             steps.push(Step::plan(&store.directory, &["cards", &filename], bytes)?);
             changes.push(json!({"card_id":metadata.id,"title":metadata.title,"version":card.version,"labels":next}));
         }
@@ -499,7 +499,7 @@ WHERE validity!='valid')", [], |row|row.get(0))?;
                 }
             };
             for filename in names {
-                let Some(card_id) = filename.strip_suffix(".md") else {
+                let Some(card_id) = filename.strip_suffix(".json") else {
                     continue;
                 };
                 if scanned >= MAX_SCANNED_CARDS {

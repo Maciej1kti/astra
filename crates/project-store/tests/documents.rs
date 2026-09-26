@@ -71,10 +71,12 @@ fn metadata_edits_preserve_body_and_milestone_extensions_byte_for_byte() {
 }
 
 #[test]
-fn comments_and_encoding_require_explicit_normalization() {
+fn transport_encoding_requires_explicit_normalization() {
     let original = String::from_utf8(bytes()).unwrap();
-    for prefix in ["# keep this comment\n", "# żółć 🦀\n"] {
-        let input = original.replacen("---\n", &format!("---\n{prefix}"), 1);
+    for input in [
+        format!("\u{feff}{original}"),
+        original.replace('\n', "\r\n"),
+    ] {
         let parsed = document::parse(Kind::Card, None, input.as_bytes()).unwrap();
         assert!(parsed.normalization_required);
         assert!(matches!(
@@ -82,61 +84,29 @@ fn comments_and_encoding_require_explicit_normalization() {
             Err(StoreError::NormalizationRequired)
         ));
     }
-    let inline = original.replace("\"archived\": false", "\"archived\": false # preserve me");
-    assert!(
-        document::parse(Kind::Card, None, inline.as_bytes())
-            .unwrap()
-            .normalization_required
-    );
+}
+
+#[test]
+fn rejects_duplicate_keys_at_every_level_and_invalid_json() {
+    let original = String::from_utf8(bytes()).unwrap();
     for input in [
-        format!("\u{feff}{original}"),
-        original.replace('\n', "\r\n"),
+        original.replacen("{", "{\"type\":\"card\",", 1),
+        original.replacen(
+            "\"metadata\": {",
+            "\"metadata\": {\"title\":\"duplicate\",",
+            1,
+        ),
+        original.replacen("\"archived\": false", "\"archived\": false // comment", 1),
+        format!("{original} {{}}"),
+        original[..original.len() - 2].to_owned(),
+        "---\n{}\n---\nLegacy Markdown".into(),
     ] {
-        assert!(
-            document::parse(Kind::Card, None, input.as_bytes())
-                .unwrap()
-                .normalization_required
-        );
-    }
-}
-
-#[test]
-fn hashes_inside_scalars_are_content_including_unicode_and_blocks() {
-    let original = String::from_utf8(bytes()).unwrap();
-    for title in [
-        "'żółć # 🦀'",
-        "\"🦀 # title\"",
-        "text#hash",
-        "|\n  🦀 # this is content\n  second line",
-    ] {
-        let original_title = format!(
-            "\"title\": {}",
-            serde_json::to_string(&card()["metadata"]["title"]).unwrap()
-        );
-        let input = original.replace(&original_title, &format!("\"title\": {title}"));
-        let parsed = document::parse(Kind::Card, None, input.as_bytes()).unwrap();
-        assert!(!parsed.normalization_required, "{title}");
-    }
-}
-
-#[test]
-fn rejects_yaml_abuse_and_invalid_source_identity() {
-    let original = String::from_utf8(bytes()).unwrap();
-    for extra in [
-        "archived: true\n",
-        "x-a: &anchor [1, 2]\n",
-        "x-a: !!str value\n",
-        "x-a: !custom value\n",
-        "<<: {x-a: 1}\n",
-        "x-a:\n\tvalue: true\n",
-        "x-a: [\n",
-    ] {
-        let input = original.replacen("---\n", &format!("---\n{extra}"), 1);
         assert!(
             document::parse(Kind::Card, None, input.as_bytes()).is_err(),
-            "{extra}"
+            "{input}"
         );
     }
+    assert!(document::parse(Kind::Milestone, None, &bytes()).is_err());
     assert!(
         document::parse(
             Kind::Card,
@@ -146,55 +116,84 @@ fn rejects_yaml_abuse_and_invalid_source_identity() {
         .is_err()
     );
     assert!(document::parse(Kind::Card, None, &[0xff]).is_err());
-    let mut input = bytes();
-    input.push(0);
-    assert!(document::parse(Kind::Card, None, &input).is_err());
-    let input = original.replacen(
-        "---\n",
-        &format!("---\nx-big: '{}'\n", "a".repeat(65536)),
-        1,
-    );
-    assert!(document::parse(Kind::Card, None, input.as_bytes()).is_err());
-    let input = original.replacen(
-        "---\n",
-        &format!("---\nx-deep: {}0{}\n", "[".repeat(15), "]".repeat(15)),
-        1,
-    );
+    assert!(document::parse(Kind::Card, None, b"{\"body\":\"\0\"}").is_err());
+    let input = original.replace("\"title\":", "\"title\": null, \"tit\\u006ce\":");
     assert!(document::parse(Kind::Card, None, input.as_bytes()).is_err());
 }
 
 #[test]
-fn card_sources_reject_retired_connection_and_deadline_fields() {
+fn comments_markdown_and_extensions_roundtrip_as_json_values() {
+    let expected: Value =
+        serde_json::from_slice(&std::fs::read(root().join("examples/card-comments.json")).unwrap())
+            .unwrap();
+    let encoded = document::serialize(&validate_document(expected.clone()).unwrap()).unwrap();
+    assert_eq!(serde_json::from_slice::<Value>(&encoded).unwrap(), expected);
+    let parsed = document::parse(Kind::Card, None, &encoded).unwrap();
+    assert_eq!(parsed.value(), expected);
+    assert!(!parsed.normalization_required);
+    for title in [
+        "# heading",
+        "żółć # 🦀",
+        "---\nbody delimiter",
+        "quoted \"text\"",
+    ] {
+        let mut value = card();
+        value["metadata"]["title"] = json!(title);
+        let encoded = document::serialize(&validate_document(value.clone()).unwrap()).unwrap();
+        assert_eq!(
+            document::parse(Kind::Card, None, &encoded).unwrap().value(),
+            value
+        );
+    }
+}
+
+#[test]
+fn json_structure_metadata_and_document_limits_are_enforced() {
     let original = String::from_utf8(bytes()).unwrap();
-    let title_line = original
-        .lines()
-        .find(|line| line.starts_with("\"title\": "))
-        .unwrap()
-        .to_owned();
+    let large = original.replacen(
+        "\"metadata\": {",
+        &format!("\"metadata\": {{\"extra\":\"{}\",", "a".repeat(65536)),
+        1,
+    );
+    assert!(matches!(
+        document::parse(Kind::Card, None, large.as_bytes()),
+        Err(StoreError::Invalid("METADATA_LIMIT"))
+    ));
+    let deep = original.replacen(
+        "\"metadata\": {",
+        &format!(
+            "\"metadata\": {{\"extra\":{}0{},",
+            "[".repeat(15),
+            "]".repeat(15)
+        ),
+        1,
+    );
+    assert!(matches!(
+        document::parse(Kind::Card, None, deep.as_bytes()),
+        Err(StoreError::Invalid("INVALID_JSON"))
+    ));
+    let many = format!("[{}]", "0,".repeat(10_001) + "0");
+    assert!(matches!(
+        document::parse(Kind::Card, None, many.as_bytes()),
+        Err(StoreError::Invalid("INVALID_JSON"))
+    ));
+    assert!(document::parse(Kind::Card, None, &vec![b' '; document::MAX_DOCUMENT + 1]).is_err());
+}
+
+#[test]
+fn card_sources_reject_retired_fields() {
     for (field, value) in [
-        ("due", json!({"date":"2026-09-10", "kind":"hard"})),
+        ("due", json!({"date":"2026-09-10"})),
         ("review_on", json!("2026-09-10")),
         (
             "milestone_id",
             json!("44444444-4444-4444-8444-444444444444"),
         ),
         ("blocked", json!({"reason":"Waiting"})),
-        (
-            "depends_on",
-            json!(["33333333-3333-4333-8333-333333333333"]),
-        ),
+        ("depends_on", json!([])),
     ] {
-        let input = original.replacen(
-            &title_line,
-            &format!(
-                "{title_line}\n\"{field}\": {}",
-                serde_json::to_string(&value).unwrap()
-            ),
-            1,
-        );
-        assert!(
-            document::parse(Kind::Card, None, input.as_bytes()).is_err(),
-            "retired card source field {field} must be rejected"
-        );
+        let mut input = card();
+        input["metadata"][field] = value;
+        assert!(document::parse(Kind::Card, None, &serde_json::to_vec(&input).unwrap()).is_err());
     }
 }

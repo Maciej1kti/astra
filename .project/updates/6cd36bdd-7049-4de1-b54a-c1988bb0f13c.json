@@ -1,0 +1,18 @@
+{
+  "body": "The mobile header now has an opaque sticky surface below the top safe area. Calendar shows dated items much earlier, Board's all-project overview stacks populated statuses, selected Boards offer direct column jumps, and Projects uses compact cards with deletion in a deliberate actions menu.\n\nThe direct paired HTTPS app passed interaction and overflow checks at 320, 390, 768, 844 landscape and 1440px, including light and dark themes. Responsive, planning, deletion and dialogs E2E suites pass. Evidence: progress/2026-09-25-mobile-calendar-board-projects.md. A physical iPhone recheck of the native status-bar blur and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "CLI user"
+    },
+    "id": "6cd36bdd-7049-4de1-b54a-c1988bb0f13c",
+    "kind": "result",
+    "recorded_at": "2026-09-25T13:33:22.771Z",
+    "summary": "Mobile Calendar, Board and Projects refined",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

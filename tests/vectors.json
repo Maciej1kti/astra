@@ -68,8 +68,8 @@
           }
         }
       ],
-          "valid": false,
-          "reason": "Rozszerzenie karty jest usunięte"
+      "valid": false,
+      "reason": "Rozszerzenie karty jest usunięte"
     },
     {
       "id": "V06",
@@ -284,43 +284,43 @@
   "parser_cases": [
     {
       "id": "P01",
-      "path": "tests/parser-fixtures/valid.md",
+      "path": "tests/parser-fixtures/valid.json",
       "type": "card",
       "valid": true
     },
     {
       "id": "P02",
-      "path": "tests/parser-fixtures/duplicate.md",
+      "path": "tests/parser-fixtures/duplicate.json.txt",
       "type": "card",
       "valid": false
     },
     {
       "id": "P03",
-      "path": "tests/parser-fixtures/alias.md",
+      "path": "tests/parser-fixtures/legacy-markdown.txt",
       "type": "card",
       "valid": false
     },
     {
       "id": "P04",
-      "path": "tests/parser-fixtures/future-project.md",
+      "path": "tests/parser-fixtures/future-project.json",
       "type": "project",
       "valid": false
     },
     {
       "id": "P05",
-      "path": "tests/parser-fixtures/unclosed.md",
+      "path": "tests/parser-fixtures/unclosed.json.txt",
       "type": "card",
       "valid": false
     },
     {
       "id": "P06",
-      "path": "tests/parser-fixtures/custom-tag.md",
+      "path": "tests/parser-fixtures/json-comment.txt",
       "type": "card",
       "valid": false
     },
     {
       "id": "P07",
-      "path": "tests/parser-fixtures/card-extension.md",
+      "path": "tests/parser-fixtures/card-extension.json",
       "type": "card",
       "valid": false
     }

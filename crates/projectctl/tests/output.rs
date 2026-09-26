@@ -389,7 +389,7 @@ fn offline_validation_does_not_initialize_or_modify_the_selected_folder() {
     let project = root.join(".project");
     std::fs::create_dir(&project).unwrap();
     std::fs::write(
-        project.join("project.md"),
+        project.join("project.json"),
         b"invalid source remains untouched",
     )
     .unwrap();
@@ -402,7 +402,7 @@ fn offline_validation_does_not_initialize_or_modify_the_selected_folder() {
     assert_eq!(value["data"]["invalid"], 1);
     assert_eq!(value["data"]["checked"], 1);
     assert_eq!(
-        std::fs::read(project.join("project.md")).unwrap(),
+        std::fs::read(project.join("project.json")).unwrap(),
         b"invalid source remains untouched"
     );
     assert_eq!(std::fs::read_dir(&project).unwrap().count(), 1);

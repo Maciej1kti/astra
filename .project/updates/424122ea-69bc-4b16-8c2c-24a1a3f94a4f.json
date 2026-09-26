@@ -1,0 +1,18 @@
+{
+  "body": "",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "424122ea-69bc-4b16-8c2c-24a1a3f94a4f",
+    "kind": "result",
+    "recorded_at": "2026-09-07T21:03:01.822Z",
+    "summary": "Finished Kanban polish: title-only column creation and per-project collapse/scroll memory. Release browser tests passed, including identical retry without duplicate cards, navigation/reload restoration, dragging, conflicts and emulated touch. Local host updated. Owner-requested Kanban feature freeze recorded in progress/SCOPE.md; bugs and remaining device/performance verification stay in scope. Evidence: progress/E025-kanban-freeze.md. Commit 55eebb5. Physical iPhone/macOS remain untested.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

@@ -1,0 +1,18 @@
+{
+  "body": "Simplified the card modal to a compact Checklist: checkbox, editable text, remove icon and drag handle per row, with Add item and immediate saving. Pointer, touch and keyboard ordering preserve item IDs and completion; cancellation does not write.\n\nRemoved Record progress, Card updates and card Additional fields with their code and shared dependencies. Card-targeted reports and card extensions are rejected throughout source/API contracts and CLI. Project and milestone reports remain supported. The two registered projects contain five cards and no matching extensions or card-targeted reports, so no source cleanup was necessary.\n\nVerified the local gate (218 Rust, 94 JavaScript, 12 Python tests), all ten browser suites across the initial and corrective runs, and the broad HTTPS smoke. Updated the existing manual runtime; instance, epoch and all existing source versions are unchanged, both projects validate cleanly. Chromium touch emulation is not physical iPhone acceptance. Evidence: progress/2026-09-22-card-checklist.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "8ce0b8cf-ac89-44a7-82f9-3eea667ca37e",
+    "kind": "result",
+    "recorded_at": "2026-09-22T16:05:23.103Z",
+    "summary": "Compact checklist and removal of card reports",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

@@ -187,7 +187,7 @@ fn persisted_records_keep_family_labels_digest_replies_and_retry_retention() {
     assert_record(journal, &create, "card", "committed", &created);
     let source = fixture
         .root
-        .join(format!("project/.project/cards/{card}.md"));
+        .join(format!("project/.project/cards/{card}.json"));
     let bytes = std::fs::read(&source).unwrap();
     let mut patch = fixture.command(
         "PATCH",
@@ -340,7 +340,7 @@ fn rejected_command_status_preserves_the_original_error() {
     fixture.mutate(&create).unwrap();
     let source = fixture
         .root
-        .join(format!("project/.project/cards/{card}.md"));
+        .join(format!("project/.project/cards/{card}.json"));
     let stale = fixture.command(
         "PATCH",
         Kind::Card,
@@ -425,7 +425,7 @@ fn failure_to_record_a_command_cannot_commit_family_side_effects() {
     assert!(
         !fixture
             .root
-            .join(format!("project/.project/cards/{card}.md"))
+            .join(format!("project/.project/cards/{card}.json"))
             .exists()
     );
     assert!(
@@ -467,7 +467,7 @@ fn failure_to_record_a_command_cannot_commit_family_side_effects() {
             )
             .is_err()
     );
-    assert!(!second.path().join(".project/project.md").exists());
+    assert!(!second.path().join(".project/project.json").exists());
     assert_eq!(
         std::fs::read(fixture.root.join("state/workspace.json")).unwrap(),
         workspace
@@ -536,7 +536,7 @@ fn state_v1_migration_keeps_pending_intents_history_and_epoch() {
                 epoch,
                 request,
                 root.to_str().unwrap(),
-                format!("cards/{card}.md"),
+                format!("cards/{card}.json"),
                 b"before".as_slice(),
                 b"after".as_slice()
             ],

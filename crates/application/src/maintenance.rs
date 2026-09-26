@@ -103,7 +103,7 @@ impl Engine {
                 )?);
                 warnings.push(json!({
                     "code": "NORMALIZATION",
-                    "message": "Canonical formatting replaces YAML comments and whitespace. Original bytes are retained in this plan.",
+                    "message": "Canonical JSON formatting normalizes encoding and whitespace. Original bytes are retained in this plan.",
                 }));
                 "normalize"
             }
@@ -128,7 +128,7 @@ impl Engine {
                     false,
                 )?;
                 let mut names = directory.names()?;
-                names.retain(|name| name.ends_with(".md"));
+                names.retain(|name| name.ends_with(".json"));
                 names.sort();
                 collection_guard = Some((
                     directory
@@ -216,7 +216,11 @@ impl Engine {
                 let bytes = source
                     .read(&name)?
                     .ok_or(AppError::Unavailable("relocation project source"))?;
-                steps.push(Step::plan(&directory, &[".project", "project.md"], bytes)?);
+                steps.push(Step::plan(
+                    &directory,
+                    &[".project", "project.json"],
+                    bytes,
+                )?);
                 workspace
                     .projects
                     .iter_mut()

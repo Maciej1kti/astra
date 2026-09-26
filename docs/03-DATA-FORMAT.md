@@ -1,25 +1,37 @@
 # 03. Format danych i inwarianty domeny
 
-## Kontrakt plikowy
+## Source contract
 
-`contracts/domain.schema.json` jest schematem JSON Schema 2020-12 [S22]. Waliduje reprezentację sparsowanego dokumentu `{type, metadata, body}`; na dysku `type` wynika z lokalizacji, metadata jest front matter, body to pozostałe bajty tekstu. Sam schema nie sprawdza cykli grafu, relacji, istnienia folderu ani poprawności wszystkich zakresów — reguły domenowe są dodatkowe.
+`contracts/domain.schema.json` is the JSON Schema 2020-12 contract [S22]. Every
+source file uses the same `{type, metadata, body}` envelope. `type` is `project`,
+`card`, `milestone` or `update`; metadata follows the corresponding schema and
+`body` is a Markdown string. The schema and server domain rules jointly validate
+dates, ranges and references. See [ADR-046](ADR-046-JSON-SOURCES.md).
 
-Plik UTF-8 rozpoczyna się dokładnie delimitrem `---` w pierwszej linii i zamyka front matter następnym takim delimitem. Nagłówek MUSI być jedną mapą. Zakazane: duplicate keys, anchors, aliases, merge keys, własne tagi, wiele dokumentów YAML i tabulatory jako wcięcia. Daty, czasy, UUID i rank zapisujemy jako stringi; wartości bool jako bool. Żadnego automatycznego zamieniania dat na typ JS Date. UTF-8 BOM i CRLF można odczytać, ale normalizacja wymaga jawnego kontraktu; pisarz generuje UTF-8 bez BOM i LF.
+Files contain one UTF-8 JSON object. Duplicate keys at any depth, trailing values,
+comments, invalid UTF-8, NUL and excessive depth/node counts are rejected.
+Dates, instants, UUIDs and positions remain strings. Canonical writes use sorted
+keys, two-space indentation, LF and a final newline. BOM and CRLF sources remain
+readable but require an explicit, versioned normalization before normal writes.
+Unrelated edits preserve the exact decoded Markdown string, including whitespace
+and newlines; the file's JSON escaping is transport syntax.
 
-Body zachowujemy bajt w bajt przy operacji niedotyczącej body, łącznie z pustymi liniami i końcowym newline. Wymiana body jest osobną świadomą zmianą. Pole tekstowe nie wykonuje skryptów ani komend. Parser MUSI odrzucać niepoprawny UTF-8, NUL i przekroczenie limitów zanim stworzy duży obiekt w pamięci.
+Unknown fields block writes. Only milestones and reports allow bounded `x-*`
+metadata extensions. The shared parser checks document size before decoding and
+bounds structure while parsing. Validation, resource versions and durable
+prepare/write/commit behavior are unchanged.
 
-Headers use canonical formatting. Unknown fields block normal writes. Bounded
-`x-*` JSON extensions are supported only on milestones and updates; project and
-card metadata have closed field sets. YAML comments that serialization would
-discard cause `NORMALIZATION_REQUIRED`; the user receives a preview and an
-explicit normalization operation with backup and If-Match. A frontend flag
-cannot silently authorize normalization.
+## Source locations and identity
 
-## Lokalizacje i tożsamość
+`.project/project.json` contains the project ID and `schema_version: 1`.
+`cards/<id>.json`, `milestones/<id>.json` and `updates/<id>.json` contain matching
+metadata IDs. The explicit type must match the location. Titles are not identity;
+the server creates UUIDv4 resource IDs and UUIDv7 command IDs [S09].
 
-`project.md` zawiera `schema_version: 1` i ID projektu. Karty, milestones i updates używają nazwy `<id>.md`; ID w nagłówku musi się zgadzać. Nazwa i tytuł nie są tożsamością. Serwer generuje UUIDv4 z CSPRNG; komendy używają UUIDv7 — odrębna rola [S09]. Import nie zmienia ID bez jawnej migracji.
-
-Puste katalogi można tworzyć leniwie. Inne pliki są ignorowane z diagnostyką, nie automatycznie kasowane. `README.md`, `.gitignore` i `.local` nie są kartami. Dane `.local` nigdy nie wchodzą do indeksu treści ani właściwego backupu źródeł.
+Collection directories may be created lazily. README.md, AGENTS.md, .gitignore and
+.local remain documentation/runtime files, not resources. Legacy Markdown/YAML
+sources require the explicitly approved test-data conversion; normal reads and
+writes never fall back to them or initialize over a nonempty legacy project.
 
 ## Pola
 
@@ -34,7 +46,7 @@ Project bodies describe the goal and context. Card and milestone bodies retain t
 
 ### Card comments
 
-`comments` is an ordered history in the card's Markdown front matter. Entries
+`comments` is an ordered history in the card's JSON metadata. Entries
 contain `id`, `author`, `recorded_at` and Markdown `body`; the card description is
 unchanged. Human and bot attribution reuses `author.kind: human | agent`.
 Normal clients append with `CardPatch.append_comment`, using the observed card
@@ -61,7 +73,7 @@ version/conflict rules as every other card edit.
 List summaries expose `acceptance_progress: {total, completed}` when a checklist
 exists. Progress is a compact projection, not an acceptance decision. Full-text
 search includes criterion text as well as title and body. The existing aggregate
-front matter limit of 64 KiB still applies even when individual field limits are
+metadata limit of 64 KiB still applies even when individual field limits are
 satisfied.
 
 Tworzenie przez API potrzebuje tylko tytułu karty lub nazwy projektu; pola wymagane w pliku uzupełnia serwer. Czasy są RFC3339 UTC z `Z`. `created_at` jest niezmienne w zwykłych mutacjach; `updated_at` ustala serwer dopiero przy rzeczywistej zmianie. No-op nie zmienia czasu ani wersji. Zwykły zapis nie tworzy updated_at wcześniejszego od created_at; wykryty skok zegara obsługuje polityka admission/recovery zamiast fałszowania chronologii. Zewnętrzna edycja może pozostawić stary czas; świeżość źródła określa też hash i `observed_at` w indeksie, nie tylko nagłówek.
@@ -117,7 +129,11 @@ Nowy rank = low + floor((high−low)/2), jeżeli istnieje przerwa. Tworzenie i z
 
 ## Limity baseline
 
-Cały dokument <= 1 MiB; nagłówek <= 64 KiB; body <= 960 KiB. Title <= 240 znaków, project name <= 120, summary <= 500, label <= 48 i max 20 etykiet. Max 50 evidence na raport, 100 resolves. Max depth JSON/YAML 12 i 10 000 węzłów. Limits działają w parserze i HTTP; JSON Schema nie zastępuje limitu bajtowego.
+The entire JSON document is at most 1 MiB; canonical metadata is at most 64 KiB;
+the decoded body is at most 960 KiB. Titles are at most 240 characters, project
+names 120, summaries 500, and labels 48 with at most 20 labels. Reports permit at
+most 50 evidence entries and 100 resolutions. The parser bounds JSON depth at 12
+and nodes at 10,000. JSON Schema does not replace byte limits.
 
 Limit testowy 100 projektów/10k kart/50k raportów nie jest limitem danych. Lista i raporty są stronicowane. Nie podnosimy limitów bez pomiaru i testu nadużycia.
 

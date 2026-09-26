@@ -12,7 +12,7 @@ aktualnymi sekretami/wersjami i starego request ID nie wolno kopiować do produk
 Testy mutacji potrzebują prawdziwego serwera. Samo przejście walidacji schema
 nie dowodzi, że działa zapis, drag-and-drop, SSE ani backup.
 
-[Card comment source](card-comments.md) and its [JSON representation](card-comments.json)
+[Card comment source](card-comments.json)
 show both human and bot comments retained in a card. The matching
 [append request](requests/card-comment.json) uses a versioned CardPatch; see the
 [HTTP example](requests/card-comment.http).

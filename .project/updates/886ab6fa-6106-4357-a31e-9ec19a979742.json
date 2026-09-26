@@ -1,0 +1,18 @@
+{
+  "body": "Rebuilt from commit 7c0fe8c356803d02e0ad8f19770c1d6284e399d1 and restarted the existing local manual host at https://localhost:47832, retaining .manual/ data. Frontend release build, locked Rust release workspace build, frontend check, bundle budget, HTTPS response, CLI project context, and offline validation passed. The source validator checked 59 documents with zero issues. Node 24.11.0 was used. Rust 1.98.1 was available on this host; the repository pins 1.92.0. No source code or project acceptance state changed.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "886ab6fa-6106-4357-a31e-9ec19a979742",
+    "kind": "result",
+    "recorded_at": "2026-09-25T14:09:35.317Z",
+    "summary": "Local Astra rebuilt and restarted from commit 7c0fe8c; HTTPS, CLI, and validation checks passed.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

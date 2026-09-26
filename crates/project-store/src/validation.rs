@@ -47,10 +47,10 @@ pub fn report(directory: &Directory) -> Result<Value, StoreError> {
     };
     inspect(
         directory,
-        "project.md",
+        "project.json",
         Kind::Project,
         None,
-        "project.md".into(),
+        "project.json".into(),
     );
     for kind in [Kind::Card, Kind::Milestone, Kind::Update] {
         let name = kind.directory().unwrap();
@@ -60,7 +60,7 @@ pub fn report(directory: &Directory) -> Result<Value, StoreError> {
             Err(error) => return Err(error),
         };
         for filename in collection.names()? {
-            let Some(id) = filename.strip_suffix(".md") else {
+            let Some(id) = filename.strip_suffix(".json") else {
                 continue;
             };
             inspect(

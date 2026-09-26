@@ -1,7 +1,7 @@
 /* Generated from contracts/domain.schema.json. Run npm run contracts. Types do not replace server validation. */
 
 /**
- * Walidacja sparsowanych dokumentów; reguły domenowe i limity bajtów są osobne.
+ * Canonical JSON project sources use the shared type, metadata, body envelope. Markdown content is stored as string values; source location and type must match.
  */
 export type LocalProjectsFileContract1 =
   ProjectDocument | CardDocument | MilestoneDocument | UpdateDocument | Workspace;

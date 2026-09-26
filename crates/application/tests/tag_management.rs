@@ -64,14 +64,14 @@ impl Environment {
             document::serialize(&project_domain::validate_document(value).unwrap()).unwrap();
         let project = Directory::open(&self.root.join(project_folder).join(".project")).unwrap();
         let cards = project.child("cards", true).unwrap();
-        cards.replace(&format!("{id}.md"), &bytes, None).unwrap();
+        cards.replace(&format!("{id}.json"), &bytes, None).unwrap();
         id
     }
     fn card_bytes(&self, folder: &str, id: &str) -> Vec<u8> {
         fs::read(
             self.root
                 .join(folder)
-                .join(format!(".project/cards/{id}.md")),
+                .join(format!(".project/cards/{id}.json")),
         )
         .unwrap()
     }
@@ -382,7 +382,7 @@ fn catalog_and_preview_report_invalid_cards_and_unavailable_projects_individuall
     let broken = env.card("Readable", "Broken source", json!(["Source"]), false);
     fs::write(
         env.root
-            .join(format!("Readable/.project/cards/{broken}.md")),
+            .join(format!("Readable/.project/cards/{broken}.json")),
         b"invalid source",
     )
     .unwrap();

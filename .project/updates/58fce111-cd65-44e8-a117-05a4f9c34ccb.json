@@ -1,0 +1,19 @@
+{
+  "body": "Pinned cards form a vertical stack with drop-to-save ordering and Alt+Up/Down keyboard support. Hidden and unavailable pins retain their slots. Confirmed cancellation, conflict protection, stable retries across navigation and persistence after reload. The local gate, three release browser suites and broad HTTPS smoke passed. The updated manual host preserves source versions and the existing Focus list; both projects validate cleanly. Evidence: progress/2026-09-22-focus-inline-order.md.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "evidence": [],
+    "id": "58fce111-cd65-44e8-a117-05a4f9c34ccb",
+    "kind": "result",
+    "recorded_at": "2026-09-22T18:16:53.355Z",
+    "summary": "Focus cards can now be reordered directly by dragging; the Arrange focus modal is removed.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

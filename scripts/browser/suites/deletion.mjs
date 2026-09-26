@@ -375,7 +375,7 @@ await runBrowserSuite(
                 config.projects[0].folder,
                 ".project",
                 "cards",
-                `${card.id}.md`,
+                `${card.id}.json`,
               ),
             ),
             false,

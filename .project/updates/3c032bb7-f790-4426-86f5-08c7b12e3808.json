@@ -1,0 +1,18 @@
+{
+  "body": "Card and project fields now save automatically: text after a short pause, discrete changes immediately, and closing flushes valid pending edits. Save changes and Cancel are removed. Serialized versioned writes preserve newer typing, unfinished entries and original command identity through uncertainty; deletion and Undo coordinate with pending saves.\n\nVerified 210 Rust, 93 JavaScript and 12 Python tests, the full local gate, all ten release Chrome regression suites, HTTPS smoke and planning workflows. Restarted the existing local runtime and verified the served assets, unchanged identity/epoch and retained registrations. Physical device and power-loss acceptance remain open. Evidence: progress/2026-09-22-editor-autosave.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "3c032bb7-f790-4426-86f5-08c7b12e3808",
+    "kind": "result",
+    "recorded_at": "2026-09-22T14:23:34.134Z",
+    "summary": "Card and project editors save automatically",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

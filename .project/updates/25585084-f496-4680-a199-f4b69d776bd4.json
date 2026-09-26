@@ -1,0 +1,18 @@
+{
+  "body": "Project folder assignment now uses the card-tag picker interaction: confirm a name or suggestion, show a removable chip, and preserve unadded input as a draft. The project still has one optional folder. Folder suggestion loading was corrected.\n\nThe full local gate and Focus, tags, editor and autosave browser regressions pass. The mobile modal was visually reviewed in Chromium. The existing remote app was restarted and serves the verified assets with the same command epoch and instance identity. Evidence: progress/2026-09-26-folder-chips.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "25585084-f496-4680-a199-f4b69d776bd4",
+    "kind": "result",
+    "recorded_at": "2026-09-26T12:39:17.897Z",
+    "summary": "Project folders now use tag-style chips",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

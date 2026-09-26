@@ -50,7 +50,6 @@ fn main() {
             let meta = json!({
                 "id": id,
                 "title": format!("Synthetic card {c}"),
-                "kind": "outcome",
                 "status": if c%3==0{"active"}else{"planned"},
                 "priority": "normal",
                 "position": format!("{:032x}",(u128::MAX/(cards as u128+1))*(c as u128+1)),
@@ -58,14 +57,14 @@ fn main() {
                 "created_at": "2026-09-05T10:00:00Z",
                 "updated_at": "2026-09-05T10:00:00Z",
             });
-            // JSON object syntax is valid YAML and avoids template-specific metadata.
+            // The fixture uses the same JSON envelope as every source document.
             fs::write(
-                path.path().join(format!(".project/cards/{id}.md")),
-                format!(
-                    "---\n{}\n---\n{}",
-                    serde_json::to_string(&meta).unwrap(),
-                    "Synthetic body. ".repeat(32)
-                ),
+                path.path().join(format!(".project/cards/{id}.json")),
+                serde_json::to_vec_pretty(&json!({
+                    "type": "card", "metadata": meta,
+                    "body": "Synthetic body. ".repeat(32),
+                }))
+                .unwrap(),
             )
             .unwrap();
             if c == 0 {
@@ -89,11 +88,12 @@ fn main() {
                 "recorded_at": "2026-09-05T10:00:00Z",
             });
             fs::write(
-                path.path().join(format!(".project/updates/{id}.md")),
-                format!(
-                    "---\n{}\n---\nShort synthetic report.\n",
-                    serde_json::to_string(&meta).unwrap()
-                ),
+                path.path().join(format!(".project/updates/{id}.json")),
+                serde_json::to_vec_pretty(&json!({
+                    "type": "update", "metadata": meta,
+                    "body": "Short synthetic report.\n",
+                }))
+                .unwrap(),
             )
             .unwrap();
         }

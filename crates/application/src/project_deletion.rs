@@ -89,7 +89,7 @@ fn validate_project_source(root_path: &Path, id: &str) -> Result<(), AppError> {
         .child(".project", false)
         .map_err(tree_error)?;
     let bytes = project
-        .read("project.md")
+        .read("project.json")
         .map_err(tree_error)?
         .ok_or_else(|| AppError::reject(409, "PROJECT_DOCUMENT_MISSING"))?;
     document::parse(Kind::Project, Some(id), &bytes)

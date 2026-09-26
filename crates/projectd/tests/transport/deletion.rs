@@ -256,7 +256,7 @@ async fn deletion_transport_rejects_missing_stale_and_extra_preconditions() {
     assert_eq!(error["error"]["code"], "VALIDATION_FAILED");
 
     fs::write(
-        Path::new(&app.project).join(".project/added-after-plan.md"),
+        Path::new(&app.project).join(".project/added-after-plan.json"),
         b"new",
     )
     .unwrap();
@@ -277,10 +277,14 @@ async fn deletion_transport_rejects_missing_stale_and_extra_preconditions() {
     let error: Value = response.json().await.unwrap();
     project_application::wire::validate("Error", &error).unwrap();
     assert_eq!(error["error"]["code"], "VERSION_CONFLICT");
-    assert!(Path::new(&app.project).join(".project/project.md").exists());
     assert!(
         Path::new(&app.project)
-            .join(".project/added-after-plan.md")
+            .join(".project/project.json")
+            .exists()
+    );
+    assert!(
+        Path::new(&app.project)
+            .join(".project/added-after-plan.json")
             .exists()
     );
 }
@@ -310,7 +314,7 @@ async fn card_delete_over_unix_removes_source_and_replays_original_identity() {
     assert!(
         !Path::new(&app.project)
             .join(".project/cards")
-            .join(format!("{card}.md"))
+            .join(format!("{card}.json"))
             .exists()
     );
     let replay: Value = delete().send().await.unwrap().json().await.unwrap();
@@ -385,8 +389,8 @@ async fn project_deletion_plan_rejects_symlink_hardlink_and_fifo_entries() {
         let source = Path::new(&app.project).join(".project");
         let entry = source.join("unsafe-entry");
         match variant {
-            "symlink" => symlink(Path::new("project.md"), &entry).unwrap(),
-            "hardlink" => fs::hard_link(source.join("project.md"), &entry).unwrap(),
+            "symlink" => symlink(Path::new("project.json"), &entry).unwrap(),
+            "hardlink" => fs::hard_link(source.join("project.json"), &entry).unwrap(),
             "fifo" => {
                 assert!(
                     std::process::Command::new("mkfifo")
@@ -417,6 +421,6 @@ async fn project_deletion_plan_rejects_symlink_hardlink_and_fifo_entries() {
                 | Some("PROJECT_TREE_SPECIAL_FILE_OR_HARDLINK")
                 | Some("PROJECT_TREE_CHANGED")
         ));
-        assert!(source.join("project.md").exists());
+        assert!(source.join("project.json").exists());
     }
 }

@@ -344,10 +344,13 @@ impl ProjectStore {
         }
         match kind.directory() {
             // child() verifies this directory before opening the collection.
-            Some(name) => Ok((self.directory.child(name, create)?, format!("{id}.md"))),
+            Some(name) => Ok((self.directory.child(name, create)?, format!("{id}.json"))),
             None => {
                 self.directory.verify()?;
-                Ok((Directory::open(self.directory.path())?, "project.md".into()))
+                Ok((
+                    Directory::open(self.directory.path())?,
+                    "project.json".into(),
+                ))
             }
         }
     }

@@ -162,7 +162,7 @@ fn read_receipts_are_atomic_shared_and_do_not_modify_reports() {
     let id = report.body["result"]["resource"]["metadata"]["id"]
         .as_str()
         .unwrap();
-    let path = env.root.join(format!("project/.project/updates/{id}.md"));
+    let path = env.root.join(format!("project/.project/updates/{id}.json"));
     let original = fs::read(&path).unwrap();
     assert_eq!(
         engine.get(&project, Kind::Update, id).unwrap()["read"],
@@ -248,7 +248,7 @@ fn broken_workspace_keeps_diagnostics_available_without_recreating_sources() {
         let env = Environment::new();
         let engine = env.engine();
         let project = register(&engine, &env.path());
-        let source = fs::read(env.root.join("project/.project/project.md")).unwrap();
+        let source = fs::read(env.root.join("project/.project/project.json")).unwrap();
         drop(engine);
         let workspace = env.root.join("state/workspace.json");
         if missing {
@@ -271,7 +271,7 @@ fn broken_workspace_keeps_diagnostics_available_without_recreating_sources() {
         );
         assert!(!diagnostics.to_string().contains("broken workspace"));
         assert_eq!(
-            fs::read(env.root.join("project/.project/project.md")).unwrap(),
+            fs::read(env.root.join("project/.project/project.json")).unwrap(),
             source
         );
         if missing {

@@ -55,7 +55,7 @@ pub(crate) fn collection(
     };
     let mut values = Vec::new();
     for filename in directory.names()? {
-        if let Some(id) = filename.strip_suffix(".md")
+        if let Some(id) = filename.strip_suffix(".json")
             && Uuid::parse_str(id).is_ok()
         {
             values.push(read(store, kind, id)?);

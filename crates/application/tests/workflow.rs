@@ -42,7 +42,7 @@ fn full_legacy_saved_plan_preserves_approval_preview_extensions_and_steps() {
     let record = json!({
         "id":"22222222-2222-4222-8222-222222222222", "kind":"relocate",
         "project_id":"11111111-1111-4111-8111-111111111111", "expires_at":1788825600000i64,
-        "steps":[{"root":"/synthetic/new", "identity":[12,34], "path":[".project","project.md"], "before":[1,2], "after":[3,4]}],
+        "steps":[{"root":"/synthetic/new", "identity":[12,34], "path":[".project","project.json"], "before":[1,2], "after":[3,4]}],
         "view":{
             "plan_id":"22222222-2222-4222-8222-222222222222", "kind":"relocate",
             "project_id":"11111111-1111-4111-8111-111111111111", "display_path":"/synthetic/new",
@@ -50,7 +50,7 @@ fn full_legacy_saved_plan_preserves_approval_preview_extensions_and_steps() {
             "expires_at":"2026-09-08T00:00:00.000Z", "future_preview":{"retained":true}
         },
         "approved_root":{"root_id":"33333333-3333-4333-8333-333333333333", "relative_path":"new", "identity":[12,34]},
-        "collection_guard":["/synthetic/new/.project/cards",["one.md","two.md"]]
+        "collection_guard":["/synthetic/new/.project/cards",["one.json","two.json"]]
     });
     let plan: Plan = serde_json::from_value(record.clone()).unwrap();
     assert_eq!(serde_json::to_value(&plan).unwrap(), record);
@@ -102,7 +102,7 @@ fn restart_recovers_a_raw_legacy_registration_plan_with_approved_root() {
     // This is the previous persisted format, assembled without serializing Plan.
     let record = json!({"id":plan_id,"kind":"registration","project_id":project_id,"expires_at":now+300_000,
         "steps":[
-            {"root":project.path(),"identity":project.identity().unwrap(),"path":[".project","project.md"],"before":null,"after":project_bytes},
+            {"root":project.path(),"identity":project.identity().unwrap(),"path":[".project","project.json"],"before":null,"after":project_bytes},
             {"root":state.path(),"identity":state.identity().unwrap(),"path":["workspace.json"],"before":before_workspace,"after":after_workspace}
         ],
         "view":{"plan_id":plan_id,"project_id":project_id,"expires_at":instant(now+300_000),
@@ -151,7 +151,7 @@ fn restart_recovers_a_raw_legacy_registration_plan_with_approved_root() {
         project
             .child(".project", false)
             .unwrap()
-            .read("project.md")
+            .read("project.json")
             .unwrap()
             .unwrap(),
         project_bytes

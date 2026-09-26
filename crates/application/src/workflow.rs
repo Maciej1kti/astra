@@ -93,7 +93,7 @@ impl Plan {
         };
         let directory = Directory::open(Path::new(path))?;
         let mut actual = directory.names()?;
-        actual.retain(|name| name.ends_with(".md"));
+        actual.retain(|name| name.ends_with(".json"));
         actual.sort();
         Ok(&actual == expected)
     }

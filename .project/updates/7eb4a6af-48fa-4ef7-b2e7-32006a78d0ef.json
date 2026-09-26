@@ -1,0 +1,18 @@
+{
+  "body": "",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "CLI user"
+    },
+    "id": "7eb4a6af-48fa-4ef7-b2e7-32006a78d0ef",
+    "kind": "result",
+    "recorded_at": "2026-09-23T10:43:55.240Z",
+    "summary": "Manual launcher now serves HTTPS on the verified Tailscale IPv4 address for phone testing. Mac-side HTTPS and CLI checks pass; phone connection remains unverified. The full gate stops at an existing macOS mkfifoat test compile error. Evidence: progress/2026-09-23-manual-tailnet-access.md.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

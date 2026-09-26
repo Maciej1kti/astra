@@ -608,7 +608,7 @@ paths:
       summary: Preview permanent deletion of the project's .project directory
       description: >-
         Reads a bounded inventory without modifying the project. The returned
-        version is the precondition for deleteProject, not the project.md version.
+        version is the precondition for deleteProject, not the project.json version.
         Added or changed entries invalidate the preview. Symlinks and unsupported
         filesystem entries are rejected; no links are followed for deletion.
       parameters:
@@ -2782,6 +2782,7 @@ components:
       - version
       additionalProperties: false
     CardResource:
+      description: Source document stored as cards/<id>.json using the shared type, metadata, body envelope; version describes the exact source bytes.
       type: object
       properties:
         type:

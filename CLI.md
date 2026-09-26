@@ -127,7 +127,7 @@ projectctl project delete PROJECT_ID --if-version DELETION_PLAN_VERSION
 ```
 
 Review the returned `.project` path, file count and byte count. Use the preview's
-version, not the version of `project.md`. The command physically removes the whole
+version, not the version of `project.json`. The command physically removes the whole
 `.project/` directory and its workspace registration/focus entries. Other files
 in the repository remain. A changed tree or workspace rejects the stale preview;
 read and review a new preview before issuing a new command. There is no restore.
@@ -254,6 +254,6 @@ projectctl --project /absolute/project card comment CARD_ID --body-file comment.
 `--body-file -` reads stdin; `--request-id` and `--epoch` retain the normal retry
 identity. Read a new version for a new comment; an uncertain retry retains the
 original version and payload. `card get` and bounded `context` include history,
-which lives in `comments` in the card's `.md` front matter. Comments cannot be
+which lives in `comments` in the card's `.json` metadata. Comments cannot be
 replaced by `card set` or removed by undo. See [ADR-045](docs/ADR-045-CARD-COMMENTS.md)
 for limits and conflict handling.

@@ -6,17 +6,13 @@ fn project_undo_rejects_historical_retired_metadata_without_resurrection() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
-    let source_path = env.root.join("project/.project/project.md");
+    let source_path = env.root.join("project/.project/project.json");
     let current = fs::read(&source_path).unwrap();
     let current_version = project_store::document::version(&current);
-    let mut historical = String::from_utf8(current.clone()).unwrap();
-    historical = historical.replacen(
-        "\"state\": \"active\"\n",
-        "\"state\": \"active\"\n\"phase\": \"Legacy\"\n\"review_on\": \"2026-09-16\"\n",
-        1,
-    );
-    assert!(historical.contains("\"phase\": \"Legacy\""));
-    let historical = historical.into_bytes();
+    let mut historical: Value = serde_json::from_slice(&current).unwrap();
+    historical["metadata"]["phase"] = json!("Legacy");
+    historical["metadata"]["review_on"] = json!("2026-09-16");
+    let historical = serde_json::to_vec_pretty(&historical).unwrap();
     let historical_version = project_store::document::version(&historical);
     let history_id = Uuid::new_v4().to_string();
     let request_id = Uuid::now_v7().to_string();
@@ -80,7 +76,7 @@ fn stale_target_rejection_precedes_unrelated_collection_validation_and_replays()
     );
     fs::write(
         env.root
-            .join(format!("project/.project/cards/{}.md", Uuid::new_v4())),
+            .join(format!("project/.project/cards/{}.json", Uuid::new_v4())),
         "invalid sibling",
     )
     .unwrap();
@@ -125,7 +121,7 @@ fn removed_card_fields_are_rejected_on_create_patch_and_undo() {
         .as_str()
         .unwrap()
         .to_owned();
-    let source_path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let source_path = env.root.join(format!("project/.project/cards/{id}.json"));
     let original_bytes = fs::read(&source_path).unwrap();
     let fields = [
         ("due", json!({"date":"2026-09-10", "kind":"hard"})),
@@ -168,17 +164,9 @@ fn removed_card_fields_are_rejected_on_create_patch_and_undo() {
 
         let current_bytes = fs::read(&source_path).unwrap();
         assert_eq!(current_bytes, original_bytes);
-        let current_text = String::from_utf8(current_bytes.clone()).unwrap();
-        let needle = "\"title\": \"Preserved\"\n";
-        let historical_text = current_text.replacen(
-            needle,
-            &format!(
-                "{needle}\"{field}\": {}\n",
-                serde_json::to_string(value).unwrap()
-            ),
-            1,
-        );
-        let historical = historical_text.into_bytes();
+        let mut historical: Value = serde_json::from_slice(&current_bytes).unwrap();
+        historical["metadata"][field] = value.clone();
+        let historical = serde_json::to_vec_pretty(&historical).unwrap();
         let history_id = Uuid::new_v4().to_string();
         engine
             .journal
@@ -333,7 +321,7 @@ fn card_delete_removes_source_replays_and_keeps_non_undoable_history() {
     assert_eq!(first.body["result"]["deleted"], true);
     assert!(
         !env.root
-            .join(format!("project/.project/cards/{id}.md"))
+            .join(format!("project/.project/cards/{id}.json"))
             .exists()
     );
     let replay = engine
@@ -393,7 +381,7 @@ fn card_delete_ignores_unrelated_archived_cards() {
     assert_eq!(deleted.http_status, 200, "{deleted:?}");
     assert!(
         !env.root
-            .join(format!("project/.project/cards/{target_id}.md"))
+            .join(format!("project/.project/cards/{target_id}.json"))
             .exists()
     );
 }
@@ -451,7 +439,7 @@ fn stale_card_delete_precedes_bounded_dependency_scan_and_replays() {
     );
     fs::write(
         env.root
-            .join(format!("project/.project/cards/{}.md", Uuid::new_v4())),
+            .join(format!("project/.project/cards/{}.json", Uuid::new_v4())),
         b"invalid source",
     )
     .unwrap();
@@ -527,7 +515,7 @@ fn card_delete_recovery_does_not_scan_incoming_cards() {
 
     fs::write(
         env.root
-            .join(format!("project/.project/cards/{incoming_id}.md")),
+            .join(format!("project/.project/cards/{incoming_id}.json")),
         b"invalid unrelated source",
     )
     .unwrap();
@@ -557,7 +545,7 @@ fn card_delete_projection_failure_is_repaired_after_retry() {
     let card = create(&engine, &project, "Projection delete");
     let id = card.body["result"]["id"].as_str().unwrap().to_owned();
     let version = card.body["result"]["version"].as_str().unwrap().to_owned();
-    let source = env.root.join(format!("project/.project/cards/{id}.md"));
+    let source = env.root.join(format!("project/.project/cards/{id}.json"));
     let fault = super::maintenance::projection_failure(&env);
     let request = Uuid::now_v7().to_string();
     let reply = engine
@@ -783,4 +771,34 @@ fn card_acceptance_lifecycle_keeps_status_body_and_conflict_history() {
         engine.get(&project, Kind::Card, id).unwrap()["metadata"]["acceptance"],
         completed
     );
+}
+
+#[test]
+fn json_source_noop_keeps_external_whitespace_and_observed_version() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "JSON no-op");
+    let resource = &created.body["result"]["resource"];
+    let id = resource["metadata"]["id"].as_str().unwrap();
+    let path = env.root.join(format!("project/.project/cards/{id}.json"));
+    let document: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    assert_eq!(document["type"], "card");
+    let external = format!("  {}  \n", serde_json::to_string(&document).unwrap());
+    fs::write(&path, &external).unwrap();
+    let current = engine.get(&project, Kind::Card, id).unwrap();
+    let reply = patch(
+        &engine,
+        &project,
+        id,
+        current["version"].as_str().unwrap(),
+        json!({"set":{"title":"JSON no-op"}}),
+    );
+    assert_eq!(reply.http_status, 200);
+    assert_eq!(
+        reply.body["result"]["resource"]["version"],
+        current["version"]
+    );
+    assert_eq!(fs::read(&path).unwrap(), external.as_bytes());
+    assert!(!path.with_extension("md").exists());
 }

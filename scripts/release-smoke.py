@@ -72,7 +72,7 @@ with tempfile.TemporaryDirectory(prefix='lp-release-', dir='/tmp') as temporary:
         request = str(uuid.uuid7())
         cli('--project', project, 'card', 'create', '--title', 'Copied card', '--request-id', request, '--epoch', old_epoch)
         card = cli('--project', project, 'cards')['data']['items'][0]
-        card_file = project / '.project/cards' / (card['id'] + '.md')
+        card_file = project / '.project/cards' / (card['id'] + '.json')
         source = card_file.read_bytes()
         assert cli('doctor')['data']['pending_commands'] == 0
         stop()

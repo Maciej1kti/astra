@@ -19,7 +19,7 @@ If-Match: "r1.REPLACE_WITH_OBSERVED_CARD_HASH"
 GET https://HOST.TAILNET.ts.net/api/v1/projects/PROJECT_ID/deletion-plan
 Cookie: __Host-project_session=REPLACE_FROM_PAIRED_BROWSER
 
-### Confirm permanent deletion using the preview version, not project.md's version.
+### Confirm permanent deletion using the preview version, not project.json's version.
 DELETE https://HOST.TAILNET.ts.net/api/v1/projects/PROJECT_ID
 Content-Type: application/json
 Origin: https://HOST.TAILNET.ts.net

@@ -21,14 +21,16 @@ fn completed_maintenance_survives_projection_failure(operation: &str, restart: b
         .as_str()
         .unwrap();
     let old_root = env.root.join("project");
-    let mut source_path = old_root.join(format!(".project/cards/{id}.md"));
+    let mut source_path = old_root.join(format!(".project/cards/{id}.json"));
     let input = match operation {
         "normalize" => {
-            let changed = fs::read_to_string(&source_path).unwrap().replacen(
-                "---\n",
-                "---\n# Normalize this comment\n",
-                1,
-            ) + "\nNew body to project\n";
+            let mut value: Value =
+                serde_json::from_slice(&fs::read(&source_path).unwrap()).unwrap();
+            value["body"] = json!("New body to project");
+            let changed = format!(
+                "\u{feff}{}\n",
+                serde_json::to_string_pretty(&value).unwrap()
+            );
             fs::write(&source_path, &changed).unwrap();
             json!({"operation": operation, "project_id": project, "kind": "card", "id": id,
                 "expected_version": project_store::document::version(changed.as_bytes())})
@@ -38,7 +40,7 @@ fn completed_maintenance_survives_projection_failure(operation: &str, restart: b
         "relocate" => {
             let destination = env.root.join("moved");
             fs::rename(&old_root, &destination).unwrap();
-            source_path = destination.join(format!(".project/cards/{id}.md"));
+            source_path = destination.join(format!(".project/cards/{id}.json"));
             json!({"operation": operation, "project_id": project,
                 "new_absolute_path": destination,
                 "expected_workspace_version": engine.workspace().unwrap().version})
@@ -193,11 +195,13 @@ fn index_rebuild_projection_failure_remains_pending_until_recovered() {
     let id = card.body["result"]["resource"]["metadata"]["id"]
         .as_str()
         .unwrap();
-    let source_path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let source_path = env.root.join(format!("project/.project/cards/{id}.json"));
     let plan = engine
         .maintenance_plan(&json!({"operation": "index_rebuild", "project_id": project}))
         .unwrap();
-    let source = fs::read_to_string(&source_path).unwrap() + "\nNew body after preview\n";
+    let mut value: Value = serde_json::from_slice(&fs::read(&source_path).unwrap()).unwrap();
+    value["body"] = json!("New body after preview");
+    let source = serde_json::to_string_pretty(&value).unwrap() + "\n";
     fs::write(&source_path, &source).unwrap();
     let fault = projection_failure(&env);
     let request = Uuid::now_v7().to_string();
@@ -271,9 +275,9 @@ fn maintenance_normalizes_conditionally_rebalances_and_unregisters_without_delet
     let id = first.body["result"]["resource"]["metadata"]["id"]
         .as_str()
         .unwrap();
-    let path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let path = env.root.join(format!("project/.project/cards/{id}.json"));
     let original = fs::read_to_string(&path).unwrap();
-    let commented = original.replacen("---\n", "---\n# Preserve in plan\n", 1);
+    let commented = format!("\u{feff}{original}");
     fs::write(&path, &commented).unwrap();
     let plan = engine
         .maintenance_plan(&json!({
@@ -344,7 +348,7 @@ fn maintenance_plan_rejects_intervening_source_edits_and_relocates_moved_folder(
     let id = first.body["result"]["resource"]["metadata"]["id"]
         .as_str()
         .unwrap();
-    let path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let path = env.root.join(format!("project/.project/cards/{id}.json"));
     let plan = engine
         .maintenance_plan(&json!({
             "operation": "normalize",
@@ -354,7 +358,9 @@ fn maintenance_plan_rejects_intervening_source_edits_and_relocates_moved_folder(
             "expected_version": first.body["result"]["resource"]["version"],
         }))
         .unwrap();
-    let edited = fs::read_to_string(&path).unwrap() + "\nExternal body\n";
+    let mut value: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    value["body"] = json!("External body");
+    let edited = serde_json::to_string_pretty(&value).unwrap() + "\n";
     fs::write(&path, &edited).unwrap();
     let reply = engine
         .commit_maintenance(
@@ -464,7 +470,7 @@ fn rebalance_rejects_new_collection_members_and_replays_rejection() {
     let id = first.body["result"]["resource"]["metadata"]["id"]
         .as_str()
         .unwrap();
-    let path = env.root.join(format!("project/.project/cards/{id}.md"));
+    let path = env.root.join(format!("project/.project/cards/{id}.json"));
     let original = fs::read(&path).unwrap();
     let plan = engine
         .maintenance_plan(&json!({
@@ -490,7 +496,7 @@ fn rebalance_rejects_new_collection_members_and_replays_rejection() {
         .unwrap();
     fs::remove_file(
         env.root
-            .join(format!("project/.project/cards/{added_id}.md")),
+            .join(format!("project/.project/cards/{added_id}.json")),
     )
     .unwrap();
     let replay = engine

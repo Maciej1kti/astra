@@ -477,8 +477,8 @@ AND state IN ('prepared',
         )?;
         if let Some(intent) = intent {
             let relative = command.target.kind.directory().map_or_else(
-                || "project.md".to_owned(),
-                |directory| format!("{directory}/{}.md", command.target.id),
+                || "project.json".to_owned(),
+                |directory| format!("{directory}/{}.json", command.target.id),
             );
             tx.execute(
                 "INSERT INTO write_intents(epoch,

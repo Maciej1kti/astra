@@ -95,42 +95,20 @@ def domain_valid(document: dict[str, Any]) -> None:
     # These are reference checks of supplied vectors, not all production limits.
 
 
-class BoundedFixtureLoader(yaml.SafeLoader):
-    """Strict enough to exercise the supplied small fixture set; NOT production."""
-
-
-def unique_mapping(loader: BoundedFixtureLoader, node: Any, deep: bool = False) -> dict:
-    result: dict[str, Any] = {}
-    for key_node, value_node in node.value:
-        key = loader.construct_object(key_node, deep=deep)
-        require(isinstance(key, str), "YAML key is not a string")
-        require(key != "<<", "YAML merge is forbidden")
-        require(key not in result, f"Duplicate YAML key {key}")
-        result[key] = loader.construct_object(value_node, deep=deep)
+def unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result = {}
+    for key, value in pairs:
+        require(key not in result, f"Duplicate JSON key {key}")
+        result[key] = value
     return result
-
-
-BoundedFixtureLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_mapping)
 
 
 def parse_fixture(path: Path, kind: str) -> dict[str, Any]:
     raw = path.read_bytes()
     require(len(raw) <= 1024 * 1024, "Fixture exceeds document limit")
-    text = raw.decode("utf-8", errors="strict")
-    require(not text.startswith("\ufeff"), "Fixture BOM not supported")
-    lines = text.splitlines(keepends=True)
-    require(lines and lines[0].rstrip("\r\n") == "---", "Missing opening front matter")
-    close = next((n for n in range(1, len(lines)) if lines[n].rstrip("\r\n") == "---"), None)
-    require(close is not None, "Missing closing front matter")
-    header = "".join(lines[1:close])
-    require(len(header.encode("utf-8")) <= 64 * 1024, "Header exceeds limit")
-    for token in yaml.scan(header):
-        require(not isinstance(token, (yaml.tokens.AliasToken, yaml.tokens.AnchorToken, yaml.tokens.TagToken)),
-                "Explicit tags, anchors and aliases are forbidden")
-    metadata = yaml.load(header, Loader=BoundedFixtureLoader)
-    require(isinstance(metadata, dict), "Metadata must be a mapping")
-    body = "".join(lines[close + 1:])
-    document = {"type": kind, "metadata": metadata, "body": body}
+    document = json.loads(raw.decode("utf-8", errors="strict"), object_pairs_hook=unique_json_object)
+    require(document.get("type") == kind, "Document type mismatch")
+    require(len(json.dumps(document.get("metadata"), ensure_ascii=False, indent=2).encode()) <= 64 * 1024, "Metadata exceeds limit")
     domain_valid(document)
     return document
 
@@ -168,16 +146,16 @@ def check_domain_examples() -> dict:
     return {"examples": len(paths)}
 
 
-def check_markdown_examples() -> dict:
+def check_source_examples() -> dict:
     base = ROOT / "examples/demo-repo/.project"
-    documents = [parse_fixture(base / "project.md", "project")]
-    require(documents[0] == load_json("examples/project.json"), "project Markdown != JSON")
+    documents = [parse_fixture(base / "project.json", "project")]
+    require(documents[0] == load_json("examples/project.json"), "Project source differs from example")
     for directory, kind in [("cards", "card"), ("milestones", "milestone"), ("updates", "update")]:
-        for path in sorted((base / directory).glob("*.md")):
+        for path in sorted((base / directory).glob("*.json")):
             document = parse_fixture(path, kind)
             require(path.stem == document["metadata"]["id"], f"Filename mismatch {path.name}")
             expected = f"examples/card-{path.stem}.json" if kind == "card" else f"examples/{kind}.json"
-            require(document == load_json(expected), f"Markdown != JSON {path.name}")
+            require(document == load_json(expected), f"Source differs from example {path.name}")
             documents.append(document)
     by_type = {kind: {d["metadata"]["id"]: d for d in documents if d["type"] == kind}
                for kind in ["project", "card", "milestone", "update"]}
@@ -187,7 +165,7 @@ def check_markdown_examples() -> dict:
     workspace = load_json("examples/workspace.json")
     for item in workspace["focus"]:
         require(item["project_id"] in by_type["project"] and item["card_id"] in by_type["card"], "Bad focus reference")
-    COUNTS["markdown_domain_examples"] = len(documents)
+    COUNTS["source_domain_examples"] = len(documents)
     return {"roundtrips": len(documents), "cross_references": "passed"}
 
 
@@ -416,7 +394,7 @@ def main() -> int:
         ("JSON files", check_json_files),
         ("JSON Schema and all local references", check_schemas),
         ("Domain examples", check_domain_examples),
-        ("Markdown/JSON roundtrip and cross-references", check_markdown_examples),
+        ("JSON source roundtrip and cross-references", check_source_examples),
         ("Reference validation vectors", check_vectors),
         ("OpenAPI structure", check_openapi_structure),
         ("HTTP request examples", check_api_examples),

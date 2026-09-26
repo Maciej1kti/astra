@@ -200,9 +200,9 @@ type ProjectionKeys = Vec<(String, String)>;
 
 fn relative_path(kind: &str, id: &str) -> String {
     if kind == "project" {
-        "project.md".to_owned()
+        "project.json".to_owned()
     } else {
-        format!("{kind}s/{id}.md")
+        format!("{kind}s/{id}.json")
     }
 }
 

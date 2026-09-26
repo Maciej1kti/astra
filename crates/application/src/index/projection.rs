@@ -27,7 +27,7 @@ impl Index {
                 Err(error) => return Err(error.into()),
             };
             for filename in directory.names()? {
-                let Some(id) = filename.strip_suffix(".md") else {
+                let Some(id) = filename.strip_suffix(".json") else {
                     continue;
                 };
                 if Uuid::parse_str(id).is_err() {

@@ -8,7 +8,7 @@ backward-compatible CLI ergonomics.
 
 ## Cel i transport
 
-CLI jest pierwszorzędnym klientem, nie skryptem do bezpośredniego sklejania YAML. Normalne komendy idą do `projectd` przez HTTP/1.1 nad Unix-domain socket. Ten sam dispatcher i modele co dla HTTP, ale principal powstaje z peer UID, nie z dowolnego nagłówka. UDS jest w prywatnym katalogu runtime, socket 0600, akceptowany ten sam UID. TCP nigdy nie montuje routingu `/local/v1` i nie ufa `X-Local-User`.
+CLI jest pierwszorzędnym klientem, nie skryptem do bezpośredniego sklejania JSON. Normalne komendy idą do `projectd` przez HTTP/1.1 nad Unix-domain socket. Ten sam dispatcher i modele co dla HTTP, ale principal powstaje z peer UID, nie z dowolnego nagłówka. UDS jest w prywatnym katalogu runtime, socket 0600, akceptowany ten sam UID. TCP nigdy nie montuje routingu `/local/v1` i nie ufa `X-Local-User`.
 
 Globalne flagi: `--project <exact-path>`, `--json`, `--socket <path>`, `--timeout <seconds>`, `--request-id <uuidv7>`, `--if-version <opaque-version>`. Dla normalnej zmiany agent podaje wersję uzyskaną przy odczycie, zamiast prosić klienta o automatyczne zastąpienie najnowszej. Nie ma force overwrite.
 

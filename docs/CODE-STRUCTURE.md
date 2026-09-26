@@ -117,7 +117,7 @@ and observed references. Writer
 validates the complete candidate, checks source versions again and preserves the
 existing durable prepare/write/commit sequence. Original command JSON stays in
 the journal. Source serialization retains canonical key ordering; no-op writes
-retain the original bytes. This refactor requires no source or database migration.
+retain the original bytes. The JSON source format is described in [ADR-046](ADR-046-JSON-SOURCES.md).
 
 The index separates lifecycle/storage, reconciliation, projection updates,
 queries and event replay. Board, calendar, attention and timeline projections

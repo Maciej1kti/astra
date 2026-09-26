@@ -64,7 +64,7 @@ references when removing artifacts from the current tree.
 ## Project context and coordination
 
 Project outcomes, milestones and dates live in `.project/`. Read
-`.project/README.md` and `.project/project.md`, then only the cards and reports
+`.project/README.md` and `.project/project.json`, then only the cards and reports
 relevant to the current task.
 
 Use the CLI with the explicitly selected project folder:
