@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Summary } from "../../lib/api/api";
+  import type { CardCreate } from "../../lib/contracts/api.generated";
   import type { DateProposal } from "./proposals";
   import type { CalendarLayout } from "./planning-navigation";
 
@@ -12,6 +13,7 @@
     calendarDate,
     calendarLayout,
     workspaceToday,
+    workspaceTimezone,
     onCalendarNavigate,
     search,
     open,
@@ -26,11 +28,12 @@
     calendarDate: string;
     calendarLayout: CalendarLayout;
     workspaceToday: string;
+    workspaceTimezone: string;
     onCalendarNavigate: (date: string, layout: CalendarLayout) => void;
     search: string;
     open: (row: Pick<Summary, "id" | "type" | "project_id">) => void;
     onpropose: (proposal: DateProposal) => void;
-    oncreate: (schedule: { start: string; end: string }) => void;
+    oncreate: (initial: Partial<CardCreate>) => void;
   } = $props();
   let CalendarView = $state<
     typeof import("./CalendarView.svelte").default | null
@@ -66,6 +69,7 @@
     {calendarDate}
     {calendarLayout}
     {workspaceToday}
+    {workspaceTimezone}
     {onCalendarNavigate}
     {revision}
     {weekStart}
@@ -81,6 +85,6 @@
     {search}
     {open}
     {onpropose}
-    {oncreate}
+    oncreate={(schedule) => oncreate({ schedule })}
   />
 {:else if !error}<p role="status">Loading planning view…</p>{/if}

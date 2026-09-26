@@ -25,6 +25,11 @@ files excluded. Do not deploy a service, change network
 settings or install privileged services without explicit direction. The project
 license remains deferred to the owner.
 
+The owner checks the application remotely. After each verified application change,
+rebuild the embedded frontend and release daemon, then restart the existing manual
+application with its current data, connection settings and certificates. Verify
+the existing HTTPS address before reporting that the change is available.
+
 ## Architectural invariants
 
 - Browser and CLI share server-side domain/application rules. `.project/` is the

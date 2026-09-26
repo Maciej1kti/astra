@@ -93,7 +93,7 @@
         [
           `${month}-01`,
           ...tasks
-            .map((t) => t.astra.schedule?.start ?? t.astra.due?.date)
+            .map((t) => t.plannedStart ?? t.astra.due?.date)
             .filter((value): value is string => !!value),
         ].sort()[0],
         -2,
@@ -107,7 +107,7 @@
           `${month}-28`,
           ...filtered.flatMap((row) => (row.due ? [row.due.date] : [])),
           ...tasks
-            .map((t) => t.astra.schedule?.end ?? t.astra.due?.date)
+            .map((t) => t.plannedEnd ?? t.astra.due?.date)
             .filter((value): value is string => !!value),
         ]
           .sort()
@@ -194,7 +194,7 @@
     const key = `${project}:${month}:${scale}:${chartWidth < metrics.compactWidth}`;
     const task =
       tasks.find((t) =>
-        (t.astra.schedule?.start ?? t.astra.due?.date ?? "").startsWith(month),
+        (t.plannedStart ?? t.astra.due?.date ?? "").startsWith(month),
       ) ?? tasks[0];
     if (!widget || !task || key === lastNavigation) return;
     lastNavigation = key;
@@ -356,7 +356,7 @@
   <section>
     <h3>Unscheduled cards</h3>
     <div class="unscheduled">
-      {#each cards.filter((r) => !r.schedule) as row}<button
+      {#each cards.filter((r) => !r.schedule && !r.event) as row}<button
           onclick={() => open(row)}>{row.title} · Set planned dates</button
         >{:else}<p>No unscheduled cards on this page.</p>{/each}
     </div>

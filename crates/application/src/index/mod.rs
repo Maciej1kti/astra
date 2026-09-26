@@ -55,6 +55,7 @@ impl Indexed {
             "status",
             "priority",
             "schedule",
+            "event",
             "due",
             "archived",
             "position",

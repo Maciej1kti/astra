@@ -320,3 +320,7 @@ Decision attention includes the source `report_id` alongside its subject
 `target`. Focus opens the report, and its existing update modal presents a
 read-only record instead of disabled form fields. See
 [ADR-042](ADR-042-ATTENTION-REPORT-NAVIGATION.md).
+
+Project folder filtering is described in [ADR-043](ADR-043-PROJECT-FOLDERS.md).
+Timed card events and their civil clock semantics are described in
+[ADR-044](ADR-044-TIMED-EVENTS.md).

@@ -168,3 +168,31 @@ test("project folders are preserved, changed and explicitly cleared without affe
     false,
   );
 });
+
+test("timed event edits retain timing and convert atomically to and from date plans", () => {
+  const event = { start: "2026-09-30T23:30", duration_minutes: 90 };
+  const draft = createEditorDraft(editTarget("p", card({ event })));
+  draft.common.title = "Renamed";
+  assert.deepEqual(editorPayload(draft).set.event, event);
+  assert.equal(editorPayload(draft).set.schedule, undefined);
+  draft.fields.time = "";
+  assert.deepEqual(editorPayload(draft).clear, ["event"]);
+  assert.deepEqual(editorPayload(draft).set.schedule, {
+    start: "2026-09-30",
+    end: "2026-09-30",
+  });
+  const plan = createEditorDraft(
+    editTarget(
+      "p",
+      card({ schedule: { start: "2026-09-30", end: "2026-10-02" } }),
+    ),
+  );
+  plan.fields.time = "09:15";
+  assert.deepEqual(editorPayload(plan).clear, ["schedule"]);
+  assert.deepEqual(editorPayload(plan).set.event, {
+    start: "2026-09-30T09:15",
+    duration_minutes: 60,
+  });
+  plan.fields.duration = 0;
+  assert.throws(() => editorPayload(plan), /duration/);
+});

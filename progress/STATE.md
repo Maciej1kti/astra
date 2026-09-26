@@ -6,12 +6,19 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Timed events](2026-09-26-timed-events.md) add start time and duration to cards,
+with hourly calendar views, conditional conversion, Focus attention and durable
+source/API support. Date-only cards remain plans and milestones remain separate.
+The full local gate, all 13 browser regression suites across documented runs,
+broad HTTPS smoke and planning gestures pass. The current manual app has been
+restarted for remote testing.
+
 [Project folders](2026-09-26-project-folders.md) add an optional source-backed
 category to projects. Focus filters across projects by folder, with pagination,
 source-preserving autosave and hidden-pin ordering. Existing card tags remain
 independent. The full local gate and all 12 release browser regression suites
 pass across the documented runs, as do broad HTTPS smoke and planning checks.
-The existing manual daemon was not restarted.
+The folder build was subsequently restarted at the owner's request.
 
 
 [Mobile Calendar, Board and Projects polish](2026-09-25-mobile-calendar-board-projects.md)

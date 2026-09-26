@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { TimedEvent } from "../../lib/contracts/domain.generated";
+  import { eventEnd } from "../../lib/resources/timed-event.ts";
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
@@ -18,6 +20,7 @@
     path,
     version,
     schedule,
+    event,
     title = "",
     onclose,
     onsaved,
@@ -25,12 +28,24 @@
     path: string;
     version: string;
     schedule?: { start: string; end: string };
+    event?: TimedEvent;
     title?: string;
     onclose: () => void;
     onsaved: () => void;
   } = $props();
-  let start = $state(untrack(() => schedule?.start ?? ""));
+  let start = $state(
+    untrack(() => event?.start.slice(0, 10) ?? schedule?.start ?? ""),
+  );
   let end = $state(untrack(() => schedule?.end ?? ""));
+  let time = $state(untrack(() => event?.start.slice(11) ?? ""));
+  let duration = $state(untrack(() => event?.duration_minutes ?? 60));
+  const heading = $derived(
+    event ? "Change event time" : "Change planned dates",
+  );
+  const proposal = () =>
+    event
+      ? { event: { start: `${start}T${time}`, duration_minutes: duration } }
+      : { schedule: { start, end } };
   let pending = $derived(operation.pending);
   let error = $state("");
   let busy = $derived(operation.busy);
@@ -57,11 +72,7 @@
   async function copyDraft() {
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify(
-          { path, version, schedule: { start, end }, pending },
-          null,
-          2,
-        ),
+        JSON.stringify({ path, version, ...proposal(), pending }, null, 2),
       );
       error = "Proposal copied.";
     } catch {
@@ -97,12 +108,18 @@
   }
   async function save() {
     if (accessLost || busy || pending || conflict) return;
+    try {
+      if (event) eventEnd(proposal().event!);
+    } catch (cause) {
+      error = String(cause);
+      return;
+    }
     operation.prepare(
       command(
         path,
         "PATCH",
         {
-          set: { schedule: { start, end } },
+          set: proposal(),
         },
         version,
       ),
@@ -114,14 +131,14 @@
 <dialog
   class="app-dialog dialog-small"
   use:modal
-  aria-label="Change planned dates"
+  aria-label={heading}
   oncancel={(event) => {
     event.preventDefault();
     if (!busy && !pending) onclose();
   }}
 >
   <DialogHeader
-    title="Change planned dates"
+    title={heading}
     {onclose}
     disabled={busy || !!pending}
     closeLabel="Close planned dates"
@@ -144,21 +161,45 @@
             disabled={busy || !!pending || !!conflict || accessLost}
           /></label
         >
-        <label
-          >Planned end<input
-            type="date"
-            bind:value={end}
-            min={start}
-            required
-            disabled={busy || !!pending || !!conflict || accessLost}
-          /></label
-        >
+        {#if event}
+          <label
+            >Start time<input
+              type="time"
+              bind:value={time}
+              required
+              disabled={busy || !!pending || !!conflict || accessLost}
+            /></label
+          >
+          <label
+            >Duration (minutes)<input
+              type="number"
+              min="1"
+              max="10080"
+              step="1"
+              bind:value={duration}
+              required
+              disabled={busy || !!pending || !!conflict || accessLost}
+            /></label
+          >
+        {:else}
+          <label
+            >Planned end<input
+              type="date"
+              bind:value={end}
+              min={start}
+              required
+              disabled={busy || !!pending || !!conflict || accessLost}
+            /></label
+          >
+        {/if}
       </div>
       {#if error}<p role="alert">{error}</p>{/if}
       {#if conflict?.current}<p>
           Current saved schedule: {JSON.stringify(
             conflict.current.type === "card"
-              ? (conflict.current.metadata.schedule ?? null)
+              ? (conflict.current.metadata.event ??
+                  conflict.current.metadata.schedule ??
+                  null)
               : null,
           )}. Your proposed dates remain above. Reopen the card to start a new
           edit.
@@ -189,7 +230,7 @@
         variant="primary"
         type="submit"
         disabled={busy || !!pending || !!conflict || accessLost}
-        >Save planned dates</Button
+        >{event ? "Save event time" : "Save planned dates"}</Button
       >
     </footer>
   </form>

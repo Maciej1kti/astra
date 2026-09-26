@@ -165,3 +165,16 @@ cards. Existing card tags remain. Focus filters all projects or projects in one
 folder, replacing project filtering in that view. Other views retain project
 selection. This supersedes project filtering in Focus from the shared-header
 decision without changing the placement of that header.
+
+## Timed events and remote testing — owner direction, 2026-09-26
+
+Add start time and duration to cards. A time makes a card an event; a start/end
+date range without a time remains planned work. The owner first requested a TODO,
+then authorized completing it alongside the folder work. Existing milestones
+remain until their proposed replacement is explicitly decided. This does not
+change the requirement to preserve their existing sources.
+
+After each verified application change, rebuild and restart the current manual
+app so the owner can inspect it remotely. Preserve its data, origin, certificates
+and network configuration. This authorization does not request deployment or
+changes to host networking.

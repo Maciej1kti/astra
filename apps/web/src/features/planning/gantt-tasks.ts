@@ -1,5 +1,6 @@
 import type { ITask } from "@svar-ui/svelte-gantt";
 import type { Summary } from "../../lib/api/api";
+import { eventDates } from "../../lib/resources/timed-event.ts";
 import { exclusiveSchedule, widgetDate } from "./planning.ts";
 
 export type AstraTask = ITask & {
@@ -22,7 +23,7 @@ export function ganttTasks(rows: Summary[]): AstraTask[] {
           astra: row,
         },
       ];
-    const schedule = row.schedule;
+    const schedule = row.event ? eventDates(row.event) : row.schedule;
     if (!schedule) return [];
     return [
       {

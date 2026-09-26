@@ -67,6 +67,11 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
                 }
             }
         }
+        if let Some(event) = m.get("event") {
+            let event: models::TimedEvent = serde_json::from_value(event.clone())
+                .map_err(|_| DomainError::Invalid("invalid event"))?;
+            event_end(&event)?;
+        }
         if let Some(schedule) = m.get("schedule") {
             let start = local_date(schedule["start"].as_str().unwrap())?;
             let end = local_date(schedule["end"].as_str().unwrap())?;
@@ -142,4 +147,26 @@ pub fn local_date(text: &str) -> Result<NaiveDate, DomainError> {
     }
     NaiveDate::parse_from_str(text, "%Y-%m-%d")
         .map_err(|_| DomainError::Invalid("invalid calendar date"))
+}
+
+/// Timed events use civil clock minutes, independent of process/browser timezone.
+pub fn event_end(event: &models::TimedEvent) -> Result<chrono::NaiveDateTime, DomainError> {
+    if event.start.len() != 16 || !(1..=10080).contains(&event.duration_minutes) {
+        return Err(DomainError::Invalid("invalid event start or duration"));
+    }
+    local_date(
+        event
+            .start
+            .get(..10)
+            .ok_or(DomainError::Invalid("invalid event date"))?,
+    )?;
+    let start = chrono::NaiveDateTime::parse_from_str(&event.start, "%Y-%m-%dT%H:%M")
+        .map_err(|_| DomainError::Invalid("invalid event start"))?;
+    let end = start
+        .checked_add_signed(chrono::TimeDelta::minutes(event.duration_minutes.into()))
+        .ok_or(DomainError::Invalid("event end out of range"))?;
+    if end.format("%Y-%m-%d").to_string().len() != 10 {
+        return Err(DomainError::Invalid("event end out of range"));
+    }
+    Ok(end)
 }

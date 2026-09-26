@@ -54,7 +54,7 @@ fn calendar_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
     let kind: String = row.get(4)?;
     let start: String = row.get(5)?;
     let end: String = row.get(6)?;
-    let item = json!({
+    let mut item = json!({
         "item_id": format!("{id}:{kind}"),
         "kind": kind,
         "project_id": project,
@@ -64,5 +64,8 @@ fn calendar_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
         "start": start,
         "end": end,
     });
+    if let Some(event) = row.get::<_, Option<String>>(7)? {
+        item["event"] = serde_json::from_str(&event).map_err(|_| rusqlite::Error::InvalidQuery)?;
+    }
     Ok(item)
 }

@@ -16,6 +16,21 @@ AND (?6 IS NULL OR {FOLDER}=?6)
 AND entity_type='card'
 AND json_extract(metadata_json,'$.schedule.end') BETWEEN ?1
 AND ?2
+UNION ALL SELECT project_id,entity_id,entity_type,title,'overdue',date(json_extract(metadata_json,'$.event.start'),'+' || json_extract(metadata_json,'$.event.duration_minutes') || ' minutes'),0
+FROM documents d
+WHERE {ACTIVE}
+AND (?5 IS NULL OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
+AND entity_type='card'
+AND datetime(json_extract(metadata_json,'$.event.start'),'+' || json_extract(metadata_json,'$.event.duration_minutes') || ' minutes')<=?7
+UNION ALL SELECT project_id,entity_id,entity_type,title,'due_soon',date(json_extract(metadata_json,'$.event.start')),3
+FROM documents d
+WHERE {ACTIVE}
+AND (?5 IS NULL OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
+AND entity_type='card'
+AND datetime(json_extract(metadata_json,'$.event.start'),'+' || json_extract(metadata_json,'$.event.duration_minutes') || ' minutes')>?7
+AND date(json_extract(metadata_json,'$.event.start'))<=?2
 UNION ALL SELECT project_id,entity_id,entity_type,title,'overdue',json_extract(metadata_json,'$.due.date'),0
 FROM documents d
 WHERE {ACTIVE}

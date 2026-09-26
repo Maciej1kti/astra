@@ -34,8 +34,8 @@ test("a compact month shows the whole month agenda and retains explicit grid acc
   assert.equal(calendarWidgetView("month", true, false), "listMonth");
   assert.equal(calendarWidgetView("month", true, true), "dayGridMonth");
   assert.equal(calendarWidgetView("agenda", true, false), "listWeek");
-  assert.equal(calendarWidgetView("week", true, false), "dayGridWeek");
-  assert.equal(calendarWidgetView("day", true, false), "dayGridDay");
+  assert.equal(calendarWidgetView("week", true, false), "timeGridWeek");
+  assert.equal(calendarWidgetView("day", true, false), "timeGridDay");
 });
 
 test("calendar navigation uses whole-day inputs without a browser-timezone shift", () => {

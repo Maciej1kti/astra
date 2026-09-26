@@ -45,6 +45,13 @@
       onclick={() => actions.open(row)}
       aria-label={`Due milestone: ${row.title}`}>◆ {row.title}</button
     >
+  {:else if row.event}
+    <button
+      class="move"
+      onclick={() => actions.open(row)}
+      aria-label={`Event: ${row.title}`}
+      >Event {row.event.start.slice(11)} · {row.title}</button
+    >
   {:else if row.schedule}
     <button
       class="handle edge"

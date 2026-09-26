@@ -3,6 +3,7 @@ export type DateProposal = {
   path: string;
   version: string;
   schedule?: { start: string; end: string };
+  event?: import("../../lib/contracts/domain.generated").TimedEvent;
   title?: string;
 };
 export type MoveProposal = {

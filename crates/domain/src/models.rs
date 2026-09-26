@@ -61,6 +61,12 @@ wire_enum!(View {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct TimedEvent {
+    pub start: String,
+    pub duration_minutes: u32,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Schedule {
     pub start: String,
     pub end: String,
@@ -137,6 +143,8 @@ pub struct CardMetadata {
     pub updated_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schedule: Option<Schedule>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event: Option<TimedEvent>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]

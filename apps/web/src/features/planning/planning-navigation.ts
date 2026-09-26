@@ -34,8 +34,8 @@ export function calendarWidgetView(
 ): string {
   if (layout === "month" && compact && !monthGrid) return "listMonth";
   return {
-    day: "dayGridDay",
-    week: "dayGridWeek",
+    day: "timeGridDay",
+    week: "timeGridWeek",
     month: "dayGridMonth",
     agenda: "listWeek",
   }[layout];

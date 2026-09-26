@@ -53,6 +53,7 @@ fn examples_roundtrip_without_losing_optional_fields_or_body() {
         "card-22222222-2222-4222-8222-222222222222.json",
         "card-33333333-3333-4333-8333-333333333333.json",
         "card-77777777-7777-4777-8777-777777777777.json",
+        "card-88888888-8888-4888-8888-888888888888.json",
         "milestone.json",
         "update.json",
     ] {
@@ -313,4 +314,37 @@ fn workspace_catalog_is_optional_exact_and_bounded() {
         value["tags"] = tags;
         assert!(validate_workspace(value.clone()).is_err());
     }
+}
+
+#[test]
+fn events_validate_clock_duration_and_exclude_all_day_schedules() {
+    let mut value = card();
+    value["metadata"]
+        .as_object_mut()
+        .unwrap()
+        .remove("schedule");
+    let event = json!({"start":"2026-09-30T23:30","duration_minutes":90});
+    value["metadata"]["event"] = event.clone();
+    let validated = validate_document(value.clone()).unwrap();
+    assert_eq!(serde_json::to_value(validated.get()).unwrap(), value);
+    let typed = serde_json::from_value(event).unwrap();
+    assert_eq!(
+        project_domain::event_end(&typed).unwrap().to_string(),
+        "2026-10-01 01:00:00"
+    );
+    for invalid in [
+        json!({"start":"2026-02-30T12:00","duration_minutes":60}),
+        json!({"start":"2026-09-30T24:00","duration_minutes":60}),
+        json!({"start":"2026-09-30T12:00Z","duration_minutes":60}),
+        json!({"start":"2026-09-30T12:00","duration_minutes":0}),
+        json!({"start":"2026-09-30T12:00","duration_minutes":10081}),
+        json!({"start":"2026-09-30T12:00","duration_minutes":1.5}),
+        json!({"start":"9999-12-31T23:59","duration_minutes":1}),
+    ] {
+        value["metadata"]["event"] = invalid;
+        assert!(validate_document(value.clone()).is_err());
+    }
+    value["metadata"]["event"] = json!({"start":"2026-09-30T12:00","duration_minutes":60});
+    value["metadata"]["schedule"] = json!({"start":"2026-09-30","end":"2026-09-30"});
+    assert!(validate_document(value).is_err());
 }

@@ -9,6 +9,7 @@ export type UUID = string;
 export type Instant = string;
 export type Position = string;
 export type LocalDate = string;
+export type LocalDateTime = string;
 /**
  * Ograniczone JSON values; poza schema: max depth 12, 10000 nodes, brak niebezpiecznych kluczy prototypu w obiektach JS.
  *
@@ -248,6 +249,7 @@ export interface CardMetadata {
    * @maxItems 100
    */
   acceptance?: AcceptanceItem[];
+  event?: TimedEvent;
 }
 export interface Schedule {
   start: LocalDate;
@@ -257,6 +259,10 @@ export interface AcceptanceItem {
   id: UUID;
   text: string;
   completed: boolean;
+}
+export interface TimedEvent {
+  start: LocalDateTime;
+  duration_minutes: number;
 }
 export interface MilestoneDocument {
   type: "milestone";

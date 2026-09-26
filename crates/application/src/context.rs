@@ -189,6 +189,7 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
     for key in [
         "status",
         "schedule",
+        "event",
         "due",
         "priority",
         "target",

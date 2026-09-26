@@ -57,7 +57,9 @@
           <span class="date" data-date-kind={date.kind}>
             <span class="date-label">{date.label}</span>
             <span class="date-value"
-              ><time datetime={date.start}>{date.start}</time>{#if date.end}
+              ><time datetime={date.start}>{date.start.replace("T", " ")}</time
+              >{#if date.duration}
+                · {date.duration} min{/if}{#if date.end}
                 – <time datetime={date.end}>{date.end}</time>{/if}</span
             >
           </span>

@@ -323,7 +323,7 @@ try {
   );
   // Selection helpers have no application metadata. They must render safely
   // while a blank date range becomes an ordinary unsaved card draft.
-  const blankDay = await hitbox(page.locator(".ec-body .ec-day").first());
+  const blankDay = await hitbox(page.locator(".ec-all-day .ec-day").first());
   await page.mouse.move(
     blankDay.x + blankDay.width / 2,
     blankDay.y + blankDay.height - 4,

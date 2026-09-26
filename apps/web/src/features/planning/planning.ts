@@ -45,5 +45,9 @@ export function calendarTarget(
   };
 }
 export function calendarLabel(item: CalendarItem) {
-  return item.kind.endsWith("due") ? "Due" : "Planned work";
+  return item.event
+    ? `Event ${item.event.start.slice(11)} · ${item.event.duration_minutes} min`
+    : item.kind.endsWith("due")
+      ? "Due"
+      : "Planned work";
 }

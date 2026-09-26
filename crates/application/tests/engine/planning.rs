@@ -370,3 +370,62 @@ fn project_folders_scope_all_resources_before_pagination_and_survive_restart() {
             .is_none()
     );
 }
+
+#[test]
+fn timed_events_survive_restart_project_across_midnight_and_expire_at_end() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Night event");
+    let resource = &created.body["result"]["resource"];
+    let id = resource["metadata"]["id"].as_str().unwrap();
+    let event = json!({"start":"2026-09-30T23:30","duration_minutes":90});
+    patch(
+        &engine,
+        &project,
+        id,
+        resource["version"].as_str().unwrap(),
+        json!({"set":{"event":event}}),
+    );
+    drop(engine);
+    let engine = env.engine();
+    for date in ["2026-09-30", "2026-10-01"] {
+        let calendar = engine
+            .calendar(Some(&project), date, date, None, 100)
+            .unwrap();
+        wire::validate("CalendarPage", &calendar).unwrap();
+        assert_eq!(calendar["items"].as_array().unwrap().len(), 1);
+        assert_eq!(calendar["items"][0]["kind"], "card_event");
+        assert_eq!(calendar["items"][0]["event"], event);
+    }
+    let gantt = engine.gantt(&project, None, 100).unwrap();
+    wire::validate("GanttPage", &gantt).unwrap();
+    assert_eq!(gantt["rows"][0]["event"], event);
+    // Fixture workspace uses Europe/Warsaw (UTC+2 on this date).
+    for (clock, reason) in [
+        ("2026-09-30T22:59:00Z", "due_soon"),
+        ("2026-09-30T23:00:00Z", "overdue"),
+    ] {
+        let now = chrono::DateTime::parse_from_rfc3339(clock)
+            .unwrap()
+            .timestamp_millis();
+        let attention = engine.attention(None, 100, now).unwrap();
+        assert_eq!(attention["items"][0]["reason"], reason);
+    }
+    let resource = engine.get(&project, Kind::Card, id).unwrap();
+    patch(
+        &engine,
+        &project,
+        id,
+        resource["version"].as_str().unwrap(),
+        json!({"set":{"event":{"start":"2026-09-30T23:30","duration_minutes":30}}}),
+    );
+    assert!(
+        engine
+            .calendar(Some(&project), "2026-10-01", "2026-10-01", None, 100)
+            .unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+}

@@ -32,10 +32,11 @@ impl Engine {
             .timezone
             .parse::<chrono_tz::Tz>()
             .map_err(|_| AppError::invariant("workspace timezone"))?;
-        let today = chrono::DateTime::from_timestamp_millis(now)
+        let local_now = chrono::DateTime::from_timestamp_millis(now)
             .ok_or_else(|| AppError::invariant("attention timestamp"))?
-            .with_timezone(&zone)
-            .date_naive();
+            .with_timezone(&zone);
+        let today = local_now.date_naive();
+        let clock = local_now.format("%Y-%m-%d %H:%M:00").to_string();
         let soon = today
             .checked_add_days(Days::new(7))
             .ok_or_else(|| AppError::invariant("attention date range"))?;
@@ -46,7 +47,7 @@ impl Engine {
                 page_revision(db, revision, project)?,
                 project,
                 folder,
-                today.to_string(),
+                clock,
                 limit
             ]);
             let start = offset(cursor, &scope)?;
@@ -64,7 +65,8 @@ impl Engine {
                         limit + 1,
                         start as i64,
                         project,
-                        folder
+                        folder,
+                        clock
                     ],
                     attention_item,
                 )?

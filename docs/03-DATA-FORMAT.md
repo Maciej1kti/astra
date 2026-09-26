@@ -25,8 +25,8 @@ Puste katalogi można tworzyć leniwie. Inne pliki są ignorowane z diagnostyką
 
 | Obiekt | Pola wymagane w poprawnym pliku | Opcjonalne |
 |---|---|---|
-| Project | schema_version, id, name, state, created_at, updated_at | — |
-| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule, labels, acceptance |
+| Project | schema_version, id, name, state, created_at, updated_at | folder |
+| Card | id, title, status, priority, position, archived, created_at, updated_at | schedule or event, labels, acceptance |
 | Milestone | id, title, status, position, archived, created_at, updated_at | due, x-* |
 | Update | id, kind, target, summary, author, recorded_at | observed_at, supersedes, resolves, evidence, x-* |
 
@@ -120,3 +120,12 @@ names, each 1–48 characters. Equality is exact, including case, punctuation an
 spacing. Existing source labels remain unchanged; registering a name does not
 rewrite any card. Card label arrays remain the source of truth for membership.
 Older workspaces without a catalog remain valid and are not rewritten on read.
+
+### Timed events
+
+A card with `event: { start: "2026-09-30T09:30", duration_minutes: 90 }` is a
+timed event. Its civil clock fields use the workspace timezone, and its end is
+derived from 1–10080 wall-clock minutes. `event` and the inclusive date-only
+`schedule` are mutually exclusive. Conversion sets one and clears the other in
+one conditional patch. Milestones remain dated checkpoints. See
+[ADR-044](ADR-044-TIMED-EVENTS.md) for timezone, DST and projection semantics.

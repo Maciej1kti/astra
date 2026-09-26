@@ -53,6 +53,7 @@
 
   let {
     target,
+    workspaceTimezone = "workspace time",
     onclose,
     onsaved,
     onautosaved,
@@ -62,6 +63,7 @@
     onresolve,
   }: {
     target: EditorTarget;
+    workspaceTimezone?: string;
     onclose: () => void;
     onsaved: () => void;
     onautosaved?: (resource: Resource) => void;
@@ -1045,13 +1047,42 @@
                 /></label
               >
               <label
-                >End<input
-                  type="date"
-                  bind:value={draft.fields.end}
-                  min={draft.fields.start}
+                >Start time<input
+                  type="time"
+                  oninput={(event) => {
+                    if (draft.type === "card" && !event.currentTarget.value)
+                      draft.fields.end = draft.fields.start;
+                  }}
+                  bind:value={draft.fields.time}
                   disabled={locked}
                 /></label
               >
+              {#if draft.fields.time}
+                <label
+                  >Duration (minutes)<input
+                    type="number"
+                    min="1"
+                    max="10080"
+                    step="1"
+                    bind:value={draft.fields.duration}
+                    disabled={locked}
+                  /></label
+                >
+              {:else}
+                <label
+                  >End<input
+                    type="date"
+                    bind:value={draft.fields.end}
+                    min={draft.fields.start}
+                    disabled={locked}
+                  /></label
+                >
+              {/if}
+              <p class="field-hint">
+                {draft.fields.time
+                  ? `Event · ${workspaceTimezone}`
+                  : "Plan · dates only. Add a start time to make an event."}
+              </p>
             {/if}
           </div>{/if}
         {#if draft.type === "update"}<label

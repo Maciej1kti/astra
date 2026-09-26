@@ -1,7 +1,15 @@
 <script lang="ts">
+  import type { CardCreate } from "../../lib/contracts/api.generated";
+  import { eventFromDates } from "../../lib/resources/timed-event.ts";
   import { compactCalendarQuery } from "../../lib/ui/planning-metrics";
   import { onMount, untrack } from "svelte";
-  import { Calendar, DayGrid, List, Interaction } from "@event-calendar/core";
+  import {
+    Calendar,
+    DayGrid,
+    TimeGrid,
+    List,
+    Interaction,
+  } from "@event-calendar/core";
   import "@event-calendar/core/index.css";
   import { cursorPage } from "../../lib/api/pagination";
   import { calendarEvents } from "./calendar-events";
@@ -30,6 +38,7 @@
     calendarDate,
     calendarLayout,
     workspaceToday,
+    workspaceTimezone,
     onCalendarNavigate,
     revision,
     weekStart,
@@ -42,13 +51,14 @@
     calendarDate: string;
     calendarLayout: CalendarLayout;
     workspaceToday: string;
+    workspaceTimezone: string;
     onCalendarNavigate: (date: string, layout: CalendarLayout) => void;
     revision: number;
     weekStart: string;
     search: string;
     open: (row: Pick<Summary, "id" | "type" | "project_id">) => void;
     onpropose: (p: DateProposal) => void;
-    oncreate: (s: { start: string; end: string }) => void;
+    oncreate: (initial: Partial<CardCreate>) => void;
   } = $props();
   const mode = $derived(calendarLayout);
   const date = $derived(calendarDate);
@@ -90,6 +100,7 @@
     headerToolbar: { start: "", center: "", end: "" },
     height: "auto",
     locale: "en-GB",
+    scrollTime: "08:00:00",
     firstDay: 1,
     editable: true,
     eventResizableFromStart: true,
@@ -110,11 +121,24 @@
     },
     dateClick: (info) => {
       if (project && !cancelled)
-        oncreate({ start: dateOnly(info.date), end: dateOnly(info.date) });
+        oncreate(
+          info.allDay
+            ? {
+                schedule: {
+                  start: dateOnly(info.date),
+                  end: dateOnly(info.date),
+                },
+              }
+            : { event: eventFromDates(info.date) },
+        );
     },
     select: (info) => {
       if (project && !cancelled) {
-        oncreate(inclusiveSchedule(info.start, info.end));
+        oncreate(
+          info.allDay
+            ? { schedule: inclusiveSchedule(info.start, info.end) }
+            : { event: eventFromDates(info.start, info.end) },
+        );
         reset++;
       }
     },
@@ -135,7 +159,9 @@
         : "var(--calendar-grid-height)"
       : monthAgenda
         ? "var(--calendar-agenda-height)"
-        : "auto";
+        : mode === "day" || mode === "week"
+          ? "var(--calendar-grid-height)"
+          : "auto";
     options.dayMaxEvents = monthGrid;
   });
   $effect(() => {
@@ -186,6 +212,28 @@
   function change(info: Calendar.EventDropInfo | Calendar.EventResizeInfo) {
     const item = info.oldEvent.extendedProps.astra as CalendarItem;
     try {
+      if (item.event) {
+        const event = !info.event.allDay
+          ? eventFromDates(info.event.start, info.event.end)
+          : null;
+        info.revert();
+        if (
+          !cancelled &&
+          event &&
+          JSON.stringify(event) !== JSON.stringify(item.event)
+        )
+          onpropose({
+            path: resourcePath(calendarTarget(item)),
+            version: item.version,
+            event,
+            title: item.title,
+          });
+        return;
+      }
+      if (!info.event.allDay) {
+        info.revert();
+        return;
+      }
       const schedule = inclusiveSchedule(info.event.start, info.event.end);
       info.revert();
       if (
@@ -284,18 +332,27 @@
       !error &&
       event.altKey &&
       ["ArrowLeft", "ArrowRight"].includes(event.key) &&
-      item.kind === "card_schedule"
+      (item.kind === "card_schedule" || item.kind === "card_event")
     ) {
       event.preventDefault();
       event.stopImmediatePropagation();
       onpropose({
         path: resourcePath(calendarTarget(item)),
         version: item.version,
-        schedule: shiftedSchedule(
-          item,
-          (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 7 : 1),
-          "move",
-        ),
+        ...(item.event
+          ? {
+              event: {
+                ...item.event,
+                start: `${shiftDate(item.event.start.slice(0, 10), (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 7 : 1))}T${item.event.start.slice(11)}`,
+              },
+            }
+          : {
+              schedule: shiftedSchedule(
+                item,
+                (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 7 : 1),
+                "move",
+              ),
+            }),
       });
     }
   }
@@ -393,7 +450,7 @@
     {#if project}<button
         class="create-scheduled"
         disabled={!isCalendarDate(date)}
-        onclick={() => oncreate({ start: date, end: date })}
+        onclick={() => oncreate({ schedule: { start: date, end: date } })}
         >New scheduled card</button
       >{/if}
   </div>
@@ -420,7 +477,10 @@
     {#if loading}<p class="loading-indicator" role="status">
         Loading calendar…
       </p>{/if}
-    {#key reset}<Calendar plugins={[DayGrid, List, Interaction]} {options}>
+    {#key reset}<Calendar
+        plugins={[DayGrid, TimeGrid, List, Interaction]}
+        {options}
+      >
         {#snippet dayCellContent({ date: day })}
           <span
             data-workspace-today={dateOnly(day) === workspaceToday}
@@ -430,7 +490,9 @@
               ? new Intl.DateTimeFormat("en-GB", { weekday: "long" }).format(
                   day,
                 )
-              : day.getDate()}
+              : mode === "month"
+                ? day.getDate()
+                : ""}
           </span>
         {/snippet}
         {#snippet eventContent({ event })}
@@ -438,12 +500,15 @@
           {#if item}
             <div
               class="calendar-item"
+              class:timed={!!item.event && (mode === "day" || mode === "week")}
+              title={`${calendarLabel(item)}: ${item.title}`}
               data-calendar-item={item.item_id}
               use:eventAccess={item}
             >
               <small
-                >{item.kind.endsWith("due") ? "◆" : "▬"}
-                {calendarLabel(item)}</small
+                >{item.event && (mode === "day" || mode === "week")
+                  ? `${item.event.start.slice(11)} · ${item.event.duration_minutes} min`
+                  : `${item.kind.endsWith("due") ? "◆" : "▬"} ${calendarLabel(item)}`}</small
               ><strong>{item.title}</strong>
             </div>
           {/if}
@@ -452,10 +517,14 @@
   </div>
   <div class="view-meta">
     <p class="legend">
-      <span>▬ Plan</span><span>◆ Due</span>
+      <span>◷ Event · ▬ Plan</span><span>◆ Due</span>
     </p>
     <details class="help">
       <summary>Calendar shortcuts & editing</summary>
+      <p>
+        Event times use {workspaceTimezone}. Select an hour in Day or Week to
+        create an event. Date-only cards stay in the all-day row.
+      </p>
       <p>
         Drag planned work to move it; drag either edge to resize. On touch, hold
         a plan to select it. Click a day or select a range to create a card.
@@ -604,7 +673,7 @@
   .month :global(.ec) {
     min-width: var(--calendar-min-height);
   }
-  .calendar-surface :global(.ec-day) {
+  .calendar-surface :global(.ec-day-grid .ec-day) {
     min-height: var(--calendar-cell-height);
   }
   .month :global(.ec-day) {
@@ -645,6 +714,20 @@
     min-height: var(--tap-target);
     overflow: hidden;
     cursor: pointer;
+  }
+  .calendar-item.timed {
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .timed small {
+    flex-shrink: 0;
+  }
+  .timed strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   small {
     display: block;

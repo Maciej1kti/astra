@@ -160,6 +160,8 @@ export interface ApiContracts {
   Version: string;
   Position: string;
   ExtensionValue: ExtensionValue;
+  LocalDateTime: string;
+  TimedEvent: TimedEvent;
   Schedule: Schedule;
   Due: Due;
   Author: Author;
@@ -224,6 +226,7 @@ export interface ApiContracts {
   CardPatch:
     | {
         set?: {
+          event?: TimedEvent;
           title?: string;
           status?: "planned" | "active" | "review" | "done" | "cancelled";
           priority?: "normal" | "high";
@@ -240,7 +243,7 @@ export interface ApiContracts {
         /**
          * @maxItems 20
          */
-        clear?: ("schedule" | "labels" | "acceptance")[];
+        clear?: ("event" | "schedule" | "labels" | "acceptance")[];
         placement?: Placement;
       }
     | {
@@ -331,6 +334,10 @@ export interface ApiContracts {
   NativeFolderInput: NativeFolderInput;
   NativeFolderSelection: NativeFolderSelection;
 }
+export interface TimedEvent {
+  start: string;
+  duration_minutes: number;
+}
 export interface Schedule {
   start: string;
   end: string;
@@ -390,6 +397,7 @@ export interface AcceptanceProgress {
   completed: number;
 }
 export interface CardMetadata {
+  event?: TimedEvent;
   id: string;
   created_at: string;
   updated_at: string;
@@ -499,6 +507,7 @@ export interface Placement {
   before_id: string | null;
 }
 export interface CardCreate {
+  event?: TimedEvent;
   title: string;
   status?: "planned" | "active" | "review" | "done" | "cancelled";
   priority?: "normal" | "high";
@@ -583,6 +592,7 @@ export interface Accepted {
   status: "running";
 }
 export interface Summary {
+  event?: TimedEvent;
   folder?: string;
   type: "project" | "card" | "milestone" | "update";
   project_id: string;
@@ -624,8 +634,9 @@ export interface SummaryPage {
   minItems?: 0;
 }
 export interface CalendarItem {
+  event?: TimedEvent;
   item_id: string;
-  kind: "card_schedule" | "milestone_due";
+  kind: "card_event" | "card_schedule" | "milestone_due";
   project_id: string;
   resource_id: string;
   version: string;
@@ -920,6 +931,7 @@ export interface Context {
   }[];
 }
 export interface ContextEntry {
+  event?: TimedEvent;
   folder?: string;
   type: "project" | "card" | "milestone" | "update";
   id: string;
@@ -1122,6 +1134,8 @@ export type Instant = ApiContracts["Instant"];
 export type Version = ApiContracts["Version"];
 
 export type Position = ApiContracts["Position"];
+
+export type LocalDateTime = ApiContracts["LocalDateTime"];
 
 export type Evidence = ApiContracts["Evidence"];
 

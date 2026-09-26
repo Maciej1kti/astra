@@ -23,6 +23,10 @@ focus suite covers the three Focus sections, active-only bounded reads, pinned
 card precedence, filters, inline pointer ordering and the viewport anchored card
 action.
 
+The events suite covers event autosave, conversion to/from date plans, hourly
+calendar movement, duration edits, slot creation, mobile layout and browser
+timezone independence.
+
 The responsive suite checks all seven views at 320, 390, 768 and 1024px, readable
 List filters with reload persistence, Calendar navigation, diagonal touch swipes
 inside a long modal and the system reduced-motion preference. These checks use

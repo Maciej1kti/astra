@@ -19,7 +19,8 @@ export function resourceLabel(value: string): string {
 }
 
 export type ResourceDateBadge = {
-  kind: "due" | "plan";
+  kind: "due" | "plan" | "event";
+  duration?: number;
   label: string;
   start: string;
   end?: string;
@@ -45,6 +46,13 @@ export function resourceDates(item: Summary): ResourceDateBadge[] {
         : {}),
     });
   }
+  if (item.event)
+    dates.push({
+      kind: "event",
+      label: "Event",
+      start: item.event.start,
+      duration: item.event.duration_minutes,
+    });
   return dates;
 }
 

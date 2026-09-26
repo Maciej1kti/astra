@@ -10,6 +10,8 @@ import type {
 import type { AcceptanceItem } from "../cards/card-work";
 import type { EditorTarget } from "./editor-target";
 
+import { eventEnd } from "../../lib/resources/timed-event.ts";
+
 type Common = { title: string; body: string };
 type EditableCommon = Common & { advanced: string };
 export type CardFields = {
@@ -17,6 +19,8 @@ export type CardFields = {
   priority: NonNullable<CardCreate["priority"]>;
   start: string;
   end: string;
+  time: string;
+  duration: number;
   labels: string[];
   tagDraft: string;
   acceptance: AcceptanceItem[];
@@ -76,8 +80,10 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         fields: {
           status: m?.status ?? "planned",
           priority: m?.priority ?? "normal",
-          start: m?.schedule?.start ?? "",
-          end: m?.schedule?.end ?? "",
+          start: m?.event?.start.slice(0, 10) ?? m?.schedule?.start ?? "",
+          end: m?.schedule?.end ?? m?.event?.start.slice(0, 10) ?? "",
+          time: m?.event?.start.slice(11) ?? "",
+          duration: m?.event?.duration_minutes ?? 60,
           labels: [...(m?.labels ?? [])],
           tagDraft: "",
           acceptance: (m?.acceptance ?? []).map((item) => ({ ...item })),
@@ -181,10 +187,20 @@ export function editorPayload(draft: EditorDraft) {
       if (d.acceptance.length)
         fields.acceptance = d.acceptance.map((item) => ({ ...item }));
       else if (metadata?.acceptance !== undefined) clear.push("acceptance");
-      if (d.start && d.end) fields.schedule = { start: d.start, end: d.end };
-      else if (d.start || d.end)
-        throw new Error("A schedule needs both start and end dates.");
-      else if (metadata?.schedule) clear.push("schedule");
+      if (d.time) {
+        fields.event = {
+          start: `${d.start}T${d.time}`,
+          duration_minutes: d.duration,
+        };
+        eventEnd(fields.event);
+        if (metadata?.schedule) clear.push("schedule");
+      } else {
+        if (d.start && d.end) fields.schedule = { start: d.start, end: d.end };
+        else if (d.start || d.end)
+          throw new Error("A schedule needs both start and end dates.");
+        else if (metadata?.schedule) clear.push("schedule");
+        if (metadata?.event) clear.push("event");
+      }
       return draft.source
         ? ({
             set: fields,

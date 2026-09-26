@@ -607,7 +607,15 @@
     return () => clearTimeout(timer);
   });
   onMount(() => {
-    const clockTimer = setInterval(() => (clockTime = Date.now()), 60_000);
+    const clockTimer = setInterval(() => {
+      clockTime = Date.now();
+      if (
+        boot &&
+        routing.current.view === "focus" &&
+        document.visibilityState === "visible"
+      )
+        void refresh(["attention"]).catch(message);
+    }, 60_000);
     window.addEventListener("popstate", historyNavigation);
     window.addEventListener("command-warning", commandWarning);
     const leaving = (event: BeforeUnloadEvent) => {
@@ -777,11 +785,12 @@
                   calendarDate={routing.current.calendarDate}
                   calendarLayout={routing.current.calendarLayout}
                   workspaceToday={today}
+                  workspaceTimezone={boot?.timezone ?? "workspace time"}
                   onCalendarNavigate={routing.navigateCalendar}
                   search={routing.current.search}
                   {open}
                   onpropose={(proposal) => (dateDraft = proposal)}
-                  oncreate={(schedule) => create("card", { schedule })}
+                  oncreate={(initial) => create("card", initial)}
                 />{:else if dateViewLoadError}<p role="alert">
                   {dateViewLoadError}
                   <button onclick={loadDateViews}
@@ -882,6 +891,7 @@
     onchanged={() => void refresh().catch(message)}
   />{/if}
 {#if editor}{#key editor}{@const editorTarget = editor}<Editor
+      workspaceTimezone={boot?.timezone ?? "workspace time"}
       target={editor}
       bind:this={editorInstance}
       onclose={closeEditor}

@@ -291,6 +291,8 @@ def check_openapi_structure() -> dict:
 def check_api_examples() -> dict:
     bindings = {
         "card-create.json": "CardCreate",
+        "event-create.json": "CardCreate",
+        "event-to-plan.json": "CardPatch",
         "card-patch.json": "CardPatch",
         "card-move.json": "CardPatch",
         "report-create.json": "UpdateCreate",

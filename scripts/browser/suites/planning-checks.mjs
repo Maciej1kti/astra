@@ -77,9 +77,11 @@ export async function verifyPlanningFixes(
   await expect(date).toHaveValue("2026-10-20");
   await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(date).toHaveValue(workspaceToday);
-  await expect(
-    calendar.locator('[data-workspace-today="true"]'),
-  ).toHaveAttribute("aria-current", "date");
+  const todayCells = calendar.locator('[data-workspace-today="true"]');
+  // Hourly views have a day cell in both the all-day and timed lanes.
+  await expect(todayCells).toHaveCount(2);
+  for (const cell of await todayCells.all())
+    await expect(cell).toHaveAttribute("aria-current", "date");
   await onCheckpoint("desktop-calendar-workspace-today", page);
 
   await date.fill(fixtureDate);

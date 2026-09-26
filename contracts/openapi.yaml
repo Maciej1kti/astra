@@ -2161,6 +2161,22 @@ components:
       - object
       description: 'Ograniczone JSON values; poza schema: max depth 12, 10000 nodes,
         brak niebezpiecznych kluczy prototypu w obiektach JS.'
+    LocalDateTime:
+      type: string
+      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T([01][0-9]|2[0-3]):[0-5][0-9]$'
+      description: Civil date and time on the workspace clock, without a UTC offset.
+    TimedEvent:
+      type: object
+      properties:
+        start:
+          $ref: '#/components/schemas/LocalDateTime'
+        duration_minutes:
+          type: integer
+          minimum: 1
+          maximum: 10080
+      required: [start, duration_minutes]
+      additionalProperties: false
+      description: A timed card, mutually exclusive with an all-day schedule. Duration uses civil clock minutes; the derived end is exclusive. No recurrence or UTC reservation is implied.
     Schedule:
       type: object
       properties:
@@ -2375,6 +2391,8 @@ components:
     CardMetadata:
       type: object
       properties:
+        event:
+          $ref: '#/components/schemas/TimedEvent'
         id:
           $ref: '#/components/schemas/UUID'
         created_at:
@@ -2416,6 +2434,8 @@ components:
             maxLength: 48
           maxItems: 20
           uniqueItems: true
+      not:
+        required: [schedule, event]
       required:
       - id
       - title
@@ -2859,6 +2879,8 @@ components:
           set:
             type: object
             properties:
+              event:
+                $ref: '#/components/schemas/TimedEvent'
               title: &id009
                 type: string
                 minLength: 1
@@ -2904,6 +2926,7 @@ components:
             items:
               type: string
               enum:
+              - event
               - schedule
               - labels
               - acceptance
@@ -2932,6 +2955,8 @@ components:
     CardCreate:
       type: object
       properties:
+        event:
+          $ref: '#/components/schemas/TimedEvent'
         title: *id009
         status: *id011
         priority: *id012
@@ -2943,6 +2968,8 @@ components:
         body: *id021
         id:
           $ref: '#/components/schemas/UUID'
+      not:
+        required: [schedule, event]
       required:
       - title
       additionalProperties: false
@@ -3307,6 +3334,8 @@ components:
     Summary:
       type: object
       properties:
+        event:
+          $ref: '#/components/schemas/TimedEvent'
         folder:
           $ref: '#/components/schemas/Folder'
         type:
@@ -3409,6 +3438,8 @@ components:
     CalendarItem:
       type: object
       properties:
+        event:
+          $ref: '#/components/schemas/TimedEvent'
         item_id:
           type: string
           minLength: 1
@@ -3416,6 +3447,7 @@ components:
         kind:
           type: string
           enum:
+          - card_event
           - card_schedule
           - milestone_due
         project_id:
@@ -4441,6 +4473,8 @@ components:
     ContextEntry:
       type: object
       properties:
+        event:
+          $ref: '#/components/schemas/TimedEvent'
         folder:
           $ref: '#/components/schemas/Folder'
         type:
