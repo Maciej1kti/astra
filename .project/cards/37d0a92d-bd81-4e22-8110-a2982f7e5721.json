@@ -1,6 +1,18 @@
 {
-  "body": "",
+  "body": "Benz\n",
   "metadata": {
+    "acceptance": [
+      {
+        "completed": false,
+        "id": "0d38bb89-4981-49cd-b5b4-ef72ab2e67a8",
+        "text": "jjsjzs"
+      },
+      {
+        "completed": false,
+        "id": "71b8b7df-793b-41cb-90d6-74359c839201",
+        "text": "bbzis"
+      }
+    ],
     "archived": false,
     "comments": [
       {
@@ -11,21 +23,64 @@
         "body": "Test\n",
         "id": "d01e8b3a-8693-40cc-85c5-ee26587f0f87",
         "recorded_at": "2026-09-26T13:13:57.135Z"
+      },
+      {
+        "author": {
+          "kind": "human",
+          "label": "Owner"
+        },
+        "body": "Test 2",
+        "id": "db0a0129-40ec-4858-9aa2-500c1cd9a2b0",
+        "recorded_at": "2026-09-26T17:10:47.870Z"
+      },
+      {
+        "author": {
+          "kind": "human",
+          "label": "Owner"
+        },
+        "body": "Test",
+        "id": "32ea6d2b-fe90-462a-928b-4ef9a489561f",
+        "recorded_at": "2026-09-26T18:18:41.109Z"
+      }
+    ],
+    "counters": [
+      {
+        "archived": false,
+        "id": "02aa0952-c855-4984-9139-efb44c3ab5b8",
+        "name": "Pompki",
+        "step": 1,
+        "unit": "reps",
+        "values": {
+          "2026-09-26": 9
+        }
+      },
+      {
+        "archived": false,
+        "id": "4e23396a-92d3-459b-98e0-85f460dc8517",
+        "name": "Bbbj",
+        "step": 1,
+        "unit": "Km",
+        "values": {
+          "2026-09-26": 2
+        }
       }
     ],
     "created_at": "2026-09-07T22:16:19.661Z",
     "id": "37d0a92d-bd81-4e22-8110-a2982f7e5721",
-    "labels": [],
+    "labels": [
+      "Mega",
+      "Re"
+    ],
     "pinned": true,
     "position": "bfffffffffffffffffffffffffffffff",
-    "priority": "normal",
+    "priority": "high",
     "schedule": {
-      "end": "2026-09-14",
-      "start": "2026-09-13"
+      "end": "2026-09-26",
+      "start": "2026-09-26"
     },
     "status": "active",
-    "title": "noew",
-    "updated_at": "2026-09-26T13:13:57.135Z"
+    "title": "noew. ",
+    "updated_at": "2026-09-26T18:19:31.964Z"
   },
   "type": "card"
 }
