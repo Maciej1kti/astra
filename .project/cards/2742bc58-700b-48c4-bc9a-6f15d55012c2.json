@@ -24,12 +24,12 @@
     "position": "7fffffffffffffffffffffffffffffff",
     "priority": "normal",
     "schedule": {
-      "end": "2026-09-01",
+      "end": "2026-08-31",
       "start": "2026-08-31"
     },
     "status": "active",
     "title": "next",
-    "updated_at": "2026-09-25T09:53:22.961Z"
+    "updated_at": "2026-09-26T12:51:29.438Z"
   },
   "type": "card"
 }
