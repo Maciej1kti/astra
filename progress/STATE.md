@@ -6,6 +6,10 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Cleared test updates](2026-09-26-clear-test-updates.md) removes the 64 existing
+reports from both live projects at the owner’s request. All 7 cards, comments
+and both project documents are preserved; Updates is empty after restart.
+
 [JSON sources](2026-09-26-json-sources.md) replace all project resource Markdown
 files with the shared `{type, metadata, body}` JSON envelope. The existing test
 data is preserved and converted; source comments/descriptions remain Markdown
