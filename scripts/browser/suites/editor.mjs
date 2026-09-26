@@ -53,7 +53,7 @@ export async function runEditorChecks({
     await close();
     const params = new URLSearchParams({ view, project, ...extra });
     await page.goto(`${config.origin}/?${params}`);
-    await page.getByLabel("Project", { exact: true }).waitFor();
+    await page.locator("header.topbar").waitFor();
     await expect(page.locator(".asidebottom")).toContainText(
       "Connected to host",
     );
@@ -865,7 +865,7 @@ export async function runEditorChecks({
 
   await check(
     "A09",
-    "Loaded Focus pins obey project and title filters",
+    "Loaded Focus pins obey folder and title filters",
     async () => {
       const own = await create({
         title: unique("Repair focus selected project"),
@@ -886,7 +886,14 @@ export async function runEditorChecks({
           cli("get", path).version,
         );
       }
-      await route("focus");
+      const projectPath = `/api/v1/projects/${project}`;
+      await mutate(
+        "PATCH",
+        projectPath,
+        { set: { folder: "Work" } },
+        cli("get", projectPath).version,
+      );
+      await route("focus", { folder: "Work" });
       const pins = page.getByRole("region", { name: "In focus", exact: true });
       await expect(
         pins.getByRole("heading", { name: own.title, exact: true }),
@@ -894,7 +901,7 @@ export async function runEditorChecks({
       await expect(
         pins.getByRole("heading", { name: other.title, exact: true }),
       ).not.toBeVisible();
-      await page.getByLabel("Project", { exact: true }).selectOption("");
+      await page.getByLabel("Folder", { exact: true }).selectOption("");
       await expect(
         pins.getByRole("heading", { name: other.title, exact: true }),
       ).toBeVisible();

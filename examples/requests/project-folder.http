@@ -1,0 +1,15 @@
+# Read the project and retain its observed version before this patch.
+PATCH /api/v1/projects/11111111-1111-4111-8111-111111111111
+If-Match: "r1.<observed-source-hash>"
+X-Request-ID: <new-uuidv7>
+X-Command-Epoch: <current-epoch>
+Content-Type: application/json
+
+{"set":{"folder":"Work"}}
+
+# Clear with an independently observed current version and new command identity.
+# {"clear":["folder"]}
+
+GET /api/v1/views/list?type=card&status=active&folder=Work&limit=200
+GET /api/v1/views/attention?folder=Work&limit=200
+GET /api/v1/views/folders?limit=200

@@ -156,3 +156,12 @@ Project filtering belongs in the shared header, with no duplicate project
 selector in the view content. Restore the Focus workspace bar above the content,
 superseding the earlier footer placement. Keep ordinary project scope, filters,
 browser history and the floating Focus Add card action.
+
+## Project folders — owner decision, 2026-09-26
+
+Add one optional folder category to projects, such as Work, Home or Hobby.
+The owner clarified that the folder belongs only to the project, not individual
+cards. Existing card tags remain. Focus filters all projects or projects in one
+folder, replacing project filtering in that view. Other views retain project
+selection. This supersedes project filtering in Focus from the shared-header
+decision without changing the placement of that header.

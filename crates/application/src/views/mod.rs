@@ -99,7 +99,21 @@ fn rows(
         .collect()
 }
 
+pub(crate) const EFFECTIVE_FOLDER: &str = "(SELECT json_extract(p.metadata_json,'$.folder') FROM documents p WHERE p.project_id=d.project_id AND p.entity_type='project')";
+
+pub(crate) fn validate_folder(folder: &str) -> Result<(), AppError> {
+    if folder.is_empty()
+        || folder.chars().count() > 48
+        || folder.trim() != folder
+        || folder.contains(['\n', '\r'])
+    {
+        return Err(AppError::reject(422, "INVALID_FOLDER_FILTER"));
+    }
+    Ok(())
+}
+
 mod attention;
 mod board;
 mod calendar;
+mod folders;
 mod gantt;

@@ -81,7 +81,7 @@ test("focus precedence and attention deduplication use project and target type",
   assert.deepEqual(result.activeCards, [active]);
 });
 
-test("focus filters apply to project and loaded titles", () => {
+test("focus filters apply to folders and loaded titles, ignoring the prior project", () => {
   const result = focusSections(
     [
       card("p1", "keep", "Keep this"),
@@ -90,12 +90,46 @@ test("focus filters apply to project and loaded titles", () => {
     ],
     [],
     [attention("p1", "card", "keep", "overdue", "Keep this")],
-    route({ project: "p1", search: "keep" }),
+    route({ project: "p2", folder: "Work", search: "keep" }),
+    [
+      { id: "p1", folder: "Work" },
+      { id: "p2", folder: "Home" },
+    ],
   );
 
   assert.deepEqual(result.activeCards, []);
   assert.deepEqual(
     result.attention.map((item) => item.target.id),
     ["keep"],
+  );
+});
+
+test("one folder includes multiple projects while All folders also includes unassigned projects", () => {
+  const projects = [
+    { id: "p1", folder: "Work" },
+    { id: "p2", folder: "Work" },
+    { id: "p3", folder: "Home" },
+    { id: "p4" },
+  ];
+  const cards = projects.map((p) => card(p.id, p.id, p.id));
+  const filtered = focusSections(
+    cards,
+    [cards[0], cards[2]],
+    [],
+    route({ folder: "Work", project: "p3" }),
+    projects,
+  );
+  assert.deepEqual(
+    filtered.focusCards.map((p) => p.id),
+    ["p1"],
+  );
+  assert.deepEqual(
+    filtered.activeCards.map((p) => p.id),
+    ["p2"],
+  );
+  assert.equal(
+    focusSections(cards, [], [], route({ project: "p3" }), projects).activeCards
+      .length,
+    4,
   );
 });

@@ -88,3 +88,7 @@ Astra is being prepared for a supported open-source release. The project license
 will be selected by the owner before that release; no license choice is implied
 by this documentation. See the [release checklist](delivery/RELEASE-CHECKLIST.md)
 for outstanding acceptance and publication decisions.
+
+Projects can have a Folder category such as Work, Home or Hobby. Set it in the
+project editor; Focus shows All folders or one folder across projects. Card tags
+remain independent. Folder categories do not move directories on disk.

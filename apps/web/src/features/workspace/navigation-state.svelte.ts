@@ -12,6 +12,7 @@ type ResourceRoute = NonNullable<WorkspaceRoute["resource"]>;
 export type RouteFilters = Pick<
   WorkspaceRoute,
   | "project"
+  | "folder"
   | "search"
   | "archived"
   | "status"

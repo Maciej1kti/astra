@@ -112,6 +112,8 @@ pub struct Evidence {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub folder: Option<String>,
     pub schema_version: u32,
     pub id: String,
     pub name: String,

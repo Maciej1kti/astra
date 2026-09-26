@@ -198,7 +198,7 @@ export async function pair(
 ) {
   await page.goto(host.origin);
   const request = page.getByRole("button", { name: /^Request access/ });
-  const project = page.getByLabel("Project", { exact: true });
+  const project = page.locator("header.topbar");
   await request.or(project).waitFor();
   if (requireRequest)
     assert(await request.isVisible(), "Expected a fresh unpaired browser");

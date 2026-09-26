@@ -6,7 +6,8 @@
     "name": "Eksport danych — demonstracja",
     "state": "active",
     "created_at": "2026-09-05T10:00:00Z",
-    "updated_at": "2026-09-05T10:00:00Z"
+    "updated_at": "2026-09-05T10:00:00Z",
+    "folder": "Work"
   },
   "body": "# Cel\n\nUdostępnić użytkownikowi przewidywalny eksport danych.\n\n## Granice\n\nBez synchronizacji chmurowej i bez automatycznej wysyłki.\n"
 }

@@ -236,3 +236,137 @@ fn gantt_keeps_source_rows_and_page_snapshot_without_forecasts_or_edges() {
     wire::validate("GanttPage", &next).unwrap();
     assert_eq!(next["rows"].as_array().unwrap().len(), 1);
 }
+
+#[test]
+fn project_folders_scope_all_resources_before_pagination_and_survive_restart() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let first = register(&engine, &env.path());
+    let mut projects = vec![first];
+    for name in ["other", "third"] {
+        let path = env.root.join(name);
+        fs::create_dir(&path).unwrap();
+        projects.push(register(&engine, path.to_str().unwrap()));
+    }
+    let set_folder = |engine: &Engine, project: &str, payload: Value| {
+        let source = engine.get(project, Kind::Project, project).unwrap();
+        engine
+            .mutate(Mutation {
+                project_id: project.into(),
+                kind: Kind::Project,
+                id: Some(project.into()),
+                payload,
+                request_id: Uuid::now_v7().to_string(),
+                epoch: engine.journal.epoch.clone(),
+                expected: Some(source["version"].as_str().unwrap().into()),
+            })
+            .unwrap()
+    };
+    for (i, project) in projects.iter().enumerate() {
+        assert_eq!(
+            set_folder(
+                &engine,
+                project,
+                json!({"set":{"folder":if i == 0 {"Home"} else {"Work"}}})
+            )
+            .http_status,
+            200
+        );
+        let created = create(&engine, project, "Folder card");
+        let resource = &created.body["result"]["resource"];
+        let id = resource["metadata"]["id"].as_str().unwrap();
+        assert_eq!(
+            patch(
+                &engine,
+                project,
+                id,
+                resource["version"].as_str().unwrap(),
+                json!({"set":{"status":"review","labels":["Unchanged"]}})
+            )
+            .http_status,
+            200
+        );
+    }
+    let folders = engine.folders(None, 1).unwrap();
+    wire::validate("FolderPage", &folders).unwrap();
+    assert_eq!(folders["items"], json!(["Home"]));
+    let next = engine
+        .folders(folders["page"]["next_cursor"].as_str(), 1)
+        .unwrap();
+    assert_eq!(next["items"], json!(["Work"]));
+    assert_eq!(next["page"]["has_more"], false);
+    let query = Query {
+        folder: Some("Work".into()),
+        limit: Some(1),
+        ..Query::default()
+    };
+    let first_page = engine.list(Some("card"), &query).unwrap();
+    assert_ne!(first_page["items"][0]["project_id"], projects[0]);
+    assert_eq!(first_page["items"][0]["labels"], json!(["Unchanged"]));
+    let second_page = engine
+        .list(
+            Some("card"),
+            &Query {
+                cursor: first_page["page"]["next_cursor"]
+                    .as_str()
+                    .map(str::to_owned),
+                ..query.clone()
+            },
+        )
+        .unwrap();
+    assert_ne!(second_page["items"][0]["project_id"], projects[0]);
+    assert_ne!(
+        first_page["items"][0]["project_id"],
+        second_page["items"][0]["project_id"]
+    );
+    assert_eq!(second_page["page"]["has_more"], false);
+    let attention = engine
+        .attention_folder(None, Some("Work"), None, 1, now_millis())
+        .unwrap();
+    assert_ne!(attention["items"][0]["project_id"], projects[0]);
+    assert_eq!(attention["page"]["has_more"], true);
+    assert!(
+        engine
+            .attention_folder(
+                None,
+                Some("Home"),
+                attention["page"]["next_cursor"].as_str(),
+                1,
+                now_millis()
+            )
+            .is_err()
+    );
+    assert_eq!(
+        set_folder(&engine, &projects[1], json!({"set":{"folder":" "}})).http_status,
+        422
+    );
+    assert_eq!(
+        set_folder(&engine, &projects[1], json!({"clear":["folder"]})).http_status,
+        200
+    );
+    assert!(
+        engine
+            .list(
+                Some("card"),
+                &Query {
+                    cursor: first_page["page"]["next_cursor"]
+                        .as_str()
+                        .map(str::to_owned),
+                    ..query.clone()
+                }
+            )
+            .is_err()
+    );
+    drop(engine);
+    let engine = env.engine();
+    let remaining = engine.list(Some("card"), &query).unwrap();
+    assert_eq!(remaining["items"][0]["project_id"], projects[2]);
+    assert_eq!(remaining["page"]["has_more"], false);
+    assert!(
+        engine
+            .get(&projects[1], Kind::Project, &projects[1])
+            .unwrap()["metadata"]
+            .get("folder")
+            .is_none()
+    );
+}

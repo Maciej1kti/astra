@@ -88,6 +88,7 @@ export interface ProjectMetadata {
   schema_version: 1;
   name: string;
   state: "active" | "paused" | "archived";
+  folder?: string;
 }
 export interface CardDocument {
   type: "card";

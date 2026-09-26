@@ -19,6 +19,7 @@ export function viewLabel(view: View): string {
 export type WorkspaceRoute = {
   view: View;
   project: string;
+  folder: string;
   search: string;
   archived: boolean;
   status: string;
@@ -56,6 +57,7 @@ export function readRoute(
       ? (params.get("view") as View)
       : defaultView,
     project,
+    folder: params.get("folder") ?? "",
     search: params.get("q") ?? "",
     archived: params.get("archived") === "true",
     // Legacy milestone lists now open cards without milestone status filters.
@@ -88,6 +90,8 @@ export function readRoute(
 export function writeRoute(state: WorkspaceRoute): URLSearchParams {
   const params = new URLSearchParams({ view: state.view });
   if (state.project) params.set("project", state.project);
+  if (state.folder && state.view === "focus")
+    params.set("folder", state.folder);
   if (state.search) params.set("q", state.search);
   if (state.view === "list") {
     if (state.archived) params.set("archived", "true");

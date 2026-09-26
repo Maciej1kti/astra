@@ -24,6 +24,7 @@ export type CardFields = {
   archived: boolean;
 };
 export type ProjectFields = {
+  folder: string;
   status: "active" | "paused" | "archived";
 };
 export type MilestoneFields = {
@@ -95,6 +96,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         common,
         fields: {
           status: m.state,
+          folder: m.folder ?? "",
         },
       };
     }
@@ -196,7 +198,14 @@ export function editorPayload(draft: EditorDraft) {
         name: title,
         state: draft.fields.status,
       };
-      return { set: fields } satisfies ProjectPatch;
+      const folder = draft.fields.folder.trim();
+      if (folder) fields.folder = folder;
+      return {
+        set: fields,
+        ...(!folder && draft.source?.metadata.folder
+          ? { clear: ["folder"] as ["folder"] }
+          : {}),
+      } satisfies ProjectPatch;
     }
     case "milestone": {
       const fields: MilestoneCreate = {

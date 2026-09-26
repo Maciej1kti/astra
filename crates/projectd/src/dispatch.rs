@@ -64,6 +64,7 @@ pub(super) fn run(
                     "status",
                     "priority",
                     "label",
+                    "folder",
                     "archived",
                     "target_type",
                     "target_id",
@@ -81,6 +82,7 @@ pub(super) fn run(
                 status: fields.get("status").cloned(),
                 priority: fields.get("priority").cloned(),
                 label: fields.get("label").cloned(),
+                folder: fields.get("folder").cloned(),
                 target_type: fields.get("target_type").cloned(),
                 target_id: fields.get("target_id").cloned(),
                 archived: fields
@@ -118,7 +120,8 @@ pub(super) fn run(
                 match *view {
                     "calendar" => &["project_id", "from", "to", "cursor", "limit"][..],
                     "board" | "gantt" => &["project_id", "cursor", "limit"],
-                    "attention" => &["cursor", "limit", "project_id"],
+                    "attention" => &["cursor", "limit", "project_id", "folder"],
+                    "folders" => &["cursor", "limit"],
                     _ => return Err(AppError::reject(404, "NOT_FOUND")),
                 },
             )?;
@@ -133,8 +136,10 @@ pub(super) fn run(
                 },
             )?;
             match *view {
-                "attention" => engine.attention_project(
+                "folders" => engine.folders(cursor, limit)?,
+                "attention" => engine.attention_folder(
                     fields.get("project_id").map(String::as_str),
+                    fields.get("folder").map(String::as_str),
                     cursor,
                     limit,
                     now,

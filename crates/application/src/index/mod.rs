@@ -23,6 +23,7 @@ pub struct Query {
     pub status: Option<String>,
     pub priority: Option<String>,
     pub label: Option<String>,
+    pub folder: Option<String>,
     pub target_type: Option<String>,
     pub target_id: Option<String>,
     pub archived: Option<bool>,
@@ -62,6 +63,7 @@ impl Indexed {
             "author",
             "target",
             "labels",
+            "folder",
         ] {
             if key == "due" {
                 let Some(date) = m["due"]["date"].as_str() else {

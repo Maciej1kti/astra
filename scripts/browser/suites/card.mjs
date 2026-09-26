@@ -118,7 +118,7 @@ export async function runCardChecks({
     await page.goto(
       `${config.origin}/?${new URLSearchParams({ view, project, ...extra })}`,
     );
-    await page.getByLabel("Project", { exact: true }).waitFor();
+    await page.locator("header.topbar").waitFor();
     await expect(page.locator(".asidebottom")).toContainText(
       "Connected to host",
     );

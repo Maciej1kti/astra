@@ -115,10 +115,10 @@ try {
     "2026-09-09",
     "2026-09-10",
   );
+  await page.getByRole("button", { name: "Timeline", exact: true }).click();
   await page
     .getByLabel("Project", { exact: true })
     .selectOption(plan.project_id);
-  await page.getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Month", { exact: true }).fill("2026-09");
   await page
     .getByRole("button", {

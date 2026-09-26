@@ -300,3 +300,25 @@ test("mutations bypass GET sharing and retry retains original identity, epoch an
     globalThis.fetch = previous;
   }
 });
+
+test("Focus queries use folders across projects and invalidate when project folders change", () => {
+  const focus = { ...query, view: "focus", folder: "Work" };
+  const path = new URL(resourceListPath(focus, "card"), "https://example.test");
+  assert.equal(path.searchParams.get("folder"), "Work");
+  assert.equal(path.searchParams.has("project_id"), false);
+  assert.equal(
+    viewQueryKey(focus),
+    viewQueryKey({ ...focus, project: "other" }),
+  );
+  assert.notEqual(
+    viewQueryKey(focus),
+    viewQueryKey({ ...focus, folder: "Home" }),
+  );
+  assert.deepEqual(
+    affectedSections(
+      { kind: "changed", project_id: "other", target: { type: "project" } },
+      focus,
+    ),
+    ["projects", "focus", "attention", "card"],
+  );
+});

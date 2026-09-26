@@ -37,7 +37,7 @@ await runBrowserSuite(
         params.set("resource", card.metadata.id);
       }
       await page.goto(`${config.origin}/?${params}`);
-      await expect(page.getByLabel("Project", { exact: true })).toBeVisible();
+      await expect(page.locator("header.topbar")).toBeVisible();
       await expect(page.locator(".asidebottom")).toContainText(
         "Connected to host",
       );

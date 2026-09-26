@@ -61,7 +61,7 @@ await runBrowserSuite(
         `${config.origin}/?${new URLSearchParams({ view, project: projectId, ...extra })}`,
       );
       if (view !== "projects")
-        await expect(page.getByLabel("Project", { exact: true })).toBeVisible();
+        await expect(page.locator("header.topbar")).toBeVisible();
       await expect(page.locator(".asidebottom")).toContainText(
         "Connected to host",
       );

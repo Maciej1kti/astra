@@ -72,7 +72,7 @@ await runBrowserSuite(
     }
     async function route(view) {
       await page.goto(`${config.origin}/?view=${view}&project=${project}`);
-      await page.getByLabel("Project", { exact: true }).waitFor();
+      await page.locator("header.topbar").waitFor();
       await expect(page.locator(".asidebottom")).toContainText(
         "Connected to host",
       );

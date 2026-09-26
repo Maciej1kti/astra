@@ -52,6 +52,7 @@
         <span class="projectopen-icon" aria-hidden="true">↗</span>
       </button>
       <div class="project-meta">
+        {#if item.folder}<Badge>{item.folder}</Badge>{/if}
         <Badge data-state={item.status}
           >{resourceLabel(item.status ?? "")}</Badge
         >

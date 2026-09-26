@@ -6,6 +6,7 @@
   import WorkspaceNavigation from "./features/workspace/WorkspaceNavigation.svelte";
   import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
   import WorkspaceFilters from "./features/workspace/WorkspaceFilters.svelte";
+  import CreateCardProject from "./features/workspace/CreateCardProject.svelte";
   import FocusScreen from "./features/workspace/screens/FocusScreen.svelte";
   import ProjectsScreen from "./features/workspace/screens/ProjectsScreen.svelte";
   import BoardOverview from "./features/workspace/screens/BoardOverview.svelte";
@@ -76,7 +77,8 @@
           manageTags ||
           gitProject ||
           diagnostics ||
-          projectDeletion
+          projectDeletion ||
+          choosingCardProject
         ),
       clearEditor: () => {
         editor = null;
@@ -453,6 +455,7 @@
     return {
       view: routing.current.view,
       project: routing.current.project,
+      folder: routing.current.folder,
       search: routing.current.search,
       archived: routing.current.archived,
       status: routing.current.status,
@@ -469,6 +472,7 @@
     data.reset();
 
     adding = false;
+    choosingCardProject = null;
     error = "Your session ended. Reconnect this browser to continue.";
   }
   function commandWarning(event: Event) {
@@ -490,22 +494,31 @@
     });
   }
 
+  let choosingCardProject = $state<Summary[] | null>(null);
   function create(
     type: CreateType,
     initialMetadata: Partial<CardCreate> = {},
     autoCreate = false,
   ) {
-    if (!routing.current.project) {
+    let project = routing.current.project;
+    if (routing.current.view === "focus") {
+      const candidates = projects.filter(
+        (p) =>
+          p.availability === "ready" &&
+          (!routing.current.folder || p.folder === routing.current.folder),
+      );
+      if (candidates.length > 1) {
+        choosingCardProject = candidates;
+        return;
+      }
+      project = candidates[0]?.id ?? "";
+    }
+    if (!project) {
       error = "Select a project before creating a resource.";
       return;
     }
     routing.startDraft();
-    editor = createTarget(
-      routing.current.project,
-      type,
-      initialMetadata,
-      autoCreate,
-    );
+    editor = createTarget(project, type, initialMetadata, autoCreate);
   }
   async function saved() {
     editor = null;
@@ -641,6 +654,9 @@
         project={routing.current.project}
         {projects}
         selectable={routing.current.view !== "projects"}
+        focus={routing.current.view === "focus"}
+        folder={routing.current.folder}
+        onfolderchange={(folder) => routing.changeFilters({ folder })}
         {today}
         onprojectchange={(project) => routing.changeFilters({ project })}
         ongit={() => (gitProject = routing.current.project)}
@@ -815,6 +831,15 @@
     </div>
   </div>
 {/if}
+{#if choosingCardProject}<CreateCardProject
+    projects={choosingCardProject}
+    onclose={() => (choosingCardProject = null)}
+    onselect={(project) => {
+      choosingCardProject = null;
+      routing.startDraft();
+      editor = createTarget(project, "card");
+    }}
+  />{/if}
 {#if dateDraft}{#key dateDraft}<DateChange
       {...dateDraft}
       onclose={() => (dateDraft = null)}

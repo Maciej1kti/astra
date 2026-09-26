@@ -88,7 +88,7 @@
   } = $props();
 
   const sections = $derived(
-    focusSections(cards, focusCards, attentionRows, route),
+    focusSections(cards, focusCards, attentionRows, route, projects),
   );
   let gestureFocus = $state<FocusCard[] | null>(null);
   const visibleFocus = $derived<FocusCard[]>(sections.focusCards);

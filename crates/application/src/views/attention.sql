@@ -4,6 +4,7 @@ FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
 AND entity_type='card'
 AND json_extract(metadata_json,'$.schedule.end')<?1
 UNION ALL SELECT project_id,entity_id,entity_type,title,'due_soon',json_extract(metadata_json,'$.schedule.end'),3
@@ -11,6 +12,7 @@ FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
 AND entity_type='card'
 AND json_extract(metadata_json,'$.schedule.end') BETWEEN ?1
 AND ?2
@@ -19,6 +21,7 @@ FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
 AND entity_type='milestone'
 AND json_extract(metadata_json,'$.due.date')<?1
 UNION ALL SELECT project_id,entity_id,entity_type,title,'due_soon',json_extract(metadata_json,'$.due.date'),3
@@ -26,6 +29,7 @@ FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
 AND entity_type='milestone'
 AND json_extract(metadata_json,'$.due.date') BETWEEN ?1
 AND ?2
@@ -34,6 +38,7 @@ FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
 AND entity_type='card'
 AND json_extract(metadata_json,'$.status')='review'
 UNION ALL SELECT d.project_id,d.entity_id,d.entity_type,d.title,'decision_needed',NULL,1
@@ -41,6 +46,7 @@ FROM documents d
 WHERE {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
 AND entity_type='update'
 AND json_extract(metadata_json,'$.kind')='decision_needed'
 AND NOT EXISTS(SELECT 1

@@ -16,6 +16,7 @@ import { projectionNotice } from "../../lib/api/projection-state.ts";
 export type ViewQuery = {
   view: View;
   project: string;
+  folder?: string;
   search: string;
   archived: boolean;
   status: string;
@@ -54,7 +55,8 @@ export function viewQueryKey(query: ViewQuery) {
   // Loaded-title filters do not change the server query or discard view state.
   return JSON.stringify([
     query.view,
-    query.view === "projects" ? "" : query.project,
+    ["projects", "focus"].includes(query.view) ? "" : query.project,
+    query.view === "focus" ? (query.folder ?? "") : "",
     ["list", "updates"].includes(query.view) ? query.search.trim() : "",
     ...(query.view === "list"
       ? [query.archived, query.status, query.priority, query.label]
@@ -71,6 +73,7 @@ export function affectedSections(
       event.kind === "health_changed" &&
       event.project_id &&
       query.project &&
+      query.view !== "focus" &&
       event.project_id !== query.project
     )
       return ["projects"];
@@ -79,7 +82,7 @@ export function affectedSections(
   const kind = event.target.type;
   if (
     query.project &&
-    query.view !== "projects" &&
+    !["projects", "focus"].includes(query.view) &&
     event.project_id &&
     event.project_id !== query.project
   )
@@ -92,7 +95,7 @@ export function affectedSections(
         : kind === "update"
           ? ["attention", "update"]
           : kind === "project"
-            ? ["projects", "attention", "planning"]
+            ? ["projects", "focus", "card", "attention", "planning"]
             : needed;
   return needed.filter((section) => changed.includes(section));
 }
@@ -111,7 +114,7 @@ export function resourceListPath(
   const params = new URLSearchParams({ type, limit: "200" });
   if (["list", "updates"].includes(query.view) && query.search.trim())
     params.set("q", query.search.trim());
-  if (query.project && query.view !== "projects")
+  if (query.project && !["projects", "focus"].includes(query.view))
     params.set("project_id", query.project);
   if (query.view === "list" && type === "card") {
     if (query.status) params.set("status", query.status);
@@ -119,7 +122,10 @@ export function resourceListPath(
     if (query.priority) params.set("priority", query.priority);
     if (query.label) params.set("label", query.label);
   }
-  if (query.view === "focus" && type === "card") params.set("status", "active");
+  if (query.view === "focus") {
+    if (type === "card") params.set("status", "active");
+    if (query.folder) params.set("folder", query.folder);
+  }
   if (cursor) params.set("cursor", cursor);
   return `/api/v1/views/list?${params}`;
 }
@@ -137,12 +143,14 @@ export const resourcePage = (
     options,
   );
 export function attentionPage(
-  project: string,
+  query: ViewQuery,
   cursor: string | null,
   options: ReadOptions = {},
 ) {
   const params = new URLSearchParams({ limit: "200" });
-  if (project) params.set("project_id", project);
+  if (query.view === "focus") {
+    if (query.folder) params.set("folder", query.folder);
+  } else if (query.project) params.set("project_id", query.project);
   if (cursor) params.set("cursor", cursor);
   return api<Page<Attention>>(
     `/api/v1/views/attention?${params}`,
@@ -192,7 +200,7 @@ export async function loadView(
         );
       else if (section === "attention") {
         result.attention = await cursorPage(
-          (cursor) => attentionPage(query.project, cursor, options),
+          (cursor) => attentionPage(query, cursor, options),
           cursors.attention ?? null,
         );
         result.notices.attention = projectionNotice(result.attention.value);

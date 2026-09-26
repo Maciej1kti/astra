@@ -181,6 +181,8 @@ export interface ApiContracts {
         value: string;
         label?: string;
       };
+  Folder: string;
+  FolderPage: FolderPage;
   ProjectMetadata: ProjectMetadata;
   AcceptanceItem: AcceptanceItem;
   Acceptance: Acceptance;
@@ -204,10 +206,15 @@ export interface ApiContracts {
   ProjectPatch:
     | {
         set?: {
+          folder?: string;
           name?: string;
           state?: "active" | "paused" | "archived";
           body?: string;
         };
+        /**
+         * @maxItems 1
+         */
+        clear?: "folder"[];
       }
     | {
         undo: {
@@ -344,7 +351,28 @@ export interface ReportTarget {
   type: "project" | "milestone";
   id: string;
 }
+export interface FolderPage {
+  /**
+   * @maxItems 200
+   */
+  items: string[];
+  page: PageMeta;
+  warnings: Warning[];
+  minItems?: 0;
+}
+export interface PageMeta {
+  next_cursor: string | null;
+  snapshot_cursor: string;
+  has_more: boolean;
+  freshness: "verified" | "index_snapshot" | "stale" | "degraded";
+}
+export interface Warning {
+  code: string;
+  message: string;
+  field?: string;
+}
 export interface ProjectMetadata {
+  folder?: string;
   id: string;
   created_at: string;
   updated_at: string;
@@ -503,11 +531,6 @@ export interface Error {
     };
   };
 }
-export interface Warning {
-  code: string;
-  message: string;
-  field?: string;
-}
 export interface DeleteInput {}
 export interface ProjectDeletionPlan {
   project_id: string;
@@ -559,13 +582,8 @@ export interface Accepted {
   job_id: string;
   status: "running";
 }
-export interface PageMeta {
-  next_cursor: string | null;
-  snapshot_cursor: string;
-  has_more: boolean;
-  freshness: "verified" | "index_snapshot" | "stale" | "degraded";
-}
 export interface Summary {
+  folder?: string;
   type: "project" | "card" | "milestone" | "update";
   project_id: string;
   id: string;
@@ -902,6 +920,7 @@ export interface Context {
   }[];
 }
 export interface ContextEntry {
+  folder?: string;
   type: "project" | "card" | "milestone" | "update";
   id: string;
   title: string;
@@ -1105,6 +1124,8 @@ export type Version = ApiContracts["Version"];
 export type Position = ApiContracts["Position"];
 
 export type Evidence = ApiContracts["Evidence"];
+
+export type Folder = ApiContracts["Folder"];
 
 export type ProjectPatch = ApiContracts["ProjectPatch"];
 

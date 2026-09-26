@@ -71,11 +71,12 @@ await runBrowserSuite(
             page.locator("main").getByLabel("Project", { exact: true }),
           ).toHaveCount(0);
           if (view !== "projects") {
-            const picker = header.getByLabel("Project", { exact: true });
+            const filterLabel = view === "focus" ? "Folder" : "Project";
+            const picker = header.getByLabel(filterLabel, { exact: true });
             await expect(
-              page.getByLabel("Project", { exact: true }),
+              page.getByLabel(filterLabel, { exact: true }),
             ).toHaveCount(1);
-            await expect(picker).toHaveValue(project);
+            await expect(picker).toHaveValue(view === "focus" ? "" : project);
             await expect(picker).toBeInViewport({ ratio: 1 });
             const box = await picker.boundingBox();
             assert.ok(
@@ -195,8 +196,11 @@ await runBrowserSuite(
       await picker.selectOption(project);
       await expect(page.locator(".listrow").first()).toBeVisible();
       await page.getByRole("button", { name: "Focus", exact: true }).click();
-      await expect(picker).toHaveValue(project);
+      await expect(page.getByLabel("Folder", { exact: true })).toHaveValue("");
+      await expect(picker).toHaveCount(0);
       await expect(page).toHaveURL(/view=focus/);
+      await page.getByRole("button", { name: "List", exact: true }).click();
+      await expect(picker).toHaveValue(project);
       results.push({
         headerProjectSelection: true,
         reloadAndHistory: true,

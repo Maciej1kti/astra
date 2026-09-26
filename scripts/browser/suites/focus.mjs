@@ -215,6 +215,13 @@ await runBrowserSuite(
       title: `Other project pin ${suffix}`,
       status: "active",
     });
+    const projectSource = cli("get", base);
+    await mutate(
+      "PATCH",
+      base,
+      { set: { folder: "Work" } },
+      projectSource.version,
+    );
     const orderFirst = await createCard(project.id, {
       title: `Focus order first ${suffix}`,
       status: "active",
@@ -350,15 +357,88 @@ await runBrowserSuite(
       );
 
       await check(
+        "F02-folder",
+        "Project folder autosave groups projects, survives reload and can be cleared",
+        async () => {
+          await page.goto(
+            `${config.origin}/?view=projects&resource_project=${otherProject.id}&type=project&resource=${otherProject.id}`,
+          );
+          const modal = editor(page);
+          await expect(modal).toBeVisible();
+          await modal.getByLabel("Folder", { exact: true }).fill("Work");
+          await expect(modal.getByTestId("autosave-status")).toHaveText(
+            "Saved",
+          );
+          await expect
+            .poll(
+              () =>
+                cli("get", `/api/v1/projects/${otherProject.id}`).metadata
+                  .folder,
+            )
+            .toBe("Work");
+          await page.reload();
+          await expect(
+            editor(page).getByLabel("Folder", { exact: true }),
+          ).toHaveValue("Work");
+          await routeFocus(page, { folder: "Work", project: otherProject.id });
+          await expect(focusCard(page, pinned.metadata.id)).toBeVisible();
+          await expect(focusCard(page, otherPinned.metadata.id)).toBeVisible();
+          await expect(page.getByLabel("Project", { exact: true })).toHaveCount(
+            0,
+          );
+          await page.reload();
+          await expect(page.getByLabel("Folder", { exact: true })).toHaveValue(
+            "Work",
+          );
+          await focusButton(page).click();
+          const chooser = page.getByRole("dialog", {
+            name: "Choose project for card",
+          });
+          await expect(chooser).toBeVisible();
+          await expect(chooser.getByRole("option")).toHaveCount(3);
+          await chooser
+            .getByLabel("Project", { exact: true })
+            .selectOption(project.id);
+          await chooser
+            .getByRole("button", { name: "Continue", exact: true })
+            .click();
+          await expect(editor(page)).toBeVisible();
+          await editor(page)
+            .getByRole("button", { name: "Close editor", exact: true })
+            .click();
+          await page.goto(
+            `${config.origin}/?view=projects&resource_project=${otherProject.id}&type=project&resource=${otherProject.id}`,
+          );
+          await editor(page).getByLabel("Folder", { exact: true }).fill("");
+          await expect(editor(page).getByTestId("autosave-status")).toHaveText(
+            "Saved",
+          );
+          await expect
+            .poll(
+              () =>
+                cli("get", `/api/v1/projects/${otherProject.id}`).metadata
+                  .folder ?? "",
+            )
+            .toBe("");
+          await routeFocus(page, { folder: "Work" });
+          await expect(focusCard(page, otherPinned.metadata.id)).toHaveCount(0);
+          await page.getByLabel("Folder", { exact: true }).selectOption("");
+          await expect(focusCard(page, otherPinned.metadata.id)).toBeVisible();
+          return { folder: "Work", projects: 2, cleared: true, reload: true };
+        },
+        page,
+      );
+
+      await check(
         "F03",
-        "Project and title filters keep focus cards scoped",
+        "Folder and title filters keep focus cards scoped",
         async () => {
           await routeFocus(page, {
-            project: project.id,
+            folder: "Work",
             q: `Pinned overdue ${suffix}`,
           });
-          await expect(page.getByLabel("Project", { exact: true })).toHaveValue(
-            project.id,
+          await expect(page.getByLabel("Folder", { exact: true })).toHaveValue(
+            "Work",
           );
           await expect(
             page.getByLabel("Filter loaded titles", { exact: true }),
@@ -381,7 +461,7 @@ await runBrowserSuite(
         "F04",
         "Focus add action stays at the viewport bottom and opens a centered editor",
         async () => {
-          await routeFocus(page, { project: project.id });
+          await routeFocus(page, { folder: "Work" });
           await page.evaluate(() => {
             document.documentElement.style.minHeight = "2200px";
           });
@@ -469,7 +549,7 @@ await runBrowserSuite(
         "Focus add action creates one autosaved card in the selected project",
         async () => {
           await page.setViewportSize({ width: 1440, height: 1000 });
-          await routeFocus(page, { project: project.id });
+          await routeFocus(page, { folder: "Work" });
           const beforePosts = requests.filter(
             (url) => url.pathname === `${base}/cards`,
           ).length;
@@ -535,7 +615,7 @@ await runBrowserSuite(
               },
             });
           });
-          await routeFocus(page, { project: project.id });
+          await routeFocus(page, { folder: "Work" });
           const startOrder = [
             orderFirst.metadata.id,
             unavailable.metadata.id,
@@ -707,7 +787,7 @@ await runBrowserSuite(
           ];
           await setFocus(initialItems);
           const observed = cli("focus", "get");
-          await routeFocus(page, { project: project.id });
+          await routeFocus(page, { folder: "Work" });
           await expect
             .poll(() => visibleFocusOrder(page))
             .toEqual(initialItems.map((item) => item.card_id));
@@ -791,7 +871,7 @@ await runBrowserSuite(
           ];
           await setFocus(items);
           const observed = cli("focus", "get");
-          await routeFocus(page, { project: project.id });
+          await routeFocus(page, { folder: "Work" });
           await expect
             .poll(() => visibleFocusOrder(page))
             .toEqual(items.map((item) => item.card_id));
@@ -918,7 +998,7 @@ await runBrowserSuite(
             `/api/v1/views/attention?project_id=${project.id}&limit=200`,
           ).items.find((item) => item.report_id === reportId);
           assert.equal(decisionRow?.target.type, "project");
-          await routeFocus(page, { project: project.id });
+          await routeFocus(page, { folder: "Work" });
           const attention = section(page, "Needs my attention");
           await expect(
             attention.getByRole("button", {

@@ -3653,6 +3653,42 @@
         ]
       }
     },
+    "/api/v1/views/folders": {
+      "get": {
+        "operationId": "getFolders",
+        "summary": "Read distinct project folders across the workspace",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated folder names from the source projection, including archived resources.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/views/attention": {
       "get": {
         "operationId": "getAttention",
@@ -3684,6 +3720,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "folder",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Folder"
+            }
+          },
           {
             "$ref": "#/components/parameters/Limit"
           },
@@ -3885,6 +3928,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "folder",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Folder"
+            }
+          },
           {
             "$ref": "#/components/parameters/TargetType"
           },
@@ -4504,9 +4554,49 @@
           }
         ]
       },
+      "Folder": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 48,
+        "pattern": "^\\S(?:.*\\S)?$",
+        "not": {
+          "pattern": "[\\r\\n]"
+        },
+        "description": "Exact, case-sensitive category name, independent of labels and filesystem paths. The folder belongs to the project and scopes all its resources."
+      },
+      "FolderPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "warnings"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "$ref": "#/components/schemas/Folder"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMeta"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            }
+          }
+        }
+      },
       "ProjectMetadata": {
         "type": "object",
         "properties": {
+          "folder": {
+            "$ref": "#/components/schemas/Folder"
+          },
           "id": {
             "$ref": "#/components/schemas/UUID"
           },
@@ -5217,6 +5307,9 @@
               "set": {
                 "type": "object",
                 "properties": {
+                  "folder": {
+                    "$ref": "#/components/schemas/Folder"
+                  },
                   "name": {
                     "type": "string",
                     "minLength": 1,
@@ -5239,6 +5332,14 @@
                 "required": [],
                 "additionalProperties": false,
                 "minProperties": 1
+              },
+              "clear": {
+                "type": "array",
+                "items": {
+                  "const": "folder"
+                },
+                "maxItems": 1,
+                "uniqueItems": true
               }
             },
             "required": [],
@@ -5981,6 +6082,9 @@
       "Summary": {
         "type": "object",
         "properties": {
+          "folder": {
+            "$ref": "#/components/schemas/Folder"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -7655,6 +7759,9 @@
       "ContextEntry": {
         "type": "object",
         "properties": {
+          "folder": {
+            "$ref": "#/components/schemas/Folder"
+          },
           "type": {
             "type": "string",
             "enum": [

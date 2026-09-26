@@ -232,3 +232,10 @@ browser-local appearance settings or a batch mutation transaction.
 Run `projectctl --help` and `projectctl COMMAND --help` for the implemented command
 tree. The [historical CLI requirements](docs/06-CLI-AND-AGENTS.md) retain outstanding
 requirements and projected aliases; they are not a command reference.
+
+Project folder categories use ordinary conditional project patches. Read the
+project with `get /api/v1/projects/PROJECT_ID`, then use `command PATCH` with
+`{"set":{"folder":"Work"}}` and its observed `--if-version`. Clear the category
+with `{"clear":["folder"]}`. Folder is project metadata, not a path or a card tag.
+`get '/api/v1/views/list?type=card&folder=Work'` and
+`get '/api/v1/views/attention?folder=Work'` filter across projects before pagination.

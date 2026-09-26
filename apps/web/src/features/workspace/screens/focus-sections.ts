@@ -21,12 +21,18 @@ export function attentionKey(item: Attention): string {
 export function groupedAttention(
   rows: Attention[],
   route: Readonly<WorkspaceRoute>,
+  projects: Summary[] = [],
 ): FocusAttention[] {
   const grouped = new Map<string, FocusAttention>();
   const search = route.search.trim().toLowerCase();
   for (const item of rows) {
     if (
-      (route.project && item.project_id !== route.project) ||
+      (route.view === "focus"
+        ? !!route.folder &&
+          !projects.some(
+            (p) => p.id === item.project_id && p.folder === route.folder,
+          )
+        : route.project && item.project_id !== route.project) ||
       (search && !item.label.toLowerCase().includes(search))
     )
       continue;
@@ -55,9 +61,10 @@ export function focusSections(
   pinnedCards: Summary[],
   attentionRows: Attention[],
   route: Readonly<WorkspaceRoute>,
+  projects: Summary[] = [],
 ): FocusSections {
-  const visibleFocus = visibleCards(pinnedCards, route);
-  const attention = groupedAttention(attentionRows, route);
+  const visibleFocus = visibleCards(pinnedCards, route, projects);
+  const attention = groupedAttention(attentionRows, route, projects);
   const pinnedKeys = new Set(visibleFocus.map(resourceKey));
   const attentionCardKeys = new Set(
     attention.filter((item) => item.target.type === "card").map(attentionKey),
@@ -71,7 +78,7 @@ export function focusSections(
   return {
     focusCards: focus,
     attention: attention.filter((item) => !pinnedKeys.has(attentionKey(item))),
-    activeCards: visibleCards(cards, route).filter(
+    activeCards: visibleCards(cards, route, projects).filter(
       (item) =>
         item.status === "active" &&
         !pinnedKeys.has(resourceKey(item)) &&

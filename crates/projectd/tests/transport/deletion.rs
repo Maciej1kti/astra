@@ -388,7 +388,17 @@ async fn project_deletion_plan_rejects_symlink_hardlink_and_fifo_entries() {
             "symlink" => symlink(Path::new("project.md"), &entry).unwrap(),
             "hardlink" => fs::hard_link(source.join("project.md"), &entry).unwrap(),
             "fifo" => {
-                rustix::fs::mkfifoat(rustix::fs::CWD, &entry, rustix::fs::Mode::RUSR).unwrap()
+                assert!(
+                    std::process::Command::new("mkfifo")
+                        .args(["-m", "400"])
+                        .arg(&entry)
+                        .status()
+                        .unwrap()
+                        .success()
+                );
+                assert!(std::os::unix::fs::FileTypeExt::is_fifo(
+                    &fs::symlink_metadata(&entry).unwrap().file_type()
+                ));
             }
             _ => unreachable!(),
         }

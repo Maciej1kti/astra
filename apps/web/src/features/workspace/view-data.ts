@@ -258,18 +258,18 @@ export class ViewData {
   async moreAttention(first = false) {
     if (this.snapshot.loadingMore) return;
     const generation = this.generation;
-    const project = this.dependencies.query().project;
+    const query = this.dependencies.query();
     const target = first ? null : this.snapshot.attentionCursor;
     this.snapshot.loadingMore = true;
     this.publish();
     try {
       const result = await cursorPage(
-        (cursor) => attentionPage(project, cursor),
+        (cursor) => attentionPage(query, cursor),
         target,
       );
       if (
         generation !== this.generation ||
-        project !== this.dependencies.query().project
+        viewQueryKey(query) !== viewQueryKey(this.dependencies.query())
       )
         return;
       this.snapshot.attentionRows = result.value.items;

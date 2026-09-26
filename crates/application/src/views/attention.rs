@@ -12,7 +12,21 @@ impl Engine {
         limit: u32,
         now: i64,
     ) -> Result<Value, AppError> {
+        self.attention_folder(project, None, cursor, limit, now)
+    }
+
+    pub fn attention_folder(
+        &self,
+        project: Option<&str>,
+        folder: Option<&str>,
+        cursor: Option<&str>,
+        limit: u32,
+        now: i64,
+    ) -> Result<Value, AppError> {
         bounded(limit, 200)?;
+        if let Some(folder) = folder {
+            validate_folder(folder)?;
+        }
         let workspace = self.workspace()?.value;
         let zone = workspace
             .timezone
@@ -31,11 +45,16 @@ impl Engine {
                 "attention",
                 page_revision(db, revision, project)?,
                 project,
+                folder,
                 today.to_string(),
                 limit
             ]);
             let start = offset(cursor, &scope)?;
-            let sql = format!(include_str!("attention.sql"), ACTIVE = ACTIVE);
+            let sql = format!(
+                include_str!("attention.sql"),
+                ACTIVE = ACTIVE,
+                FOLDER = EFFECTIVE_FOLDER
+            );
             let mut statement = db.prepare(&sql)?;
             let mut items = statement
                 .query_map(
@@ -44,7 +63,8 @@ impl Engine {
                         soon.to_string(),
                         limit + 1,
                         start as i64,
-                        project
+                        project,
+                        folder
                     ],
                     attention_item,
                 )?

@@ -80,7 +80,7 @@ impl Index {
     source_hash,
     metadata_json,
     validity
-FROM documents
+FROM documents d
 WHERE 1=1"
             .to_owned();
         let mut values = Vec::<SqlValue>::new();
@@ -108,6 +108,11 @@ WHERE 1=1"
                 sql.push_str(&format!(" AND {condition}=?"));
                 values.push(value.to_owned().into());
             }
+        }
+        if let Some(folder) = &query.folder {
+            crate::views::validate_folder(folder)?;
+            sql.push_str(&format!(" AND {}=?", crate::views::EFFECTIVE_FOLDER));
+            values.push(folder.clone().into());
         }
         if let Some(label) = &query.label {
             sql.push_str(

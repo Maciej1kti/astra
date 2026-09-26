@@ -293,12 +293,21 @@ fn unsupported_symlink_hardlink_and_fifo_are_rejected_by_preview() {
     fs::hard_link(&outside, env.project_text_path("hardlink.txt")).unwrap();
     assert!(engine.project_deletion_plan(&project).is_err());
     fs::remove_file(env.project_text_path("hardlink.txt")).unwrap();
-    rustix::fs::mkfifoat(
-        rustix::fs::CWD,
-        env.project_text_path("fifo"),
-        rustix::fs::Mode::from_raw_mode(0o600),
-    )
-    .unwrap();
+    // macOS does not expose mkfifoat; the POSIX utility creates the same fixture.
+    assert!(
+        std::process::Command::new("mkfifo")
+            .arg("-m")
+            .arg("600")
+            .arg(env.project_text_path("fifo"))
+            .status()
+            .unwrap()
+            .success()
+    );
+    assert!(std::os::unix::fs::FileTypeExt::is_fifo(
+        &fs::symlink_metadata(env.project_text_path("fifo"))
+            .unwrap()
+            .file_type()
+    ));
     assert!(engine.project_deletion_plan(&project).is_err());
 }
 

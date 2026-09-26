@@ -104,3 +104,25 @@ test("view create actions select cards or updates", () => {
     assert.equal(primaryResource(view), "card");
   assert.equal(primaryResource("updates"), "update");
 });
+
+test("Focus folder and resource links survive reload independently of the previous project", () => {
+  const route = readRoute(
+    new URLSearchParams({
+      view: "focus",
+      project,
+      folder: "Work & Home",
+      resource: card,
+      type: "card",
+    }),
+    today,
+  );
+  const saved = writeRoute(route);
+  assert.equal(saved.get("project"), project);
+  const restored = readRoute(saved, today);
+  assert.equal(restored.folder, "Work & Home");
+  assert.equal(restored.resource.project, project);
+  assert.equal(restored.project, project);
+  route.view = "list";
+  assert.equal(writeRoute(route).has("folder"), false);
+  assert.equal(writeRoute(route).get("project"), project);
+});

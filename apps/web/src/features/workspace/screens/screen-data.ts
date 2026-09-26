@@ -16,10 +16,16 @@ export function projectLabel(projects: Summary[], id: string): string {
 export function visibleCards(
   cards: Summary[],
   route: Readonly<WorkspaceRoute>,
+  projects: Summary[] = [],
 ): Summary[] {
   return cards.filter(
     (card) =>
-      (!route.project || card.project_id === route.project) &&
+      (route.view === "focus"
+        ? !route.folder ||
+          projects.some(
+            (p) => p.id === card.project_id && p.folder === route.folder,
+          )
+        : !route.project || card.project_id === route.project) &&
       (route.view === "list"
         ? !!card.archived === route.archived
         : !card.archived) &&

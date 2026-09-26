@@ -7,6 +7,9 @@
   let {
     project,
     projects,
+    focus = false,
+    folder = "",
+    onfolderchange,
     selectable,
     today,
     onprojectchange,
@@ -17,6 +20,9 @@
     logout,
   }: {
     project: string;
+    focus?: boolean;
+    folder?: string;
+    onfolderchange: (folder: string) => void;
     projects: Summary[];
     selectable: boolean;
     today: string;
@@ -27,13 +33,30 @@
     onrefresh: () => void;
     logout: () => void;
   } = $props();
+  const folders = $derived(
+    [...new Set(projects.flatMap((p) => (p.folder ? [p.folder] : [])))].sort(),
+  );
   const projectName = $derived(
     projects.find((item) => item.id === project)?.title ?? "All projects",
   );
 </script>
 
 <header class="topbar">
-  {#if selectable}
+  {#if focus}
+    <select
+      class="workspace-project"
+      aria-label="Folder"
+      title={folder || "All folders"}
+      value={folder}
+      onchange={(event) => onfolderchange(event.currentTarget.value)}
+    >
+      <option value="">All folders</option>
+      {#if folder && !folders.includes(folder)}<option value={folder}
+          >{folder}</option
+        >{/if}
+      {#each folders as item}<option value={item}>{item}</option>{/each}
+    </select>
+  {:else if selectable}
     <select
       class="workspace-project"
       aria-label="Project"
@@ -50,8 +73,9 @@
   {/if}
   <div class="workspace-actions">
     <div class="desktop-workspace-actions">
-      {#if project && selectable}<Button variant="quiet" onclick={ongit}
-          >Git</Button
+      {#if project && selectable && !focus}<Button
+          variant="quiet"
+          onclick={ongit}>Git</Button
         >{/if}
       <span class="date">{today}</span><Button
         variant="quiet"
@@ -67,7 +91,7 @@
     <div class="mobile-workspace-actions">
       <ActionMenu label="Workspace actions">
         {#snippet children(close)}
-          {#if project && selectable}<Button
+          {#if project && selectable && !focus}<Button
               variant="quiet"
               onclick={() => {
                 close();

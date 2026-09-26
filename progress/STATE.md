@@ -1,10 +1,18 @@
 # Current implementation state
 
-Updated 2026-09-25. The application is implemented and under verification;
+Updated 2026-09-26. The application is implemented and under verification;
 full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 [release checklist](../delivery/RELEASE-CHECKLIST.md).
 
 ## Current work and verification
+
+[Project folders](2026-09-26-project-folders.md) add an optional source-backed
+category to projects. Focus filters across projects by folder, with pagination,
+source-preserving autosave and hidden-pin ordering. Existing card tags remain
+independent. The full local gate and all 12 release browser regression suites
+pass across the documented runs, as do broad HTTPS smoke and planning checks.
+The existing manual daemon was not restarted.
+
 
 [Mobile Calendar, Board and Projects polish](2026-09-25-mobile-calendar-board-projects.md)
 brings dated items higher on phone screens, replaces empty-first Board navigation

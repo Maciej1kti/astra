@@ -80,6 +80,11 @@ before each write and retains its command identity through retries. `TagPicker`
 suggests labels from the current project. The older workspace vocabulary API
 remains available for existing clients but is not used by the current UI.
 
+Project folders are optional project metadata, independent of card labels.
+The project editor uses `FolderPicker`; Focus scopes source pins by project
+summaries and sends folder filters to paginated list/attention reads. Folder
+suggestions come from the bounded projection catalog. See [ADR-043](ADR-043-PROJECT-FOLDERS.md).
+
 ## Rust application
 
 The CLI owns argument translation, bounded input/project resolution, named view

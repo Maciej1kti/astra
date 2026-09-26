@@ -262,6 +262,15 @@
             "paused",
             "archived"
           ]
+        },
+        "folder": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "not": {
+            "pattern": "[\\r\\n]"
+          }
         }
       },
       "required": [

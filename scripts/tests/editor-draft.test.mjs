@@ -145,3 +145,26 @@ test("drafts own nested edits and include unfinished tag and acceptance input", 
   assert.equal(source.metadata.acceptance[0].text, "Original");
   assert.deepEqual(source.metadata.labels, [" preserved tag "]);
 });
+
+test("project folders are preserved, changed and explicitly cleared without affecting card tags", () => {
+  const source = {
+    type: "project",
+    version: "v1",
+    body: "Description",
+    metadata: { id: "p", name: "Project", state: "active", folder: "Work" },
+  };
+  const draft = createEditorDraft(editTarget("p", source));
+  draft.common.title = "Renamed";
+  assert.equal(editorPayload(draft).set.folder, "Work");
+  draft.fields.folder = "Home";
+  assert.equal(editorPayload(draft).set.folder, "Home");
+  draft.fields.folder = "";
+  assert.deepEqual(editorPayload(draft), {
+    set: { body: "Description", name: "Renamed", state: "active" },
+    clear: ["folder"],
+  });
+  assert.equal(
+    "folder" in createEditorDraft(editTarget("p", card())).fields,
+    false,
+  );
+});

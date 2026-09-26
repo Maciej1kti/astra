@@ -2,6 +2,7 @@
   import Icon from "../../lib/ui/Icon.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
+  import FolderPicker from "./FolderPicker.svelte";
   import EditableTitle from "../../lib/ui/EditableTitle.svelte";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
 
@@ -1021,6 +1022,10 @@
                   >{/each}</select
               ></label
             >
+            {#if draft.type === "project"}<FolderPicker
+                bind:value={draft.fields.folder}
+                disabled={locked}
+              />{/if}
             {#if draft.type === "card"}
               <label
                 >Priority<select
