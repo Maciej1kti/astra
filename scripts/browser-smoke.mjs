@@ -242,9 +242,7 @@ try {
     .getByLabel("Title", { exact: true })
     .fill("Keep my mobile draft");
   await expect(mobile.getByTestId("autosave-status")).toHaveText("Not saved");
-  await mobile
-    .getByText("Current saved version · your draft stays above")
-    .waitFor();
+  await mobile.getByText("Current saved version").waitFor();
   assert.equal(
     await mobile.getByLabel("Title", { exact: true }).inputValue(),
     "Keep my mobile draft",

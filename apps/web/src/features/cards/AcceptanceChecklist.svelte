@@ -16,11 +16,13 @@
     draft = $bindable(""),
     error = $bindable(""),
     disabled = false,
+    messagesInHeader = false,
   }: {
     items?: AcceptanceItem[];
     draft?: string;
     error?: string;
     disabled?: boolean;
+    messagesInHeader?: boolean;
   } = $props();
   const id = $props.id();
   let input = $state<HTMLInputElement>();
@@ -444,7 +446,14 @@
       onclick={add}><Icon name="plus" /></button
     >
   </div>
-  {#if error}<p role="alert" id={`${id}-error`} class="error">{error}</p>{/if}
+  {#if error}<p
+      role={messagesInHeader ? undefined : "alert"}
+      id={`${id}-error`}
+      class="error"
+      class:sr-only={messagesInHeader}
+    >
+      {error}
+    </p>{/if}
   <p role="status" aria-live="polite" aria-atomic="true" class="sr-only">
     {announcement}
   </p>

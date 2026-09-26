@@ -163,25 +163,25 @@ await runBrowserSuite(
           const box = (selector) =>
             el.querySelector(selector).getBoundingClientRect();
           const title = box("textarea"),
-            context = box(".card-context"),
+            context = box(".dialog-heading"),
+            toolbar = box(".card-header-toolbar"),
             close = box(".dialog-close");
           const header = el.getBoundingClientRect();
           return {
+            titleTop: title.top,
             titleBottom: title.bottom,
-            contextTop: context.top,
-            titleRight: title.right,
-            closeLeft: close.left,
+            contextBottom: context.bottom,
+            toolbarTop: toolbar.top,
+            closeBottom: close.bottom,
             overflow: el.scrollWidth > el.clientWidth + 1,
             headerHeight: header.height,
           };
         });
         assert.ok(
-          layout.contextTop >= layout.titleBottom,
-          `Two header rows: ${JSON.stringify(layout)}`,
-        );
-        assert.ok(
-          layout.titleRight <= layout.closeLeft,
-          "Title keeps the close action clear",
+          layout.titleTop >=
+            Math.max(layout.contextBottom, layout.closeBottom) &&
+            layout.toolbarTop >= layout.titleBottom,
+          `Three header rows: ${JSON.stringify(layout)}`,
         );
         assert.equal(layout.overflow, false);
         assert.ok(

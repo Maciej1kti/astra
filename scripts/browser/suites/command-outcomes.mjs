@@ -246,7 +246,7 @@ await runBrowserSuite(
           "This resource changed since you opened it. Your draft has been kept.",
         );
         await expect(
-          dialog.getByText("Current saved version · your draft stays above", {
+          dialog.getByText("Current saved version", {
             exact: true,
           }),
         ).toBeVisible();
@@ -257,11 +257,11 @@ await runBrowserSuite(
       } else {
         if (unavailable)
           await expect(dialog).toContainText(
-            "The current saved version is unavailable. Your draft is preserved above.",
+            "The current saved version is unavailable. Your draft is preserved in the editor.",
           );
         else {
           await expect(
-            dialog.getByText("Current saved version · your draft stays above", {
+            dialog.getByText("Current saved version", {
               exact: true,
             }),
           ).toBeVisible();

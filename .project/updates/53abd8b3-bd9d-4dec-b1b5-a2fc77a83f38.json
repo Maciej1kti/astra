@@ -1,0 +1,18 @@
+{
+  "body": "Reorganized the card modal header into project/actions, editable title, and status/priority/pin rows with a colored save indicator. Errors, confirmations, field validation and command recovery appear in a conditional fourth header row above the scrolling body. Duplicate field messages and stale success notices during errors are suppressed.\n\nVerified the full local gate, ten release Chromium suites across recorded runs, and broad HTTPS smoke. Rebuilt and restarted the existing manual app; HTTPS serves the change, both projects validate, and source versions, pins and certificate were preserved. Evidence: progress/2026-09-26-card-header-feedback.md. Physical-device acceptance remains open.\n",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "53abd8b3-bd9d-4dec-b1b5-a2fc77a83f38",
+    "kind": "result",
+    "recorded_at": "2026-09-26T18:16:50.512Z",
+    "summary": "Card header layout and visible feedback verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

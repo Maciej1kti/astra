@@ -236,29 +236,28 @@ dialog::backdrop {
   }
 }
 
-.dialog-header-two-rows {
+.dialog-header-stacked {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: var(--space-3);
 }
-.dialog-header-two-rows .dialog-heading {
+.dialog-header-content,
+.dialog-header-messages {
   grid-column: 1 / -1;
-  padding-right: calc(var(--tap-target) + var(--space-4));
-}
-.dialog-header-secondary {
   min-width: 0;
 }
-.dialog-header-two-rows .dialog-close {
-  position: absolute;
-  top: var(--space-6);
-  right: var(--space-10);
+.dialog-header-messages:not(:has(> *)) {
+  display: none;
+}
+.dialog-header-messages {
+  max-height: min(32dvh, 280px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: var(--stroke) solid var(--line);
+  padding-top: var(--space-4);
+  font-size: var(--text-sm);
 }
 .action-menu.align-start .action-menu-panel {
   left: 0;
   right: auto;
-}
-@media (max-width: 520px) {
-  .dialog-header-two-rows .dialog-close {
-    top: var(--space-4);
-    right: var(--space-6);
-  }
 }

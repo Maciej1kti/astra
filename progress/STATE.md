@@ -6,6 +6,11 @@ full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 
 ## Current work and verification
 
+[Card header and feedback](2026-09-26-card-header-feedback.md) puts project/actions,
+title and state controls into three rows, with colored save state and a conditional
+fourth row for errors, confirmations and recovery. The full gate, ten release
+browser suites and broad HTTPS smoke pass. The manual app is restarted and verified.
+
 [Daily card counters](2026-09-26-daily-card-counters.md) add configurable steps,
 explicit daily result confirmation, retained history and protected drafts in the
 shared card modal. The full gate and five release browser suites pass; the manual

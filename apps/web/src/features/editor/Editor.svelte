@@ -84,6 +84,7 @@
   let draft = $state(createEditorDraft(untrack(() => target)));
   let acceptanceError = $state("");
   let tagError = $state("");
+  let tagCatalogError = $state("");
   let commentFlushing = $state(false);
 
   let projectName = $state("");
@@ -111,6 +112,22 @@
     error: null,
   });
   let autosaveError = $state("");
+  const fieldMessages = $derived(
+    draft.type === "card"
+      ? [
+          ...new Set(
+            [acceptanceError, tagError, tagCatalogError].filter(
+              (message) =>
+                !!message &&
+                message !== error &&
+                message !== autosaveError &&
+                message !== deleteError,
+            ),
+          ),
+        ]
+      : [],
+  );
+
   let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
   let autosaveCreated = false;
   let disposed = false;
@@ -900,56 +917,31 @@
     close();
   }}
 >
-  {#if autoCreate && !error && !autosaveError && !conflict && !discard}<p
-      role="status"
-    >
-      Creating card…
-    </p>{/if}
-  <div
-    class="editor-layout"
-    class:quick-pending={autoCreate &&
-      !error &&
-      !autosaveError &&
-      !conflict &&
-      !discard}
-  >
-    {#snippet cardHeaderSecondary()}
-      {#if draft.type === "card"}
-        <div class="card-context">
-          <span class="card-project-name" title={projectName}
-            >{projectName || "Card"}</span
-          >
-          <button
-            type="button"
-            class="quiet priority-toggle"
-            class:high={draft.fields.priority === "high"}
-            aria-label="High priority"
-            title="High priority"
-            aria-pressed={draft.fields.priority === "high"}
-            disabled={locked}
-            onclick={() => {
-              if (draft.type === "card")
-                draft.fields.priority =
-                  draft.fields.priority === "high" ? "normal" : "high";
-            }}><Icon name="flag" small /><span>High priority</span></button
-          >
-        </div>
-      {/if}
+  <div class="editor-layout">
+    {#snippet savedIndicator()}
+      {#if autosaveStatus}<span
+          class="draft-state save-indicator"
+          class:saved={autosaveStatus === "Saved" && !busy && !pending}
+          class:unsaved={autosaveStatus === "Not saved" || !!pending}
+          data-testid="autosave-status"
+          role="status"
+          >{busy ? "Saving…" : pending ? "Not saved" : autosaveStatus}</span
+        >{/if}
     {/snippet}
-    <DialogHeader
-      secondary={draft.type === "card" ? cardHeaderSecondary : undefined}
-      onclose={close}
-      closeLabel="Close editor"
-      disabled={busy || deleteBusy || closing}
-      bind:closeButton={descriptionCloseButton}
-      onclosepointerdown={(event) => {
-        // Preserve the clicked target while a description edit changes height.
-        if (event.button === 0 && descriptionEditing) event.preventDefault();
-      }}
-    >
-      {#snippet heading()}
-        {#if draft.type === "card"}
-          <div class="card-heading">
+    {#snippet cardHeaderContent()}
+      {#if draft.type === "card"}
+        <div class="card-heading">
+          <EditableTitle
+            bind:value={draft.common.title}
+            label="Title"
+            placeholder="Card title"
+            disabled={locked}
+            focus={!resource && !autoCreate}
+            onfinish={finishTitleEdit}
+          />
+        </div>
+        <div class="card-header-toolbar">
+          <div class="card-state-actions">
             <ActionMenu
               label={`Status: ${resourceLabel(draft.fields.status)}`}
               icon={draft.fields.status}
@@ -971,84 +963,121 @@
                 {/each}
               {/snippet}
             </ActionMenu>
-            <EditableTitle
-              bind:value={draft.common.title}
-              label="Title"
-              placeholder="Card title"
-              disabled={locked}
-              focus={!resource && !autoCreate}
-              onfinish={finishTitleEdit}
-            />
-          </div>
-        {:else}
-          <div class="editor-context">
-            <Icon
-              name={draft.type === "project"
-                ? "projects"
-                : draft.type === "update"
-                  ? "updates"
-                  : "board"}
-              small
-            />
-            <span
-              >{projectName ||
-                (draft.type === "project"
-                  ? "Project"
-                  : resourceLabel(draft.type))}</span
-            >
-            {#if projectName}<span class="context-separator">/</span><span
-                class="context-kind">{resourceLabel(draft.type)}</span
-              >{/if}
-          </div>
-        {/if}
-      {/snippet}
-      {#snippet actions()}
-        {#if autosaveStatus}<span
-            class="draft-state"
-            class:unsaved={autosaveStatus === "Not saved"}
-            data-testid="autosave-status"
-            role="status">{autosaveStatus}</span
-          >{/if}
-        {#if draft.type === "card" && resource}
-          <button
-            type="button"
-            class="quiet icon-button focus-toggle"
-            class:pinned
-            aria-label={pinned ? "Remove from focus" : "Pin to focus"}
-            title={pinned ? "Remove from focus" : "Pin to focus"}
-            aria-pressed={pinned}
-            onclick={toggleFocus}
-            disabled={locked || persistedDirty || autosaveWork}
-            ><Icon name="pin" small /></button
-          >
-          <ActionMenu label="Card actions" disabled={locked}>
-            <label class="archive-action"
-              ><input
-                type="checkbox"
-                bind:checked={draft.fields.archived}
-                disabled={locked}
-              /> Archived</label
-            >
-            <p class="menu-hint">Archived cards stay in the project.</p>
             <button
               type="button"
-              class="quiet destructive-action"
-              onclick={requestDelete}
-              disabled={locked || !!conflict || deleteConflict}
-              >Delete card</button
+              class="quiet icon-button priority-toggle"
+              class:high={draft.fields.priority === "high"}
+              aria-label="High priority"
+              title="High priority"
+              aria-pressed={draft.fields.priority === "high"}
+              disabled={locked}
+              onclick={() => {
+                if (draft.type === "card")
+                  draft.fields.priority =
+                    draft.fields.priority === "high" ? "normal" : "high";
+              }}><Icon name="flag" small /></button
             >
-          </ActionMenu>
-        {/if}
-      {/snippet}
-    </DialogHeader>
-    <form
-      class="dialog-body editor-form"
-      onchange={handleChange}
-      onsubmit={(e) => {
-        e.preventDefault();
-        void save();
-      }}
-    >
+            {#if resource}
+              <button
+                type="button"
+                class="quiet icon-button focus-toggle"
+                class:pinned
+                aria-label={pinned ? "Remove from focus" : "Pin to focus"}
+                title={pinned ? "Remove from focus" : "Pin to focus"}
+                aria-pressed={pinned}
+                onclick={toggleFocus}
+                disabled={locked || persistedDirty || autosaveWork}
+                ><Icon name="pin" small /></button
+              >
+            {/if}
+          </div>
+          {@render savedIndicator()}
+        </div>
+      {/if}
+    {/snippet}
+    {#snippet editorMessages()}
+      {#if autoCreate && !error && !autosaveError && !conflict && !discard}<p
+          role="status"
+        >
+          Creating card…
+        </p>{/if}
+      {#if fieldMessages.length}
+        <div class="notice" role="alert">
+          {#each fieldMessages as message}<p>
+              {message}
+            </p>{/each}
+        </div>
+      {/if}
+      {#if error}<div bind:this={notice} class="notice" role="alert">
+          {error}
+        </div>{/if}
+      {#if autosaveResource && autosaveError}<div class="notice" role="alert">
+          {autosaveError}
+        </div>{/if}
+      {#if deleteError}<div
+          bind:this={deleteNotice}
+          class="notice"
+          role="alert"
+          tabindex="-1"
+        >
+          <p>{deleteError}</p>
+        </div>{/if}
+      {#if conflict}
+        {#if conflict.current}<details>
+            <summary>Current saved version</summary>
+            <pre>{JSON.stringify(
+                conflict.current.metadata,
+                null,
+                2,
+              )}{"\n"}{conflict.current.body}</pre>
+          </details>
+        {:else}<p>
+            The current saved version is unavailable. Your draft is preserved in
+            the editor.
+          </p>{/if}
+        <p>
+          Close and reopen to edit the current version. Copy any draft changes
+          you want to keep first.
+        </p>{/if}
+      {#if pending}<p>Request <code>{pending.requestId}</code></p>
+        <div class="row">
+          <button type="button" onclick={resolve} disabled={busy || accessLost}
+            >Check status</button
+          ><button
+            type="button"
+            onclick={transmit}
+            disabled={busy || accessLost}>Retry same command</button
+          >
+        </div>{/if}
+      {#if (dirty || pending || deletePending || autosaveState.pending) && (!autosaveResource || discard || accessLost || !!error || !!autosaveError || !!conflict || !!pending || !!deletePending)}<button
+          type="button"
+          onclick={copyDraft}>Copy draft</button
+        >{/if}
+      {#if autosaveResource && autosaveState.pending && (autosaveState.phase === "uncertain" || autosaveState.phase === "conflict")}<p
+        >
+          Autosave request <code>{autosaveState.pending.requestId}</code>
+        </p>
+        {#if autosaveState.phase === "uncertain"}<div class="row">
+            <button type="button" onclick={autosaveCheck} disabled={accessLost}
+              >Check status</button
+            ><button type="button" onclick={autosaveRetry} disabled={accessLost}
+              >Retry same command</button
+            >
+          </div>{/if}{/if}
+      {#if deletePending}<p>
+          Deletion request <code>{deletePending.requestId}</code>
+        </p>
+        <div class="row">
+          <button
+            type="button"
+            onclick={() => void checkDelete()}
+            disabled={deleteBusy || accessLost}>Check deletion status</button
+          ><button
+            type="button"
+            onclick={() => void retryDelete()}
+            disabled={deleteBusy || accessLost}>Retry same deletion</button
+          >
+        </div>{/if}
       {#if discard}<div role="alert" class="notice">
           <p>
             {pending || deletePending || autosaveWork
@@ -1101,9 +1130,87 @@
             >
           </div>
         </section>{/if}
-      {#if statusMessage}<p class="action-status" role="status">
+      {#if statusMessage && statusMessage !== "Saved" && !error && !autosaveError && !deleteError && !conflict && !pending && !deletePending && !discard && !deleteConfirmation}<p
+          class="action-status"
+          role="status"
+        >
           {statusMessage}
         </p>{/if}
+    {/snippet}
+    <DialogHeader
+      content={draft.type === "card" ? cardHeaderContent : undefined}
+      messages={editorMessages}
+      onclose={close}
+      closeLabel="Close editor"
+      disabled={busy || deleteBusy || closing}
+      bind:closeButton={descriptionCloseButton}
+      onclosepointerdown={(event) => {
+        // Preserve the clicked target while a description edit changes height.
+        if (event.button === 0 && descriptionEditing) event.preventDefault();
+      }}
+    >
+      {#snippet heading()}
+        {#if draft.type === "card"}
+          <span class="card-project-name" title={projectName}
+            >{projectName || "Card"}</span
+          >
+        {:else}
+          <div class="editor-context">
+            <Icon
+              name={draft.type === "project"
+                ? "projects"
+                : draft.type === "update"
+                  ? "updates"
+                  : "board"}
+              small
+            />
+            <span
+              >{projectName ||
+                (draft.type === "project"
+                  ? "Project"
+                  : resourceLabel(draft.type))}</span
+            >
+            {#if projectName}<span class="context-separator">/</span><span
+                class="context-kind">{resourceLabel(draft.type)}</span
+              >{/if}
+          </div>
+        {/if}
+      {/snippet}
+      {#snippet actions()}
+        {#if draft.type === "card" && resource}
+          <ActionMenu label="Card actions" disabled={locked}>
+            <label class="archive-action"
+              ><input
+                type="checkbox"
+                bind:checked={draft.fields.archived}
+                disabled={locked}
+              /> Archived</label
+            >
+            <p class="menu-hint">Archived cards stay in the project.</p>
+            <button
+              type="button"
+              class="quiet destructive-action"
+              onclick={requestDelete}
+              disabled={locked || !!conflict || deleteConflict}
+              >Delete card</button
+            >
+          </ActionMenu>
+        {:else if draft.type !== "card"}{@render savedIndicator()}{/if}
+      {/snippet}
+    </DialogHeader>
+    <form
+      class="dialog-body editor-form"
+      class:quick-pending={autoCreate &&
+        !error &&
+        !autosaveError &&
+        !conflict &&
+        !discard}
+      onchange={handleChange}
+      onsubmit={(e) => {
+        e.preventDefault();
+        void save();
+      }}
+    >
       {#if readonly}
         <h2 class="record-title">{draft.common.title || "Update record"}</h2>
         <div class="record-actions">
@@ -1299,6 +1406,7 @@
             {locked}
             bind:acceptanceError
             bind:tagError
+            bind:tagCatalogError
           />{/if}
         {#if draft.type === "card"}
           <CardCounters
@@ -1384,76 +1492,6 @@
               onclick={() => loadHistory(true)}>Older changes</button
             >{/if}
         </details>{/if}
-      {#if error}<div bind:this={notice} class="notice" role="alert">
-          {error}
-        </div>{/if}
-      {#if conflict}
-        {#if conflict.current}<details open>
-            <summary>Current saved version · your draft stays above</summary>
-            <pre>{JSON.stringify(
-                conflict.current.metadata,
-                null,
-                2,
-              )}{"\n"}{conflict.current.body}</pre>
-          </details>
-        {:else}<p>
-            The current saved version is unavailable. Your draft is preserved
-            above.
-          </p>{/if}
-        <p>
-          Close and reopen to edit the current version. Copy any draft changes
-          you want to keep first.
-        </p>{/if}
-      {#if pending}<p>Request <code>{pending.requestId}</code></p>
-        <div class="row">
-          <button type="button" onclick={resolve} disabled={busy || accessLost}
-            >Check status</button
-          ><button
-            type="button"
-            onclick={transmit}
-            disabled={busy || accessLost}>Retry same command</button
-          >
-        </div>{/if}
-      {#if (dirty || pending || deletePending || autosaveState.pending) && (!autosaveResource || discard || accessLost || !!error || !!autosaveError || !!conflict || !!pending || !!deletePending)}<button
-          type="button"
-          onclick={copyDraft}>Copy draft</button
-        >{/if}
-      {#if autosaveResource && autosaveError}<div class="notice" role="alert">
-          {autosaveError}
-        </div>{/if}
-      {#if autosaveResource && autosaveState.pending && (autosaveState.phase === "uncertain" || autosaveState.phase === "conflict")}<p
-        >
-          Autosave request <code>{autosaveState.pending.requestId}</code>
-        </p>
-        {#if autosaveState.phase === "uncertain"}<div class="row">
-            <button type="button" onclick={autosaveCheck} disabled={accessLost}
-              >Check status</button
-            ><button type="button" onclick={autosaveRetry} disabled={accessLost}
-              >Retry same command</button
-            >
-          </div>{/if}{/if}
-      {#if deleteError}<div
-          bind:this={deleteNotice}
-          class="notice"
-          role="alert"
-          tabindex="-1"
-        >
-          <p>{deleteError}</p>
-        </div>{/if}
-      {#if deletePending}<p>
-          Deletion request <code>{deletePending.requestId}</code>
-        </p>
-        <div class="row">
-          <button
-            type="button"
-            onclick={() => void checkDelete()}
-            disabled={deleteBusy || accessLost}>Check deletion status</button
-          ><button
-            type="button"
-            onclick={() => void retryDelete()}
-            disabled={deleteBusy || accessLost}>Retry same deletion</button
-          >
-        </div>{/if}
       {#if !autosaveResource && !readonly}<footer class="dialog-footer">
           <button type="button" onclick={close} disabled={busy || deleteBusy}
             >Cancel</button

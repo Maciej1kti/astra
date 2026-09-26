@@ -111,14 +111,23 @@ drag transforms remain owned by their gesture implementation.
 
 ## Card modal hierarchy
 
-Cards use a two-row DialogHeader: status-icon disclosure and editable title on
-the first row with Close, then project context, High priority toggle, save state,
-pin and card actions. The title stays available as the body scrolls and is bounded
-to three visible lines. Mobile keeps the same order with an icon-only priority
-button whose accessible name remains High priority. The status disclosure uses
-ordinary keyboard-focusable buttons; Escape closes it and restores its trigger.
+Cards use three persistent header rows: project context with card actions and
+Close; a full-width editable title; then status, priority and pin controls on the
+left with the save indicator on the right. Saved uses the success color, while
+unconfirmed/failed writes remain distinguishable by text and color. The title is
+bounded to two visible lines and stays available while the body scrolls. Status
+and action menus remain keyboard accessible, with a scrollable status menu on
+short screens.
 
-Card body order is planning dates, Description, Checklist, Labels and Comments.
+Editor feedback occupies a fourth header row only when there is content. Errors,
+field validation, success messages, conflicts, discard/delete prompts and command
+recovery controls remain above the independently scrolling form. The feedback
+area has a bounded scroll height so lengthy conflict details cannot consume the
+whole dialog. Error details lead, repeated field errors are deduplicated, and
+older success messages are hidden during errors or confirmation prompts. Local
+field descriptions remain available to assistive technology.
+
+Card body order is planning dates, Description, Checklist, Labels, Counters and Comments.
 Checklist is a peer section without an enclosing inset panel. Comments start with
 the explicit draft and Add comment button, then saved history. Browser comments
 use human/Owner attribution without author controls; existing attribution and

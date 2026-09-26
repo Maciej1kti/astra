@@ -87,3 +87,7 @@ from `progress/README.md`; concise local records retain their original limitatio
 The counters suite covers multiple definitions, explicit OK, dated totals, midnight
 rollover, preserved drafts, hidden counters, unit protection, mobile layout,
 response-loss replay and concurrent conflicts.
+
+The editor-header suite checks the three persistent header rows and conditional
+feedback row while a long card is scrolled, including visible field/save errors,
+command recovery, confirmations, phone portrait and a 320px-high landscape view.

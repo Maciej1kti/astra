@@ -11,6 +11,8 @@
     labels = $bindable<string[]>([]),
     draft = $bindable(""),
     error = $bindable(""),
+    catalogError = $bindable(""),
+    messagesInHeader = false,
     disabled = false,
     project = "",
     kind = "tag",
@@ -18,6 +20,8 @@
     labels?: string[];
     draft?: string;
     error?: string;
+    catalogError?: string;
+    messagesInHeader?: boolean;
     disabled?: boolean;
     project?: string;
     kind?: "tag" | "folder";
@@ -31,7 +35,6 @@
   let active = $state(-1);
   let announcement = $state("");
   let projectOptions = $state<string[]>([]);
-  let catalogError = $state("");
   let catalogLoading = $state(false);
   let catalogLoaded = false;
   let generation = 0;
@@ -267,7 +270,12 @@
   {#if folder}<p id={`${id}-hint`} class="hint">
       Enter sets the folder. One folder per project.
     </p>{/if}
-  {#if error}<p id={`${id}-error`} role="alert" class="tag-error">
+  {#if error}<p
+      id={`${id}-error`}
+      role={messagesInHeader ? undefined : "alert"}
+      class="tag-error"
+      class:sr-only={messagesInHeader}
+    >
       {error}
     </p>{/if}
   {#if expanded && suggestions.length}

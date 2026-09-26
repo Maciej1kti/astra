@@ -267,56 +267,88 @@
   line-height: var(--leading-tight);
 }
 
-.editor .card-heading,
-.editor .card-context {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-width: 0;
-}
-.editor .card-heading {
-  align-items: flex-start;
-}
 .editor .card-heading .editable-title {
-  flex: 1;
+  margin: 0;
   min-width: 0;
 }
 .editor .card-heading textarea {
-  max-height: 3lh;
+  max-height: 2lh;
   overflow-y: auto;
 }
 .editor .card-project-name {
-  min-width: 0;
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
   font-size: var(--text-label);
 }
-.editor .priority-toggle,
+.editor .card-header-toolbar,
+.editor .card-state-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.editor .card-header-toolbar {
+  justify-content: space-between;
+  margin-top: var(--space-3);
+}
+.editor .card-state-actions {
+  gap: var(--space-2);
+}
 .editor .status-option {
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);
-}
-.editor .priority-toggle {
-  flex-shrink: 0;
 }
 .editor .priority-toggle.high,
 .editor .status-option[aria-pressed="true"] {
   color: var(--accent-ink);
   background: var(--accent);
 }
+.editor .save-indicator {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--soft);
+}
+.editor .save-indicator.saved {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, var(--paper));
+}
+.editor .save-indicator.unsaved {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.editor .dialog-header-messages .row {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: var(--space-4);
+}
+.editor .dialog-header-messages p {
+  margin: var(--space-3) 0;
+}
+.editor .dialog-header-messages .notice,
+.editor .dialog-header-messages .action-status {
+  margin: var(--space-3) 0;
+  padding: var(--space-4);
+}
+.editor .dialog-header-messages details {
+  margin: var(--space-3) 0;
+}
+.editor .dialog-header-messages h3 {
+  margin: 0 0 var(--space-3);
+}
+.editor .dialog-header-messages .notice:first-child,
+.editor .dialog-header-messages .action-status:first-child {
+  margin-top: 0;
+}
 @media (max-width: 520px) {
-  .editor .priority-toggle {
-    width: var(--tap-target);
-    padding: 0;
-    justify-content: center;
-  }
-  .editor .priority-toggle span {
-    display: none;
-  }
   .editor .card-heading textarea {
     font-size: var(--text-xl);
   }
+}
+
+.editor .card-state-actions .action-menu-panel {
+  max-height: 35dvh;
+  overflow-y: auto;
 }

@@ -700,14 +700,14 @@ export async function runCardChecks({
       const before = get(card.id);
       await open(card.id);
       await item(1).fill("  ");
-      await expect(checklist().getByRole("alert")).toContainText(
-        "Add text to checklist item 1",
-      );
+      await expect(
+        dialog().locator(".dialog-header").getByRole("alert"),
+      ).toContainText("Add text to checklist item 1");
       assert.equal(get(card.id).version, before.version);
       await item(1).fill("x".repeat(501));
-      await expect(checklist().getByRole("alert")).toContainText(
-        "500 characters",
-      );
+      await expect(
+        dialog().locator(".dialog-header").getByRole("alert"),
+      ).toContainText("500 characters");
       assert.equal(get(card.id).version, before.version);
       await item(1).fill("A valid condition after local feedback");
       await waitForAutosaveACK();

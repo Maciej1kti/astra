@@ -275,7 +275,7 @@ export async function runEditorChecks({
       );
       await expect(title()).toHaveValue("Autosaved focus conflict draft");
       await expect(
-        dialog().getByText("Current saved version · your draft stays above", {
+        dialog().getByText("Current saved version", {
           exact: true,
         }),
       ).toBeVisible();

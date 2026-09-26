@@ -8,12 +8,14 @@
     locked,
     acceptanceError = $bindable(),
     tagError = $bindable(),
+    tagCatalogError = $bindable(),
     project,
   }: {
     fields: CardFields;
     locked: boolean;
     acceptanceError: string;
     tagError: string;
+    tagCatalogError: string;
     project: string;
   } = $props();
 </script>
@@ -22,6 +24,7 @@
   bind:items={fields.acceptance}
   bind:draft={fields.acceptanceDraft}
   bind:error={acceptanceError}
+  messagesInHeader
   disabled={locked}
 />
 <TagPicker
@@ -29,5 +32,7 @@
   bind:labels={fields.labels}
   bind:draft={fields.tagDraft}
   bind:error={tagError}
+  bind:catalogError={tagCatalogError}
+  messagesInHeader
   disabled={locked}
 />
