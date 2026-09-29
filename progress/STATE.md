@@ -1,10 +1,17 @@
 # Current implementation state
 
-Updated 2026-09-26. The application is implemented and under verification;
+Updated 2026-09-29. The application is implemented and under verification;
 full release acceptance remains open. See [scope decisions](SCOPE.md) and the
 [release checklist](../delivery/RELEASE-CHECKLIST.md).
 
 ## Current work and verification
+
+[Repository audit](2026-09-29-repository-audit.md) reproduces seven defects in
+Focus reads, counter dates, live-update recovery and transport/pagination behavior,
+plus measured source-scan bottlenecks and stale maintained guidance. The full
+local gate, broad HTTPS/planning checks and all 17 release Chromium suites pass;
+the audit adds failure cases beyond their coverage. These findings remain open;
+no application behavior or acceptance status was changed.
 
 [Card header and feedback](2026-09-26-card-header-feedback.md) puts project/actions,
 title and state controls into three rows, with colored save state and a conditional
