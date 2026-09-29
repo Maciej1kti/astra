@@ -2,14 +2,14 @@ import { api, type ReadOptions } from "./api.ts";
 import type { CalendarPage, GanttPage } from "../contracts/api.generated";
 
 export function getCalendar(
-  scope: { project: string; from: string; to: string },
+  scope: { project: string; from: string; to: string; limit?: number },
   cursor: string | null,
   options: ReadOptions = {},
 ) {
   const query = new URLSearchParams({
     from: scope.from,
     to: scope.to,
-    limit: "1000",
+    limit: String(scope.limit ?? 1000),
   });
   if (scope.project) query.set("project_id", scope.project);
   if (cursor) query.set("cursor", cursor);

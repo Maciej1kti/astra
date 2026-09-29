@@ -1,8 +1,8 @@
 # Iterative performance optimization — 2026-09-29
 
 Owner direction: continue improving performance until further changes stop making
-a noticeable difference. The goal remains active; this records the first verified
-iteration, not a claim that every bottleneck or release target is resolved.
+a noticeable difference. The goal remains active; this records verified
+iterations, not a claim that every bottleneck or release target is resolved.
 
 ## Iteration 1: startup and navigation
 
@@ -82,10 +82,67 @@ The earlier `pass1` timing run overlapped browser verification and is explorator
 the table uses only the final quiet run. Preload recovery probes and their logs
 record both the failing case and the verified workaround.
 
+## Iteration 2: planning views and the first card
+
+Explicit Calendar/Timeline routes now request their widget during bootstrap.
+Editor code warms immediately after the initial ordinary view read completes.
+An earlier experiment fetched it alongside that read, but delayed the large List
+by about 70 ms under network constraints; the retained ordering avoids that
+competition. Small- and large-fixture first List times remain essentially unchanged.
+
+Calendar data and derived events no longer acquire deep reactive proxies, the
+initial layout uses the actual viewport, and weekday formatting reuses one formatter.
+These changes alone improved the large agenda modestly. The main cost was about
+18,000 DOM elements for 1,000 dated items repeated across their occupied days.
+Agenda now requests 200 items per page, displays a count and retains explicit
+Next/First controls. Grid/time views retain 1,000; switching page size resets the
+cursor. This is a paging tradeoff, not faster rendering of the same 1,000-item DOM.
+Existing server limits, source versions and gesture/write ownership are unchanged.
+
+Measurements use the same hardware, browser, viewport and constrained profile
+as iteration 1. Both fixtures have three projects; the expanded one has 1,000
+cards including ten pins. Before: three exploratory samples on `10f9be5`; after:
+five samples per case in a quiet run. The warm daemon/index and synthetic sources
+do not establish physical-device, VPN or p95 acceptance.
+
+| Median, ms | Local before | Local after | Constrained before | Constrained after |
+| --- | ---: | ---: | ---: | ---: |
+| Small, fresh Calendar | 90.0 | 73.4 | 897.1 | 747.9 |
+| Small, fresh Timeline | 88.9 | 90.0 | 997.0 | 847.1 |
+| Small, immediate first card | 34.1 | 33.7 | 295.3 | 219.8 |
+| 1,000 cards, fresh Calendar | 307.8 | 107.3 | 2259.6 | 954.5 |
+| 1,000 cards, warm Calendar | 254.6 | 59.2 | 1727.6 | 633.7 |
+| 1,000 cards, fresh Timeline | 89.1 | 90.0 | 1164.5 | 946.6 |
+| 1,000 cards, immediate first card | 36.6 | 33.2 | 316.5 | 192.3 |
+
+The large warm Calendar samples ranged from 631.9 to 998.0 ms under constraints;
+the table does not hide that remaining variation behind a tail-latency claim.
+Initial JS/CSS remains 63,409 gzip bytes, below the 80 KiB regression ceiling.
+
+The full local gate passes with the same 238 Rust, 110 JS and 12 Python tests.
+Release Chromium and WebKit pass loading, planning, calendar-pages and timed-event
+checks; the separate Chromium gesture suite also passes. The new real-source
+pagination regression adds 205 cards and verifies every item, Next/First pages,
+versioned keyboard opening and agenda/grid cursor changes.
+
+The first WebKit planning run exposed Playwright's screenshot preparation injecting
+an inline `body {}` stylesheet, rejected by the existing CSP. The harness now
+records metrics without WebKit screenshots and recognizes its `cancelled` navigation
+reads. The corrected run has no page, console or CSP errors; application policy
+was not weakened. Chromium screenshots remain available.
+
+The rebuilt manual app serves verified current assets at its existing HTTPS
+address. All 24 existing resource versions, two pins, preferences and the certificate
+matched the pre-restart snapshot. Evidence: `pass2-full-gate.log`, `pass2-browser`,
+`pass2-gestures`, `pass2-webkit`, `pass2-webkit-final`, `pass2-final-small`,
+`pass2-final-large` and `manual-pass2.json` under the ignored loading evidence folder.
+Earlier raw-state and eager-editor experiments remain there with their actual results.
+
 ## Continuing work
 
-Measure immediate first-card opening, cold/warm Board, Calendar and Timeline,
-then larger source sets and full pages. Follow the measured request and render
-costs before choosing the next change. Evaluate compression and remaining serial
-reads against their actual effect; retain durability, source validation and read
-bounds. Do not treat the improvements above as completion of the owner's goal.
+The expanded fixture still takes about 935 ms for warm constrained Focus: ten
+pinned cards trigger separate detail reads after the section reads. Address that
+measured waterfall next, preserving snapshot freshness and current-version reads
+before editing. Evaluate remaining transfer and rendering costs against their
+actual effect; retain durability, source validation and read bounds. Do not treat
+the improvements above as completion of the owner's goal.

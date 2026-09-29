@@ -95,8 +95,17 @@ command recovery, confirmations, phone portrait and a 320px-high landscape view.
 The `session` suite covers startup read failure recovery and remote workspace
 timezone changes with existing and new daily counter drafts.
 
-The `loading` suite holds bootstrap to verify concurrent preferences, pauses
+The `loading` suite holds bootstrap to verify concurrent preferences and selected
+planning-module preloads, holds List data to verify editor warming starts after
+the initial read, pauses
 browser timers to distinguish immediate navigation from debounced search, checks
 deferred-module failure recovery, and exercises pending pairing reload when the
 concurrent unauthorized preference read cancels bootstrap. Timing measurements
 remain separate from these controlled behavioral checks.
+
+The `calendar-pages` suite adds 205 scheduled cards to its disposable source
+fixture. It checks complete agenda pagination, preserved item versions and keyboard
+opening, first-page recovery and cursor reset when switching between agenda and
+the broader month grid. The `planning` suite retains strict CSP checks in both
+engines; WebKit records layout metrics without screenshots because Playwright's
+screenshot preparation injects an inline stylesheet blocked by the app policy.

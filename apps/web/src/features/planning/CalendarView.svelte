@@ -62,14 +62,17 @@
   } = $props();
   const mode = $derived(calendarLayout);
   const date = $derived(calendarDate);
-  let compact = $state(false);
+  let compact = $state(window.matchMedia(compactCalendarQuery).matches);
   let mobileMonthGrid = $state(false);
   const widgetView = $derived(
     calendarWidgetView(mode, compact, mobileMonthGrid),
   );
   const monthAgenda = $derived(widgetView === "listMonth");
   const monthGrid = $derived(widgetView === "dayGridMonth");
-  let items = $state<CalendarItem[]>([]);
+  // Agenda repeats each multi-day item on every occupied day. Keep its page
+  // bounded like other lists; the grid retains its broader period overview.
+  const pageSize = $derived(monthAgenda || mode === "agenda" ? 200 : 1000);
+  let items = $state.raw<CalendarItem[]>([]);
   let range = $state({
     start: untrack(() => calendarDate),
     end: untrack(() => calendarDate),
@@ -84,7 +87,9 @@
   let readKey = "";
   let pageStart: string | null = null;
   let loadedScope = $state("");
-  const queryScope = $derived(`${project}:${range.start}:${range.end}`);
+  const queryScope = $derived(
+    `${project}:${range.start}:${range.end}:${pageSize}`,
+  );
   // A background read keeps the displayed, versioned projection interactive.
   // Scope changes still disable old events until their own page arrives.
   const ready = $derived(loadedScope === queryScope && !error);
@@ -94,23 +99,20 @@
   let cancelled = false;
   let pointer: number | null = null;
   let reset = $state(0);
-  let options = $state<Calendar.Options>({
-    view: untrack(() => calendarWidgetView(calendarLayout, false, false)),
-    date: untrack(() => calendarDate),
+  let displayedDate = $state(untrack(() => calendarDate));
+  let events = $state.raw<Calendar.EventInput[]>([]);
+  const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
+  const callbacks: Calendar.Options = {
     headerToolbar: { start: "", center: "", end: "" },
-    height: "auto",
     locale: "en-GB",
     scrollTime: "08:00:00",
-    firstDay: 1,
     editable: true,
     eventResizableFromStart: true,
     eventLongPressDelay: 350,
     longPressDelay: 350,
     dragScroll: true,
-    dayMaxEvents: true,
     noEventsContent: "No dated items in this period.",
     eventDurationEditable: true,
-    selectable: false,
     buttonText: { today: "Today", close: "Close" },
     datesSet: (info) => {
       const next = {
@@ -148,12 +150,14 @@
     },
     eventDrop: change,
     eventResize: change,
-  });
-  $effect(() => {
-    options.view = widgetView;
+  };
+  const options = $derived<Calendar.Options>({
+    ...callbacks,
+    view: widgetView,
+    date: displayedDate,
     // EventCalendar limits stacked events to the day cell's measured height.
     // An auto-height uniform month instead grows every week to its busiest day.
-    options.height = monthGrid
+    height: monthGrid
       ? compact
         ? "var(--calendar-mobile-grid-height)"
         : "var(--calendar-grid-height)"
@@ -161,31 +165,34 @@
         ? "var(--calendar-agenda-height)"
         : mode === "day" || mode === "week"
           ? "var(--calendar-grid-height)"
-          : "auto";
-    options.dayMaxEvents = monthGrid;
+          : "auto",
+    dayMaxEvents: monthGrid,
+    firstDay: weekStart === "sunday" ? 0 : 1,
+    selectable: !!project && ready,
+    events,
   });
   $effect(() => {
-    if (isCalendarDate(date)) options.date = date;
-  });
-  $effect(() => {
-    options.firstDay = weekStart === "sunday" ? 0 : 1;
-  });
-  $effect(() => {
-    options.selectable = !!project && ready;
+    if (isCalendarDate(date)) displayedDate = date;
   });
   $effect(() => {
     if (active) return;
-    options.events = calendarEvents(items, search, ready);
+    events = calendarEvents(items, search, ready);
   });
   $effect(() => {
     void project;
     void revision;
     void range;
+    void pageSize;
     untrack(() => void load(false));
   });
   async function load(more: boolean) {
     const key = queryScope;
-    const scope = { project, from: range.start, to: range.end };
+    const scope = {
+      project,
+      from: range.start,
+      to: range.end,
+      limit: pageSize,
+    };
     const target = more ? cursor : key === readKey ? pageStart : null;
     readKey = key;
     error = "";
@@ -487,9 +494,7 @@
             aria-current={dateOnly(day) === workspaceToday ? "date" : undefined}
           >
             {monthAgenda || mode === "agenda"
-              ? new Intl.DateTimeFormat("en-GB", { weekday: "long" }).format(
-                  day,
-                )
+              ? weekday.format(day)
               : mode === "month"
                 ? day.getDate()
                 : ""}
@@ -535,6 +540,9 @@
       </p>
     </details>
   </div>
+  {#if cursor || paged}<p class="hint">
+      Showing {items.length} dated items on this page.
+    </p>{/if}
   {#if cursor}<button disabled={loading} onclick={() => load(true)}
       >Next page of dated resources</button
     >{/if}

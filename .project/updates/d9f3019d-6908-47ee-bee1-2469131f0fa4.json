@@ -1,0 +1,18 @@
+{
+  "body": "Preloaded selected planning widgets, warmed the editor after initial data, and reduced agenda pages to 200 items with explicit Next/First controls. The month grid retains 1,000 items. In the 1,000-card release fixture, constrained warm Calendar falls from 1.73 s to 0.63 s and immediate card opening from 317 to 192 ms. These are synthetic small-sample medians, not physical-device or p95 acceptance.\n\nThe full gate, affected Chromium/WebKit suites and calendar gesture tests pass. The existing manual app was rebuilt/restarted and HTTPS verified; all 24 existing resource versions, two pins, preferences and the certificate were preserved.\n\nThe performance goal remains active. Focus still waits for separate pinned-card detail reads; that measured bottleneck is next. Evidence: progress/2026-09-29-performance-optimization.md.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "d9f3019d-6908-47ee-bee1-2469131f0fa4",
+    "kind": "result",
+    "recorded_at": "2026-09-29T20:02:56.672Z",
+    "summary": "Faster planning views and first-card opening verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

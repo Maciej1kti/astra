@@ -16,6 +16,7 @@ await runBrowserSuite(
     newContext,
     pair,
   }) => {
+    const engine = browser.browserType().name();
     const context = await newContext({ timezoneId: "Pacific/Honolulu" });
     const page = await context.newPage();
     page.setDefaultTimeout(15000);
@@ -32,6 +33,7 @@ await runBrowserSuite(
       started,
       status: "running",
       browser: browser.version(),
+      engine,
       timezone: "Pacific/Honolulu",
       fixture: { projectId: config.projects[0].id, cardId: config.cards[0].id },
       pageErrors,
@@ -109,8 +111,14 @@ await runBrowserSuite(
         selectedTitle: document.querySelector(".selected-summary strong")
           ?.textContent,
       }));
-      const screenshot = `${name}.png`;
-      await page.screenshot({ path: join(output, screenshot), fullPage: true });
+      // Playwright's WebKit screenshot preparation injects an inline "body {}"
+      // stylesheet. Keep CSP assertions strict and collect only metrics there.
+      const screenshot = engine === "webkit" ? null : `${name}.png`;
+      if (screenshot)
+        await page.screenshot({
+          path: join(output, screenshot),
+          fullPage: true,
+        });
       checkpoints.push({ name, screenshot, ...metrics });
       await writeFile(
         join(output, "results.json"),
@@ -167,7 +175,7 @@ await runBrowserSuite(
       const unexpectedRequests = failedRequests.filter(
         (failure) =>
           failure.stage === "verification" &&
-          failure.error !== "net::ERR_ABORTED",
+          !["net::ERR_ABORTED", "cancelled"].includes(failure.error),
       );
       const unexpectedConsole = consoleErrors.filter(
         (error) => error.stage === "verification",
@@ -211,13 +219,13 @@ await runBrowserSuite(
       );
       await writeFile(
         join(output, "README.md"),
-        `# Planning browser verification\n\nStatus: **${report.status}**.\n\nChromium ${report.browser}, Pacific/Honolulu, desktop 1440 × 1000 and emulated phone 390 × 844.\n\nThe browser used normal pairing and an isolated synthetic host. Self-signed HTTPS was accepted only by the test browser; production CSP/auth/TLS policy was unchanged. Physical iPhone behavior is not claimed.\n\nSee [results.json](results.json) for assertions, layout metrics, page/console/CSP/network telemetry and any failure. Screenshots are captured at named workflow checkpoints.\n`,
+        `# Planning browser verification\n\nStatus: **${report.status}**.\n\n${engine} ${report.browser}, Pacific/Honolulu, desktop 1440 × 1000 and emulated phone 390 × 844.\n\nThe browser used normal pairing and an isolated synthetic host. Self-signed HTTPS was accepted only by the test browser; production CSP/auth/TLS policy was unchanged. Physical iPhone behavior is not claimed.\n\nSee [results.json](results.json) for assertions, layout metrics, page/console/CSP/network telemetry and any failure. Chromium captures named screenshots; WebKit retains metrics because Playwright's screenshot preparation injects an inline stylesheet forbidden by the app's CSP.\n`,
       );
       console.log(
         JSON.stringify({
           status: report.status,
           error: report.error,
-          screenshots: checkpoints.length,
+          screenshots: checkpoints.filter((point) => point.screenshot).length,
           pageErrors: pageErrors.length,
           cspViolations: cspViolations.length,
         }),

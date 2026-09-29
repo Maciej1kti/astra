@@ -22,6 +22,7 @@ const suites = [
   "dialogs",
   "responsive",
   "planning",
+  "calendar-pages",
   "events",
   "code-health",
   "protocol",

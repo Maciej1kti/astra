@@ -46,7 +46,12 @@ until further improvements become unnoticeable. Its first verified iteration
 removes the navigation delay, splits secondary UI code and overlaps startup
 reads. Initial JS/CSS drops to 61.8 KiB gzip; local view changes take about 30 ms
 in the small release fixture. The manual app is rebuilt/restarted and verified.
-Larger-project and cold planning-view measurements continue; the goal remains open.
+A second verified iteration preloads selected planning widgets, warms the editor
+after initial data and bounds agenda pages to 200 items with explicit pagination.
+At 1,000 cards, warm Calendar improves from 1.73 s to 0.63 s under the recorded
+network/CPU emulation; first-card opening falls from 317 to 192 ms. The full gate,
+affected Chromium/WebKit checks and manual HTTPS restart verification pass.
+Focus's remaining serial pin reads are next; the goal remains open.
 
 ## Implemented product
 

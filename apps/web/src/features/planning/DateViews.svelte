@@ -3,6 +3,8 @@
   import type { CardCreate } from "../../lib/contracts/api.generated";
   import type { DateProposal } from "./proposals";
   import type { CalendarLayout } from "./planning-navigation";
+  import { loadCalendarView, loadGanttView } from "./planning-components";
+  import { reloadAfterPreloadFailure } from "../../lib/ui/preload-recovery";
 
   let {
     project,
@@ -47,12 +49,12 @@
     error = "";
     try {
       if (requestedView === "calendar")
-        CalendarView = (await import("./CalendarView.svelte")).default;
-      else GanttView = (await import("./GanttView.svelte")).default;
+        CalendarView = (await loadCalendarView()).default;
+      else GanttView = (await loadGanttView()).default;
     } catch {
       if (view === requestedView)
         error =
-          "This planning view could not be loaded. Retry, or reload after preserving any open draft.";
+          "This planning view could not be loaded. Retry, or reload the app.";
     }
   }
   $effect(() => {
@@ -63,6 +65,7 @@
 
 {#if error}<p role="alert">
     {error} <button onclick={loadView}>Retry planning view</button>
+    <button onclick={reloadAfterPreloadFailure}>Reload app</button>
   </p>{/if}
 {#if view === "calendar" && CalendarView}<CalendarView
     {project}

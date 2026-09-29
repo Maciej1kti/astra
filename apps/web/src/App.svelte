@@ -44,6 +44,10 @@
   import { applyTheme, readTheme } from "./features/settings/appearance";
   import DateChange from "./features/planning/DateChange.svelte";
   import DateViews from "./features/planning/DateViews.svelte";
+  import {
+    loadCalendarView,
+    loadGanttView,
+  } from "./features/planning/planning-components";
   import MoveChange from "./features/board/MoveChange.svelte";
   import type {
     DateProposal,
@@ -176,6 +180,8 @@
       );
       assignRoute(route);
       await refresh();
+      if (route.view !== "calendar" && route.view !== "gantt")
+        void editorUI.load();
       if (!editor && route.resource)
         await open({
           project_id: route.resource.project,
@@ -219,6 +225,11 @@
   $effect(() => {
     if (routing.current.view === "board" && routing.current.project && !Board)
       void loadBoard();
+  });
+  $effect(() => {
+    const view = routing.current.view;
+    if (view === "calendar") void loadCalendarView().catch(() => {});
+    if (view === "gantt") void loadGanttView().catch(() => {});
   });
 
   let dateDraft = $state<DateProposal | null>(null);

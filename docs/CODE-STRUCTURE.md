@@ -32,13 +32,15 @@ concurrently; either request can end an expired session, and initialization stil
 recovers an existing pairing if the other request is cancelled.
 
 Editor, settings and administrative components load on demand through
-`lib/ui/deferred-component.svelte.ts`. Editor code warms after the first view and
+`lib/ui/deferred-component.svelte.ts`. Editor code warms immediately after the
+initial ordinary view read, without competing for its network transfer, and
 loads alongside resource reads on an early click. Once loaded, the registration
 browser stays mounted while hidden so its pending command is retained. Loading
 failures expose a closable dialog, retry and explicit reload. The explicit reload
 revalidates a bounded set of failed local preload assets to clear WebKit's failed
-preload cache; it never reloads automatically over a draft. Calendar/Gantt import
-directly from the small planning wrapper without an extra wrapper chunk request.
+preload cache; it never reloads automatically over a draft. Explicit Calendar/Gantt
+routes start their widget import alongside bootstrap through `planning-components.ts`;
+the mounted planning view owns errors and the same explicit reload recovery.
 
 `lib/api` owns transport, bounded reads, invalidation batching, typed resource/
 planning/tag endpoints and command execution. Feature code should use a named
@@ -101,7 +103,11 @@ Reports target projects or milestones.
 
 [PlanningRead](../apps/web/src/features/planning/planning-read.ts) owns one view's
 request generation, cancellation and deferred publication during gestures. Calendar
-and Gantt keep their own pagination policy. Typed widget adapters convert inclusive
+and Gantt keep their own pagination policy. Calendar agenda pages hold 200 items;
+grid/time views retain 1,000. The page size participates in read scope, so changing
+layout resets an incompatible cursor. Read-only calendar snapshots and widget
+events use shallow reactive ownership, with explicit replacement on changes.
+Typed widget adapters convert inclusive
 domain dates into vendor events/tasks without modifying
 source rows. Gantt gesture activity is passed through its instance context.
 

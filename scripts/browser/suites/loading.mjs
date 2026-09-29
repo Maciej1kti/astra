@@ -29,6 +29,14 @@ await runBrowserSuite(async ({ config, newContext, evidence }) => {
     await blockedBootstrap;
     await route.continue();
   });
+  let releaseCards;
+  const blockedCards = new Promise((resolve) => {
+    releaseCards = resolve;
+  });
+  await page.route("**/api/v1/views/list?*", async (route) => {
+    await blockedCards;
+    await route.continue();
+  });
   try {
     await page.goto(
       `${config.origin}/?${new URLSearchParams({ view: "list", project })}`,
@@ -48,9 +56,22 @@ await runBrowserSuite(async ({ config, newContext, evidence }) => {
       false,
     );
     releaseBootstrap();
+    await expect
+      .poll(() => requests.some((url) => url.pathname === "/api/v1/views/list"))
+      .toBe(true);
+    assert.equal(
+      requests.some((url) => /\/Editor-[^/]+\.js$/.test(url.pathname)),
+      false,
+    );
+    releaseCards();
+    await expect
+      .poll(() =>
+        requests.some((url) => /\/Editor-[^/]+\.js$/.test(url.pathname)),
+      )
+      .toBe(true);
     await expect(page.locator(".view-content .listrow").first()).toBeVisible();
     checks.push(
-      "Preferences travel alongside bootstrap; secondary UI is absent from startup",
+      "Preferences travel alongside bootstrap; editor warms after the initial card read",
     );
 
     await page.clock.install();
@@ -151,6 +172,36 @@ await runBrowserSuite(async ({ config, newContext, evidence }) => {
     checks.push(
       "Failed secondary chunk remains closable and recovers through explicit reload",
     );
+    for (const [view, asset, selector] of [
+      ["calendar", "CalendarView", "[data-calendar-item]"],
+      ["gantt", "GanttView", ".astra-gantt [data-card-id]"],
+    ]) {
+      const planningContext = await newContext();
+      const planningPage = await planningContext.newPage();
+      planningPage.on("pageerror", (error) => errors.push(error.message));
+      let release;
+      const blocked = new Promise((resolve) => (release = resolve));
+      await planningPage.route("**/api/v1/bootstrap", async (route) => {
+        await blocked;
+        await route.continue();
+      });
+      try {
+        const requested = planningPage.waitForRequest((request) =>
+          new URL(request.url()).pathname.startsWith(`/assets/${asset}-`),
+        );
+        await planningPage.goto(
+          `${config.origin}/?${new URLSearchParams({ view, project, date: "2026-09-08", month: "2026-09" })}`,
+          { waitUntil: "domcontentloaded" },
+        );
+        await requested;
+        release();
+        await expect(planningPage.locator(selector).first()).toBeVisible();
+        checks.push(`${view} code loads before bootstrap completes`);
+      } finally {
+        release();
+        await planningContext.close();
+      }
+    }
     const unpaired = await newContext({ storageState: undefined });
     const pairingPage = await unpaired.newPage();
     try {
@@ -179,6 +230,7 @@ await runBrowserSuite(async ({ config, newContext, evidence }) => {
     assert.deepEqual(errors, []);
   } finally {
     releaseBootstrap();
+    releaseCards();
     await writeFile(
       join(evidence, "results.json"),
       JSON.stringify(
