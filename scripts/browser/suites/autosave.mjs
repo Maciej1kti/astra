@@ -188,6 +188,7 @@ export async function runAutosaveChecks({
     "AS01",
     "A valid new card creates once, then patches the same resource while the modal stays open",
     async () => {
+      await page.clock.install();
       await routeTo("list");
       await page
         .locator(".heading")
@@ -238,24 +239,36 @@ export async function runAutosaveChecks({
         cardPath(id),
         (value) => value.metadata.title === later,
       );
-      const immediateStarted = Date.now();
-      const immediate = page.waitForResponse(
-        (response) =>
-          response.request().method() === "PATCH" &&
-          response.url().endsWith(`/cards/${id}`),
-      );
-      await dialog()
-        .getByRole("button", { name: /^Status:/ })
-        .click();
-      await dialog()
-        .getByRole("button", { name: "Active", exact: true })
-        .click();
-      const immediateResponse = await immediate;
-      assert.equal(immediateResponse.status(), 200);
-      assert(
-        Date.now() - immediateStarted < 350,
-        "discrete status changes should save without the text debounce",
-      );
+      const delayedStatusPath = `${config.origin}${cardPath(id)}`;
+      const delayStatusReply = async (route) => {
+        if (route.request().method() !== "PATCH") return route.continue();
+        const response = await route.fetch();
+        await new Promise((done) => setTimeout(done, 500));
+        await route.fulfill({ response });
+      };
+      await page.route(delayedStatusPath, delayStatusReply);
+      await expect(dialog().getByTestId("autosave-status")).toHaveText("Saved");
+      // A discrete change must send with browser timers paused. Response latency
+      // and runner speed do not determine whether the text debounce was bypassed.
+      await page.clock.pauseAt(Date.now() + 5_000);
+      try {
+        const immediate = page.waitForResponse(
+          (response) =>
+            response.request().method() === "PATCH" &&
+            response.url().endsWith(`/cards/${id}`),
+        );
+        await dialog()
+          .getByRole("button", { name: /^Status:/ })
+          .click();
+        await dialog()
+          .getByRole("button", { name: "Active", exact: true })
+          .click();
+        const immediateResponse = await immediate;
+        assert.equal(immediateResponse.status(), 200);
+      } finally {
+        await page.clock.resume();
+        await page.unroute(delayedStatusPath, delayStatusReply);
+      }
       await waitForWrite(cardPath(id), "PATCH", 2);
       assert.equal(writesFor(`${base}/cards`, "POST").length, 1);
       assert.equal(writesFor(cardPath(id), "PATCH").length, 2);

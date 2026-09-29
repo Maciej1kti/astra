@@ -12,3 +12,34 @@ contact from the maintainer before sharing them.
 For the implemented trust boundaries, see the [security design](docs/07-SECURITY.md).
 The daemon is intended for loopback access behind an owner-managed private HTTPS
 proxy. Packaging does not install or configure a public service automatically.
+
+## Dependency advisories
+
+[Dependency advisory scan](.github/workflows/dependencies.yml) runs each Monday
+at 07:23 UTC, on dependency/scan-workflow changes in pushes and pull requests, and
+on manual dispatch. It uses the pinned official
+[OSV workflow](https://google.github.io/osv-scanner/github-action/) to scan the
+exact npm, Cargo and validation-tool Python lockfiles. It does not install project
+dependencies, run their scripts, update versions or resolve new dependencies.
+The Python lockfile uses an explicit requirements parser because of its name.
+
+Findings fail the check and appear under Actions and Security > Code scanning;
+scan/service failures also fail and are not a clean result. Scheduled jobs depend
+on GitHub Actions availability and can be delayed. The local full gate remains
+independent of advisory-service availability.
+
+Triage a finding by checking the pinned affected version, runtime versus tooling
+use, upstream fix and actual exposure. Update the smallest necessary dependency
+set, preserve lockfiles and run appropriate checks before integration. Do not
+silently suppress a finding or use automatic force upgrades. Any justified
+temporary exception needs a recorded reason and review date. A clean scan only
+means no matching published advisory was returned, not a security guarantee.
+
+To reproduce with OSV-Scanner 2.6.0:
+
+```sh
+osv-scanner scan source --no-resolve \
+  --lockfile=package-lock.json \
+  --lockfile=Cargo.lock \
+  --lockfile=requirements.txt:scripts/requirements-validation.lock
+```

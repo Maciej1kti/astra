@@ -26,6 +26,12 @@ target. One crash-test child failed once and passed focused/full reruns; its
 cause remains unknown and future failures now retain child diagnostics.
 See the remediation checkpoint for measurements, this failure and other limits.
 
+The owner requested a [stability follow-up](2026-09-29-stability-followup.md):
+bounded crash diagnostics, advisory CI and editor simplification. The crash test
+passed 24 further runs; a separate reproducible autosave timing assertion in remote
+CI is corrected using paused browser timers. The full local gate and autosave
+suite pass, and pinned OSV dependency scans are configured. Editor work follows.
+
 ## Implemented product
 
 - Shared Rust domain/application rules, strict JSON sources and generated browser
