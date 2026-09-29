@@ -36,6 +36,11 @@ The manual app is rebuilt/restarted with its existing state and HTTPS verified.
 Legacy API roles and remaining diagnostic limits are recorded in the follow-up;
 no compatibility endpoint or source format was removed.
 
+A subsequent [loading profile](2026-09-29-loading-profile.md) measures the release
+UI and ranks possible speed improvements. The clearest candidate is a 200 ms
+navigation debounce; smaller startup code and fewer serial reads are additional
+options. This profiling changed no application code or acceptance status.
+
 ## Implemented product
 
 - Shared Rust domain/application rules, strict JSON sources and generated browser

@@ -1,0 +1,18 @@
+{
+  "body": "Profiled the release UI with ordinary HTTPS pairing on a synthetic fixture of three projects and 37 cards. Navigation waits about 204 ms before sending its first request because all changed view queries share a 200 ms debounce. Local median List navigation is 242 ms; opening a card is 29 ms.\n\nWith simulated 100 ms request latency, 6 Mbps download and 4x CPU slowdown, median first List load is 879 ms, warm reload 515 ms and List navigation 350 ms. Recommended priorities are immediate navigation reads, deferred editor/Markdown/settings code and fewer serial loading stages. Existing gzip, caching and lazy planning chunks are already present.\n\nThis was assessment only: no application code, API contracts or runtime settings changed. These measurements do not establish physical-device, real-network or large-project acceptance. Method, limits and candidates: progress/2026-09-29-loading-profile.md.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "45bfc3d1-6180-4c9e-ae84-8adbb5e5569d",
+    "kind": "result",
+    "recorded_at": "2026-09-29T18:59:34.938Z",
+    "summary": "Loading profile identifies avoidable navigation latency",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
