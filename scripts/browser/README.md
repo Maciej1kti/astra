@@ -10,7 +10,7 @@ ASTRA_TEST_PROFILE=release npm run test:browser
 
 The HTTPS smoke exercises broad workflows, including keyboard Focus ordering and
 reload persistence, while the planning suite covers its widgets. The portable
-regression runner adds card checklists and handle reordering, workspace tags,
+regression runner adds card checklists and handle reordering, project tags,
 editor draft safety, board/settings dialogs, planning navigation, bounded view
 reads, real stale-page recovery in all five paged views, and direct/status command
 outcomes with preserved drafts and unavailable conflict details. The deletion

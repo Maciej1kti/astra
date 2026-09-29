@@ -20,6 +20,7 @@
   import ReportFields from "./ReportFields.svelte";
   import UpdateDetails from "./UpdateDetails.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
+  import ResourceDescription from "./ResourceDescription.svelte";
   import CardCounters from "../cards/CardCounters.svelte";
   import { countersDirty } from "../cards/card-counters";
   import CardComments from "../cards/CardComments.svelte";
@@ -42,6 +43,7 @@
     createEditorDraft,
     draftSnapshot,
     autosaveSnapshot,
+    discreteAutosaveChange,
     detachedEditorDraft,
   } from "./editor-draft";
   import { EditorAutosave, type AutosaveState } from "./editor-autosave.ts";
@@ -140,8 +142,6 @@
 
   let preview = $state(false);
   let descriptionEditing = $state(false);
-  let descriptionPointerOutside = false;
-  let descriptionInput = $state<HTMLTextAreaElement>();
   let descriptionCloseButton = $state<HTMLButtonElement>();
   let discard = $state(false);
   let closing = $state(false);
@@ -262,63 +262,12 @@
     discard = false;
     onkeepediting?.();
   }
-  function beginDescriptionEdit(event?: Event) {
-    const target = event?.target;
-    if (target instanceof Element && target.closest("a")) return;
-    if ((draft.type === "project" || draft.type === "card") && !locked)
-      descriptionEditing = true;
-  }
-  function finishTitleEdit() {
+  function finishTextEdit() {
     if (autosaveResource && persistedDirty && !closing)
       void flushAutosave().catch((cause) => {
         autosaveError = cause instanceof Error ? cause.message : String(cause);
       });
   }
-  function finishDescriptionEdit() {
-    if (draft.type !== "project" && draft.type !== "card") return;
-    descriptionEditing = false;
-    descriptionPointerOutside = false;
-    if (persistedDirty && !closing)
-      void flushAutosave().catch((cause) => {
-        autosaveError = cause instanceof Error ? cause.message : String(cause);
-      });
-  }
-  function blurDescription() {
-    // Keep the clicked control in place until its click has been dispatched.
-    if (!descriptionPointerOutside) finishDescriptionEdit();
-  }
-  $effect(() => {
-    if (!descriptionEditing || !descriptionInput) return;
-    queueMicrotask(() => {
-      if (!descriptionEditing || !descriptionInput) return;
-      descriptionInput.focus();
-      descriptionInput.setSelectionRange(
-        descriptionInput.value.length,
-        descriptionInput.value.length,
-      );
-    });
-  });
-  $effect(() => {
-    if (!descriptionEditing) return;
-    const outsidePointer = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (descriptionInput?.contains(target)) return;
-      if (descriptionCloseButton?.contains(target)) return;
-      descriptionPointerOutside = true;
-    };
-    const finishPointer = () => {
-      if (descriptionPointerOutside) finishDescriptionEdit();
-    };
-    document.addEventListener("pointerdown", outsidePointer, true);
-    document.addEventListener("click", finishPointer);
-    document.addEventListener("pointercancel", finishPointer);
-    return () => {
-      document.removeEventListener("pointerdown", outsidePointer, true);
-      document.removeEventListener("click", finishPointer);
-      document.removeEventListener("pointercancel", finishPointer);
-    };
-  });
   function focusDeleteAction(node: HTMLButtonElement) {
     node.focus({ preventScroll: true });
     node.scrollIntoView({ block: "center", inline: "nearest" });
@@ -655,34 +604,6 @@
   }
   let watchedAutosaveSnapshot = $state(untrack(() => autosaveSnapshot(draft)));
   let immediateAutosave = $state(false);
-  function discreteAutosaveChange(previous: string, next: string) {
-    try {
-      const before = JSON.parse(previous) as Record<string, unknown>;
-      const after = JSON.parse(next) as Record<string, unknown>;
-      for (const key of [
-        "status",
-        "priority",
-        "kind",
-        "archived",
-        "labels",
-        "folder",
-      ]) {
-        if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
-          return true;
-      }
-      const structure = (value: unknown) =>
-        Array.isArray(value)
-          ? value.map((item) => ({ id: item.id, completed: item.completed }))
-          : [];
-      return (
-        JSON.stringify(structure(before.acceptance)) !==
-        JSON.stringify(structure(after.acceptance))
-      );
-    } catch {
-      return false;
-    }
-    return false;
-  }
   $effect(() => {
     if (!autosaveResource) return;
     const current = autosaveSnapshot(draft);
@@ -937,7 +858,7 @@
             placeholder="Card title"
             disabled={locked}
             focus={!resource && !autoCreate}
-            onfinish={finishTitleEdit}
+            onfinish={finishTextEdit}
           />
         </div>
         <div class="card-header-toolbar">
@@ -1249,7 +1170,7 @@
               : 240}
           disabled={locked}
           focus={!resource && !autoCreate}
-          onfinish={finishTitleEdit}
+          onfinish={finishTextEdit}
         />
         {#if !autosaveResource}<p class="draft-state" role="status">
             {busy
@@ -1346,48 +1267,14 @@
             disabled={locked}
           />{/if}
         {#if draft.type === "project" || draft.type === "card"}
-          <section
-            class="resource-description-field"
-            aria-label={`${resourceLabel(draft.type)} description`}
-          >
-            <div class="field-label">
-              Description
-              {#if descriptionEditing}<span>Markdown supported</span>{/if}
-            </div>
-            {#if descriptionEditing}
-              <textarea
-                bind:this={descriptionInput}
-                bind:value={draft.common.body}
-                rows="8"
-                aria-label="Description"
-                onblur={blurDescription}
-                disabled={locked}></textarea>
-            {:else}
-              <div
-                class="resource-description-rendered"
-                role="button"
-                tabindex={locked ? -1 : 0}
-                aria-label={`Edit ${draft.type} description`}
-                aria-disabled={locked}
-                onclick={beginDescriptionEdit}
-                onkeydown={(event) => {
-                  if (
-                    event.target instanceof Element &&
-                    event.target.closest("a")
-                  )
-                    return;
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    beginDescriptionEdit(event);
-                  }
-                }}
-              >
-                {#if draft.common.body.trim()}<Markdown
-                    source={draft.common.body}
-                  />{:else}<p class="empty-context">Add a description…</p>{/if}
-              </div>
-            {/if}
-          </section>
+          <ResourceDescription
+            type={draft.type}
+            bind:body={draft.common.body}
+            bind:editing={descriptionEditing}
+            disabled={locked}
+            closeButton={descriptionCloseButton}
+            onfinish={finishTextEdit}
+          />
         {:else}
           <label class="description-label"
             >Description <span>Markdown source</span><textarea

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { runBrowserSuite } from "../runtime.mjs";
 
 await runBrowserSuite(
-  async ({ config, cli, runtime, evidence, newContext }) => {
+  async ({ config, cli, runtime, evidence, newContext, browser }) => {
     const context = await newContext({
       isMobile: true,
       hasTouch: true,
@@ -134,7 +134,16 @@ await runBrowserSuite(
       });
       await statusTrigger.press("Enter");
       await expect(statusTrigger).toHaveAttribute("aria-expanded", "true");
-      await statusTrigger.press("Tab");
+      // Include buttons under macOS WebKit's default keyboard navigation.
+      await statusTrigger.press(
+        process.platform === "darwin" &&
+          browser.browserType().name() === "webkit"
+          ? "Alt+Tab"
+          : "Tab",
+      );
+      await expect(
+        header.getByRole("button", { name: "Planned", exact: true }),
+      ).toBeFocused();
       await page.keyboard.press("Escape");
       await expect(statusTrigger).toHaveAttribute("aria-expanded", "false");
       await expect(statusTrigger).toBeFocused();

@@ -27,10 +27,14 @@ cause remains unknown and future failures now retain child diagnostics.
 See the remediation checkpoint for measurements, this failure and other limits.
 
 The owner requested a [stability follow-up](2026-09-29-stability-followup.md):
-bounded crash diagnostics, advisory CI and editor simplification. The crash test
-passed 24 further runs; a separate reproducible autosave timing assertion in remote
-CI is corrected using paused browser timers. The full local gate and autosave
-suite pass, and pinned OSV dependency scans are configured. Editor work follows.
+bounded crash diagnostics, advisory CI and editor simplification. It is complete:
+the crash test passed 24 further runs; advisory and source/package CI passed on
+the diagnostics commit. Description editing has its own component, title resizing
+no longer feeds back into its observer, and browser tests wait for acknowledged
+writes. The final full gate and affected release Chromium/WebKit checks pass.
+The manual app is rebuilt/restarted with its existing state and HTTPS verified.
+Legacy API roles and remaining diagnostic limits are recorded in the follow-up;
+no compatibility endpoint or source format was removed.
 
 ## Implemented product
 

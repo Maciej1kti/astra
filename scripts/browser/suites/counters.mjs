@@ -51,6 +51,10 @@ await runBrowserSuite(
       });
     const confirm = (name) =>
       row(name).getByRole("button", { name: `Confirm ${name}`, exact: true });
+    const expectRecorded = async (name) => {
+      await expect(row(name).locator(".draft-hint")).toHaveCount(0);
+      await expect(confirm(name)).toBeDisabled();
+    };
     const open = async () => {
       await page.goto(
         `${config.origin}/?${new URLSearchParams({ view: "list", project: project.id, type: "card", resource: id })}`,
@@ -108,11 +112,11 @@ await runBrowserSuite(
         .getByRole("button", { name: "Keep editing", exact: true })
         .click();
       await confirm("Push-ups").click();
-      await expect(confirm("Push-ups")).toBeDisabled();
+      await expectRecorded("Push-ups");
       assert.equal(get().metadata.counters[0].values[today], 10);
       await expect(value("Sit-ups")).toHaveText("5");
       await confirm("Sit-ups").click();
-      await expect(confirm("Sit-ups")).toBeDisabled();
+      await expectRecorded("Sit-ups");
       await mutate(
         "PATCH",
         path,
@@ -190,7 +194,7 @@ await runBrowserSuite(
       await dialog
         .getByRole("button", { name: "Retry same command", exact: true })
         .click();
-      await expect(confirm("Push-ups")).toBeDisabled();
+      await expectRecorded("Push-ups");
       assert.equal(get().metadata.counters[0].values[today], 15);
       assert.equal(submitted.length, 2);
       for (const key of ["x-request-id", "x-command-epoch", "if-match"])
@@ -243,9 +247,19 @@ await runBrowserSuite(
       await expect(row("Squats")).toContainText(`Unsaved result for ${today}`);
       // Keep real time for admission; the counter draft retains its explicit day.
       await page.clock.setSystemTime(new Date());
+      // An in-flight command disables OK before its durable acknowledgement.
+      await page.route(matcher, async (route) => {
+        if (
+          route.request().method() === "PATCH" &&
+          route.request().postDataJSON()?.record_counter
+        )
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        await route.continue();
+      });
       await confirm("Squats").click();
-      await expect(confirm("Squats")).toBeDisabled();
+      await expectRecorded("Squats");
       assert.equal(get().metadata.counters[2].values[today], 5);
+      await page.unroute(matcher);
       assert.deepEqual(errors, []);
       await writeFile(
         join(evidence, "results.json"),

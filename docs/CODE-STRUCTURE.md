@@ -59,6 +59,12 @@ App keeps acknowledged resource routing separate from editor instance identity
 so refreshes cannot replace a queued draft. Reports retain explicit submission.
 See [ADR-035](ADR-035-EDITOR-AUTOSAVE.md) for queue and recovery behavior.
 
+[ResourceDescription](../apps/web/src/features/editor/ResourceDescription.svelte)
+owns Markdown display/editing, focus and pointer transitions. It binds the existing
+draft body and tells the editor when editing finishes; the editor retains autosave,
+conflict and close ownership. Draft snapshot classification lives with the draft
+model, so picker/checklist changes bypass only the typing debounce.
+
 `CardComments` renders source-owned conversations and an explicit comment draft.
 The editor flushes autosave before a conditional append, keeps uncertain comment
 commands in the shared controller, and preserves unsubmitted comment text across

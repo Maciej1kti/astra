@@ -166,6 +166,34 @@ export function autosaveSnapshot(draft: EditorDraft): string {
   delete value.counterDrafts;
   return JSON.stringify(value);
 }
+/** Picker and checklist structure changes save without the typing debounce. */
+export function discreteAutosaveChange(previous: string, next: string) {
+  try {
+    const before = JSON.parse(previous) as Record<string, unknown>;
+    const after = JSON.parse(next) as Record<string, unknown>;
+    for (const key of [
+      "status",
+      "priority",
+      "kind",
+      "archived",
+      "labels",
+      "folder",
+    ]) {
+      if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
+        return true;
+    }
+    const structure = (value: unknown) =>
+      Array.isArray(value)
+        ? value.map((item) => ({ id: item.id, completed: item.completed }))
+        : [];
+    return (
+      JSON.stringify(structure(before.acceptance)) !==
+      JSON.stringify(structure(after.acceptance))
+    );
+  } catch {
+    return false;
+  }
+}
 /** Detach a draft from Svelte's reactive proxy before queueing it. */
 export function detachedEditorDraft(draft: EditorDraft): EditorDraft {
   return JSON.parse(JSON.stringify(draft)) as EditorDraft;

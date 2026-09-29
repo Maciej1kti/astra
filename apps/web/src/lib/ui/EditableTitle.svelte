@@ -24,11 +24,25 @@
       node.style.height = "auto";
       node.style.height = `${node.scrollHeight}px`;
     };
-    const observer = new ResizeObserver(resize);
+    let width: number | undefined;
+    let frame = 0;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width === width) return;
+      width = entry.contentRect.width;
+      // Reflow on width changes without writing height during observer delivery.
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(resize);
+    });
     observer.observe(node);
     resize();
     if (focus) void tick().then(() => node.focus());
-    return { update: resize, destroy: () => observer.disconnect() };
+    return {
+      update: resize,
+      destroy: () => {
+        cancelAnimationFrame(frame);
+        observer.disconnect();
+      },
+    };
   }
 </script>
 

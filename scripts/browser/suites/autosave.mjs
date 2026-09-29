@@ -385,6 +385,9 @@ export async function runAutosaveChecks({
             value.metadata.title === "Newest typed title" &&
             !Object.hasOwn(value.metadata, "schedule"),
         );
+        await expect(dialog().getByTestId("autosave-status")).toHaveText(
+          "Saved",
+        );
         let releaseThird = () => {};
         let thirdReady;
         const thirdReadyPromise = new Promise((resolve) => {
