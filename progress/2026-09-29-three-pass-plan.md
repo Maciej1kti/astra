@@ -13,14 +13,19 @@ Baseline: `1a8f650`; findings and measurements are in
   Focus failure isolation/admission, pagination and representation validators.
 - [x] Pass 2: measure and optimize A08, retaining authoritative write checks,
   journal ordering, fsync and conflict behavior. Compare release workloads.
-- [ ] Pass 3: review the final implementation and broader failure/security/
+- [x] Pass 3: review the final implementation and broader failure/security/
   durability boundaries; fix newly confirmed issues with focused regressions.
-- [ ] Final full gate and release browser checks; rebuild/restart the existing
+- [x] Final full gate and release browser checks; rebuild/restart the existing
   manual application and verify its unchanged HTTPS address; report and push.
 
-Current checkpoint: pass 1 is committed/pushed as `5751928`. Pass 2 is verified
-and ready to commit. Resume with pass 3: audit the final code and broader failure,
-security and durability boundaries, fix only newly confirmed issues, then stop.
+Closed checkpoint: all three passes are complete. Passes 1 and 2 are
+committed/pushed as `5751928` and `e0a0728`; pass 3 tests and closing evidence are
+included with this checkpoint. Six focused boundary scenarios pass. The final
+full gate passes (238 Rust, 110 JavaScript, 12 Python), as do broad release
+HTTPS/planning checks, all 18 Chromium suites and WebKit session recovery/
+preferences. No additional reproducible application defect was found in pass 3.
+Final project report: `e2f41b7c-ddc8-4cc5-84fd-f1e80c758b74`. No fourth pass is
+planned; the remaining performance and acceptance limits below stay open.
 The partial pin index passes the full gate and release session/Focus suites. The
 manual app was rebuilt/restarted; all 18 existing resource versions, pins,
 preferences, certificate and HTTPS origin matched. Project report:
@@ -97,3 +102,42 @@ an authoritative cache, skip reference reads or replace the filesystem layer.
 This is the intended stop before speculative architecture. Full performance
 acceptance remains open; all measurements, including slower creation tails, are
 retained in ignored evidence.
+
+## Pass 3 audit boundaries
+
+Rechecked pin membership and ordering against source ownership, command admission,
+undo, pending durable intents and restart; session invalidations and command
+confirmation; cursor expiry and representation versions; HTTP/Unix admission,
+session revocation, Markdown rendering, bounded Git observation and writer
+reference/prepare/sync/commit ordering. No additional reproducible application
+defect was found in this bounded pass. No security or durability guard changed.
+
+Three new engine regressions prove cold-index/unavailable-pin recovery without
+restoring removed membership, pin-restoring undo at the limit, and a prepared pin
+reserving the last slot across projects and restart. Existing pagination coverage
+now checks attention's actual event end and next-day expiry as well as unchanged
+minutes. Release WebKit session recovery/preferences also passes; this is not a
+physical iPhone test.
+
+The first final gate reported one crash-child exit 101 at the Renamed boundary.
+That test discarded child output, so its cause is unknown. The focused rerun and
+the complete gate both passed. Retain the failed log and report captured child
+output and the returned command result on future failures; do not label this an
+application fix or silently erase it. All assertions and crash checkpoints remain
+unchanged. Evidence: `full-gate-pass3.log`, `durability-diagnostic.log` and
+`full-gate-pass3-diagnostic.log` under the ignored remediation evidence directory.
+
+The original 17 resource versions, two pins, preferences, certificate and HTTPS
+origin still match the pre-remediation snapshot; three intentional result reports
+were added during the cycle. Source validation reports zero invalid documents. Pass 3
+changes tests/evidence only; the manual application already runs the pass-2 build.
+
+Final browser evidence is in `browser-pass3/` and `browser-webkit/`; the release
+HTTPS/planning log is `browser-pass3.log`. No tracked bulk artifacts or runtime
+credentials were added. The owner's two existing card edits remain excluded.
+
+Stop here. Large editor/widget files and the broad smoke
+suite can be split when a concrete behavior change needs that boundary. Legacy
+workspace tags and milestones need an owner compatibility decision before removal.
+Do not add a generic state/event layer, rewrite storage to chase the creation
+benchmark or delete historical evidence to reduce file counts.

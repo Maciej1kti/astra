@@ -59,6 +59,219 @@ fn focus_isolates_invalid_sources_retains_pins_and_recovers() {
 }
 
 #[test]
+fn cold_focus_preserves_unavailable_saved_pins_without_restoring_removed_membership() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Saved pin");
+    let id = card.body["result"]["id"].as_str().unwrap();
+    let pinned = patch(
+        &engine,
+        &project,
+        id,
+        card.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":true}}),
+    );
+    assert_eq!(pinned.http_status, 200);
+    let items = json!([{"project_id":project,"card_id":id}]);
+    assert_eq!(
+        engine
+            .mutate_workspace(
+                "focus",
+                &json!({"items":items}),
+                &Uuid::now_v7().to_string(),
+                &engine.journal.epoch,
+                Some(&engine.workspace().unwrap().version),
+            )
+            .unwrap()
+            .http_status,
+        200
+    );
+    drop(engine);
+    fs::rename(env.root.join("project"), env.root.join("moved")).unwrap();
+    fs::remove_file(env.root.join("state/index.sqlite")).unwrap();
+    let engine = Engine::open_for_service(&env.root.join("state")).unwrap();
+    for reconciled in [false, true] {
+        if reconciled {
+            assert!(engine.refresh_project(&project, None).is_err());
+        }
+        let read = engine.focus_resource().unwrap();
+        wire::validate("FocusResource", &read).unwrap();
+        assert_eq!(read["items"], items);
+        assert_eq!(read["complete"], false);
+    }
+    fs::rename(env.root.join("moved"), env.root.join("project")).unwrap();
+    engine.refresh_project(&project, None).unwrap();
+    assert_eq!(engine.focus_resource().unwrap()["complete"], true);
+    let unpinned = patch(
+        &engine,
+        &project,
+        id,
+        pinned.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":false}}),
+    );
+    assert_eq!(unpinned.http_status, 200);
+    drop(engine);
+    let engine = env.engine();
+    assert_eq!(json!(engine.workspace().unwrap().value.focus), items);
+    let read = engine.focus_resource().unwrap();
+    assert_eq!(read["complete"], true);
+    assert_eq!(read["items"], json!([]));
+}
+
+#[test]
+fn undo_cannot_restore_a_pin_past_the_limit_and_succeeds_after_a_slot_is_freed() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Undo candidate");
+    let id = card.body["result"]["id"].as_str().unwrap();
+    let pinned = patch(
+        &engine,
+        &project,
+        id,
+        card.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":true}}),
+    );
+    assert_eq!(pinned.http_status, 200);
+    let unpinned = patch(
+        &engine,
+        &project,
+        id,
+        pinned.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":false}}),
+    );
+    assert_eq!(unpinned.http_status, 200);
+    let version = unpinned.body["result"]["version"].as_str().unwrap();
+    let history = engine.history(&project, Kind::Card, id, None, 50).unwrap();
+    assert_eq!(history["items"][0]["can_undo"], true);
+    let undo = json!({"undo":{"history_entry_id":history["items"][0]["id"]}});
+    external_pins(&env, &card.body["result"]["resource"], 100);
+    engine.refresh_project(&project, None).unwrap();
+    let rejected = patch(&engine, &project, id, version, undo.clone());
+    assert_eq!(rejected.body["error"]["code"], "FOCUS_LIMIT");
+    assert_eq!(
+        engine.get(&project, Kind::Card, id).unwrap()["version"],
+        version
+    );
+    let focus = engine.focus_resource().unwrap();
+    let other = focus["items"][0]["card_id"].as_str().unwrap();
+    let source = engine.get(&project, Kind::Card, other).unwrap();
+    assert_eq!(
+        patch(
+            &engine,
+            &project,
+            other,
+            source["version"].as_str().unwrap(),
+            json!({"set":{"pinned":false}}),
+        )
+        .http_status,
+        200
+    );
+    let restored = patch(&engine, &project, id, version, undo);
+    assert_eq!(restored.http_status, 200, "{restored:?}");
+    assert_eq!(
+        restored.body["result"]["resource"]["metadata"]["pinned"],
+        true
+    );
+    let focus = engine.focus_resource().unwrap();
+    assert_eq!(focus["items"].as_array().unwrap().len(), 100);
+    assert_eq!(focus["complete"], true);
+}
+
+#[test]
+fn unresolved_pin_reserves_the_last_slot_across_projects_and_restart() {
+    use project_application::{
+        journal::{Command, Target},
+        writer::{CommitPoint, Writer},
+    };
+    use project_store::StoreError;
+
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let a = create(&engine, &project, "Interrupted pin");
+    let other = env.root.join("other");
+    fs::create_dir(&other).unwrap();
+    let second = register(&engine, other.to_str().unwrap());
+    let b = create(&engine, &second, "Competing pin");
+    external_pins(&env, &a.body["result"]["resource"], 99);
+    engine.refresh_project(&project, None).unwrap();
+    let command = Command {
+        request_id: Uuid::now_v7().to_string(),
+        epoch: engine.journal.epoch.clone(),
+        method: "PATCH".into(),
+        target: Target {
+            project_id: project.clone(),
+            kind: Kind::Card,
+            id: a.body["result"]["id"].as_str().unwrap().into(),
+        },
+        expected: Some(a.body["result"]["version"].as_str().unwrap().into()),
+        payload: json!({"set":{"pinned":true}}),
+    };
+    {
+        let handle = engine.store(&project).unwrap();
+        let mut store = handle.lock().unwrap();
+        let pending = Writer {
+            journal: &engine.journal,
+        }
+        .execute_with(
+            &mut store,
+            &command,
+            vec![],
+            now_millis(),
+            |old| {
+                let mut next = old.unwrap().clone();
+                next["metadata"]["pinned"] = json!(true);
+                Ok(next)
+            },
+            |point| {
+                if point == CommitPoint::Prepared {
+                    Err(StoreError::Invalid("TEST_INTERRUPTION"))
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+        assert_eq!(pending.http_status, 202);
+    }
+    assert_eq!(
+        engine.focus_resource().unwrap()["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        99
+    );
+    let competing = |engine: &Engine| {
+        patch(
+            engine,
+            &second,
+            b.body["result"]["id"].as_str().unwrap(),
+            b.body["result"]["version"].as_str().unwrap(),
+            json!({"set":{"pinned":true}}),
+        )
+    };
+    assert_eq!(
+        competing(&engine).body["error"]["code"],
+        "WORKSPACE_RECOVERY_REQUIRED"
+    );
+    drop(engine);
+    let engine = env.engine();
+    assert!(!engine.journal.has_pending(&project).unwrap());
+    assert_eq!(
+        engine
+            .get(&project, Kind::Card, &command.target.id)
+            .unwrap()["metadata"]["pinned"],
+        true
+    );
+    assert_eq!(competing(&engine).body["error"]["code"], "FOCUS_LIMIT");
+    let focus = engine.focus_resource().unwrap();
+    assert_eq!(focus["items"].as_array().unwrap().len(), 100);
+    assert_eq!(focus["complete"], true);
+}
+
+#[test]
 fn concurrent_pins_admit_only_the_last_slot_and_overflow_reads_allow_recovery() {
     let env = Environment::new();
     let engine = Arc::new(env.engine());
@@ -154,6 +367,14 @@ fn focus_and_attention_pages_survive_minutes_but_expire_on_actual_event_boundary
             engine.attention(Some(cursor), 1, now + 60_000)
         };
         assert!(next.is_ok(), "unchanged minute: {next:?}");
+        let tomorrow = if section == "motion" {
+            engine.focus_cards("motion", None, Some(cursor), 1, now + 86_400_000)
+        } else {
+            engine.attention(Some(cursor), 1, now + 86_400_000)
+        };
+        assert!(
+            matches!(tomorrow, Err(project_application::AppError::Rejected(reply)) if reply.body["error"]["code"] == "PAGE_STALE")
+        );
     }
     for i in 0..3 {
         let card = create(&engine, &project, "Timed");
@@ -165,14 +386,27 @@ fn focus_and_attention_pages_survive_minutes_but_expire_on_actual_event_boundary
             json!({"set":{"event":{"start":"2026-09-29T10:00","duration_minutes":i+2}}}),
         );
     }
-    let page = engine.focus_cards("events", None, None, 1, now).unwrap();
-    let cursor = page["page"]["next_cursor"].as_str().unwrap();
-    assert!(
-        engine
-            .focus_cards("events", None, Some(cursor), 1, now + 60_000)
-            .is_ok()
-    );
-    assert!(
-        matches!(engine.focus_cards("events", None, Some(cursor), 1, now + 120_000), Err(project_application::AppError::Rejected(reply)) if reply.body["error"]["code"] == "PAGE_STALE")
-    );
+    for section in ["events", "attention"] {
+        let page = if section == "events" {
+            engine.focus_cards("events", None, None, 1, now)
+        } else {
+            engine.attention(None, 1, now)
+        }
+        .unwrap();
+        let cursor = page["page"]["next_cursor"].as_str().unwrap();
+        for (elapsed, expires) in [(60_000, false), (120_000, true)] {
+            let next = if section == "events" {
+                engine.focus_cards("events", None, Some(cursor), 1, now + elapsed)
+            } else {
+                engine.attention(Some(cursor), 1, now + elapsed)
+            };
+            if expires {
+                assert!(
+                    matches!(next, Err(project_application::AppError::Rejected(reply)) if reply.body["error"]["code"] == "PAGE_STALE")
+                );
+            } else {
+                assert!(next.is_ok(), "unchanged minute: {next:?}");
+            }
+        }
+    }
 }

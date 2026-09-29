@@ -300,15 +300,19 @@ fn subprocess_crashes_at_every_durability_boundary_recover_once() {
         .unwrap();
         drop(store);
         drop(journal);
-        let status = process::Command::new(std::env::current_exe().unwrap())
+        let output = process::Command::new(std::env::current_exe().unwrap())
             .args(["--exact", "durability_tests::fault_child", "--nocapture"])
             .env("ASTRA_FAULT_HOME", &env.root)
             .env("ASTRA_FAULT_POINT", point)
-            .stdout(process::Stdio::null())
-            .stderr(process::Stdio::null())
-            .status()
+            .output()
             .unwrap();
-        assert_eq!(status.code(), Some(77), "{point}");
+        assert_eq!(
+            output.status.code(),
+            Some(77),
+            "{point}: {}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
         let (journal, mut store) = env.open();
         assert_eq!(journal.epoch, epoch);
         assert_eq!(
@@ -460,7 +464,7 @@ fn fault_child() {
     let cmd: Command =
         serde_json::from_slice(&fs::read(root.join("command.json")).unwrap()).unwrap();
     let (journal, mut store) = open(&root);
-    Writer { journal: &journal }
+    let reply = Writer { journal: &journal }
         .execute_with(&mut store, &cmd, vec![], now_millis(), rename, |reached| {
             if format!("{reached:?}") == point {
                 process::exit(77);
@@ -468,7 +472,7 @@ fn fault_child() {
             Ok(())
         })
         .unwrap();
-    panic!("fault point was not reached");
+    panic!("fault point was not reached: {reply:?}");
 }
 
 #[test]

@@ -10,17 +10,21 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 The [repository audit](2026-09-29-repository-audit.md) reproduced A01–A07 and
 measured source-scan bottlenecks. The owner authorized a bounded
 [three-pass remediation](2026-09-29-three-pass-plan.md): fixes, measured optimization,
-then a final audit. Pass 1 is verified: A01–A07 and maintained-guide corrections are complete;
-the measured pin index is verified and the final audit remains. This is not release acceptance.
+then a final audit. All three passes are complete: A01–A07 and maintained-guide
+corrections are verified, Focus reads use a measured partial pin index, and the
+final boundary audit found no further reproducible application defect. This is not release acceptance.
 Its read/client changes are described in
 [ADR-050](../docs/ADR-050-READ-RECOVERY-AND-CONFIRMATION.md).
 
-The final pass-1 gate passed 235 Rust, 110 JavaScript and 12 Python tests,
-broad HTTPS/planning checks and 18 release Chromium suites. The manual app is
+The final gate passed 238 Rust, 110 JavaScript and 12 Python tests,
+broad HTTPS/planning checks and 18 release Chromium suites. WebKit session
+recovery/preferences also passed. The manual app is
 rebuilt, restarted and verified with existing resources, pins, preferences and
 certificate preserved. The pass-2 pin index brings Focus membership p95 to
 0.35 ms for 10,000 cards/one pin; durable creation remains above its performance
-target. See the remediation checkpoint for measurements and limits.
+target. One crash-test child failed once and passed focused/full reruns; its
+cause remains unknown and future failures now retain child diagnostics.
+See the remediation checkpoint for measurements, this failure and other limits.
 
 ## Implemented product
 
