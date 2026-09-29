@@ -1,0 +1,18 @@
+{
+  "body": "Release Focus membership p95 for one project/one pin: 206.23 to 0.25 ms at 1,000 cards; 1,811.91 to 0.35 ms at 10,000 cards (20 samples, application only). A small partial pin index prevents scanning unrelated card metadata; the actual query plan is checked. Full gate and release session/Focus suites pass. Existing manual app rebuilt/restarted and HTTPS verified; all 18 resource versions, pins, settings and certificate preserved. Mixed durable write p95 remains 322.77 ms; creation median remains about 320 ms, dominated by secure filesystem observations/reference rechecks. Keep those guards and stop before introducing an authoritative cache or filesystem rewrite. Detailed limits and all measurements: progress/2026-09-29-three-pass-plan.md. Final bounded audit remains next; acceptance unchanged.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "56cf690f-689f-4507-a343-2a22f689e924",
+    "kind": "result",
+    "recorded_at": "2026-09-29T17:00:00.564Z",
+    "summary": "Audit remediation pass 2: measured Focus optimization and explicit stop",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

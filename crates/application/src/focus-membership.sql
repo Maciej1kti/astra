@@ -5,7 +5,7 @@ WITH projects AS (
     json_extract(value,'$.card_id') card_id, key rank FROM json_each(?2)
 ), candidates AS (
   SELECT d.project_id, d.entity_id card_id, json_extract(d.metadata_json,'$.position') position
-  FROM documents d JOIN projects p ON p.id=d.project_id
+  FROM documents d INDEXED BY documents_focus_pins JOIN projects p ON p.id=d.project_id
   WHERE entity_type='card' AND json_extract(metadata_json,'$.pinned')=1
   UNION ALL
   SELECT o.project_id,o.card_id,NULL FROM ordering o JOIN projects p ON p.id=o.project_id

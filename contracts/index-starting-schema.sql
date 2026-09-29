@@ -23,6 +23,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title,search_text,co
 -- Application updates FTS in same projection transaction; tests MUST prove it.
 -- Not a complete query schema: status/date/rank columns should be indexed after profiling.
 CREATE INDEX IF NOT EXISTS documents_project_type ON documents(project_id,entity_type);
+-- Focus needs only pinned rows, including retained unavailable observations.
+CREATE INDEX IF NOT EXISTS documents_focus_pins ON documents(project_id,json_extract(metadata_json,'$.position'),entity_id) WHERE entity_type='card' AND json_extract(metadata_json,'$.pinned')=1;
 
 CREATE TRIGGER IF NOT EXISTS documents_ai AFTER INSERT ON documents BEGIN INSERT INTO documents_fts(rowid,title,search_text) VALUES(new.rowid,new.title,new.search_text); END;
         CREATE TRIGGER IF NOT EXISTS documents_ad AFTER DELETE ON documents BEGIN INSERT INTO documents_fts(documents_fts,rowid,title,search_text) VALUES('delete',old.rowid,old.title,old.search_text); END;

@@ -241,4 +241,20 @@ fn bundled_sqlite_seeks_composite_projection_and_report_target_keys() {
             .join("\n");
         assert!(plan.contains(expected), "{plan}");
     }
+    let sql = format!(
+        "EXPLAIN QUERY PLAN {}",
+        include_str!("../focus-membership.sql")
+    );
+    let plan = db
+        .prepare(&sql)
+        .unwrap()
+        .query_map(
+            params!["[{\"project_id\":\"project\"}]", "[]", 101],
+            |row| row.get::<_, String>(3),
+        )
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .join("\n");
+    assert!(plan.contains("documents_focus_pins"), "{plan}");
 }
