@@ -25,6 +25,10 @@ type SessionHooks = {
   changes: (events: Invalidation[]) => void;
 };
 
+function sessionRequired(cause: unknown) {
+  return cause instanceof ApiError && cause.status === 401;
+}
+
 /** One mounted application's bootstrap, pairing and event-stream lifetime. */
 export function sessionState(hooks: SessionHooks) {
   let boot = $state<Bootstrap | null>(null);
@@ -36,12 +40,24 @@ export function sessionState(hooks: SessionHooks) {
   let source: EventSource | undefined;
   let generation = 0;
   let preferencesGeneration = 0;
-  async function preferences() {
-    const current = generation;
-    const request = ++preferencesGeneration;
-    const value = await getPreferences({ fresh: true });
-    if (!boot || current !== generation) return;
-    if (request === preferencesGeneration) {
+  function startPreferencesRead() {
+    return {
+      generation,
+      request: ++preferencesGeneration,
+      // Consume either outcome even if bootstrap fails first. Both GETs are
+      // authenticated by the existing session and can travel concurrently.
+      response: getPreferences({ fresh: true }).then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      ),
+    };
+  }
+  async function preferences(read = startPreferencesRead()) {
+    const result = await read.response;
+    if (!boot || read.generation !== generation) return;
+    if ("error" in result) throw result.error;
+    const value = result.value;
+    if (read.request === preferencesGeneration) {
       boot = { ...boot, timezone: value.timezone };
       hooks.preferences(value);
     }
@@ -109,18 +125,30 @@ export function sessionState(hooks: SessionHooks) {
   ) {
     loading = true;
     const current = generation;
+    const initialPreferences = startPreferencesRead();
     try {
       const value = await api<Bootstrap>("/api/v1/bootstrap");
-      if (current !== generation) return;
+      if (current !== generation) {
+        const result = await initialPreferences.response;
+        if ("error" in result && sessionRequired(result.error))
+          throw result.error;
+        return;
+      }
       boot = value;
       configure(boot);
       publishSession("restored");
       connect();
-      const valuePreferences = await preferences();
+      const valuePreferences = await preferences(initialPreferences);
       if (valuePreferences && current === generation)
         await ready(valuePreferences);
     } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 401) {
+      // Either concurrent GET can end the session and cancel the other. Retain
+      // the original 401 so a pending pairing still appears after a reload.
+      const result = await initialPreferences.response;
+      if (
+        sessionRequired(cause) ||
+        ("error" in result && sessionRequired(result.error))
+      ) {
         boot = null;
         try {
           pairing = await api<Pairing>("/api/v1/auth/pairings/current");
@@ -135,13 +163,14 @@ export function sessionState(hooks: SessionHooks) {
   async function foreground() {
     if (document.visibilityState !== "visible" || !boot) return;
     const current = generation;
+    const currentPreferences = startPreferencesRead();
     try {
       const value = await api<Bootstrap>("/api/v1/bootstrap");
       if (!boot || current !== generation) return;
       boot = value;
       configure(boot);
       connect();
-      await preferences();
+      await preferences(currentPreferences);
       if (boot && current === generation) await hooks.foreground();
     } catch (cause) {
       hooks.error(cause);

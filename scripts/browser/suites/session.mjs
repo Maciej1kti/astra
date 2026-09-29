@@ -134,6 +134,12 @@ await runBrowserSuite(
           exact: true,
         });
         await confirm.click();
+        // Disabled also covers an in-flight write; draft removal requires ACK.
+        await expect(
+          counters
+            .getByRole("group", { name: `Counter: ${name}`, exact: true })
+            .getByRole("button", { name: "Reset draft", exact: true }),
+        ).toHaveCount(0);
         await expect(confirm).toBeDisabled();
       }
       const values = cli("get", path).metadata.counters;

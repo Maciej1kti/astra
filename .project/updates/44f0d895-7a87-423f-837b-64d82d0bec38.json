@@ -1,0 +1,18 @@
+{
+  "body": "Removed the 200 ms navigation delay while retaining typed-search debounce. Deferred editor and secondary dialogs, overlapped startup reads, and removed the extra planning-wrapper request. Initial JS/CSS falls from 139.0 to 61.8 KiB gzip. In the small release fixture, local List navigation falls from 242 to 30 ms; with simulated network/CPU constraints it falls from 350 to 160 ms and first List load from 879 to 684 ms.\n\nThe full local gate passes, with 19 Chromium suites and affected WebKit coverage across the recorded runs. Regression checks cover pending pairing recovery, conditional writes and a reproduced WebKit failed-preload cache issue. The rebuilt manual app serves the verified HTTPS assets; 23 existing resource versions, pins, preferences and certificates survived restart.\n\nThe owner's performance goal remains active. Larger projects, first-card opening and cold planning views are being measured next. Physical-device and full performance acceptance are not claimed. Evidence: progress/2026-09-29-performance-optimization.md.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "44f0d895-7a87-423f-837b-64d82d0bec38",
+    "kind": "result",
+    "recorded_at": "2026-09-29T19:42:08.658Z",
+    "summary": "Faster startup and navigation verified; further profiling continues",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

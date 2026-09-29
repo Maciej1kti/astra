@@ -94,3 +94,9 @@ command recovery, confirmations, phone portrait and a 320px-high landscape view.
 
 The `session` suite covers startup read failure recovery and remote workspace
 timezone changes with existing and new daily counter drafts.
+
+The `loading` suite holds bootstrap to verify concurrent preferences, pauses
+browser timers to distinguish immediate navigation from debounced search, checks
+deferred-module failure recovery, and exercises pending pairing reload when the
+concurrent unauthorized preference read cancels bootstrap. Timing measurements
+remain separate from these controlled behavioral checks.

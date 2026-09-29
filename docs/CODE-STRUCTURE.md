@@ -26,6 +26,20 @@ project overview, resource lists, updates and the workspace board overview.
 Navigation exposes a read-only route and explicit actions; only navigation owns
 the generation that cancels obsolete resource reads and history restoration.
 
+View/project/discrete-filter changes start their reads immediately. Only typed
+server-side searches retain the 200 ms debounce. Bootstrap and preferences load
+concurrently; either request can end an expired session, and initialization still
+recovers an existing pairing if the other request is cancelled.
+
+Editor, settings and administrative components load on demand through
+`lib/ui/deferred-component.svelte.ts`. Editor code warms after the first view and
+loads alongside resource reads on an early click. Once loaded, the registration
+browser stays mounted while hidden so its pending command is retained. Loading
+failures expose a closable dialog, retry and explicit reload. The explicit reload
+revalidates a bounded set of failed local preload assets to clear WebKit's failed
+preload cache; it never reloads automatically over a draft. Calendar/Gantt import
+directly from the small planning wrapper without an extra wrapper chunk request.
+
 `lib/api` owns transport, bounded reads, invalidation batching, typed resource/
 planning/tag endpoints and command execution. Feature code should use a named
 endpoint when one exists; response types are asserted only at transport boundaries. `lib/contracts` contains generated types; `lib/resources` contains

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 
-export const INITIAL_BUNDLE_LIMIT = 300 * 1024;
+export const INITIAL_BUNDLE_LIMIT = 80 * 1024;
 
 export async function measureInitialBundle(manifest, readAsset) {
   const visited = new Set(),
@@ -48,5 +48,5 @@ if (
   );
   console.log(JSON.stringify(result, null, 2));
   if (result.gzipBytes > result.limitBytes)
-    throw new Error("Initial JavaScript/CSS exceeds the 300 KiB gzip budget.");
+    throw new Error("Initial JavaScript/CSS exceeds the 80 KiB gzip budget.");
 }

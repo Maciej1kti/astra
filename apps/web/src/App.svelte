@@ -2,6 +2,9 @@
   import PageHeading from "./lib/ui/PageHeading.svelte";
   import { viewLabel } from "./features/workspace/navigation";
   import Button from "./lib/ui/Button.svelte";
+  import DeferredDialog from "./lib/ui/DeferredDialog.svelte";
+  import { deferredComponent } from "./lib/ui/deferred-component.svelte";
+  import { observePreloadFailures } from "./lib/ui/preload-recovery";
 
   import WorkspaceNavigation from "./features/workspace/WorkspaceNavigation.svelte";
   import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
@@ -39,24 +42,50 @@
   import { readRoute, primaryResource } from "./features/workspace/navigation";
 
   import { applyTheme, readTheme } from "./features/settings/appearance";
-  import RegistrationBrowser from "./features/registration/RegistrationBrowser.svelte";
   import DateChange from "./features/planning/DateChange.svelte";
+  import DateViews from "./features/planning/DateViews.svelte";
   import MoveChange from "./features/board/MoveChange.svelte";
   import type {
     DateProposal,
     MoveProposal,
   } from "./features/planning/proposals";
-  import Editor from "./features/editor/Editor.svelte";
-  import Settings from "./features/settings/Settings.svelte";
-  import TagManager from "./features/tags/TagManager.svelte";
-  import NativeProject from "./features/registration/NativeProject.svelte";
-  import ProjectDeletion from "./features/registration/ProjectDeletion.svelte";
-  import GitObservation from "./features/host/GitObservation.svelte";
-  import Diagnostics from "./features/host/Diagnostics.svelte";
   import { apiCode, type Resource, type Summary } from "./lib/api/api";
   import { getResource, getProject, replaceFocus } from "./lib/api/resources";
   import type { FocusRef, FocusResource } from "./lib/contracts/api.generated";
   import { commandOperation } from "./lib/api/command-operation.svelte";
+
+  const registrationUI = deferredComponent(
+    () => import("./features/registration/RegistrationBrowser.svelte"),
+  );
+  const RegistrationBrowser = $derived(registrationUI.component);
+  const editorUI = deferredComponent(
+    () => import("./features/editor/Editor.svelte"),
+  );
+  const Editor = $derived(editorUI.component);
+  const settingsUI = deferredComponent(
+    () => import("./features/settings/Settings.svelte"),
+  );
+  const Settings = $derived(settingsUI.component);
+  const tagsUI = deferredComponent(
+    () => import("./features/tags/TagManager.svelte"),
+  );
+  const TagManager = $derived(tagsUI.component);
+  const nativeUI = deferredComponent(
+    () => import("./features/registration/NativeProject.svelte"),
+  );
+  const NativeProject = $derived(nativeUI.component);
+  const deletionUI = deferredComponent(
+    () => import("./features/registration/ProjectDeletion.svelte"),
+  );
+  const ProjectDeletion = $derived(deletionUI.component);
+  const gitUI = deferredComponent(
+    () => import("./features/host/GitObservation.svelte"),
+  );
+  const GitObservation = $derived(gitUI.component);
+  const diagnosticsUI = deferredComponent(
+    () => import("./features/host/Diagnostics.svelte"),
+  );
+  const Diagnostics = $derived(diagnosticsUI.component);
 
   const routing = navigationState(
     readRoute(
@@ -66,7 +95,11 @@
     {
       today: () => today,
       hasEditor: () => !!editor,
-      requestClose: () => editorInstance?.requestClose() ?? false,
+      requestClose: () => {
+        if (editorInstance) return editorInstance.requestClose();
+        closeEditor();
+        return true;
+      },
       dialogsOpen: () =>
         !!(
           dateDraft ||
@@ -83,12 +116,14 @@
       clearEditor: () => {
         editor = null;
       },
-      loadResource: (target) =>
-        getResource({
+      loadResource: (target) => {
+        void editorUI.load();
+        return getResource({
           project_id: target.project,
           type: target.type as Summary["type"],
           id: target.id,
-        }),
+        });
+      },
       showResource: (target, resource) => {
         editor = editTarget(target.project, resource);
       },
@@ -163,7 +198,10 @@
   const more = data.more;
   const moreAttention = data.moreAttention;
 
-  onMount(() => applyTheme(readTheme()));
+  onMount(() => {
+    applyTheme(readTheme());
+    return observePreloadFailures();
+  });
 
   let Board = $state<
     typeof import("./features/board/Board.svelte").default | null
@@ -194,30 +232,8 @@
 
   let diagnostics = $state(false);
   let settings = $state(false);
-  let DateViews = $state<
-    typeof import("./features/planning/DateViews.svelte").default | null
-  >(null);
   const viewRevision = $derived(data.state.revision);
   let weekStart = $state("monday");
-  let dateViewLoadError = $state("");
-  async function loadDateViews() {
-    dateViewLoadError = "";
-    try {
-      DateViews = (await import("./features/planning/DateViews.svelte"))
-        .default;
-    } catch {
-      dateViewLoadError =
-        "The planning view could not be loaded. Retry, or reload after preserving any open draft.";
-    }
-  }
-  $effect(() => {
-    if (
-      (routing.current.view === "calendar" ||
-        routing.current.view === "gantt") &&
-      !DateViews
-    )
-      void loadDateViews();
-  });
 
   const attentionRows = $derived(data.state.attentionRows);
   const attentionCursor = $derived(data.state.attentionCursor);
@@ -593,8 +609,15 @@
         : undefined,
     );
   });
+  const queryScopeKey = $derived(
+    viewQueryKey({ ...currentQuery(), search: "" }),
+  );
+  let previousQueryScope = "";
   $effect(() => {
     const requestedQuery = queryKey;
+    const scope = queryScopeKey;
+    const searchOnly = previousQueryScope === scope;
+    previousQueryScope = scope;
     if (
       !boot ||
       loading ||
@@ -605,10 +628,41 @@
     untrack(() => {
       data.invalidate();
     });
-    const timer = setTimeout(() => {
-      void requestedQuery;
-      void refresh().catch(message);
-    }, 200);
+    if (searchOnly) {
+      const timer = setTimeout(() => void refresh().catch(message), 200);
+      return () => clearTimeout(timer);
+    }
+    untrack(() => void refresh().catch(message));
+  });
+  $effect(() => {
+    if (adding) void registrationUI.load();
+  });
+  $effect(() => {
+    if (editor) void editorUI.load();
+  });
+  $effect(() => {
+    if (settings) void settingsUI.load();
+  });
+  $effect(() => {
+    if (manageTags) void tagsUI.load();
+  });
+  $effect(() => {
+    if (nativeAdding) void nativeUI.load();
+  });
+  $effect(() => {
+    if (projectDeletion) void deletionUI.load();
+  });
+  $effect(() => {
+    if (gitProject) void gitUI.load();
+  });
+  $effect(() => {
+    if (diagnostics) void diagnosticsUI.load();
+  });
+  // Warm the most common action after the first view has rendered. Opening a
+  // resource also starts this import alongside its read, without waiting here.
+  $effect(() => {
+    if (!boot || loading) return;
+    const timer = setTimeout(() => void editorUI.load(), 150);
     return () => clearTimeout(timer);
   });
   onMount(() => {
@@ -785,27 +839,22 @@
                 {cards}
                 {open}
               />
-            {:else if routing.current.view === "calendar" || routing.current.view === "gantt"}{#if DateViews}<DateViews
-                  project={routing.current.project}
-                  month={routing.current.month}
-                  view={routing.current.view}
-                  revision={viewRevision}
-                  {weekStart}
-                  calendarDate={routing.current.calendarDate}
-                  calendarLayout={routing.current.calendarLayout}
-                  workspaceToday={today}
-                  workspaceTimezone={boot?.timezone ?? "workspace time"}
-                  onCalendarNavigate={routing.navigateCalendar}
-                  search={routing.current.search}
-                  {open}
-                  onpropose={(proposal) => (dateDraft = proposal)}
-                  oncreate={(initial) => create("card", initial)}
-                />{:else if dateViewLoadError}<p role="alert">
-                  {dateViewLoadError}
-                  <button onclick={loadDateViews}
-                    >Retry loading planning view</button
-                  >
-                </p>{:else}<p role="status">Loading date views…</p>{/if}
+            {:else if routing.current.view === "calendar" || routing.current.view === "gantt"}<DateViews
+                project={routing.current.project}
+                month={routing.current.month}
+                view={routing.current.view}
+                revision={viewRevision}
+                {weekStart}
+                calendarDate={routing.current.calendarDate}
+                calendarLayout={routing.current.calendarLayout}
+                workspaceToday={today}
+                workspaceTimezone={boot?.timezone ?? "workspace time"}
+                onCalendarNavigate={routing.navigateCalendar}
+                search={routing.current.search}
+                {open}
+                onpropose={(proposal) => (dateDraft = proposal)}
+                oncreate={(initial) => create("card", initial)}
+              />
             {:else if routing.current.view === "updates"}
               <UpdatesScreen
                 route={routing.current}
@@ -874,71 +923,129 @@
         void refresh().catch(message);
       }}
     />{/key}{/if}
-{#if gitProject}<GitObservation
-    project={gitProject}
-    onclose={() => (gitProject = "")}
-  />{/if}
-{#if diagnostics}<Diagnostics onclose={() => (diagnostics = false)} />{/if}
-{#if settings}<Settings
-    ontags={() => {
-      manageTags = true;
-    }}
-    onclose={() => (settings = false)}
-    onsaved={() => {
-      settings = false;
-      void initialize();
-    }}
-  />{/if}
-{#if manageTags}<TagManager
-    initialProject={routing.current.project ??
-      routing.current.resource?.project ??
-      ""}
-    projectNames={Object.fromEntries(
-      projects.map((item) => [item.id, item.title]),
-    )}
-    onclose={() => (manageTags = false)}
-    onchanged={() => void refresh().catch(message)}
-  />{/if}
-{#if editor}{#key editor}{@const editorTarget = editor}<Editor
-      workspaceTimezone={boot?.timezone ?? "workspace time"}
-      target={editor}
-      bind:this={editorInstance}
-      onclose={closeEditor}
-      onkeepediting={() => {
-        if (routing.pending) keepEditing();
+{#if gitProject}{#if GitObservation}<GitObservation
+      project={gitProject}
+      onclose={() => (gitProject = "")}
+    />{:else}<DeferredDialog
+      title="Git status"
+      error={gitUI.error}
+      retry={gitUI.load}
+      onclose={() => {
+        gitProject = "";
       }}
-      onchanged={() => refresh().catch(message)}
-      onresolve={(decision) => {
-        routing.startDraft();
-        editor = resolutionTarget(editorTarget.project, decision);
+    />{/if}{/if}
+{#if diagnostics}{#if Diagnostics}<Diagnostics
+      onclose={() => (diagnostics = false)}
+    />{:else}<DeferredDialog
+      title="Diagnostics"
+      error={diagnosticsUI.error}
+      retry={diagnosticsUI.load}
+      onclose={() => {
+        diagnostics = false;
       }}
-      onsaved={() => void saved()}
-      onautosaved={(resource) => autosaved(editorTarget, resource)}
-      ondeleted={() => void deleted()}
-    />{/key}{/if}
-{#if projectDeletion}<ProjectDeletion
-    project={projectDeletion}
-    onclose={() => (projectDeletion = null)}
-    ondeleted={projectDeleted}
-  />{/if}
+    />{/if}{/if}
+{#if settings}{#if Settings}<Settings
+      ontags={() => {
+        manageTags = true;
+      }}
+      onclose={() => (settings = false)}
+      onsaved={() => {
+        settings = false;
+        void initialize();
+      }}
+    />{:else}<DeferredDialog
+      title="Workspace settings"
+      error={settingsUI.error}
+      retry={settingsUI.load}
+      onclose={() => {
+        settings = false;
+      }}
+    />{/if}{/if}
+{#if manageTags}{#if TagManager}<TagManager
+      initialProject={routing.current.project ??
+        routing.current.resource?.project ??
+        ""}
+      projectNames={Object.fromEntries(
+        projects.map((item) => [item.id, item.title]),
+      )}
+      onclose={() => (manageTags = false)}
+      onchanged={() => void refresh().catch(message)}
+    />{:else}<DeferredDialog
+      title="Project tags"
+      error={tagsUI.error}
+      retry={tagsUI.load}
+      onclose={() => {
+        manageTags = false;
+      }}
+    />{/if}{/if}
+{#if editor}{#if Editor}{#key editor}{@const editorTarget = editor}<Editor
+        workspaceTimezone={boot?.timezone ?? "workspace time"}
+        target={editor}
+        bind:this={editorInstance}
+        onclose={closeEditor}
+        onkeepediting={() => {
+          if (routing.pending) keepEditing();
+        }}
+        onchanged={() => refresh().catch(message)}
+        onresolve={(decision) => {
+          routing.startDraft();
+          editor = resolutionTarget(editorTarget.project, decision);
+        }}
+        onsaved={() => void saved()}
+        onautosaved={(resource) => autosaved(editorTarget, resource)}
+        ondeleted={() => void deleted()}
+      />{/key}{:else}<DeferredDialog
+      title="Edit resource"
+      error={editorUI.error}
+      retry={editorUI.load}
+      onclose={() => {
+        closeEditor();
+      }}
+    />{/if}{/if}
+{#if projectDeletion}{#if ProjectDeletion}<ProjectDeletion
+      project={projectDeletion}
+      onclose={() => (projectDeletion = null)}
+      ondeleted={projectDeleted}
+    />{:else}<DeferredDialog
+      title="Delete project"
+      error={deletionUI.error}
+      retry={deletionUI.load}
+      onclose={() => {
+        projectDeletion = null;
+      }}
+    />{/if}{/if}
 <!-- Keep the registration identity alive while its dialog is closed. -->
-<RegistrationBrowser
-  bind:open={adding}
-  onregistered={async (id) => {
-    routing.showProject(id);
-    await refresh().catch(message);
-  }}
-/>
-
-{#if nativeAdding}<NativeProject
-    onclose={() => (nativeAdding = false)}
-    onbrowse={() => {
-      nativeAdding = false;
-      adding = true;
-    }}
-    onadded={(id) => {
-      nativeAdding = false;
+{#if RegistrationBrowser}<RegistrationBrowser
+    bind:open={adding}
+    onregistered={async (id) => {
       routing.showProject(id);
-      void refresh().catch(message);
+      await refresh().catch(message);
+    }}
+  />{:else if adding}<DeferredDialog
+    title="Add project"
+    error={registrationUI.error}
+    retry={registrationUI.load}
+    onclose={() => {
+      adding = false;
     }}
   />{/if}
+
+{#if nativeAdding}{#if NativeProject}<NativeProject
+      onclose={() => (nativeAdding = false)}
+      onbrowse={() => {
+        nativeAdding = false;
+        adding = true;
+      }}
+      onadded={(id) => {
+        nativeAdding = false;
+        routing.showProject(id);
+        void refresh().catch(message);
+      }}
+    />{:else}<DeferredDialog
+      title="Add project"
+      error={nativeUI.error}
+      retry={nativeUI.load}
+      onclose={() => {
+        nativeAdding = false;
+      }}
+    />{/if}{/if}

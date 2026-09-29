@@ -79,8 +79,11 @@ Safari validation.
 
 Frontend changes use `npm run format`; `npm run format:check` is part of the local
 and CI gate. Generated domain/API types remain owned by `npm run contracts`.
-After building, `npm run check:bundle` enforces the 300 KiB gzip budget for initial
-JavaScript and CSS, following static imports and excluding lazy planning chunks.
+After building, `npm run check:bundle` enforces an 80 KiB gzip regression limit for
+initial JavaScript and CSS, following all static imports. Planning, editor,
+settings and administrative dialogs load separately. This tighter build check
+preserves the loading optimization; the historical 300 KiB product ceiling is
+not a measured performance result.
 The build manifest is not embedded in the daemon's public assets.
 
 Run release benchmarks separately from builds/browser tests, for example:

@@ -41,6 +41,13 @@ UI and ranks possible speed improvements. The clearest candidate is a 200 ms
 navigation debounce; smaller startup code and fewer serial reads are additional
 options. This profiling changed no application code or acceptance status.
 
+The owner then authorized [iterative performance optimization](2026-09-29-performance-optimization.md)
+until further improvements become unnoticeable. Its first verified iteration
+removes the navigation delay, splits secondary UI code and overlaps startup
+reads. Initial JS/CSS drops to 61.8 KiB gzip; local view changes take about 30 ms
+in the small release fixture. The manual app is rebuilt/restarted and verified.
+Larger-project and cold planning-view measurements continue; the goal remains open.
+
 ## Implemented product
 
 - Shared Rust domain/application rules, strict JSON sources and generated browser
