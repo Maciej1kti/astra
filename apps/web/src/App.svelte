@@ -106,6 +106,9 @@
   const session = sessionState({
     error: message,
     ended: sessionEnded,
+    preferences: (value) => {
+      weekStart = value.preferences.week_start ?? "monday";
+    },
     foreground: async () => {
       if (routing.current.project) await getProject(routing.current.project);
       await refresh();
@@ -137,7 +140,6 @@
         preferences.preferences.default_view ?? "focus",
       );
       assignRoute(route);
-      weekStart = preferences.preferences.week_start ?? "monday";
       await refresh();
       if (!editor && route.resource)
         await open({
@@ -249,7 +251,10 @@
   const focusCommand = commandOperation(() => !!boot);
   let focusProposal = $state<FocusRef[] | null>(null);
   let focusProposalVersion = $state("");
-  let focusAcknowledged = $state<FocusResource | null>(null);
+  let focusAcknowledged = $state<Pick<
+    FocusResource,
+    "items" | "version"
+  > | null>(null);
   let focusAcknowledgedRevision = 0;
   let focusError = $state("");
   let focusCopyMessage = $state("");
@@ -348,7 +353,7 @@
     focusError = "";
     try {
       const reply = await focusCommand.commit();
-      const committed: FocusResource = {
+      const committed: Pick<FocusResource, "items" | "version"> = {
         items: focusProposal.map((item) => ({ ...item })),
         version: reply.result.version ?? "",
       };

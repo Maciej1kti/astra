@@ -25,10 +25,33 @@ pub struct Mutation {
 }
 impl Engine {
     pub fn mutate(&self, input: Mutation) -> Result<Reply, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let membership = input.kind == Kind::Card
+            && (input.payload.get("pinned").is_some()
+                || input.payload["set"].get("pinned").is_some()
+                || input.payload.get("undo").is_some()
+                || input.payload["clear"]
+                    .as_array()
+                    .is_some_and(|keys| keys.iter().any(|key| key == "pinned")));
+        // Serialize membership across projects while ordinary writes keep their shared gate.
+        let (_exclusive, _shared) = if membership {
+            (
+                Some(
+                    self.gate
+                        .write()
+                        .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?,
+                ),
+                None,
+            )
+        } else {
+            (
+                None,
+                Some(
+                    self.gate
+                        .read()
+                        .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?,
+                ),
+            )
+        };
         let Mutation {
             project_id,
             kind,
@@ -96,6 +119,16 @@ impl Engine {
             Err(AppError::Rejected(reply)) => return reject(reply),
             Err(error) => return Err(error),
         };
+        if prepared.adds_pin {
+            debug_assert!(membership);
+            drop(store);
+            if let Err(error) = self.admit_pin() {
+                return self.journal.reject_error(&command, error, now);
+            }
+            store = handle
+                .lock()
+                .map_err(|_| AppError::LockPoisoned("project store"))?;
+        }
         let mut reply = Writer {
             journal: &self.journal,
         }
@@ -123,6 +156,7 @@ impl Engine {
 /// A patch remains JSON until defaults, placement and references are resolved.
 /// Writer validates this complete candidate before serializing or preparing an intent.
 struct PreparedMutation {
+    adds_pin: bool,
     draft: Value,
     references: Vec<Reference>,
 }
@@ -183,7 +217,13 @@ fn prepare(
     if kind == Kind::Update {
         references.extend(report_references(store, &next)?);
     }
+    let adds_pin = kind == Kind::Card
+        && next["metadata"]["pinned"] == true
+        && previous
+            .as_ref()
+            .is_none_or(|old| old.value()["metadata"]["pinned"] != true);
     Ok(PreparedMutation {
+        adds_pin,
         draft: next,
         references,
     })

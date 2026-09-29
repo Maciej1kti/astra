@@ -578,7 +578,11 @@ try {
       await route.fulfill({
         status: 202,
         contentType: "application/json",
-        body: JSON.stringify({ state: "prepared" }),
+        body: JSON.stringify({
+          api_version: "1",
+          request_id: route.request().headers()["x-request-id"],
+          state: "prepared",
+        }),
       });
     else await route.continue();
   });

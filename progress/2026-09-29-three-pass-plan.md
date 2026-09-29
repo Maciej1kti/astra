@@ -8,7 +8,7 @@ Baseline: `1a8f650`; findings and measurements are in
 
 ## Execution and resume point
 
-- [ ] Pass 1: regressions and fixes for A01–A07; refresh maintained guidance (A09).
+- [x] Pass 1: regressions and fixes for A01–A07; refresh maintained guidance (A09).
   Start with browser session recovery/preferences and command confirmation, then
   Focus failure isolation/admission, pagination and representation validators.
 - [ ] Pass 2: measure and optimize A08, retaining authoritative write checks,
@@ -18,8 +18,27 @@ Baseline: `1a8f650`; findings and measurements are in
 - [ ] Final full gate and release browser checks; rebuild/restart the existing
   manual application and verify its unchanged HTTPS address; report and push.
 
-Current checkpoint: plan recorded; no application changes yet. The baseline full
-gate, 17 release Chromium suites and audit probes are recorded in the audit.
+Current checkpoint: pass 1 is verified and ready to commit. Resume with pass 2
+release measurements and source-read profiling, then perform the bounded final audit.
+
+Pass 1 evidence: failing regressions reproduced A01/A03/A04/A05/A06 before their
+fixes; the earlier audit reproduced A02/A07. The final full gate passes (235 Rust,
+110 JavaScript, 12 Python), including subprocess durability, contracts/examples,
+types, Clippy and release builds. Broad release HTTPS/planning checks and all 18
+Chromium suites pass. Session/Focus were repeated after retaining the project
+store lock throughout ordinary prepare/write operations; only new-pin admission
+releases it under the exclusive workspace gate. Synthetic command fixtures now
+include the real protocol identity fields. No validation or durability guard was
+weakened to pass a check.
+
+ADR-050 and the Focus response example record the contract changes. Maintained
+guides are corrected and STATE is consolidated with an immutable historical link.
+The Focus projection also removes A08's display scan; quantify it in pass 2.
+The manual application was rebuilt and restarted at its existing HTTPS origin.
+All 17 pre-existing resource versions, two pins, preferences and certificate
+matched across restart; the new embedded assets are served and project validation
+passes. Project report: `ed7e93fd-3c3a-446d-a4f7-08ea343a9edd`.
+
 Two pre-existing owner card edits (`2fec9ea1…`, `37d0a92d…`) must remain untouched
 and excluded from commits. Local detailed logs belong in ignored
 `test-results/remediation-2026-09-29/`.

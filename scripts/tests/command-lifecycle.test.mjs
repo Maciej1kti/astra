@@ -40,7 +40,12 @@ test("pending commands own an immutable payload and status always uses their ori
     server_time: new Date().toISOString(),
   });
   const payload = { set: { labels: ["original"] } };
-  const pending = api.command("/resource", "PATCH", payload, "version");
+  const pending = api.command(
+    "/api/v1/projects/test/cards",
+    "PATCH",
+    payload,
+    "version",
+  );
   globalThis.fetch = async (path, init) => {
     calls.push({ path, init });
     if (calls.length === 1) throw new TypeError("Response lost");
@@ -48,10 +53,12 @@ test("pending commands own an immutable payload and status always uses their ori
       status: 200,
       ok: true,
       json: async () => ({
+        api_version: "1",
+        request_id: pending.requestId,
+        replayed: false,
         status: "committed",
         result: { type: "card" },
         warnings: [],
-        state: "committed",
       }),
     };
   };

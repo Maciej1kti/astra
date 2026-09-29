@@ -155,13 +155,15 @@ In **Timeline**, choose September 2026, then:
 In **Calendar**, navigate to the same dates and try day, week, month and agenda.
 Select an empty day/range or use **New scheduled card** to open a prefilled draft.
 Move planned work or resize either end, then confirm the proposal. Milestone
-date markers open the milestone editor; card events use their planned range.
+date markers open the milestone editor. Date-only cards use inclusive planned
+ranges; timed events use their recorded start and duration.
 
 The **Calendar shortcuts & editing** disclosure lists controls. Alt+1 through
 Alt+4 select the four layouts; Alt+T returns to today. Alt+Left/Right navigates
 when the calendar region has focus and moves dates when a planned event has
 focus; Shift changes that move to a week. Normal text-entry shortcuts are kept.
-All views use whole-day dates; there is no hourly reservation model.
+Date-only plans keep whole-day dates. Timed events appear in hourly calendar
+views; their local start time follows the workspace timezone.
 
 Repeat an edit in two browser tabs to inspect conflict handling. Keep an uncertain
 proposal open and use **Retry same command** or check its status; do not submit

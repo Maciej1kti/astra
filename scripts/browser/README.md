@@ -91,3 +91,6 @@ response-loss replay and concurrent conflicts.
 The editor-header suite checks the three persistent header rows and conditional
 feedback row while a long card is scrolled, including visible field/save errors,
 command recovery, confirmations, phone portrait and a 320px-high landscape view.
+
+The `session` suite covers startup read failure recovery and remote workspace
+timezone changes with existing and new daily counter drafts.

@@ -117,11 +117,13 @@ Mutating typed commands accept `--request-id` together with `--epoch` for an
 identical retry. `--timeout` bounds transport waits. The generic `get` and
 `command` interfaces remain available for API operations without a dedicated alias.
 
-The editor provides escaped-HTML Markdown preview with images disabled, explicit
-connections/blockers, report targets and resolutions, and draft discard protection.
+The editor provides escaped-HTML Markdown preview with images disabled, card
+checklists, comments, daily counters and draft discard protection. Reports target
+projects or milestones; corrections and resolutions are separate reports.
 Calendar and timeline load separately and use bounded view APIs. Timeline handles
 propose a schedule move or resize; review the dates and save with the original
-version. Deadlines are independent. Escape, pointer cancellation, a second pointer
+version. Date-only card schedules use inclusive dates; timed events add start
+time and duration. Milestones retain a separate date. Escape, pointer cancellation, a second pointer
 or orientation changes cancel a gesture without writing. Opening the date form
 with a handle also provides a keyboard alternative. Physical phone validation and
 complete release acceptance remain outstanding.

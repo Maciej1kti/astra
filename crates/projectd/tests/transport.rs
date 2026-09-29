@@ -582,6 +582,13 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
     let read = app.local("GET", &path).send().await.unwrap();
     assert_eq!(read.status(), 200);
     assert!(read.headers().contains_key("etag"));
+    let focus = app
+        .local("GET", "/api/v1/workspace/focus")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(focus.status(), 200);
+    assert!(!focus.headers().contains_key("etag"));
     let project = plan["project_id"].as_str().unwrap();
     let resolved: Value = app
         .local("POST", "/local/v1/projects/resolve")
@@ -673,6 +680,26 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
         .await
         .unwrap();
     assert_eq!(reports["items"].as_array().unwrap().len(), 2);
+    let report_id = reports["items"][0]["id"].as_str().unwrap();
+    let report_path = format!("/api/v1/projects/{project}/updates/{report_id}");
+    let before = app.local("GET", &report_path).send().await.unwrap();
+    assert!(!before.headers().contains_key("etag"));
+    let before: Value = before.json().await.unwrap();
+    assert_eq!(before["read"], false);
+    let receipt = app
+        .local("POST", "/api/v1/workspace/read-receipts")
+        .header("x-request-id", Uuid::now_v7().to_string())
+        .header("x-command-epoch", epoch)
+        .json(&json!({"items":[{"project_id":project,"update_id":report_id,"read":true}]}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(receipt.status(), 200);
+    let after = app.local("GET", &report_path).send().await.unwrap();
+    assert!(!after.headers().contains_key("etag"));
+    let after: Value = after.json().await.unwrap();
+    assert_eq!(after["read"], true);
+    assert_eq!(before["version"], after["version"]);
     for path in [
         format!("/api/v1/projects/{project}/updates?target_type=milestone&target_id={milestone}"),
         format!(

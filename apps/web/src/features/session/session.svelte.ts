@@ -21,6 +21,7 @@ type SessionHooks = {
   error: (cause: unknown) => void;
   ended: () => void;
   foreground: () => Promise<void>;
+  preferences: (value: PreferencesResource) => void;
   changes: (events: Invalidation[]) => void;
 };
 
@@ -33,21 +34,50 @@ export function sessionState(hooks: SessionHooks) {
   let loading = $state(true);
   let connected = $state(false);
   let source: EventSource | undefined;
+  let generation = 0;
+  let preferencesGeneration = 0;
+  async function preferences() {
+    const current = generation;
+    const request = ++preferencesGeneration;
+    const value = await getPreferences({ fresh: true });
+    if (!boot || current !== generation) return;
+    if (request === preferencesGeneration) {
+      boot = { ...boot, timezone: value.timezone };
+      hooks.preferences(value);
+    }
+    return value;
+  }
   const changes = invalidationBatch((events) => {
-    if (boot) hooks.changes(events);
+    const current = generation;
+    void (async () => {
+      if (!boot) return;
+      if (
+        events.some((event) =>
+          ["workspace_changed", "resync_required"].includes(event.kind ?? ""),
+        )
+      ) {
+        try {
+          await preferences();
+        } catch (cause) {
+          hooks.error(cause);
+        }
+      }
+      if (boot && current === generation) hooks.changes(events);
+    })();
   });
 
   function ended() {
+    generation++;
     changes.cancel();
     source?.close();
+    source = undefined;
     clearReads();
     boot = null;
     connected = false;
     hooks.ended();
   }
   function connect() {
-    source?.close();
-    if (!boot) return;
+    if (source || !boot) return;
     source = new EventSource(
       `/api/v1/events?cursor=${encodeURIComponent(boot.snapshot_cursor)}`,
     );
@@ -78,13 +108,17 @@ export function sessionState(hooks: SessionHooks) {
     ready: (preferences: PreferencesResource) => Promise<void>,
   ) {
     loading = true;
+    const current = generation;
     try {
-      boot = await api<Bootstrap>("/api/v1/bootstrap");
+      const value = await api<Bootstrap>("/api/v1/bootstrap");
+      if (current !== generation) return;
+      boot = value;
       configure(boot);
       publishSession("restored");
-      const preferences = await getPreferences();
-      await ready(preferences);
       connect();
+      const valuePreferences = await preferences();
+      if (valuePreferences && current === generation)
+        await ready(valuePreferences);
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
         boot = null;
@@ -100,10 +134,15 @@ export function sessionState(hooks: SessionHooks) {
   }
   async function foreground() {
     if (document.visibilityState !== "visible" || !boot) return;
+    const current = generation;
     try {
-      boot = await api<Bootstrap>("/api/v1/bootstrap");
+      const value = await api<Bootstrap>("/api/v1/bootstrap");
+      if (!boot || current !== generation) return;
+      boot = value;
       configure(boot);
-      await hooks.foreground();
+      connect();
+      await preferences();
+      if (boot && current === generation) await hooks.foreground();
     } catch (cause) {
       hooks.error(cause);
     }
@@ -156,7 +195,9 @@ export function sessionState(hooks: SessionHooks) {
       unsubscribe();
       window.removeEventListener("online", foreground);
       document.removeEventListener("visibilitychange", foreground);
+      generation++;
       source?.close();
+      source = undefined;
       changes.cancel();
     };
   });

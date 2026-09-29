@@ -163,7 +163,8 @@ export class ViewData {
         }
         if (result.focus) {
           this.snapshot.focus = result.focus.items;
-          this.snapshot.focusVersion = result.focus.version;
+          this.snapshot.focusVersion =
+            result.focus.complete === false ? "" : result.focus.version;
           this.snapshot.focusRevision = ++this.focusRevision;
           this.snapshot.focusCards = result.focusCards ?? [];
         }

@@ -4,6 +4,7 @@ import {
   resourcePath,
   type Resource,
   type Summary,
+  type ReadOptions,
 } from "./api.ts";
 import type {
   CardPatch,
@@ -44,8 +45,14 @@ export function deleteProject(project: string, version: string) {
 export function getFocus() {
   return api<FocusResource>("/api/v1/workspace/focus");
 }
-export function getPreferences() {
-  return api<PreferencesResource>("/api/v1/workspace/preferences");
+export function getPreferences(options: ReadOptions = {}) {
+  return api<PreferencesResource>(
+    "/api/v1/workspace/preferences",
+    "GET",
+    undefined,
+    {},
+    options,
+  );
 }
 export function getHistory(ref: Reference, cursor?: string | null) {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";

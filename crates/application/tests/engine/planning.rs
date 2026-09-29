@@ -539,7 +539,7 @@ fn focus_daily_membership_filters_before_paging_in_workspace_time() {
     assert!(
         engine
             .focus_cards("motion", Some("Work"), Some(cursor), 1, now + 60_000)
-            .is_err()
+            .is_ok()
     );
     assert!(
         engine

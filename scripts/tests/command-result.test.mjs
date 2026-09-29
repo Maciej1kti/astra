@@ -12,7 +12,7 @@ const pending = Object.freeze({
   method: "PUT",
   payload: { items: [] },
   version: "original-version",
-  requestId: "original-request",
+  requestId: "0199a000-0000-7000-8000-000000000001",
   epoch: "original-epoch",
 });
 
@@ -39,7 +39,7 @@ test("recorded source/workspace conflicts keep their classification after status
     "IDEMPOTENCY_KEY_REUSED",
     "REQUEST_OUTSIDE_WINDOW",
   ]) {
-    const error = { error: { code } };
+    const error = { api_version: "1", error: { code, message: code } };
     for (const lost of [false, true]) {
       const operation = new CommandController({
         send: async () => {
@@ -48,7 +48,12 @@ test("recorded source/workspace conflicts keep their classification after status
         },
         status: async (identity) => {
           assert.equal(identity, pending);
-          return { state: "rejected", error };
+          return {
+            api_version: "1",
+            request_id: pending.requestId,
+            state: "rejected",
+            error,
+          };
         },
       });
       operation.prepare(pending);

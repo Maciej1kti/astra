@@ -752,6 +752,12 @@ export interface FocusResource {
    * @maxItems 100
    */
   items: FocusRef[];
+  complete: boolean;
+  page: PageMeta;
+  /**
+   * @maxItems 100
+   */
+  warnings: Warning[];
   version: string;
   minItems?: 0;
 }

@@ -1,3 +1,8 @@
+import {
+  validateCommandReply,
+  validCommandError,
+  invalidConfirmation,
+} from "./confirmation.ts";
 import { publishSession } from "./session-events.ts";
 import { ReadRequests, ReadQueueFullError } from "./read-requests.ts";
 import type {
@@ -127,6 +132,7 @@ async function request<T>(
   payload: unknown,
   headers: Record<string, string>,
   readSignal?: AbortSignal,
+  pending?: Pending,
 ): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     // Mutations have their own transport deadline and are never cancelled with a view.
@@ -152,6 +158,10 @@ async function request<T>(
       });
       const value = response.status === 204 ? null : await response.json();
       if (response.status === 401) publishSession("ended");
+      if (pending) {
+        if (response.ok) validateCommandReply(value, pending, response.status);
+        else if (!validCommandError(value, pending)) invalidConfirmation();
+      }
       if (!response.ok) throw new ApiError(response.status, value);
       return value as T;
     } catch (error) {
@@ -210,7 +220,11 @@ export type CommandReply =
   | { kind: "unresolved"; state: "prepared" | "blocked" | "needs_review" };
 
 /** Unknown or incomplete success responses must retain the original command. */
-export function normalizeCommandReply(value: unknown): CommandReply {
+export function normalizeCommandReply(
+  value: unknown,
+  pending?: Pending,
+): CommandReply {
+  if (pending) validateCommandReply(value, pending);
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
     if (
@@ -241,7 +255,7 @@ export function normalizeCommandReply(value: unknown): CommandReply {
   );
 }
 export async function send(pending: Pending): Promise<CommandReply> {
-  const value = await api<unknown>(
+  const value = await request<unknown>(
     pending.path,
     pending.method,
     pending.payload,
@@ -250,8 +264,10 @@ export async function send(pending: Pending): Promise<CommandReply> {
       "X-Command-Epoch": pending.epoch,
       ...(pending.version ? { "If-Match": `"${pending.version}"` } : {}),
     },
+    undefined,
+    pending,
   );
-  const reply = normalizeCommandReply(value);
+  const reply = normalizeCommandReply(value, pending);
   if (reply.kind === "committed" && reply.reply.warnings.length)
     window.dispatchEvent(
       new CustomEvent("command-warning", { detail: reply.reply.warnings }),

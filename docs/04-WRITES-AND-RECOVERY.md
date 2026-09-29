@@ -1,5 +1,11 @@
 # 04. Trwały zapis, konflikty i odzyskiwanie
 
+Current clarification: [ADR-050](ADR-050-READ-RECOVERY-AND-CONFIRMATION.md)
+separates conditional source versions from enriched representation validators.
+Report reads with mutable receipts and projected Focus membership have no strong
+ETag; their `version` remains usable for the documented conditional write.
+
+
 ## Inwarianty
 
 W1: istnieje jeden pisarz normalnych operacji na projekt. W2: zapis istniejącego dokumentu wymaga wersji, na której powstała intencja. W3: sukces nie jest zwracany przed końcem protokołu trwałości. W4: indeks nie jest źródłem naprawy plików. W5: ponowienie nie jest nową intencją. W6: niepewny wynik nie staje się porażką ani sukcesem przez zgadywanie.

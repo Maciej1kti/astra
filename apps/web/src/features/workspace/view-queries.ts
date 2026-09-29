@@ -202,7 +202,7 @@ export async function loadView(
               projectionNotice(page) || result.notices.projects;
           },
         });
-      } else if (section === "focus")
+      } else if (section === "focus") {
         result.focus = await api<FocusResource>(
           "/api/v1/workspace/focus",
           "GET",
@@ -210,7 +210,10 @@ export async function loadView(
           {},
           { ...options, fresh: true },
         );
-      else if (section === "attention") {
+        result.notices.focus =
+          result.focus.warnings.map((warning) => warning.message).join(" ") ||
+          projectionNotice(result.focus);
+      } else if (section === "attention") {
         result.attention = await cursorPage(
           (cursor) => attentionPage(query, cursor, options),
           cursors.attention ?? null,

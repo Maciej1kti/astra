@@ -7,16 +7,23 @@ import {
 } from "../../apps/web/src/lib/api/api.ts";
 
 const pending = Object.freeze({
-  path: "/card",
+  path: "/api/v1/projects/test/cards",
   method: "PATCH",
   payload: { set: { title: "Draft" } },
-  requestId: "original",
+  requestId: "0199a000-0000-7000-8000-000000000001",
   epoch: "original-epoch",
   version: "original-version",
 });
 const committed = {
   kind: "committed",
-  reply: { status: "committed", result: { type: "card" }, warnings: [] },
+  reply: {
+    api_version: "1",
+    request_id: pending.requestId,
+    status: "committed",
+    result: { type: "card" },
+    warnings: [],
+    replayed: false,
+  },
 };
 
 test("lost replies retain identity and concurrent submissions cannot replace a command", async () => {
@@ -82,8 +89,13 @@ test("definitive rejection releases the command; status rejection preserves its 
   assert.equal(operation.pending, null);
   const checked = new CommandController({
     status: async () => ({
+      api_version: "1",
+      request_id: pending.requestId,
       state: "rejected",
-      error: { error: { code: "VERSION_CONFLICT" } },
+      error: {
+        api_version: "1",
+        error: { code: "VERSION_CONFLICT", message: "Conflict" },
+      },
     }),
   });
   checked.prepare(pending);
@@ -113,7 +125,12 @@ test("blocked and needs-review responses remain unresolved, while accepted jobs 
 
 test("status confirmation completes only with a committed result; malformed replies are uncertain", async () => {
   const operation = new CommandController({
-    status: async () => ({ state: "committed", result: committed.reply }),
+    status: async () => ({
+      api_version: "1",
+      request_id: pending.requestId,
+      state: "committed",
+      result: committed.reply,
+    }),
   });
   operation.prepare(pending);
   assert.equal((await operation.check()).kind, "committed");

@@ -175,3 +175,6 @@ mod report_deletion;
 
 #[path = "engine/counters.rs"]
 mod counters;
+
+#[path = "engine/audit_recovery.rs"]
+mod audit_recovery;

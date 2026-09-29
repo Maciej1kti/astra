@@ -269,7 +269,7 @@ test("mutations bypass GET sharing and retry retains original identity, epoch an
     server_time: new Date().toISOString(),
   });
   const pending = command(
-    "/resource",
+    "/api/v1/projects/test/cards",
     "PATCH",
     { set: { title: "Draft" } },
     "version",
@@ -278,6 +278,9 @@ test("mutations bypass GET sharing and retry retains original identity, epoch an
     calls.push({ url, init });
     if (calls.length === 1) throw new TypeError("Response lost");
     return response({
+      api_version: "1",
+      request_id: pending.requestId,
+      replayed: false,
       status: "committed",
       result: { type: "card" },
       warnings: [],

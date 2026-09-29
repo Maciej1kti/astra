@@ -64,12 +64,14 @@ impl Engine {
         let receipts_version = project_store::document::version(receipts.as_bytes());
         self.index.with_snapshot(|db, revision| {
             let projection = ProjectionStatus::read(db, project)?;
+            let boundary = event_boundary(db, project, folder, None, &clock)?;
             let scope = json!([
                 "attention",
                 page_revision(db, revision, project)?,
                 project,
                 folder,
-                clock,
+                today.to_string(),
+                boundary,
                 focus,
                 receipts_version,
                 limit

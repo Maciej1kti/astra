@@ -1,3 +1,4 @@
+import { validateCommandStatus } from "./confirmation.ts";
 import {
   ApiError,
   commandStatus,
@@ -96,6 +97,7 @@ export class CommandController {
         const result = await (this.dependencies.status ?? commandStatus)(
           pending,
         );
+        validateCommandStatus(result, pending);
         if (result.state === "rejected") {
           rejected = true;
           const code = result.error?.error.code;
@@ -105,6 +107,7 @@ export class CommandController {
         }
         reply = normalizeCommandReply(
           result.state === "committed" ? result.result : result,
+          pending,
         );
       } else reply = await (this.dependencies.send ?? send)(pending);
       if (reply.kind === "unresolved")

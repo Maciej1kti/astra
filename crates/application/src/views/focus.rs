@@ -29,7 +29,8 @@ impl Engine {
         let clock = local.format("%Y-%m-%d %H:%M:00").to_string();
         self.index.with_snapshot(|db, revision| {
             let projection = ProjectionStatus::read(db, None)?;
-            let scope = json!(["focus-cards", revision, section, folder, clock, limit]);
+            let boundary = if section == "events" { event_boundary(db, None, folder, Some(&today), &clock)? } else { None };
+            let scope = json!(["focus-cards", revision, section, folder, today, boundary, limit]);
             let start = offset(cursor, &scope)?;
             let sql = format!(include_str!("focus.sql"), ACTIVE=ACTIVE, FOLDER=EFFECTIVE_FOLDER);
             let mut statement = db.prepare(&sql)?;

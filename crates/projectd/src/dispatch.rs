@@ -482,13 +482,15 @@ pub(super) fn run(
     let version = value
         .get("version")
         .and_then(Value::as_str)
-        // Tag views combine source observations with the workspace write version;
+        // Enriched reads combine observations with a conditional source version;
         // that version cannot validate the complete response representation.
         .filter(|_| {
             !matches!(
                 input.path.as_str(),
-                "/api/v1/workspace/tags" | "/api/v1/workspace/tags/preview"
-            )
+                "/api/v1/workspace/tags"
+                    | "/api/v1/workspace/tags/preview"
+                    | "/api/v1/workspace/focus"
+            ) && value["type"] != "update"
         })
         .map(str::to_owned);
     let mut reply = axum::Json(value).into_response();
