@@ -1,11 +1,22 @@
 # Current implementation state
 
-Updated 2026-09-30. The application is implemented and under verification;
+Updated 2026-10-01. The application is implemented and under verification;
 full release acceptance remains open. [Scope decisions](SCOPE.md) supersede the
 historical handoff. Use the [release checklist](../delivery/RELEASE-CHECKLIST.md)
 for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ownership.
 
 ## Current work
+
+The [request-local receipt iteration](2026-09-30-focus-rust-receipts.md) replaces
+SQLite concatenation/tree membership with a lazy Rust hash predicate and an
+ordered unread index under the existing snapshot. Required all-read note-history
+release calls improve from 52.8–53.2 ms median / 57.6–58.3 ms p95 to 30.5 / 31.2 ms.
+A concentrated 50k-report index comparison improves 58 to 2.1 ms without receipts;
+mixed follow-ups retain 30–39 ms medians. Ten attention regressions pass, including
+request cleanup, concurrent scoped/general reads and older-index restoration.
+The full gate passes 269 Rust, 139 JavaScript and 12 Python tests; Focus/protocol
+pass in Chromium and WebKit. Manual publication is in progress; broader
+performance and acceptance remain open.
 
 The [decision-history iteration](2026-09-30-focus-decision-histories.md) replaces
 per-decision history scans with statement-local closure membership and bounded

@@ -954,7 +954,7 @@ fn attention_partial_indexes_reopen_and_rebuild_without_losing_sources_or_receip
         rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
     )
     .unwrap();
-    db.execute_batch("DROP INDEX documents_in_review; DROP INDEX documents_decision_needed; DROP INDEX documents_report_kind;")
+    db.execute_batch("DROP INDEX documents_in_review; DROP INDEX documents_decision_needed; DROP INDEX documents_report_kind; DROP INDEX documents_unread_order;")
         .unwrap();
     drop(db);
     let engine = env.engine();

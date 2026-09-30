@@ -246,9 +246,17 @@ have separate modules under `views/`; substantial static queries have adjacent
 SQL files. Row mapping and domain decisions remain in Rust.
 
 Focus Attention reads shared report receipts before taking the index snapshot;
-their ordered serialization still contributes to cursor identity. The query builds
-receipt membership once within that statement and keeps only the first
+their ordered serialization still contributes to cursor identity. The private
+receipt predicate in `views/attention.rs` builds project/report hash membership
+on its first use from that exact snapshot. Borrowed row identities avoid repeated
+concatenation and tree lookups. The predicate accepts only direct application SQL;
+it has no I/O, SQL or nested locks. Its statements/results end before explicit
+removal under the same index lock; errors also remove it and cleanup failure
+cannot return success. No set is built when decisions fill the requested prefix
+or no unread rows are examined. The query keeps only the first
 `offset + limit + 1` eligible unread reports, saturating at SQLite's signed limit.
+The ordered non-decision report index avoids sorting a whole project before that
+prefix. Startup installs it before admitting reads, including older projections.
 This is safe because unread reports share their weight, date and reason, and use
 the same project/ID order as the final mixed page. Eligibility and scope checks
 precede that prefix; overdue items, unresolved decisions and review items retain
@@ -262,7 +270,7 @@ ID, ignores nonmatching NULL edges and preserves direct closure even when a
 resolution is later corrected. Eligible decisions retain the same sufficient
 ordered prefix as unread reports. When that decision prefix alone fills the
 requested prefix, lower-priority unread rows cannot enter it and are not queried.
-Membership and prefixes last only for this statement. Receipts remain durable
+Membership and prefixes last only for this request. Receipts remain durable
 journal state, never an indexed source or a retained application cache.
 Attention reason branches and the shared event-boundary query check date/kind
 eligibility before the more expensive active/project checks. The boundary still

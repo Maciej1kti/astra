@@ -62,3 +62,30 @@ authority, locks, write durability or retained caches. Startup and ordinary rebu
 coverage include the required existing index. Exact paged results are checked
 against independently expected report identities, subjects and scope, including
 cross-project repeated IDs and maximum-size resolution arrays.
+
+## Unread receipt membership
+
+Focus keeps its exact durable ordered receipt serialization and cursor hash.
+After the journal read finishes, a private Rust scalar predicate on the serialized
+index connection answers membership for the current request. A nested project/report
+hash set replaces per-row concatenation and SQLite's temporary membership tree.
+It is built only on first use, so a full decision prefix or no unread rows avoids
+the allocation. Canonical UUID pairs allow borrowed JSON decoding; row identities
+are borrowed as well. The builder retains only owned project/report keys.
+
+The predicate cannot run from stored views or triggers and performs no I/O, SQL
+or nested locking. Statements and results are dropped before explicit removal;
+removal is required before returning success. A drop guard also handles early
+unwinding. Each request owns a fresh durable snapshot; there is no receipt cache
+between requests, receipt source in the disposable index, or changed source/API
+schema. Regressions cover current read/unread transitions, repeated IDs, concurrent
+scoped/general reads, invalid cursors, projection mapping errors, cleanup,
+unchanged source bytes/versions and reopening.
+
+An ordered partial index on non-decision reports provides the project/report
+prefix directly. Without it, the report-kind access path sorts an entire large
+project before yielding the first eligible unread rows. The unread branch selects
+this index explicitly; `Index::open` installs it for older disposable projections
+before reads. Ordinary report writes and rebuild maintain it. Source bytes,
+receipts and versions remain authoritative elsewhere. Reopen/rebuild coverage
+removes the index and verifies its restoration through actual attention reads.

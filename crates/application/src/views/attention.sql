@@ -24,7 +24,7 @@ AND json_extract(r.metadata_json,'$.supersedes') IS NOT NULL
 AND (?5 IS NULL OR r.project_id=?5)
 )
 ORDER BY d.project_id,d.entity_id
-LIMIT ?10
+LIMIT ?9
 ), candidates AS (
               SELECT project_id,entity_id,entity_type,title,'overdue' reason,json_extract(metadata_json,'$.schedule.end') date,0 weight
 FROM documents d
@@ -87,18 +87,16 @@ UNION ALL SELECT * FROM decision_prefix
 -- Unread rows have the same weight, date and reason. Later rows cannot enter this page.
 UNION ALL SELECT * FROM (
 SELECT d.project_id,d.entity_id,d.entity_type,d.title,'unread_report',NULL,2
-FROM documents d
+FROM documents d INDEXED BY documents_unread_order
 WHERE ?8=1 AND entity_type='update'
-AND (d.project_id || ':' || d.entity_id) NOT IN (
-SELECT value FROM json_each(?9) WHERE value IS NOT NULL
-)
+AND NOT astra_report_is_read(d.project_id,d.entity_id)
 AND json_extract(metadata_json,'$.kind')!='decision_needed'
 AND {ACTIVE}
 AND (?5 IS NULL OR d.project_id=?5)
 AND (?6 IS NULL OR {FOLDER}=?6)
 ORDER BY d.project_id,d.entity_id
 -- A zero limit skips reads when higher-priority decisions already fill the prefix.
-LIMIT CASE WHEN ?8=1 AND (SELECT COUNT(*) FROM decision_prefix)<?10 THEN ?10 ELSE 0 END
+LIMIT CASE WHEN ?8=1 AND (SELECT COUNT(*) FROM decision_prefix)<?9 THEN ?9 ELSE 0 END
 )
             ) SELECT project_id,entity_id,entity_type,title,reason,date
 FROM candidates

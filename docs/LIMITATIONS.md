@@ -1,7 +1,7 @@
 # Limitations and verification coverage
 
 This page separates current product boundaries from work still needed for release.
-It describes the repository as of 2026-09-30. Follow [current status](../progress/STATE.md)
+It describes the repository as of 2026-10-01. Follow [current status](../progress/STATE.md)
 for revision-specific evidence and [owner decisions](../progress/SCOPE.md) for scope.
 An implemented feature and a passed release acceptance scenario are different claims.
 
@@ -86,6 +86,14 @@ and sufficient decision prefixes. Required mixed-history medians improve from
 concentrated case has 200 but no shipped baseline at that scale. Note-only
 all-read p95 remains about 60 ms. Wider graph/edge/offset and concurrent profiles,
 older outliers, device and transport verification remain open.
+The [request-local receipt iteration](../progress/2026-09-30-focus-rust-receipts.md)
+replaces concatenation/tree membership with a lazy Rust hash predicate and an
+ordered unread index. Required note-only all-read release calls measure 30.5 ms
+median / 31.2 ms p95 versus the current control's 52.8–53.2 / 57.6–58.3 ms.
+A concentrated 50k-note index comparison improves 58 to 2.1 ms without receipts;
+mixed histories retain 30–39 ms medians in 200-sample follow-ups. Each request
+still reads durable receipts; no cache is retained. These isolated calls exclude
+transport/browser costs and do not remove the broader coverage limits above.
 The [tag source-read iteration](../progress/2026-09-30-tag-source-reads.md) reduces
 repeated folder work while preserving current-file counts and preview versions.
 Such catalogs still inspect source files and scale with the selected card collection.

@@ -124,8 +124,16 @@ edits; malformed input remains a diagnostic, not an empty or repaired document.
 Focus Attention reads report receipts from durable state before acquiring its
 index snapshot and includes that receipt snapshot in cursor identity. Its unread
 branch selects an eligible ordered prefix large enough for the requested page;
-other reasons keep their ordering and pagination. Receipt membership is checked
-before the remaining unread-row eligibility work. Review and decision branches
+other reasons keep their ordering and pagination. A private request-local Rust
+predicate checks receipt membership before remaining unread-row eligibility work.
+It builds a project/report hash set lazily from the same durable ordered snapshot,
+borrows row identities without concatenation and ends before the index lock is
+released. Read statements finish before explicit predicate removal, including on
+errors; cleanup failure cannot report success. A full decision prefix avoids even
+building the set. There is no receipt cache between requests. The unread branch
+uses an ordered partial index so a large project's history is not sorted before
+its sufficient prefix can be returned. Startup restores the index for older
+projections. Review and decision branches
 explicitly use their existing partial indexes, which startup restores for older
 projections before admitting reads. The same statement builds decision closure
 membership from resolution edges and correction targets once, scoped by project
