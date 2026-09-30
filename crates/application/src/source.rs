@@ -5,11 +5,11 @@ use project_store::{
     document::{self, Kind},
     filesystem::{CollectionReader, ProjectStore},
 };
-use std::sync::Mutex;
+use std::sync::{Mutex, mpsc};
 use uuid::Uuid;
 
 // At most one collection can add read workers. Contention stays sequential,
-// without another queue or a blocking lock in the application lock order.
+// without queuing worker admission or blocking within application locks.
 static PARALLEL_SOURCE_READ: Mutex<()> = Mutex::new(());
 
 #[derive(Debug)]
@@ -55,6 +55,81 @@ pub(crate) fn read_collection(
 ) -> Result<document::ParsedDocument, AppError> {
     parse_read(kind, id, reader.read(id)?)
 }
+
+fn source_read_workers(count: usize, threshold: usize) -> usize {
+    if count < threshold {
+        1
+    } else {
+        std::thread::available_parallelism().map_or(1, |count| count.get().min(4))
+    }
+}
+
+/// Consume independent source observations in input order, with bounded results.
+/// The caller retains its application locks; workers only invoke its guarded read.
+pub(crate) fn visit_ordered<T: Send>(
+    ids: &[&str],
+    read: impl Fn(&str) -> T + Sync,
+    mut visit: impl FnMut(&str, T) -> Result<(), AppError>,
+) -> Result<(), AppError> {
+    let workers = source_read_workers(ids.len(), 64);
+    if workers == 1 {
+        return ids.iter().try_for_each(|id| visit(id, read(id)));
+    }
+    let Ok(_capacity) = PARALLEL_SOURCE_READ.try_lock() else {
+        return ids.iter().try_for_each(|id| visit(id, read(id)));
+    };
+    std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(workers);
+        let mut receivers = Vec::with_capacity(workers);
+        for worker in 0..workers {
+            let (sender, receiver) = mpsc::sync_channel(1);
+            let read = &read;
+            let partition = &ids[worker..];
+            match std::thread::Builder::new()
+                .name("astra-source-read".into())
+                .spawn_scoped(scope, move || {
+                    for id in partition.iter().step_by(workers) {
+                        if sender.send(read(id)).is_err() {
+                            break;
+                        }
+                    }
+                }) {
+                Ok(handle) => {
+                    handles.push(handle);
+                    receivers.push(Some(receiver));
+                }
+                // A failed start retains the same read on the caller thread.
+                Err(_) => receivers.push(None),
+            }
+        }
+        let mut result = Ok(());
+        for (index, id) in ids.iter().enumerate() {
+            let observed = match &receivers[index % workers] {
+                Some(receiver) => match receiver.recv() {
+                    Ok(observed) => observed,
+                    Err(_) => {
+                        result = Err(AppError::invariant("source read worker"));
+                        break;
+                    }
+                },
+                None => read(id),
+            };
+            if let Err(error) = visit(id, observed) {
+                result = Err(error);
+                break;
+            }
+        }
+        // Stop blocked producers before joining, including an early visitor
+        // failure. Each worker holds at most a queued result and a current one.
+        drop(receivers);
+        for handle in handles {
+            if handle.join().is_err() && result.is_ok() {
+                result = Err(AppError::invariant("source read worker"));
+            }
+        }
+        result
+    })
+}
 pub(crate) fn collection(
     store: &ProjectStore,
     kind: Kind,
@@ -78,11 +153,7 @@ pub(crate) fn collection(
             .map(|id| read_collection(&directory, kind, id))
             .collect::<Result<Vec<_>, AppError>>()
     };
-    let workers = if ids.len() < 256 {
-        1
-    } else {
-        std::thread::available_parallelism().map_or(1, |count| count.get().min(4))
-    };
+    let workers = source_read_workers(ids.len(), 256);
     if workers == 1 {
         return read(&ids);
     }
@@ -125,6 +196,126 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::{fs, os::unix::fs::symlink};
+
+    struct Observed {
+        index: usize,
+        active: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    }
+    impl Drop for Observed {
+        fn drop(&mut self) {
+            self.active
+                .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    #[test]
+    fn ordered_visits_bound_results_and_preserve_input_order() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+        let ids: Vec<_> = (0..128).map(|index| index.to_string()).collect();
+        let names: Vec<_> = ids.iter().map(String::as_str).collect();
+        let active = Arc::new(AtomicUsize::new(0));
+        let peak = AtomicUsize::new(0);
+        let mut visited = Vec::new();
+        visit_ordered(
+            &names,
+            |id| {
+                let count = active.fetch_add(1, Ordering::SeqCst) + 1;
+                peak.fetch_max(count, Ordering::SeqCst);
+                Observed {
+                    index: id.parse().unwrap(),
+                    active: active.clone(),
+                }
+            },
+            |id, observed| {
+                assert_eq!(observed.index, id.parse::<usize>().unwrap());
+                visited.push(observed.index);
+                std::thread::sleep(std::time::Duration::from_micros(100));
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(visited, (0..128).collect::<Vec<_>>());
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+        // Four workers: one queued and one current result each, plus consumer.
+        assert!(peak.load(Ordering::SeqCst) <= 9);
+    }
+
+    #[test]
+    fn ordered_visit_failure_joins_producers_and_releases_pending_results() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+        let ids: Vec<_> = (0..128).map(|index| index.to_string()).collect();
+        let names: Vec<_> = ids.iter().map(String::as_str).collect();
+        let active = Arc::new(AtomicUsize::new(0));
+        let mut visited = Vec::new();
+        let result = visit_ordered(
+            &names,
+            |id| {
+                active.fetch_add(1, Ordering::SeqCst);
+                Observed {
+                    index: id.parse().unwrap(),
+                    active: active.clone(),
+                }
+            },
+            |_, observed| {
+                visited.push(observed.index);
+                if observed.index == 9 {
+                    return Err(AppError::reject(409, "TEST_SOURCE_VISITOR"));
+                }
+                Ok(())
+            },
+        );
+        let Err(AppError::Rejected(reply)) = result else {
+            panic!("The visitor failure must survive producer cleanup");
+        };
+        assert_eq!(reply.http_status, 409);
+        assert_eq!(reply.body["error"]["code"], "TEST_SOURCE_VISITOR");
+        assert_eq!(visited, (0..10).collect::<Vec<_>>());
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn ordered_worker_panic_closes_the_stream_and_joins_other_producers() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicBool, AtomicUsize, Ordering},
+        };
+        let ids: Vec<_> = (0..128).map(|index| index.to_string()).collect();
+        let names: Vec<_> = ids.iter().map(String::as_str).collect();
+        let active = Arc::new(AtomicUsize::new(0));
+        let failed = AtomicBool::new(false);
+        let caller = std::thread::current().id();
+        let result = visit_ordered(
+            &names,
+            |id| {
+                if id == "7" && std::thread::current().id() != caller {
+                    failed.store(true, Ordering::SeqCst);
+                    panic!("Synthetic source worker failure");
+                }
+                active.fetch_add(1, Ordering::SeqCst);
+                Observed {
+                    index: id.parse().unwrap(),
+                    active: active.clone(),
+                }
+            },
+            |_, _| Ok(()),
+        );
+        if failed.load(Ordering::SeqCst) {
+            assert!(matches!(
+                result,
+                Err(AppError::Invariant("source read worker"))
+            ));
+        } else {
+            // Capacity contention and single-CPU hosts use the guarded caller.
+            assert!(result.is_ok());
+        }
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+    }
 
     fn fixture() -> (tempfile::TempDir, ProjectStore, Vec<String>) {
         let temp = tempfile::tempdir().unwrap();
@@ -207,6 +398,22 @@ mod tests {
         for (id, parsed) in ids.iter().zip(&observed) {
             assert_eq!(parsed.value()["metadata"]["id"], *id);
         }
+        let reader = store.collection_reader(Kind::Card).unwrap();
+        let names: Vec<_> = ids.iter().map(String::as_str).collect();
+        let mut visited = 0;
+        visit_ordered(
+            &names,
+            |id| read_collection(&reader, Kind::Card, id),
+            |id, parsed| {
+                let parsed = parsed?;
+                assert_eq!(parsed.value()["metadata"]["id"], id);
+                assert_eq!(parsed.version, observed[visited].version);
+                visited += 1;
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(visited, ids.len());
         drop(capacity);
     }
 }

@@ -217,11 +217,15 @@ ordered result or first source error is returned. There is no new queue or sourc
 cache. See [ADR-055](ADR-055-BOUNDED-SOURCE-READS.md).
 
 The tolerant tag scanner also borrows one `CollectionReader` per project and
-uses the source module's common guarded single-item parser. It stays sequential,
-counts the same sorted filenames and reports unreadable/invalid cards individually
-within the existing bounds. Catalogs and previews still read current source bytes
-and versions independently of the suggestion index; a missing collection is
-distinct from a missing or replaced lease.
+uses the source module's common guarded single-item parser. At 64 readable
+filenames, `visit_ordered` uses the same capacity guard and up to four workers,
+with capacity-one result channels. The caller consumes source observations in
+sorted order, retaining at most nine results at four workers; no full parsed
+collection is retained. Projects remain sequential under their existing locks.
+The scan bounds sorted names before validity filtering, so invalid identifiers
+still consume the budget and ordered issues remain bounded. Catalogs/previews
+read current bytes and versions independently of the suggestion index; a missing
+collection remains distinct from a missing or replaced lease.
 
 Patch preparation composes creation defaults, patch/undo application, placement
 resolution and report reference collection as named steps. It produces a candidate

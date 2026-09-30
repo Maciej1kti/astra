@@ -420,6 +420,185 @@ fn catalog_and_preview_report_invalid_cards_and_unavailable_projects_individuall
 }
 
 #[test]
+fn streamed_tag_scans_keep_current_versions_and_sorted_partial_results() {
+    use std::{collections::BTreeMap, os::unix::fs::symlink};
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = env.register(&engine, "Streamed");
+    let template_id = env.card("Streamed", "Template", json!(["Source", "Shared"]), false);
+    let directory = env.root.join("Streamed/.project/cards");
+    let path = |id: &str| directory.join(format!("{id}.json"));
+    let template: Value = serde_json::from_slice(&fs::read(path(&template_id)).unwrap()).unwrap();
+    fs::remove_file(path(&template_id)).unwrap();
+    let ids: Vec<_> = (0..320)
+        .map(|index| format!("10000000-0000-4000-8000-{index:012x}"))
+        .collect();
+    for (index, id) in ids.iter().enumerate() {
+        let mut source = template.clone();
+        source["metadata"]["id"] = json!(id);
+        source["metadata"]["title"] = json!(format!("Streamed source {index}"));
+        source["metadata"]["archived"] = json!(index % 17 == 0);
+        project_domain::validate_document(source.clone()).unwrap();
+        // Disposable external sources retain the ordinary guarded read path.
+        fs::write(path(id), crate::source::pretty(&source)).unwrap();
+    }
+    assert_eq!(
+        engine.project_tag_catalog(&project).unwrap()["complete"],
+        true
+    );
+    let mut source: Value = serde_json::from_slice(&fs::read(path(&ids[100])).unwrap()).unwrap();
+    source["metadata"]["title"] = json!("Current external title");
+    source["metadata"]["labels"] = json!(["Fresh", "Shared"]);
+    let changed_bytes = crate::source::pretty(&source);
+    fs::write(path(&ids[100]), &changed_bytes).unwrap();
+    for index in [3, 127, 255] {
+        fs::write(path(&ids[index]), b"invalid source").unwrap();
+    }
+    fs::remove_file(path(&ids[129])).unwrap();
+    symlink(path(&ids[0]), path(&ids[129])).unwrap();
+    fs::write(directory.join("0000-invalid.json"), &changed_bytes).unwrap();
+    fs::write(
+        directory.join(format!("{}-extra.json", ids[128])),
+        &changed_bytes,
+    )
+    .unwrap();
+    fs::write(directory.join("invalid-id.json"), &changed_bytes).unwrap();
+    fs::write(directory.join("ignored.txt"), b"Not a card").unwrap();
+    let good: Vec<_> = ids
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| ![3, 127, 129, 255].contains(index))
+        .map(|(_, id)| id.as_str())
+        .collect();
+    let bytes: BTreeMap<_, _> = good
+        .iter()
+        .map(|id| (*id, fs::read(path(id)).unwrap()))
+        .collect();
+    let expected_issues = vec![
+        Value::Null,
+        json!(ids[3]),
+        json!(ids[127]),
+        Value::Null,
+        json!(ids[129]),
+        json!(ids[255]),
+        Value::Null,
+    ];
+    let local = engine.project_tag_catalog(&project).unwrap();
+    let global = engine.tag_catalog().unwrap();
+    for catalog in [&local, &global] {
+        wire::validate("TagCatalog", catalog).unwrap();
+        assert_eq!(catalog["complete"], false);
+        assert_eq!(
+            catalog["tags"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|tag| (tag["name"].clone(), tag["usage"].clone()))
+                .collect::<Vec<_>>(),
+            vec![
+                (json!("Fresh"), json!(1)),
+                (json!("Shared"), json!(316)),
+                (json!("Source"), json!(315))
+            ]
+        );
+        assert_eq!(
+            catalog["issues"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|issue| issue["card_id"].clone())
+                .collect::<Vec<_>>(),
+            expected_issues
+        );
+    }
+    assert_eq!(local["issues"], global["issues"]);
+    let preview = engine
+        .tag_preview(&json!({"source":"Shared", "target":"Destination"}))
+        .unwrap();
+    assert_eq!(preview["complete"], false);
+    assert_eq!(preview["issues"], local["issues"]);
+    let changes = preview["changes"].as_array().unwrap();
+    assert_eq!(
+        changes
+            .iter()
+            .map(|change| change["card_id"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        good
+    );
+    for change in changes {
+        let id = change["card_id"].as_str().unwrap();
+        assert_eq!(change["version"], document::version(&bytes[id]));
+        assert_eq!(fs::read(path(id)).unwrap(), bytes[id]);
+    }
+    let changed = changes
+        .iter()
+        .find(|change| change["card_id"] == ids[100])
+        .unwrap();
+    assert_eq!(changed["title"], "Current external title");
+    assert_eq!(changed["labels"], json!(["Fresh", "Destination"]));
+    assert!(
+        fs::symlink_metadata(path(&ids[129]))
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
+}
+
+#[test]
+fn tag_scan_budget_counts_invalid_names_and_keeps_issue_omissions_bounded() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = env.register(&engine, "Bounded");
+    let id = env.card(
+        "Bounded",
+        "Past the source budget",
+        json!(["Unobserved"]),
+        false,
+    );
+    let directory = env.root.join("Bounded/.project/cards");
+    let late_id = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+    let original = directory.join(format!("{id}.json"));
+    let mut late: Value = serde_json::from_slice(&fs::read(&original).unwrap()).unwrap();
+    late["metadata"]["id"] = json!(late_id);
+    let late_bytes = crate::source::pretty(&late);
+    fs::remove_file(original).unwrap();
+    fs::write(directory.join(format!("{late_id}.json")), &late_bytes).unwrap();
+    // Invalid names sort before the readable source and still consume the budget.
+    for index in 0..50_001 {
+        fs::write(
+            directory.join(format!("00000000-0000-0000-0000-{index:012x}.json")),
+            b"",
+        )
+        .unwrap();
+    }
+    fs::write(directory.join("ignored.txt"), b"Not a card").unwrap();
+    let catalog = engine.project_tag_catalog(&project).unwrap();
+    wire::validate("TagCatalog", &catalog).unwrap();
+    assert_eq!(catalog["complete"], false);
+    assert_eq!(catalog["tags"], json!([]));
+    let issues = catalog["issues"].as_array().unwrap();
+    assert_eq!(issues.len(), 501);
+    for issue in &issues[..500] {
+        assert_eq!(issue["project_id"], project);
+        assert!(issue["card_id"].is_null());
+        assert!(
+            issue["message"]
+                .as_str()
+                .unwrap()
+                .contains("invalid identifier")
+        );
+    }
+    assert_eq!(
+        issues[500]["message"],
+        "49501 additional source issues were omitted from this response."
+    );
+    assert_eq!(
+        fs::read(directory.join(format!("{late_id}.json"))).unwrap(),
+        late_bytes
+    );
+}
+
+#[test]
 fn preview_merges_exact_tags_without_writes_and_preserves_unrelated_order() {
     let env = Environment::new();
     let engine = env.engine();

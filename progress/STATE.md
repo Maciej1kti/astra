@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [ordered tag-read iteration](2026-09-30-tag-parallel-reads.md) uses bounded
+source workers while retaining current versions, sorted partial issues and scan
+limits. Required release global catalog median improves from 867 to 423 ms;
+the 100-card project from 10.3 to 4.6 ms, and a 1,000-card project from 75.5 to
+33.8 ms (p95 34.2, maximum 51.2). The full gate passes 265 Rust, 139 JavaScript
+and 12 Python tests; tags/editor pass in Chromium and WebKit. Original manual
+publication is pending. Broader performance and release acceptance remain open.
+
 The [dense Calendar probes](2026-09-30-calendar-initial-probes.md) test omitted
 CSS-hidden details, simpler color selectors, lazy full-event conversion and
 equal-row geometry reuse. Quiet release comparisons do not establish a useful

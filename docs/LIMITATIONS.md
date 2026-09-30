@@ -81,6 +81,10 @@ and dense decisions need separate coverage; further gains are not ruled out.
 The [tag source-read iteration](../progress/2026-09-30-tag-source-reads.md) reduces
 repeated folder work while preserving current-file counts and preview versions.
 Such catalogs still inspect source files and scale with the selected card collection.
+The [later ordered-read iteration](../progress/2026-09-30-tag-parallel-reads.md)
+reduces a required global median to 423 ms and a 1k-card project p95 to 34 ms,
+with a 51 ms maximum. Its isolated profiles exclude transport/browser costs;
+contention uses sequential reads and larger sources need separate coverage.
 Do not infer a universal latency guarantee from these measurements.
 The [later dense Calendar probes](../progress/2026-09-30-calendar-initial-probes.md)
 reduce operation counts without a stable useful quiet latency gain and are

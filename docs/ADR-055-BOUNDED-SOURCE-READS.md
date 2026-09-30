@@ -36,3 +36,35 @@ Tests cover ordered values/current external byte versions, first-error ordering
 with an unsafe later source and the contended sequential path. Release timing,
 tail variability, memory and verification limits are recorded in
 [the performance evidence](../progress/2026-09-30-parallel-source.md).
+
+## Ordered tolerant tag scans
+
+Tag catalogs and workspace rename previews keep their tolerant source behavior:
+invalid cards produce ordered partial-result issues while readable neighbors are
+visited. Their independent file reads use the same process-wide capacity guard,
+with up to four scoped workers at 64 readable filenames. Smaller scans and
+capacity contention stay sequential; the strict collection threshold remains 256.
+
+Each worker traverses every fourth input and sends results through a capacity-one
+channel. The caller consumes channels in original input order. At most two
+results per worker (queued/current) and the consumer's result are held: nine
+source observations at four workers, independent of the 50,000-file scan bound.
+There is no full parsed collection or persistent worker pool for a tolerant scan.
+Failed thread starts use the caller for that partition. Receivers are closed
+before joining after an early visitor failure or worker panic, so blocked senders
+terminate; all workers finish before the application locks or reader are released.
+
+The workspace gate and the current project's lock remain with the caller;
+projects are still processed sequentially. Every readable file keeps the same
+guarded collection parser and exact byte version. The sorted filename prefix is
+bounded before validity filtering, so invalid identifiers still count toward the
+50,000-file budget. They avoid worker dispatch and retain their position among
+card errors. The 500 detailed issues/omitted count, 500 preview proposals, literal
+labels, archived sources and incomplete counts remain unchanged.
+
+Tests cover ordered/limited in-flight observations, early failure cleanup, worker
+panic, shared-capacity fallback, fresh external source versions, unsafe/malformed
+neighbors and the actual 50,000-file/500-issue boundary. This is read scheduling;
+it adds no source authority, protocol field or write exception.
+Release comparison and coverage limits are in
+[the ordered tag-read evidence](../progress/2026-09-30-tag-parallel-reads.md).

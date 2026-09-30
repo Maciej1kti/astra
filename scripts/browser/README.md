@@ -23,6 +23,11 @@ focus suite covers the four Focus sections, daily plan/event bounded reads, pinn
 card precedence, filters, inline pointer ordering and the viewport anchored card
 action.
 
+The tags suite also adds 80 external source cards to exercise larger catalogs
+through normal paired HTTP reads. It checks updated usage counts after a source
+edit and the exact current card version in a browser rename preview, alongside
+project isolation, archived merges and stale-plan rejection.
+
 The comments suite covers human/browser and bot/CLI attribution, source history,
 Markdown rendering, unsent draft protection, comment counts and editor access
 from every card view, mobile layout, response-loss retries and concurrent conflicts.

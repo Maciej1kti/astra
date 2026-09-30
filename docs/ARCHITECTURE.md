@@ -135,6 +135,9 @@ Tag usage catalogs and rename previews read current validated card files under
 each project's existing lock, including external changes not yet reconciled into
 the index. A scoped collection reader avoids reopening that folder for each card;
 every file still verifies its current lease, parent identity and bounded bytes.
+Larger tag scans use bounded scoped readers and capacity-one result channels
+under the common source-read capacity guard. The caller retains the project lock
+and consumes results in sorted order; projects and source authority stay unchanged.
 Invalid or unavailable cards produce partial-result issues while readable neighbors
 remain visible. Global indexed tag suggestions provide names with projection
 freshness; the editor's project picker and tag manager use the current project

@@ -1,7 +1,8 @@
 /** Project-scoped tags through a paired browser and real source files. */
 import { runBrowserSuite } from "../runtime.mjs";
 import { expect } from "@playwright/test";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 
@@ -84,6 +85,77 @@ await runBrowserSuite(
 
     try {
       await pair(page);
+      await check(
+        "T04",
+        "A streamed source catalog refreshes counts and preview versions",
+        async () => {
+          const name = unique("Streamed labels");
+          const fresh = unique("Fresh source label");
+          const folder = join(config.projects[0].folder, ".project/cards");
+          const template = JSON.parse(
+            await readFile(join(folder, `${config.cards[0].id}.json`), "utf8"),
+          );
+          const ids = [];
+          for (let index = 0; index < 80; index++) {
+            const source = structuredClone(template);
+            const id = randomUUID();
+            ids.push(id);
+            Object.assign(source.metadata, {
+              id,
+              title: `Streamed browser source ${index}`,
+              labels: [name],
+              pinned: false,
+            });
+            // External edits stay within this suite's disposable source project.
+            await writeFile(join(folder, `${id}.json`), JSON.stringify(source));
+          }
+          assert.equal(
+            catalog().tags.find((tag) => tag.name === name).usage,
+            80,
+          );
+          await open();
+          const list = manager().getByRole("list", { name: "Project tags" });
+          await expect(
+            list.getByRole("listitem").filter({ hasText: name }),
+          ).toContainText("80 cards");
+          const path = join(folder, `${ids[0]}.json`);
+          const source = JSON.parse(await readFile(path, "utf8"));
+          source.metadata.title = "Current streamed source title";
+          source.metadata.labels = [fresh];
+          await writeFile(path, JSON.stringify(source));
+          const observed = get(ids[0]);
+          await manager()
+            .getByRole("button", { name: "Refresh project tags" })
+            .click();
+          await expect(
+            list.getByRole("listitem").filter({ hasText: name }),
+          ).toContainText("79 cards");
+          await expect(
+            list.getByRole("listitem").filter({ hasText: fresh }),
+          ).toContainText("1 card");
+          const response = page.waitForResponse(
+            (response) =>
+              new URL(response.url()).pathname === `${base}/tags/preview` &&
+              response.status() === 200,
+          );
+          await preview(fresh, unique("Destination"));
+          const plan = await (await response).json();
+          assert.equal(plan.changes.length, 1);
+          assert.equal(plan.changes[0].card_id, ids[0]);
+          assert.equal(plan.changes[0].title, observed.metadata.title);
+          assert.equal(plan.changes[0].version, observed.version);
+          if (browser.browserType().name() === "chromium")
+            await page.screenshot({
+              path: join(evidence, "streamed-catalog-preview.png"),
+              fullPage: false,
+            });
+          return {
+            sourceCards: ids.length,
+            countAfterEdit: 79,
+            currentVersion: observed.version,
+          };
+        },
+      );
       await check(
         "T01",
         "Project catalog and suggestions do not leak across projects",

@@ -4,7 +4,7 @@ use crate::{
     AppError, Reply,
     engine::Engine,
     instant, now_millis,
-    source::{collection, read, read_collection},
+    source::{collection, read, read_collection, visit_ordered},
     wire,
     workflow::{Plan, PlanLocation, Step, Workflows},
     workflow_kind::WorkflowKind,
@@ -498,51 +498,71 @@ WHERE validity!='valid')", [], |row|row.get(0))?;
                     continue;
                 }
             };
-            for filename in names {
-                let Some(card_id) = filename.strip_suffix(".json") else {
-                    continue;
-                };
-                if scanned >= MAX_SCANNED_CARDS {
-                    issues.add(None, None, "The source scan reached its limit of 50,000 card files; tag usage and previews are incomplete.");
-                    return Ok(issues);
-                }
-                scanned += 1;
-                if !Uuid::parse_str(card_id).is_ok_and(|id| {
-                    id.get_version_num() == 4
-                        && id.get_variant() == uuid::Variant::RFC4122
-                        && id.to_string() == card_id
-                }) {
-                    issues.add(
-                        Some(project_id),
-                        None,
-                        "A card file has an invalid identifier; its tag usage could not be read.",
-                    );
-                    continue;
-                }
-                let card = match read_collection(&directory, Kind::Card, card_id) {
-                    Ok(card) => card,
-                    Err(_) => {
-                        issues.add(
+            let mut filenames = names.iter().filter_map(|name| name.strip_suffix(".json"));
+            let ids: Vec<_> = filenames
+                .by_ref()
+                .take(MAX_SCANNED_CARDS - scanned)
+                .collect();
+            let limited = filenames.next().is_some();
+            scanned += ids.len();
+            let readable: Vec<_> = ids
+                .iter()
+                .copied()
+                .filter(|card_id| {
+                    Uuid::parse_str(card_id).is_ok_and(|id| {
+                        id.get_version_num() == 4
+                            && id.get_variant() == uuid::Variant::RFC4122
+                            && id.to_string() == *card_id
+                    })
+                })
+                .collect();
+            let mut ordered = ids.into_iter();
+            let invalid_id =
+                "A card file has an invalid identifier; its tag usage could not be read.";
+            visit_ordered(
+                &readable,
+                |card_id| read_collection(&directory, Kind::Card, card_id),
+                |card_id, observed| {
+                    for filename in ordered.by_ref() {
+                        if filename == card_id {
+                            break;
+                        }
+                        issues.add(Some(project_id), None, invalid_id);
+                    }
+                    let card = match observed {
+                        Ok(card) => card,
+                        Err(_) => {
+                            issues.add(
                             Some(project_id),
                             Some(card_id),
                             "This card is invalid or unavailable; its tag usage could not be read.",
                         );
-                        continue;
-                    }
-                };
-                let project_domain::models::Document::Card { metadata, .. } = card.document.get()
-                else {
-                    return Err(AppError::invariant("card source kind"));
-                };
-                visit(SourceCard {
-                    project_id,
-                    project_name,
-                    project_archived,
-                    card_id,
-                    title: &metadata.title,
-                    version: &card.version,
-                    labels: metadata.labels.clone().unwrap_or_default(),
-                });
+                            return Ok(());
+                        }
+                    };
+                    let project_domain::models::Document::Card { metadata, .. } =
+                        card.document.get()
+                    else {
+                        return Err(AppError::invariant("card source kind"));
+                    };
+                    visit(SourceCard {
+                        project_id,
+                        project_name,
+                        project_archived,
+                        card_id,
+                        title: &metadata.title,
+                        version: &card.version,
+                        labels: metadata.labels.clone().unwrap_or_default(),
+                    });
+                    Ok(())
+                },
+            )?;
+            for _ in ordered {
+                issues.add(Some(project_id), None, invalid_id);
+            }
+            if limited {
+                issues.add(None, None, "The source scan reached its limit of 50,000 card files; tag usage and previews are incomplete.");
+                return Ok(issues);
             }
         }
         Ok(issues)
