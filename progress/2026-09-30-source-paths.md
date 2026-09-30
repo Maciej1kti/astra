@@ -38,9 +38,12 @@ normal workload makes 40 durable creates and 160 conditional title patches.
 
 Create median falls by about 30%; mixed p95 by about 31%. Single-resource title
 patches are effectively unchanged, as expected. These application-level timings
-exclude HTTP, VPN, browser rendering and physical-device coverage. Forty creates
-do not meet the separate 200-create acceptance sample requirement. The recorded
-150 ms target remains unmet, including create p95.
+exclude HTTP, VPN, browser rendering and physical-device coverage. The mixed
+workload has 200 measured mutations after warmup; its create-only subset has 40
+observations. The performance requirement specifies 200 mixed mutations, rather
+than a separate 200-create minimum. The required 100-project/10k-card/50k-report
+dataset and transport/device coverage are not established by this smaller run.
+The recorded 150 ms target remains unmet, including create p95.
 
 ## Verification
 

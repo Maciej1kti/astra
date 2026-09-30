@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [bounded source-read iteration](2026-09-30-parallel-source.md) uses at most
+four scoped readers with one nonblocking process-wide capacity guard. Alternating
+1,000-card runs reduce create median from 163 to 116–117 ms and p95 from 170–175
+to 119–135 ms. An earlier optimized run's 1,266 ms maximum remains recorded;
+the target is not claimed unconditionally. The full 100-project/10k-card/50k-report
+profile records mixed-write p95 43 ms and indexed-query p95 20 ms; Attention and
+the legacy global tag catalog still cost 86 ms and 1.8 s. Full and combined gates
+pass 255 Rust, 137 JavaScript and 12 Python tests; all 24 Chromium, five WebKit,
+broad HTTPS and planning checks pass. Manual publication and acceptance remain open.
+
 The [calendar presentation update](2026-09-30-calendar-design.md) adds a compact
 mobile toolbar, readable agenda, a seven-column month grid that fits phones, and
 flat event styling with separate overlapping hourly columns. Existing performance
@@ -62,6 +72,12 @@ desktop views plus first-card/Settings opening with a 1,000-card release fixture
 Local warm views are about 38–40 ms except the 163 ms Calendar grid; constrained
 Calendar remains about 999 ms. This small ranking run is not p95/device acceptance.
 The repeated lease traversal is measured separately in the source path iteration.
+
+A [calendar rendering follow-up](2026-09-30-calendar-followup.md) tests two further
+ways to reduce header reads and hidden-list copying. The release comparison does
+not show a noticeable latency gain, so both prototypes are reverted. Initial
+rendering still retains 7,339 DOM elements in the 1,000-card fixture; reducing this
+cost requires new behavioral evidence rather than omitting dated items.
 
 The [compact card counters](2026-09-30-compact-card-counters.md) add 14-day charts,
 horizontal scrubbing and guarded numeric entry in compact rows. Redundant clock

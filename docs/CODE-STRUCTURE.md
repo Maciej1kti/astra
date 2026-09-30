@@ -202,6 +202,14 @@ link count. The following source read still walks the current absolute path and
 verifies both project and collection identities before opening any source bytes.
 This removes a duplicate lease-path traversal without caching a path check.
 
+The application collection helper keeps small collections sequential. At 256
+recognized filenames it can use up to four scoped readers, limited by CPU
+parallelism and one process-wide nonblocking capacity guard. Contention or a
+thread-start failure uses the same guarded sequential reads. The caller retains
+its project lock/lease; workers borrow the reader and all finish before the
+ordered result or first source error is returned. There is no new queue or source
+cache. See [ADR-055](ADR-055-BOUNDED-SOURCE-READS.md).
+
 Patch preparation composes creation defaults, patch/undo application, placement
 resolution and report reference collection as named steps. It produces a candidate
 and observed references. Writer
