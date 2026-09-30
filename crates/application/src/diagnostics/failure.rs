@@ -74,6 +74,9 @@ fn classification(error: &AppError) -> Value {
             // ErrorKind names are library constants; an OS error's message may contain paths.
             return json!({"category":"io", "io_kind":format!("{:?}", error.kind())});
         }
+        AppError::Store(StoreError::MissingCollection) => {
+            return json!({"category":"io", "io_kind":"NotFound"});
+        }
         AppError::Store(StoreError::Invalid(_)) => "invalid_store",
         AppError::Store(StoreError::NormalizationRequired) => "normalization_required",
         AppError::Store(StoreError::Conflict) => "conflict",

@@ -23,15 +23,33 @@ fn component(name: &str) -> Result<(), StoreError> {
     Ok(())
 }
 fn open_directory(path: &Path) -> Result<File, StoreError> {
+    open_directory_with_ancestor(path, None)
+}
+fn open_directory_with_ancestor(
+    path: &Path,
+    ancestor: Option<&Directory>,
+) -> Result<File, StoreError> {
     if !path.is_absolute() || path.to_str().is_none() {
         return Err(StoreError::Invalid("ABSOLUTE_UTF8_PATH_REQUIRED"));
     }
+    let guard = match ancestor {
+        Some(directory) => {
+            if !path.starts_with(directory.path()) {
+                return Err(StoreError::Invalid("DIRECTORY_CHANGED"));
+            }
+            Some((
+                directory.path.components().count() - 1,
+                directory.identity()?,
+            ))
+        }
+        None => None,
+    };
     let mut fd = fs::open(
         "/",
         OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
         Mode::empty(),
     )?;
-    for part in path.components() {
+    for (depth, part) in path.components().enumerate() {
         match part {
             Component::RootDir => {}
             Component::Normal(name) => {
@@ -43,6 +61,14 @@ fn open_directory(path: &Path) -> Result<File, StoreError> {
                 )?;
             }
             _ => return Err(StoreError::Invalid("UNSAFE_PATH")),
+        }
+        if let Some((ancestor_depth, identity)) = guard
+            && depth == ancestor_depth
+        {
+            let stat = fs::fstat(&fd)?;
+            if (stat.st_dev as u64, stat.st_ino as u64) != identity {
+                return Err(StoreError::Invalid("DIRECTORY_CHANGED"));
+            }
         }
     }
     Ok(File::from(fd))
@@ -126,7 +152,10 @@ impl Directory {
     }
     /// Reject a directory replaced or moved since it was approved/opened.
     pub fn verify(&self) -> Result<(), StoreError> {
-        let current = fs::fstat(open_directory(&self.path)?)?;
+        self.verify_with_ancestor(None)
+    }
+    fn verify_with_ancestor(&self, ancestor: Option<&Directory>) -> Result<(), StoreError> {
+        let current = fs::fstat(open_directory_with_ancestor(&self.path, ancestor)?)?;
         let held = fs::fstat(&self.file)?;
         if (current.st_dev, current.st_ino) != (held.st_dev, held.st_ino) {
             return Err(StoreError::Invalid("DIRECTORY_CHANGED"));
@@ -155,8 +184,15 @@ impl Directory {
         })
     }
     pub fn read(&self, name: &str) -> Result<Option<Vec<u8>>, StoreError> {
+        self.read_with_ancestor(name, None)
+    }
+    fn read_with_ancestor(
+        &self,
+        name: &str,
+        ancestor: Option<&Directory>,
+    ) -> Result<Option<Vec<u8>>, StoreError> {
         component(name)?;
-        self.verify()?;
+        self.verify_with_ancestor(ancestor)?;
         let fd = match fs::openat(
             &self.file,
             name,
@@ -322,6 +358,39 @@ pub struct ProjectStore {
     pub directory: Directory,
     lease: Lease,
 }
+
+/// A read batch keeps the collection descriptor, never source bytes or versions.
+/// Every read still verifies the lease, current directory and individual file.
+pub struct CollectionReader<'a> {
+    directory: Directory,
+    lease: &'a Lease,
+    project: &'a Directory,
+}
+impl CollectionReader<'_> {
+    pub fn names(&self) -> Result<Vec<String>, StoreError> {
+        self.lease.verify()?;
+        self.project.verify()?;
+        let names = self.directory.names()?;
+        self.project.verify()?;
+        self.lease.verify()?;
+        Ok(names)
+    }
+    pub fn read(&self, id: &str) -> Result<Option<Vec<u8>>, StoreError> {
+        self.lease.verify()?;
+        resource_id(id)?;
+        // Check the approved project inode while walking to the collection.
+        // Moving both the lease and collection into a new parent must fail too.
+        self.directory
+            .read_with_ancestor(&format!("{id}.json"), Some(self.project))
+    }
+}
+fn resource_id(id: &str) -> Result<(), StoreError> {
+    let uuid = Uuid::parse_str(id).map_err(|_| StoreError::Invalid("INVALID_ID"))?;
+    if uuid.get_version_num() != 4 || uuid.to_string() != id {
+        return Err(StoreError::Invalid("INVALID_ID"));
+    }
+    Ok(())
+}
 impl ProjectStore {
     pub fn open(project_root: &Path, create: bool) -> Result<Self, StoreError> {
         let root = Directory::open(project_root)?;
@@ -338,10 +407,7 @@ impl ProjectStore {
         create: bool,
     ) -> Result<(Directory, String), StoreError> {
         self.lease.verify()?;
-        let uuid = Uuid::parse_str(id).map_err(|_| StoreError::Invalid("INVALID_ID"))?;
-        if uuid.get_version_num() != 4 || uuid.to_string() != id {
-            return Err(StoreError::Invalid("INVALID_ID"));
-        }
+        resource_id(id)?;
         match kind.directory() {
             // child() verifies this directory before opening the collection.
             Some(name) => Ok((self.directory.child(name, create)?, format!("{id}.json"))),
@@ -353,5 +419,22 @@ impl ProjectStore {
                 ))
             }
         }
+    }
+    pub fn collection_reader(&self, kind: Kind) -> Result<CollectionReader<'_>, StoreError> {
+        self.lease.verify()?;
+        let name = kind
+            .directory()
+            .ok_or(StoreError::Invalid("COLLECTION_KIND_REQUIRED"))?;
+        let directory = match self.directory.child(name, false) {
+            Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Err(StoreError::MissingCollection);
+            }
+            value => value?,
+        };
+        Ok(CollectionReader {
+            directory,
+            lease: &self.lease,
+            project: &self.directory,
+        })
     }
 }

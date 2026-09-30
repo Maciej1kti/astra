@@ -9,7 +9,7 @@ use project_domain::validate_document;
 use project_store::{
     StoreError,
     document::{self, Kind},
-    filesystem::{DeletePoint, ProjectStore, WritePoint},
+    filesystem::{CollectionReader, DeletePoint, ProjectStore, WritePoint},
 };
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -482,12 +482,21 @@ fn distinct_references(references: Vec<Reference>) -> Option<Vec<Reference>> {
 }
 
 pub fn references_match(store: &ProjectStore, references: &[Reference]) -> Result<bool, AppError> {
+    let mut collection: Option<(Kind, CollectionReader<'_>)> = None;
     for reference in references {
-        let (directory, name) = store.location(reference.kind, &reference.id, false)?;
-        let version = directory
-            .read(&name)?
-            .as_ref()
-            .map(|bytes| document::version(bytes));
+        let bytes = if reference.kind.directory().is_some() {
+            if collection
+                .as_ref()
+                .is_none_or(|(kind, _)| *kind != reference.kind)
+            {
+                collection = Some((reference.kind, store.collection_reader(reference.kind)?));
+            }
+            collection.as_ref().unwrap().1.read(&reference.id)?
+        } else {
+            let (directory, name) = store.location(reference.kind, &reference.id, false)?;
+            directory.read(&name)?
+        };
+        let version = bytes.as_ref().map(|bytes| document::version(bytes));
         if version != reference.version {
             return Ok(false);
         }

@@ -9,6 +9,8 @@ pub enum StoreError {
     Invalid(&'static str),
     #[error("NORMALIZATION_REQUIRED")]
     NormalizationRequired,
+    #[error("COLLECTION_NOT_FOUND")]
+    MissingCollection,
     #[error("VERSION_CONFLICT")]
     Conflict,
     #[error("{0}")]

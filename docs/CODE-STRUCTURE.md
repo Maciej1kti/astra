@@ -147,6 +147,13 @@ Registration, workspace mutation and source-dependent ordering operate on
 these models. Projection rows and patch envelopes still use JSON where
 the schema intentionally varies; this does not replace domain validation.
 
+Source collection scans and consecutive reference checks use a scoped
+`CollectionReader`. It retains one collection descriptor, verifies the lease
+on every file and checks the approved project and collection identities in one
+path walk. File type, link count, size bounds and current bytes remain checked;
+there is no source/version cache. A missing collection has a distinct error,
+so a missing lease cannot be interpreted as an empty source collection.
+
 Patch preparation composes creation defaults, patch/undo application, placement
 resolution and report reference collection as named steps. It produces a candidate
 and observed references. Writer

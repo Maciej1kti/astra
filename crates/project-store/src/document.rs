@@ -57,11 +57,14 @@ impl ParsedDocument {
 }
 
 pub fn version(bytes: &[u8]) -> String {
-    let hash: String = Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect();
-    format!("r1.{hash}")
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut value = String::with_capacity(67);
+    value.push_str("r1.");
+    for byte in Sha256::digest(bytes) {
+        value.push(HEX[usize::from(byte >> 4)] as char);
+        value.push(HEX[usize::from(byte & 15)] as char);
+    }
+    value
 }
 
 pub fn parse(

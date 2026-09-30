@@ -216,6 +216,98 @@ fn duplicate_references_preserve_conflicts_and_store_one_recovery_precondition()
 }
 
 #[test]
+fn reference_batches_recheck_changed_removed_and_new_sources_across_kinds() {
+    use project_application::writer::references_match;
+    let env = Environment::new();
+    let (_, store) = env.open();
+    let ids = [
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    ];
+    let mut references = Vec::new();
+    for kind in [Kind::Card, Kind::Milestone, Kind::Update] {
+        for id in ids {
+            let (directory, name) = store.location(kind, id, true).unwrap();
+            directory.replace(&name, b"observed", None).unwrap();
+            references.push(Reference {
+                kind,
+                id: id.into(),
+                version: Some(document::version(b"observed")),
+            });
+        }
+    }
+    let project = Reference {
+        kind: Kind::Project,
+        id: PROJECT.into(),
+        version: None,
+    };
+    references.insert(2, project.clone());
+    references.push(project);
+    assert!(references_match(&store, &references).unwrap());
+    let (directory, name) = store.location(Kind::Card, ids[1], false).unwrap();
+    directory
+        .replace(
+            &name,
+            b"changed externally",
+            Some(&document::version(b"observed")),
+        )
+        .unwrap();
+    assert!(!references_match(&store, &references).unwrap());
+    directory
+        .replace(
+            &name,
+            b"observed",
+            Some(&document::version(b"changed externally")),
+        )
+        .unwrap();
+    assert!(references_match(&store, &references).unwrap());
+    let (directory, name) = store.location(Kind::Milestone, ids[1], false).unwrap();
+    directory
+        .remove_with(&name, &document::version(b"observed"), |_| Ok(()))
+        .unwrap();
+    assert!(!references_match(&store, &references).unwrap());
+    references
+        .iter_mut()
+        .find(|r| r.kind == Kind::Milestone && r.id == ids[1])
+        .unwrap()
+        .version = None;
+    assert!(references_match(&store, &references).unwrap());
+    directory.replace(&name, b"new source", None).unwrap();
+    assert!(!references_match(&store, &references).unwrap());
+}
+
+#[test]
+fn source_collection_distinguishes_a_missing_folder_from_a_missing_lease() {
+    let env = Environment::new();
+    let (_, store) = env.open();
+    assert!(
+        crate::source::collection(&store, Kind::Card)
+            .unwrap()
+            .is_empty()
+    );
+    let (directory, name) = store.location(Kind::Card, CARD, true).unwrap();
+    let card = json!({
+        "type": "card",
+        "metadata": {
+            "id": CARD, "title": "Retained source", "status": "planned",
+            "priority": "normal", "position": "80000000000000000000000000000000",
+            "archived": false, "created_at": "2026-09-05T10:00:00Z",
+            "updated_at": "2026-09-05T10:00:00Z",
+        },
+        "body": "",
+    });
+    directory
+        .replace(&name, &serde_json::to_vec(&card).unwrap(), None)
+        .unwrap();
+    assert_eq!(
+        crate::source::collection(&store, Kind::Card).unwrap().len(),
+        1
+    );
+    fs::remove_file(store.directory.path().join(".local/writer.lock")).unwrap();
+    assert!(crate::source::collection(&store, Kind::Card).is_err());
+}
+
+#[test]
 fn missing_precondition_and_invalid_source_never_write() {
     let env = Environment::new();
     let (journal, mut store) = env.open();

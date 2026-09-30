@@ -31,9 +31,14 @@ pub(crate) fn read(
         }
         value => value?,
     };
-    let bytes = directory
-        .read(&name)?
-        .ok_or_else(|| AppError::reject(404, "RESOURCE_NOT_FOUND"))?;
+    parse_read(kind, id, directory.read(&name)?)
+}
+fn parse_read(
+    kind: Kind,
+    id: &str,
+    bytes: Option<Vec<u8>>,
+) -> Result<document::ParsedDocument, AppError> {
+    let bytes = bytes.ok_or_else(|| AppError::reject(404, "RESOURCE_NOT_FOUND"))?;
     let parsed = document::parse(kind, Some(id), &bytes)
         .map_err(|_| AppError::reject(409, "DOCUMENT_INVALID"))?;
     Ok(parsed)
@@ -42,15 +47,12 @@ pub(crate) fn collection(
     store: &ProjectStore,
     kind: Kind,
 ) -> Result<Vec<document::ParsedDocument>, AppError> {
-    let directory = match store.directory.child(
-        kind.directory()
-            .ok_or(AppError::invariant("source collection kind"))?,
-        false,
-    ) {
+    if kind.directory().is_none() {
+        return Err(AppError::invariant("source collection kind"));
+    }
+    let directory = match store.collection_reader(kind) {
         Ok(directory) => directory,
-        Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(vec![]);
-        }
+        Err(StoreError::MissingCollection) => return Ok(vec![]),
         Err(error) => return Err(error.into()),
     };
     let mut values = Vec::new();
@@ -58,7 +60,7 @@ pub(crate) fn collection(
         if let Some(id) = filename.strip_suffix(".json")
             && Uuid::parse_str(id).is_ok()
         {
-            values.push(read(store, kind, id)?);
+            values.push(parse_read(kind, id, directory.read(id)?)?);
         }
     }
     Ok(values)

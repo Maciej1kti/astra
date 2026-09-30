@@ -58,6 +58,16 @@ The full gate passes 239 Rust, 112 JavaScript and 12 Python tests; affected
 Chromium/WebKit and manual HTTPS restart checks pass. Transfer costs and desktop
 planning rendering remain candidates; the performance objective remains open.
 
+The owner then requested [deeper performance work](2026-09-30-deep-performance.md).
+Scoped collection descriptors remove repeated source-directory work while every
+file retains current lease, parent, file and version checks. At 1,000 cards,
+release creation p50 falls from 318 to 229 ms; mixed write p95 from 326 to 233 ms,
+still above the 150 ms target. Hash formatting also avoids temporary strings.
+The full gate passes 244 Rust, 112 JavaScript and 12 Python tests; all 20 Chromium
+suites, broad HTTPS, WebKit Focus and the manual restart check pass. Python is
+tooling/optional Linux integration, outside ordinary browser requests. Desktop
+Calendar profiling identifies remaining transfer and browser-rendering costs.
+
 ## Implemented product
 
 - Shared Rust domain/application rules, strict JSON sources and generated browser

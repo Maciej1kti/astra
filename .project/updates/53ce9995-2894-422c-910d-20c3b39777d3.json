@@ -1,0 +1,18 @@
+{
+  "body": "The main daemon, application and CLI already run in Rust; Python is build/test/package/install tooling or optional Linux integration. Scoped collection descriptors reduce redundant path work; every file retains lease, approved parent, type/link/size and current-byte checks. Hash formatting preserves exact versions with fewer allocations. At 1,000 cards, quiet release creation p50 falls from 318.3 to 228.9 ms and mixed-write p95 from 326.5 to 232.6 ms; the 150 ms target remains unmet. Full gate: 244 Rust, 112 JavaScript, 12 Python tests. All 20 Chromium suites, broad HTTPS and WebKit Focus pass. The rebuilt/restarted manual app preserves all 26 existing resource versions, two pins, preferences and certificate; HTTPS assets match. Desktop Calendar profiling identifies 344 KB transfer and a 582 ms browser long task under network/CPU emulation, for further work. Evidence: progress/2026-09-30-deep-performance.md. Physical-device, full acceptance and the performance objective remain open.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "53ce9995-2894-422c-910d-20c3b39777d3",
+    "kind": "result",
+    "recorded_at": "2026-09-30T07:53:18.609Z",
+    "summary": "Scoped source reads reduce durable creation costs while retaining current-file checks",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
