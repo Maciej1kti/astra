@@ -234,6 +234,19 @@ queries and event replay. Board, calendar, attention and timeline projections
 have separate modules under `views/`; substantial static queries have adjacent
 SQL files. Row mapping and domain decisions remain in Rust.
 
+Focus Attention reads shared report receipts before taking the index snapshot;
+their ordered serialization still contributes to cursor identity. The query builds
+receipt membership once within that statement and keeps only the first
+`offset + limit + 1` eligible unread reports, saturating at SQLite's signed limit.
+This is safe because unread reports share their weight, date and reason, and use
+the same project/ID order as the final mixed page. Eligibility and scope checks
+precede that prefix; overdue items, unresolved decisions and review items retain
+their existing rules. Receipts remain durable journal state, never an indexed
+source or a retained application cache.
+Attention reason branches and the shared event-boundary query check date/kind
+eligibility before the more expensive active/project checks. The boundary still
+includes exactly the qualifying ended events used for cursor invalidation.
+
 ### Locks and errors
 
 Lock order is the workspace gate, store registry, project store, journal, then

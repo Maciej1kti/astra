@@ -623,3 +623,242 @@ fn focus_unread_reports_leave_attention_when_read_but_decisions_remain() {
         );
     }
 }
+
+#[test]
+fn focus_attention_pages_keep_order_scopes_targets_and_receipt_identity() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let mut projects = Vec::new();
+    let mut receipts = Vec::new();
+    let mut unread = Vec::new();
+    for p in 0..3 {
+        let path = env.root.join(format!("reports-{p}"));
+        fs::create_dir(&path).unwrap();
+        let project = register(&engine, path.to_str().unwrap());
+        let resource = engine.get(&project, Kind::Project, &project).unwrap();
+        let reply = engine.mutate(Mutation {
+            project_id: project.clone(), kind: Kind::Project, id: Some(project.clone()),
+            payload: json!({"set":{"folder":if p == 1 {"Home"} else {"Work"},"state":if p == 2 {"archived"} else {"active"}}}),
+            request_id: Uuid::now_v7().to_string(), epoch: engine.command_epoch().into(),
+            expected: Some(resource["version"].as_str().unwrap().into()),
+        }).unwrap();
+        assert_eq!(reply.http_status, 200, "{}", reply.body);
+        let milestone_target = if p == 0 {
+            let milestone = engine
+                .mutate(Mutation {
+                    project_id: project.clone(),
+                    kind: Kind::Milestone,
+                    id: None,
+                    payload: json!({"title":"Report checkpoint"}),
+                    request_id: Uuid::now_v7().to_string(),
+                    epoch: engine.command_epoch().into(),
+                    expected: None,
+                })
+                .unwrap();
+            assert_eq!(milestone.http_status, 200);
+            json!({"type":"milestone","id":milestone.body["result"]["resource"]["metadata"]["id"]})
+        } else {
+            json!({"type":"project","id":project})
+        };
+        let directory = path.join(".project/updates");
+        fs::create_dir_all(&directory).unwrap();
+        for n in 0..230 {
+            // IDs deliberately repeat across projects; receipts identify both parts.
+            let id = Uuid::from_u128(0x00000000_0000_4000_8000_000000000000 + n + 1).to_string();
+            let summary = format!("Report {p}/{n}");
+            let kind = ["note", "result", "blocker"][n as usize % 3];
+            let target = if n == 3 {
+                milestone_target.clone()
+            } else {
+                json!({"type":"project","id":project})
+            };
+            fs::write(directory.join(format!("{id}.json")), serde_json::to_vec(&json!({
+                "type":"update","metadata":{
+                    "id":id,"kind":kind,
+                    "summary":summary,"target":target,
+                    "author":{"kind":"human","label":"Owner"},"recorded_at":"2026-09-05T10:00:00Z"
+                },"body":"Synthetic external report."
+            })).unwrap()).unwrap();
+            if p < 2 {
+                let read = (p == 0 && n % 7 == 0) || (p == 1 && n % 11 == 0);
+                if read {
+                    receipts.push(json!({"project_id":project,"update_id":id,"read":true}));
+                } else {
+                    unread.push(json!({
+                        "id":format!("{project}:{id}:unread_report"),"project_id":project,
+                        "target":target,"report_id":id,
+                        "reason":"unread_report","label":summary
+                    }));
+                }
+            }
+        }
+        projects.push(project);
+    }
+    engine.refresh_all().unwrap();
+    let project = &projects[0];
+    let report = engine.mutate(Mutation {
+        project_id: project.clone(), kind: Kind::Update, id: None,
+        payload: json!({"kind":"decision_needed","summary":"Still unresolved","target":{"type":"project","id":project},"author":{"kind":"human","label":"Owner"}}),
+        request_id: Uuid::now_v7().to_string(), epoch: engine.command_epoch().into(), expected: None,
+    }).unwrap();
+    assert_eq!(report.http_status, 200);
+    let decision = report.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap();
+    receipts.push(json!({"project_id":project,"update_id":decision,"read":true}));
+    let marked = engine
+        .receipts(
+            &json!({"items":receipts}),
+            &Uuid::now_v7().to_string(),
+            engine.command_epoch(),
+        )
+        .unwrap();
+    assert_eq!(marked.http_status, 200, "{}", marked.body);
+    let mut expected = vec![json!({
+        "id":format!("{project}:{decision}:decision_needed"),"project_id":project,
+        "target":{"type":"project","id":project},"report_id":decision,
+        "reason":"decision_needed","label":"Still unresolved"
+    })];
+    unread.sort_by(|a, b| a["id"].as_str().unwrap().cmp(b["id"].as_str().unwrap()));
+    expected.extend(unread);
+    for (title, set, reason) in [
+        (
+            "Overdue",
+            json!({"schedule":{"start":"2026-09-01","end":"2026-09-02"}}),
+            "overdue",
+        ),
+        ("Review", json!({"status":"review"}), "review"),
+    ] {
+        let created = create(&engine, project, title);
+        let resource = &created.body["result"]["resource"];
+        let id = resource["metadata"]["id"].as_str().unwrap();
+        let reply = patch(
+            &engine,
+            project,
+            id,
+            resource["version"].as_str().unwrap(),
+            json!({"set":set}),
+        );
+        assert_eq!(reply.http_status, 200);
+        let mut item = json!({
+            "id":format!("{project}:{id}:{reason}"),"project_id":project,
+            "target":{"type":"card","id":id},"reason":reason,"label":title
+        });
+        if reason == "overdue" {
+            item["date"] = json!("2026-09-02");
+            expected.insert(0, item);
+        } else {
+            expected.push(item);
+        }
+    }
+    let now = chrono::DateTime::parse_from_rfc3339("2026-09-30T12:00:00Z")
+        .unwrap()
+        .timestamp_millis();
+    for (scope, folder) in [
+        (None, None),
+        (Some(project.as_str()), None),
+        (None, Some("Home")),
+        (None, Some("Work")),
+    ] {
+        let filtered: Vec<_> = expected
+            .iter()
+            .filter(|item| {
+                scope.is_none_or(|scope| item["project_id"] == scope)
+                    && folder.is_none_or(|folder| {
+                        item["project_id"] == projects[usize::from(folder == "Home")]
+                    })
+            })
+            .cloned()
+            .collect();
+        for limit in [1, 7, 200] {
+            let mut cursor = None;
+            let mut actual = Vec::new();
+            loop {
+                let page = engine
+                    .attention_mode(scope, folder, cursor.as_deref(), limit, now, true)
+                    .unwrap();
+                wire::validate("AttentionPage", &page).unwrap();
+                actual.extend(page["items"].as_array().unwrap().iter().cloned());
+                cursor = page["page"]["next_cursor"].as_str().map(str::to_owned);
+                assert!(actual.len() <= filtered.len());
+                if cursor.is_none() {
+                    break;
+                }
+            }
+            assert_eq!(
+                actual, filtered,
+                "scope={scope:?} folder={folder:?} limit={limit}"
+            );
+        }
+    }
+    let first = engine
+        .attention_mode(None, None, None, 7, now, true)
+        .unwrap();
+    let cursor = first["page"]["next_cursor"].as_str().unwrap();
+    let mut distant: Value = serde_json::from_str(cursor).unwrap();
+    distant[1] = json!(i64::MAX);
+    let empty = engine
+        .attention_mode(None, None, Some(&distant.to_string()), 7, now, true)
+        .unwrap();
+    assert!(empty["items"].as_array().unwrap().is_empty());
+    assert!(empty["page"]["next_cursor"].is_null());
+    let restored = Uuid::from_u128(0x00000000_0000_4000_8000_000000000001).to_string();
+    let reply = engine
+        .receipts(
+            &json!({"items":[{"project_id":project,"update_id":restored,"read":false}]}),
+            &Uuid::now_v7().to_string(),
+            engine.command_epoch(),
+        )
+        .unwrap();
+    assert_eq!(reply.http_status, 200);
+    match engine.attention_mode(None, None, Some(cursor), 7, now, true) {
+        Err(project_application::AppError::Rejected(reply)) => {
+            assert_eq!(reply.body["error"]["code"], "PAGE_STALE")
+        }
+        result => panic!("{result:?}"),
+    }
+    let refreshed = engine
+        .attention_mode(Some(project), None, None, 7, now, true)
+        .unwrap();
+    assert!(
+        refreshed["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|item| item["report_id"] == restored)
+    );
+    let original = engine.get(project, Kind::Update, &restored).unwrap();
+    let all: Vec<_> = projects[..2]
+        .iter()
+        .flat_map(|project| {
+            (1..=230).map(move |n| json!({
+            "project_id":project,
+            "update_id":Uuid::from_u128(0x00000000_0000_4000_8000_000000000000 + n).to_string(),
+            "read":true
+        }))
+        })
+        .collect();
+    for items in all.chunks(200) {
+        let reply = engine
+            .receipts(
+                &json!({"items":items}),
+                &Uuid::now_v7().to_string(),
+                engine.command_epoch(),
+            )
+            .unwrap();
+        assert_eq!(reply.http_status, 200);
+    }
+    let page = engine
+        .attention_mode(None, None, None, 200, now, true)
+        .unwrap();
+    let remaining: Vec<_> = expected
+        .into_iter()
+        .filter(|item| item["reason"] != "unread_report")
+        .collect();
+    assert_eq!(page["items"], json!(remaining));
+    assert!(page["page"]["next_cursor"].is_null());
+    assert_eq!(
+        engine.get(project, Kind::Update, &restored).unwrap()["version"],
+        original["version"]
+    );
+}

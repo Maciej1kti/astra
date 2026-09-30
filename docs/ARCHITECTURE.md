@@ -121,6 +121,13 @@ finishes durable recovery before admitting listeners and marks projections as
 reconciling until startup scans finish. Watchers and reconciliation detect external
 edits; malformed input remains a diagnostic, not an empty or repaired document.
 
+Focus Attention reads report receipts from durable state before acquiring its
+index snapshot and includes that receipt snapshot in cursor identity. Its unread
+branch selects an eligible ordered prefix large enough for the requested page;
+other reasons keep their ordering and pagination. Marking a report read affects
+its unread entry, while a decision remains until resolved or corrected. Opening
+any returned target still uses a current source read.
+
 Server-sent events invalidate client reads. Scoped cursors and snapshot generations
 prevent combining incompatible pages. The browser cancels obsolete reads while
 retaining active drafts and deferring publication during planning gestures.

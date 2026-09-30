@@ -71,6 +71,9 @@ capacity limits. See [bounded source-read evidence](../progress/2026-09-30-paral
 and [performance ranking](../progress/2026-09-30-performance-ranking.md) for environment,
 sample counts and limits. The [later Attention iteration](../progress/2026-09-30-attention-filters.md)
 distinguishes ordinary Attention from Focus Attention with 50,000 unread reports.
+The [Focus receipt/prefix iteration](../progress/2026-09-30-focus-attention-prefix.md)
+reduces repeated receipt scans and bounds ordered unread candidates; its measured
+first-page profiles do not cover every decision/history distribution or large offset.
 Do not infer a universal latency guarantee from these measurements.
 
 The current initial JS/CSS build regression budget is 80 KiB gzip. This is a bundle

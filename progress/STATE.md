@@ -21,6 +21,15 @@ short plans for substantial work, documentation updates alongside implementation
 and appropriate Playwright verification. The documentation and full local gates
 pass; this changes contributor instructions, not application behavior or acceptance.
 
+The [Focus receipt/prefix iteration](2026-09-30-focus-attention-prefix.md) builds
+receipt membership once and bounds eligible unread candidates before the mixed
+page. On the required release dataset, first-page p95 is 23 ms with no receipts
+and 33 ms with 1,000; the latter control median was 3.6 seconds. An all-read
+50k-receipt history still costs 95 ms median / 199 ms p95 with larger outliers.
+The full gate passes 256 Rust, 137 JavaScript and 12 Python tests; Focus, events
+and protocol suites pass in Chromium and WebKit. Combined integration and manual
+HTTPS publication remain pending; no release acceptance is claimed.
+
 The [Attention eligibility iteration](2026-09-30-attention-filters.md) avoids
 expensive checks for rows outside each union branch. On the required release
 dataset, ordinary Attention p95 improves from 86 to 33 ms; full Focus Attention

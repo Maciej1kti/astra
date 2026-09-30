@@ -74,14 +74,21 @@ FROM json_each(r.metadata_json,'$.resolves') edge
 WHERE edge.value=d.entity_id))
 OR (json_extract(r.metadata_json,'$.kind')='correction'
 AND json_extract(r.metadata_json,'$.supersedes')=d.entity_id)))
-UNION ALL SELECT d.project_id,d.entity_id,d.entity_type,d.title,'unread_report',NULL,2
+-- Unread rows have the same weight, date and reason. Later rows cannot enter this page.
+UNION ALL SELECT * FROM (
+SELECT d.project_id,d.entity_id,d.entity_type,d.title,'unread_report',NULL,2
 FROM documents d
 WHERE ?8=1 AND entity_type='update'
 AND json_extract(metadata_json,'$.kind')!='decision_needed'
 AND {ACTIVE}
 AND (?5 IS NULL OR d.project_id=?5)
 AND (?6 IS NULL OR {FOLDER}=?6)
-AND NOT EXISTS(SELECT 1 FROM json_each(?9) WHERE value=d.project_id || ':' || d.entity_id)
+AND (d.project_id || ':' || d.entity_id) NOT IN (
+SELECT value FROM json_each(?9) WHERE value IS NOT NULL
+)
+ORDER BY d.project_id,d.entity_id
+LIMIT ?10
+)
             ) SELECT project_id,entity_id,entity_type,title,reason,date
 FROM candidates
 WHERE (?8=0 OR reason!='due_soon')

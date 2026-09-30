@@ -15,10 +15,11 @@ fn event_boundary(
     today: Option<&str>,
     clock: &str,
 ) -> Result<Option<String>, AppError> {
-    let sql = format!("SELECT MAX(datetime(json_extract(metadata_json,'$.event.start'), '+' || json_extract(metadata_json,'$.event.duration_minutes') || ' minutes')) FROM documents d WHERE entity_type='card' AND {ACTIVE}
+    let sql = format!("SELECT MAX(datetime(json_extract(metadata_json,'$.event.start'), '+' || json_extract(metadata_json,'$.event.duration_minutes') || ' minutes')) FROM documents d WHERE entity_type='card'
+        AND datetime(json_extract(metadata_json,'$.event.start'), '+' || json_extract(metadata_json,'$.event.duration_minutes') || ' minutes')<=?4
+        AND {ACTIVE}
         AND (?1 IS NULL OR project_id=?1) AND (?2 IS NULL OR {EFFECTIVE_FOLDER}=?2)
-        AND (?3 IS NULL OR (date(json_extract(metadata_json,'$.event.start'))=?3 AND COALESCE(json_extract(metadata_json,'$.pinned'),0)=0 AND json_extract(metadata_json,'$.status')!='review'))
-        AND datetime(json_extract(metadata_json,'$.event.start'), '+' || json_extract(metadata_json,'$.event.duration_minutes') || ' minutes')<=?4");
+        AND (?3 IS NULL OR (date(json_extract(metadata_json,'$.event.start'))=?3 AND COALESCE(json_extract(metadata_json,'$.pinned'),0)=0 AND json_extract(metadata_json,'$.status')!='review'))");
     Ok(db.query_row(&sql, params![project, folder, today, clock], |r| r.get(0))?)
 }
 
