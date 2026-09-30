@@ -82,6 +82,9 @@ The [tag source-read iteration](../progress/2026-09-30-tag-source-reads.md) redu
 repeated folder work while preserving current-file counts and preview versions.
 Such catalogs still inspect source files and scale with the selected card collection.
 Do not infer a universal latency guarantee from these measurements.
+The [later dense Calendar probes](../progress/2026-09-30-calendar-initial-probes.md)
+reduce operation counts without a stable useful quiet latency gain and are
+reverted. Further component/DOM work is not ruled out by those experiments.
 
 The current initial JS/CSS build regression budget is 80 KiB gzip. This is a bundle
 check, not a user-perceived performance acceptance result. Planning and secondary

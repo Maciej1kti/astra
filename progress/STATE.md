@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [dense Calendar probes](2026-09-30-calendar-initial-probes.md) test omitted
+CSS-hidden details, simpler color selectors, lazy full-event conversion and
+equal-row geometry reuse. Quiet release comparisons do not establish a useful
+stable gain, so all four prototypes are restored. Current local warm rendering
+is 167–171 ms median; constrained warm rendering is 984–1037 ms across two
+controls. Reduced DOM/geometry operation counts alone do not prove faster
+readiness. Initial dense rendering, source scans and the full objective remain open.
+
 The [Focus eligibility/index iteration](2026-09-30-focus-eligibility-indexes.md)
 checks receipt membership earlier and selects existing review/decision partial
 indexes. The matched required release profile records all-read 50k receipts at
