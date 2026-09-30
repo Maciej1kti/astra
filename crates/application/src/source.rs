@@ -3,7 +3,7 @@ use crate::AppError;
 use project_store::{
     StoreError,
     document::{self, Kind},
-    filesystem::ProjectStore,
+    filesystem::{CollectionReader, ProjectStore},
 };
 use std::sync::Mutex;
 use uuid::Uuid;
@@ -48,6 +48,13 @@ fn parse_read(
         .map_err(|_| AppError::reject(409, "DOCUMENT_INVALID"))?;
     Ok(parsed)
 }
+pub(crate) fn read_collection(
+    reader: &CollectionReader<'_>,
+    kind: Kind,
+    id: &str,
+) -> Result<document::ParsedDocument, AppError> {
+    parse_read(kind, id, reader.read(id)?)
+}
 pub(crate) fn collection(
     store: &ProjectStore,
     kind: Kind,
@@ -68,7 +75,7 @@ pub(crate) fn collection(
         .collect();
     let read = |ids: &[&str]| {
         ids.iter()
-            .map(|id| parse_read(kind, id, directory.read(id)?))
+            .map(|id| read_collection(&directory, kind, id))
             .collect::<Result<Vec<_>, AppError>>()
     };
     let workers = if ids.len() < 256 {

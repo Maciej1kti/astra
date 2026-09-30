@@ -74,6 +74,9 @@ distinguishes ordinary Attention from Focus Attention with 50,000 unread reports
 The [Focus receipt/prefix iteration](../progress/2026-09-30-focus-attention-prefix.md)
 reduces repeated receipt scans and bounds ordered unread candidates; its measured
 first-page profiles do not cover every decision/history distribution or large offset.
+The [tag source-read iteration](../progress/2026-09-30-tag-source-reads.md) reduces
+repeated folder work while preserving current-file counts and preview versions.
+Such catalogs still inspect source files and scale with the selected card collection.
 Do not infer a universal latency guarantee from these measurements.
 
 The current initial JS/CSS build regression budget is 80 KiB gzip. This is a bundle

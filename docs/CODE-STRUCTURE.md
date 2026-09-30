@@ -216,6 +216,13 @@ its project lock/lease; workers borrow the reader and all finish before the
 ordered result or first source error is returned. There is no new queue or source
 cache. See [ADR-055](ADR-055-BOUNDED-SOURCE-READS.md).
 
+The tolerant tag scanner also borrows one `CollectionReader` per project and
+uses the source module's common guarded single-item parser. It stays sequential,
+counts the same sorted filenames and reports unreadable/invalid cards individually
+within the existing bounds. Catalogs and previews still read current source bytes
+and versions independently of the suggestion index; a missing collection is
+distinct from a missing or replaced lease.
+
 Patch preparation composes creation defaults, patch/undo application, placement
 resolution and report reference collection as named steps. It produces a candidate
 and observed references. Writer

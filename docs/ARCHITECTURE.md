@@ -128,6 +128,15 @@ other reasons keep their ordering and pagination. Marking a report read affects
 its unread entry, while a decision remains until resolved or corrected. Opening
 any returned target still uses a current source read.
 
+Tag usage catalogs and rename previews read current validated card files under
+each project's existing lock, including external changes not yet reconciled into
+the index. A scoped collection reader avoids reopening that folder for each card;
+every file still verifies its current lease, parent identity and bounded bytes.
+Invalid or unavailable cards produce partial-result issues while readable neighbors
+remain visible. Global indexed tag suggestions provide names with projection
+freshness; the editor's project picker and tag manager use the current project
+catalog. A catalog's version does not authorize overwriting a card.
+
 Server-sent events invalidate client reads. Scoped cursors and snapshot generations
 prevent combining incompatible pages. The browser cancels obsolete reads while
 retaining active drafts and deferring publication during planning gestures.

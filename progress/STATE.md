@@ -21,6 +21,15 @@ short plans for substantial work, documentation updates alongside implementation
 and appropriate Playwright verification. The documentation and full local gates
 pass; this changes contributor instructions, not application behavior or acceptance.
 
+The [tag source-read iteration](2026-09-30-tag-source-reads.md) reuses one guarded
+collection reader per project while catalogs/previews still validate current
+source files. On the required release fixture, global catalog median improves
+from 1.77 to 0.87 seconds; the 100-card project catalog from 17.7 to 8.8 ms.
+A separate 1,000-card project still has p95 78 ms. Fresh external labels, preview
+versions and partial invalid/unsafe-file issues pass focused regressions. The full
+gate passes 259 Rust, 139 JavaScript and 12 Python tests; tags/editor pass in
+Chromium and WebKit. Existing manual HTTPS publication remains pending.
+
 The [Focus receipt/prefix iteration](2026-09-30-focus-attention-prefix.md) builds
 receipt membership once and bounds eligible unread candidates before the mixed
 page. On the required release dataset, first-page p95 is 23 ms with no receipts

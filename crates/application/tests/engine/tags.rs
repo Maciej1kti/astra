@@ -123,3 +123,89 @@ fn tag_rename_stops_on_external_card_change() {
     let catalog = engine.project_tag_catalog(&project).unwrap();
     assert_eq!(catalog["tags"][0]["name"], "Old");
 }
+
+#[test]
+fn tag_source_scans_keep_external_freshness_versions_and_partial_issues() {
+    use std::os::unix::fs::symlink;
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let mut ids = Vec::new();
+    for title in ["Changed externally", "Invalid source", "Unsafe source"] {
+        let created = create(&engine, &project, title);
+        let resource = &created.body["result"]["resource"];
+        let id = resource["metadata"]["id"].as_str().unwrap();
+        let tagged = patch(
+            &engine,
+            &project,
+            id,
+            resource["version"].as_str().unwrap(),
+            json!({"set":{"labels":["Old"]}}),
+        );
+        assert_eq!(tagged.http_status, 200);
+        ids.push(id.to_owned());
+    }
+    assert_eq!(engine.tag_catalog().unwrap()["tags"][0]["usage"], 3);
+    let directory = env.root.join("project/.project/cards");
+    let path = |id: &str| directory.join(format!("{id}.json"));
+    let mut source: Value = serde_json::from_slice(&fs::read(path(&ids[0])).unwrap()).unwrap();
+    source["metadata"]["title"] = json!("Current external title");
+    source["metadata"]["labels"] = json!(["Current"]);
+    let bytes = crate::source::pretty(&source);
+    fs::write(path(&ids[0]), &bytes).unwrap();
+    // No reconciliation: the suggestion index still holds the former labels.
+    assert_eq!(engine.tag_suggestions().unwrap()["names"], json!(["Old"]));
+    let project_catalog = engine.project_tag_catalog(&project).unwrap();
+    let global_catalog = engine.tag_catalog().unwrap();
+    for catalog in [&project_catalog, &global_catalog] {
+        wire::validate("TagCatalog", catalog).unwrap();
+        assert_eq!(catalog["complete"], true);
+        assert_eq!(catalog["tags"][0]["name"], "Current");
+        assert_eq!(catalog["tags"][0]["usage"], 1);
+        assert_eq!(catalog["tags"][1]["name"], "Old");
+        assert_eq!(catalog["tags"][1]["usage"], 2);
+    }
+    let preview = engine
+        .tag_preview(&json!({"source":"Current","target":"Destination"}))
+        .unwrap();
+    assert_eq!(preview["complete"], true);
+    assert_eq!(preview["changes"].as_array().unwrap().len(), 1);
+    assert_eq!(preview["changes"][0]["card_id"], ids[0]);
+    assert_eq!(preview["changes"][0]["title"], "Current external title");
+    assert_eq!(
+        preview["changes"][0]["version"],
+        project_store::document::version(&bytes)
+    );
+    assert_eq!(preview["changes"][0]["labels"], json!(["Destination"]));
+    fs::write(path(&ids[1]), b"invalid source").unwrap();
+    fs::remove_file(path(&ids[2])).unwrap();
+    symlink(path(&ids[0]), path(&ids[2])).unwrap();
+    fs::write(directory.join("invalid-id.json"), &bytes).unwrap();
+    fs::write(directory.join("ignored.txt"), b"Not a card").unwrap();
+    let project_catalog = engine.project_tag_catalog(&project).unwrap();
+    let global_catalog = engine.tag_catalog().unwrap();
+    for catalog in [&project_catalog, &global_catalog] {
+        wire::validate("TagCatalog", catalog).unwrap();
+        assert_eq!(catalog["complete"], false);
+        assert_eq!(catalog["tags"].as_array().unwrap().len(), 1);
+        assert_eq!(catalog["tags"][0]["name"], "Current");
+        assert_eq!(catalog["tags"][0]["usage"], 1);
+        let issues = catalog["issues"].as_array().unwrap();
+        assert_eq!(issues.len(), 3);
+        for id in [&ids[1], &ids[2]] {
+            assert!(issues.iter().any(|issue| issue["card_id"] == *id));
+        }
+        assert!(issues.iter().any(|issue| issue["card_id"].is_null()));
+    }
+    assert_eq!(project_catalog["issues"], global_catalog["issues"]);
+    let preview = engine
+        .tag_preview(&json!({"source":"Current","target":"Destination"}))
+        .unwrap();
+    assert_eq!(preview["complete"], false);
+    assert_eq!(preview["issues"], global_catalog["issues"]);
+    assert_eq!(
+        preview["changes"][0]["version"],
+        project_store::document::version(&bytes)
+    );
+    assert_eq!(fs::read(path(&ids[0])).unwrap(), bytes);
+}

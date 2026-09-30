@@ -4,7 +4,7 @@ use crate::{
     AppError, Reply,
     engine::Engine,
     instant, now_millis,
-    source::{collection, read},
+    source::{collection, read, read_collection},
     wire,
     workflow::{Plan, PlanLocation, Step, Workflows},
     workflow_kind::WorkflowKind,
@@ -477,9 +477,9 @@ WHERE validity!='valid')", [], |row|row.get(0))?;
             };
             let project_name = metadata.name.as_str();
             let project_archived = metadata.state == project_domain::models::ProjectState::Archived;
-            let directory = match store.directory.child("cards", false) {
+            let directory = match store.collection_reader(Kind::Card) {
                 Ok(directory) => directory,
-                Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+                Err(StoreError::MissingCollection) => {
                     continue;
                 }
                 Err(_) => {
@@ -519,7 +519,7 @@ WHERE validity!='valid')", [], |row|row.get(0))?;
                     );
                     continue;
                 }
-                let card = match read(&store, Kind::Card, card_id) {
+                let card = match read_collection(&directory, Kind::Card, card_id) {
                     Ok(card) => card,
                     Err(_) => {
                         issues.add(
