@@ -1,0 +1,18 @@
+{
+  "body": "Release Engine Focus on 100 projects / 10k cards / 50k mixed decision reports improves from 3.43-3.54 seconds to 30.4-38.2 ms median across zero/half/all durable receipt profiles (20 measurements after 20 warm calls each). A separate one-project / 50k-report profile measures 18.2-25.7 ms median and 18.7-26.9 ms p95 (200 samples per profile, no shipped baseline at that concentrated scale). A 2k unresolved history improves from about 1.65 seconds to 2.2-2.4 ms. Note-only all-read p95 remains about 60 ms; its medians are unchanged.\n\nThe query builds direct resolution/correction membership once and keeps a sufficient sorted decision prefix. A zero unread limit skips lower-priority work when that prefix already fills the page. Project identity, targets, missing/NULL edges, receipt independence, priority/pagination, source versions, stale-page handling, reopen/rebuild and durable writes are preserved. No new index, schema, retained cache or API field is added.\n\nThe full gate passes 268 Rust, 139 JavaScript and 12 Python tests. Focus/protocol pass in Chromium and WebKit, including reading a decision before resolving it and preserving another decision. The original frontend/release daemon is rebuilt and the existing manual app restarted with all 56 prior source versions, two pins, preferences and certificate preserved. Trusted HTTPS and all 33 served assets are verified. Evidence: progress/2026-09-30-focus-decision-histories.md.\n\nDense Calendar, further receipt/graph/edge/offset/source-size and concurrency profiles, write pauses and physical-device/transport acceptance remain open. Engine measurements exclude HTTP/VPN/browser rendering and are not full release acceptance.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "1345e532-dea2-40bd-8e13-72b33e4c18fc",
+    "kind": "result",
+    "recorded_at": "2026-09-30T21:15:00.742Z",
+    "summary": "Verified bounded decision-history reads remove multi-second Focus delays.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

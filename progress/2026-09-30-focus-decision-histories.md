@@ -99,7 +99,15 @@ formatting, Svelte, clippy, bundle bounds and release builds. Focus and protocol
 pass against ordinarily paired real release daemons in Chromium 153.0.8010.12
 and WebKit 26.6. F09 retains a read decision until its resolution; the other
 decision remains. Cursor recovery passes in all five paged views. Rendered
-desktop and 320px Focus results are inspected. Manual publication is pending.
+desktop and 320px Focus results are inspected.
+
+The original embedded frontend and release daemon are rebuilt. The existing
+manual launcher is restarted with its current data, connection settings and
+certificate. All 56 prior source versions, two pins, preferences and certificate
+are preserved. Trusted HTTPS remains `https://100.122.250.14:47832`, and all
+33 served assets match the rebuilt frontend. The ordinary CLI appends and reads
+back report `1345e532-dea2-40bd-8e13-72b33e4c18fc` with its committed source
+version. No card status, scope or acceptance is changed.
 
 The owned temporary example is removed before the full gate. Ignored evidence
 is in `test-results/focus-decisions-2026-09-30/`: complete sample arrays, exact
