@@ -113,6 +113,9 @@ await runBrowserSuite(
         .getByLabel("New item", { exact: true })
         .fill("An unfinished checklist item");
       await dialog
+        .getByRole("button", { name: "Counter actions", exact: true })
+        .click();
+      await dialog
         .getByRole("button", { name: "Add counter", exact: true })
         .click();
       await dialog

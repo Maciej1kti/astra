@@ -65,6 +65,9 @@ await runBrowserSuite(
       await open();
       for (const name of ["Push-ups", "Sit-ups", "Squats"]) {
         await section
+          .getByRole("button", { name: "Counter actions", exact: true })
+          .click();
+        await section
           .getByRole("button", { name: "Add counter", exact: true })
           .click();
         await section.getByLabel("Counter name", { exact: true }).fill(name);
@@ -245,6 +248,9 @@ await runBrowserSuite(
         .getByRole("button", { name: "Save counter", exact: true })
         .click();
       await expect(row("Push-ups")).toHaveCount(0);
+      await section
+        .getByRole("button", { name: "Counter actions", exact: true })
+        .click();
       await section
         .getByRole("button", { name: "Archived", exact: true })
         .click();

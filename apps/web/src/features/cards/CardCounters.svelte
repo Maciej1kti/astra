@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import SectionHeading from "../../lib/ui/SectionHeading.svelte";
+  import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
   import CounterRow from "./CounterRow.svelte";
@@ -33,6 +34,7 @@
   let now = $state(Date.now());
   const today = $derived(counterDay(timezone, now));
   let showArchived = $state(false);
+  let configurationName = $state<HTMLInputElement>();
   const visible = $derived(counters.filter((c) => showArchived || !c.archived));
   const unitLocked = $derived(
     !!draft.configuration?.id &&
@@ -52,7 +54,7 @@
       document.removeEventListener("visibilitychange", refresh);
     };
   });
-  function configure(counter?: CardCounter) {
+  async function configure(counter?: CardCounter) {
     draft.configuration = counter
       ? {
           id: counter.id,
@@ -62,6 +64,8 @@
           archived: counter.archived,
         }
       : { name: "", unit: "reps", step: 1, archived: false };
+    await tick();
+    configurationName?.focus();
   }
 </script>
 
@@ -70,19 +74,7 @@
   aria-label="Card counters"
   data-counter-today={today}
 >
-  <SectionHeading title="Counters" level={3} visuallyHidden>
-    {#snippet actions()}<Button
-        type="button"
-        variant="quiet"
-        disabled={disabled ||
-          !saved ||
-          !!draft.configuration ||
-          counters.length >= 20}
-        onclick={() => configure()}
-        ><Icon name="plus" small />Add counter</Button
-      >
-    {/snippet}
-  </SectionHeading>
+  <SectionHeading title="Counters" level={3} visuallyHidden />
   {#if !saved}<p class="field-hint">
       Save the card title to add counters.
     </p>{/if}
@@ -95,6 +87,7 @@
       <label
         >Name<input
           aria-label="Counter name"
+          bind:this={configurationName}
           maxlength="80"
           bind:value={draft.configuration.name}
           {disabled}
@@ -171,18 +164,38 @@
       {/each}
     </div>
   {/if}
-  {#if counters.some((c) => c.archived)}
-    <div class="counter-archive-actions">
-      <Button
-        type="button"
-        variant="quiet"
-        aria-pressed={showArchived}
-        onclick={() => {
-          showArchived = !showArchived;
-        }}>Archived</Button
-      >
-    </div>
-  {/if}
+  <div class="counter-actions">
+    <ActionMenu label="Counter actions" placement="auto">
+      {#snippet children(close)}
+        <Button
+          type="button"
+          variant="quiet"
+          disabled={disabled ||
+            !saved ||
+            !!draft.configuration ||
+            counters.length >= 20}
+          onclick={() => {
+            close();
+            void configure();
+          }}>Add counter</Button
+        >
+        <Button
+          type="button"
+          variant="quiet"
+          aria-pressed={showArchived}
+          disabled={!counters.some((counter) => counter.archived)}
+          onclick={() => {
+            close();
+            showArchived = !showArchived;
+          }}
+          ><span>Archived</span>{#if showArchived}<Icon
+              name="check"
+              small
+            />{/if}</Button
+        >
+      {/snippet}
+    </ActionMenu>
+  </div>
   {#if counters.length >= 20}<p class="field-hint">
       This card has reached its 20-counter limit.
     </p>{/if}
@@ -196,13 +209,22 @@
     border: var(--stroke) solid var(--line);
     border-radius: var(--radius-control);
   }
-  .counter-archive-actions {
+  .counter-actions {
     display: flex;
     justify-content: flex-end;
     margin: var(--space-4) 0 0;
   }
-  .counter-archive-actions :global(button[aria-pressed="true"]) {
+  .counter-actions :global(.action-menu-panel button) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-4);
+  }
+  .counter-actions :global(button[aria-pressed="true"]) {
     background: var(--soft);
+  }
+  .counter-actions :global(button span) {
+    flex: 1;
   }
   .counter-configuration {
     background: var(--soft);

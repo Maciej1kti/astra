@@ -179,9 +179,13 @@ Counters share a compact divided list. Each row contains its name, a fourteen-da
 bar preview, a value with its unit, and a quiet configuration icon. Desktop places
 the preview beside the value; phones place it below the name. The repeated date
 and timezone line is omitted. Only a draft for a different day exposes its date.
-Add counter stays on the right above the list. The Archived toggle uses the same
-right edge below it and exposes its pressed state. There is no visible gesture
-helper; value controls retain their accessible gesture/keyboard instructions.
+A right-aligned three-dot menu below the list contains Add counter and Archived.
+Archived exposes its pressed state and is disabled when no archived counters exist.
+The shared action menu chooses the available space above or below its trigger,
+or beside it on short screens, inside the scroll surface. Adding a counter focuses
+its configuration field.
+There is no visible gesture helper; value controls retain their accessible
+gesture/keyboard instructions.
 
 The value uses the pinned counter's horizontal scrub gesture and keyboard steps.
 Vertical touch movement scrolls the modal. Tap opens numeric entry in the same

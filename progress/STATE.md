@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [counter actions menu](2026-09-30-counter-actions-menu.md) moves Add counter
+and Archived into one three-dot menu below the list. Automatic placement keeps
+both actions visible on short screens. The full gate passes 251 Rust, 137
+JavaScript and 12 Python tests; four Chromium and three WebKit suites plus 48
+menu geometry cases pass. The rebuilt manual app preserves 37 prior resources,
+pins, preferences and certificate, with all HTTPS assets verified.
+
 The [minimal card sections](2026-09-30-minimal-card-sections.md) remove visible
 section headings and the counter gesture helper, retaining accessible names.
 Add counter and the compact Archived toggle align right. The full gate passes
