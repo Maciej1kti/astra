@@ -180,7 +180,7 @@ bar preview, a value with its unit, and a quiet configuration icon. Desktop plac
 the preview beside the value; phones place it below the name. The repeated date
 and timezone line is omitted. Only a draft for a different day exposes its date.
 A right-aligned three-dot menu below the list contains Add counter and Archived.
-The next section follows with a small gap and no extra divider below this menu.
+The next section retains its divider, with compact spacing on both sides of the line.
 Archived exposes its pressed state and is disabled when no archived counters exist.
 The shared action menu chooses the available space above or below its trigger,
 or beside it on short screens, inside the scroll surface. Adding a counter focuses

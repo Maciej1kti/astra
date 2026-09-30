@@ -7,10 +7,11 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
-The [counter footer follow-up](2026-09-30-counter-footer-spacing.md) removes the
-extra divider and space below its menu. The full gate and affected Chromium/WebKit
-suites pass; the rebuilt manual app preserves all 38 prior resources and its
-existing settings, with HTTPS/build assets verified.
+The [counter footer follow-up](2026-09-30-counter-footer-spacing.md#divider-correction)
+keeps the section divider with compact spacing below its menu. An initial removal
+of the divider was corrected after owner clarification. The full gate and affected
+Chromium/WebKit checks pass; the rebuilt manual app preserves all 39 prior resources
+and its existing settings, with HTTPS/build assets verified.
 
 The [counter actions menu](2026-09-30-counter-actions-menu.md) moves Add counter
 and Archived into one three-dot menu below the list. Automatic placement keeps

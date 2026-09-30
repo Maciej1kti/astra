@@ -394,8 +394,7 @@
 }
 .card-body-grid > [data-card-section="counters"] + .card-section {
   margin-top: var(--space-4);
-  border-top: 0;
-  padding-top: 0;
+  padding-top: var(--space-4);
 }
 .card-editor .sectiontitle-compact {
   justify-content: flex-start;
