@@ -1,0 +1,18 @@
+{
+  "body": "Release first-page Focus Attention on 100 projects / 10k cards / 50k reports improves from 112.8 to 23.3 ms p95 without receipts (200 samples each). With 1,000 receipts, the control median is 3,642 ms (20 samples), versus 24.9 ms after optimization (200 samples). An all-read 50k-receipt history still costs 95.2 ms median / 199.1 ms p95 with larger outliers and remains a performance candidate. Eligibility, ordering, scopes, cursor identity, source authority and durable writes are preserved.\n\nThe combined full gate passes 258 Rust, 139 JavaScript and 12 Python tests. Focus, events, protocol and card-layout suites pass in Chromium and WebKit; broad HTTPS passes. Rebuilt/restarted the existing manual app: HTTPS, all 33 assets, 50 prior source versions, two pins, preferences and certificate are verified. Evidence: progress/2026-09-30-focus-attention-prefix.md. Calendar, tag/source reads, large report histories and physical/end-to-end acceptance remain open.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "3f40586e-af4f-4b82-a4ac-9a13967f8202",
+    "kind": "result",
+    "recorded_at": "2026-09-30T16:07:59.666Z",
+    "summary": "Verified Focus Attention receipt membership and bounded unread prefixes.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

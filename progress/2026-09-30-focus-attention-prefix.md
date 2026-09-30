@@ -72,8 +72,17 @@ Rust, 137 JavaScript and 12 Python tests, contracts, formatting, Svelte, clippy,
 bundle bounds and release builds. Focus, events and protocol suites pass in both
 Chromium and WebKit against the real release daemon. The protocol suite retains
 ordinary stale-page recovery; Focus retains report read/decision resolution and
-observed-version writes. Combined integration with the latest card-layout change
-and existing manual HTTPS verification are pending. No acceptance or project-card
+observed-version writes. After integration with the latest card-layout controls,
+the full gate passes 258 Rust, 139 JavaScript and 12 Python tests. Focus, events,
+protocol and card-layout pass again in both engines; broad HTTPS passes. Rendered
+desktop Focus and narrow-screen card results are inspected.
+
+The original embedded frontend and release daemon are rebuilt. The existing
+manual launcher is restarted with its current state, origin and certificate.
+Trusted HTTPS remains `https://100.122.250.14:47832`; all 33 served build files
+match the build. All 50 prior resource versions, two pins, preferences and
+certificate are preserved. A concise normal CLI project report records the
+result (`3f40586e-af4f-4b82-a4ac-9a13967f8202`). No acceptance or project-card
 status is changed by this evidence.
 
 ## Reproduction and limits
