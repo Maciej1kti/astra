@@ -30,6 +30,12 @@ Focus reads its pinned summaries with the ordered membership snapshot. Missing
 retained references become unavailable placeholders; older hosts without summaries
 use the existing bounded detail-read path. Opening a card still reads its current
 source before editing. See [ADR-051](ADR-051-FOCUS-SNAPSHOT-SUMMARIES.md).
+`PinnedCard` separates the opening/reordering surface from `FocusCounterChip`.
+The cards feature owns the horizontal scrub action and a route-independent
+`FocusCounterController`; its confirmed-response overlay prevents old projections
+from briefly replacing acknowledged totals. Daily previews and the narrow
+conditional-write exception are specified in
+[ADR-053](ADR-053-FOCUS-DAILY-COUNTER-PREVIEWS.md).
 
 View/project/discrete-filter changes start their reads immediately. Only typed
 server-side searches retain the 200 ms debounce. Bootstrap and preferences load
@@ -91,8 +97,10 @@ edits that preference without entering autosave. The editor keeps content and
 property sections keyed so reordering retains mounted controls and explicit
 drafts. `card-schedule.ts` derives relative schedule summaries using the workspace
 calendar; `CardPlanningFields` owns the disclosure, whose initial creation state
-does not change when the card is first acknowledged. Neither feature changes
-source formats or server preferences.
+does not change when the card is first acknowledged. `ScheduleCalendar` stages a
+civil date/range in a nested native modal; Apply updates the existing editor draft.
+`lib/ui/calendar-dates.ts` owns its timezone-independent date arithmetic. Neither
+layout nor calendar selection changes source formats or server preferences.
 
 `CardComments` renders source-owned conversations and an explicit comment draft.
 The editor flushes autosave before a conditional append, keeps uncertain comment

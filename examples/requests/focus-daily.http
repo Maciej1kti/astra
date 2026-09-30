@@ -6,3 +6,10 @@ GET /api/v1/views/focus-cards?section=events&folder=Work&limit=200
 
 # Actionable attention and unread reports without due-soon reminders.
 GET /api/v1/views/attention?focus=true&folder=Work&limit=200
+
+# Pins include bounded daily totals, with an explicit workspace date and card version.
+GET /api/v1/workspace/focus
+
+# Record a preview's new absolute total using the containing card's observed version.
+# Use the normal CSRF/session and command request ID/epoch headers from card-counter.http.
+# After a lost reply retry the identical command; after a conflict explicitly reload.

@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Focus cards and calendar follow-up](2026-09-30-focus-counters-calendar.md)
+adds compact daily counter scrubbing/numeric entry with explicit confirmation,
+retained conditional command recovery, and a range calendar in the card editor.
+The full gate passes 251 Rust, 125 JavaScript and 12 Python tests; fourteen
+Chromium and five WebKit suites cover the change. The manual app is rebuilt and
+restarted: HTTPS/build assets, 30 existing resource versions, pins, preferences
+and certificate are verified. Physical mobile-device and full release acceptance
+remain open.
+
+
 The [repository audit](2026-09-29-repository-audit.md) reproduced A01–A07 and
 measured source-scan bottlenecks. The owner authorized a bounded
 [three-pass remediation](2026-09-29-three-pass-plan.md): fixes, measured optimization,

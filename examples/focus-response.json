@@ -14,7 +14,18 @@
       "version": "r1.0000000000000000000000000000000000000000000000000000000000000000",
       "status": "active",
       "priority": "normal",
-      "availability": "ready"
+      "availability": "ready",
+      "counter_count": 1,
+      "daily_counters": [
+        {
+          "id": "44444444-4444-4444-8444-444444444444",
+          "name": "Review passes",
+          "unit": "runs",
+          "step": 1,
+          "date": "2026-09-30",
+          "value": 2
+        }
+      ]
     }
   ],
   "version": "r1.0000000000000000000000000000000000000000000000000000000000000000",

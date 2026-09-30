@@ -65,6 +65,7 @@
   let {
     target,
     workspaceTimezone = "UTC",
+    weekStart = "monday",
     onclose,
     onsaved,
     onautosaved,
@@ -75,6 +76,7 @@
   }: {
     target: EditorTarget;
     workspaceTimezone?: string;
+    weekStart?: string;
     onclose: () => void;
     onsaved: () => void;
     onautosaved?: (resource: Resource) => void;
@@ -1269,6 +1271,7 @@
               >
                 {#if section === "schedule"}
                   <CardPlanningFields
+                    {weekStart}
                     bind:fields={draft.fields}
                     {locked}
                     timezone={workspaceTimezone}

@@ -1,6 +1,9 @@
 <script lang="ts">
   import EmptyState from "../../../lib/ui/EmptyState.svelte";
 
+  import PinnedCard from "./PinnedCard.svelte";
+  import type { FocusCounterSnapshot } from "../../cards/focus-counter-controller";
+  import type { DailyCounterSummary } from "../../../lib/contracts/api.generated";
   import ResourceCard from "../../../lib/ui/ResourceCard.svelte";
   import SectionHeading from "../../../lib/ui/SectionHeading.svelte";
   import Icon from "../../../lib/ui/Icon.svelte";
@@ -20,6 +23,11 @@
   import { focusOrderGesture } from "../focus-order-gesture";
 
   let {
+    today,
+    timezone,
+    now,
+    counterState,
+    oncounter,
     route,
     projects,
     cards,
@@ -55,6 +63,16 @@
     moreActiveCards,
     moreEvents,
   }: {
+    today: string;
+    timezone: string;
+    now: number;
+    counterState: FocusCounterSnapshot;
+    oncounter: (
+      item: Summary,
+      counter: DailyCounterSummary,
+      value: number,
+      focus?: boolean,
+    ) => void;
     route: Readonly<WorkspaceRoute>;
     projects: Summary[];
     cards: Summary[];
@@ -143,40 +161,25 @@
   <SectionHeading
     id="focus-section-title"
     title="In focus"
-    count={`${displayedFocus.length} visible cards`}
+    count={`${displayedFocus.length} visible ${displayedFocus.length === 1 ? "card" : "cards"}`}
   />
   {#if focusCount > 1}<p class="sr" id="focus-order-help">
       Drag a card to reorder it, or focus it and press Alt+↑ / Alt+↓. Click a
       card to open it.
     </p>{/if}
   <div class="focus-stack" use:focusOrderGesture={focusGestureOptions()}>
-    {#each displayedFocus as item (item.project_id + ":" + item.id)}<ResourceCard
+    {#each displayedFocus as item (item.project_id + ":" + item.id)}
+      <PinnedCard
         {item}
-        showStatus
-        pinned
+        {today}
+        {timezone}
+        {now}
+        {counterState}
+        {oncounter}
         projectName={projectLabel(projects, item.project_id)}
-        class="title focus-card"
-        data-focus-card={item.id}
-        data-focus-project={item.project_id}
-        data-focus-key={`${item.project_id}:${item.id}`}
-        data-focus-reorderable={item.availability === "unavailable"
-          ? undefined
-          : ""}
-        title={item.title}
-        aria-describedby={focusCount > 1 ? "focus-order-help" : undefined}
-        aria-keyshortcuts={item.availability === "unavailable"
-          ? undefined
-          : "Alt+ArrowUp Alt+ArrowDown"}
-        onclick={() => open(item)}
-      >
-        {#if item.attentionReasons.length}<span
-            class="attention-reasons"
-            aria-label="Attention reasons"
-            >{#each item.attentionReasons as reason}<span class="badge"
-                >{resourceLabel(reason)}</span
-              >{/each}</span
-          >{/if}</ResourceCard
-      >{:else}<EmptyState>
+        reorderable={focusCount > 1}
+        open={() => open(item)}
+      />{:else}<EmptyState>
         {route.project || route.search
           ? "No pinned cards match this selection. Change the project or clear the title filter."
           : "No pinned cards yet. Open a card and pin it to keep it here."}

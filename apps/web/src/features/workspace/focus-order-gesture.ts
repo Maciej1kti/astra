@@ -182,6 +182,8 @@ export function focusOrderGesture(node: HTMLElement, initial: Options) {
       options.disabled()
     )
       return;
+    if ((event.target as HTMLElement).closest("[data-focus-interactive]"))
+      return;
     suppressClick = false;
     const target = (event.target as HTMLElement).closest<HTMLElement>(
       "[data-focus-card][data-focus-reorderable]",
@@ -261,6 +263,8 @@ export function focusOrderGesture(node: HTMLElement, initial: Options) {
   }
 
   function keydown(event: KeyboardEvent) {
+    if ((event.target as HTMLElement).closest("[data-focus-interactive]"))
+      return;
     if (
       pointer !== null ||
       !event.altKey ||

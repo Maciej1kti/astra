@@ -201,6 +201,7 @@ export interface ApiContracts {
   CardCounters: CardCounters;
   CounterConfiguration: CounterConfiguration;
   CounterRecord: CounterRecord;
+  DailyCounterSummary: DailyCounterSummary;
   CardMetadata: CardMetadata;
   MilestoneMetadata: MilestoneMetadata;
   UpdateMetadata: UpdateMetadata;
@@ -450,6 +451,14 @@ export interface CounterRecord {
   date: string;
   value: number;
 }
+export interface DailyCounterSummary {
+  id: string;
+  name: string;
+  unit: string;
+  step: number;
+  date: string;
+  value: number;
+}
 export interface CardMetadata {
   counters?: CardCounters;
   /**
@@ -651,6 +660,10 @@ export interface Accepted {
   status: "running";
 }
 export interface Summary {
+  /**
+   * @maxItems 20
+   */
+  daily_counters?: DailyCounterSummary[];
   counter_count?: number;
   comment_count?: number;
   event?: TimedEvent;

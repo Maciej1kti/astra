@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
+  import ScheduleCalendar from "./ScheduleCalendar.svelte";
+  import { counterDay } from "../cards/card-counters";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
   import { cardScheduleSummary } from "./card-schedule";
@@ -9,14 +11,17 @@
     fields = $bindable(),
     locked,
     timezone,
+    weekStart,
     initiallyExpanded = false,
   }: {
     fields: CardFields;
     locked: boolean;
     timezone: string;
+    weekStart: string;
     initiallyExpanded?: boolean;
   } = $props();
   const id = $props.id();
+  let calendarOpen = $state(false);
   let expanded = $state(untrack(() => initiallyExpanded));
   let now = $state(Date.now());
   const summary = $derived(cardScheduleSummary(fields, timezone, now));
@@ -76,6 +81,21 @@
     aria-hidden={!expanded}
   >
     <div class="schedule-disclosure-inner">
+      <Button
+        type="button"
+        variant="quiet"
+        class="schedule-calendar-trigger"
+        disabled={locked || !expanded}
+        onclick={(event) => {
+          // WebKit does not focus a button on pointer clicks. The modal restores
+          // this explicit trigger focus when its local proposal closes.
+          event.currentTarget.focus({ preventScroll: true });
+          calendarOpen = true;
+        }}
+        ><Icon name="calendar" small />Choose dates<span aria-hidden="true"
+          >↗</span
+        ></Button
+      >
       <div class="editor-properties card-properties">
         <label class="schedule-start">
           Start<input
@@ -121,3 +141,23 @@
     </div>
   </div>
 </section>
+
+{#if calendarOpen}
+  <ScheduleCalendar
+    start={fields.start}
+    end={fields.end}
+    single={!!fields.time}
+    {locked}
+    {weekStart}
+    today={counterDay(timezone, now)}
+    onclose={() => {
+      calendarOpen = false;
+    }}
+    onapply={(range) => {
+      fields.start = range.start;
+      fields.end = range.end;
+      if (!range.start) fields.time = "";
+      calendarOpen = false;
+    }}
+  />
+{/if}

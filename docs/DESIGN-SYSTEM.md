@@ -168,3 +168,26 @@ Comments start with a bordered composer and its explicit Add comment action,
 followed by saved history. Browser comments use human/Owner attribution without
 author controls; existing attribution and CLI/API bot comments remain visible.
 The date-plan and label-entry helper sentences are omitted from the card form.
+
+
+## Pinned daily controls and calendar selection
+
+Pinned cards have a project/status row, a clear title and quiet schedule/checklist/
+comment metadata. Daily counters sit below a divider, outside the card-opening
+button. The value has a 44px target: horizontal scrubbing follows the configured
+step, arrow keys do the same, and tapping opens numeric entry. Vertical scrolling
+and cancelled gestures leave totals unchanged. A compact confirmation bar appears
+only while editing; one draft stays available across views and filters. Save and
+recovery state belong to the cards feature, with the existing command controller.
+Long counter names wrap; they take a full row on narrow screens when necessary.
+
+The schedule's Choose dates action opens a small native modal above the card.
+Start/end selectors, a six-week grid, today, clear and Apply share existing tokens,
+buttons, icons and dialog focus handling. Range bands join selected days; endpoints
+and today remain distinct in both themes. Keyboard arrows move days, Home/End move
+within a week, and Page Up/Down move months (Shift moves years). All dates are civil
+workspace dates, and weekday order follows the workspace preference. Apply enters
+the normal editor autosave; Cancel/Escape only closes this local proposal. Typed
+native date/time controls remain available. Nested dialog footers do not inherit
+the editor form's sticky negative margins. Calendar month fades and counter-bar
+entrances respect reduced motion.

@@ -83,3 +83,13 @@
     scroll-behavior: auto !important;
   }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .focus-counter-bar,
+  .focus-counter-saved {
+    animation: astra-reveal var(--motion-enter) var(--motion-ease);
+  }
+  .schedule-calendar-grid {
+    animation: astra-fade var(--motion-quick) ease;
+  }
+}

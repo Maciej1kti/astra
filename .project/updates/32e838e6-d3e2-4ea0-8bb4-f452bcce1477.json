@@ -1,0 +1,18 @@
+{
+  "body": "Pinned Focus cards now show compact daily counters with horizontal scrubbing, keyboard/numeric entry and explicit confirmation. Counter drafts retain the observed day/version, and uncertain writes retain the same command across navigation or reconnection. The card calendar supports range selection, workspace week start, keyboard navigation and local Apply/Cancel behavior. Existing editing and counter history remain intact.\n\nVerification: the full gate passed 251 Rust, 125 JavaScript and 12 Python tests. Fourteen affected Chromium and five WebKit suites passed across the change, including touch cancellation, stale-version rejection, lost-response replay, date ranges, events and responsive layouts. These are browser/emulator checks, not physical-device acceptance. Evidence: progress/2026-09-30-focus-counters-calendar.md.\n\nThe manual application was rebuilt/restarted at its existing HTTPS address. All 33 public assets match the build, and 30 existing resource versions, two pins, preferences and certificate were preserved. Scope, dates, priorities and acceptance status are unchanged.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "32e838e6-d3e2-4ea0-8bb4-f452bcce1477",
+    "kind": "result",
+    "recorded_at": "2026-09-30T10:58:57.449Z",
+    "summary": "Refine pinned Focus cards, daily counter controls and the card calendar",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

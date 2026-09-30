@@ -10,6 +10,9 @@
   import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
   import WorkspaceFilters from "./features/workspace/WorkspaceFilters.svelte";
   import CreateCardProject from "./features/workspace/CreateCardProject.svelte";
+  import FocusCounterBar from "./features/cards/FocusCounterBar.svelte";
+  import { focusCounterState } from "./features/cards/focus-counter-state.svelte";
+  import type { DailyCounterSummary } from "./lib/contracts/api.generated";
   import FocusScreen from "./features/workspace/screens/FocusScreen.svelte";
   import ProjectsScreen from "./features/workspace/screens/ProjectsScreen.svelte";
   import BoardOverview from "./features/workspace/screens/BoardOverview.svelte";
@@ -275,6 +278,31 @@
   const cards = $derived(data.state.cards);
   const updates = $derived(data.state.updates);
   const focus = $derived(data.state.focus);
+  const counterEditing = focusCounterState(
+    () => !!boot,
+    () => {
+      data.invalidate();
+      void refresh().catch(message);
+    },
+  );
+  let counterBar: FocusCounterBar | undefined = $state();
+  function editFocusCounter(
+    item: Summary,
+    counter: DailyCounterSummary,
+    value: number,
+    focus = false,
+  ) {
+    counterEditing.controller.edit(item, counter, value);
+    if (focus) void counterBar?.focusValue();
+  }
+  function dismissFocusCounter() {
+    const rejected = counterEditing.snapshot.rejected;
+    counterEditing.controller.dismiss();
+    if (rejected) {
+      data.invalidate();
+      void refresh().catch(message);
+    }
+  }
   const focusCommand = commandOperation(() => !!boot);
   let focusProposal = $state<FocusRef[] | null>(null);
   let focusProposalVersion = $state("");
@@ -294,7 +322,10 @@
   );
   const orderedFocusCards = $derived.by(() => {
     const summaries = new Map(
-      focusCards.map((item) => [`${item.project_id}:${item.id}`, item]),
+      focusCards.map((item) => [
+        `${item.project_id}:${item.id}`,
+        counterEditing.present(item, today),
+      ]),
     );
     return focusOrder.map((item): Summary => {
       return (
@@ -684,12 +715,17 @@
         routing.current.view === "focus" &&
         document.visibilityState === "visible"
       )
-        void refresh(["attention", "card", "event"]).catch(message);
+        void refresh(["focus", "attention", "card", "event"]).catch(message);
     }, 60_000);
     window.addEventListener("popstate", historyNavigation);
     window.addEventListener("command-warning", commandWarning);
     const leaving = (event: BeforeUnloadEvent) => {
-      if (focusProposal || focusCommand.pending) {
+      if (
+        focusProposal ||
+        focusCommand.pending ||
+        counterEditing.snapshot.draft ||
+        counterEditing.snapshot.pending
+      ) {
         event.preventDefault();
         event.returnValue = "";
       }
@@ -720,7 +756,7 @@
     ondiagnostics={() => (diagnostics = true)}
   />
 {:else}
-  <div class="app">
+  <div class="app" class:counter-editing={!!counterEditing.snapshot.draft}>
     <WorkspaceNavigation
       view={routing.current.view}
       {connected}
@@ -787,6 +823,11 @@
               <div class="empty" role="status">Loading resources…</div>
             {:else if routing.current.view === "focus"}
               <FocusScreen
+                {today}
+                timezone={boot?.timezone ?? "UTC"}
+                now={clockTime}
+                counterState={counterEditing.snapshot}
+                oncounter={editFocusCounter}
                 route={routing.current}
                 {projects}
                 {cards}
@@ -993,7 +1034,8 @@
       }}
     />{/if}{/if}
 {#if editor}{#if Editor}{#key editor}{@const editorTarget = editor}<Editor
-        workspaceTimezone={boot?.timezone ?? "workspace time"}
+        workspaceTimezone={boot?.timezone ?? "UTC"}
+        {weekStart}
         target={editor}
         bind:this={editorInstance}
         onclose={closeEditor}
@@ -1063,3 +1105,15 @@
         nativeAdding = false;
       }}
     />{/if}{/if}
+
+<FocusCounterBar
+  bind:this={counterBar}
+  snapshot={counterEditing.snapshot}
+  connected={!!boot}
+  {today}
+  onchange={(value) => counterEditing.controller.setValue(value)}
+  onsave={() => counterEditing.controller.save()}
+  onretry={() => counterEditing.controller.resolve(false)}
+  oncheck={() => counterEditing.controller.resolve(true)}
+  oncancel={dismissFocusCounter}
+/>

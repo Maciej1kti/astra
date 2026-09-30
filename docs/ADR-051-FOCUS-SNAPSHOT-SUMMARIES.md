@@ -24,7 +24,9 @@ The new field is optional in the response schema to retain compatibility with
 reference-only hosts. Current hosts always send it, including an empty array.
 The browser follows `items` for order, uses the summary keyed by project/card ID,
 and keeps its bounded old detail-read path only when `cards` is absent. Opening
-any card still fetches its current source resource before editing. No endpoint,
+any card still fetches its current source resource before editing. The later
+[ADR-053](ADR-053-FOCUS-DAILY-COUNTER-PREVIEWS.md) permits conditional recording
+from an observed daily counter preview. No endpoint,
 legacy workspace API or source format is removed.
 
 Regression coverage includes source versions and absent bodies, pending/invalid/

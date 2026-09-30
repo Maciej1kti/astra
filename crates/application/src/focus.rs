@@ -21,6 +21,16 @@ impl Engine {
             .read()
             .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
         let workspace = self.workspace()?;
+        let zone = workspace
+            .value
+            .timezone
+            .parse::<chrono_tz::Tz>()
+            .map_err(|_| AppError::invariant("workspace timezone"))?;
+        let today = chrono::DateTime::from_timestamp_millis(crate::now_millis())
+            .ok_or_else(|| AppError::invariant("focus timestamp"))?
+            .with_timezone(&zone)
+            .date_naive()
+            .to_string();
         self.index.with_snapshot(|db, revision| {
             let projection = ProjectionStatus::read(db, None)?;
             let projects = serde_json::to_string(&workspace.value.projects).unwrap();
@@ -58,7 +68,7 @@ impl Engine {
             let mut warnings = projection.warnings;
             if issues { warnings.push(json!({"code":"FOCUS_INCOMPLETE","message":"Some project sources are unavailable or invalid. Retained pins may be stale; check host diagnostics."})); }
             if overflow { warnings.push(json!({"code":"FOCUS_LIMIT","message":"Showing the first 100 pins. Unpin cards to restore ordering; other cards remain accessible in List."})); }
-            Ok(json!({"items":items,"cards":cards.iter().map(Indexed::summary).collect::<Vec<_>>(),"version":workspace.version,"complete":complete,
+            Ok(json!({"items":items,"cards":cards.iter().map(|card| focus_summary(card, &today)).collect::<Vec<_>>(),"version":workspace.version,"complete":complete,
                 "page":{"next_cursor":null,"snapshot_cursor":revision,"has_more":false,"freshness":if complete {"index_snapshot"} else {"stale"}},"warnings":warnings}))
         })
     }
@@ -135,5 +145,71 @@ impl Engine {
                 .unwrap_or(usize::MAX)
         });
         Ok(pinned)
+    }
+}
+
+/// Only the current day's totals leave the index snapshot, never counter history.
+fn focus_summary(card: &Indexed, today: &str) -> Value {
+    let mut summary = card.summary();
+    if card.validity == "valid" {
+        let counters: Vec<_> = card
+            .metadata
+            .get("counters")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter(|counter| counter["archived"] != true)
+            .map(|counter| {
+                json!({
+                    "id": counter["id"], "name": counter["name"], "unit": counter["unit"],
+                    "step": counter["step"], "date": today,
+                    "value": counter["values"].get(today).cloned().unwrap_or(json!(0))
+                })
+            })
+            .collect();
+        summary["daily_counters"] = json!(counters);
+    }
+    summary
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn daily_preview_omits_history_hidden_counters_and_unverified_rows() {
+        let mut card = Indexed {
+            project_id: "project".into(),
+            kind: "card".into(),
+            id: "card".into(),
+            version: "observed-version".into(),
+            validity: "valid".into(),
+            metadata: json!({"title":"Exercise", "counters":[
+                {"id":"visible", "name":"Push-ups", "unit":"reps", "step":5,
+                 "archived":false, "values":{"2026-09-29":100,"2026-09-30":15}},
+                {"id":"hidden", "archived":true,"values":{"2026-09-30":30}}
+            ]}),
+        };
+        let summary = focus_summary(&card, "2026-09-30");
+        assert_eq!(summary["version"], "observed-version");
+        assert_eq!(
+            summary["daily_counters"],
+            json!([
+                {"id":"visible","name":"Push-ups","unit":"reps","step":5,
+                 "date":"2026-09-30","value":15}
+            ])
+        );
+        assert_eq!(
+            focus_summary(&card, "2026-10-01")["daily_counters"][0]["value"],
+            0
+        );
+        for validity in ["stale", "invalid", "unavailable"] {
+            card.validity = validity.into();
+            assert!(
+                focus_summary(&card, "2026-09-30")
+                    .get("daily_counters")
+                    .is_none()
+            );
+        }
     }
 }

@@ -190,3 +190,76 @@ fn counter_source_rejects_duplicate_ids_invalid_days_and_retains_metadata_bounds
             .is_err()
     );
 }
+
+#[test]
+fn focus_counter_preview_is_a_conditional_observation_without_history_reads() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Pinned exercise");
+    let id = created.body["result"]["id"].as_str().unwrap();
+    let pinned = patch(
+        &engine,
+        &project,
+        id,
+        created.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":true}}),
+    );
+    let configured = patch(
+        &engine,
+        &project,
+        id,
+        pinned.body["result"]["version"].as_str().unwrap(),
+        json!({"configure_counter":{"name":"Push-ups","unit":"reps","step":5,"archived":false}}),
+    );
+    let counter_id = configured.body["result"]["resource"]["metadata"]["counters"][0]["id"]
+        .as_str()
+        .unwrap();
+    let focus = engine.focus_resource().unwrap();
+    wire::validate("FocusResource", &focus).unwrap();
+    let summary = &focus["cards"][0];
+    let preview = &summary["daily_counters"][0];
+    assert_eq!(preview["value"], 0);
+    assert_eq!(preview["id"], counter_id);
+    assert!(summary.get("counters").is_none());
+    assert!(summary.get("body").is_none());
+    let payload = json!({"record_counter":{"id":counter_id,"date":preview["date"],"value":15}});
+    let saved = patch(
+        &engine,
+        &project,
+        id,
+        summary["version"].as_str().unwrap(),
+        payload.clone(),
+    );
+    assert_eq!(saved.http_status, 200);
+    assert_eq!(
+        patch(
+            &engine,
+            &project,
+            id,
+            summary["version"].as_str().unwrap(),
+            payload
+        )
+        .http_status,
+        412
+    );
+    let refreshed = engine.focus_resource().unwrap();
+    wire::validate("FocusResource", &refreshed).unwrap();
+    assert_eq!(refreshed["cards"][0]["daily_counters"][0]["value"], 15);
+    assert_eq!(
+        refreshed["cards"][0]["version"],
+        saved.body["result"]["version"]
+    );
+    let hidden = patch(
+        &engine,
+        &project,
+        id,
+        saved.body["result"]["version"].as_str().unwrap(),
+        json!({"configure_counter":{"id":counter_id,"name":"Push-ups","unit":"reps","step":5,"archived":true}}),
+    );
+    assert_eq!(hidden.http_status, 200);
+    assert_eq!(
+        engine.focus_resource().unwrap()["cards"][0]["daily_counters"],
+        json!([])
+    );
+}

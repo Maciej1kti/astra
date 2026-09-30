@@ -5323,6 +5323,47 @@
         "additionalProperties": false,
         "description": "Replace the total for this explicit calendar date, conditionally on the observed card version. Other dates remain unchanged."
       },
+      "DailyCounterSummary": {
+        "type": "object",
+        "description": "An active counter's total for one explicit workspace calendar date, from the same projection snapshot and card version as its containing Summary. History is omitted. A conditional record_counter may use that observed version; conflicts require an explicit discard/reload, never refetch-and-overwrite.",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5,
+            "pattern": "\\S"
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000
+          },
+          "date": {
+            "$ref": "#/components/schemas/LocalDate"
+          },
+          "value": {
+            "$ref": "#/components/schemas/CounterValue"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "step",
+          "date",
+          "value"
+        ],
+        "additionalProperties": false
+      },
       "CardMetadata": {
         "type": "object",
         "properties": {
@@ -6791,6 +6832,14 @@
       "Summary": {
         "type": "object",
         "properties": {
+          "daily_counters": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/DailyCounterSummary"
+            },
+            "description": "Focus-only daily preview. Omitted for unverified sources and older servers."
+          },
           "counter_count": {
             "type": "integer",
             "minimum": 0,
@@ -7116,7 +7165,7 @@
         "properties": {
           "cards": {
             "type": "array",
-            "description": "Card summaries from the same projection snapshot as items, without bodies. Missing retained references have no summary; their position remains in items. Present on current hosts and optional for older-host compatibility. Always read the current resource before editing.",
+            "description": "Card summaries from the same projection snapshot as items, without bodies. Missing retained references have no summary; their position remains in items. Present on current hosts and optional for older-host compatibility. Read the current resource before editing, except a daily_counters total which may be recorded conditionally on this observed card version.",
             "maxItems": 100,
             "items": {
               "$ref": "#/components/schemas/Summary"
