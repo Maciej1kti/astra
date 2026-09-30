@@ -378,7 +378,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: var(--space-10);
   padding: var(--space-10) var(--card-padding);
   font-size: var(--text-card);
 }
@@ -389,8 +388,14 @@
   margin: 0;
 }
 .card-body-grid > .card-section + .card-section {
+  margin-top: var(--space-10);
   border-top: var(--stroke) solid var(--line);
   padding-top: var(--space-10);
+}
+.card-body-grid > [data-card-section="counters"] + .card-section {
+  margin-top: var(--space-4);
+  border-top: 0;
+  padding-top: 0;
 }
 .card-editor .sectiontitle-compact {
   justify-content: flex-start;
