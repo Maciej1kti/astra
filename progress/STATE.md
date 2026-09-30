@@ -15,7 +15,9 @@ the target is not claimed unconditionally. The full 100-project/10k-card/50k-rep
 profile records mixed-write p95 43 ms and indexed-query p95 20 ms; Attention and
 the legacy global tag catalog still cost 86 ms and 1.8 s. Full and combined gates
 pass 255 Rust, 137 JavaScript and 12 Python tests; all 24 Chromium, five WebKit,
-broad HTTPS and planning checks pass. Manual publication and acceptance remain open.
+broad HTTPS and planning checks pass. The rebuilt manual app preserves all 42
+prior resource versions, pins, preferences and certificate; its HTTPS address and
+33 build files are verified. Full release acceptance remains open.
 
 The [calendar presentation update](2026-09-30-calendar-design.md) adds a compact
 mobile toolbar, readable agenda, a seven-column month grid that fits phones, and

@@ -81,8 +81,14 @@ presentation. All 24 Chromium suites, five WebKit suites (session, planning,
 calendar layout, events and protocol), broad HTTPS and planning checks pass.
 The existing WebKit deletion fixture's unsupported clipboard permission remains
 the coverage limit recorded in the prior source-path iteration; Chromium covers
-deletion. The manual restart is pending. No requirement, scope or acceptance
-status changes. The earlier report's separate 200-create requirement wording is
+deletion.
+
+The original checkout's embedded frontend and release daemon are rebuilt. The
+existing manual launcher is restarted with the same data, origin, ports and
+certificate. Trusted HTTPS at `https://100.122.250.14:47832` serves all 33 rebuilt
+assets byte-for-byte. All 42 prior source versions, two pins, preferences and
+certificate are preserved. No requirement, scope or acceptance status changes.
+The earlier report's separate 200-create requirement wording is
 corrected: `docs/09-PERFORMANCE.md` requires 200 mixed mutations after warmup.
 The benchmark meets that sample count for the mixed workload; its create subset
 and smaller initial dataset retain their stated limits.
