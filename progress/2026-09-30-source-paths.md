@@ -63,9 +63,16 @@ coverage remains Chromium-only in this run.
 
 The full gate also passes after integration with the latest card section/menu
 changes. Affected card layout, counter, session and card checks pass in Chromium;
-card layout, counter and session checks also pass in WebKit. The existing manual
-restart is pending at this checkpoint. No requirement, scope or acceptance
-status changes.
+card layout, counter and session checks also pass in WebKit.
+
+The embedded frontend and release daemon are rebuilt in the original checkout.
+The existing manual launcher is restarted with its current data, connection
+settings and certificate. The verified HTTPS address remains
+`https://100.122.250.14:47832`; all 33 served build files match the rebuilt assets.
+All 40 prior source versions, two pins, preferences and certificate are preserved.
+An immediate snapshot initially preceded socket readiness; the subsequent
+read-only readiness check and complete snapshot/asset verification pass.
+No requirement, scope or acceptance status changes.
 
 Ignored evidence is under `test-results/calendar-rendering-2026-09-30/`:
 `source-relative-before.json`, `source-relative-after.json` and the retained

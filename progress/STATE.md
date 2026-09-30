@@ -11,8 +11,11 @@ The [source lease path iteration](2026-09-30-source-paths.md) removes a repeated
 absolute traversal during collection reads, retaining current source/lease
 checks and durable writes. With 1,000 cards, release create median/p95 improves
 from 231/246 to 160/174 ms. The full gate passes 252 Rust, 137 JavaScript and 12
-Python tests; all 24 Chromium and five applicable WebKit suites pass. The 150 ms
-write target, physical-device coverage and full release acceptance remain open.
+Python tests; all 24 Chromium and five applicable WebKit suites pass, with affected
+card checks repeated on the combined frontend. The rebuilt manual app preserves
+all 40 prior resource versions, pins, preferences and certificate; its HTTPS
+address and 33 build files are verified. The 150 ms write target, physical-device
+coverage and full release acceptance remain open.
 
 The [counter footer follow-up](2026-09-30-counter-footer-spacing.md#divider-correction)
 keeps the section divider with compact spacing below its menu. An initial removal

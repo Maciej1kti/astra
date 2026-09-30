@@ -1,0 +1,18 @@
+{
+  "body": "Collection reads avoid one duplicate absolute lease path traversal while retaining live ancestry/inode, no-follow, hardlink, source-version and durable-write guards. Release benchmark at 1,000 cards: create p50/p95 230.7/246.3 ms to 160.3/173.7 ms (40 creates); conditional title patches remain about 27/33 ms. The full gate passes 252 Rust, 137 JavaScript and 12 Python tests; all 24 Chromium and five applicable WebKit suites pass. WebKit deletion cannot start because its fixture requests an unsupported clipboard permission. Affected card checks pass again on the latest combined frontend. The original manual app is rebuilt/restarted; HTTPS and all 33 assets are verified, with all 40 prior resource versions, two pins, preferences and certificate preserved. The 150 ms write target, 200-create acceptance sample, physical-device coverage and full release acceptance remain open. Evidence: progress/2026-09-30-source-paths.md.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "135b9d3a-e1ba-4463-beaf-c0caff25347e",
+    "kind": "result",
+    "recorded_at": "2026-09-30T13:31:58.925Z",
+    "summary": "Verified source lease path optimization reduces release card creation by about 30%.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
