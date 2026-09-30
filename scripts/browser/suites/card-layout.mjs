@@ -1,4 +1,4 @@
-/** Compact schedules and browser layout preferences on a normally paired release host. */
+/** Section gestures, shared visibility and retained drafts on a paired release host. */
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
@@ -43,6 +43,9 @@ await runBrowserSuite(
     );
     const card = cli("command", "POST", base, "--json-file", file).result
       .resource;
+    await writeFile(file, JSON.stringify({ title: "A separate card" }));
+    const other = cli("command", "POST", base, "--json-file", file).result
+      .resource;
     const path = `${base}/${card.metadata.id}`;
     const url = `${config.origin}/?${new URLSearchParams({ view: "list", project, type: "card", resource: card.metadata.id })}`;
     const dialog = page.getByRole("dialog", {
@@ -71,6 +74,46 @@ await runBrowserSuite(
     ];
     const closePanel = () =>
       panel.getByRole("button", { name: "Done arranging sections" }).click();
+    const settleOrder = () =>
+      panel.locator(".layout-order").evaluate(async (el) => {
+        // Svelte starts FLIP on the next frame; measure after it has settled.
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        );
+        await Promise.all(
+          el
+            .getAnimations({ subtree: true })
+            .map((a) => a.finished.catch(() => {})),
+        );
+      });
+    async function pointerMove(section, anchor, after, cancel = false) {
+      await settleOrder();
+      const handle = panel.getByRole("button", {
+        name: `Reorder ${section}`,
+        exact: true,
+      });
+      await handle.scrollIntoViewIfNeeded();
+      const from = await handle.boundingBox();
+      const target = await panel
+        .locator(`[data-layout-section="${anchor.toLowerCase()}"]`)
+        .boundingBox();
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        from.x + from.width / 2,
+        target.y + (after ? target.height - 2 : 2),
+        { steps: 8 },
+      );
+      await expect(dialog.locator(".layout-drag-preview")).toBeVisible();
+      await expect(
+        panel.locator(`[data-layout-section="${section.toLowerCase()}"]`),
+      ).toHaveAttribute("data-dragging", "true");
+      if (cancel) await page.keyboard.press("Escape");
+      await page.mouse.up();
+      await expect(dialog.locator(".layout-drag-preview")).toHaveCount(0);
+      await expect(panel).toBeVisible();
+      await settleOrder();
+    }
     try {
       await page.goto(url);
       await expect
@@ -136,30 +179,29 @@ await runBrowserSuite(
       ).toHaveCount(1);
       await expect(panel.getByRole("listitem")).toHaveCount(6);
       const moveComments = panel.getByRole("button", {
-        name: "Move Comments up",
+        name: "Reorder Comments",
         exact: true,
       });
       await moveComments.focus();
-      await moveComments.press("Enter");
+      await moveComments.press("ArrowUp");
       await expect(moveComments).toBeFocused();
-      await moveComments.press("Enter");
-      await moveComments.press("Enter");
-      await expect(moveComments).toHaveAttribute("aria-disabled", "true");
+      await moveComments.press("ArrowUp");
+      await moveComments.press("ArrowUp");
+      await moveComments.press("ArrowUp");
       const moveSchedule = panel.getByRole("button", {
-        name: "Move Schedule up",
+        name: "Reorder Schedule",
         exact: true,
       });
       await moveSchedule.focus();
-      for (let step = 0; step < 5; step++) await moveSchedule.press("Enter");
+      await moveSchedule.press("Home");
       await expect(moveSchedule).toBeFocused();
-      await expect(moveSchedule).toHaveAttribute("aria-disabled", "true");
       await expect(panel.getByRole("status")).toHaveText(
         "Schedule moved to position 1 of 6.",
       );
       for (let step = 0; step < 3; step++)
         await panel
-          .getByRole("button", { name: "Move Labels up", exact: true })
-          .click();
+          .getByRole("button", { name: "Reorder Labels", exact: true })
+          .press("ArrowUp");
       await expect.poll(sections).toEqual(mixedOrder);
       await expect(toggle).toHaveAttribute("aria-expanded", "true");
       await expect(toggle).toHaveAttribute("data-mounted-probe", "retained");
@@ -178,6 +220,73 @@ await runBrowserSuite(
         card.version,
         "Presentation preferences do not mutate card source",
       );
+      for (const name of ["Comments", "Counters", "Labels"]) {
+        const eye = panel.getByRole("button", {
+          name: `Show ${name}`,
+          exact: true,
+        });
+        await eye.click();
+        await expect(eye).toHaveAttribute("aria-pressed", "false");
+        await expect(
+          dialog.locator(`[data-card-section="${name.toLowerCase()}"]`),
+        ).toBeHidden();
+      }
+      await expect
+        .poll(() => cli("get", path).metadata.hidden_sections)
+        .toEqual(["counters", "comments", "labels"]);
+      assert.equal(cli("get", path).body, card.body);
+      assert.deepEqual(
+        cli("get", path).metadata.schedule,
+        card.metadata.schedule,
+      );
+      assert.equal(
+        cli("get", `${base}/${other.metadata.id}`).metadata.hidden_sections,
+        undefined,
+      );
+      const secondContext = await newContext();
+      try {
+        const second = await secondContext.newPage();
+        await second.goto(url);
+        for (const name of ["counters", "comments", "labels"])
+          await expect(
+            second.locator(`[data-card-section="${name}"]`),
+          ).toBeHidden();
+        await second.goto(
+          `${config.origin}/?${new URLSearchParams({ view: "list", project, type: "card", resource: other.metadata.id })}`,
+        );
+        await expect(second.locator('[data-card-visible="true"]')).toHaveCount(
+          6,
+        );
+      } finally {
+        await secondContext.close();
+      }
+      for (const name of ["Comments", "Counters", "Labels"])
+        await panel
+          .getByRole("button", { name: `Show ${name}`, exact: true })
+          .click();
+      await expect
+        .poll(() => cli("get", path).metadata.hidden_sections)
+        .toBeUndefined();
+      await expect(comment).toHaveValue("An unfinished comment");
+      await expect(comment).toHaveAttribute("data-mounted-probe", "retained");
+      await expect(labels).toHaveValue("An unfinished label");
+      await expect(labels).toHaveAttribute("data-mounted-probe", "retained");
+      await expect(
+        dialog.getByLabel("Counter name", { exact: true }),
+      ).toHaveValue("An unfinished counter");
+      const presentationVersion = cli("get", path).version;
+      await pointerMove("Comments", "Labels", true, true);
+      await expect.poll(sections).toEqual(mixedOrder);
+      assert.equal(cli("get", path).version, presentationVersion);
+      const counterEye = panel.getByRole("button", {
+        name: "Show Counters",
+        exact: true,
+      });
+      await counterEye.click();
+      await expect(counterEye).toHaveAttribute("aria-pressed", "false");
+      await counterEye.click();
+      await expect(counterEye).toHaveAttribute("aria-pressed", "true");
+      await expect(dialog.getByTestId("autosave-status")).toHaveText("Saved");
       await page.keyboard.press("Escape");
       await expect(panel).toBeHidden();
       await expect(customize).toBeFocused();
@@ -224,15 +333,28 @@ await runBrowserSuite(
         );
         assert.equal(geometry.overflow, false);
         const move = panel.getByRole("button", {
-          name: "Move Comments down",
+          name: "Reorder Comments",
           exact: true,
         });
         const bounds = await move.boundingBox();
         assert.ok(bounds.width >= 44 && bounds.height >= 44);
-        await move.tap();
-        await panel
-          .getByRole("button", { name: "Move Comments up", exact: true })
-          .tap();
+        if (height > 500) {
+          await pointerMove("Comments", "Labels", true);
+          await expect
+            .poll(sections)
+            .toEqual([
+              "schedule",
+              "labels",
+              "comments",
+              "description",
+              "checklist",
+              "counters",
+            ]);
+          await pointerMove("Comments", "Labels", false);
+        } else {
+          await move.press("ArrowDown");
+          await move.press("ArrowUp");
+        }
         await closePanel();
         await dialog.locator(".card-body-grid").evaluate(async (el) => {
           await Promise.all(
@@ -281,6 +403,110 @@ await runBrowserSuite(
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.setViewportSize({ width: 390, height: 844 });
       await customize.click();
+      if (browser.browserType().name() === "chromium") {
+        const touch = await context.newCDPSession(page);
+        try {
+          const handle = panel.getByRole("button", {
+            name: "Reorder Schedule",
+            exact: true,
+          });
+          const from = await handle.boundingBox();
+          const target = await panel
+            .locator('[data-layout-section="comments"]')
+            .boundingBox();
+          const point = {
+            x: from.x + from.width / 2,
+            y: from.y + from.height / 2,
+          };
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchStart",
+            touchPoints: [point],
+          });
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchMove",
+            touchPoints: [{ ...point, y: target.y + target.height - 2 }],
+          });
+          await expect(dialog.locator(".layout-drag-preview")).toBeVisible();
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchCancel",
+            touchPoints: [],
+          });
+          await expect.poll(sections).toEqual(mixedOrder);
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchStart",
+            touchPoints: [point],
+          });
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchMove",
+            touchPoints: [{ ...point, y: target.y + target.height - 2 }],
+          });
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchEnd",
+            touchPoints: [],
+          });
+          await expect
+            .poll(sections)
+            .toEqual([
+              "comments",
+              "schedule",
+              "labels",
+              "description",
+              "checklist",
+              "counters",
+            ]);
+          await handle.press("Home");
+          await expect.poll(sections).toEqual(mixedOrder);
+        } finally {
+          await touch.detach();
+        }
+      }
+      await page.setViewportSize({ width: 844, height: 390 });
+      const handle = panel.getByRole("button", {
+        name: "Reorder Schedule",
+        exact: true,
+      });
+      await handle.scrollIntoViewIfNeeded();
+      const grip = await handle.boundingBox();
+      const shortPanel = await panel.boundingBox();
+      await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        grip.x + grip.width / 2,
+        shortPanel.y + shortPanel.height - 6,
+        { steps: 5 },
+      );
+      await expect
+        .poll(() =>
+          panel.evaluate(
+            (el) => el.scrollTop >= el.scrollHeight - el.clientHeight - 1,
+          ),
+        )
+        .toBe(true);
+      await page.mouse.up();
+      await expect.poll(sections).toEqual([...mixedOrder.slice(1), "schedule"]);
+      await handle.press("Home");
+      await expect.poll(sections).toEqual(mixedOrder);
+      await page.setViewportSize({ width: 390, height: 844 });
+      for (const name of [
+        "Description",
+        "Checklist",
+        "Counters",
+        "Comments",
+        "Schedule",
+        "Labels",
+      ])
+        await panel
+          .getByRole("button", { name: `Show ${name}`, exact: true })
+          .click();
+      await expect(dialog.locator('[data-card-visible="true"]')).toHaveCount(0);
+      await expect
+        .poll(() => cli("get", path).metadata.hidden_sections?.length)
+        .toBe(6);
+      await expect(panel.getByRole("listitem")).toHaveCount(6);
+      await closePanel();
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await customize.click();
+      await expect(panel).toBeVisible();
       await panel
         .getByRole("button", { name: "Reset layout", exact: true })
         .click();
@@ -294,6 +520,10 @@ await runBrowserSuite(
           "schedule",
           "labels",
         ]);
+      await expect
+        .poll(() => cli("get", path).metadata.hidden_sections)
+        .toBeUndefined();
+      await page.setViewportSize({ width: 390, height: 844 });
       assert.equal(
         await dialog
           .locator(".card-body-grid")
@@ -345,9 +575,24 @@ await runBrowserSuite(
           await page.screenshot({
             path: join(evidence, `layout-${width}.png`),
           });
+          if (width === 390) {
+            const eye = panel.getByRole("button", {
+              name: "Show Schedule",
+              exact: true,
+            });
+            await eye.click();
+            await page.emulateMedia({ colorScheme: "dark" });
+            await page.screenshot({
+              path: join(evidence, "layout-hidden-dark-390.png"),
+            });
+            await eye.click();
+            await page.emulateMedia({ colorScheme: "light" });
+          }
           await closePanel();
         }
       }
+      assert.deepEqual(errors, []);
+      assert.deepEqual(await page.evaluate(() => window.layoutCsp), []);
       await writeFile(
         join(evidence, "results.json"),
         JSON.stringify(
@@ -358,10 +603,14 @@ await runBrowserSuite(
               "relative workspace date",
               "collapsed and invalid schedules",
               "no presentation writes",
+              "per-card visibility persists across browser contexts",
+              "hidden drafts remain mounted and recover intact",
+              "all-hidden state remains recoverable from the layout menu",
               "legacy preference upgrade to one six-section order",
               "cross-group moves retain mounted drafts and disclosure state",
               "visual order matches reading order at every width",
-              "pointer and keyboard ordering",
+              "handle pointer and keyboard ordering, Escape cancellation",
+              "short-panel drag autoscroll and Chromium touch/cancellation",
               "local preference reload and reset",
               "320–1440px plus landscape",
               "reduced motion",

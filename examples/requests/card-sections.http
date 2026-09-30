@@ -1,0 +1,13 @@
+# Use the current card version, a fresh request ID and this host's command epoch.
+PATCH /api/v1/projects/11111111-1111-4111-8111-111111111111/cards/22222222-2222-4222-8222-222222222222 HTTP/1.1
+If-Match: "r1.OBSERVED_CARD_VERSION"
+X-Request-ID: 99999999-9999-4999-8999-999999999991
+X-Command-Epoch: 99999999-9999-4999-8999-999999999992
+X-CSRF-Token: CURRENT_SESSION_CSRF
+Content-Type: application/json
+
+{"set":{"hidden_sections":["schedule","labels"]}}
+
+# Restore all sections with a new conditional command against its acknowledged version:
+# {"clear":["hidden_sections"]}
+# This changes visibility only. Dates, tags and all other section content remain.

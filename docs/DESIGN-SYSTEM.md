@@ -159,15 +159,26 @@ sessions start expanded and stay expanded through their creation acknowledgement
 
 The header's Card layout disclosure orders Description, Checklist, Counters,
 Comments, Schedule and Labels in one list, without separate groups. Its
-44px up/down buttons support touch and keyboard input, announce the new position,
-and preserve focus. Keyed sections move their existing DOM and local drafts. The
+44px six-dot handles support pointer dragging and Arrow/Home/End keys, announce
+the new position and preserve focus. Like Focus, a drag shows a floating preview
+and insertion line, committing order only on release. Escape, cancellation and
+loss of focus discard the preview. Short panels scroll during dragging. A native
+popover keeps the menu and preview above dialog clipping when the body shrinks,
+including when all sections are hidden. Keyed sections retain their DOM and drafts. The
 order applies to all cards in this browser; only known section identifiers are
 stored locally, following appearance/board display preferences. Existing grouped
 preferences upgrade in their previous reading order. Storage failure
-keeps the current layout usable and explains its limited lifetime. Reset restores
-the default order. No card or workspace source write is caused by rearranging.
-Reordering uses brief FLIP motion; the schedule uses a grid-height transition.
-Both respect the current reduced-motion preference, including changes while open.
+keeps the current order usable and explains its limited lifetime. Rearranging
+does not write card or workspace source.
+
+A 44px eye control on each row toggles that section's visibility. Shown sections
+use the accent eye; hidden sections have a muted label and crossed-out eye. All
+rows stay in the menu, so hiding everything remains reversible. Visibility is
+saved for this card across devices through ordinary autosave. Hidden controls
+remain mounted but inert and outside the accessibility tree; visible sections
+alone determine dividers and spacing. Reset restores the browser order and shows
+every section on this card. Reordering uses brief FLIP motion; hiding uses a
+grid-height transition. Both respect reduced motion, including changes while open.
 
 At phone widths up to 520px, the card dialog fills the viewport and accounts for
 safe areas, retaining its persistent header and independently scrolling body.

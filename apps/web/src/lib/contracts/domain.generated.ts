@@ -7,6 +7,20 @@ export type LocalProjectsFileContract1 =
   ProjectDocument | CardDocument | MilestoneDocument | UpdateDocument | Workspace;
 export type UUID = string;
 export type Instant = string;
+/**
+ * Sections hidden in this card's editor on every device. Omitted or empty shows all sections; content is retained.
+ *
+ * @maxItems 6
+ */
+export type CardHiddenSections =
+  | []
+  | [CardSection]
+  | [CardSection, CardSection]
+  | [CardSection, CardSection, CardSection]
+  | [CardSection, CardSection, CardSection, CardSection]
+  | [CardSection, CardSection, CardSection, CardSection, CardSection]
+  | [CardSection, CardSection, CardSection, CardSection, CardSection, CardSection];
+export type CardSection = "description" | "checklist" | "counters" | "comments" | "schedule" | "labels";
 export type Position = string;
 export type LocalDate = string;
 export type LocalDateTime = string;
@@ -309,6 +323,7 @@ export interface CardDocument {
   body: string;
 }
 export interface CardMetadata {
+  hidden_sections?: CardHiddenSections;
   id: UUID;
   created_at: Instant;
   updated_at: Instant;

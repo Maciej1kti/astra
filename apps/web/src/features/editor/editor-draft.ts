@@ -20,6 +20,7 @@ import {
 type Common = { title: string; body: string };
 type EditableCommon = Common & { advanced: string };
 export type CardFields = {
+  hiddenSections: NonNullable<CardCreate["hidden_sections"]>;
   status: NonNullable<CardCreate["status"]>;
   priority: NonNullable<CardCreate["priority"]>;
   start: string;
@@ -86,6 +87,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         source: target.resource,
         common,
         fields: {
+          hiddenSections: [...(m?.hidden_sections ?? [])],
           status: m?.status ?? "planned",
           priority: m?.priority ?? "normal",
           start: m?.event?.start.slice(0, 10) ?? m?.schedule?.start ?? "",
@@ -178,6 +180,7 @@ export function discreteAutosaveChange(previous: string, next: string) {
       "archived",
       "labels",
       "folder",
+      "hiddenSections",
     ]) {
       if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
         return true;
@@ -226,6 +229,10 @@ export function editorPayload(draft: EditorDraft) {
         labels: [...d.labels],
       };
       const clear: NonNullable<PatchSet<CardPatch>["clear"]> = [];
+      if (d.hiddenSections.length)
+        fields.hidden_sections = [...d.hiddenSections];
+      else if (metadata?.hidden_sections !== undefined)
+        clear.push("hidden_sections");
       if (d.acceptance.length)
         fields.acceptance = d.acceptance.map((item) => ({ ...item }));
       else if (metadata?.acceptance !== undefined) clear.push("acceptance");

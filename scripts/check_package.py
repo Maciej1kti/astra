@@ -273,6 +273,7 @@ def check_api_examples() -> dict:
         "event-to-plan.json": "CardPatch",
         "card-patch.json": "CardPatch",
         "card-move.json": "CardPatch",
+        "card-sections.json": "CardPatch",
         "report-create.json": "UpdateCreate",
         "focus-replace.json": "FocusReplace",
         "tags-replace.json": "TagsReplace",

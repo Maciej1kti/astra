@@ -35,7 +35,8 @@ The editor-inputs suite checks date/time control bounds, touch targets, empty
 time fields, event autosave/reload and conversion back to a plan at 320–1440px.
 The card-layout suite checks compact relative schedules, deliberate expansion,
 incomplete-date recovery, creation state, grouped-preference upgrades, unrestricted
-six-section ordering/reset/reload, retained mounted drafts and disclosure state,
+six-section ordering/reset/reload, per-card visibility across browser contexts,
+all-hidden recovery, retained mounted drafts and disclosure state,
 matching visual/reading order, keyboard/touch controls, motion preferences and
 strict CSP at 320–1440px plus landscape. WebKit runs the same behavior without screenshots,
 whose preparation would inject a stylesheet prohibited by the app's CSP.

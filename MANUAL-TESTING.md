@@ -87,10 +87,14 @@ Existing cards show a one-line relative schedule; click it to edit dates/time.
 New cards keep these controls expanded, including after the first automatic save.
 Check upcoming, current, overdue, finished and timed cards in the workspace
 timezone. A partial schedule stays expanded until corrected or cleared.
-Use the layout icon beside Card actions to move any of the six sections up/down
-in one shared order. Check live movement, keyboard focus, unsent comment/counter drafts,
-reload persistence in the same browser, Reset layout and reduced-motion settings.
-Layout preferences are local to each browser and do not change card source data.
+Use the layout icon beside Card actions to drag any of the six sections by its
+six-dot handle. Check the insertion preview, Escape cancellation, scrolling in a
+short panel, and Arrow/Home/End keys on a focused handle. Order persists in the
+same browser. Toggle each eye and reopen the card on another paired device:
+visibility must match for that card while other cards stay unchanged. Hide/show
+sections with unsent comment, counter, checklist and tag drafts, and confirm the
+entries survive. Check hiding all six sections, Reset layout and reduced motion.
+Section order is local to each browser and does not change card source data.
 Their descriptions display formatted Markdown; click the description field to
 edit the source, then click outside it to return to the formatted view. Keyboard
 users can focus the description and press Enter or Space to edit, then Tab to

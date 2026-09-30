@@ -23,3 +23,8 @@ shows conditional configuration and recording. See [ADR-049](../docs/ADR-049-DAI
 [Summary compression](requests/summary-compression.http) illustrates optional
 gzip, identity compatibility and the source-resource boundary in
 [ADR-052](../docs/ADR-052-BOUNDED-SUMMARY-COMPRESSION.md).
+
+[Card section visibility](requests/card-sections.json) hides sections across
+devices without removing their content. The [HTTP example](requests/card-sections.http)
+uses an ordinary conditional card patch; see
+[ADR-056](../docs/ADR-056-CARD-SECTION-VISIBILITY.md).

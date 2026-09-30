@@ -3,6 +3,112 @@ use project_store::document;
 use rusqlite::params;
 
 #[test]
+fn card_visibility_is_conditional_durable_and_preserves_hidden_content() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = engine
+        .mutate(Mutation {
+            project_id: project.clone(),
+            kind: Kind::Card,
+            id: None,
+            payload: json!({
+                "title":"Section visibility", "body":"Keep the description",
+                "schedule":{"start":"2026-09-30","end":"2026-10-02"},
+                "labels":["Keep the label"], "hidden_sections":["labels"]
+            }),
+            request_id: Uuid::now_v7().to_string(),
+            epoch: engine.journal.epoch.clone(),
+            expected: None,
+        })
+        .unwrap();
+    assert_eq!(created.http_status, 200, "{created:?}");
+    let original = &created.body["result"]["resource"];
+    let id = original["metadata"]["id"].as_str().unwrap();
+    let version = original["version"].as_str().unwrap();
+    let other = create(&engine, &project, "Other card");
+    let command = Mutation {
+        project_id: project.clone(),
+        kind: Kind::Card,
+        id: Some(id.into()),
+        payload: json!({"set":{"hidden_sections":["description","schedule","labels"]}}),
+        request_id: Uuid::now_v7().to_string(),
+        epoch: engine.journal.epoch.clone(),
+        expected: Some(version.into()),
+    };
+    let hidden = engine.mutate(command.clone()).unwrap();
+    assert_eq!(hidden.http_status, 200, "{hidden:?}");
+    wire::validate("CommandResponse", &hidden.body).unwrap();
+    assert_eq!(
+        engine.mutate(command).unwrap().body["result"],
+        hidden.body["result"]
+    );
+    let saved = &hidden.body["result"]["resource"];
+    assert_eq!(saved["body"], original["body"]);
+    for field in ["schedule", "labels", "status", "position"] {
+        assert_eq!(saved["metadata"][field], original["metadata"][field]);
+    }
+    assert_eq!(
+        patch(
+            &engine,
+            &project,
+            id,
+            version,
+            json!({"clear":["hidden_sections"]})
+        )
+        .http_status,
+        412
+    );
+    let current = saved["version"].as_str().unwrap();
+    for invalid in [json!(["unknown"]), json!(["labels", "labels"]), json!(null)] {
+        assert_eq!(
+            patch(
+                &engine,
+                &project,
+                id,
+                current,
+                json!({"set":{"hidden_sections":invalid}})
+            )
+            .http_status,
+            422
+        );
+    }
+    assert_eq!(engine.get(&project, Kind::Card, id).unwrap(), *saved);
+    let source_path = env.root.join(format!("project/.project/cards/{id}.json"));
+    let persisted = document::parse(Kind::Card, Some(id), &fs::read(source_path).unwrap())
+        .unwrap()
+        .value();
+    assert_eq!(
+        persisted["metadata"]["hidden_sections"],
+        saved["metadata"]["hidden_sections"]
+    );
+    drop(engine);
+    let engine = env.engine();
+    assert_eq!(engine.get(&project, Kind::Card, id).unwrap(), *saved);
+    let other_id = other.body["result"]["id"].as_str().unwrap();
+    assert!(
+        engine.get(&project, Kind::Card, other_id).unwrap()["metadata"]
+            .get("hidden_sections")
+            .is_none()
+    );
+    let shown = patch(
+        &engine,
+        &project,
+        id,
+        current,
+        json!({"clear":["hidden_sections"]}),
+    );
+    assert_eq!(shown.http_status, 200, "{shown:?}");
+    let restored = &shown.body["result"]["resource"];
+    assert!(restored["metadata"].get("hidden_sections").is_none());
+    assert_eq!(restored["body"], original["body"]);
+    assert_eq!(
+        restored["metadata"]["schedule"],
+        original["metadata"]["schedule"]
+    );
+}
+
+#[test]
 fn strict_card_commands_reject_unsupported_metadata_without_writing() {
     let env = Environment::new();
     let engine = env.engine();

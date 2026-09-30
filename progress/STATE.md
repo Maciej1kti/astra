@@ -7,6 +7,15 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [card layout controls](2026-09-30-card-layout-controls.md) add six-dot drag
+handles and per-card eye toggles saved across devices. Hidden content and mounted
+drafts are retained; the layout menu stays reachable when all sections are hidden.
+The full gate passes 257 Rust, 139 JavaScript and 12 Python tests; six affected
+Chromium suites, four WebKit suites and broad HTTPS/planning checks pass. The
+rebuilt manual app preserves 49 prior resource versions, pins, preferences and
+certificate; HTTPS and all 33 build files are verified. Physical-device and full
+release acceptance remain open.
+
 The [agent workflow guidance](2026-09-30-agent-workflow-guidance.md) now requires
 short plans for substantial work, documentation updates alongside implementation
 and appropriate Playwright verification. The documentation and full local gates

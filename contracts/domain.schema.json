@@ -283,9 +283,21 @@
       ],
       "additionalProperties": false
     },
+    "CardSection": {
+      "type": "string",
+      "enum": ["description", "checklist", "counters", "comments", "schedule", "labels"]
+    },
+    "CardHiddenSections": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/CardSection"},
+      "maxItems": 6,
+      "uniqueItems": true,
+      "description": "Sections hidden in this card's editor on every device. Omitted or empty shows all sections; content is retained."
+    },
     "CardMetadata": {
       "type": "object",
       "properties": {
+        "hidden_sections": {"$ref": "#/$defs/CardHiddenSections"},
         "id": {
           "$ref": "#/$defs/UUID"
         },

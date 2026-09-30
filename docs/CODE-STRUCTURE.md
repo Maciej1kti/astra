@@ -96,15 +96,19 @@ conflict and close ownership. Draft snapshot classification lives with the draft
 model, so picker/checklist changes bypass only the typing debounce.
 
 `card-layout.ts` owns sanitized browser-only section ordering; `CardLayoutMenu`
-edits that preference without entering autosave. The editor keeps all six sections
-in one keyed list so any reorder retains mounted controls and explicit drafts.
-The preference reader upgrades the former grouped order into that single list.
+edits that order without entering autosave. `card-layout-gesture.ts` owns handle
+drag previews, cancellation, panel scrolling and keyboard moves. The editor keeps
+all six sections in one keyed list so reorders and visibility changes retain
+mounted controls and explicit drafts. The preference reader upgrades the former
+grouped order into that single list. Visibility is the source-owned card field
+`hidden_sections`, edited through ordinary autosave; see
+[ADR-056](ADR-056-CARD-SECTION-VISIBILITY.md).
 `card-schedule.ts` derives relative schedule summaries using the workspace
 calendar; `CardPlanningFields` owns the disclosure, whose initial creation state
 does not change when the card is first acknowledged. `ScheduleCalendar` stages a
 civil date/range in a nested native modal; Apply updates the existing editor draft.
 `lib/ui/calendar-dates.ts` owns its timezone-independent date arithmetic. Neither
-layout nor calendar selection changes source formats or server preferences.
+section reordering nor calendar selection changes source formats or server preferences.
 
 `CardComments` renders source-owned conversations and an explicit comment draft.
 The editor flushes autosave before a conditional append, keeps uncertain comment

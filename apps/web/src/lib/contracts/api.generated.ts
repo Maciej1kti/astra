@@ -27,6 +27,10 @@ export type Acceptance = AcceptanceItem[];
  * @maxItems 20
  */
 export type CardCounters = CardCounter[];
+/**
+ * @maxItems 6
+ */
+export type CardHiddenSections = ("description" | "checklist" | "counters" | "comments" | "schedule" | "labels")[];
 export type UpdateMetadata = {
   id: string;
   kind: "result" | "blocker" | "decision_needed" | "note" | "correction" | "resolution";
@@ -202,6 +206,8 @@ export interface ApiContracts {
   CounterConfiguration: CounterConfiguration;
   CounterRecord: CounterRecord;
   DailyCounterSummary: DailyCounterSummary;
+  CardSection: "description" | "checklist" | "counters" | "comments" | "schedule" | "labels";
+  CardHiddenSections: CardHiddenSections;
   CardMetadata: CardMetadata;
   MilestoneMetadata: MilestoneMetadata;
   UpdateMetadata: UpdateMetadata;
@@ -256,6 +262,7 @@ export interface ApiContracts {
           pinned?: boolean;
           schedule?: Schedule;
           acceptance?: Acceptance;
+          hidden_sections?: CardHiddenSections;
           /**
            * @maxItems 20
            */
@@ -265,7 +272,7 @@ export interface ApiContracts {
         /**
          * @maxItems 20
          */
-        clear?: ("event" | "schedule" | "labels" | "acceptance")[];
+        clear?: ("event" | "schedule" | "labels" | "acceptance" | "hidden_sections")[];
         placement?: Placement;
       }
     | {
@@ -460,6 +467,7 @@ export interface DailyCounterSummary {
   value: number;
 }
 export interface CardMetadata {
+  hidden_sections?: CardHiddenSections;
   counters?: CardCounters;
   /**
    * @maxItems 200
@@ -575,6 +583,7 @@ export interface Placement {
   before_id: string | null;
 }
 export interface CardCreate {
+  hidden_sections?: CardHiddenSections;
   event?: TimedEvent;
   title: string;
   status?: "planned" | "active" | "review" | "done" | "cancelled";
@@ -1231,6 +1240,8 @@ export type Evidence = ApiContracts["Evidence"];
 export type Folder = ApiContracts["Folder"];
 
 export type CounterValue = ApiContracts["CounterValue"];
+
+export type CardSection = ApiContracts["CardSection"];
 
 export type ProjectPatch = ApiContracts["ProjectPatch"];
 

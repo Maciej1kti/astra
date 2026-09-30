@@ -176,8 +176,8 @@ await runBrowserSuite(
         .getByRole("button", { name: "Customize card layout", exact: true })
         .click();
       await dialog
-        .getByRole("button", { name: "Move Counters up", exact: true })
-        .click();
+        .getByRole("button", { name: "Reorder Counters", exact: true })
+        .press("ArrowUp");
       await dialog
         .getByRole("button", { name: "Done arranging sections", exact: true })
         .click();

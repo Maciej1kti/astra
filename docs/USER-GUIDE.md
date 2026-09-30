@@ -55,10 +55,17 @@ can focus it and press Enter or Space. Leaving the field returns to the formatte
 view. Embedded HTML is escaped and remote images are not loaded.
 
 Cards have six freely reorderable sections: Description, Checklist, Counters,
-Comments, Schedule and Labels. The layout menu in the header changes their order
-in one responsive column and can reset it. This preference is local to the browser;
-reordering sections does not modify the card. On phones the editor fills the
-viewport with a persistent header; on larger screens it is a centered dialog.
+Comments, Schedule and Labels. Open Card layout in the header and drag a six-dot
+handle to arrange them in one column. A focused handle also supports the arrow
+keys, Home and End; Escape cancels a drag. Order is local to this browser.
+
+The eye beside each section shows or hides it for this particular card on every
+device. Hiding keeps its data and unfinished entries. Visibility saves with the
+card and follows the same save/conflict handling as other edits. The layout menu
+always keeps all six sections available, even when every section is hidden.
+Reset layout restores the default browser order and shows all sections on the card.
+On phones the editor fills the viewport with a persistent header; on larger screens
+it is a centered dialog.
 
 ### Checklists and labels
 

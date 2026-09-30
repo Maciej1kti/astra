@@ -25,6 +25,14 @@ wire_enum!(CardStatus {
     Cancelled
 });
 wire_enum!(Priority { Normal, High });
+wire_enum!(CardSection {
+    Description,
+    Checklist,
+    Counters,
+    Comments,
+    Schedule,
+    Labels
+});
 wire_enum!(MilestoneStatus {
     Planned,
     Active,
@@ -131,6 +139,8 @@ pub struct ProjectMetadata {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CardMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hidden_sections: Option<Vec<CardSection>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub counters: Option<Vec<CardCounter>>,
     #[serde(skip_serializing_if = "Option::is_none")]

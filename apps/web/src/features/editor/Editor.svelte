@@ -96,6 +96,12 @@
   let tagCatalogError = $state("");
   let commentFlushing = $state(false);
   let cardLayout = $state(readCardLayout());
+  const visibleCardSections = $derived(
+    cardLayout.filter(
+      (section) =>
+        draft.type !== "card" || !draft.fields.hiddenSections.includes(section),
+    ),
+  );
 
   let projectName = $state("");
   let statusMessage = $state("");
@@ -1118,7 +1124,12 @@
       {/snippet}
       {#snippet actions()}
         {#if draft.type === "card"}
-          <CardLayoutMenu bind:layout={cardLayout} disabled={locked} />
+          <CardLayoutMenu
+            bind:layout={cardLayout}
+            bind:hidden={draft.fields.hiddenSections}
+            disabled={locked}
+            visibilityDisabled={!!conflict}
+          />
         {/if}
         {#if draft.type === "card" && resource}
           <ActionMenu label="Card actions" disabled={locked}>
@@ -1215,68 +1226,78 @@
         />{:else if draft.type === "card"}
         <div class="card-body-grid">
           {#each cardLayout as section (section)}
+            {@const visibleIndex = visibleCardSections.indexOf(section)}
             <div
               class="card-section"
+              class:card-section-hidden={visibleIndex === -1}
+              class:card-section-following={visibleIndex > 0}
+              class:after-counters={visibleCardSections[visibleIndex - 1] ===
+                "counters"}
+              aria-hidden={visibleIndex === -1}
+              inert={visibleIndex === -1}
               data-card-section={section}
+              data-card-visible={visibleIndex !== -1}
               animate:layoutMotion
             >
-              {#if section === "description"}
-                <ResourceDescription
-                  type="card"
-                  bind:body={draft.common.body}
-                  bind:editing={descriptionEditing}
-                  disabled={locked}
-                  closeButton={descriptionCloseButton}
-                  onfinish={finishTextEdit}
-                />
-              {:else if section === "checklist"}
-                <AcceptanceChecklist
-                  bind:items={draft.fields.acceptance}
-                  bind:draft={draft.fields.acceptanceDraft}
-                  bind:error={acceptanceError}
-                  messagesInHeader
-                  disabled={locked}
-                />
-              {:else if section === "counters"}
-                <CardCounters
-                  counters={resource?.type === "card"
-                    ? (resource.metadata.counters ?? [])
-                    : []}
-                  bind:draft={draft.fields.counterDrafts}
-                  timezone={workspaceTimezone}
-                  disabled={locked || !!conflict}
-                  saved={!!resource}
-                  onsubmit={saveCounter}
-                />
-              {:else if section === "comments"}
-                <CardComments
-                  comments={resource?.type === "card"
-                    ? (resource.metadata.comments ?? [])
-                    : []}
-                  bind:body={draft.fields.commentDraft}
-                  disabled={locked || !!conflict}
-                  saved={!!resource}
-                  onadd={addComment}
-                />
-              {:else if section === "schedule"}
-                <CardPlanningFields
-                  {weekStart}
-                  bind:fields={draft.fields}
-                  {locked}
-                  timezone={workspaceTimezone}
-                  initiallyExpanded={!target.resource}
-                />
-              {:else if section === "labels"}
-                <TagPicker
-                  {project}
-                  bind:labels={draft.fields.labels}
-                  bind:draft={draft.fields.tagDraft}
-                  bind:error={tagError}
-                  bind:catalogError={tagCatalogError}
-                  messagesInHeader
-                  disabled={locked}
-                />
-              {/if}
+              <div class="card-section-content">
+                {#if section === "description"}
+                  <ResourceDescription
+                    type="card"
+                    bind:body={draft.common.body}
+                    bind:editing={descriptionEditing}
+                    disabled={locked}
+                    closeButton={descriptionCloseButton}
+                    onfinish={finishTextEdit}
+                  />
+                {:else if section === "checklist"}
+                  <AcceptanceChecklist
+                    bind:items={draft.fields.acceptance}
+                    bind:draft={draft.fields.acceptanceDraft}
+                    bind:error={acceptanceError}
+                    messagesInHeader
+                    disabled={locked}
+                  />
+                {:else if section === "counters"}
+                  <CardCounters
+                    counters={resource?.type === "card"
+                      ? (resource.metadata.counters ?? [])
+                      : []}
+                    bind:draft={draft.fields.counterDrafts}
+                    timezone={workspaceTimezone}
+                    disabled={locked || !!conflict}
+                    saved={!!resource}
+                    onsubmit={saveCounter}
+                  />
+                {:else if section === "comments"}
+                  <CardComments
+                    comments={resource?.type === "card"
+                      ? (resource.metadata.comments ?? [])
+                      : []}
+                    bind:body={draft.fields.commentDraft}
+                    disabled={locked || !!conflict}
+                    saved={!!resource}
+                    onadd={addComment}
+                  />
+                {:else if section === "schedule"}
+                  <CardPlanningFields
+                    {weekStart}
+                    bind:fields={draft.fields}
+                    {locked}
+                    timezone={workspaceTimezone}
+                    initiallyExpanded={!target.resource}
+                  />
+                {:else if section === "labels"}
+                  <TagPicker
+                    {project}
+                    bind:labels={draft.fields.labels}
+                    bind:draft={draft.fields.tagDraft}
+                    bind:error={tagError}
+                    bind:catalogError={tagCatalogError}
+                    messagesInHeader
+                    disabled={locked}
+                  />
+                {/if}
+              </div>
             </div>
           {/each}
         </div>

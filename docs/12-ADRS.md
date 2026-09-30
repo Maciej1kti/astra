@@ -341,3 +341,6 @@ described in [ADR-053](ADR-053-FOCUS-DAILY-COUNTER-PREVIEWS.md).
 
 Reviewed calendar rendering optimizations are described in
 [ADR-054](ADR-054-CALENDAR-RENDERING.md).
+
+Per-card section visibility across devices and browser-local handle ordering are
+described in [ADR-056](ADR-056-CARD-SECTION-VISIBILITY.md).

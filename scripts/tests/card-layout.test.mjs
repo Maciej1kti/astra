@@ -5,7 +5,19 @@ import {
   readCardLayout,
   writeCardLayout,
   moveCardSection,
+  moveCardSectionTo,
 } from "../../apps/web/src/features/editor/card-layout.ts";
+
+test("a drag can move any section directly while retaining every other section's order", () => {
+  const initial = defaultCardLayout();
+  const last = initial.at(-1);
+  const moved = moveCardSectionTo(initial, last, 0);
+  assert.deepEqual(moved, [last, ...initial.slice(0, -1)]);
+  assert.deepEqual(moveCardSectionTo(moved, last, 5), initial);
+  for (const index of [-1, 6, NaN, 1.5])
+    assert.deepEqual(moveCardSectionTo(initial, last, index), initial);
+  assert.deepEqual(initial, defaultCardLayout());
+});
 
 test("layout preferences retain only known unique sections and fill missing sections", () => {
   const result = readCardLayout({

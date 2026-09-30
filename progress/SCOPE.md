@@ -229,3 +229,11 @@ and label-entry helper sentences. Place the comment composer before history,
 remove visible author controls and redundant comment/helper labels, and default
 browser comments to human/Owner. Existing history and CLI/API author options stay
 intact; this changes presentation and browser defaults, not the source contract.
+
+## Card section visibility — owner direction, 2026-09-30
+
+Replace Card layout up/down buttons with six-dot drag handles. Add an eye toggle
+for each section; the owner confirmed that visibility belongs to the specific
+card across all devices. Hiding a section preserves its content. Existing
+browser-local section order remains separate. See
+[ADR-056](../docs/ADR-056-CARD-SECTION-VISIBILITY.md).

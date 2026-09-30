@@ -9,6 +9,40 @@ fn read(path: &str) -> Value {
 fn card() -> Value {
     read("examples/card-22222222-2222-4222-8222-222222222222.json")
 }
+
+#[test]
+fn card_section_visibility_is_optional_bounded_and_lossless() {
+    let original = card();
+    let mut value = original.clone();
+    for hidden in [
+        json!([]),
+        json!(["schedule", "labels"]),
+        json!([
+            "description",
+            "checklist",
+            "counters",
+            "comments",
+            "schedule",
+            "labels"
+        ]),
+    ] {
+        value["metadata"]["hidden_sections"] = hidden;
+        let decoded = validate_document(value.clone()).unwrap();
+        assert_eq!(serde_json::to_value(decoded.get()).unwrap(), value);
+        assert_eq!(value["body"], original["body"]);
+    }
+    for invalid in [
+        json!(["unknown"]),
+        json!(["description", "description"]),
+        json!(vec!["schedule"; 7]),
+        json!([null]),
+        json!(null),
+        json!("schedule"),
+    ] {
+        value["metadata"]["hidden_sections"] = invalid;
+        assert!(validate_document(value.clone()).is_err());
+    }
+}
 fn milestone() -> Value {
     read("examples/milestone.json")
 }

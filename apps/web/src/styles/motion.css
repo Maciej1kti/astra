@@ -53,6 +53,16 @@
       grid-template-rows var(--motion-enter) var(--motion-ease),
       visibility 0s var(--motion-enter);
   }
+  .card-section {
+    transition:
+      grid-template-rows var(--motion-enter) var(--motion-ease),
+      margin-top var(--motion-enter) var(--motion-ease),
+      padding-top var(--motion-enter) var(--motion-ease),
+      visibility 0s;
+  }
+  .card-section-hidden {
+    transition-delay: 0s, 0s, 0s, var(--motion-enter);
+  }
   .schedule-disclosure.expanded {
     transition-delay: 0s;
   }

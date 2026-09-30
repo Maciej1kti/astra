@@ -90,6 +90,10 @@ closed field set.
 Use `clear` for an optional retained card field, for example
 `{"clear":["schedule"]}` in a versioned patch. Card deadline/review dates,
 milestone links, dependencies and blocked reasons are not supported.
+Card `hidden_sections` controls editor visibility across devices. For example,
+`{"set":{"hidden_sections":["schedule","labels"]}}` hides those sections while
+retaining their content; `{"clear":["hidden_sections"]}` shows all sections.
+See [section visibility](docs/ADR-056-CARD-SECTION-VISIBILITY.md).
 Projects support `name`, `state`, optional `folder` and Markdown `body` edits; project
 `phase`, `review_on` and `x-*` fields are rejected by the shared server rules.
 

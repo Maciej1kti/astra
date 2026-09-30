@@ -10,6 +10,7 @@
     text,
     align = "end",
     placement = "bottom",
+    floating = false,
     children,
   }: {
     label?: string;
@@ -18,6 +19,7 @@
     text?: string;
     align?: "start" | "end";
     placement?: "bottom" | "auto";
+    floating?: boolean;
     children: Snippet<[close: () => void]>;
   } = $props();
   let open = $state(false);
@@ -27,6 +29,8 @@
   let above = $state(false);
   let sideTop = $state<number>();
   let availableHeight = $state<number>();
+  let floatingTop = $state(0);
+  let floatingLeft = $state(0);
   let pointerInside = false;
   const id = $props.id();
   function close() {
@@ -35,6 +39,36 @@
   }
   $effect(() => {
     if (disabled) open = false;
+  });
+  $effect(() => {
+    if (!open || !floating || !panel) return;
+    const popover = panel;
+    popover.showPopover();
+    const position = () => {
+      const bounds = trigger.getBoundingClientRect();
+      const rect = popover.getBoundingClientRect();
+      const edge = 12;
+      floatingLeft = Math.max(
+        edge,
+        Math.min(
+          bounds.right - rect.width,
+          window.innerWidth - rect.width - edge,
+        ),
+      );
+      floatingTop = Math.max(
+        edge,
+        Math.min(bounds.bottom + 8, window.innerHeight - rect.height - edge),
+      );
+    };
+    position();
+    const resize = new ResizeObserver(position);
+    resize.observe(popover);
+    window.addEventListener("resize", position);
+    return () => {
+      resize.disconnect();
+      window.removeEventListener("resize", position);
+      if (popover.matches(":popover-open")) popover.hidePopover();
+    };
   });
   $effect(() => {
     if (!open || placement !== "auto" || !panel) return;
@@ -129,12 +163,17 @@
   {#if open}<div
       bind:this={panel}
       class="action-menu-panel"
+      class:floating
+      popover={floating ? "manual" : undefined}
       class:above={placement === "auto" && above}
       class:beside={placement === "auto" && sideTop !== undefined}
       class:bounded={placement === "auto"}
-      style:top={placement === "auto" && sideTop !== undefined
-        ? `${sideTop}px`
-        : undefined}
+      style:left={floating ? `${floatingLeft}px` : undefined}
+      style:top={floating
+        ? `${floatingTop}px`
+        : placement === "auto" && sideTop !== undefined
+          ? `${sideTop}px`
+          : undefined}
       style:max-height={placement === "auto" && availableHeight !== undefined
         ? `${availableHeight}px`
         : undefined}
@@ -145,6 +184,12 @@
 </div>
 
 <style>
+  .action-menu-panel.floating {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    animation-name: astra-fade;
+  }
   .action-menu-panel.above {
     top: auto;
     bottom: calc(100% + var(--space-2));

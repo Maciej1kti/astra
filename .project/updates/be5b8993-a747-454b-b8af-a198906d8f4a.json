@@ -1,0 +1,18 @@
+{
+  "body": "Card layout now has six-dot drag handles and per-card eye controls. Section visibility is stored on the card and loads on every device; hiding retains content and unfinished entries. Browser-local section order remains separate.\n\nThe final full gate passes 257 Rust, 139 JavaScript and 12 Python tests. Six Chromium and four WebKit suites plus broad HTTPS/planning checks pass, including touch cancellation, narrow-screen layouts, shared visibility, hidden draft retention and all-hidden recovery.\n\nThe rebuilt manual app is available at the existing HTTPS address. Restart preserves all 49 prior resource versions, two pins, preferences and certificate; all 33 served build files match. Evidence: progress/2026-09-30-card-layout-controls.md. Physical-device and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "be5b8993-a747-454b-b8af-a198906d8f4a",
+    "kind": "result",
+    "recorded_at": "2026-09-30T15:50:44.563Z",
+    "summary": "Card layout drag handles and shared section visibility verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

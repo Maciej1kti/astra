@@ -5364,9 +5364,32 @@
         ],
         "additionalProperties": false
       },
+      "CardSection": {
+        "type": "string",
+        "enum": [
+          "description",
+          "checklist",
+          "counters",
+          "comments",
+          "schedule",
+          "labels"
+        ]
+      },
+      "CardHiddenSections": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/CardSection"
+        },
+        "maxItems": 6,
+        "uniqueItems": true,
+        "description": "Sections hidden in this card's editor on every device. Omitted or empty shows all sections; content is retained."
+      },
       "CardMetadata": {
         "type": "object",
         "properties": {
+          "hidden_sections": {
+            "$ref": "#/components/schemas/CardHiddenSections"
+          },
           "counters": {
             "$ref": "#/components/schemas/CardCounters"
           },
@@ -6152,6 +6175,9 @@
                   "acceptance": {
                     "$ref": "#/components/schemas/Acceptance"
                   },
+                  "hidden_sections": {
+                    "$ref": "#/components/schemas/CardHiddenSections"
+                  },
                   "labels": {
                     "type": "array",
                     "items": {
@@ -6180,7 +6206,8 @@
                     "event",
                     "schedule",
                     "labels",
-                    "acceptance"
+                    "acceptance",
+                    "hidden_sections"
                   ]
                 },
                 "maxItems": 20,
@@ -6221,6 +6248,9 @@
       "CardCreate": {
         "type": "object",
         "properties": {
+          "hidden_sections": {
+            "$ref": "#/components/schemas/CardHiddenSections"
+          },
           "event": {
             "$ref": "#/components/schemas/TimedEvent"
           },

@@ -1,3 +1,6 @@
+import type { CardSection } from "../../lib/contracts/api.generated";
+export type { CardSection };
+
 export const cardSections = {
   description: "Description",
   checklist: "Checklist",
@@ -5,8 +8,7 @@ export const cardSections = {
   comments: "Comments",
   schedule: "Schedule",
   labels: "Labels",
-} as const;
-export type CardSection = keyof typeof cardSections;
+} as const satisfies Record<CardSection, string>;
 export type CardLayout = CardSection[];
 const defaults: CardLayout = [
   "description",
@@ -80,8 +82,24 @@ export function moveCardSection(
 ): CardLayout {
   const result = normalize(layout);
   const index = result.indexOf(section);
-  const next = index + direction;
-  if (index >= 0 && next >= 0 && next < result.length)
-    [result[index], result[next]] = [result[next], result[index]];
+  return moveCardSectionTo(result, section, index + direction);
+}
+
+export function moveCardSectionTo(
+  layout: CardLayout,
+  section: CardSection,
+  destination: number,
+): CardLayout {
+  const result = normalize(layout);
+  const index = result.indexOf(section);
+  if (
+    index >= 0 &&
+    Number.isInteger(destination) &&
+    destination >= 0 &&
+    destination < result.length
+  ) {
+    result.splice(index, 1);
+    result.splice(destination, 0, section);
+  }
   return result;
 }

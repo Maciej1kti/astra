@@ -4,7 +4,35 @@ import {
   createEditorDraft,
   draftSnapshot,
   editorPayload,
+  autosaveSnapshot,
+  discreteAutosaveChange,
 } from "../../apps/web/src/features/editor/editor-draft.ts";
+
+test("card visibility is a persisted edit that preserves content and clears explicitly", () => {
+  const source = card({ hidden_sections: ["schedule"] });
+  const draft = createEditorDraft(editTarget("p", source));
+  const before = autosaveSnapshot(draft);
+  draft.fields.hiddenSections.push("description");
+  assert.deepEqual(source.metadata.hidden_sections, ["schedule"]);
+  assert.equal(discreteAutosaveChange(before, autosaveSnapshot(draft)), true);
+  assert.deepEqual(editorPayload(draft).set.hidden_sections, [
+    "schedule",
+    "description",
+  ]);
+  assert.equal(editorPayload(draft).set.body, source.body);
+  draft.fields.hiddenSections = [];
+  assert.deepEqual(editorPayload(draft).clear, ["hidden_sections"]);
+  assert.equal(editorPayload(draft).set.hidden_sections, undefined);
+  const created = createEditorDraft(
+    createTarget("p", "card", { hidden_sections: ["comments"] }),
+  );
+  assert.deepEqual(editorPayload(created).hidden_sections, ["comments"]);
+  assert.equal(
+    editorPayload(createEditorDraft(editTarget("p", card()))).set
+      .hidden_sections,
+    undefined,
+  );
+});
 import {
   editTarget,
   createTarget,
