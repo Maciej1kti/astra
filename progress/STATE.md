@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Attention eligibility iteration](2026-09-30-attention-filters.md) avoids
+expensive checks for rows outside each union branch. On the required release
+dataset, ordinary Attention p95 improves from 86 to 33 ms; full Focus Attention
+with 50k unread reports still costs 85 ms. An archival-set prototype regresses
+that path and is reverted. The full gate passes 255 Rust, 137 JavaScript and 12
+Python tests; four affected Chromium/WebKit suites, broad HTTPS and the combined
+counter/card/Focus checks pass. Manual publication and full acceptance remain open.
+
 The [empty counter action](2026-09-30-empty-counter-action.md) exposes Add counter
 directly when no counters exist, right-aligned in the same 44px action row. Existing
 and archived-only counters retain the menu. The full gate passes 255 Rust, 137
