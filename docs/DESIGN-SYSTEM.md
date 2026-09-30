@@ -159,8 +159,11 @@ Both respect the current reduced-motion preference, including changes while open
 
 At phone widths up to 520px, the card dialog fills the viewport and accounts for
 safe areas, retaining its persistent header and independently scrolling body.
-Other editor dialogs retain their existing centered presentation. Compact shared
-headings, spacing and dividers give all card sections the same hierarchy.
+Other editor dialogs retain their existing centered presentation. Card section
+names and heading counts remain available to assistive technology without visible
+heading rows. Shared `SectionHeading` keeps action-only rows aligned right;
+spacing and dividers separate the self-describing content. Section names remain
+visible in the layout menu. Schedule keeps its relative summary when expanded.
 Checklist remains a peer section without an enclosing inset panel; each item
 retains its separate checkbox, text, remove control and drag handle.
 
@@ -176,6 +179,9 @@ Counters share a compact divided list. Each row contains its name, a fourteen-da
 bar preview, a value with its unit, and a quiet configuration icon. Desktop places
 the preview beside the value; phones place it below the name. The repeated date
 and timezone line is omitted. Only a draft for a different day exposes its date.
+Add counter stays on the right above the list. The Archived toggle uses the same
+right edge below it and exposes its pressed state. There is no visible gesture
+helper; value controls retain their accessible gesture/keyboard instructions.
 
 The value uses the pinned counter's horizontal scrub gesture and keyboard steps.
 Vertical touch movement scrolls the modal. Tap opens numeric entry in the same

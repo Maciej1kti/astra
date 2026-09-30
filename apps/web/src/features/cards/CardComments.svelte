@@ -22,7 +22,12 @@
 </script>
 
 <section class="card-comments" aria-label="Card comments">
-  <SectionHeading title="Comments" level={3} count={comments.length} />
+  <SectionHeading
+    title="Comments"
+    level={3}
+    count={comments.length}
+    visuallyHidden
+  />
   <div class="comment-composer">
     <textarea
       aria-label="Write a comment"

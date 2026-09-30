@@ -61,8 +61,7 @@
       <span
         id={`${id}-summary`}
         class="schedule-summary"
-        class:overdue={summary.overdue}
-        >{expanded ? "Schedule" : summary.text}</span
+        class:overdue={summary.overdue}>{summary.text}</span
       >
       {#if !expanded && summary.detail}<span
           id={`${id}-detail`}

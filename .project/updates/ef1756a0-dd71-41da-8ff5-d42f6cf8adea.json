@@ -1,0 +1,18 @@
+{
+  "body": "The card modal now omits visible section names and heading counts while retaining accessible headings and layout-menu labels. Add counter remains right-aligned; the visible gesture helper is removed. Archived is a short right-aligned toggle with an exposed pressed state. Schedule keeps its relative summary when expanded. Existing editing and counter behavior are preserved.\n\nFull gate: 251 Rust, 137 JavaScript and 12 Python tests pass, plus six release Chromium and four WebKit suites. Visual/geometry checks cover 320–1440px, tablet, landscape, both themes and the archive toggle. Rebuilt/restarted the existing manual app: trusted HTTPS at https://100.122.250.14:47832 serves 33 matching build assets; all 35 prior resource versions, two pins, preferences and certificate are preserved.\n\nEvidence: progress/2026-09-30-minimal-card-sections.md. Physical-device and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "ef1756a0-dd71-41da-8ff5-d42f6cf8adea",
+    "kind": "result",
+    "recorded_at": "2026-09-30T12:31:34.514Z",
+    "summary": "Minimize card section headings and counter actions",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

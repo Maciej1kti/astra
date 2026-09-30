@@ -210,6 +210,7 @@
     <SectionHeading
       title="Labels"
       level={3}
+      visuallyHidden
       count={`${labels.length}/${TAG_LIMIT}`}
     />
     <label class="sr-only" for={`${id}-input`}>Labels</label>

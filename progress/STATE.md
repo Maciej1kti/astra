@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [minimal card sections](2026-09-30-minimal-card-sections.md) remove visible
+section headings and the counter gesture helper, retaining accessible names.
+Add counter and the compact Archived toggle align right. The full gate passes
+251 Rust, 137 JavaScript and 12 Python tests; six Chromium and four WebKit suites
+pass. The rebuilt manual app preserves 35 prior resources, pins, preferences and
+certificate, with all HTTPS assets verified. Physical-device acceptance remains open.
+
 The [calendar refresh iteration](2026-09-30-calendar-refresh.md) retains displayed
 event identities after identical ordinary reads. At 1,000 cards, no-change
 refresh improves from 155 to 37 ms locally and from 879 to 352 ms under the

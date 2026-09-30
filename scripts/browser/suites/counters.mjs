@@ -246,7 +246,7 @@ await runBrowserSuite(
         .click();
       await expect(row("Push-ups")).toHaveCount(0);
       await section
-        .getByRole("button", { name: "Show archived counters", exact: true })
+        .getByRole("button", { name: "Archived", exact: true })
         .click();
       await expect(row("Push-ups")).toContainText("Hidden");
       await row("Push-ups")

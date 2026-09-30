@@ -6,6 +6,7 @@
     count,
     countLabel,
     level = 2,
+    visuallyHidden = false,
     actions,
   }: {
     title: string;
@@ -13,13 +14,26 @@
     count?: string | number;
     countLabel?: string;
     level?: 2 | 3;
+    visuallyHidden?: boolean;
     actions?: Snippet;
   } = $props();
 </script>
 
-<div class="sectiontitle" class:sectiontitle-compact={level === 3}>
-  {#if level === 3}<h3 {id}>{title}</h3>{:else}<h2 {id}>{title}</h2>{/if}
-  {#if count !== undefined}<span aria-label={countLabel}>{count}</span>{/if}
+<div
+  class="sectiontitle"
+  class:sectiontitle-compact={level === 3}
+  class:sr={visuallyHidden && !actions}
+>
+  {#if level === 3}<h3 {id} class:sr={visuallyHidden}>{title}</h3>{:else}<h2
+      {id}
+      class:sr={visuallyHidden}
+    >
+      {title}
+    </h2>{/if}
+  {#if count !== undefined}<span
+      class:sr={visuallyHidden}
+      aria-label={countLabel}>{count}</span
+    >{/if}
   {#if actions}<div class="sectiontitle-actions">{@render actions()}</div>{/if}
 </div>
 

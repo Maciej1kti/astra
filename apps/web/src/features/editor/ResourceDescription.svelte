@@ -73,12 +73,15 @@
   aria-label={`${resourceLabel(type)} description`}
 >
   {#if type === "card"}
-    <SectionHeading title="Description" level={3}>
-      {#snippet actions()}
-        {#if editing}<span class="description-format">Markdown supported</span
-          >{/if}
-      {/snippet}
-    </SectionHeading>
+    {#snippet formatHint()}
+      <span class="description-format">Markdown supported</span>
+    {/snippet}
+    <SectionHeading
+      title="Description"
+      level={3}
+      visuallyHidden
+      actions={editing ? formatHint : undefined}
+    />
   {:else}<div class="field-label">
       Description
       {#if editing}<span>Markdown supported</span>{/if}

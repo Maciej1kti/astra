@@ -70,7 +70,7 @@
   aria-label="Card counters"
   data-counter-today={today}
 >
-  <SectionHeading title="Counters" level={3}>
+  <SectionHeading title="Counters" level={3} visuallyHidden>
     {#snippet actions()}<Button
         type="button"
         variant="quiet"
@@ -170,20 +170,19 @@
         />
       {/each}
     </div>
-    {#if visible.some((counter) => !counter.archived)}
-      <p class="counter-help">Swipe a value left or right · Tap to type</p>
-    {/if}
   {/if}
-  {#if counters.some((c) => c.archived)}<button
-      type="button"
-      class="quiet"
-      onclick={() => {
-        showArchived = !showArchived;
-      }}
-      >{showArchived
-        ? "Hide archived counters"
-        : "Show archived counters"}</button
-    >{/if}
+  {#if counters.some((c) => c.archived)}
+    <div class="counter-archive-actions">
+      <Button
+        type="button"
+        variant="quiet"
+        aria-pressed={showArchived}
+        onclick={() => {
+          showArchived = !showArchived;
+        }}>Archived</Button
+      >
+    </div>
+  {/if}
   {#if counters.length >= 20}<p class="field-hint">
       This card has reached its 20-counter limit.
     </p>{/if}
@@ -197,10 +196,13 @@
     border: var(--stroke) solid var(--line);
     border-radius: var(--radius-control);
   }
-  .counter-help {
+  .counter-archive-actions {
+    display: flex;
+    justify-content: flex-end;
     margin: var(--space-4) 0 0;
-    color: var(--muted);
-    font-size: var(--text-sm);
+  }
+  .counter-archive-actions :global(button[aria-pressed="true"]) {
+    background: var(--soft);
   }
   .counter-configuration {
     background: var(--soft);

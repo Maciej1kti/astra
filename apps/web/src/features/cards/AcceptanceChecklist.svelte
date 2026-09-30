@@ -354,6 +354,7 @@
   <SectionHeading
     title="Checklist"
     level={3}
+    visuallyHidden
     count={`${items.filter((item) => item.completed).length} / ${items.length}`}
     countLabel={`${items.filter((item) => item.completed).length} of ${items.length} checklist items completed`}
   />
