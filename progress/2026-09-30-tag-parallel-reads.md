@@ -68,8 +68,13 @@ case adds 80 external source cards, refreshes usage from 80 to 79 after an edit
 and checks the exact current version/title in a rename preview. Project isolation,
 archived merges, stale-plan rejection, retained drafts and narrow editor controls
 remain covered. The final Chromium preview is visually inspected; WebKit keeps
-behavioral results without injecting screenshot styles. Manual publication is
-pending at this implementation checkpoint.
+behavioral results without injecting screenshot styles. The original embedded
+frontend and release daemon are rebuilt; the existing manual launcher is
+restarted with its data and connection settings. All 55 prior source versions,
+two pins, preferences and certificate are preserved. Trusted HTTPS remains
+`https://100.122.250.14:47832`, and all 33 served build assets match the original
+build. The normal CLI appends and reads back project report
+`6f4db3da-a744-43a8-9dbd-049c91bb2577` with its committed source version.
 
 Ignored evidence: `test-results/tag-parallel-2026-09-30/` contains control/initial/
 final JSON sample arrays, process timing, focused/full checks, browser results,

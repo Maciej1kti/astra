@@ -1,0 +1,18 @@
+{
+  "body": "Release source-current catalogs on 100 projects / 10k cards / 50k reports improve from 867.2 to 423.1 ms median globally (20 samples each), and from 10.27 to 4.58 ms in the 100-card project (200 samples each). A matched 1,000-card project improves from 75.46 to 33.81 ms median and 77.80 to 34.24 ms p95, with a 51.24 ms maximum. Bounded workers retain sorted results, current source versions, individual validation and partial issues. Invalid names still consume the 50,000-file budget; no cache, protocol or durable-write exception is added.\n\nThe full gate passes 265 Rust, 139 JavaScript and 12 Python tests. Tags/editor pass in Chromium and WebKit, including the larger real-HTTP catalog, fresh external versions and stale-plan rejection. The original manual app is rebuilt/restarted; all 55 prior source versions, two pins, preferences and certificate are preserved, and trusted HTTPS plus all 33 served assets are verified. Evidence: progress/2026-09-30-tag-parallel-reads.md.\n\nSource-size/concurrency profiles, dense Calendar, further history distributions and write pauses remain open. Engine timings exclude transport/browser costs and do not establish physical-device or full release acceptance.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "6f4db3da-a744-43a8-9dbd-049c91bb2577",
+    "kind": "result",
+    "recorded_at": "2026-09-30T19:55:24.281Z",
+    "summary": "Verified bounded ordered source reads halve tag catalog latency.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
