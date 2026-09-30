@@ -1,5 +1,10 @@
 # 14. Źródła techniczne
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 Sprawdzone na potrzeby pakietu 5 września 2026 r. To dokumentacja pierwotna. Potwierdza właściwości technologii/protokołów, nie nasze cele wydajności ani implementację. Wartości limitów, timeouts, zakres v1 i architektura są decyzjami projektowymi. Wersje bibliotek Astra przypina ponownie przy rozpoczęciu builda; strony „latest” mogą się zmienić.
 
 | ID | Dokumentacja | Zastosowanie |

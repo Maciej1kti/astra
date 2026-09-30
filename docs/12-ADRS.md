@@ -1,5 +1,10 @@
 # 12. Rejestr decyzji architektonicznych (baseline)
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 ## ADR-001 — pliki źródłowe
 
 **Decyzja:** stan projektów w `.project`, nie wyłącznie DB. **Powód:** jawność, dostęp agenta i niezależność od uruchomionej aplikacji. **Koszt:** kontrolowany parser, konflikty i protokół trwałości. **Odrzucono:** dwie równorzędne kopie Markdown/SQLite. Indeks jest odtwarzalny.

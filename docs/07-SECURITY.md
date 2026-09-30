@@ -1,5 +1,10 @@
 # 07. Prywatna sieć i model bezpieczeństwa
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 ## Zakres zagrożeń
 
 Chronimy przed przypadkowym wystawieniem danych, niezaufaną stroną w przeglądarce, złośliwą treścią Markdown, nieuprawnionym klientem w prywatnej sieci, błędną ścieżką, wyciekiem cookie i retry po restore. Nie izolujemy użytkownika/agentów posiadających ten sam UID i pełny dostęp do dysku, przejętej przeglądarki lub skradzionego odblokowanego urządzenia z aktywną sesją.

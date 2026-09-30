@@ -1,5 +1,10 @@
 # 04. Trwały zapis, konflikty i odzyskiwanie
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 Current clarification: [ADR-050](ADR-050-READ-RECOVERY-AND-CONFIRMATION.md)
 separates conditional source versions from enriched representation validators.
 Report reads with mutable receipts and projected Focus membership have no strong

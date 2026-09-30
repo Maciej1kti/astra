@@ -1,5 +1,9 @@
 # Astra — raport zbiorczych napraw po audycie
 
+> Historical report for its dated revision, retained in its original language.
+> Use the [current documentation](docs/README.md), [roadmap](ROADMAP.md) and
+> [implementation evidence](progress/STATE.md) for present-day guidance.
+
 Pakiet napraw jest zaimplementowany i sprawdzony na wersji release, z prawdziwym serwerem aplikacji, plikami projektów oraz danymi syntetycznymi. Najpierw powstały zmiany w całej aplikacji, następnie wykonano testy integracyjne i przegląd wizualny.
 
 ## Naprawione usterki

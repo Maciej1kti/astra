@@ -1,5 +1,10 @@
 # Mapa wymagań → testy → zadania
 
+> Historical delivery reference. See the [directory guide](README.md) for its
+> role, the [current roadmap](../ROADMAP.md) for maintained English status, and
+> [scope decisions](../progress/SCOPE.md) for superseding requirements. Original
+> task statuses are not a live assignment queue or current release acceptance.
+
 | Wymaganie | Testy | Zadania |
 |---|---|---|
 | R01 — Dokładny folder i idempotentna rejestracja | A01, A02, A03, A49 | T14, T34, T42 |

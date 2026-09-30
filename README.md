@@ -1,94 +1,130 @@
 # Astra
 
-Astra is a local planner tied to explicitly selected folders. Project content lives in
-JSON under `.project/`; a Rust daemon coordinates conditional, durable
-writes. A Svelte browser interface and a Unix-socket CLI use the same application
-engine. SQLite provides a rebuildable search index and separate operational state
-for sessions, command retries, receipts and history.
+Astra is a self-hosted planner for work that belongs to a folder. Keep cards,
+plans, milestones and progress reports alongside your project, and use the same
+data from a browser or the command line.
 
-The application is under active implementation. See [current status](progress/STATE.md)
-and [verification evidence](progress/EVIDENCE.md) for implemented scope and known
-limitations. Physical iPhone/Safari, Arch/ext4 and physical power-loss acceptance
-are not established. Built-in backup/restore archives and source-format migration
-frameworks are [deferred](progress/SCOPE.md).
+Project content lives in readable JSON files under `.project/`. A Rust daemon
+coordinates durable writes; a Svelte interface provides seven views of that
+content. You select every project folder explicitly.
 
-Features include seven source-backed views, cards and milestones, date planning,
-reports and explicit resolutions, shared focus, full-text search, history and
-conditional undo. The board supports dragging and keyboard ordering. The Gantt
-view connects cards with finish-to-start dependencies and previews their impact
-on the project finish.
-The calendar provides day, week, month and agenda views with movement, resizing
-and keyboard alternatives. Planning widgets are pinned MIT dependencies; see
-[planning implementation and verification](progress/E026-planning-widgets.md).
-Browser access requires pairing; the CLI requires the server's Unix socket. No write command falls back to editing files directly.
+**Status:** working software under active development, with release acceptance
+still open. Users build from source. The project is being prepared for open-source
+collaboration; **the project license has not yet been selected**. See
+[limitations](docs/LIMITATIONS.md) and the [roadmap](ROADMAP.md) before adopting it.
 
-## Start here
+[Build and install](INSTALL.md) · [User guide](docs/USER-GUIDE.md) ·
+[CLI](CLI.md) · [Contribute](CONTRIBUTING.md) · [Documentation](docs/README.md)
 
-- [Run from source](DEVELOPMENT.md) for setup and toolchains.
-- [Try the interface](MANUAL-TESTING.md) for pairing and a guided walkthrough.
-- [Install a built package](ops/PACKAGE.md) for daemon and CLI installation.
-- [Contribute](CONTRIBUTING.md) for code ownership, checks and change conventions.
-- [Documentation](docs/README.md) for architecture, contracts and retained requirements.
+## What you can do
 
-After completing development setup, run `npm run try`. It uses persistent
-synthetic data under ignored `.manual/`. The binaries retain their existing names:
-`projectd` is the daemon and `projectctl` is the command-line client.
+| Area | Available now |
+| --- | --- |
+| Organize projects | Register an exact folder, describe its purpose, choose a folder category, pause or archive it |
+| Manage cards | Status, Normal/High priority, Markdown, labels, checklists, comments and daily counters |
+| Plan dates | Inclusive date ranges or timed events with a start time and duration; independent milestones |
+| Work across views | Focus, Projects, List, Board, Calendar, Timeline and Updates |
+| Record outcomes | Project/milestone reports, explicit corrections and decision resolutions, shared read receipts |
+| Automate | Local CLI with JSON output, bounded project context, conditional writes and command recovery |
+| Inspect and recover | Search, change history, conditional undo, diagnostics, Git observations and maintenance workflows |
 
-## Run and package
+Card and project editors autosave valid changes and preserve drafts when a write
+needs attention. Board ordering, planning gestures and Focus ordering have keyboard
+alternatives. Cards can contain human or bot comments and dated counter totals.
+The [user guide](docs/USER-GUIDE.md) explains the behavior and its boundaries.
 
-Use [development instructions](DEVELOPMENT.md) to build the pinned Rust/Svelte
-workspace. Run all local checks with:
+## How it fits together
 
-```sh
-.venv-check/bin/python scripts/check.py
+```text
+  Desktop / phone browser                     Local tools / agents
+           |                                          |
+     private HTTPS                            projectctl (CLI)
+           |                                          |
+  Your HTTPS reverse proxy                      Unix socket
+           |                                          |
+           +-----------> projectd <-------------------+
+                         Rust daemon
+                              |
+                 shared validation + durable writes
+                              |
+              +---------------+----------------+
+              |                                |
+       Selected project folders          Private host state
+       .project/*.json                   workspace + journal
+       .project/cards/*.json             sessions + history
+       .project/milestones/*.json         rebuildable search index
+       .project/updates/*.json
 ```
 
-Release packages include the daemon, CLI, embedded frontend and a user-service
-configuration generator. See [installation](ops/PACKAGE.md). Runtime use does not
-require Node.js or Docker. The daemon listens on loopback; configure an owner-managed
-private HTTPS proxy before using the browser. The installer does not enable a
-service or change network settings automatically.
+One host owns each registered project. Several paired devices can use that host;
+the application currently has one owner, without team accounts or per-user roles.
+Contributing to Astra as a team is separate from multi-user product functionality.
+See [architecture](docs/ARCHITECTURE.md) for storage, trust boundaries and code layout.
 
-## CLI
+## Build and try it
 
-See the [CLI guide](CLI.md) for named commands, readable text output, stdin input
-and safe retries. `--socket` can be supplied once through `ASTRA_SOCKET`.
-
-Select a registered folder explicitly; parent folders are never searched:
+Install the [prerequisites](INSTALL.md#prerequisites): Node 24.11.0, Rust 1.92.0,
+Python 3.14, a native build toolchain, Git, gzip and OpenSSL. From your clone:
 
 ```sh
-projectctl --socket /absolute/state/projectd.sock --project /absolute/project context
-projectctl --socket /absolute/state/projectd.sock --project /absolute/project card list
-projectctl --project /absolute/project validate --offline
+python3.14 -m venv .venv-check
+.venv-check/bin/python -m pip install -r scripts/requirements-validation.lock
+npm ci
+npm run build
+scripts/cargo-local build --workspace --release --locked
+npm run try
 ```
 
-Normal output is one JSON envelope with `api_version`, `ok`, `data` or `error`, and
-`request_id`. Exit 9 means an operation is still in progress or its result is
-uncertain. Keep the request ID, command epoch, original payload and resource version
-when retrying. Read-only offline validation checks source documents without
-creating project metadata or requiring a running server.
+Open `https://localhost:47832` in your regular browser. The trial uses a local
+self-signed certificate. Request access, then approve the displayed challenge in
+another terminal:
 
-## Contracts and development evidence
+```sh
+npm run pair:try -- "CHALLENGE_FROM_BROWSER"
+```
 
-- [Source schemas](contracts/domain.schema.json), [HTTP API](contracts/openapi.yaml),
-  [CLI output](contracts/cli-output.schema.json) and [local IPC](contracts/local-ipc.json).
-- [Code structure and ownership](docs/CODE-STRUCTURE.md),
-  [architecture decisions](docs/12-ADRS.md), [implementation plan](progress/PLAN.md)
-  and [acceptance scenarios](delivery/ACCEPTANCE.json).
-- Original handoff documents remain temporary implementation references until their
-  outstanding requirements are resolved. They are not a claim of product readiness.
+Return to the browser and connect. The trial keeps its sample project and edits
+in ignored `.manual/`; Ctrl+C stops it. The [installation guide](INSTALL.md) covers
+building your own archive, installing the binaries and running a regular host.
+The [manual walkthrough](MANUAL-TESTING.md) provides a practical verification pass.
 
-All new repository content is English. Fixtures and screenshots contain synthetic
-projects; user project data, credentials, runtime state and local dependencies are
-excluded from version control.
+The binaries are named `projectd` and `projectctl`. Existing package/service names
+use `local-projects`. A normal installed host serves embedded assets and needs no
+Node.js or Docker; the trial launcher uses Node for its local HTTPS proxy.
 
-## Project status and licensing
+## Important boundaries
 
-Astra is being prepared for a supported open-source release. The project license
-will be selected by the owner before that release; no license choice is implied
-by this documentation. See the [release checklist](delivery/RELEASE-CHECKLIST.md)
-for outstanding acceptance and publication decisions.
+- Browser editing needs a running host and a paired session. There is no offline
+  write queue, cloud sync or automatic federation between hosts.
+- Timeline shows recorded schedules and milestones. It has no dependency graph,
+  critical-path forecast or automatic scheduling.
+- Only the search index is disposable. Project sources, workspace configuration
+  and operational state all need to be preserved.
+- Built-in backup archives and source migration tooling are deferred. Use the
+  documented [stopped-server copy and recovery procedure](ops/RECOVERY.md).
+- Physical iPhone/Safari, Arch/ext4, power-loss and complete release acceptance
+  remain open. Automated browser checks are recorded separately.
 
-Projects can have a Folder category such as Work, Home or Hobby. Set it in the
-project editor; Focus shows All folders or one folder across projects. Card tags
-remain independent. Folder categories do not move directories on disk.
+See [limitations and platform coverage](docs/LIMITATIONS.md) for the distinction
+between product boundaries, unfinished work and unverified behavior.
+
+## Find your way around
+
+| I want to… | Read |
+| --- | --- |
+| Build, install, pair or update a host | [Installation](INSTALL.md) and [operations](ops/README.md) |
+| Understand views and everyday workflows | [User guide](docs/USER-GUIDE.md) |
+| Script a change or recover an uncertain command | [CLI guide](CLI.md) |
+| Understand the system and locate code | [Architecture](docs/ARCHITECTURE.md) and [code ownership](docs/CODE-STRUCTURE.md) |
+| Make a contribution and run checks | [Contributing](CONTRIBUTING.md) and [development](DEVELOPMENT.md) |
+| See what is done and what remains | [Roadmap](ROADMAP.md), [current evidence](progress/STATE.md) and [release checklist](delivery/RELEASE-CHECKLIST.md) |
+| Find schemas, decisions or historical requirements | [Documentation index](docs/README.md) |
+| Report a security concern | [Security reporting](SECURITY.md) |
+
+## Licensing and contributions
+
+The owner will select the project license before a supported open-source release.
+Dependency licenses do not select Astra's project license. Generated host archives
+include third-party notices; no supported release or security-support period is
+declared yet. [Contributions](CONTRIBUTING.md), issue reports and documentation
+improvements should describe the affected revision and actual verification.

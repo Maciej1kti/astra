@@ -1,5 +1,10 @@
 # 02. Architektura i moduły
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 ## Jednostka wdrożenia
 
 `projectd` jest programem użytkownika, bez roota, obsługującym HTTP i lokalne IPC. Serwuje statyczny build SPA. `projectctl` jest klientem IPC i narzędziem diagnostycznym. Nie uruchamia ukrytego daemon'a przy każdej komendzie. Node jest narzędziem builda, nie runtime'em wydania.

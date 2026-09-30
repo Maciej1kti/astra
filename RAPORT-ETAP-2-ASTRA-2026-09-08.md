@@ -1,5 +1,9 @@
 # Astra — raport etapu 2, 8 września 2026
 
+> Historical report for its dated revision, retained in its original language.
+> Use the [current documentation](docs/README.md), [roadmap](ROADMAP.md) and
+> [implementation evidence](progress/STATE.md) for present-day guidance.
+
 Wdrożono kolejny pakiet po naprawach interfejsu: rozbudowany model karty i centralne zarządzanie tagami. Zmiany obejmują dane, walidację, API, CLI, wyszukiwanie i interfejs. Testy wykonano na prawdziwym serwerze aplikacji z izolowanymi danymi syntetycznymi.
 
 Commit `1716637` został wypchnięty do `origin/main`. Po pushu lokalny HEAD i `origin/main` wskazują ten sam commit, a repozytorium jest czyste.

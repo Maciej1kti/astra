@@ -1,6 +1,8 @@
 # Code structure and ownership
 
-This describes the maintained implementation. Source formats and HTTP behavior
+Start with [Architecture](ARCHITECTURE.md) for the runtime diagrams, storage model
+and repository map. This page describes the maintained module ownership.
+Source formats and HTTP behavior
 remain governed by [the contracts](../contracts/openapi.yaml) and
 [write/recovery rules](04-WRITES-AND-RECOVERY.md).
 

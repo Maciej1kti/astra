@@ -1,5 +1,10 @@
 # Organizacja pracy agentów
 
+> Historical delivery reference. See the [directory guide](README.md) for its
+> role, the [current roadmap](../ROADMAP.md) for maintained English status, and
+> [scope decisions](../progress/SCOPE.md) for superseding requirements. Original
+> task statuses are not a live assignment queue or current release acceptance.
+
 Role są podziałem odpowiedzialności, nie twierdzeniem, że narzędzie uruchamiania subagentów jest dostępne. Gdy nie ma delegacji, Astra wykonuje role sekwencyjnie.
 
 | Rola | Własność | Szczególna odpowiedzialność |

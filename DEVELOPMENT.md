@@ -1,92 +1,136 @@
 # Development
 
-The application is under active implementation. Read `progress/STATE.md` for
-current coverage and limitations. The temporary handoff remains normative until
-its requirements have been implemented and verified.
+Follow [Build and install](INSTALL.md) for the pinned toolchains and first build.
+Read [Contributing](CONTRIBUTING.md), [architecture](docs/ARCHITECTURE.md),
+[code ownership](docs/CODE-STRUCTURE.md) and the contracts relevant to your change.
+[Current status](progress/STATE.md) records implementation evidence; a local
+check does not establish release acceptance.
 
-## Toolchains
+## Build loop
 
-Use Node 24.11.0 (`.nvmrc`), Rust 1.92.0 (`rust-toolchain.toml`) and Python 3.14.
-The daemon build also uses the system `gzip` executable to precompress static
-assets deterministically; Node remains a build dependency, not a release runtime.
-On this checkout, `scripts/cargo-local` uses the repository-local Rust installation
-under `.tools/`. On a fresh machine, install the pinned Rust toolchain with rustup
-or provide the same local directories. Dependencies are pinned in Cargo.lock,
-package-lock.json and scripts/requirements-validation.lock.
+The root npm workspace owns dependencies for `apps/web`. Use `npm ci` with Node
+24.11.0, Rust 1.92.0 from `rust-toolchain.toml` and a Python 3.14 `.venv-check`
+installed from `scripts/requirements-validation.lock`.
 
 ```sh
-python3 -m venv .venv-check
-.venv-check/bin/pip install -r scripts/requirements-validation.lock
-npm ci
+npm run build
+scripts/cargo-local build --workspace --release --locked
+npm run try
+```
+
+`projectd` embeds the built frontend, so rebuild it after frontend changes.
+`npm run try` uses the release binaries and persistent ignored `.manual/` data.
+A debug-only Rust build is insufficient for that launcher. Use the
+[manual guide](MANUAL-TESTING.md) for pairing and walkthroughs.
+
+For a debug build, keep the same frontend-first order:
+
+```sh
 npm run build
 scripts/cargo-local build --workspace --locked
+```
+
+Run `target/debug/projectd` with an explicit data directory and HTTPS origin as
+in [installation](INSTALL.md#run-your-own-host). `npm run dev` starts only Vite's
+local frontend server; it does not create the daemon, HTTPS proxy or paired
+session. The integrated trial is the documented end-to-end development path.
+There is no development authentication bypass.
+
+Use synthetic projects and isolated state for tests. Do not initialize, seed or
+replace another contributor's manual workspace. When updating the owner's existing
+manual application under the repository instructions, preserve its data, origin,
+certificates and connection settings and verify its existing HTTPS address.
+Documentation-only edits do not require restarting a running application.
+
+## Verification
+
+Run the full local gate before integration:
+
+```sh
 .venv-check/bin/python scripts/check.py
 ```
 
-Build the frontend before compiling `projectd`: the daemon embeds the production
-assets. `scripts/check.py` enforces that order. Development API requests must go
-through the normal session/CSRF protections; there is no authentication bypass.
+In dependency order it checks generated schemas, contract/examples and Markdown
+links, OpenAPI, Python and JavaScript tests, frontend types, import boundaries,
+formatting, the frontend/bundle budget, Rust formatting, Clippy, Rust tests and a
+release build. It includes subprocess durability tests. It does **not** run browser
+suites, package installation, advisory scans or physical-device acceptance.
 
-## Run
+| Focus | Command |
+| --- | --- |
+| Contracts/examples/documentation links | `.venv-check/bin/python scripts/check_package.py` |
+| Generated API schema drift | `.venv-check/bin/python scripts/generate_api_schema.py --check` |
+| Frontend types/contracts | `npm run check` |
+| JavaScript behavior | `npm run test:unit` |
+| One behavior test | `node --test scripts/tests/planning-read.test.mjs` |
+| Domain rules | `scripts/cargo-local test -p project-domain --locked` |
+| Application rules/recovery | `scripts/cargo-local test -p project-application --lib --locked` |
+| Frontend dependency boundaries | `node scripts/check-boundaries.mjs` |
+| Bundle budget, after build | `npm run check:bundle` |
 
-Choose an absolute, non-symlink, owner-only state directory. Keep the Unix socket
-path short enough for the host OS (macOS has a small sockaddr_un limit).
+Format the files you changed using the repository tools. The broad format commands
+are `npm run format` and `scripts/cargo-local fmt --all`; review their diff and keep
+unrelated formatting out of the contribution.
+
+Contract changes regenerate representations with:
 
 ```sh
-mkdir -m 700 "$HOME/.local-projects"
-target/debug/projectd --data-dir "$HOME/.local-projects" --public-origin https://your-host.example
+.venv-check/bin/python scripts/generate_api_schema.py
+npm run contracts
 ```
 
-The HTTP listener binds only `127.0.0.1:47831`. Configure your own trusted HTTPS
-proxy (for example an existing Tailscale Serve setup) to preserve the public Host.
-The origin must match `--public-origin` exactly. The daemon does not configure
-network access, VPNs, TLS certificates or public hosting.
+Include examples, regression coverage and an ADR in the same protocol change.
+Generated browser types live under `apps/web/src/lib/contracts/`.
 
-```sh
-target/debug/projectctl --socket "$HOME/.local-projects/projectd.sock" hello
-target/debug/projectctl --socket "$HOME/.local-projects/projectd.sock" add-root /absolute/projects --label Projects
-```
+## Browser integration
 
-Open the HTTPS origin, request pairing, compare the displayed challenge and
-approve it through `projectctl ... approve ID --challenge "the displayed challenge"`.
-Then confirm in the browser. List pending requests with `projectctl ... pairings`.
-
-For CLI registration, run `registration-plan /absolute/project`, inspect the JSON
-plan, then `register PLAN_ID`. Use `projects`, `get /api/v1/...` and `command --help`
-for resource operations. Existing resource edits require `--if-version`.
-CLI commands print the request ID and epoch to stderr before sending. An uncertain
-result must be checked through `/api/v1/commands/REQUEST_ID`; retries must provide
-both `--request-id` and `--epoch` with unchanged input and version.
-
-## Browser integration tests
+After the frontend and release binaries are built:
 
 ```sh
 npx playwright install chromium
-npm run build
-scripts/cargo-local build --workspace --release --locked
 ASTRA_TEST_PROFILE=release npm run test:browser
 ```
 
-This creates temporary synthetic projects, a short-lived self-signed HTTPS proxy
-and an ordinary daemon, pairs Chromium through the real owner approval flow, and
-checks creation, competing edits, planning and the maintained card/tag/editor/dialog
-regressions. Each regression suite owns its fixture and cleans up processes and
-temporary state. Bulk screenshots/logs default to ignored `test-results/browser/`
-and CI artifacts; concise durable summaries belong in `progress/`. See
-[browser suite instructions](scripts/browser/README.md) for selecting a suite and
-the evidence retention policy. Chromium phone emulation is not physical iPhone or
-Safari validation.
+On Linux, Playwright may also need OS libraries; CI provisions them with
+`npx playwright install --with-deps chromium`. That step can require administrator
+access, unlike ordinary runtime use. Install them deliberately for your test host.
 
-Frontend changes use `npm run format`; `npm run format:check` is part of the local
-and CI gate. Generated domain/API types remain owned by `npm run contracts`.
-After building, `npm run check:bundle` enforces an 80 KiB gzip regression limit for
-initial JavaScript and CSS, following all static imports. Planning, editor,
-settings and administrative dialogs load separately. This tighter build check
-preserves the loading optimization; the historical 300 KiB product ceiling is
-not a measured performance result.
-The build manifest is not embedded in the daemon's public assets.
+The suites create temporary synthetic projects and a short-lived self-signed
+HTTPS proxy, start an ordinary daemon and pair through the real approval flow.
+They do not reuse a running `.manual/` host. The broad HTTPS suite, planning suite
+and individual regression suites cover different layers.
 
-Run release benchmarks separately from builds/browser tests, for example:
+```sh
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs card tags
+npx playwright install webkit
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs editor-inputs
+```
+
+Without `ASTRA_TEST_PROFILE=release`, browser scripts select debug binaries.
+See [browser suites](scripts/browser/README.md) for coverage and additional knobs.
+Desktop WebKit and viewport emulation do not establish physical iPhone/Safari
+acceptance. Artifacts go to ignored `test-results/browser/` by default.
+
+## Packaging and CI
+
+[CI](.github/workflows/check.yml) runs on Ubuntu 24.04 and macOS 15. It installs the
+pinned toolchains, runs the local gate, Chromium browser suites, host packaging and
+package installation/recovery smoke. Workflow results apply to the tested commit.
+Advisory scanning is a [separate workflow](SECURITY.md#dependency-advisories).
+
+```sh
+.venv-check/bin/python scripts/package.py
+.venv-check/bin/python scripts/release-smoke.py dist/local-projects-VERSION-OS-ARCH.tar.gz
+```
+
+Use the actual generated archive filename. See [installation](INSTALL.md) and the
+[package guide](ops/PACKAGE.md). Packaging uses the current host's release binaries;
+it does not cross-compile or publish them. Release packages contain third-party
+notices. Full license/publication decisions remain with the owner.
+
+## Performance work
+
+Measure release builds, separately from builds and browser suites:
 
 ```sh
 scripts/cargo-local build -p project-application --example benchmark --release --locked
@@ -94,39 +138,27 @@ target/release/examples/benchmark 1 1000 500
 target/release/examples/benchmark 100 100 500
 ```
 
+The arguments are project count, cards per project and reports per project.
 Each profile has 20 warmups and 200 measured mutations (40 creates, 160 title
 patches), plus indexed reads. Tag catalog timings use one warmup and ten samples;
-they describe a different, more expensive source-management operation than tag
-suggestions. Application timings exclude HTTP, VPN and rendering. Preserve a
-small JSON summary in `progress/` and keep bulk artifacts in `test-results/`.
+that source-management operation differs from tag suggestions. Application timings
+exclude HTTP, VPN and browser rendering. The 100/100/500 profile covers 100 projects,
+10,000 cards and 50,000 reports; it is not a capacity limit.
 
-## Typed CLI and date editing
+Record the revision, hardware/OS, fixture, sample counts, metric definition and
+coverage limits. Compare equivalent workloads and retain outliers. Keep a concise
+summary in `progress/`, bulk output in ignored `test-results/`. The initial JS/CSS
+regression budget is 80 KiB gzip following static imports; this is distinct from
+end-user performance targets. The build manifest is not served as a public asset.
 
-The [CLI guide](CLI.md) documents the implemented command tree, stdin input,
-optional text output and explicit socket configuration.
+## Test ownership
 
-Project commands require an exact registered folder; no parent or Git lookup occurs.
+Application tests under `crates/application/tests` compile as private unit-test
+modules (`autotests = false` is intentional). Failure injection stays private.
+Frontend `.mjs` tests import actual TypeScript modules through Node's built-in
+runner; compile-time endpoint examples live in `apps/web/src/type-tests/`.
 
-```sh
-projectctl --socket "$SOCKET" --project . context --max-bytes 24576 --json
-projectctl --socket "$SOCKET" --project . card list --limit 50
-projectctl --socket "$SOCKET" --project . card create --title 'Write the guide'
-projectctl --socket "$SOCKET" --project . card set CARD_ID --patch-file patch.json --if-version VERSION
-projectctl --socket "$SOCKET" --project . report add --kind result --target project:PROJECT_ID --summary 'Guide reviewed'
-projectctl --socket "$SOCKET" command-status REQUEST_ID --epoch ORIGINAL_EPOCH
-```
-
-Mutating typed commands accept `--request-id` together with `--epoch` for an
-identical retry. `--timeout` bounds transport waits. The generic `get` and
-`command` interfaces remain available for API operations without a dedicated alias.
-
-The editor provides escaped-HTML Markdown preview with images disabled, card
-checklists, comments, daily counters and draft discard protection. Reports target
-projects or milestones; corrections and resolutions are separate reports.
-Calendar and timeline load separately and use bounded view APIs. Timeline handles
-propose a schedule move or resize; review the dates and save with the original
-version. Date-only card schedules use inclusive dates; timed events add start
-time and duration. Milestones retain a separate date. Escape, pointer cancellation, a second pointer
-or orientation changes cancel a gesture without writing. Opening the date form
-with a handle also provides a keyboard alternative. Physical phone validation and
-complete release acceptance remain outstanding.
+Use a failing regression first for data-loss/conflict fixes. Exercise affected
+browser behavior for UI/transport changes and package/recovery behavior for host
+changes. Report skipped or unavailable coverage explicitly. Preserve unresolved
+requirements; passing tests and commits are evidence, not automatic acceptance.

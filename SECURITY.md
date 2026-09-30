@@ -9,7 +9,9 @@ working sensitive exploit in a public issue. Public issues may describe a
 sanitized symptom and affected revision. For sensitive details, request a private
 contact from the maintainer before sharing them.
 
-For the implemented trust boundaries, see the [security design](docs/07-SECURITY.md).
+For implemented trust boundaries, see the
+[architecture overview](docs/ARCHITECTURE.md#security-and-operations-boundaries)
+and the [detailed security requirements](docs/07-SECURITY.md).
 The daemon is intended for loopback access behind an owner-managed private HTTPS
 proxy. Packaging does not install or configure a public service automatically.
 

@@ -1,5 +1,10 @@
 # Testy akceptacyjne — czytelna lista
 
+> Historical delivery reference. See the [directory guide](README.md) for its
+> role, the [current roadmap](../ROADMAP.md) for maintained English status, and
+> [scope decisions](../progress/SCOPE.md) for superseding requirements. Original
+> task statuses are not a live assignment queue or current release acceptance.
+
 Każdy test ma status **not_run** dla aplikacji. Identyfikatory są zgodne z plikiem JSON.
 
 ## A01 — Rejestracja i ponowienie

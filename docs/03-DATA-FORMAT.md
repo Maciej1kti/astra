@@ -1,5 +1,10 @@
 # 03. Format danych i inwarianty domeny
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 ## Source contract
 
 `contracts/domain.schema.json` is the JSON Schema 2020-12 contract [S22]. Every

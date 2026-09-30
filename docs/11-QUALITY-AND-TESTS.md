@@ -1,5 +1,10 @@
 # 11. Testy i definicja jakości
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 ## Warstwy
 
 Unit/property: LocalDate, rank, attention signals, typed patches, parser and

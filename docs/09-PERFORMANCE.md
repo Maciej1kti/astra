@@ -1,5 +1,10 @@
 # 09. Wydajność, obserwacja i diagnostyka
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 ## Budżety
 
 Wszystkie liczby są **celami do zmierzenia**, nie wynikami. Dataset: 100 projektów, 10k kart, 50k krótkich raportów, lokalny SSD, release. Dodatkowe profile: mały 3/100/300 oraz przeciążenie 300/50k/250k. Raport zapamiętuje OS, CPU, RAM, dysk, browser/build, build produktu, rozmiar datasetu i metodę.

@@ -1,40 +1,103 @@
 # Documentation
 
-## Using and contributing
+The maintained user and contributor guides are in English. Start with the path
+that matches your task; historical requirements are indexed separately below.
 
-- [Product overview](../README.md)
-- [Development setup](../DEVELOPMENT.md)
-- [CLI guide](../CLI.md)
-- [Manual walkthrough](../MANUAL-TESTING.md)
-- [Installation](../ops/PACKAGE.md) and [stopped-server recovery](../ops/RECOVERY.md)
-- [Contributing](../CONTRIBUTING.md)
-- [Code structure and ownership](CODE-STRUCTURE.md)
-- [Current status](../progress/STATE.md) and [release checklist](../delivery/RELEASE-CHECKLIST.md)
+## Use and operate Astra
 
-## Contracts and architectural decisions
+| Guide | Contents |
+| --- | --- |
+| [Overview](../README.md) | Product, capabilities, quick start and license status |
+| [Build and install](../INSTALL.md) | Prerequisites, source build, trial, foreground host, package, pairing and upgrades |
+| [User guide](USER-GUIDE.md) | Views, cards, dates, Focus, reports, recovery and deletion behavior |
+| [CLI reference](../CLI.md) | Implemented commands, JSON/text output, versions and safe retries |
+| [Manual walkthrough](../MANUAL-TESTING.md) | Synthetic trial, remote trial access and practical checks |
+| [Operations](../ops/README.md) | Configuration and host lifecycle |
+| [Package guide](../ops/PACKAGE.md) | Self-contained instructions also included in built archives |
+| [Stopped-server recovery](../ops/RECOVERY.md) | What to copy, how to restore and what must be preserved |
+| [Limitations](LIMITATIONS.md) | Product boundaries, platform coverage and unverified acceptance |
+| [Roadmap](../ROADMAP.md) | Implemented scope, remaining work and owner decisions |
 
-[Source schemas](../contracts/domain.schema.json), [OpenAPI](../contracts/openapi.yaml)
-and [CLI output](../contracts/cli-output.schema.json) describe the public formats.
-[Architecture decisions](12-ADRS.md) explain choices and invariants. Generated
-TypeScript and JSON representations are checked for drift by the local gate.
+## Contribute and understand the implementation
 
-The numbered chapters retain original implementation requirements. In particular,
-read [source formats](03-DATA-FORMAT.md), [writes and recovery](04-WRITES-AND-RECOVERY.md),
-[API/events](05-API-AND-EVENTS.md) and [security](07-SECURITY.md) before changing
-those contracts. Some handoff prose is still Polish; it remains a requirement
-reference, not the contributor onboarding path or proof of completion.
+| Guide | Contents |
+| --- | --- |
+| [Contributing](../CONTRIBUTING.md) | Issues, scope, branches, ownership, review and evidence |
+| [Development](../DEVELOPMENT.md) | Build loop, focused/full checks, browser suites and benchmarks |
+| [Architecture](ARCHITECTURE.md) | Runtime/storage/write diagrams and repository map |
+| [Code structure](CODE-STRUCTURE.md) | Specific feature/module owners, lock order and test boundaries |
+| [Design system](DESIGN-SYSTEM.md) | UI tokens, components, responsive behavior and interaction ownership |
+| [Security reporting](../SECURITY.md) | Reporting status, sanitization and dependency advisory checks |
+| [Scripts](../scripts/README.md) | Tool entry points and generated artifacts |
+| [Browser suites](../scripts/browser/README.md) | Real-host integration coverage and suite selection |
+| [Omarchy integration](../integrations/omarchy/README.md) | Optional Linux desktop integration |
 
-[Owner scope decisions](../progress/SCOPE.md) supersede older wording. Deferred
-backup archives/source migrations and unverified physical-device acceptance must
-not be silently marked complete. [Delivery requirements](../delivery/REQUIREMENTS.json)
-and [acceptance scenarios](../delivery/ACCEPTANCE.json) remain traceable.
+## Contracts and decisions
 
-## Historical material
+| Reference | Authority |
+| --- | --- |
+| [Source schema](../contracts/domain.schema.json) | Project resource and workspace JSON structures; server rules add semantic validation |
+| [OpenAPI](../contracts/openapi.yaml) | HTTP endpoints, request/response schemas and errors |
+| [CLI output](../contracts/cli-output.schema.json) | Stable machine-readable CLI envelopes |
+| [Local IPC](../contracts/local-ipc.json) | Host-local administrative transport contract |
+| [Examples](../examples/README.md) | Validated synthetic documents and protocol vectors |
+| [Architecture decisions](12-ADRS.md) | Rationale and invariants; later decisions can supersede earlier ones |
+| [Owner scope decisions](../progress/SCOPE.md) | Explicit scope overrides, deferrals and removals |
 
-[Progress](../progress/README.md) contains concise implementation and verification
-records. Obsolete bulk artifacts are available at the linked immutable checkpoint.
-A historical test result applies to its revision, not automatically to current code.
+Generated schema representations and TypeScript types are checked for drift by
+the full gate. Edit their source contracts and run the documented generators;
+do not edit generated files by hand.
 
-For an offline consolidated copy of the requirement chapters, run
-`python scripts/assemble_spec.py`. Output goes to ignored
-`test-results/docs/MASTER-SPEC.md`; edit source chapters, not that generated copy.
+## Document authority and history
+
+Use current guides for operating the application and locating code. For a proposed
+change, read its contracts and applicable ADRs as well as the owner scope decisions.
+If observed code differs from its contract, record and resolve that discrepancy;
+do not silently redefine the contract in prose.
+
+```text
+  Owner scope decisions        explicit changes to intended scope
+            |
+  Contracts + applicable ADRs  current formats and invariants
+            |
+  Maintained English guides   current user/contributor behavior
+            |
+  Retained requirements       open obligations, subject to later decisions
+
+  Dated evidence              proof for a particular revision/environment
+  .project/                   project outcomes, milestones and dates
+```
+
+The numbered chapters `00` through `14` retain the original implementation
+requirements and decision history, including Polish prose. They are not the
+onboarding path, a command reference or a claim that every requirement shipped.
+Some passages have later clarifications. Their open obligations remain tracked;
+labeling a chapter historical does not cancel a requirement.
+
+| Retained chapter | Current starting point |
+| --- | --- |
+| [00 Decisions](00-DECISIONS.md), [01 Product](01-PRODUCT.md) | [Roadmap](../ROADMAP.md), [scope](../progress/SCOPE.md) |
+| [02 Architecture](02-ARCHITECTURE.md) | [Architecture](ARCHITECTURE.md), [code ownership](CODE-STRUCTURE.md) |
+| [03 Data format](03-DATA-FORMAT.md) | [Source overview](ARCHITECTURE.md#source-format), schema and ADR-046 |
+| [04 Writes/recovery](04-WRITES-AND-RECOVERY.md) | [Write path](ARCHITECTURE.md#write-and-recovery-path), applicable ADRs |
+| [05 API/events](05-API-AND-EVENTS.md) | OpenAPI and typed endpoint modules |
+| [06 CLI/agents](06-CLI-AND-AGENTS.md) | [CLI](../CLI.md), managed project instructions |
+| [07 Security](07-SECURITY.md) | [Security reporting](../SECURITY.md), [architecture](ARCHITECTURE.md#security-and-operations-boundaries) |
+| [08 UI/interactions](08-UI-AND-INTERACTIONS.md) | [User guide](USER-GUIDE.md), [design system](DESIGN-SYSTEM.md) |
+| [09 Performance](09-PERFORMANCE.md) | [Limitations](LIMITATIONS.md#reliability-and-performance-acceptance), dated release measurements |
+| [10 Operations](10-OPERATIONS.md) | [Installation](../INSTALL.md), [recovery](../ops/RECOVERY.md) |
+| [11 Quality/tests](11-QUALITY-AND-TESTS.md) | [Development](../DEVELOPMENT.md), [release checklist](../delivery/RELEASE-CHECKLIST.md) |
+| [12 ADRs](12-ADRS.md) | Same decision index; follow later superseding ADRs |
+| [13 Risks](13-RISKS-AND-OPTIMIZATIONS.md), [14 Sources](14-SOURCES.md) | [Limitations](LIMITATIONS.md) and the cited decision's original references |
+
+`delivery/REQUIREMENTS.json` and `delivery/ACCEPTANCE.json` retain stable IDs for
+traceability. Older delivery backlogs are historical sequencing, not today's work
+queue. [Current status](../progress/STATE.md), [evidence policy](../progress/README.md)
+and the [release checklist](../delivery/RELEASE-CHECKLIST.md) distinguish implementation
+from acceptance. Original reports and retired bulk artifacts remain available
+through immutable checkpoint links; no open requirements are removed by this index.
+
+To assemble the retained chapters offline, run `python3 scripts/assemble_spec.py`.
+Output goes to ignored `test-results/docs/MASTER-SPEC.md`; edit the chapters, not
+that generated copy. See [documentation maintenance](../CONTRIBUTING.md#documentation-changes)
+when updating a guide.

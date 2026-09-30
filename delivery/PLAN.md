@@ -1,5 +1,10 @@
 # Plan wykonania dla Astry
 
+> Historical delivery reference. See the [directory guide](README.md) for its
+> role, the [current roadmap](../ROADMAP.md) for maintained English status, and
+> [scope decisions](../progress/SCOPE.md) for superseding requirements. Original
+> task statuses are not a live assignment queue or current release acceptance.
+
 > Owner scope override (2026-09-05): built-in backup/restore and source-file migration tooling are deferred beyond v1. See [scope decision](../progress/SCOPE.md). All other work remains in scope.
 
 Nie jest harmonogramem z datami ani obietnicą czasu. Bramki kończy wynik, nie liczba plików. Backlog JSON zawiera zadania i zależności; nie trzeba odczytywać całej specyfikacji w każdej sesji, ale trzeba przeczytać kontrakt danego modułu.

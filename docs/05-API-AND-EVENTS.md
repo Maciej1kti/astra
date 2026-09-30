@@ -1,5 +1,10 @@
 # 05. API HTTP, kontrakty i aktualizowanie widoków
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 ## Unresolved single-resource commands — implementation clarification
 
 A mutation that durably reached PREPARED but has no confirmed outcome returns

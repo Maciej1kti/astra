@@ -1,5 +1,10 @@
 # 01. Produkt i doświadczenie użytkownika
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 ## Cel
 
 Użytkownik ma po otwarciu wiedzieć, co jest istotne, co wymaga decyzji i co planuje na kiedy. Utrzymanie narzędzia nie powinno stawać się oddzielnym projektem administracyjnym. Karta opisuje rezultat lub decyzję. Agent może mieć dowolnie szczegółowy plan poza `.project`.

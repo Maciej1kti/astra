@@ -1,5 +1,10 @@
 # 06. CLI, lokalne IPC i współpraca z agentami
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 For implemented commands and runnable examples, use the maintained
 [CLI guide](../CLI.md). The catalogue below retains projected aliases and
 outstanding requirements; scope deferrals still apply. See

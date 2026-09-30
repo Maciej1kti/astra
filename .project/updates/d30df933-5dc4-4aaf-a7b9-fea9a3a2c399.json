@@ -1,0 +1,18 @@
+{
+  "body": "Added source-build and installation instructions, user and architecture guides with ASCII diagrams, platform/product limitations, a scope-preserving roadmap and issue/PR templates. Updated the README, CLI, development and manual guides; marked historical requirements clearly while preserving their content and open obligations.\n\nVerified on macOS ARM64: full local gate (255 Rust, 137 JavaScript and 12 Python tests), documentation links/anchors, rendered Markdown, host packaging and isolated installation/restart/stopped-copy recovery. Evidence: progress/2026-09-30-contributor-documentation.md.\n\nThe project license, supported-release/security decisions and outstanding physical-device/platform/reliability acceptance remain open. No application behavior, project scope, priority, dates or acceptance status was changed.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "d30df933-5dc4-4aaf-a7b9-fea9a3a2c399",
+    "kind": "result",
+    "recorded_at": "2026-09-30T15:14:34.851Z",
+    "summary": "Prepared current English self-build and contributor documentation with architecture diagrams.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

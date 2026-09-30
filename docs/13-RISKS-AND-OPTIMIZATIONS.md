@@ -1,5 +1,10 @@
 # 13. Ryzyka, kontrole i decyzje delegowane
 
+> Retained requirements and decision history. For current English guides, start
+> with the [documentation index](README.md). [Owner scope decisions](../progress/SCOPE.md)
+> and later ADRs supersede older behavior; unresolved obligations remain in force.
+> This chapter is not an installation guide or proof of release acceptance.
+
 Current source storage uses the JSON envelope defined in [ADR-046](ADR-046-JSON-SOURCES.md).
 References to YAML below describe the historical handoff and are superseded.
 

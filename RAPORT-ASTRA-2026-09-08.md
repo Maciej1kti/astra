@@ -1,5 +1,9 @@
 # Astra — audyt działania i plan dopracowania UI
 
+> Historical report for its dated revision, retained in its original language.
+> Use the [current documentation](docs/README.md), [roadmap](ROADMAP.md) and
+> [implementation evidence](progress/STATE.md) for present-day guidance.
+
 **Data:** 8 września 2026. **Wersja:** `c3b912f`, świeży build produkcyjny frontendu i serwera.
 
 **Ocena:** podstawowe mechanizmy aplikacji działają, ale produkt wymaga istotnych poprawek w spójności, organizacji informacji i bezpieczeństwie szkiców. Najpilniejsze są: utrata niezapisanej treści po przypięciu karty, zmiana tagów przy edycji innego pola, błędny kontekst tworzenia elementu, brak dostępu do archiwum i niepraktyczny kalendarz miesiąca. Samo ujednolicenie kolorów nie rozwiąże tych problemów.

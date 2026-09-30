@@ -1,6 +1,7 @@
 # Try the application
 
-From this repository, run:
+Complete the [source build](INSTALL.md#clone-and-build), including release binaries,
+first. From this repository, run:
 
 ```sh
 npm run try
@@ -79,16 +80,15 @@ card is created after entering a valid title. Add tags/checklist items with thei
 Add controls, and post reports separately. Invalid input, conflicts or uncertain
 commands keep the draft available for correction or explicit recovery.
 
-Card editors use a wide centered dialog over a dimmed, blurred workspace on
-desktop, with Schedule and Labels beside the main content. Tablets stack these
-properties after the content; phones use a full-height editor with a persistent
-header. Project editors remain centered dialogs.
+Card editors use a centered dialog over a dimmed, blurred workspace on desktop
+and a single responsive reading column. Phones use a full-height editor with a
+persistent header. Project editors remain centered dialogs.
 Existing cards show a one-line relative schedule; click it to edit dates/time.
 New cards keep these controls expanded, including after the first automatic save.
 Check upcoming, current, overdue, finished and timed cards in the workspace
 timezone. A partial schedule stays expanded until corrected or cleared.
-Use the layout icon beside Card actions to move sections up/down within Content
-or Properties. Check live movement, keyboard focus, unsent comment/counter drafts,
+Use the layout icon beside Card actions to move any of the six sections up/down
+in one shared order. Check live movement, keyboard focus, unsent comment/counter drafts,
 reload persistence in the same browser, Reset layout and reduced-motion settings.
 Layout preferences are local to each browser and do not change card source data.
 Their descriptions display formatted Markdown; click the description field to
@@ -110,22 +110,23 @@ or milestones; cards have no custom metadata extensions.
 
 ## Known limits
 
-- The launcher listens on localhost on the host computer. Phone access requires
-  the intended private HTTPS network setup.
-- The planning views have local Arch Linux/Chromium verification. Physical
-  iPhone/Safari and macOS planning acceptance remain outstanding; CI results
-  and earlier platform evidence are recorded separately in `progress/`.
+- The launcher defaults to localhost on the host computer. Its explicit tailnet
+  mode above uses that host's Tailscale address. A regular host uses the private
+  HTTPS setup described in [Installation](INSTALL.md).
+- Chromium and targeted macOS WebKit suites have revision-specific evidence.
+  Physical iPhone/Safari and full platform/planning acceptance remain outstanding;
+  see [coverage](docs/LIMITATIONS.md#platform-and-browser-coverage).
 - Git observation covers HEAD and staged changes, excluding `.project`; it does not
   claim to check unstaged or untracked files.
-- Some less common metadata fields use the advanced JSON editor. Full release polish,
-  larger performance/fault scenarios and documentation cleanup await feedback.
+- Milestone/report extensions use advanced JSON fields. Full performance, fault,
+  device and release acceptance remain open; see the [roadmap](ROADMAP.md).
 - Built-in backup archives and source migrations are deferred.
 
 The prepared binary is in `target/release/`. To rebuild after changing source:
 
 ```sh
 npm run build
-scripts/cargo-local build --workspace --release
+scripts/cargo-local build --workspace --release --locked
 ```
 
 ## Add an existing project folder

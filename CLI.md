@@ -2,7 +2,7 @@
 
 `projectctl` reads and changes the same data as the browser through the local
 daemon. It also exposes local maintenance operations. Follow
-[Development](DEVELOPMENT.md) to build it; the examples assume `projectctl` is on
+[Installation](INSTALL.md) to build it; the examples assume `projectctl` is on
 your PATH and the daemon is running.
 
 ## Connection and output
@@ -10,7 +10,7 @@ your PATH and the daemon is running.
 Select the daemon explicitly once in your shell:
 
 ```sh
-export ASTRA_SOCKET="$HOME/.local-projects/projectd.sock"
+export ASTRA_SOCKET="$HOME/.lp/projectd.sock"
 projectctl hello
 projectctl --project /absolute/project context
 ```
@@ -90,7 +90,7 @@ closed field set.
 Use `clear` for an optional retained card field, for example
 `{"clear":["schedule"]}` in a versioned patch. Card deadline/review dates,
 milestone links, dependencies and blocked reasons are not supported.
-Projects support only `name`, `state` and Markdown `body` edits; project
+Projects support `name`, `state`, optional `folder` and Markdown `body` edits; project
 `phase`, `review_on` and `x-*` fields are rejected by the shared server rules.
 
 Project edits use the generic command with the version from a project read:
@@ -208,7 +208,23 @@ resource edits, workflow submissions and status reads have distinct reply checks
 | 8 | Invalid read response or server/internal failure |
 | 9 | Durable command result is uncertain, or operation is still pending |
 
-## Other commands and scope
+## Reports
+
+Reports target projects or milestones. Use the project ID from `context` or
+`projects` for a project report:
+
+```sh
+projectctl --project /absolute/project report add --kind result --target project:PROJECT_ID --summary 'Contributor guide verified' --body-file result.md --author 'Contributor'
+projectctl --project /absolute/project report get REPORT_ID
+projectctl --project /absolute/project report resolve REPORT_ID --summary 'Decision recorded' --body-file resolution.md
+```
+
+`report add` supports `result`, `blocker`, `decision_needed` and `note`; `resolve`
+creates a separate resolution. Corrections use the generic API command and the
+`supersedes` field. Reports cannot be patched. The named add command records human
+attribution; automation needing `author.kind: agent` uses the generic POST with
+the report schema. See [OpenAPI](contracts/openapi.yaml). Do not turn a project
+report into a full implementation transcript.
 
 Reports support explicit conditional deletion:
 
@@ -221,6 +237,8 @@ The command sends an empty DELETE payload and preserves request ID, epoch and
 version on retries. `REPORT_REFERENCED` identifies a correction/resolution that
 must be deleted first. Deletion is permanent; deleting a resolution can reopen
 its decision. Report contents cannot be patched.
+
+## Other commands and scope
 
 Use `report`, `focus`, `tags`, `sessions`, `pairings`, `approve`, `deny`,
 `registration-plan` and `register` for their named workflows. `tags list`
@@ -289,8 +307,10 @@ projectctl --project /absolute/project card set CARD_ID --patch-file - --if-vers
 JSON
 ```
 
-Another confirmed record updates that day's total and keeps other dates. Missing
-days display zero. Configuration with an existing `id` changes name/step or hides
-the counter (`archived: true`); units are fixed after the first recorded result.
+Another confirmed record updates that day's total and keeps other dates. A daily
+input starts at zero when no result is saved; history/trends retain missing days
+as gaps rather than recorded zeros. Configuration with an existing `id` changes
+name/step or hides the counter (`archived: true`); units are fixed after the first
+recorded result.
 There is no destructive clear or undo of counter data. See
 [ADR-049](docs/ADR-049-DAILY-CARD-COUNTERS.md) for limits and retry semantics.

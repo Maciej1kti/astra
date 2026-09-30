@@ -1,5 +1,10 @@
 # Backlog wykonawczy
 
+> Historical delivery reference. See the [directory guide](README.md) for its
+> role, the [current roadmap](../ROADMAP.md) for maintained English status, and
+> [scope decisions](../progress/SCOPE.md) for superseding requirements. Original
+> task statuses are not a live assignment queue or current release acceptance.
+
 Źródło statusów: BACKLOG.json. T01–T03 ukończone w zakresie G0; T05 w toku. Dowody w progress/EVIDENCE.md. Scenariusze odbioru produktu pozostają niezaliczone.
 
 | ID | Bramka | Rola | Zadanie | Zależności |
