@@ -129,6 +129,12 @@ suggestions come from the bounded projection catalog. See [ADR-043](ADR-043-PROJ
 
 ## Rust application
 
+`projectd` dispatch explicitly selects summary GETs for `read_response` gzip
+negotiation, using the shared encoding-quality parser and admitted blocking worker.
+Encoding starts after engine query locks are released, has a 4 MiB input cap and
+retains private caching, identity source ETags and credential/SSE exclusions.
+See [ADR-052](ADR-052-BOUNDED-SUMMARY-COMPRESSION.md).
+
 The CLI owns argument translation, bounded input/project resolution, named view
 queries, operation-aware transport and optional terminal presentation in separate
 modules under `crates/projectctl/src`. `transport/response.rs` checks command

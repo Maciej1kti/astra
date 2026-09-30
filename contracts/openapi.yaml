@@ -456,8 +456,17 @@ paths:
       summary: listProjects
       description: ''
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -469,6 +478,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - $ref: '#/components/parameters/Limit'
       - $ref: '#/components/parameters/Cursor'
   /api/v1/projects/{project_id}:
@@ -752,8 +762,17 @@ paths:
       summary: listCards
       description: ''
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -765,6 +784,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - $ref: '#/components/parameters/project_id'
       - $ref: '#/components/parameters/Limit'
       - $ref: '#/components/parameters/Cursor'
@@ -983,8 +1003,17 @@ paths:
       summary: listMilestones
       description: ''
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -996,6 +1025,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - $ref: '#/components/parameters/project_id'
       - $ref: '#/components/parameters/Limit'
       - $ref: '#/components/parameters/Cursor'
@@ -1145,8 +1175,17 @@ paths:
       summary: listUpdates
       description: Returns bounded report summaries. Supply target_type and target_id together to select project or milestone history before pagination. Card-targeted reports are rejected. Invalid pairs return 422 INVALID_TARGET_FILTER; target filters are bound into the cursor.
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1158,6 +1197,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - $ref: '#/components/parameters/TargetType'
       - $ref: '#/components/parameters/TargetID'
       - $ref: '#/components/parameters/project_id'
@@ -1284,8 +1324,17 @@ paths:
         source resources before editing. New pins are admitted atomically up to 100;
         external overflow remains readable. Incomplete membership disables reordering.
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1296,6 +1345,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+      parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
+
     put:
       operationId: replaceFocus
       tags:
@@ -1645,8 +1697,17 @@ paths:
       summary: getBoard
       description: ''
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1658,6 +1719,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - name: project_id
         in: query
         required: true
@@ -1673,8 +1735,17 @@ paths:
       summary: Get bounded card and milestone timeline rows
       description: ''
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1686,6 +1757,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - name: project_id
         in: query
         required: true
@@ -1708,8 +1780,17 @@ paths:
       description: from/to inclusive; max 400 dni. Brak project_id = bieżąca instancja,
         nie inne hosty.
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1721,6 +1802,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - name: from
         in: query
         required: true
@@ -1748,11 +1830,21 @@ paths:
       operationId: getFolders
       summary: Read distinct project folders across the workspace
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - $ref: '#/components/parameters/Limit'
       - $ref: '#/components/parameters/Cursor'
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Paginated folder names from the source projection, including archived resources.
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1770,6 +1862,7 @@ paths:
       summary: Read today's planned work or timed events
       description: Workspace-local daily membership, filtered before pagination. Motion includes inclusive date plans; events start today and have not ended. Pinned, review, completed, cancelled and archived cards and archived projects are excluded. Event order follows start time. Cursors expire when the workspace clock minute or projection changes.
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - name: section
         in: query
         required: true
@@ -1783,8 +1876,17 @@ paths:
       - $ref: '#/components/parameters/Limit'
       - $ref: '#/components/parameters/Cursor'
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: A bounded page of card summaries
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1803,8 +1905,17 @@ paths:
       summary: getAttention
       description: Focus mode omits due-soon reminders and adds unread non-decision reports. Unresolved decisions remain even when read.
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1816,6 +1927,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - name: focus
         in: query
         schema:
@@ -1936,8 +2048,17 @@ paths:
         project and field filters use the same index and cursor rules as per-project
         collections.
       responses:
+        '406':
+          $ref: '#/components/responses/EncodingNotAcceptable'
         '200':
           description: Poprawna odpowiedź
+          headers:
+            Content-Encoding:
+              $ref: '#/components/headers/ReadContentEncoding'
+            Vary:
+              $ref: '#/components/headers/ReadEncodingVary'
+            Cache-Control:
+              $ref: '#/components/headers/PrivateReadCache'
           content:
             application/json:
               schema:
@@ -1949,6 +2070,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       parameters:
+      - $ref: '#/components/parameters/ReadAcceptEncoding'
       - name: folder
         in: query
         schema:
@@ -2082,7 +2204,34 @@ paths:
           $ref: '#/components/schemas/UUID'
       responses: *id008
 components:
+  headers:
+    ReadContentEncoding:
+      description: Present only for a negotiated gzip response; decoding preserves the JSON schema and source versions. See ADR-052.
+      schema:
+        type: string
+        const: gzip
+    ReadEncodingVary:
+      description: These summary responses negotiate their representation using Accept-Encoding, including identity responses.
+      schema:
+        type: string
+        const: Accept-Encoding
+    PrivateReadCache:
+      description: Authenticated API responses remain private and are not stored by caches.
+      schema:
+        type: string
+        const: no-store
   responses:
+    EncodingNotAcceptable:
+      description: ENCODING_NOT_ACCEPTABLE. Neither an available bounded gzip representation nor identity is acceptable. This is a read, with no domain mutation. Compression input is capped at 4 MiB.
+      headers:
+        Vary:
+          $ref: '#/components/headers/ReadEncodingVary'
+        Cache-Control:
+          $ref: '#/components/headers/PrivateReadCache'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     RequestTimeout:
       description: The request body was not fully received within 10 seconds. No domain command was admitted; preserve the original request identity if retrying the same intention.
       content:
@@ -2095,6 +2244,13 @@ components:
       in: cookie
       name: __Host-project_session
   parameters:
+    ReadAcceptEncoding:
+      name: Accept-Encoding
+      in: header
+      required: false
+      description: Optional gzip negotiation for authenticated summary reads. Missing/empty headers use identity. Explicit gzip and identity qualities and wildcard vetoes are respected. Prefer fast gzip for JSON from 1 KiB through 4 MiB when it is smaller; gzip-only clients may also receive smaller responses. Oversize reads retain identity, or return 406 when identity is forbidden. Credentials, source resources, commands and SSE remain identity. See ADR-052.
+      schema:
+        type: string
     RequestID:
       name: X-Request-ID
       in: header

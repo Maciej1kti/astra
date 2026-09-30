@@ -47,6 +47,12 @@ Zmiana AGENTS i info/exclude jest wyjątkiem inicjalizacji, pokazanym w planie. 
 
 ## Zależności i logi
 
+Optional summary-response gzip runs only after normal authentication, within the
+existing blocking-worker admission bound and a 4 MiB input cap. Bootstrap, pairing,
+credentials, commands and SSE are excluded; API responses retain `no-store` and
+the existing Host/Origin/session policy. Source-resource strong ETags remain on
+identity representations. See [ADR-052](ADR-052-BOUNDED-SUMMARY-COMPRESSION.md).
+
 Astra sprawdza utrzymanie, licencję i advisory przy przypinaniu zależności. Żadnej płatnej funkcji PRO bez decyzji właściciela. Lockfiles, SBOM i lista third-party notices w wydaniu. Nie zakładaj, że darmowa demonstracja widgetu oznacza darmowe wszystkie funkcje.
 
 Logi zawierają request ID, czasy, code, logiczny target i statystyki, nie body dokumentów, cookies, pairing secret ani komendy z prywatną treścią. Local telemetry bez wysyłki. Endpoint diagnostics wymaga sesji; unauth health zwraca tylko gotowość bez listy projektów. Rozbudowany bundle diagnostyczny tworzy właściciel z podglądem zawartości.

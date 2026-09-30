@@ -19,3 +19,7 @@ show both human and bot comments retained in a card. The matching
 
 `card-counters.json` shows source-owned daily totals; `requests/card-counter.http`
 shows conditional configuration and recording. See [ADR-049](../docs/ADR-049-DAILY-CARD-COUNTERS.md).
+
+[Summary compression](requests/summary-compression.http) illustrates optional
+gzip, identity compatibility and the source-resource boundary in
+[ADR-052](../docs/ADR-052-BOUNDED-SUMMARY-COMPRESSION.md).

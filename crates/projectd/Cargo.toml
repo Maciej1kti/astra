@@ -18,6 +18,7 @@ rusqlite.workspace = true
 project-application = { path = "../application" }
 project-store = { path = "../project-store" }
 notify = "=8.2.0"
+flate2 = { version = "=1.1.10", default-features = false, features = ["rust_backend", "runtime_detection"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "=5.13.2", default-features = false, features = ["tokio"] }

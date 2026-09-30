@@ -916,3 +916,6 @@ async fn session_revocation_closes_the_browser_event_stream() {
 
 #[path = "transport/deletion.rs"]
 mod deletion;
+
+#[path = "transport/compression.rs"]
+mod compression;

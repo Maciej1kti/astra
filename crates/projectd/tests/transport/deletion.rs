@@ -29,7 +29,7 @@ fn tree_snapshot(root: &Path) -> BTreeMap<String, Vec<u8>> {
     snapshot
 }
 
-async fn register(app: &Running) -> (String, String) {
+pub(super) async fn register(app: &Running) -> (String, String) {
     let hello: Value = app
         .local("GET", "/local/v1/hello")
         .send()
@@ -93,7 +93,7 @@ async fn deletion_plan(app: &Running, project: &str) -> Value {
     value
 }
 
-async fn browser_session(app: &Running) -> (String, String) {
+pub(super) async fn browser_session(app: &Running) -> (String, String) {
     let pending = app
         .browser("POST", "/api/v1/auth/pairings")
         .header("origin", "https://projects.test")

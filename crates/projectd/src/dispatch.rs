@@ -493,6 +493,9 @@ pub(super) fn run(
             ) && value["type"] != "update"
         })
         .map(str::to_owned);
+    if version.is_none() && super::read_response::eligible(&input.method, &parts) {
+        return super::read_response::json(&value, &input.headers);
+    }
     let mut reply = axum::Json(value).into_response();
     if let Some(version) = version {
         reply.headers_mut().insert(

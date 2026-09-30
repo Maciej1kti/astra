@@ -67,6 +67,14 @@ The full gate passes 244 Rust, 112 JavaScript and 12 Python tests; all 20 Chromi
 suites, broad HTTPS, WebKit Focus and the manual restart check pass. Python is
 tooling/optional Linux integration, outside ordinary browser requests. Desktop
 Calendar profiling identifies remaining transfer and browser-rendering costs.
+A further verified iteration negotiates bounded fast gzip for authenticated
+summary reads, with identity compatibility and unchanged source/credential/command
+boundaries. Large desktop Calendar JSON falls from 344 to 75 KB; warm constrained
+readiness falls from 1479 to 1081 ms, with the same returned items and DOM.
+The gate passes 249 Rust, 112 JavaScript and 12 Python tests; all 20 Chromium
+suites, six affected WebKit suites, broad HTTPS and manual restart checks pass.
+Rust dependency advisory/license review passes at this checkpoint. Calendar
+rendering and the durable-write target still require further performance work.
 
 ## Implemented product
 

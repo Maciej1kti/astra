@@ -23,6 +23,20 @@ Reprezentacja pojedynczego obiektu: `{type, metadata, body, version}`. Wersja je
 
 Błąd ma `{api_version, error: {code, message, request_id?, details?}}`. Stabilny jest code; message można tłumaczyć. Details nie zawiera sekretów ani pełnych plików przypadkowo z innego projektu. Błędy walidacji wskazują pole i regułę. Przykłady są w `examples/requests`.
 
+## Summary response compression
+
+Authenticated view, project and card/milestone/report collection GETs and Focus
+may negotiate gzip with `Accept-Encoding`; decoded JSON and source versions are
+unchanged. They retain `no-store` and send `Vary: Accept-Encoding`. Missing/empty
+encoding headers preserve identity compatibility. Fast compression normally
+applies only from 1 KiB through 4 MiB when gzip is preferred and smaller; gzip-only
+clients can receive smaller bodies too. Oversize reads use identity, or controlled
+406 `ENCODING_NOT_ACCEPTABLE` when no permitted representation remains. Source
+ETag resources, credentials/bootstrap, commands and SSE remain identity. The
+existing admission limit bounds compression workers. See
+[ADR-052](ADR-052-BOUNDED-SUMMARY-COMPRESSION.md) and the
+[HTTP example](../examples/requests/summary-compression.http).
+
 ## Mutacje
 
 Domenowe POST/PATCH/PUT wymagają `X-Request-ID` UUIDv7, `X-Command-Epoch` i przeglądarkowego `X-CSRF-Token`. Zmiana istniejącego dokumentu wymaga `If-Match`. Brak precondition → 428; niezgodna → 412. Zasób nieistniejący → 404. Stary epoch → 409. Zepsute źródło → 409 DOCUMENT_INVALID. Niedostępny projekt → 503. Zbyt duży payload → 413. Niepoprawne dane → 422. Request rate → 429. Utrata storage → 507 lub 503 z konkretnym code i bez fałszywego committed.

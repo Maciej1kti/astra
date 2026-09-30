@@ -15,8 +15,10 @@ use tokio::{
 use url::Url;
 mod assets;
 mod dispatch;
+mod encoding;
 mod events;
 mod picker;
+mod read_response;
 
 #[derive(Clone)]
 pub struct Service {

@@ -1,4 +1,5 @@
 //! Immutable frontend files with build-time compression; API bodies never enter this path.
+use super::encoding::quality;
 use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
@@ -11,33 +12,6 @@ struct Asset {
     gzip: Option<&'static [u8]>,
 }
 include!(concat!(env!("OUT_DIR"), "/assets.rs"));
-
-fn quality(headers: &HeaderMap, encoding: &str) -> Option<f32> {
-    headers
-        .get_all("accept-encoding")
-        .iter()
-        .filter_map(|value| value.to_str().ok())
-        .flat_map(|value| value.split(','))
-        .filter_map(|value| {
-            let mut parts = value.split(';');
-            if !parts.next()?.trim().eq_ignore_ascii_case(encoding) {
-                return None;
-            }
-            let mut quality = 1.0;
-            for parameter in parts {
-                let (key, value) = parameter.trim().split_once('=')?;
-                if !key.eq_ignore_ascii_case("q") {
-                    return None;
-                }
-                quality = value.trim().parse::<f32>().ok()?;
-                if !(0.0..=1.0).contains(&quality) {
-                    return None;
-                }
-            }
-            Some(quality)
-        })
-        .reduce(f32::max)
-}
 
 fn hashed(path: &str) -> bool {
     let Some(stem) = path
@@ -98,12 +72,7 @@ pub(super) fn serve(path: &str, headers: &HeaderMap, head: bool) -> Response {
 mod tests {
     use super::*;
     #[test]
-    fn encoding_quality_respects_explicit_veto_and_multiple_headers() {
-        let mut headers = HeaderMap::new();
-        headers.append("accept-encoding", HeaderValue::from_static("br, *;q=0.5"));
-        headers.append("accept-encoding", HeaderValue::from_static("gzip;q=0"));
-        assert_eq!(quality(&headers, "gzip"), Some(0.0));
-        assert_eq!(quality(&headers, "*"), Some(0.5));
+    fn hashed_asset_names_are_distinct_from_entry_documents() {
         assert!(hashed("/assets/index-Abcd_1-2.js"));
         assert!(!hashed("/index.html"));
         assert!(!hashed("/assets/index.js"));
