@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Focus eligibility/index iteration](2026-09-30-focus-eligibility-indexes.md)
+checks receipt membership earlier and selects existing review/decision partial
+indexes. The matched required release profile records all-read 50k receipts at
+52.7 ms median / 59.5 ms p95 versus 85.5 / 91.9 ms; no-receipt median improves
+from 22.5 to 15.2 ms. Further history distributions and earlier outliers remain
+open. The full gate passes 260 Rust, 139 JavaScript and 12 Python tests; Focus,
+events and protocol pass in Chromium and WebKit. Manual publication is pending.
+
 The [card layout controls](2026-09-30-card-layout-controls.md) add six-dot drag
 handles and per-card eye toggles saved across devices. Hidden content and mounted
 drafts are retained; the layout menu stays reachable when all sections are hidden.

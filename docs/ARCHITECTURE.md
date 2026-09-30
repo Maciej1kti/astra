@@ -124,7 +124,10 @@ edits; malformed input remains a diagnostic, not an empty or repaired document.
 Focus Attention reads report receipts from durable state before acquiring its
 index snapshot and includes that receipt snapshot in cursor identity. Its unread
 branch selects an eligible ordered prefix large enough for the requested page;
-other reasons keep their ordering and pagination. Marking a report read affects
+other reasons keep their ordering and pagination. Receipt membership is checked
+before the remaining unread-row eligibility work. Review and decision branches
+explicitly use their existing partial indexes, which startup restores for older
+projections before admitting reads. Marking a report read affects
 its unread entry, while a decision remains until resolved or corrected. Opening
 any returned target still uses a current source read.
 

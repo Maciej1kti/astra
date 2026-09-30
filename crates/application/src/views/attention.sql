@@ -49,7 +49,7 @@ AND (?5 IS NULL
 OR d.project_id=?5)
 AND (?6 IS NULL OR {FOLDER}=?6)
 UNION ALL SELECT project_id,entity_id,entity_type,title,'review',NULL,4
-FROM documents d
+FROM documents d INDEXED BY documents_in_review
 WHERE entity_type='card'
 AND json_extract(metadata_json,'$.status')='review'
 AND {ACTIVE}
@@ -57,7 +57,7 @@ AND (?5 IS NULL
 OR d.project_id=?5)
 AND (?6 IS NULL OR {FOLDER}=?6)
 UNION ALL SELECT d.project_id,d.entity_id,d.entity_type,d.title,'decision_needed',NULL,1
-FROM documents d
+FROM documents d INDEXED BY documents_decision_needed
 WHERE entity_type='update'
 AND json_extract(metadata_json,'$.kind')='decision_needed'
 AND {ACTIVE}
@@ -79,13 +79,13 @@ UNION ALL SELECT * FROM (
 SELECT d.project_id,d.entity_id,d.entity_type,d.title,'unread_report',NULL,2
 FROM documents d
 WHERE ?8=1 AND entity_type='update'
+AND (d.project_id || ':' || d.entity_id) NOT IN (
+SELECT value FROM json_each(?9) WHERE value IS NOT NULL
+)
 AND json_extract(metadata_json,'$.kind')!='decision_needed'
 AND {ACTIVE}
 AND (?5 IS NULL OR d.project_id=?5)
 AND (?6 IS NULL OR {FOLDER}=?6)
-AND (d.project_id || ':' || d.entity_id) NOT IN (
-SELECT value FROM json_each(?9) WHERE value IS NOT NULL
-)
 ORDER BY d.project_id,d.entity_id
 LIMIT ?10
 )

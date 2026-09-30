@@ -862,3 +862,135 @@ fn focus_attention_pages_keep_order_scopes_targets_and_receipt_identity() {
         original["version"]
     );
 }
+
+#[test]
+fn attention_partial_indexes_reopen_and_rebuild_without_losing_sources_or_receipts() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let mut reports = Vec::new();
+    for kind in ["note", "result", "decision_needed"] {
+        let reply = engine
+            .mutate(Mutation {
+                project_id: project.clone(),
+                kind: Kind::Update,
+                id: None,
+                payload: json!({
+                    "kind":kind,"summary":format!("Index fixture {kind}"),
+                    "target":{"type":"project","id":project},
+                    "author":{"kind":"human","label":"Owner"}
+                }),
+                request_id: Uuid::now_v7().to_string(),
+                epoch: engine.command_epoch().into(),
+                expected: None,
+            })
+            .unwrap();
+        assert_eq!(reply.http_status, 200, "{}", reply.body);
+        reports.push(
+            reply.body["result"]["resource"]["metadata"]["id"]
+                .as_str()
+                .unwrap()
+                .to_owned(),
+        );
+    }
+    let reply = engine
+        .receipts(
+            &json!({"items":[{"project_id":project,"update_id":reports[0],"read":true}]}),
+            &Uuid::now_v7().to_string(),
+            engine.command_epoch(),
+        )
+        .unwrap();
+    assert_eq!(reply.http_status, 200);
+    let card = create(&engine, &project, "Review fixture");
+    let card = &card.body["result"]["resource"];
+    let card_id = card["metadata"]["id"].as_str().unwrap().to_owned();
+    assert_eq!(
+        patch(
+            &engine,
+            &project,
+            &card_id,
+            card["version"].as_str().unwrap(),
+            json!({"set":{"status":"review"}})
+        )
+        .http_status,
+        200
+    );
+    let mut sources = Vec::new();
+    for (kind, id) in reports
+        .iter()
+        .map(|id| (Kind::Update, id))
+        .chain(std::iter::once((Kind::Card, &card_id)))
+    {
+        let resource = engine.get(&project, kind, id).unwrap();
+        let path = env
+            .root
+            .join(format!("project/.project/{}s/{id}.json", kind.as_str()));
+        sources.push((
+            kind,
+            id.clone(),
+            path.clone(),
+            fs::read(path).unwrap(),
+            resource["version"].clone(),
+        ));
+    }
+    let now = now_millis();
+    let expected = engine
+        .attention_mode(None, None, None, 200, now, true)
+        .unwrap()["items"]
+        .clone();
+    assert_eq!(
+        expected
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|item| item["reason"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        vec!["decision_needed", "unread_report", "review"]
+    );
+    drop(engine);
+    // An older disposable index may not have these indexes; opening restores them.
+    let db = rusqlite::Connection::open_with_flags(
+        env.root.join("state/index.sqlite"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )
+    .unwrap();
+    db.execute_batch("DROP INDEX documents_in_review; DROP INDEX documents_decision_needed;")
+        .unwrap();
+    drop(db);
+    let engine = env.engine();
+    assert_eq!(
+        engine
+            .attention_mode(None, None, None, 200, now, true)
+            .unwrap()["items"],
+        expected
+    );
+    let plan = engine
+        .maintenance_plan(&json!({"operation":"index_rebuild","project_id":project}))
+        .unwrap();
+    let reply = engine
+        .commit_maintenance(
+            plan["plan_id"].as_str().unwrap(),
+            &Uuid::now_v7().to_string(),
+            engine.command_epoch(),
+        )
+        .unwrap();
+    assert_eq!(reply.http_status, 202, "{}", reply.body);
+    assert_eq!(
+        (Workflows {
+            journal: &engine.journal
+        })
+        .job(reply.body["job_id"].as_str().unwrap())
+        .unwrap()["state"],
+        "done"
+    );
+    assert_eq!(
+        engine
+            .attention_mode(None, None, None, 200, now, true)
+            .unwrap()["items"],
+        expected
+    );
+    for (kind, id, path, bytes, version) in sources {
+        assert_eq!(fs::read(path).unwrap(), bytes);
+        assert_eq!(engine.get(&project, kind, &id).unwrap()["version"], version);
+    }
+}

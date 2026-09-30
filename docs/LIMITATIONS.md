@@ -74,6 +74,10 @@ distinguishes ordinary Attention from Focus Attention with 50,000 unread reports
 The [Focus receipt/prefix iteration](../progress/2026-09-30-focus-attention-prefix.md)
 reduces repeated receipt scans and bounds ordered unread candidates; its measured
 first-page profiles do not cover every decision/history distribution or large offset.
+The [existing-index iteration](../progress/2026-09-30-focus-eligibility-indexes.md)
+reduces the all-read 50k-receipt profile from 85.5 to 52.7 ms median; its p95 is
+still 59.5 ms and earlier larger outliers remain recorded. Receipt histories
+and dense decisions need separate coverage; further gains are not ruled out.
 The [tag source-read iteration](../progress/2026-09-30-tag-source-reads.md) reduces
 repeated folder work while preserving current-file counts and preview versions.
 Such catalogs still inspect source files and scale with the selected card collection.

@@ -248,8 +248,11 @@ receipt membership once within that statement and keeps only the first
 This is safe because unread reports share their weight, date and reason, and use
 the same project/ID order as the final mixed page. Eligibility and scope checks
 precede that prefix; overdue items, unresolved decisions and review items retain
-their existing rules. Receipts remain durable journal state, never an indexed
-source or a retained application cache.
+their existing rules. Receipt membership precedes further unread-row eligibility
+checks. Review and decision branches select their existing partial indexes so
+unrelated statuses/kinds do not cause full scans. `Index::open` installs these
+indexes before reads, including on an older projection. Receipts remain durable
+journal state, never an indexed source or a retained application cache.
 Attention reason branches and the shared event-boundary query check date/kind
 eligibility before the more expensive active/project checks. The boundary still
 includes exactly the qualifying ended events used for cursor invalidation.
