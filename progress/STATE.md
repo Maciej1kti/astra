@@ -25,6 +25,12 @@ is rebuilt/restarted; all 34 existing source versions, pins, preferences and
 certificate are preserved, and all 33 HTTPS assets are verified. Initial/changed-page
 rendering, durable-write performance and release acceptance remain open.
 
+A [remaining-cost ranking](2026-09-30-performance-ranking.md) covers all seven
+desktop views plus first-card/Settings opening with a 1,000-card release fixture.
+Local warm views are about 38–40 ms except the 163 ms Calendar grid; constrained
+Calendar remains about 999 ms. This small ranking run is not p95/device acceptance.
+Duplicate source/lease path traversal is the next server candidate to measure.
+
 The [compact card counters](2026-09-30-compact-card-counters.md) add 14-day charts,
 horizontal scrubbing and guarded numeric entry in compact rows. Redundant clock
 metadata is removed; history and prior-day draft context remain available.
