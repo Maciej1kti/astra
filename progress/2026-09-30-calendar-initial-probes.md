@@ -76,6 +76,8 @@ prototype acceptance is claimed. The restored final tree passes documentation/
 package validation and the full gate: 260 Rust, 139 JavaScript and 12 Python
 tests, contracts, formatting, Svelte, clippy, bundle bounds and release builds.
 The owner's existing uncommitted card edit is preserved separately.
+The normal CLI appends and reads back project report
+`88a282f4-fa44-42c4-a8e0-90b24b254e8e` with its committed source version.
 
 Reducing populated event-component work would require broader geometry,
 accessibility, popup, typography and interaction evidence. These rejected

@@ -1,0 +1,18 @@
+{
+  "body": "Four candidates test omitted CSS-hidden details, event color classes, lazy full-event conversion and equal-row height reuse. Seven release runs contain 196 cold/warm observations on 1,000 cards / 995 dated items. Two controls record local warm medians of 167.4–171.1 ms and constrained medians of 984.1–1036.9 ms. Reduced DOM and geometry operation counts do not produce a stable useful readiness improvement, so every prototype is restored.\n\nThe final restored tree passes 260 Rust, 139 JavaScript and 12 Python tests plus contracts, formatting, Svelte, clippy, bundle bounds and release builds. Focused prototype Chromium checks cover dense layout, complete popups, source versions, resizing and keyboard opening. This result changes evidence only; the previously verified manual application remains in use. Evidence: progress/2026-09-30-calendar-initial-probes.md.\n\nInitial dense rendering, current-source tag scans, additional Focus history distributions and write pauses remain performance candidates. Source authority, bounds, durability and acceptance requirements remain intact. Physical-device and end-to-end acceptance are not established by these measurements.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "88a282f4-fa44-42c4-a8e0-90b24b254e8e",
+    "kind": "result",
+    "recorded_at": "2026-09-30T18:59:59.052Z",
+    "summary": "Dense Calendar release probes do not establish a useful stable improvement; all prototypes are restored.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
