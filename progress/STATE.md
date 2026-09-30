@@ -115,17 +115,19 @@ broader WebKit dialog failures are reproduced against the previous frontend and
 documented. The manual app is rebuilt/restarted with all 29 existing resource
 versions, pins, preferences, certificate and 33 HTTPS assets verified.
 
-## Implemented product
-
 The [calendar rendering iteration](2026-09-30-calendar-rendering.md) eliminates
 repeated geometry reads, unused event-time formatting and accumulated array
 copies. With 1,000 cards, warm readiness improves from 190 to 160 ms locally
-and 1064 to 972 ms under the recorded network/CPU emulation. The full gate passes
-249 Rust, 123 JavaScript and 12 Python tests; broad HTTPS/planning, all 22 Chromium
-suites and six affected WebKit suites pass. It also fixes a reproduced retained
-editor exception after session revocation by preserving the last authenticated
-timezone for locked drafts. Manual availability remains to be verified; the
+and 1064 to 972 ms under the recorded network/CPU emulation. Initial and integrated
+full gates, broad HTTPS/planning, Chromium and eight affected WebKit checks pass;
+the integrated comments check passes after correcting its obsolete Focus selector.
+It also fixes a reproduced retained-editor exception after session revocation by
+preserving the last authenticated timezone for locked drafts. The combined manual
+release at `16a6935` is rebuilt/restarted and all 33 HTTPS assets are verified.
+Restart evidence and later owner edits are distinguished in the report. The
 overall performance objective and release acceptance remain open.
+
+## Implemented product
 
 - Shared Rust domain/application rules, strict JSON sources and generated browser
   contracts; conditional durable writes, unchanged retries, recovery and history.

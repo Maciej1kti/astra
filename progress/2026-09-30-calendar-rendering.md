@@ -67,10 +67,30 @@ separate from uninstrumented timing measurements.
 
 ## Verification and remaining work
 
-The full gate passes 249 Rust, 123 JavaScript and 12 Python tests. Broad release
-HTTPS/planning checks and all 22 Chromium regression suites pass. WebKit loading,
-session, planning, calendar-pages, calendar-layout and events pass, including
-strict CSP assertions. Manual HTTPS verification is pending at this checkpoint.
+The initial isolated full gate passes 249 Rust, 123 JavaScript and 12 Python tests.
+Broad release HTTPS/planning checks and all 22 Chromium regression suites pass.
+WebKit loading, session, planning, calendar-pages, calendar-layout and events pass,
+including strict CSP assertions.
+
+Integration with the completed Focus counters and card calendar at `8bd35b9`
+passes the full gate with 251 Rust, 129 JavaScript and 12 Python tests. Broad
+HTTPS/planning and 23 of 24 Chromium suites pass on the first run. Comments fails
+because its Focus entry selector assumes the former metadata markup; a focused
+rerun with the correct card entry passes, retaining history, uncertain-command
+and conflict checks. Eight affected WebKit suites pass. The subsequent unified
+card-layout change at `16a6935` independently corrects that selector and passes
+its full gate and affected browser suites, as recorded in
+[its evidence](2026-09-30-unified-card-sections.md).
+
+The combined release frontend and daemon at `16a6935`, including this optimization,
+were rebuilt and the existing manual application restarted. Its restart evidence
+preserves all 31 pre-existing resource versions, two pins, preferences and the
+certificate. A subsequent trusted-certificate check at
+`https://100.122.250.14:47832` verifies all 33 embedded assets against the current
+production build, with no diagnostic maps. At that later check there are 32
+resources: one report was added and one known owner-edited card has a newer
+version. The other 30 earlier versions, pins, preferences and certificate match;
+the owner's edits are retained and are not treated as restart mutations.
 
 The broad HTTPS run also exposed a reproducible retained-editor exception after
 session revocation. Its failing regression and correction are described in
@@ -86,5 +106,7 @@ profiles/traces/maps, `baseline-isolated`, `height-cache`, `lazy-chunks`, the
 dense-layout regression, its unmodified negative control and build/check logs.
 Final evidence adds `current-baseline`, `current-optimized`, `current-coverage.json`,
 `verified-full-gate.log`, `verified-chromium`, `verified-webkit` and the before/after
-session regression. These results use isolated builds; concurrent source work
-is preserved separately.
+session regression. Integrated checks are in `integration-full-gate.log`,
+`integration-chromium`, `integration-comments`, `integration-webkit` and
+`manual-verification.json`. These results use isolated builds; concurrent source
+work is preserved separately.
