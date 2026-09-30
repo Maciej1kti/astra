@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [calendar refresh iteration](2026-09-30-calendar-refresh.md) retains displayed
+event identities after identical ordinary reads. At 1,000 cards, no-change
+refresh improves from 155 to 37 ms locally and from 879 to 352 ms under the
+recorded network/CPU emulation. New source versions, changed metadata, scope,
+editability, order and membership still publish; source reads remain fresh.
+The combined full gate passes 251 Rust, 137 JavaScript and 12 Python tests;
+broad HTTPS/planning, seven Chromium and six WebKit suites pass. Manual restart
+verification is pending in its evidence. Initial/changed-page rendering,
+durable-write performance and release acceptance remain open.
+
 The [compact card counters](2026-09-30-compact-card-counters.md) add 14-day charts,
 horizontal scrubbing and guarded numeric entry in compact rows. Redundant clock
 metadata is removed; history and prior-day draft context remain available.

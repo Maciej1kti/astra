@@ -134,6 +134,10 @@ and Gantt keep their own pagination policy. Calendar agenda pages hold 200 items
 grid/time views retain 1,000. The page size participates in read scope, so changing
 layout resets an incompatible cursor. Read-only calendar snapshots and widget
 events use shallow reactive ownership, with explicit replacement on changes.
+The calendar adapter retains event identity only for its displayed page and
+compares every version/projection field after each ordinary read. Identical pages
+avoid another widget normalization/layout pass; changed metadata, editability,
+order and membership still publish. This does not cache source-read authority.
 Typed widget adapters convert inclusive
 domain dates into vendor events/tasks without modifying
 source rows. Gantt gesture activity is passed through its instance context.

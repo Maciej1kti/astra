@@ -39,6 +39,17 @@ are unchanged. Further DOM and overlap work requires new measurements and
 behavioral evidence rather than assuming these optimizations make rendering
 constant-time.
 
+An additional measured refresh optimization retains widget event inputs only for
+the currently displayed page. Identical fresh reads keep the same event objects
+and array; any changed source version, projection field, timed-event field,
+editability, order or membership is published explicitly. Exhaustive typed field
+sets make a contract extension require adapter review. Owned metadata snapshots
+avoid silently changing retained events through caller mutation. Removed or
+filtered events are evicted; this is not a multi-page or source-response cache.
+Normal reads, request cancellation, gesture publication, freshness notices and
+current-source reads before opening remain unchanged. See
+[the refresh evidence](../progress/2026-09-30-calendar-refresh.md).
+
 Unit tests cover pass-local geometry, resized cells and lazy current details.
 The release browser regression uses 300 added source cards, including a plan
 crossing a week boundary. It checks actual geometry-read counts, unused time

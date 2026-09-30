@@ -52,11 +52,12 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
   const checkpoints = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript(() => {
-    const counts = { cell: 0, footer: 0, timeFormats: 0 };
+    const counts = { cell: 0, header: 0, footer: 0, timeFormats: 0 };
     const rect = Element.prototype.getBoundingClientRect;
     window.calendarReadRect = (element) => rect.call(element);
     Element.prototype.getBoundingClientRect = function () {
       if (this.classList.contains("ec-day")) counts.cell++;
+      if (this.classList.contains("ec-day-head")) counts.header++;
       if (this.classList.contains("ec-day-foot")) counts.footer++;
       return rect.call(this);
     };
@@ -141,6 +142,71 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
       JSON.stringify(initial),
     );
     assert.equal(initial.counts.timeFormats, 0);
+    await page.evaluate(() => {
+      for (const key of Object.keys(window.calendarGeometry))
+        window.calendarGeometry[key] = 0;
+    });
+    const refreshed = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/v1/views/calendar" &&
+        response.status() === 200,
+    );
+    await page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await (await refreshed).finished();
+    const unchanged = await checkpoint("unchanged-refresh");
+    assert.equal(unchanged.counts.header, 0, JSON.stringify(unchanged));
+    assert.equal(unchanged.counts.cell, 0, JSON.stringify(unchanged));
+    assert.equal(unchanged.counts.footer, 0, JSON.stringify(unchanged));
+
+    const changedPath = `/api/v1/projects/${project.id}/cards/${config.cards[0].id}`;
+    const observed = cli("get", changedPath);
+    const payload = join(config.temp, "calendar-refresh-command.json");
+    await writeFile(
+      payload,
+      JSON.stringify({ set: { title: "Calendar refresh source update" } }),
+    );
+    const committed = cli(
+      "command",
+      "PATCH",
+      changedPath,
+      "--json-file",
+      payload,
+      "--if-version",
+      observed.version,
+    );
+    assert.equal(committed.status, "committed");
+    const source = cli("get", changedPath);
+    await expect
+      .poll(
+        () => {
+          expected = cli("get", path);
+          return expected.items.some(
+            (item) =>
+              item.resource_id === config.cards[0].id &&
+              item.version === source.version,
+          );
+        },
+        { timeout: 30000 },
+      )
+      .toBe(true);
+    const latest = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/v1/views/calendar" &&
+        response.status() === 200,
+    );
+    await page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await (await latest).finished();
+    const changed = expected.items.find(
+      (item) => item.resource_id === config.cards[0].id,
+    );
+    const changedEntry = surface
+      .locator(`[data-calendar-item="${changed.item_id}"]`)
+      .first();
+    await expect(changedEntry).toContainText("Calendar refresh source update");
+    await expect(
+      changedEntry.locator("xpath=ancestor::article[1]"),
+    ).toHaveAttribute("data-source-version", source.version);
+    await checkpoint("changed-refresh");
     for (const viewport of [
       { width: 1024, height: 640 },
       { width: 1440, height: 1000 },

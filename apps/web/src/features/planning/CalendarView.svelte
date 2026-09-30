@@ -12,7 +12,7 @@
   } from "@event-calendar/core";
   import "@event-calendar/core/index.css";
   import { cursorPage } from "../../lib/api/pagination";
-  import { calendarEvents } from "./calendar-events";
+  import { calendarEventProjection } from "./calendar-events";
   import { getCalendar } from "../../lib/api/planning";
   import { PlanningRead } from "./planning-read";
   import { projectionNotice } from "../../lib/api/projection-state";
@@ -101,6 +101,7 @@
   let reset = $state(0);
   let displayedDate = $state(untrack(() => calendarDate));
   let events = $state.raw<Calendar.EventInput[]>([]);
+  const projectEvents = calendarEventProjection();
   const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
   const callbacks: Calendar.Options = {
     headerToolbar: { start: "", center: "", end: "" },
@@ -176,7 +177,7 @@
   });
   $effect(() => {
     if (active) return;
-    events = calendarEvents(items, search, ready);
+    events = projectEvents(items, search, ready);
   });
   $effect(() => {
     void project;
