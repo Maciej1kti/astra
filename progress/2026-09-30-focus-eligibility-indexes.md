@@ -61,7 +61,14 @@ release builds. Focus, events and protocol suites pass in Chromium and WebKit
 against fresh real release daemons with ordinary pairing. They retain report
 reading, decision resolution, observed-version writes and stale-page recovery
 in all five paged views. Rendered desktop Focus and narrow-screen event results
-are inspected. Manual publication remains pending.
+are inspected.
+
+The original embedded frontend and release daemon are rebuilt. The existing
+manual launcher is restarted with its current state, connection settings and
+certificate. Trusted HTTPS remains `https://100.122.250.14:47832`; all 33 served
+build files match the build. All 52 prior resource versions, two pins, preferences
+and certificate are preserved. The normal CLI report is
+`588e6e81-da0b-4574-8aeb-08f868990e83`; no card status or acceptance is changed.
 The new engine regression exercises an older projection without review/decision
 indexes, ordinary reopening and index rebuild. It compares mixed Focus results,
 read-receipt behavior, exact source bytes and versions. Existing pagination,
