@@ -1,5 +1,10 @@
 //! Pin membership belongs to card source; workspace focus is only a local order.
-use crate::{AppError, engine::Engine, index::ProjectionStatus, source::collection};
+use crate::{
+    AppError,
+    engine::Engine,
+    index::{Indexed, ProjectionStatus},
+    source::collection,
+};
 use project_domain::models::{Document, FocusRef, Workspace};
 use project_store::document::Kind;
 use rusqlite::params;
@@ -20,18 +25,40 @@ impl Engine {
             let projection = ProjectionStatus::read(db, None)?;
             let projects = serde_json::to_string(&workspace.value.projects).unwrap();
             let ordering = serde_json::to_string(&workspace.value.focus).unwrap();
-            let mut items = db.prepare(include_str!("focus-membership.sql"))?
+            let mut statement = db.prepare(include_str!("focus-membership.sql"))?;
+            let mut rows = statement
                 .query_map(params![projects, ordering, (MAX_FOCUS + 1) as i64], |row| {
-                    Ok(FocusRef { project_id: row.get(0)?, card_id: row.get(1)? })
-                })?.collect::<Result<Vec<_>, _>>()?;
-            let overflow = items.len() > MAX_FOCUS;
-            items.truncate(MAX_FOCUS);
+                    let reference = FocusRef {
+                        project_id: row.get(0)?,
+                        card_id: row.get(1)?,
+                    };
+                    let card = if let Some(version) = row.get::<_, Option<String>>(2)? {
+                        Some(Indexed {
+                            project_id: reference.project_id.clone(),
+                            kind: "card".into(),
+                            id: reference.card_id.clone(),
+                            version,
+                            metadata: serde_json::from_str(&row.get::<_, String>(3)?)
+                                .map_err(|_| rusqlite::Error::InvalidQuery)?,
+                            validity: row.get(4)?,
+                        })
+                    } else {
+                        None
+                    };
+                    Ok((reference, card))
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+            let overflow = rows.len() > MAX_FOCUS;
+            rows.truncate(MAX_FOCUS);
+            let (items, cards): (Vec<_>, Vec<_>) = rows.into_iter().unzip();
+            let mut cards: Vec<_> = cards.into_iter().flatten().collect();
+            projection.mark_rows(&mut cards);
             let issues: bool = db.query_row("SELECT EXISTS(SELECT 1 FROM projection_issues)", [], |r| r.get(0))?;
             let complete = !overflow && !issues && projection.freshness != "stale";
             let mut warnings = projection.warnings;
             if issues { warnings.push(json!({"code":"FOCUS_INCOMPLETE","message":"Some project sources are unavailable or invalid. Retained pins may be stale; check host diagnostics."})); }
             if overflow { warnings.push(json!({"code":"FOCUS_LIMIT","message":"Showing the first 100 pins. Unpin cards to restore ordering; other cards remain accessible in List."})); }
-            Ok(json!({"items":items,"version":workspace.version,"complete":complete,
+            Ok(json!({"items":items,"cards":cards.iter().map(Indexed::summary).collect::<Vec<_>>(),"version":workspace.version,"complete":complete,
                 "page":{"next_cursor":null,"snapshot_cursor":revision,"has_more":false,"freshness":if complete {"index_snapshot"} else {"stale"}},"warnings":warnings}))
         })
     }

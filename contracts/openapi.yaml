@@ -1274,8 +1274,15 @@ paths:
       operationId: getFocus
       tags:
       - workspace
-      summary: getFocus
-      description: Bounded projection of source-owned pins, ranked by workspace order. Returns freshness, warnings and completeness; unavailable pins are retained. The version is for conditional ordering, not a representation ETag. New pins are admitted atomically up to 100; external overflow remains readable but ordering is disabled until repaired.
+      summary: Read ordered pins and their snapshot summaries
+      description: >-
+        Bounded projection of source-owned pins, ranked by workspace order. Returns
+        freshness, warnings and completeness; unavailable pins are retained. Current
+        hosts include cards from the same projection snapshot, without source bodies.
+        Missing summaries retain their reference in items; older hosts may omit cards.
+        The version is for conditional ordering, not a representation ETag. Read current
+        source resources before editing. New pins are admitted atomically up to 100;
+        external overflow remains readable. Incomplete membership disables reordering.
       responses:
         '200':
           description: Poprawna odpowiedź
@@ -3780,6 +3787,12 @@ components:
     FocusResource:
       type: object
       properties:
+        cards:
+          type: array
+          description: Card summaries from the same projection snapshot as items, without bodies. Missing retained references have no summary; their position remains in items. Present on current hosts and optional for older-host compatibility. Always read the current resource before editing.
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Summary'
         items:
           type: array
           items:

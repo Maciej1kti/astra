@@ -886,7 +886,10 @@
           <Button
             variant="primary"
             class="focus-add-action"
-            onclick={() => create("card")}>＋ Add card</Button
+            onclick={(event) => {
+              event.currentTarget.focus({ preventScroll: true });
+              create("card");
+            }}>＋ Add card</Button
           >
         {/if}
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =

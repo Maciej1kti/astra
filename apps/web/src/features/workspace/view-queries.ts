@@ -30,9 +30,21 @@ export type {
   AttentionItem as Attention,
 } from "../../lib/contracts/api.generated";
 import type {
+  FocusRef,
   FocusResource,
   AttentionItem as Attention,
 } from "../../lib/contracts/api.generated";
+
+function unavailablePin(ref: FocusRef): Summary {
+  return {
+    type: "card",
+    id: ref.card_id,
+    project_id: ref.project_id,
+    title: "Unavailable pinned card",
+    version: "",
+    availability: "unavailable",
+  };
+}
 
 export function viewSections(query: ViewQuery): Section[] {
   switch (query.view) {
@@ -231,6 +243,21 @@ export async function loadView(
   );
   signal.throwIfAborted();
   if (result.focus) {
+    if (result.focus.cards) {
+      const summaries = new Map(
+        result.focus.cards.map((item) => [
+          `${item.project_id}:${item.id}`,
+          item,
+        ]),
+      );
+      result.focusCards = result.focus.items.map(
+        (ref) =>
+          summaries.get(`${ref.project_id}:${ref.card_id}`) ??
+          unavailablePin(ref),
+      );
+      return result;
+    }
+    // Older hosts expose references only. Keep their bounded detail-read path.
     const cached = new Map(
       (result.pages.card?.value.items ?? []).map((item) => [
         `${item.project_id}:${item.id}`,
@@ -257,14 +284,7 @@ export async function loadView(
           return detailSummary(resource, ref.project_id, "card");
         } catch (error) {
           if (isAbortError(error)) throw error;
-          return {
-            type: "card",
-            id: ref.card_id,
-            project_id: ref.project_id,
-            title: "Unavailable pinned card",
-            version: "",
-            availability: "unavailable",
-          };
+          return unavailablePin(ref);
         }
       },
       signal,

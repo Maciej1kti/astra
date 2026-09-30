@@ -45,6 +45,14 @@ fn focus_isolates_invalid_sources_retains_pins_and_recovers() {
         .expect("one invalid source must not block healthy pins");
     wire::validate("FocusResource", &read).unwrap();
     assert_eq!(read["items"][0]["card_id"], id);
+    assert_eq!(read["cards"][0]["id"], id);
+    assert_eq!(read["cards"][0]["title"], "Healthy pin");
+    assert_eq!(read["cards"][0]["availability"], "ready");
+    assert_eq!(
+        read["cards"][0]["version"],
+        engine.get(&good, Kind::Card, id).unwrap()["version"]
+    );
+    assert!(read["cards"][0].get("body").is_none());
     assert_eq!(read["complete"], false);
     assert!(!read["warnings"].as_array().unwrap().is_empty());
     fs::write(&path, bytes).unwrap();
@@ -55,7 +63,40 @@ fn focus_isolates_invalid_sources_retains_pins_and_recovers() {
     let read = engine.focus_resource().unwrap();
     wire::validate("FocusResource", &read).unwrap();
     assert_eq!(read["items"][0]["card_id"], id);
+    assert_eq!(read["cards"][0]["availability"], "unavailable");
     assert_eq!(read["complete"], false);
+}
+
+#[test]
+fn focus_summaries_remain_stale_until_source_reconciliation() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Retained pin");
+    let id = card.body["result"]["id"].as_str().unwrap();
+    let pinned = patch(
+        &engine,
+        &project,
+        id,
+        card.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":true}}),
+    );
+    assert_eq!(pinned.http_status, 200);
+    drop(engine);
+    let engine = Engine::open_for_service(&env.root.join("state")).unwrap();
+    let pending = engine.focus_resource().unwrap();
+    wire::validate("FocusResource", &pending).unwrap();
+    assert_eq!(pending["complete"], false);
+    assert_eq!(pending["cards"][0]["availability"], "stale");
+    assert_eq!(
+        pending["cards"][0]["version"],
+        pinned.body["result"]["version"]
+    );
+    engine.refresh_project(&project, None).unwrap();
+    let ready = engine.focus_resource().unwrap();
+    assert_eq!(ready["complete"], true);
+    assert_eq!(ready["cards"][0]["availability"], "ready");
+    assert_eq!(ready["cards"][0]["version"], pending["cards"][0]["version"]);
 }
 
 #[test]
@@ -98,6 +139,7 @@ fn cold_focus_preserves_unavailable_saved_pins_without_restoring_removed_members
         let read = engine.focus_resource().unwrap();
         wire::validate("FocusResource", &read).unwrap();
         assert_eq!(read["items"], items);
+        assert_eq!(read["cards"], json!([]));
         assert_eq!(read["complete"], false);
     }
     fs::rename(env.root.join("moved"), env.root.join("project")).unwrap();
@@ -316,6 +358,16 @@ fn concurrent_pins_admit_only_the_last_slot_and_overflow_reads_allow_recovery() 
     engine.refresh_project(&project, None).unwrap();
     let read = engine.focus_resource().unwrap();
     assert_eq!(read["items"].as_array().unwrap().len(), 100);
+    assert_eq!(read["cards"].as_array().unwrap().len(), 100);
+    for (reference, summary) in read["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(read["cards"].as_array().unwrap())
+    {
+        assert_eq!(reference["card_id"], summary["id"]);
+        assert_eq!(reference["project_id"], summary["project_id"]);
+    }
     assert_eq!(read["complete"], false);
     let pin = &read["items"][0];
     let project = pin["project_id"].as_str().unwrap();

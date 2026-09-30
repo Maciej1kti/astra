@@ -328,3 +328,97 @@ test("Focus queries use folders across projects and invalidate when project fold
     ["projects", "focus", "attention", "card", "event"],
   );
 });
+
+test("Focus uses snapshot summaries without detail reads and retains missing pins in order", async () => {
+  const calls = [];
+  const previous = globalThis.fetch;
+  const first = {
+    type: "card",
+    project_id: "p",
+    id: "first",
+    title: "First",
+    version: "observed-first",
+    availability: "stale",
+  };
+  const second = {
+    ...first,
+    id: "second",
+    title: "Second",
+    version: "observed-second",
+    availability: "ready",
+  };
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    assert.equal(url, "/api/v1/workspace/focus");
+    return response({
+      items: [second, { ...first, id: "missing" }, first].map((item) => ({
+        project_id: item.project_id,
+        card_id: item.id,
+      })),
+      cards: [first, second],
+      version: "order-version",
+      complete: false,
+      warnings: [],
+      page: { freshness: "stale" },
+    });
+  };
+  try {
+    const result = await loadView(
+      { ...query, view: "focus" },
+      ["focus"],
+      {},
+      new AbortController().signal,
+    );
+    assert.deepEqual(calls, ["/api/v1/workspace/focus"]);
+    assert.deepEqual(
+      result.focusCards.map((item) => item.id),
+      ["second", "missing", "first"],
+    );
+    assert.deepEqual(result.focusCards[0], second);
+    assert.equal(result.focusCards[1].availability, "unavailable");
+    assert.deepEqual(result.focusCards[2], first);
+    assert.equal(result.focus.version, "order-version");
+  } finally {
+    clearReads();
+    globalThis.fetch = previous;
+  }
+});
+
+test("Focus remains compatible with reference-only hosts", async () => {
+  const calls = [];
+  const previous = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    return response(
+      url === "/api/v1/workspace/focus"
+        ? {
+            items: [{ project_id: "p", card_id: "c" }],
+            version: "order",
+            warnings: [],
+            page: { freshness: "index_snapshot" },
+          }
+        : {
+            type: "card",
+            metadata: { id: "c", title: "Legacy pin" },
+            version: "card-version",
+          },
+    );
+  };
+  try {
+    const result = await loadView(
+      { ...query, view: "focus" },
+      ["focus"],
+      {},
+      new AbortController().signal,
+    );
+    assert.deepEqual(calls, [
+      "/api/v1/workspace/focus",
+      "/api/v1/projects/p/cards/c",
+    ]);
+    assert.equal(result.focusCards[0].title, "Legacy pin");
+    assert.equal(result.focusCards[0].version, "card-version");
+  } finally {
+    clearReads();
+    globalThis.fetch = previous;
+  }
+});

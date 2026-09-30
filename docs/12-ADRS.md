@@ -324,3 +324,6 @@ read-only record instead of disabled form fields. See
 Project folder filtering is described in [ADR-043](ADR-043-PROJECT-FOLDERS.md).
 Timed card events and their civil clock semantics are described in
 [ADR-044](ADR-044-TIMED-EVENTS.md).
+
+Bounded Focus summaries sharing the membership snapshot are described in
+[ADR-051](ADR-051-FOCUS-SNAPSHOT-SUMMARIES.md).

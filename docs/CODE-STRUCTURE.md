@@ -26,6 +26,11 @@ project overview, resource lists, updates and the workspace board overview.
 Navigation exposes a read-only route and explicit actions; only navigation owns
 the generation that cancels obsolete resource reads and history restoration.
 
+Focus reads its pinned summaries with the ordered membership snapshot. Missing
+retained references become unavailable placeholders; older hosts without summaries
+use the existing bounded detail-read path. Opening a card still reads its current
+source before editing. See [ADR-051](ADR-051-FOCUS-SNAPSHOT-SUMMARIES.md).
+
 View/project/discrete-filter changes start their reads immediately. Only typed
 server-side searches retain the 200 ms debounce. Bootstrap and preferences load
 concurrently; either request can end an expired session, and initialization still

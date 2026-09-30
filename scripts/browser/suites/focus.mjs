@@ -17,6 +17,7 @@ await runBrowserSuite(
     const errors = [];
     const requests = [];
     const focusWrites = [];
+    const activeReads = new Set();
 
     await mkdir(evidence, { recursive: true });
 
@@ -262,9 +263,17 @@ await runBrowserSuite(
     const page = await context.newPage();
     page.setDefaultTimeout(15000);
     page.on("pageerror", (error) => errors.push(error.message));
+    page.on("requestfinished", (request) => activeReads.delete(request));
+    page.on("requestfailed", (request) => activeReads.delete(request));
     page.on("request", (request) => {
       const url = new URL(request.url());
       requests.push(url);
+      if (
+        request.method() === "GET" &&
+        url.pathname.startsWith("/api/v1/") &&
+        url.pathname !== "/api/v1/events"
+      )
+        activeReads.add(request);
       if (
         request.method() === "PUT" &&
         url.pathname === "/api/v1/workspace/focus"
@@ -369,6 +378,13 @@ await runBrowserSuite(
           assert(
             requests.some((url) => url.pathname === "/api/v1/workspace/focus"),
             "Focus must read the workspace focus resource",
+          );
+          assert.equal(
+            requests.filter((url) =>
+              /\/projects\/[^/]+\/cards\/[^/]+$/.test(url.pathname),
+            ).length,
+            0,
+            "Pinned summaries must arrive with Focus, without individual detail reads",
           );
           assert(
             requests.some((url) => url.pathname === "/api/v1/views/attention"),
@@ -702,6 +718,15 @@ await runBrowserSuite(
           await setFocus(items);
           const observed = cli("focus", "get");
           let unavailableReads = 0;
+          // Keep compatibility coverage for a host that returns references only.
+          const legacyFocus = `${config.origin}/api/v1/workspace/focus`;
+          await page.route(legacyFocus, async (route) => {
+            if (route.request().method() !== "GET") return route.continue();
+            const response = await route.fetch();
+            const value = await response.json();
+            delete value.cards;
+            await route.fulfill({ response, json: value });
+          });
           const unavailablePath = `${config.origin}${base}/cards/${unavailable.metadata.id}`;
           await page.route(unavailablePath, async (route) => {
             if (route.request().method() !== "GET") return route.continue();
@@ -827,6 +852,11 @@ await runBrowserSuite(
           await page.screenshot({
             path: join(evidence, "F06-drag-preview.png"),
           });
+          const refreshedFocus = page.waitForResponse(
+            (response) =>
+              response.request().method() === "GET" &&
+              new URL(response.url()).pathname === "/api/v1/workspace/focus",
+          );
           await page.mouse.up();
           const response = await putResponse;
           assert.equal(response.status(), 200);
@@ -835,6 +865,10 @@ await runBrowserSuite(
           assert.deepEqual(saved.items, expected);
           assert.deepEqual(focusWrites.at(-1).payload, { items: expected });
           assert.equal(focusWrites.at(-1).version, `"${observed.version}"`);
+          // This checks persistence after an acknowledged refresh. WebKit reports
+          // queued fetches as access-control errors if reload interrupts that read.
+          await (await refreshedFocus).finished();
+          await expect.poll(() => activeReads.size).toBe(0);
           await page.reload();
           await expect
             .poll(() => visibleFocusOrder(page))
@@ -866,6 +900,8 @@ await runBrowserSuite(
             });
           }
           await page.setViewportSize({ width: 1440, height: 1000 });
+          await page.unroute(legacyFocus);
+          await page.unroute(unavailablePath);
           return {
             hiddenPinRetainedAtSlot: 2,
             unavailablePinRetainedAtSlot: 1,

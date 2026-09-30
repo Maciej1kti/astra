@@ -751,6 +751,10 @@ export interface FocusResource {
   /**
    * @maxItems 100
    */
+  cards?: Summary[];
+  /**
+   * @maxItems 100
+   */
   items: FocusRef[];
   complete: boolean;
   page: PageMeta;

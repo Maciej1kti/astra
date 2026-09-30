@@ -1,6 +1,6 @@
 # Current implementation state
 
-Updated 2026-09-29. The application is implemented and under verification;
+Updated 2026-09-30. The application is implemented and under verification;
 full release acceptance remains open. [Scope decisions](SCOPE.md) supersede the
 historical handoff. Use the [release checklist](../delivery/RELEASE-CHECKLIST.md)
 for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ownership.
@@ -51,7 +51,12 @@ after initial data and bounds agenda pages to 200 items with explicit pagination
 At 1,000 cards, warm Calendar improves from 1.73 s to 0.63 s under the recorded
 network/CPU emulation; first-card opening falls from 317 to 192 ms. The full gate,
 affected Chromium/WebKit checks and manual HTTPS restart verification pass.
-Focus's remaining serial pin reads are next; the goal remains open.
+A third verified iteration returns pin summaries in Focus's membership snapshot,
+preserving older-host compatibility and current-source reads before editing.
+At 1,000 cards/ten pins, warm constrained Focus improves from 935 to 523 ms.
+The full gate passes 239 Rust, 112 JavaScript and 12 Python tests; affected
+Chromium/WebKit and manual HTTPS restart checks pass. Transfer costs and desktop
+planning rendering remain candidates; the performance objective remains open.
 
 ## Implemented product
 

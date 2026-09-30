@@ -1,7 +1,7 @@
 # Iterative performance optimization — 2026-09-29
 
 Owner direction: continue improving performance until further changes stop making
-a noticeable difference. The goal remains active; this records verified
+a noticeable difference. The objective remains open; this records verified
 iterations, not a claim that every bottleneck or release target is resolved.
 
 ## Iteration 1: startup and navigation
@@ -138,11 +138,70 @@ matched the pre-restart snapshot. Evidence: `pass2-full-gate.log`, `pass2-browse
 `pass2-final-large` and `manual-pass2.json` under the ignored loading evidence folder.
 Earlier raw-state and eager-editor experiments remain there with their actual results.
 
+## Iteration 3: Focus snapshot summaries — verified 2026-09-30
+
+Focus now includes up to 100 card summaries with its ordered pin membership,
+from the same locked projection snapshot. This removes the individual full-source
+reads previously used only to construct summaries. Pending/invalid/unavailable
+rows retain their availability; missing retained references keep their positions
+as unavailable placeholders. Opening a card still reads its current source before
+editing. The optional response field preserves compatibility with reference-only
+hosts, whose existing bounded detail-read path remains. Contracts, examples and
+[ADR-051](../docs/ADR-051-FOCUS-SNAPSHOT-SUMMARIES.md) describe that boundary.
+
+The partial pin index remains in use. Selection/order/limit precede primary-key
+document joins; source scans, admission rules, write durability and the no-ETag
+rule are unchanged. Initial JS/CSS totals 63,480 gzip bytes (62.0 KiB).
+
+Before and after use five quiet release samples per case with the same hardware,
+Chromium 153, 390 × 844 viewport and network/CPU emulation recorded above. The
+three-project fixtures contain either 37 cards or 1,000 cards with ten pins.
+
+| Median, ms | Local before | Local after | Constrained before | Constrained after |
+| --- | ---: | ---: | ---: | ---: |
+| Small, fresh Focus | 73.4 | 73.8 | 749.5 | 754.3 |
+| Small, warm Focus | 39.1 | 39.5 | 482.3 | 484.1 |
+| 1,000 cards, fresh Focus | 73.4 | 73.1 | 1220.9 | 806.6 |
+| 1,000 cards, warm Focus | 56.0 | 54.9 | 935.4 | 523.5 |
+
+The expanded warm constrained case improves by 44%; its final range is
+515.8–528.1 ms. Resource traces contain no individual pin reads. Small/local
+differences do not establish a speed improvement. Warm daemon/index, synthetic
+sources and five-sample medians still do not establish physical-device, VPN or
+p95 acceptance.
+
+The final full local gate passes 239 Rust, 112 JavaScript and 12 Python tests.
+Release Chromium passes Focus/session, protocol and broad HTTPS checks; WebKit
+passes session and the corrected Focus suite. Coverage includes source versions
+without bodies, pending reconciliation, unavailable sources, missing index rows,
+overflow/order bounds and reference-only host behavior. Safari's click behavior
+also exposed missing focus restoration after closing the editor; the Focus add
+action now explicitly establishes the focus target before opening it.
+
+WebKit reported queued fetches as access-control page errors when the test
+reloaded immediately after an acknowledged reorder, while its follow-up read
+was starting. Instrumented runs located them between beforeunload and pagehide,
+with cancelled existing reads and no window error/unhandled rejection. The
+persistence test now waits for the post-write Focus response and ordinary API
+reads to settle before reload; page errors remain failures, without filtering.
+The corrected Chromium/WebKit runs pass. An initial broad Chromium run failed
+to open a Board editor once; an unmodified repeat and the final application run
+passed. The initial cause remains unknown and its evidence is retained.
+
+The existing manual app was rebuilt/restarted and its HTTPS assets match the
+current build byte for byte. All 25 existing resource versions, two pins,
+preferences and the certificate matched the pre-restart snapshot.
+
+Evidence under the same ignored folder: `pass3-final-gate.log`,
+`pass3-format-final.log`, `pass3-browser`, `pass3-protocol`, `pass3-smoke-final`,
+`pass3-chromium-refresh`, `pass3-webkit`, `pass3-webkit-refresh`,
+`pass3-webkit-diagnostic`, `pass3-final-small`, `pass3-final-large` and
+`manual-pass3.json`. Earlier failing SQL, focus restoration, reload and smoke
+probes remain there with their actual results.
+
 ## Continuing work
 
-The expanded fixture still takes about 935 ms for warm constrained Focus: ten
-pinned cards trigger separate detail reads after the section reads. Address that
-measured waterfall next, preserving snapshot freshness and current-version reads
-before editing. Evaluate remaining transfer and rendering costs against their
-actual effect; retain durability, source validation and read bounds. Do not treat
-the improvements above as completion of the owner's goal.
+Evaluate remaining transfer costs and desktop planning rendering against their
+actual effect, followed by source-collection costs in durable creation if still
+material. Retain durability, source validation and read bounds. Do not treat the
+improvements above as completion of the owner's objective.
