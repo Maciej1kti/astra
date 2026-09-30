@@ -74,12 +74,18 @@ HTTPS/planning checks, seven Chromium suites and six WebKit suites pass. These
 cover loading, session recovery, planning, calendar pages/layout and events;
 Chromium additionally covers protocol cursor recovery. Strict CSP, actual
 gestures, observed versions and uncertain conditional-command checks remain.
-Manual restart verification is pending at this checkpoint. No requirement,
-scope or acceptance status changes.
+The combined frontend and release daemon at `e507d6c` are rebuilt, and the
+existing manual application is restarted at `https://100.122.250.14:47832`.
+Trusted-certificate checks verify all 33 embedded build assets. All 34 existing
+resource versions, two pins, workspace preferences and the certificate match
+the pre-restart snapshot. No requirement, scope or acceptance status changes.
 
 Ignored evidence is under `test-results/calendar-rendering-2026-09-30/`:
 `refresh-baseline`, `refresh-optimized`, `refresh-coverage.json`,
 `refresh-regression`, `refresh-regression-diagnosis`, `refresh-regression-fixed`
-and the negative control. Physical profiling/build scripts and logs are kept in
+and the negative control. Final checks include `refresh-full-gate.log`,
+`refresh-chromium`, `refresh-webkit`, broad HTTPS/planning logs and
+`refresh-manual-verification.json`. Restart snapshots are in the ignored
+remediation evidence. Physical profiling/build scripts and logs are kept in
 the isolated worktree's ignored `test-results/calendar-isolated/`; copies of the
 refresh profile and final build/check logs are retained with the ignored evidence.
