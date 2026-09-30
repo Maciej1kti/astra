@@ -109,6 +109,16 @@ versions, pins, preferences, certificate and 33 HTTPS assets verified.
 
 ## Implemented product
 
+The [calendar rendering iteration](2026-09-30-calendar-rendering.md) eliminates
+repeated geometry reads, unused event-time formatting and accumulated array
+copies. With 1,000 cards, warm readiness improves from 190 to 160 ms locally
+and 1064 to 972 ms under the recorded network/CPU emulation. The full gate passes
+249 Rust, 123 JavaScript and 12 Python tests; broad HTTPS/planning, all 22 Chromium
+suites and six affected WebKit suites pass. It also fixes a reproduced retained
+editor exception after session revocation by preserving the last authenticated
+timezone for locked drafts. Manual availability remains to be verified; the
+overall performance objective and release acceptance remain open.
+
 - Shared Rust domain/application rules, strict JSON sources and generated browser
   contracts; conditional durable writes, unchanged retries, recovery and history.
 - Explicit folder registration, host-native selection, pairing and sessions;

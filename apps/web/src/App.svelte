@@ -900,7 +900,7 @@
                 calendarDate={routing.current.calendarDate}
                 calendarLayout={routing.current.calendarLayout}
                 workspaceToday={today}
-                workspaceTimezone={boot?.timezone ?? "workspace time"}
+                workspaceTimezone={session.timezone}
                 onCalendarNavigate={routing.navigateCalendar}
                 search={routing.current.search}
                 {open}
@@ -1034,7 +1034,7 @@
       }}
     />{/if}{/if}
 {#if editor}{#if Editor}{#key editor}{@const editorTarget = editor}<Editor
-        workspaceTimezone={boot?.timezone ?? "UTC"}
+        workspaceTimezone={session.timezone}
         {weekStart}
         target={editor}
         bind:this={editorInstance}

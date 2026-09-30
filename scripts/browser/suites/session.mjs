@@ -37,6 +37,8 @@ await runBrowserSuite(
       ).result.resource;
     const context = await newContext();
     const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
     try {
       let streams = 0;
       page.on("request", (r) => {
@@ -179,6 +181,37 @@ await runBrowserSuite(
         await writeFile(broken, original);
       }
       await expect(warning).toHaveCount(0);
+
+      await mutate(
+        "PATCH",
+        path,
+        { set: { schedule: { start: after, end: after } } },
+        cli("get", path).version,
+      );
+      await page.goto(
+        `${config.origin}/?${new URLSearchParams({ view: "list", project: project.id, type: "card", resource: card.metadata.id })}`,
+      );
+      await expect(day).toHaveAttribute("datetime", after);
+      const schedule = page.getByRole("button", {
+        name: "Edit schedule",
+        exact: true,
+      });
+      await expect(schedule).toContainText("Ends today");
+      const comment = page.getByLabel("Write a comment", { exact: true });
+      await comment.fill("Retained session-loss comment");
+      await counters
+        .getByRole("button", { name: "Increase New draft by 1", exact: true })
+        .click();
+      for (const session of cli("sessions").items)
+        cli("revoke-session", session.id);
+      await expect(
+        page.getByText("Your session ended.", { exact: false }).first(),
+      ).toBeVisible();
+      await expect(day).toHaveAttribute("datetime", after);
+      await expect(schedule).toContainText("Ends today");
+      await expect(comment).toHaveValue("Retained session-loss comment");
+      await expect(comment).toBeDisabled();
+      assert.deepEqual(errors, []);
       await writeFile(
         join(evidence, "results.json"),
         JSON.stringify({
@@ -190,13 +223,19 @@ await runBrowserSuite(
             "remote timezone",
             "old and new draft dates",
             "Focus isolates an invalid source and recovers",
+            "session loss retains the last known timezone and unsent drafts",
           ],
+          errors,
         }),
       );
     } catch (error) {
       await page.screenshot({ path: join(evidence, "failure.png") });
       throw error;
     } finally {
+      await writeFile(
+        join(evidence, "page-errors.json"),
+        JSON.stringify(errors, null, 2),
+      );
       await context.close();
     }
   },

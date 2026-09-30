@@ -26,6 +26,7 @@ const suites = [
   "responsive",
   "planning",
   "calendar-pages",
+  "calendar-layout",
   "events",
   "code-health",
   "protocol",

@@ -10,7 +10,8 @@ remain governed by [the contracts](../contracts/openapi.yaml) and
 and connects their callbacks. Long-lived state has three owners:
 
 - [session](../apps/web/src/features/session/session.svelte.ts) owns pairing,
-  bootstrap and the event-stream lifetime;
+  bootstrap, the last authenticated timezone for retained locked drafts and
+  the event-stream lifetime;
 - [navigation](../apps/web/src/features/workspace/navigation-state.svelte.ts)
   owns the route, browser history and guarded navigation;
 - [view data](../apps/web/src/features/workspace/view-data.ts) owns loaded rows,
@@ -131,6 +132,12 @@ events use shallow reactive ownership, with explicit replacement on changes.
 Typed widget adapters convert inclusive
 domain dates into vendor events/tasks without modifying
 source rows. Gantt gesture activity is passed through its instance context.
+
+The calendar's reviewed build transform lives in `apps/web/build`; it is guarded
+by exact upstream source hashes and required-module checks. Planning owns its
+pass-local geometry and lazy snippet argument helpers. No element measurement
+survives a synchronous layout pass. See [ADR-054](ADR-054-CALENDAR-RENDERING.md)
+for dependency review and retained rendering behavior.
 
 `TagManager` reads exact labels from the selected project's cards and prepares
 one durable rename workflow for that project. The workflow checks source bytes

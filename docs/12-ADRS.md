@@ -328,5 +328,11 @@ Timed card events and their civil clock semantics are described in
 Bounded Focus summaries sharing the membership snapshot are described in
 [ADR-051](ADR-051-FOCUS-SNAPSHOT-SUMMARIES.md).
 
+Bounded summary compression is described in
+[ADR-052](ADR-052-BOUNDED-SUMMARY-COMPRESSION.md).
+
 Pinned daily counter previews and their conditional write observation are
 described in [ADR-053](ADR-053-FOCUS-DAILY-COUNTER-PREVIEWS.md).
+
+Reviewed calendar rendering optimizations are described in
+[ADR-054](ADR-054-CALENDAR-RENDERING.md).

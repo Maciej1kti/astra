@@ -32,6 +32,7 @@ function sessionRequired(cause: unknown) {
 /** One mounted application's bootstrap, pairing and event-stream lifetime. */
 export function sessionState(hooks: SessionHooks) {
   let boot = $state<Bootstrap | null>(null);
+  let timezone = $state("UTC");
   let pairing = $state<Pairing | null>(null);
   let device = $state("My browser");
   let busy = $state(false);
@@ -40,6 +41,11 @@ export function sessionState(hooks: SessionHooks) {
   let source: EventSource | undefined;
   let generation = 0;
   let preferencesGeneration = 0;
+  function acceptBootstrap(value: Bootstrap) {
+    boot = value;
+    // Retained locked drafts still need the last authenticated clock context.
+    timezone = value.timezone;
+  }
   function startPreferencesRead() {
     return {
       generation,
@@ -58,7 +64,7 @@ export function sessionState(hooks: SessionHooks) {
     if ("error" in result) throw result.error;
     const value = result.value;
     if (read.request === preferencesGeneration) {
-      boot = { ...boot, timezone: value.timezone };
+      acceptBootstrap({ ...boot, timezone: value.timezone });
       hooks.preferences(value);
     }
     return value;
@@ -134,8 +140,8 @@ export function sessionState(hooks: SessionHooks) {
           throw result.error;
         return;
       }
-      boot = value;
-      configure(boot);
+      acceptBootstrap(value);
+      configure(value);
       publishSession("restored");
       connect();
       const valuePreferences = await preferences(initialPreferences);
@@ -167,8 +173,8 @@ export function sessionState(hooks: SessionHooks) {
     try {
       const value = await api<Bootstrap>("/api/v1/bootstrap");
       if (!boot || current !== generation) return;
-      boot = value;
-      configure(boot);
+      acceptBootstrap(value);
+      configure(value);
       connect();
       await preferences(currentPreferences);
       if (boot && current === generation) await hooks.foreground();
@@ -233,6 +239,9 @@ export function sessionState(hooks: SessionHooks) {
   return {
     get boot() {
       return boot;
+    },
+    get timezone() {
+      return timezone;
     },
     get loading() {
       return loading;

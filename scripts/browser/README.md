@@ -99,7 +99,9 @@ command recovery, confirmations, an unclipped two-line title at 320px width,
 phone portrait and a 320px-high landscape view.
 
 The `session` suite covers startup read failure recovery and remote workspace
-timezone changes with existing and new daily counter drafts.
+timezone changes with existing and new daily counter drafts. It also revokes
+the ordinary session while schedule/counter/comment drafts remain mounted,
+checking retained clock context, preserved drafts and disabled inputs.
 
 The `loading` suite holds bootstrap to verify concurrent preferences and selected
 planning-module preloads, holds List data to verify editor warming starts after
@@ -115,3 +117,9 @@ opening, first-page recovery and cursor reset when switching between agenda and
 the broader month grid. The `planning` suite retains strict CSP checks in both
 engines; WebKit records layout metrics without screenshots because Playwright's
 screenshot preparation injects an inline stylesheet blocked by the app policy.
+
+The `calendar-layout` suite adds 300 densely overlapping scheduled cards,
+including plans crossing a week boundary. It checks measured month-grid geometry
+calls, unused time formatting, complete item/popup membership, resize layout and
+keyboard opening with the observed version. Instrumented call counts are
+regressions; release timing measurements remain separate.

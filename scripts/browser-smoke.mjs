@@ -688,7 +688,12 @@ try {
       "[data-board-card] select, [data-board-card] .handle, [data-board-card] details",
     ),
   ).toHaveCount(0);
-  await page.locator(`[data-board-card="${typedId}"] .title`).click();
+  const statusCardTitle = page.locator(`[data-board-card="${typedId}"] .title`);
+  await hitbox(statusCardTitle);
+  await statusCardTitle.click();
+  await expect(
+    page.getByRole("dialog", { name: "Edit resource", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: /^Status:/ }).click();
   await page.getByRole("button", { name: "Planned", exact: true }).click();
   await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
