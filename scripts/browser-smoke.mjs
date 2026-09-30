@@ -1,4 +1,8 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
+import {
+  setCalendarDate,
+  expectCalendarDate,
+} from "./browser/calendar-controls.mjs";
 import { chromium, devices, expect } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHost } from "./browser/host.mjs";
@@ -1274,18 +1278,17 @@ try {
     .getByLabel("Calendar layout", { exact: true })
     .selectOption("week");
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(7);
-  await expect(page.getByLabel("Go to date", { exact: true })).toHaveValue(
+  await expectCalendarDate(
+    page,
     (await page.locator(".topbar .date").innerText()).trim(),
   );
-  await page.getByLabel("Go to date", { exact: true }).fill("2026-09-08");
+  await setCalendarDate(page, "2026-09-08");
   await page.getByLabel("Calendar layout", { exact: true }).selectOption("day");
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Next calendar period", exact: true })
     .click();
-  await expect(page.getByLabel("Go to date", { exact: true })).toHaveValue(
-    "2026-09-09",
-  );
+  await expectCalendarDate(page, "2026-09-09");
   await page
     .getByRole("button", { name: "Previous calendar period", exact: true })
     .focus();
@@ -1331,7 +1334,7 @@ try {
     fullPage: true,
   });
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
-  await page.getByLabel("Go to date", { exact: true }).fill("2026-09-09");
+  await setCalendarDate(page, "2026-09-09");
   await page
     .getByLabel("Calendar layout", { exact: true })
     .selectOption("week");

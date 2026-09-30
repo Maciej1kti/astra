@@ -1,4 +1,5 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
+import { setCalendarDate } from "./browser/calendar-controls.mjs";
 import { chromium, expect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createHost } from "./browser/host.mjs";
@@ -182,7 +183,7 @@ try {
   ).toHaveCount(0);
   await expect(page.getByLabel("Predecessor", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
-  await page.getByLabel("Go to date", { exact: true }).fill("2026-09-07");
+  await setCalendarDate(page, "2026-09-07");
   await page
     .getByLabel("Calendar layout", { exact: true })
     .selectOption("week");
@@ -252,7 +253,20 @@ try {
     cli("get", `/api/v1/projects/${plan.project_id}/cards/${design.id}`)
       .version,
   );
-  const retainedBox = await hitbox(locator());
+  await hitbox(locator());
+  // Refresh may scroll the document to its toolbar after editor focus returns.
+  // Compare document coordinates, retaining sensitivity to widget layout shifts.
+  const documentBox = () =>
+    locator().evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        x: box.x + scrollX,
+        y: box.y + scrollY,
+        width: box.width,
+        height: box.height,
+      };
+    });
+  const retainedBox = await documentBox();
   const calendarRead = /\/api\/v1\/views\/calendar\?/;
   let releaseCalendar;
   let finishCalendar;
@@ -284,7 +298,7 @@ try {
       page.getByText("Loading calendar…", { exact: true }),
     ).toBeVisible();
     assert.deepEqual(
-      await locator().boundingBox(),
+      await documentBox(),
       retainedBox,
       "Background loading must not shift the calendar",
     );
@@ -355,7 +369,7 @@ try {
   if (await discardSelection.isVisible()) await discardSelection.click();
   await selectedDraft.waitFor({ state: "hidden" });
   await page.getByLabel("Calendar layout", { exact: true }).selectOption("day");
-  await page.getByLabel("Go to date", { exact: true }).fill("2026-09-09");
+  await setCalendarDate(page, "2026-09-09");
   await locator().waitFor();
   await page.screenshot({
     path: join(evidenceDir, "calendar-day.png"),

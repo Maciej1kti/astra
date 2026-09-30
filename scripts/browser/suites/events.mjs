@@ -1,4 +1,5 @@
 /** Timed event persistence and civil clocks through the real paired application. */
+import { setCalendarDate } from "../calendar-controls.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
@@ -61,8 +62,8 @@ await runBrowserSuite(
         .click();
       await expect(dialog).toBeHidden();
       await route({});
-      await page.getByLabel("Go to date").fill("2026-09-30");
-      await page.getByLabel("Go to date").press("Tab");
+      await setCalendarDate(page, "2026-09-30");
+
       await page.getByLabel("Calendar layout").selectOption("week");
       const event = page
         .locator(`[data-calendar-item="${id}:card_event"]`)
@@ -97,8 +98,8 @@ await runBrowserSuite(
         start: "2026-10-01T23:30",
         duration_minutes: 30,
       });
-      await page.getByLabel("Go to date").fill("2026-10-01");
-      await page.getByLabel("Go to date").press("Tab");
+      await setCalendarDate(page, "2026-10-01");
+
       await page.getByLabel("Calendar layout").selectOption("day");
       await expect(event).toContainText("30 min");
       await expect(async () => {

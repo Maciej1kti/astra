@@ -2,6 +2,7 @@
  * The fixture month must contain enough overlapping events to produce overflow.
  * Run after the implementation batch, alongside the existing gesture suite.
  */
+import { setCalendarDate, expectCalendarDate } from "../calendar-controls.mjs";
 import { expect } from "@playwright/test";
 
 export async function verifyPlanningFixes(
@@ -18,11 +19,17 @@ export async function verifyPlanningFixes(
 ) {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(calendarUrl);
-  const date = page.getByLabel("Go to date");
   const layout = page.getByLabel("Calendar layout");
-  await expect(date).toBeVisible();
-  await date.fill(fixtureDate);
-  await date.press("Tab");
+  const dateToggle = page.getByRole("button", {
+    name: "Choose calendar date",
+    exact: true,
+  });
+  await dateToggle.click();
+  await expect(page.getByLabel("Go to date")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("Go to date")).toHaveCount(0);
+  await expect(dateToggle).toBeFocused();
+  await setCalendarDate(page, fixtureDate);
   await layout.selectOption("month");
   await expect(
     page.getByText("Loading calendar…", { exact: true }),
@@ -60,23 +67,22 @@ export async function verifyPlanningFixes(
     .click();
   await expect(calendar.getByRole("dialog")).toHaveCount(0);
 
-  await date.fill("2026-10-13");
-  await date.press("Tab");
+  await setCalendarDate(page, "2026-10-13");
   await layout.selectOption("week");
   const sharedUrl = page.url();
   await page.reload();
-  await expect(date).toHaveValue("2026-10-13");
+  await expectCalendarDate(page, "2026-10-13");
   await expect(layout).toHaveValue("week");
   await expect(page).toHaveURL(sharedUrl);
   await page.getByRole("button", { name: "Next calendar period" }).click();
-  await expect(date).toHaveValue("2026-10-20");
+  await expectCalendarDate(page, "2026-10-20");
   await page.goBack();
-  await expect(date).toHaveValue("2026-10-13");
+  await expectCalendarDate(page, "2026-10-13");
   await expect(layout).toHaveValue("week");
   await page.goForward();
-  await expect(date).toHaveValue("2026-10-20");
+  await expectCalendarDate(page, "2026-10-20");
   await page.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(date).toHaveValue(workspaceToday);
+  await expectCalendarDate(page, workspaceToday);
   const todayCells = calendar.locator('[data-workspace-today="true"]');
   // Hourly views have a day cell in both the all-day and timed lanes.
   await expect(todayCells).toHaveCount(2);
@@ -84,8 +90,7 @@ export async function verifyPlanningFixes(
     await expect(cell).toHaveAttribute("aria-current", "date");
   await onCheckpoint("desktop-calendar-workspace-today", page);
 
-  await date.fill(fixtureDate);
-  await date.press("Tab");
+  await setCalendarDate(page, fixtureDate);
   await layout.selectOption("month");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
@@ -105,6 +110,7 @@ export async function verifyPlanningFixes(
     )
     .toBeLessThanOrEqual(1);
   const agendaEvents = calendar.locator(".ec-event[role=button]");
+  await expect(agendaEvents.first()).toHaveCSS("box-shadow", "none");
   await expect(
     agendaEvents.first().locator(".calendar-item strong"),
   ).toBeInViewport();
@@ -129,7 +135,54 @@ export async function verifyPlanningFixes(
     )
     .toBeLessThan(800);
   await onCheckpoint("mobile-390-calendar-grid", page);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect
+      .poll(() =>
+        calendar.evaluate(
+          (element) => element.scrollWidth - element.clientWidth,
+        ),
+      )
+      .toBeLessThanOrEqual(1);
+    const days = calendar.locator(".ec-header .ec-col-head");
+    await expect(days).toHaveCount(7);
+    for (const day of await days.all())
+      await expect(day).toBeInViewport({ ratio: 1 });
+    const overflow = calendar
+      .getByRole("button", { name: /^\+\d+ more$/ })
+      .first();
+    await overflow.click();
+    const popup = calendar.getByRole("dialog");
+    await expect(popup).toBeVisible();
+    const bounds = await popup.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    const entry = popup.locator(".ec-event[role=button]").first();
+    await entry.click({ trial: true });
+    await popup.getByRole("button", { name: /close/i }).click();
+  }
   await page.getByRole("button", { name: "Agenda", exact: true }).click();
+  await layout.selectOption("week");
+  await expect
+    .poll(() =>
+      calendar
+        .locator(".ec-body .ec-day")
+        .first()
+        .evaluate((day) => day.getBoundingClientRect().width),
+    )
+    .toBeGreaterThanOrEqual(100);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
+    )
+    .toBeLessThanOrEqual(1);
+  await calendar.locator(".ec-main").evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect(
+    calendar.locator(".ec-header .ec-col-head").last(),
+  ).toBeInViewport({ ratio: 0.99 });
+  await layout.selectOption("month");
 
   if (timelineUrl && timelineCardId && timelineCardTitle) {
     await page.goto(timelineUrl);
@@ -161,6 +214,9 @@ export async function verifyPlanningFixes(
     workspaceToday,
     mobileMonthAgenda: true,
     mobileMonthGridAvailable: true,
+    mobileMonthFitsSevenDays: true,
+    dateDisclosureKeyboard: true,
+    readableMobileWeekColumns: true,
     timelineSelection: Boolean(
       timelineUrl && timelineCardId && timelineCardTitle,
     ),

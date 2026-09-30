@@ -142,6 +142,11 @@ Typed widget adapters convert inclusive
 domain dates into vendor events/tasks without modifying
 source rows. Gantt gesture activity is passed through its instance context.
 
+`CalendarToolbar` composes the shared buttons, icons and date disclosure. It emits
+navigation and creation callbacks; `CalendarView` retains route integration,
+versioned reads, paging, gesture guards and date proposals. Calendar presentation
+does not replace or cache the source projection.
+
 The calendar's reviewed build transform lives in `apps/web/build`; it is guarded
 by exact upstream source hashes and required-module checks. Planning owns its
 pass-local geometry and lazy snippet argument helpers. No element measurement

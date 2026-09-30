@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { CardCreate } from "../../lib/contracts/api.generated";
   import { eventFromDates } from "../../lib/resources/timed-event.ts";
-  import { compactCalendarQuery } from "../../lib/ui/planning-metrics";
+  import {
+    calendarMetrics,
+    compactCalendarQuery,
+  } from "../../lib/ui/planning-metrics";
   import { onMount, untrack } from "svelte";
   import {
     Calendar,
@@ -11,6 +14,8 @@
     Interaction,
   } from "@event-calendar/core";
   import "@event-calendar/core/index.css";
+  import CalendarToolbar from "./CalendarToolbar.svelte";
+  import Icon from "../../lib/ui/Icon.svelte";
   import { cursorPage } from "../../lib/api/pagination";
   import { calendarEventProjection } from "./calendar-events";
   import { getCalendar } from "../../lib/api/planning";
@@ -156,6 +161,15 @@
     ...callbacks,
     view: widgetView,
     date: displayedDate,
+    dayHeaderFormat: monthGrid
+      ? { weekday: "short" }
+      : { weekday: "short", day: "numeric" },
+    listDaySideFormat: { month: "short" },
+    slotEventOverlap: false,
+    columnWidth:
+      compact && mode === "week"
+        ? `${calendarMetrics.compactHourColumn}px`
+        : undefined,
     // EventCalendar limits stacked events to the day cell's measured height.
     // An auto-height uniform month instead grows every week to its busiest day.
     height: monthGrid
@@ -426,50 +440,19 @@
   tabindex="-1"
   use:shortcutRegion
 >
-  <div class="toolbar">
-    <div class="navigation">
-      <button aria-label="Previous calendar period" onclick={() => navigate(-1)}
-        >←</button
-      ><button onclick={today}>Today</button><button
-        aria-label="Next calendar period"
-        onclick={() => navigate(1)}>→</button
-      >
-    </div>
-    <label class="date-control"
-      ><span class="control-caption">Go to date</span><input
-        type="date"
-        aria-label="Go to date"
-        value={date}
-        onchange={(e) => changeDate(e.currentTarget)}
-        required
-      /></label
-    >
-    <label
-      ><span class="control-caption">Calendar layout</span><select
-        aria-label="Calendar layout"
-        value={mode}
-        onchange={(e) => changeLayout(e.currentTarget.value as CalendarLayout)}
-        ><option value="day">Day</option><option value="week">Week</option
-        ><option value="month">Month</option><option value="agenda"
-          >Agenda</option
-        ></select
-      ></label
-    >
-    {#if project}<button
-        class="create-scheduled"
-        disabled={!isCalendarDate(date)}
-        onclick={() => oncreate({ schedule: { start: date, end: date } })}
-        >New scheduled card</button
-      >{/if}
-  </div>
-  {#if compact && mode === "month"}<div class="mobile-month-mode">
-      <button
-        aria-pressed={monthAgenda}
-        onclick={() => (mobileMonthGrid = false)}>Agenda</button
-      ><button aria-pressed={monthGrid} onclick={() => (mobileMonthGrid = true)}
-        >Month grid</button
-      >
-    </div>{/if}
+  <CalendarToolbar
+    {date}
+    {mode}
+    {compact}
+    {monthGrid}
+    {project}
+    {navigate}
+    {today}
+    {changeDate}
+    {changeLayout}
+    changeMonthGrid={(grid) => (mobileMonthGrid = grid)}
+    create={() => oncreate({ schedule: { start: date, end: date } })}
+  />
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
   {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
   {#if error}<p role="alert">
@@ -491,15 +474,25 @@
       >
         {#snippet dayCellContent({ date: day })}
           <span
+            class="calendar-day-label"
             data-workspace-today={dateOnly(day) === workspaceToday}
             aria-current={dateOnly(day) === workspaceToday ? "date" : undefined}
           >
-            {monthAgenda || mode === "agenda"
-              ? weekday.format(day)
-              : mode === "month"
-                ? day.getDate()
-                : ""}
+            {#if monthAgenda || mode === "agenda"}
+              <span class="day-number">{day.getDate()}</span>
+              <span>{weekday.format(day)}</span>
+              {#if dateOnly(day) === workspaceToday}<span class="today-label"
+                  >Today</span
+                >{/if}
+            {:else if mode === "month"}
+              <span class="day-number">{day.getDate()}</span>
+            {/if}
           </span>
+        {/snippet}
+        {#snippet moreLinkContent({ num })}
+          <span class="more-count">+{num}</span><span class="more-label">
+            more</span
+          >
         {/snippet}
         {#snippet eventContent({ event })}
           {@const item = event.extendedProps.astra as CalendarItem | undefined}
@@ -507,15 +500,34 @@
             <div
               class="calendar-item"
               class:timed={!!item.event && (mode === "day" || mode === "week")}
+              class:event={!!item.event}
+              class:short={!!item.event && item.event.duration_minutes <= 30}
+              class:due={item.kind.endsWith("due")}
               title={`${calendarLabel(item)}: ${item.title}`}
               data-calendar-item={item.item_id}
               use:eventAccess={item}
             >
-              <small
-                >{item.event && (mode === "day" || mode === "week")
-                  ? `${item.event.start.slice(11)} · ${item.event.duration_minutes} min`
-                  : `${item.kind.endsWith("due") ? "◆" : "▬"} ${calendarLabel(item)}`}</small
-              ><strong>{item.title}</strong>
+              <span class="item-time" aria-hidden="true"
+                >{item.event
+                  ? item.event.start.slice(11)
+                  : item.kind.endsWith("due")
+                    ? "Due"
+                    : "All day"}{#if item.event}<span class="time-duration">
+                    · {item.event.duration_minutes} min</span
+                  >{/if}</span
+              >
+              <div class="item-copy">
+                <strong>{item.title}</strong>
+                <small
+                  >{item.event
+                    ? `${item.event.duration_minutes} min`
+                    : item.kind.endsWith("due")
+                      ? "Due"
+                      : item.start !== item.end
+                        ? "Multi-day plan"
+                        : "Planned work"}</small
+                >
+              </div>
             </div>
           {/if}
         {/snippet}
@@ -523,7 +535,9 @@
   </div>
   <div class="view-meta">
     <p class="legend">
-      <span>◷ Event · ▬ Plan</span><span>◆ Due</span>
+      <span><Icon name="planned" small />Event</span><span
+        ><i class="plan-mark"></i>Plan</span
+      ><span><Icon name="flag" small />Due</span>
     </p>
     <details class="help">
       <summary>Calendar shortcuts & editing</summary>
@@ -558,92 +572,16 @@
 
 <style>
   .calendar-region {
-    --calendar-plan-bg: var(--accent);
+    --calendar-plan-bg: var(--plan-bg);
     --calendar-due-bg: var(--notice-bg);
-  }
-  .toolbar,
-  .navigation,
-  .legend {
-    display: flex;
-    gap: var(--space-5);
-    flex-wrap: wrap;
-    align-items: end;
-  }
-  .toolbar {
-    margin-bottom: var(--space-5);
-  }
-  .navigation {
-    gap: var(--space-2);
-    flex-wrap: nowrap;
-  }
-  .navigation button {
-    min-width: var(--tap-target);
-    flex-shrink: 0;
-  }
-  .create-scheduled {
-    margin-left: auto;
-  }
-  .view-meta {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: var(--space-2) var(--space-8);
-    margin-top: var(--space-6);
-  }
-  label {
-    display: grid;
-    gap: var(--space-3);
-    font-size: var(--text-sm);
+    --calendar-mobile-grid-height: clamp(600px, calc(100dvh - 180px), 700px);
     min-width: 0;
-  }
-  input,
-  select {
-    min-width: 0;
-    max-width: 100%;
-  }
-  input,
-  select,
-  button {
-    min-height: var(--tap-target);
-  }
-  .legend {
-    color: var(--muted);
-    font-size: var(--text-sm);
-    gap: var(--space-7);
-    margin: 0;
-  }
-  .help {
-    font-size: var(--text-label);
-    color: var(--muted);
-    margin: 0;
-  }
-  .help p {
-    max-width: var(--reading-width);
-    line-height: var(--leading-body);
-  }
-  .mobile-month-mode {
-    display: none;
-    align-items: center;
-    gap: var(--space-2);
-    margin: 0 0 var(--space-4);
-    font-size: var(--text-sm);
-    color: var(--muted);
-  }
-  .mobile-month-mode button {
-    flex: 1;
-    min-height: var(--tap-target);
-  }
-  .mobile-month-mode button[aria-pressed="true"] {
-    background: var(--accent);
-    color: var(--accent-ink);
-    border-color: var(--accent);
   }
   .calendar-surface {
     position: relative;
     overflow: auto;
     border: var(--stroke) solid var(--line);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-card);
     background: var(--paper);
   }
   .loading-indicator {
@@ -653,6 +591,7 @@
     z-index: 5;
     margin: 0;
     padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
     background: var(--paper);
     color: var(--muted);
     font-size: var(--text-sm);
@@ -662,47 +601,108 @@
     --ec-bg-color: var(--paper);
     --ec-text-color: var(--ink);
     --ec-border-color: var(--line);
-    /* The library's local-clock Today class must not contradict workspace dates. */
+    /* Workspace civil dates own Today, independently of the device's clock. */
     --ec-today-bg-color: transparent;
     --ec-event-bg-color: var(--calendar-plan-bg);
     --ec-event-text-color: var(--ink);
     --ec-button-bg-color: var(--paper);
     --ec-button-text-color: var(--ink);
-    --ec-list-day-bg-color: var(--wash);
+    --ec-list-day-bg-color: var(--soft);
+    --ec-popup-bg-color: var(--paper);
+    --ec-event-col-gap: var(--space-2);
     font: inherit;
+    min-width: 0;
     min-height: var(--agenda-min-height);
   }
+  .calendar-surface :global(.ec-toolbar) {
+    display: none;
+  }
+  .calendar-surface :global(.ec-main) {
+    border: 0;
+  }
+  .calendar-surface :global(.ec-col-head) {
+    padding-block: var(--space-6);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--muted);
+    background: var(--paper);
+  }
+  .calendar-surface :global(.ec-col-head time),
+  .calendar-surface :global(.ec-day-head time) {
+    font-family: var(--font-sans);
+  }
+  .calendar-surface :global(.ec-day.ec-sat),
+  .calendar-surface :global(.ec-day.ec-sun) {
+    --ec-day-bg-color: color-mix(in srgb, var(--soft) 50%, var(--paper));
+  }
   .calendar-surface :global(.ec-day:has([data-workspace-today="true"])) {
-    background-color: color-mix(in srgb, var(--accent) 7%, var(--paper));
+    --ec-day-bg-color: color-mix(in srgb, var(--accent) 25%, var(--paper));
   }
-  .calendar-surface :global([data-workspace-today="true"]) {
-    color: var(--ink);
-    font-weight: var(--weight-bold);
+  .calendar-day-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-5);
   }
-  .month :global(.ec) {
-    min-width: var(--calendar-min-height);
+  .day-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--space-11);
+    height: var(--space-11);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
   }
-  .calendar-surface :global(.ec-day-grid .ec-day) {
-    min-height: var(--calendar-cell-height);
+  [data-workspace-today="true"] .day-number {
+    background: var(--accent-ink);
+    color: var(--paper);
+    font-weight: var(--weight-semibold);
+  }
+  .today-label {
+    color: var(--accent-ink);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
   }
   .month :global(.ec-day) {
     min-height: 0;
   }
+  .month :global(.ec-day-head) {
+    padding: var(--space-2);
+  }
+  .month :global(.ec-day-foot) {
+    padding: 0 var(--space-2);
+  }
   .month :global(.ec-day-foot a) {
-    display: inline-flex;
+    display: flex;
+    width: 100%;
     min-height: var(--tap-target);
     align-items: center;
-    padding: 0 var(--space-2);
-    color: var(--ink);
-    font-weight: var(--weight-semibold);
-    text-decoration: underline;
-    text-underline-offset: var(--space-1);
+    justify-content: center;
+    gap: var(--space-1);
+    color: var(--muted);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-xs);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+  .month :global(.ec-day-foot a:hover) {
+    background: var(--soft);
+    color: var(--accent-ink);
   }
   .calendar-surface :global(.ec-popup) {
     min-inline-size: min(var(--card-min-width), 80vw);
     max-inline-size: min(var(--dialog-small), 90vw);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-floating);
+    padding: var(--space-4) var(--space-6) var(--space-6);
     z-index: 5;
+  }
+  .calendar-surface :global(.ec-popup .ec-day-head) {
+    align-items: center;
+    font-size: var(--text-label);
+    font-weight: var(--weight-semibold);
+    margin-bottom: var(--space-3);
   }
   .calendar-surface :global(.ec-popup .ec-day-head a) {
     display: inline-flex;
@@ -710,127 +710,306 @@
     justify-content: center;
     min-width: var(--tap-target);
     min-height: var(--tap-target);
+    border-radius: var(--radius-control);
   }
   .calendar-surface :global(.ec-event) {
     border-radius: var(--radius-sm);
     box-shadow: none;
-    border-left: var(--space-2) solid var(--accent-ink);
-  }
-  .calendar-surface :global(.ec-event-title) {
+    border-left: var(--space-1) solid var(--success);
     padding: var(--space-1) var(--space-2);
   }
+  .calendar-surface :global(.ec-event:has(.event)) {
+    --calendar-plan-bg: var(--accent);
+    border-left-color: var(--accent-ink);
+  }
+  .calendar-surface :global(.ec-event:has(.due)) {
+    border-left-color: var(--notice-ink);
+  }
+  .calendar-surface :global(.ec-event-body) {
+    min-width: 0;
+    width: 100%;
+  }
   .calendar-item {
-    min-height: var(--tap-target);
+    min-height: var(--space-14);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    min-width: 0;
     overflow: hidden;
     cursor: pointer;
+  }
+  .item-copy {
+    min-width: 0;
+    flex: 1;
+  }
+  .item-time {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+  .calendar-item strong {
+    display: block;
+    font-size: var(--text-label);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-body);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .calendar-item small {
+    display: block;
+    color: var(--muted);
+    font-size: var(--text-xs);
+    line-height: var(--leading-body);
+  }
+  .month .calendar-item {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+  }
+  .month .item-copy {
+    flex: initial;
+    width: 100%;
+  }
+  .month .calendar-item small {
+    display: none;
+  }
+  .month .calendar-item:not(.event):not(.due) > .item-time,
+  .calendar-surface :global(.ec-all-day .item-time),
+  .calendar-surface :global(.ec-all-day .calendar-item small) {
+    display: none;
+  }
+  .time-duration {
+    display: none;
   }
   .calendar-item.timed {
     min-height: 0;
     height: 100%;
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
   }
-  .timed small {
-    flex-shrink: 0;
+  /* A short event still needs one legible title line; its civil times stay exact. */
+  .calendar-surface :global(.ec-time-grid .ec-body .ec-event) {
+    min-block-size: var(--space-10) !important;
   }
-  .timed strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  small {
-    display: block;
-    font-size: var(--text-xs);
-    opacity: 0.8;
-  }
-  strong {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
+  .timed.short strong {
     white-space: nowrap;
   }
-  .agenda strong,
-  .calendar-surface :global(.ec-popup strong) {
-    display: block;
+  .timed.short .item-time {
+    display: none;
+  }
+  .timed .item-time {
+    color: var(--accent-ink);
+    font-size: var(--text-compact);
+  }
+  .timed .item-copy {
+    flex: initial;
+    width: 100%;
+    order: -1;
+  }
+  .timed .time-duration {
+    display: inline;
+  }
+  .timed small {
+    display: none;
+  }
+  .timed strong {
     white-space: normal;
     overflow-wrap: anywhere;
-    line-height: var(--leading-body);
+    line-height: var(--leading-tight);
   }
   .agenda :global(.ec-day) {
     min-height: 0;
+    padding-bottom: var(--space-4);
   }
   .agenda :global(.ec-day-head) {
-    align-items: baseline;
-    font-size: var(--text-sm);
+    align-items: center;
+    padding: var(--space-4) var(--space-6);
+    background: var(--paper);
+    font-size: var(--text-label);
     font-weight: var(--weight-semibold);
+    border-bottom-color: var(--line);
+    margin: 0;
   }
-  .agenda :global(.ec-day-head time) {
-    font-family: var(--font-sans);
-    font-weight: var(--weight-semibold);
+  .agenda .day-number {
+    width: var(--space-12);
+    height: var(--space-12);
+    border-radius: var(--radius-control);
+    background: var(--soft);
+    font-size: var(--text-lg);
+  }
+  .agenda [data-workspace-today="true"] .day-number {
+    background: var(--accent-ink);
+    color: var(--paper);
   }
   .agenda :global(.ec-day-head .ec-day-side) {
-    font-family: var(--font-mono);
     font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
+    font-weight: var(--weight-normal);
     color: var(--muted);
   }
   .agenda :global(.ec-main) {
     display: block;
     min-height: 0;
     overflow-y: auto;
+    scroll-padding-block: var(--space-16);
   }
   .agenda :global(.ec-event-tag) {
     display: none;
   }
-  .calendar-item:focus-visible {
-    outline: var(--focus-width) solid var(--accent);
+  .agenda :global(.ec-event) {
+    margin: 0 var(--space-6);
+    padding: var(--space-4) 0;
+    width: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .agenda :global(.ec-event + .ec-event) {
+    border-top: var(--stroke) solid var(--line);
+  }
+  .agenda :global(.ec-event:hover) {
+    background: var(--soft);
+  }
+  .agenda :global(.ec-event-title) {
+    padding: 0;
+  }
+  .agenda .calendar-item {
+    align-items: flex-start;
+    gap: var(--space-8);
+    min-height: var(--tap-target);
+  }
+  .agenda .item-time {
+    width: var(--space-16);
+    padding-top: var(--space-1);
+    font-size: var(--text-sm);
+  }
+  .agenda .event .item-time {
+    color: var(--accent-ink);
+  }
+  .agenda .calendar-item strong {
+    font-size: var(--text-base);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .agenda .calendar-item small {
+    margin-top: var(--space-1);
+  }
+  .calendar-surface :global(.ec-popup .calendar-item) {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-6);
+  }
+  .calendar-surface :global(.ec-popup .calendar-item > .item-time) {
+    display: inline;
+  }
+  .calendar-surface :global(.ec-popup .item-time) {
+    width: var(--space-16);
+  }
+  .calendar-surface :global(.ec-popup strong) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .calendar-surface :global(.ec-popup small) {
+    display: block;
+  }
+  .calendar-surface :global(.ec-no-events) {
+    padding: var(--space-20) var(--space-8);
+    color: var(--muted);
+    font-size: var(--text-label);
+  }
+  .calendar-surface :global(.ec-event:focus-visible) {
+    outline: var(--focus-width) solid var(--accent-ink);
     outline-offset: calc(-1 * var(--focus-width));
   }
+  .view-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-8);
+    margin-top: var(--space-6);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-8);
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--text-xs);
+  }
+  .legend > span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .plan-mark {
+    width: var(--space-4);
+    height: var(--space-1);
+    border-radius: var(--radius-pill);
+    background: var(--success);
+  }
+  .help {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin: 0;
+  }
+  .help summary {
+    min-height: var(--tap-target);
+    align-content: center;
+    cursor: pointer;
+  }
+  .help p {
+    max-width: var(--reading-width);
+    line-height: var(--leading-body);
+  }
   @media (max-width: 720px) {
-    .toolbar {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: var(--space-4);
-      margin-bottom: var(--space-4);
+    .month :global(.ec-col-head) {
+      padding-inline: 0;
+      font-size: var(--text-xs);
     }
-    .navigation {
-      order: 0;
-      grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: var(--tap-target) minmax(0, 1fr) var(--tap-target);
+    .month :global(.ec-day-head) {
+      justify-content: center;
+      padding-inline: 0;
     }
-    .create-scheduled {
-      order: 3;
-      grid-column: 1 / -1;
-      margin-left: 0;
-      padding-inline: var(--space-4);
+    .month :global(.ec-day-foot) {
+      padding-inline: 0;
     }
-    .toolbar label {
-      order: 2;
+    .month .more-label {
+      position: absolute;
+      width: var(--stroke);
+      height: var(--stroke);
+      overflow: hidden;
+      clip-path: inset(50%);
     }
-    .toolbar .control-caption {
-      display: none;
+    .month .more-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-2) var(--space-3);
+      background: var(--soft);
+      border-radius: var(--radius-pill);
     }
-    .toolbar input,
-    .toolbar select {
-      width: 100%;
+    .month .calendar-item strong {
+      font-size: var(--text-xs);
+    }
+    .month .item-time {
+      font-size: var(--text-compact);
     }
     .view-meta {
-      gap: var(--space-4);
+      gap: 0 var(--space-8);
     }
-    .mobile-month-mode {
-      display: flex;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .agenda :global(.ec-event) {
+      transition: background-color var(--motion-quick) ease;
     }
-    .legend {
-      gap: var(--space-6);
-    }
-    .calendar-surface:not(.month) :global(.ec) {
-      min-width: 0;
-    }
-    .calendar-item {
-      min-height: var(--tap-target);
-    }
-    .month :global(.ec-day-foot a) {
-      min-height: var(--tap-target);
+    .calendar-surface :global(.ec-popup) {
+      animation: astra-fade var(--motion-quick) ease;
     }
   }
 </style>

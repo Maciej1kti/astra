@@ -13,3 +13,4 @@ export const timelineMetrics = {
   scale: 32,
 } as const;
 export const compactCalendarQuery = "(max-width: 720px)";
+export const calendarMetrics = { compactHourColumn: 100 } as const;

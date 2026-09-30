@@ -7,6 +7,15 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [calendar presentation update](2026-09-30-calendar-design.md) adds a compact
+mobile toolbar, readable agenda, a seven-column month grid that fits phones, and
+flat event styling with separate overlapping hourly columns. Existing performance
+adapters and paging remain intact. The full gate passes 252 Rust, 137 JavaScript
+and 12 Python tests; five Chromium and four WebKit suites plus broad HTTPS/planning
+checks pass. The rebuilt manual app preserves all 41 prior resources, pins,
+preferences and certificate, with its HTTPS address and all 33 assets verified.
+Physical-device and full release acceptance remain open.
+
 The [source lease path iteration](2026-09-30-source-paths.md) removes a repeated
 absolute traversal during collection reads, retaining current source/lease
 checks and durable writes. With 1,000 cards, release create median/p95 improves

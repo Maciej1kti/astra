@@ -59,10 +59,22 @@ even when collapsed. Route state remains authoritative across reload and navigat
 Never let a row of selects shrink to unreadable arrows. Workspace toolbar styles
 are scoped to `WorkspaceFilters` so they cannot override planning widget controls.
 
-On phones, Calendar places period navigation and date/layout controls in two
-compact rows. Its month agenda/grid choice sits just above the dated items;
-instructions and the plan/due legend follow the calendar instead of delaying
-its content. Board's all-project overview stacks populated statuses vertically.
+Calendar uses a compact period toolbar: its month title opens the shared date
+disclosure, with Today and previous/next controls alongside. Layout, month
+agenda/grid and scheduled-card creation remain directly available. On phones
+these controls occupy two rows; the default month agenda separates date headings,
+times and wrapping titles. All seven month columns fit the surface. Overflow
+counts open the complete day's list; hourly week columns scroll within the
+calendar to retain readable widths. Instructions and the legend follow its content.
+
+Calendar items are flat, without shadows: soft blue timed events, green plans
+and warm due markers. Titles lead in hourly views; short events retain at least
+one readable title line, while overlapping events use separate columns. Actual
+times, durations and editing proposals remain source-owned. The agenda provides
+full titles and duration labels, with dividers instead of nested card boxes.
+Popovers and controls use the shared motion and reduced-motion rules.
+
+Board's all-project overview stacks populated statuses vertically.
 Within a project, a small status strip jumps between horizontally scrolling
 columns and opens on the first column with cards when no position was saved.
 Projects uses compact cards with a separate actions menu; deletion remains a

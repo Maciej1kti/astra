@@ -1,0 +1,18 @@
+{
+  "body": "Updated the main calendar for phone, tablet and desktop: compact shared controls, a month-title date disclosure, readable agenda rows, a month grid that fits seven days, and scrollable hourly week columns. Timed events, plans and due items use flat semantic styling without shadows; overlapping events use separate columns and short events keep a readable title.\n\nPreserved the existing performance work, source authority, paging, observed versions and gesture/command behavior. The full local gate passed 252 Rust, 137 JavaScript and 12 Python tests. Five Chromium and four WebKit suites plus broad HTTPS/planning checks passed, including dense layout, unchanged-refresh geometry, pagination, drag/resize, keyboard and mobile bounds. Evidence: progress/2026-09-30-calendar-design.md. Browser emulation is not physical-device acceptance.\n\nRebuilt and restarted the existing manual application. Trusted HTTPS and all 33 production files were verified at its existing address. All 41 prior source versions, two pins, preferences and certificate remained unchanged. This report records the result without changing project/card scope or acceptance.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "78958759-5d1b-4057-b88a-8fa879943a8f",
+    "kind": "result",
+    "recorded_at": "2026-09-30T14:05:09.684Z",
+    "summary": "Refined responsive calendar and flat event presentation",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
