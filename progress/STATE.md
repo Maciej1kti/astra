@@ -7,6 +7,11 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [agent workflow guidance](2026-09-30-agent-workflow-guidance.md) now requires
+short plans for substantial work, documentation updates alongside implementation
+and appropriate Playwright verification. The documentation and full local gates
+pass; this changes contributor instructions, not application behavior or acceptance.
+
 The [Attention eligibility iteration](2026-09-30-attention-filters.md) avoids
 expensive checks for rows outside each union branch. On the required release
 dataset, ordinary Attention p95 improves from 86 to 33 ms; full Focus Attention

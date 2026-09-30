@@ -2,6 +2,7 @@
 
 Read [Contributing](CONTRIBUTING.md), [code ownership](docs/CODE-STRUCTURE.md),
 [current status](progress/STATE.md) and the contracts relevant to the change.
+Use the [documentation index](docs/README.md) to find the maintained guides.
 These instructions govern the application. The block installed in user projects
 is maintained separately in `templates/managed-agents-block.md`.
 
@@ -30,6 +31,19 @@ rebuild the embedded frontend and release daemon, then restart the existing manu
 application with its current data, connection settings and certificates. Verify
 the existing HTTPS address before reporting that the change is available.
 
+## Planning and documentation
+
+For nontrivial work, keep a short plan of steps, affected areas and checks in the
+task context, updating it as findings change. Inspect Git status and preserve
+concurrent work. Small fixes do not need a separate plan file; detailed plans
+stay outside `.project/`.
+
+Update affected maintained guides and examples alongside implementation, in the
+same change before commit or handoff. Use the
+[documentation map](CONTRIBUTING.md#documentation-changes) to choose the files.
+A progress report does not replace user/developer documentation. Keep status,
+roadmap and limitations accurate without inventing scope or acceptance decisions.
+
 ## Architectural invariants
 
 - Browser and CLI share server-side domain/application rules. `.project/` is the
@@ -53,8 +67,14 @@ the existing HTTPS address before reporting that the change is available.
 Start data-loss/conflict fixes with a failing regression. Run checks appropriate
 to the change and the full gate before integration. Measure release builds when
 reporting performance; report environment and coverage limits honestly.
+For UI changes, exercise affected workflows through the real daemon with
+[Playwright](scripts/browser/README.md), including relevant narrow-screen and
+keyboard/touch behavior. Inspect rendered results; a build alone does not verify
+an interaction. Documentation-only changes need link/command checks, not UI suites.
 
-Write concise evidence in `progress/`. Bulk generated output goes in ignored
+Write concise evidence in `progress/` and update `progress/STATE.md` after meaningful
+results or blockers, linking the dated evidence rather than duplicating it.
+Bulk generated output goes in ignored
 `test-results/` or CI artifacts. Do not put implementation transcripts in user
 project reports. A browser emulator is not a physical iPhone test, and a working
 mock UI is not product acceptance. Preserve historical evidence through immutable
