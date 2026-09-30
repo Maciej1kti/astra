@@ -192,6 +192,9 @@ bar preview, a value with its unit, and a quiet configuration icon. Desktop plac
 the preview beside the value; phones place it below the name. The repeated date
 and timezone line is omitted. Only a draft for a different day exposes its date.
 A right-aligned three-dot menu below the list contains Add counter and Archived.
+When the card has no counters, a direct Add counter button occupies the same
+right-aligned action row. Cards with archived counters retain the menu so their
+history remains reachable.
 The next section retains its divider, with compact spacing on both sides of the line.
 Archived exposes its pressed state and is disabled when no archived counters exist.
 The shared action menu chooses the available space above or below its trigger,

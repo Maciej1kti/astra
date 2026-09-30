@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [empty counter action](2026-09-30-empty-counter-action.md) exposes Add counter
+directly when no counters exist, right-aligned in the same 44px action row. Existing
+and archived-only counters retain the menu. The full gate passes 255 Rust, 137
+JavaScript and 12 Python tests; affected Chromium/WebKit suites and 36 layout cases
+pass. The rebuilt manual app preserves all 44 prior source versions, pins,
+preferences and certificate, with HTTPS and all 33 build files verified.
+
 The [bounded source-read iteration](2026-09-30-parallel-source.md) uses at most
 four scoped readers with one nonblocking process-wide capacity guard. Alternating
 1,000-card runs reduce create median from 163 to 116–117 ms and p95 from 170–175

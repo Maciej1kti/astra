@@ -64,9 +64,12 @@ await runBrowserSuite(
     try {
       await open();
       for (const name of ["Push-ups", "Sit-ups", "Squats"]) {
-        await section
-          .getByRole("button", { name: "Counter actions", exact: true })
-          .click();
+        const menu = section.getByRole("button", {
+          name: "Counter actions",
+          exact: true,
+        });
+        if (name === "Push-ups") await expect(menu).toHaveCount(0);
+        else await menu.click();
         await section
           .getByRole("button", { name: "Add counter", exact: true })
           .click();

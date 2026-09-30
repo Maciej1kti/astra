@@ -36,6 +36,9 @@
   let showArchived = $state(false);
   let configurationName = $state<HTMLInputElement>();
   const visible = $derived(counters.filter((c) => showArchived || !c.archived));
+  const canAdd = $derived(
+    !disabled && saved && !draft.configuration && counters.length < 20,
+  );
   const unitLocked = $derived(
     !!draft.configuration?.id &&
       counters.some(
@@ -165,36 +168,42 @@
     </div>
   {/if}
   <div class="counter-actions">
-    <ActionMenu label="Counter actions" placement="auto">
-      {#snippet children(close)}
-        <Button
-          type="button"
-          variant="quiet"
-          disabled={disabled ||
-            !saved ||
-            !!draft.configuration ||
-            counters.length >= 20}
-          onclick={() => {
-            close();
-            void configure();
-          }}>Add counter</Button
-        >
-        <Button
-          type="button"
-          variant="quiet"
-          aria-pressed={showArchived}
-          disabled={!counters.some((counter) => counter.archived)}
-          onclick={() => {
-            close();
-            showArchived = !showArchived;
-          }}
-          ><span>Archived</span>{#if showArchived}<Icon
-              name="check"
-              small
-            />{/if}</Button
-        >
-      {/snippet}
-    </ActionMenu>
+    {#if counters.length === 0}
+      <Button
+        type="button"
+        variant="quiet"
+        disabled={!canAdd}
+        onclick={() => void configure()}>Add counter</Button
+      >
+    {:else}
+      <ActionMenu label="Counter actions" placement="auto">
+        {#snippet children(close)}
+          <Button
+            type="button"
+            variant="quiet"
+            disabled={!canAdd}
+            onclick={() => {
+              close();
+              void configure();
+            }}>Add counter</Button
+          >
+          <Button
+            type="button"
+            variant="quiet"
+            aria-pressed={showArchived}
+            disabled={!counters.some((counter) => counter.archived)}
+            onclick={() => {
+              close();
+              showArchived = !showArchived;
+            }}
+            ><span>Archived</span>{#if showArchived}<Icon
+                name="check"
+                small
+              />{/if}</Button
+          >
+        {/snippet}
+      </ActionMenu>
+    {/if}
   </div>
   {#if counters.length >= 20}<p class="field-hint">
       This card has reached its 20-counter limit.
@@ -213,6 +222,9 @@
     display: flex;
     justify-content: flex-end;
     margin: var(--space-4) 0 0;
+  }
+  .counter-actions > :global(.ui-button) {
+    padding-block: var(--space-4);
   }
   .counter-actions :global(.action-menu-panel button) {
     display: flex;

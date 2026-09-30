@@ -1,0 +1,18 @@
+{
+  "body": "Cards with no counter definitions now show a direct, right-aligned Add counter button in the same 44px action row. Existing and archived-only counters retain the menu; draft/write guards and section dividers remain. The full gate passes 255 Rust, 137 JavaScript and 12 Python tests. Release counters/card-layout suites pass in Chromium and WebKit; 36 layout cases cover phones, tablets, desktops and short landscape. The rebuilt/restarted manual app preserves all 44 prior source versions, two pins, preferences and certificate; trusted HTTPS verifies all 33 build files. Physical-device and full release acceptance remain open. See progress/2026-09-30-empty-counter-action.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "1ec9462d-0bfc-4bd5-9814-74ee36ab2547",
+    "kind": "result",
+    "recorded_at": "2026-09-30T15:01:22.518Z",
+    "summary": "Show a direct Add counter action on empty cards",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
