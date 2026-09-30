@@ -47,8 +47,13 @@ clippy, bundle bounds and release builds. Returning from the archival prototype
 restores that verified source exactly. Focus, planning, event and protocol suites
 pass in Chromium and WebKit; broad HTTPS checks pass. The full gate also passes
 with the latest empty-counter presentation, followed by passing counters, card
-layout and Focus Chromium checks. The manual restart is pending. No requirement,
-scope or acceptance status changes.
+layout and Focus Chromium checks.
+
+The original embedded frontend and release daemon are rebuilt; the existing
+manual launcher is restarted with the same data, settings and certificate.
+Trusted HTTPS remains `https://100.122.250.14:47832`; all 33 served build assets
+match the verified files. All 45 prior source versions, two pins, preferences and
+certificate are preserved. No requirement, scope or acceptance status changes.
 
 Ignored evidence lives in `test-results/calendar-rendering-2026-09-30/`:
 `source-parallel-target.json`, `attention-filter-target.json`,
