@@ -92,9 +92,11 @@ All application sources are restored. The full local gate passes 269 Rust,
 139 JavaScript and 12 Python tests, including the restored embedded frontend
 and release workspace build. Incremental compilation was disabled for this
 gate after reclaiming this worktree's generated application build artifacts;
-no checks or durability settings were weakened. The normal project report is
-pending publication. No manual application restart is required for these
-rejected probes. Broader rendering work, data distributions, concurrent
+no checks or durability settings were weakened. The normal CLI report
+`80c8b849-1adb-434d-9638-9030d7db12d5` is durably committed and read back with
+the same version and body; the owner's existing card is unchanged. No manual
+application restart is required for these rejected probes. Broader rendering
+work, data distributions, concurrent
 reads/writes, physical devices and full release acceptance remain open. A larger
 Calendar improvement needs a measured reduction in widget work while retaining
 real geometry and complete popup/source behavior.
