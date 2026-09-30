@@ -165,7 +165,6 @@ await runBrowserSuite(
         const cardButton = page
           .getByRole("button")
           .filter({ hasText: "Conversation preserved" })
-          .filter({ has: page.locator(".resource-metadata") })
           .first();
         await expect(cardButton).toContainText("2 comments");
         await cardButton.click();

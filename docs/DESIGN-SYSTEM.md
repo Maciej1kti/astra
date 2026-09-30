@@ -131,11 +131,10 @@ whole dialog. Error details lead, repeated field errors are deduplicated, and
 older success messages are hidden during errors or confirmation prompts. Local
 field descriptions remain available to assistive technology.
 
-Cards use a wider dialog with a reading column for Description, Checklist,
-Counters and Comments, and a quieter right column for Schedule and Labels.
-Both columns share the form's single scroll surface. Below 900px, properties
-follow the content column; DOM order remains the keyboard and reading order.
-Tablet schedule fields share one row when expanded. On phones,
+Cards use one reading column for all six sections, with an 800px dialog limit
+and a single form scroll surface. Every section can move to any position;
+the visual, keyboard and reading order stay aligned at every width. Expanded
+schedule fields share one row on desktop and tablet. On phones,
 date ranges and event time/duration pairs use two columns when they fit, and a
 single column below 360px. Native date/time values must fit without clipping.
 
@@ -146,12 +145,13 @@ planned duration instead of an increasing overdue count. Expanding the row keeps
 the existing date/time controls; incomplete edits cannot be collapsed. New card
 sessions start expanded and stay expanded through their creation acknowledgement.
 
-The header's Card layout disclosure orders Description, Checklist, Counters and
-Comments within the content column, and Schedule/Labels within properties. Its
+The header's Card layout disclosure orders Description, Checklist, Counters,
+Comments, Schedule and Labels in one list, without separate groups. Its
 44px up/down buttons support touch and keyboard input, announce the new position,
 and preserve focus. Keyed sections move their existing DOM and local drafts. The
 order applies to all cards in this browser; only known section identifiers are
-stored locally, following appearance/board display preferences. Storage failure
+stored locally, following appearance/board display preferences. Existing grouped
+preferences upgrade in their previous reading order. Storage failure
 keeps the current layout usable and explains its limited lifetime. Reset restores
 the default order. No card or workspace source write is caused by rearranging.
 Reordering uses brief FLIP motion; the schedule uses a grid-height transition.

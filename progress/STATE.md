@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [unified card section order](2026-09-30-unified-card-sections.md) removes the
+Content/Properties split. All six sections can be freely interleaved in one
+responsive reading column, retaining mounted drafts, animation and prior browser
+preferences. The full gate passes 251 Rust, 126 JavaScript and 12 Python tests;
+eight Chromium and four WebKit suites pass. The rebuilt manual app preserves all
+31 existing resource versions, pins, preferences and certificate; its HTTPS build
+assets are verified. Physical-device and full release acceptance remain open.
+
 The [Focus cards and calendar follow-up](2026-09-30-focus-counters-calendar.md)
 adds compact daily counter scrubbing/numeric entry with explicit confirmation,
 retained conditional command recovery, and a range calendar in the card editor.
@@ -86,9 +94,9 @@ suites, six affected WebKit suites, broad HTTPS and manual restart checks pass.
 Rust dependency advisory/license review passes at this checkpoint. Calendar
 rendering and the durable-write target still require further performance work.
 
-The [responsive card modal](2026-09-30-card-modal-layout.md) now gives desktop
-cards a reading column and properties sidebar, stacks the content on tablets,
-and uses the phone viewport with a persistent header. Shared headings, labeled
+The initial [responsive card modal](2026-09-30-card-modal-layout.md) gave desktop
+cards a reading column and properties sidebar, stacked the content on tablets,
+and used the phone viewport with a persistent header. Shared headings, labeled
 status, clearer sections and an unclipped two-line title preserve existing
 editing behavior. The isolated full gate, thirteen release Chromium suites and
 six WebKit suites pass. The manual app is rebuilt/restarted; its HTTPS assets,

@@ -16,6 +16,13 @@ await runBrowserSuite(
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.addInitScript(() => {
+      localStorage.setItem(
+        "astra-card-layout:v1",
+        JSON.stringify({
+          content: ["description", "checklist", "counters", "comments"],
+          properties: ["labels", "schedule"],
+        }),
+      );
       window.layoutCsp = [];
       document.addEventListener("securitypolicyviolation", (e) =>
         window.layoutCsp.push(e.effectiveDirective),
@@ -50,19 +57,39 @@ await runBrowserSuite(
       exact: true,
     });
     const panel = dialog.locator(".card-layout-menu .action-menu-panel");
-    const sections = (group) =>
+    const sections = () =>
       dialog
-        .locator(`.card-${group} > [data-card-section]`)
+        .locator(".card-body-grid > [data-card-section]")
         .evaluateAll((nodes) => nodes.map((node) => node.dataset.cardSection));
+    const mixedOrder = [
+      "schedule",
+      "comments",
+      "labels",
+      "description",
+      "checklist",
+      "counters",
+    ];
     const closePanel = () =>
       panel.getByRole("button", { name: "Done arranging sections" }).click();
     try {
       await page.goto(url);
+      await expect
+        .poll(sections)
+        .toEqual([
+          "description",
+          "checklist",
+          "counters",
+          "comments",
+          "labels",
+          "schedule",
+        ]);
       await expect(toggle).toHaveAttribute("aria-expanded", "false");
       await expect(toggle).toContainText("2 days left");
       await expect(toggle).toContainText("Day 3");
       await expect(dialog.getByLabel("Start", { exact: true })).toBeHidden();
-      assert.ok((await toggle.boundingBox()).height >= 44);
+      await toggle.scrollIntoViewIfNeeded();
+      const toggleBounds = await toggle.boundingBox();
+      assert.ok(toggleBounds.height >= 44, JSON.stringify(toggleBounds));
       await toggle.click();
       await expect(dialog.getByLabel("Start", { exact: true })).toBeVisible();
       await dialog.getByLabel("End", { exact: true }).fill("");
@@ -92,7 +119,19 @@ await runBrowserSuite(
         .getByLabel("Counter name", { exact: true })
         .fill("An unfinished counter");
       await comment.evaluate((el) => (el.dataset.mountedProbe = "retained"));
+      const labels = dialog.getByRole("combobox", {
+        name: "Labels",
+        exact: true,
+      });
+      await labels.fill("An unfinished label");
+      await labels.evaluate((el) => (el.dataset.mountedProbe = "retained"));
+      await toggle.click();
+      await toggle.evaluate((el) => (el.dataset.mountedProbe = "retained"));
       await customize.click();
+      await expect(
+        panel.getByRole("list", { name: "Section order" }),
+      ).toHaveCount(1);
+      await expect(panel.getByRole("listitem")).toHaveCount(6);
       const moveComments = panel.getByRole("button", {
         name: "Move Comments up",
         exact: true,
@@ -103,15 +142,26 @@ await runBrowserSuite(
       await moveComments.press("Enter");
       await moveComments.press("Enter");
       await expect(moveComments).toHaveAttribute("aria-disabled", "true");
-      await expect
-        .poll(() => sections("main"))
-        .toEqual(["comments", "description", "checklist", "counters"]);
-      await panel
-        .getByRole("button", { name: "Move Labels up", exact: true })
-        .click();
-      await expect
-        .poll(() => sections("sidebar"))
-        .toEqual(["labels", "schedule"]);
+      const moveSchedule = panel.getByRole("button", {
+        name: "Move Schedule up",
+        exact: true,
+      });
+      await moveSchedule.focus();
+      for (let step = 0; step < 5; step++) await moveSchedule.press("Enter");
+      await expect(moveSchedule).toBeFocused();
+      await expect(moveSchedule).toHaveAttribute("aria-disabled", "true");
+      await expect(panel.getByRole("status")).toHaveText(
+        "Schedule moved to position 1 of 6.",
+      );
+      for (let step = 0; step < 3; step++)
+        await panel
+          .getByRole("button", { name: "Move Labels up", exact: true })
+          .click();
+      await expect.poll(sections).toEqual(mixedOrder);
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      await expect(toggle).toHaveAttribute("data-mounted-probe", "retained");
+      await expect(labels).toHaveValue("An unfinished label");
+      await expect(labels).toHaveAttribute("data-mounted-probe", "retained");
       await expect(comment).toHaveValue("An unfinished comment");
       await expect(comment).toHaveAttribute("data-mounted-probe", "retained");
       await expect(dialog.getByLabel("New item", { exact: true })).toHaveValue(
@@ -129,17 +179,19 @@ await runBrowserSuite(
       await expect(panel).toBeHidden();
       await expect(customize).toBeFocused();
       await expect(dialog).toBeVisible();
+      await labels.fill("");
       await dialog.getByLabel("New item", { exact: true }).fill("");
       await dialog.getByLabel("Write a comment", { exact: true }).fill("");
       await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
       await page.reload();
       await expect(toggle).toHaveAttribute("aria-expanded", "false");
-      await expect
-        .poll(() => sections("main"))
-        .toEqual(["comments", "description", "checklist", "counters"]);
-      await expect
-        .poll(() => sections("sidebar"))
-        .toEqual(["labels", "schedule"]);
+      await expect.poll(sections).toEqual(mixedOrder);
+      assert.deepEqual(
+        await page.evaluate(() =>
+          JSON.parse(localStorage.getItem("astra-card-layout:v2")),
+        ),
+        mixedOrder,
+      );
 
       for (const [width, height] of [
         [1440, 1000],
@@ -179,6 +231,34 @@ await runBrowserSuite(
           .getByRole("button", { name: "Move Comments up", exact: true })
           .tap();
         await closePanel();
+        await dialog.locator(".card-body-grid").evaluate(async (el) => {
+          await Promise.all(
+            el
+              .getAnimations({ subtree: true })
+              .map((a) => a.finished.catch(() => {})),
+          );
+        });
+        const sectionBounds = await dialog
+          .locator(".card-body-grid > [data-card-section]")
+          .evaluateAll((nodes) =>
+            nodes.map((node) => {
+              const r = node.getBoundingClientRect();
+              return {
+                left: r.left,
+                right: r.right,
+                top: r.top,
+                bottom: r.bottom,
+              };
+            }),
+          );
+        for (let index = 1; index < sectionBounds.length; index++) {
+          assert.ok(
+            sectionBounds[index].top >= sectionBounds[index - 1].bottom,
+          );
+          assert.equal(sectionBounds[index].left, sectionBounds[0].left);
+          assert.equal(sectionBounds[index].right, sectionBounds[0].right);
+        }
+        await expect.poll(sections).toEqual(mixedOrder);
         assert.ok(
           await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
         );
@@ -186,6 +266,14 @@ await runBrowserSuite(
         await expect(dialog.getByLabel("Start", { exact: true })).toBeVisible();
         await toggle.tap();
         await expect(dialog.getByLabel("Start", { exact: true })).toBeHidden();
+        if (browser.browserType().name() === "chromium") {
+          await dialog.locator(".editor-form").evaluate((el) => {
+            el.scrollTop = 0;
+          });
+          await page.screenshot({
+            path: join(evidence, `mixed-layout-${width}.png`),
+          });
+        }
       }
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.setViewportSize({ width: 390, height: 844 });
@@ -194,8 +282,15 @@ await runBrowserSuite(
         .getByRole("button", { name: "Reset layout", exact: true })
         .click();
       await expect
-        .poll(() => sections("main"))
-        .toEqual(["description", "checklist", "counters", "comments"]);
+        .poll(sections)
+        .toEqual([
+          "description",
+          "checklist",
+          "counters",
+          "comments",
+          "schedule",
+          "labels",
+        ]);
       assert.equal(
         await dialog
           .locator(".card-body-grid")
@@ -260,7 +355,9 @@ await runBrowserSuite(
               "relative workspace date",
               "collapsed and invalid schedules",
               "no presentation writes",
-              "retained mounted drafts",
+              "legacy preference upgrade to one six-section order",
+              "cross-group moves retain mounted drafts and disclosure state",
+              "visual order matches reading order at every width",
               "pointer and keyboard ordering",
               "local preference reload and reset",
               "320–1440px plus landscape",

@@ -94,9 +94,10 @@ conflict and close ownership. Draft snapshot classification lives with the draft
 model, so picker/checklist changes bypass only the typing debounce.
 
 `card-layout.ts` owns sanitized browser-only section ordering; `CardLayoutMenu`
-edits that preference without entering autosave. The editor keeps content and
-property sections keyed so reordering retains mounted controls and explicit
-drafts. `card-schedule.ts` derives relative schedule summaries using the workspace
+edits that preference without entering autosave. The editor keeps all six sections
+in one keyed list so any reorder retains mounted controls and explicit drafts.
+The preference reader upgrades the former grouped order into that single list.
+`card-schedule.ts` derives relative schedule summaries using the workspace
 calendar; `CardPlanningFields` owns the disclosure, whose initial creation state
 does not change when the card is first acknowledged. `ScheduleCalendar` stages a
 civil date/range in a nested native modal; Apply updates the existing editor draft.

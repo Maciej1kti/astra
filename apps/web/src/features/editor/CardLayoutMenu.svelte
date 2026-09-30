@@ -10,7 +10,6 @@
     writeCardLayout,
     type CardLayout,
     type CardSection,
-    type LayoutGroup,
   } from "./card-layout";
 
   let {
@@ -19,17 +18,13 @@
   }: { layout: CardLayout; disabled?: boolean } = $props();
   let announcement = $state("");
   let stored = $state(true);
-  const groups: { key: LayoutGroup; label: string }[] = [
-    { key: "content", label: "Content" },
-    { key: "properties", label: "Properties" },
-  ];
   function save(next: CardLayout) {
     layout = next;
     stored = writeCardLayout(next);
   }
-  function move(group: LayoutGroup, section: CardSection, direction: -1 | 1) {
-    save(moveCardSection(layout, group, section, direction));
-    announcement = `${cardSections[section]} moved to position ${layout[group].indexOf(section) + 1} of ${layout[group].length}.`;
+  function move(section: CardSection, direction: -1 | 1) {
+    save(moveCardSection(layout, section, direction));
+    announcement = `${cardSections[section]} moved to position ${layout.indexOf(section) + 1} of ${layout.length}.`;
   }
 </script>
 
@@ -46,45 +41,32 @@
         >
       </div>
       <p class="layout-hint">Choose the order that works for you.</p>
-      {#each groups as group}
-        <div
-          class="layout-group"
-          role="group"
-          aria-label={`${group.label} order`}
-        >
-          <p class="layout-group-label">{group.label}</p>
-          <ol>
-            {#each layout[group.key] as section, index (section)}
-              <li animate:layoutMotion>
-                <span class="layout-position" aria-hidden="true"
-                  >{index + 1}</span
-                >
-                <span class="layout-section-name">{cardSections[section]}</span>
-                <Button
-                  type="button"
-                  variant="quiet"
-                  class="icon-button"
-                  aria-label={`Move ${cardSections[section]} up`}
-                  aria-disabled={index === 0}
-                  onclick={() => index > 0 && move(group.key, section, -1)}
-                  ><Icon name="chevronUp" /></Button
-                >
-                <Button
-                  type="button"
-                  variant="quiet"
-                  class="icon-button"
-                  aria-label={`Move ${cardSections[section]} down`}
-                  aria-disabled={index === layout[group.key].length - 1}
-                  onclick={() =>
-                    index < layout[group.key].length - 1 &&
-                    move(group.key, section, 1)}
-                  ><Icon name="chevronDown" /></Button
-                >
-              </li>
-            {/each}
-          </ol>
-        </div>
-      {/each}
+      <ol class="layout-order" aria-label="Section order">
+        {#each layout as section, index (section)}
+          <li animate:layoutMotion>
+            <span class="layout-position" aria-hidden="true">{index + 1}</span>
+            <span class="layout-section-name">{cardSections[section]}</span>
+            <Button
+              type="button"
+              variant="quiet"
+              class="icon-button"
+              aria-label={`Move ${cardSections[section]} up`}
+              aria-disabled={index === 0}
+              onclick={() => index > 0 && move(section, -1)}
+              ><Icon name="chevronUp" /></Button
+            >
+            <Button
+              type="button"
+              variant="quiet"
+              class="icon-button"
+              aria-label={`Move ${cardSections[section]} down`}
+              aria-disabled={index === layout.length - 1}
+              onclick={() => index < layout.length - 1 && move(section, 1)}
+              ><Icon name="chevronDown" /></Button
+            >
+          </li>
+        {/each}
+      </ol>
       <div class="layout-panel-footer">
         <p class="layout-hint">
           {stored

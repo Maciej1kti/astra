@@ -342,7 +342,7 @@
   overflow-y: auto;
 }
 
-/* Card content and properties share one scroll surface at every width. */
+/* All card sections follow one reading order and scroll surface at every width. */
 .app-dialog.card-editor {
   --dialog-width: var(--dialog-card);
   --card-padding: var(--space-12);
@@ -374,29 +374,11 @@
 }
 .card-body-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 288px);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  font-size: var(--text-card);
-}
-.card-main,
-.card-sidebar {
-  min-width: 0;
-  padding: var(--space-10) var(--card-padding);
-}
-.card-main {
-  display: grid;
   gap: var(--space-10);
-}
-.card-sidebar {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: stretch;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-12);
-  padding-inline: var(--space-10);
-  background: color-mix(in srgb, var(--soft) 65%, var(--paper));
-  border-left: var(--stroke) solid var(--line);
+  padding: var(--space-10) var(--card-padding);
+  font-size: var(--text-card);
 }
 .card-section {
   min-width: 0;
@@ -404,7 +386,7 @@
 .card-editor .card-section > section {
   margin: 0;
 }
-.card-main > .card-section + .card-section {
+.card-body-grid > .card-section + .card-section {
   border-top: var(--stroke) solid var(--line);
   padding-top: var(--space-10);
 }
@@ -434,7 +416,7 @@
   margin: 0;
 }
 .card-editor .card-properties {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-6);
   border: 0;
   padding: 0;
@@ -443,10 +425,10 @@
   background: var(--paper);
   border-color: var(--line);
 }
-.card-editor .card-sidebar .tags .input-row {
+.card-editor .tags .input-row {
   margin-top: var(--space-6);
 }
-.card-editor .card-sidebar .chips li {
+.card-editor .tags .chips li {
   background: var(--paper);
 }
 .card-editor .card-comments {
@@ -454,6 +436,10 @@
 }
 .card-editor .card-comments .markdown {
   line-height: var(--leading-body);
+}
+.card-editor .comment-history > li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 .card-editor .schedule-heading {
   margin: 0;
@@ -541,26 +527,20 @@
   line-height: var(--leading-body);
   margin: 0 0 var(--space-6);
 }
-.layout-group-label {
-  color: var(--muted);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  margin: var(--space-6) 0 var(--space-3);
-}
-.layout-group ol {
+.layout-order {
   padding: 0;
   margin: 0;
   list-style: none;
 }
-.layout-group li {
+.layout-order li {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   border-radius: var(--radius-sm);
   font-size: var(--text-label);
 }
-.layout-group li:hover,
-.layout-group li:focus-within {
+.layout-order li:hover,
+.layout-order li:focus-within {
   background: var(--soft);
 }
 .layout-position {
@@ -572,7 +552,7 @@
 .layout-section-name {
   flex: 1;
 }
-.layout-group button[aria-disabled="true"] {
+.layout-order button[aria-disabled="true"] {
   opacity: var(--disabled-opacity);
   cursor: default;
 }
@@ -588,22 +568,6 @@
   width: auto;
   flex-shrink: 0;
   font-size: var(--text-sm);
-}
-@media (max-width: 899px) {
-  .card-body-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .card-sidebar {
-    grid-column: 1;
-    grid-row: auto;
-    padding-inline: var(--card-padding);
-    border-left: 0;
-    border-top: var(--stroke) solid var(--line);
-    gap: var(--space-10);
-  }
-  .card-editor .card-properties {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 @media (max-width: 640px) {
   .app-dialog.card-editor {
@@ -641,8 +605,7 @@
   .card-editor .card-heading textarea {
     font-size: var(--text-section);
   }
-  .card-editor .card-main,
-  .card-editor .card-sidebar {
+  .card-editor .card-body-grid {
     padding-bottom: max(var(--space-10), env(safe-area-inset-bottom));
   }
   .card-editor .card-properties input {

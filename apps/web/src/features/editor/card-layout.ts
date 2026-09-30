@@ -7,34 +7,51 @@ export const cardSections = {
   labels: "Labels",
 } as const;
 export type CardSection = keyof typeof cardSections;
-export type CardLayout = { content: CardSection[]; properties: CardSection[] };
-export type LayoutGroup = keyof CardLayout;
-const defaults: CardLayout = {
-  content: ["description", "checklist", "counters", "comments"],
-  properties: ["schedule", "labels"],
-};
-const key = "astra-card-layout:v1";
+export type CardLayout = CardSection[];
+const defaults: CardLayout = [
+  "description",
+  "checklist",
+  "counters",
+  "comments",
+  "schedule",
+  "labels",
+];
+const key = "astra-card-layout:v2";
+const legacyKey = "astra-card-layout:v1";
 type StorageReader = Pick<Storage, "getItem">;
 type StorageWriter = Pick<Storage, "setItem">;
 
 function normalize(value: unknown): CardLayout {
+  const saved = Array.isArray(value) ? value : [];
+  return [...new Set([...saved, ...defaults])].filter((section) =>
+    defaults.includes(section),
+  );
+}
+
+function readLegacy(value: unknown): CardLayout {
   const raw =
-    value && typeof value === "object" ? (value as Partial<CardLayout>) : {};
-  const order = (group: LayoutGroup) => {
-    const saved = Array.isArray(raw[group]) ? raw[group] : [];
-    return [...new Set([...saved, ...defaults[group]])].filter((section) =>
-      defaults[group].includes(section),
+    value && typeof value === "object"
+      ? (value as { content?: unknown; properties?: unknown })
+      : {};
+  const order = (saved: unknown, sections: CardLayout) =>
+    [...new Set([...(Array.isArray(saved) ? saved : []), ...sections])].filter(
+      (section) => sections.includes(section),
     );
-  };
-  return { content: order("content"), properties: order("properties") };
+  // Preserve the previous reading order when upgrading the browser preference.
+  return [
+    ...order(raw.content, defaults.slice(0, 4)),
+    ...order(raw.properties, defaults.slice(4)),
+  ];
 }
 
 /** Only section identifiers are stored; card data stays in the editor/server. */
 export function readCardLayout(storage?: StorageReader): CardLayout {
   try {
-    return normalize(
-      JSON.parse((storage ?? localStorage).getItem(key) ?? "null"),
-    );
+    const source = storage ?? localStorage;
+    const saved = source.getItem(key);
+    return saved !== null
+      ? normalize(JSON.parse(saved))
+      : readLegacy(JSON.parse(source.getItem(legacyKey) ?? "null"));
   } catch {
     return normalize(null);
   }
@@ -58,15 +75,13 @@ export function defaultCardLayout(): CardLayout {
 
 export function moveCardSection(
   layout: CardLayout,
-  group: LayoutGroup,
   section: CardSection,
   direction: -1 | 1,
 ): CardLayout {
   const result = normalize(layout);
-  const order = result[group];
-  const index = order.indexOf(section);
+  const index = result.indexOf(section);
   const next = index + direction;
-  if (index >= 0 && next >= 0 && next < order.length)
-    [order[index], order[next]] = [order[next], order[index]];
+  if (index >= 0 && next >= 0 && next < result.length)
+    [result[index], result[next]] = [result[next], result[index]];
   return result;
 }
