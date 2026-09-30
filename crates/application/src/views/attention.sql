@@ -1,4 +1,31 @@
-WITH candidates AS (
+WITH decision_prefix AS MATERIALIZED (
+SELECT d.project_id,d.entity_id,d.entity_type,d.title,'decision_needed' reason,NULL date,1 weight
+FROM documents d INDEXED BY documents_decision_needed
+WHERE entity_type='update'
+AND json_extract(metadata_json,'$.kind')='decision_needed'
+AND {ACTIVE}
+AND (?5 IS NULL
+OR d.project_id=?5)
+AND (?6 IS NULL OR {FOLDER}=?6)
+-- Build decision closure membership once, scoped by both project and report ID.
+AND (d.project_id || ':' || d.entity_id) NOT IN (
+SELECT r.project_id || ':' || edge.value
+FROM documents r INDEXED BY documents_report_kind,
+json_each(r.metadata_json,'$.resolves') edge
+WHERE r.entity_type='update'
+AND json_extract(r.metadata_json,'$.kind')='resolution'
+AND edge.value IS NOT NULL
+AND (?5 IS NULL OR r.project_id=?5)
+UNION ALL SELECT r.project_id || ':' || json_extract(r.metadata_json,'$.supersedes')
+FROM documents r INDEXED BY documents_report_kind
+WHERE r.entity_type='update'
+AND json_extract(r.metadata_json,'$.kind')='correction'
+AND json_extract(r.metadata_json,'$.supersedes') IS NOT NULL
+AND (?5 IS NULL OR r.project_id=?5)
+)
+ORDER BY d.project_id,d.entity_id
+LIMIT ?10
+), candidates AS (
               SELECT project_id,entity_id,entity_type,title,'overdue' reason,json_extract(metadata_json,'$.schedule.end') date,0 weight
 FROM documents d
 WHERE entity_type='card'
@@ -56,24 +83,7 @@ AND {ACTIVE}
 AND (?5 IS NULL
 OR d.project_id=?5)
 AND (?6 IS NULL OR {FOLDER}=?6)
-UNION ALL SELECT d.project_id,d.entity_id,d.entity_type,d.title,'decision_needed',NULL,1
-FROM documents d INDEXED BY documents_decision_needed
-WHERE entity_type='update'
-AND json_extract(metadata_json,'$.kind')='decision_needed'
-AND {ACTIVE}
-AND (?5 IS NULL
-OR d.project_id=?5)
-AND (?6 IS NULL OR {FOLDER}=?6)
-AND NOT EXISTS(SELECT 1
-FROM documents r
-WHERE r.project_id=d.project_id
-AND r.entity_type='update'
-AND ((json_extract(r.metadata_json,'$.kind')='resolution'
-AND EXISTS(SELECT 1
-FROM json_each(r.metadata_json,'$.resolves') edge
-WHERE edge.value=d.entity_id))
-OR (json_extract(r.metadata_json,'$.kind')='correction'
-AND json_extract(r.metadata_json,'$.supersedes')=d.entity_id)))
+UNION ALL SELECT * FROM decision_prefix
 -- Unread rows have the same weight, date and reason. Later rows cannot enter this page.
 UNION ALL SELECT * FROM (
 SELECT d.project_id,d.entity_id,d.entity_type,d.title,'unread_report',NULL,2
@@ -87,7 +97,8 @@ AND {ACTIVE}
 AND (?5 IS NULL OR d.project_id=?5)
 AND (?6 IS NULL OR {FOLDER}=?6)
 ORDER BY d.project_id,d.entity_id
-LIMIT ?10
+-- A zero limit skips reads when higher-priority decisions already fill the prefix.
+LIMIT CASE WHEN ?8=1 AND (SELECT COUNT(*) FROM decision_prefix)<?10 THEN ?10 ELSE 0 END
 )
             ) SELECT project_id,entity_id,entity_type,title,reason,date
 FROM candidates

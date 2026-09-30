@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [decision-history iteration](2026-09-30-focus-decision-histories.md) replaces
+per-decision history scans with statement-local closure membership and bounded
+priority prefixes. Required mixed-history release medians improve from 3.4–3.5
+seconds to 30–38 ms; a separate concentrated 50k-report profile measures 18–26 ms.
+Three focused regressions and the full gate pass (268 Rust, 139 JavaScript,
+12 Python); Focus/protocol pass in Chromium and WebKit. Manual publication is
+pending. Note-only receipt tails and broader performance remain open.
+
 The [ordered tag-read iteration](2026-09-30-tag-parallel-reads.md) uses bounded
 source workers while retaining current versions, sorted partial issues and scan
 limits. Required release global catalog median improves from 867 to 423 ms;

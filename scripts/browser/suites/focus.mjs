@@ -1158,6 +1158,18 @@ await runBrowserSuite(
             reportId,
           );
           await dialog
+            .getByRole("button", { name: "Mark read", exact: true })
+            .click();
+          await expect(
+            dialog.getByRole("button", { name: "Mark unread", exact: true }),
+          ).toBeVisible();
+          await expect(row).toBeVisible();
+          const readDecision = cli(
+            "get",
+            `/api/v1/views/attention?project_id=${project.id}&focus=true&limit=200`,
+          ).items.find((item) => item.report_id === reportId);
+          assert.equal(readDecision?.reason, "decision_needed");
+          await dialog
             .getByRole("button", { name: "Resolve decision" })
             .click();
           const resolution = editor(page);
@@ -1183,7 +1195,11 @@ await runBrowserSuite(
             `/api/v1/views/attention?project_id=${project.id}&limit=200`,
           ).items;
           assert(!remaining.some((item) => item.report_id === reportId));
-          return { reportId, resolvedFromUpdate: true };
+          return {
+            reportId,
+            readDecisionRetained: true,
+            resolvedFromUpdate: true,
+          };
         },
         page,
       );

@@ -255,7 +255,14 @@ precede that prefix; overdue items, unresolved decisions and review items retain
 their existing rules. Receipt membership precedes further unread-row eligibility
 checks. Review and decision branches select their existing partial indexes so
 unrelated statuses/kinds do not cause full scans. `Index::open` installs these
-indexes before reads, including on an older projection. Receipts remain durable
+indexes before reads, including on an older projection. Decision closure membership
+is built once in the same statement from resolution edges and correction targets,
+using the existing report-kind index. Membership includes both project and report
+ID, ignores nonmatching NULL edges and preserves direct closure even when a
+resolution is later corrected. Eligible decisions retain the same sufficient
+ordered prefix as unread reports. When that decision prefix alone fills the
+requested prefix, lower-priority unread rows cannot enter it and are not queried.
+Membership and prefixes last only for this statement. Receipts remain durable
 journal state, never an indexed source or a retained application cache.
 Attention reason branches and the shared event-boundary query check date/kind
 eligibility before the more expensive active/project checks. The boundary still

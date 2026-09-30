@@ -21,7 +21,8 @@ The autosave suite covers automatic card/project writes, queued edits, creation,
 close flushing and recovery without replacing the original command identity. The
 focus suite covers the four Focus sections, daily plan/event bounded reads, pinned
 card precedence, filters, inline pointer ordering and the viewport anchored card
-action.
+action. It also marks a decision read, verifies it remains in Focus, then resolves
+it through the update editor while another unresolved decision remains visible.
 
 The tags suite also adds 80 external source cards to exercise larger catalogs
 through normal paired HTTP reads. It checks updated usage counts after a source

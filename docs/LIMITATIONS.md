@@ -78,6 +78,14 @@ The [existing-index iteration](../progress/2026-09-30-focus-eligibility-indexes.
 reduces the all-read 50k-receipt profile from 85.5 to 52.7 ms median; its p95 is
 still 59.5 ms and earlier larger outliers remain recorded. Receipt histories
 and dense decisions need separate coverage; further gains are not ruled out.
+The [decision-history iteration](../progress/2026-09-30-focus-decision-histories.md)
+replaces repeated resolution/correction scans with statement-local membership
+and sufficient decision prefixes. Required mixed-history medians improve from
+3.4–3.5 seconds to 30–38 ms; a separate concentrated 50k-report profile measures
+18–26 ms. The mixed shipped comparison has only 20 samples per profile; the
+concentrated case has 200 but no shipped baseline at that scale. Note-only
+all-read p95 remains about 60 ms. Wider graph/edge/offset and concurrent profiles,
+older outliers, device and transport verification remain open.
 The [tag source-read iteration](../progress/2026-09-30-tag-source-reads.md) reduces
 repeated folder work while preserving current-file counts and preview versions.
 Such catalogs still inspect source files and scale with the selected card collection.

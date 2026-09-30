@@ -77,7 +77,7 @@ impl Engine {
                 limit
             ]);
             let start = offset(cursor, &scope)?;
-            let unread_prefix = (start as i64).saturating_add(i64::from(limit) + 1);
+            let candidate_prefix = (start as i64).saturating_add(i64::from(limit) + 1);
             let sql = format!(
                 include_str!("attention.sql"),
                 ACTIVE = ACTIVE,
@@ -96,7 +96,7 @@ impl Engine {
                         clock,
                         focus,
                         receipts,
-                        unread_prefix
+                        candidate_prefix
                     ],
                     attention_item,
                 )?

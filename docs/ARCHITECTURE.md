@@ -127,7 +127,13 @@ branch selects an eligible ordered prefix large enough for the requested page;
 other reasons keep their ordering and pagination. Receipt membership is checked
 before the remaining unread-row eligibility work. Review and decision branches
 explicitly use their existing partial indexes, which startup restores for older
-projections before admitting reads. Marking a report read affects
+projections before admitting reads. The same statement builds decision closure
+membership from resolution edges and correction targets once, scoped by project
+and report identity; it does not rescan each project's history for every decision.
+The existing report-kind index supplies those observations, and the set ends with
+the statement. A sufficient ordered decision prefix also skips lower-priority
+unread work when decisions already fill the requested prefix, preserving the
+same mixed-page order. Marking a report read affects
 its unread entry, while a decision remains until resolved or corrected. Opening
 any returned target still uses a current source read.
 

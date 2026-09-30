@@ -34,3 +34,31 @@ Examples: `examples/requests/focus-daily.http`. Regression coverage includes
 workspace-local midnight, inclusive endpoints, planned status, exclusions,
 folder filtering before pagination, cursor expiry, chronological events, unread
 receipt changes, section ordering and archived/completed pin visibility.
+
+## Decision-history reads
+
+Decision attention preserves direct closure: a resolution's `resolves` entries
+or a correction's `supersedes` value close matching decisions in the same project.
+Correcting a resolution does not reopen its earlier decisions. The query builds
+this membership once within its existing projection snapshot, selecting the
+already installed report-kind index, instead of rescanning report history for
+each decision. Canonical UUID identities include both project and report; missing
+or NULL edges do not match or suppress unrelated decisions. Project scope applies
+before page materialization. General and Focus attention use the same closure;
+durable read receipts only affect unread non-decision reports.
+
+Eligible decisions share their weight, date and reason, so their sorted project/ID
+prefix of `offset + limit + 1` is sufficient for the same final page, saturating at
+SQLite's signed limit. The statement materializes that prefix once. If it fills
+the requested prefix, lower-priority unread reports cannot enter the page and
+that branch receives a zero limit before scanning reports. Overdue rows still
+precede decisions; unread reports,
+general due-soon reminders and review rows retain their final ordering. When
+fewer decisions qualify, ordinary unread eligibility and receipt membership run
+before their existing sufficient prefix. No eligible page item is omitted.
+
+This changes the read algorithm, not source/API schemas, cursor scope, projection
+authority, locks, write durability or retained caches. Startup and ordinary rebuild
+coverage include the required existing index. Exact paged results are checked
+against independently expected report identities, subjects and scope, including
+cross-project repeated IDs and maximum-size resolution arrays.
