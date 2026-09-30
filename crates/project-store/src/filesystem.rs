@@ -345,12 +345,30 @@ pub struct Lease {
 impl Lease {
     pub fn verify(&self) -> Result<(), StoreError> {
         let dir = Directory::open(&self.directory)?;
-        let stat = fs::statat(&dir.file, &self.name, AtFlags::SYMLINK_NOFOLLOW)?;
+        self.verify_at(&dir.file)
+    }
+    fn verify_at(&self, directory: &File) -> Result<(), StoreError> {
+        let stat = fs::statat(directory, &self.name, AtFlags::SYMLINK_NOFOLLOW)?;
         let held = fs::fstat(&self.file)?;
         if (stat.st_dev, stat.st_ino) != (held.st_dev, held.st_ino) || stat.st_nlink != 1 {
             return Err(StoreError::Invalid("LEASE_REPLACED"));
         }
         Ok(())
+    }
+    /// Collection reads subsequently verify this project's current pathname and
+    /// the collection inode before opening any source file. The held project
+    /// descriptor therefore avoids a second full walk just for its lease child.
+    fn verify_relative_to_project(&self, project: &Directory) -> Result<(), StoreError> {
+        if self.directory != project.path.join(".local") {
+            return Err(StoreError::Invalid("LEASE_REPLACED"));
+        }
+        let local = File::from(fs::openat(
+            &project.file,
+            ".local",
+            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::empty(),
+        )?);
+        self.verify_at(&local)
     }
 }
 
@@ -376,7 +394,7 @@ impl CollectionReader<'_> {
         Ok(names)
     }
     pub fn read(&self, id: &str) -> Result<Option<Vec<u8>>, StoreError> {
-        self.lease.verify()?;
+        self.lease.verify_relative_to_project(self.project)?;
         resource_id(id)?;
         // Check the approved project inode while walking to the collection.
         // Moving both the lease and collection into a new parent must fail too.

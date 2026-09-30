@@ -141,6 +141,39 @@ fn collection_reader_rejects_replacement_after_an_earlier_read() {
 }
 
 #[test]
+fn collection_reader_rejects_changed_lease_directory_after_an_earlier_read() {
+    let id = "11111111-1111-4111-8111-111111111111";
+    for kind in [Kind::Card, Kind::Milestone, Kind::Update] {
+        for change in ["symlink", "replacement", "hardlink"] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = temp.path().canonicalize().unwrap();
+            let store = ProjectStore::open(&root, true).unwrap();
+            let (directory, name) = store.location(kind, id, true).unwrap();
+            directory.replace(&name, b"before", None).unwrap();
+            let reader = store.collection_reader(kind).unwrap();
+            assert_eq!(reader.read(id).unwrap().unwrap(), b"before");
+            let local = root.join(".project/.local");
+            let moved = root.join(".project/previous-local");
+            fs::rename(&local, &moved).unwrap();
+            if change == "symlink" {
+                // A symlink can expose the very same locked inode. It is still
+                // forbidden as a component of the current lease path.
+                symlink(&moved, &local).unwrap();
+            } else {
+                fs::create_dir(&local).unwrap();
+                if change == "hardlink" {
+                    fs::hard_link(moved.join("writer.lock"), local.join("writer.lock")).unwrap();
+                } else {
+                    fs::write(local.join("writer.lock"), b"replacement").unwrap();
+                }
+            }
+            assert!(reader.read(id).is_err(), "{kind:?}: {change}");
+            assert_eq!(fs::read(directory.path().join(name)).unwrap(), b"before");
+        }
+    }
+}
+
+#[test]
 fn collection_reader_observes_current_bytes_and_retains_file_guards() {
     use project_store::document::MAX_DOCUMENT;
     let id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";

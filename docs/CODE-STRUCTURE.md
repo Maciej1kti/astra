@@ -191,6 +191,11 @@ on every file and checks the approved project and collection identities in one
 path walk. File type, link count, size bounds and current bytes remain checked;
 there is no source/version cache. A missing collection has a distinct error,
 so a missing lease cannot be interpreted as an empty source collection.
+For a collection file, lease lookup opens the fixed `.local` child relative to
+the held project descriptor with `NOFOLLOW`, then checks the locked inode and
+link count. The following source read still walks the current absolute path and
+verifies both project and collection identities before opening any source bytes.
+This removes a duplicate lease-path traversal without caching a path check.
 
 Patch preparation composes creation defaults, patch/undo application, placement
 resolution and report reference collection as named steps. It produces a candidate

@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [source lease path iteration](2026-09-30-source-paths.md) removes a repeated
+absolute traversal during collection reads, retaining current source/lease
+checks and durable writes. With 1,000 cards, release create median/p95 improves
+from 231/246 to 160/174 ms. The full gate passes 252 Rust, 137 JavaScript and 12
+Python tests; all 24 Chromium and five applicable WebKit suites pass. The 150 ms
+write target, physical-device coverage and full release acceptance remain open.
+
 The [counter footer follow-up](2026-09-30-counter-footer-spacing.md#divider-correction)
 keeps the section divider with compact spacing below its menu. An initial removal
 of the divider was corrected after owner clarification. The full gate and affected
@@ -42,7 +49,7 @@ A [remaining-cost ranking](2026-09-30-performance-ranking.md) covers all seven
 desktop views plus first-card/Settings opening with a 1,000-card release fixture.
 Local warm views are about 38–40 ms except the 163 ms Calendar grid; constrained
 Calendar remains about 999 ms. This small ranking run is not p95/device acceptance.
-Duplicate source/lease path traversal is the next server candidate to measure.
+The repeated lease traversal is measured separately in the source path iteration.
 
 The [compact card counters](2026-09-30-compact-card-counters.md) add 14-day charts,
 horizontal scrubbing and guarded numeric entry in compact rows. Redundant clock
