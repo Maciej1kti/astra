@@ -7,6 +7,17 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Calendar geometry/query probes](2026-10-01-calendar-probes.md) reject
+initial-header removal, automatic content visibility, remembered skipped sizes,
+layout/paint containment and an early SQL type restriction. Automatic visibility
+repeats an 8–15 ms local / 74–77 ms constrained warm gain, but a controlled
+large-text probe exposes underestimated skipped heights. The Rust query already
+uses branch-specific indexes: the 100-project, 10k-card, 50k-report global page
+measures 14.25 ms median / 14.69 ms p95; a scoped page is below 1 ms. All
+application prototypes are restored. The full gate passes 269 Rust, 139
+JavaScript and 12 Python tests; normal report publication is pending. Broader
+performance and acceptance remain open.
+
 The [request-local receipt iteration](2026-09-30-focus-rust-receipts.md) replaces
 SQLite concatenation/tree membership with a lazy Rust hash predicate and an
 ordered unread index under the existing snapshot. Required all-read note-history
