@@ -7,12 +7,14 @@
     label = "More actions",
     disabled = false,
     icon = "more",
+    text,
     align = "end",
     children,
   }: {
     label?: string;
     disabled?: boolean;
     icon?: IconName;
+    text?: string;
     align?: "start" | "end";
     children: Snippet<[close: () => void]>;
   } = $props();
@@ -63,13 +65,16 @@
   <button
     bind:this={trigger}
     type="button"
-    class="quiet icon-button"
+    class="quiet"
+    class:icon-button={!text}
+    class:action-menu-labeled={!!text}
     aria-label={label}
     title={label}
     aria-expanded={open}
     aria-controls={id}
     {disabled}
-    onclick={() => (open = !open)}><Icon name={icon} /></button
+    onclick={() => (open = !open)}
+    ><Icon name={icon} />{#if text}<span>{text}</span>{/if}</button
   >
   {#if open}<div class="action-menu-panel" {id}>
       {@render children(close)}

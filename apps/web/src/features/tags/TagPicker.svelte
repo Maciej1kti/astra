@@ -1,6 +1,7 @@
 <script lang="ts">
   import { all } from "../../lib/api/api";
   import Icon from "../../lib/ui/Icon.svelte";
+  import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
   import { getProjectTags } from "../../lib/api/tags";
@@ -201,11 +202,18 @@
 </script>
 
 <section class="tags" aria-label={folder ? "Project folder" : "Card tags"}>
-  <div class="heading">
-    <label for={`${id}-input`}>{folder ? "Folder" : "Labels"}</label><span
-      >{labels.length}/{folder ? 1 : TAG_LIMIT}</span
-    >
-  </div>
+  {#if folder}<div class="heading">
+      <label for={`${id}-input`}>{folder ? "Folder" : "Labels"}</label><span
+        >{labels.length}/{folder ? 1 : TAG_LIMIT}</span
+      >
+    </div>{:else}
+    <SectionHeading
+      title="Labels"
+      level={3}
+      count={`${labels.length}/${TAG_LIMIT}`}
+    />
+    <label class="sr-only" for={`${id}-input`}>Labels</label>
+  {/if}
   {#if labels.length}
     <ul class="chips" aria-label={folder ? "Selected folder" : "Selected tags"}>
       {#each labels as label (label)}
@@ -258,13 +266,14 @@
     />
     <button
       type="button"
+      class:tag-add={!folder}
+      aria-label={folder ? undefined : "Add tag"}
+      title={folder ? undefined : "Add tag"}
       disabled={disabled || !draft.trim()}
       onclick={() => add()}
-      >{folder
-        ? labels.length
-          ? "Set folder"
-          : "Add folder"
-        : "Add tag"}</button
+      >{#if folder}{labels.length ? "Set folder" : "Add folder"}{:else}<Icon
+          name="plus"
+        />{/if}</button
     >
   </div>
   {#if folder}<p id={`${id}-hint`} class="hint">
@@ -345,9 +354,16 @@
     flex: 1;
     width: 100%;
     min-width: 0;
+    margin: 0;
   }
   .input-row button {
     flex-shrink: 0;
+  }
+  .tag-add {
+    display: grid;
+    place-items: center;
+    width: var(--tap-target);
+    padding: 0;
   }
   .chips,
   .suggestions {

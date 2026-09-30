@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import SectionHeading from "../../lib/ui/SectionHeading.svelte";
+  import Button from "../../lib/ui/Button.svelte";
+  import Icon from "../../lib/ui/Icon.svelte";
   import type {
     CardCounter,
     CardPatch,
@@ -68,18 +71,19 @@
 </script>
 
 <section class="card-counters" aria-label="Card counters">
-  <div class="section-heading">
-    <h3>Counters</h3>
-    <button
-      type="button"
-      class="quiet"
-      disabled={disabled ||
-        !saved ||
-        !!draft.configuration ||
-        counters.length >= 20}
-      onclick={() => configure()}>Add counter</button
-    >
-  </div>
+  <SectionHeading title="Counters" level={3}>
+    {#snippet actions()}<Button
+        type="button"
+        variant="quiet"
+        disabled={disabled ||
+          !saved ||
+          !!draft.configuration ||
+          counters.length >= 20}
+        onclick={() => configure()}
+        ><Icon name="plus" small />Add counter</Button
+      >
+    {/snippet}
+  </SectionHeading>
   {#if counters.length}<p class="field-hint">
       Today · <time datetime={today}>{today}</time> · {timezone}
     </p>{/if}
@@ -265,11 +269,8 @@
 
 <style>
   .card-counters {
-    margin-top: var(--space-10);
-    padding-top: var(--space-8);
-    border-top: var(--stroke) solid var(--line);
+    min-width: 0;
   }
-  .section-heading,
   .counter-heading,
   .draft-hint {
     display: flex;
@@ -277,17 +278,14 @@
     gap: var(--space-4);
     flex-wrap: wrap;
   }
-  h3 {
-    font-size: var(--text-section);
-    margin: 0;
-  }
-  .section-heading > button,
   .counter-heading > button {
     margin-left: auto;
   }
   .counter {
-    padding: var(--space-6) 0;
-    border-bottom: var(--stroke) solid var(--line);
+    padding: var(--space-6);
+    margin-top: var(--space-6);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
   }
   .counter-heading strong {
     overflow-wrap: anywhere;
@@ -295,7 +293,9 @@
   }
   .counter-controls {
     display: grid;
-    grid-template-columns: 44px minmax(40px, 1fr) 44px minmax(30px, auto) 44px;
+    grid-template-columns:
+      var(--tap-target) minmax(0, 1fr) var(--tap-target)
+      minmax(0, auto) var(--tap-target);
     align-items: center;
     gap: var(--space-3);
     margin: var(--space-3) 0;
@@ -303,7 +303,7 @@
   }
   .counter-controls button {
     padding: 0;
-    min-height: 44px;
+    min-height: var(--tap-target);
   }
   output {
     text-align: center;

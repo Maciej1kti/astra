@@ -103,6 +103,26 @@ await runBrowserSuite(
           path: join(evidence, `header-${size.width}x${size.height}.png`),
         });
       }
+      await page.setViewportSize({ width: 320, height: 844 });
+      await title.fill("Refine the onboarding experience");
+      await expect
+        .poll(() => cli("get", path).metadata.title)
+        .toBe("Refine the onboarding experience");
+      await expect(header.getByTestId("autosave-status")).toHaveText("Saved");
+      const titleLines = await title.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return {
+          contentHeight:
+            el.clientHeight -
+            parseFloat(style.paddingTop) -
+            parseFloat(style.paddingBottom),
+          lineHeight: parseFloat(style.lineHeight),
+        };
+      });
+      assert.ok(
+        titleLines.contentHeight >= titleLines.lineHeight * 2 - 1,
+        "A two-line phone title is readable without clipping the second line",
+      );
       await page.setViewportSize({ width: 390, height: 844 });
       await comment.fill("Visible confirmation from the bottom of a long card");
       await dialog

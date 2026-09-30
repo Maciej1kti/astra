@@ -20,6 +20,8 @@
   import ReportFields from "./ReportFields.svelte";
   import UpdateDetails from "./UpdateDetails.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
+  import AcceptanceChecklist from "../cards/AcceptanceChecklist.svelte";
+  import TagPicker from "../tags/TagPicker.svelte";
   import ResourceDescription from "./ResourceDescription.svelte";
   import CardCounters from "../cards/CardCounters.svelte";
   import { countersDirty } from "../cards/card-counters";
@@ -828,6 +830,7 @@
   class:dialog-large={draft.type !== "project"}
   class:resource-editor={draft.type === "project" || draft.type === "card"}
   class:project-editor={draft.type === "project"}
+  class:card-editor={draft.type === "card"}
   aria-label={readonly
     ? "Update details"
     : resource
@@ -865,6 +868,7 @@
           <div class="card-state-actions">
             <ActionMenu
               label={`Status: ${resourceLabel(draft.fields.status)}`}
+              text={resourceLabel(draft.fields.status)}
               icon={draft.fields.status}
               align="start"
               disabled={locked}
@@ -1072,9 +1076,12 @@
     >
       {#snippet heading()}
         {#if draft.type === "card"}
-          <span class="card-project-name" title={projectName}
-            >{projectName || "Card"}</span
-          >
+          <div class="editor-context">
+            <Icon name="projects" small />
+            <span class="card-project-name" title={projectName}
+              >{projectName || "Card"}</span
+            >
+          </div>
         {:else}
           <div class="editor-context">
             <Icon
@@ -1190,66 +1197,73 @@
           {resource}
           {projectName}
           {project}
-        />{:else}
-        {#if draft.type !== "update"}<div
-            class="editor-properties"
-            class:card-properties={draft.type === "card"}
-          >
-            {#if draft.type !== "card"}<label
-                >Status<select
-                  aria-label="Status"
-                  bind:value={draft.fields.status}
-                  disabled={locked}
-                  >{#each statuses as item}<option value={item}
-                      >{resourceLabel(item)}</option
-                    >{/each}</select
-                ></label
-              >
-            {/if}
-            {#if draft.type === "card"}
-              <label
-                >Start<input
-                  type="date"
-                  bind:value={draft.fields.start}
-                  disabled={locked}
-                /></label
-              >
-              <label
-                >Start time<input
-                  type="time"
-                  oninput={(event) => {
-                    if (draft.type === "card" && !event.currentTarget.value)
-                      draft.fields.end = draft.fields.start;
-                  }}
-                  bind:value={draft.fields.time}
-                  disabled={locked}
-                /></label
-              >
-              {#if draft.fields.time}
-                <label
-                  >Duration (minutes)<input
-                    type="number"
-                    min="1"
-                    max="10080"
-                    step="1"
-                    bind:value={draft.fields.duration}
-                    disabled={locked}
-                  /></label
-                >
-              {:else}
-                <label
-                  >End<input
-                    type="date"
-                    bind:value={draft.fields.end}
-                    min={draft.fields.start}
-                    disabled={locked}
-                  /></label
-                >
-              {/if}
-              {#if draft.fields.time}<p class="field-hint">
-                  Event · {workspaceTimezone}
-                </p>{/if}
-            {/if}
+        />{:else if draft.type === "card"}
+        <div class="card-body-grid">
+          <div class="card-main">
+            <ResourceDescription
+              type="card"
+              bind:body={draft.common.body}
+              bind:editing={descriptionEditing}
+              disabled={locked}
+              closeButton={descriptionCloseButton}
+              onfinish={finishTextEdit}
+            />
+            <AcceptanceChecklist
+              bind:items={draft.fields.acceptance}
+              bind:draft={draft.fields.acceptanceDraft}
+              bind:error={acceptanceError}
+              messagesInHeader
+              disabled={locked}
+            />
+            <CardCounters
+              counters={resource?.type === "card"
+                ? (resource.metadata.counters ?? [])
+                : []}
+              bind:draft={draft.fields.counterDrafts}
+              timezone={workspaceTimezone}
+              disabled={locked || !!conflict}
+              saved={!!resource}
+              onsubmit={saveCounter}
+            />
+          </div>
+          <aside class="card-sidebar" aria-label="Card properties">
+            <CardPlanningFields
+              bind:fields={draft.fields}
+              {locked}
+              timezone={workspaceTimezone}
+            />
+            <TagPicker
+              {project}
+              bind:labels={draft.fields.labels}
+              bind:draft={draft.fields.tagDraft}
+              bind:error={tagError}
+              bind:catalogError={tagCatalogError}
+              messagesInHeader
+              disabled={locked}
+            />
+          </aside>
+          <CardComments
+            comments={resource?.type === "card"
+              ? (resource.metadata.comments ?? [])
+              : []}
+            bind:body={draft.fields.commentDraft}
+            disabled={locked || !!conflict}
+            saved={!!resource}
+            onadd={addComment}
+          />
+        </div>
+      {:else}
+        {#if draft.type !== "update"}<div class="editor-properties">
+            <label
+              >Status<select
+                aria-label="Status"
+                bind:value={draft.fields.status}
+                disabled={locked}
+                >{#each statuses as item}<option value={item}
+                    >{resourceLabel(item)}</option
+                  >{/each}</select
+              ></label
+            >
           </div>{/if}
         {#if draft.type === "update"}<label
             >Kind<select
@@ -1266,7 +1280,7 @@
             bind:draft={draft.fields.folderDraft}
             disabled={locked}
           />{/if}
-        {#if draft.type === "project" || draft.type === "card"}
+        {#if draft.type === "project"}
           <ResourceDescription
             type={draft.type}
             bind:body={draft.common.body}
@@ -1286,35 +1300,6 @@
             >{preview ? "Hide preview" : "Preview Markdown"}</button
           >
           {#if preview}<Markdown source={draft.common.body} />{/if}
-        {/if}
-        {#if draft.type === "card"}<CardPlanningFields
-            {project}
-            bind:fields={draft.fields}
-            {locked}
-            bind:acceptanceError
-            bind:tagError
-            bind:tagCatalogError
-          />{/if}
-        {#if draft.type === "card"}
-          <CardCounters
-            counters={resource?.type === "card"
-              ? (resource.metadata.counters ?? [])
-              : []}
-            bind:draft={draft.fields.counterDrafts}
-            timezone={workspaceTimezone}
-            disabled={locked || !!conflict}
-            saved={!!resource}
-            onsubmit={saveCounter}
-          />
-          <CardComments
-            comments={resource?.type === "card"
-              ? (resource.metadata.comments ?? [])
-              : []}
-            bind:body={draft.fields.commentDraft}
-            disabled={locked || !!conflict}
-            saved={!!resource}
-            onadd={addComment}
-          />
         {/if}
         {#if draft.type === "milestone"}<div class="row">
             <label

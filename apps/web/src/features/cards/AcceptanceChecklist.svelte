@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from "../../lib/ui/Icon.svelte";
+  import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import { onMount, tick } from "svelte";
   import {
     ACCEPTANCE_LIMIT,
@@ -350,15 +351,12 @@
 </script>
 
 <section class="checklist" aria-label="Checklist">
-  <div class="checklist-heading">
-    <h3>Checklist</h3>
-    <span
-      class="checklist-count"
-      aria-label={`${items.filter((item) => item.completed).length} of ${items.length} checklist items completed`}
-    >
-      {items.filter((item) => item.completed).length} / {items.length}
-    </span>
-  </div>
+  <SectionHeading
+    title="Checklist"
+    level={3}
+    count={`${items.filter((item) => item.completed).length} / ${items.length}`}
+    countLabel={`${items.filter((item) => item.completed).length} of ${items.length} checklist items completed`}
+  />
   <ul bind:this={list}>
     {#each displayedItems as item, index (item.id)}
       <li
@@ -463,26 +461,6 @@
   .checklist {
     margin: var(--space-10) 0;
   }
-  .checklist-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-6);
-    padding: 0 0 var(--space-4);
-  }
-  .checklist h3 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    margin: 0;
-    font-size: var(--text-label);
-  }
-  .checklist-count {
-    color: var(--muted);
-    font-size: var(--text-sm);
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-  }
   ul {
     list-style: none;
     margin: 0;
@@ -543,6 +521,8 @@
   }
   .completed textarea {
     color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--line-strong);
   }
   .icon-button,
   .handle,
@@ -582,7 +562,7 @@
     gap: var(--space-2);
     margin-top: var(--space-4);
     padding: 0 var(--space-2) 0 var(--space-4);
-    background: var(--paper);
+    background: var(--soft);
     border-radius: var(--radius-control);
   }
   .checklist .add-row input {

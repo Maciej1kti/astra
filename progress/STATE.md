@@ -76,6 +76,16 @@ suites, six affected WebKit suites, broad HTTPS and manual restart checks pass.
 Rust dependency advisory/license review passes at this checkpoint. Calendar
 rendering and the durable-write target still require further performance work.
 
+The [responsive card modal](2026-09-30-card-modal-layout.md) now gives desktop
+cards a reading column and properties sidebar, stacks the content on tablets,
+and uses the phone viewport with a persistent header. Shared headings, labeled
+status, clearer sections and an unclipped two-line title preserve existing
+editing behavior. The isolated full gate, thirteen release Chromium suites and
+six WebKit suites pass. The manual app is rebuilt/restarted; its HTTPS assets,
+28 existing resource versions, pins, settings and certificate are verified.
+Broader WebKit test limitations are recorded in the evidence; physical-device
+and release acceptance remain open.
+
 ## Implemented product
 
 - Shared Rust domain/application rules, strict JSON sources and generated browser

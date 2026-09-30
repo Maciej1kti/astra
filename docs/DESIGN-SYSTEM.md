@@ -10,6 +10,8 @@ additional UI framework, styling runtime or component dependency is required.
 - `lib/ui/` owns `Button`, `Badge`, `Icon`, `Brand`, `PageHeading`,
   `SectionHeading`, `EmptyState`, `ResourceCard`, `ResourceMetadata`,
   `DialogHeader`, `EditableTitle` and `ActionMenu`.
+  `SectionHeading` supports compact level-three headings, counts and section
+  actions; `ActionMenu` can show a text label beside its status icon.
 - `styles/base.css` also styles native inputs, selects, textareas and buttons.
   Native controls remain appropriate for DOM bindings and drag actions.
 - `styles/workspace.css` owns the responsive shell and workspace layouts;
@@ -113,7 +115,9 @@ drag transforms remain owned by their gesture implementation.
 
 Cards use three persistent header rows: project context with card actions and
 Close; a full-width editable title; then status, priority and pin controls on the
-left with the save indicator on the right. Saved uses the success color, while
+left with the save indicator on the right. Status has an icon and visible name;
+High priority uses the same warm semantic colors as card priority badges.
+Saved uses the success color, while
 unconfirmed/failed writes remain distinguishable by text and color. The title is
 bounded to two visible lines and stays available while the body scrolls. Status
 and action menus remain keyboard accessible, with a scrollable status menu on
@@ -127,9 +131,22 @@ whole dialog. Error details lead, repeated field errors are deduplicated, and
 older success messages are hidden during errors or confirmation prompts. Local
 field descriptions remain available to assistive technology.
 
-Card body order is planning dates, Description, Checklist, Labels, Counters and Comments.
-Checklist is a peer section without an enclosing inset panel. Comments start with
-the explicit draft and Add comment button, then saved history. Browser comments
-use human/Owner attribution without author controls; existing attribution and
-CLI/API bot comments remain visible in history. The date-plan and label-entry
-helper sentences are omitted from the card form.
+Cards use a wider dialog with a reading column for Description, Checklist,
+Counters and Comments, and a quieter right column for Schedule and Labels.
+Both columns share the form's single scroll surface. Below 900px, properties
+follow Description, Checklist and Counters, before Comments; DOM order remains
+the keyboard and reading order. Tablet schedule fields share one row. On phones,
+date ranges and event time/duration pairs use two columns when they fit, and a
+single column below 360px. Native date/time values must fit without clipping.
+
+At phone widths up to 520px, the card dialog fills the viewport and accounts for
+safe areas, retaining its persistent header and independently scrolling body.
+Other editor dialogs retain their existing centered presentation. Compact shared
+headings, spacing and dividers give all card sections the same hierarchy.
+Checklist remains a peer section without an enclosing inset panel; each item
+retains its separate checkbox, text, remove control and drag handle.
+
+Comments start with a bordered composer and its explicit Add comment action,
+followed by saved history. Browser comments use human/Owner attribution without
+author controls; existing attribution and CLI/API bot comments remain visible.
+The date-plan and label-entry helper sentences are omitted from the card form.

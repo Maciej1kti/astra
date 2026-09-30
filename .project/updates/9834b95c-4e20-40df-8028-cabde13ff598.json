@@ -1,0 +1,18 @@
+{
+  "body": "Refined the card modal using the existing design system: a desktop reading column and properties sidebar, stacked tablet content, a full-height phone editor, readable status and section headings, an unclipped two-line title, clearer checklist/counter groups and comment composer. Existing editing, autosave, recovery and card actions remain intact.\n\nThe isolated full gate passed 249 Rust, 112 JavaScript and 12 Python tests; all thirteen affected Chromium suites and six WebKit suites passed. Rebuilt and restarted the existing manual app; HTTPS assets match the verified build and all 28 existing resource versions, two pins, settings and certificate were preserved. Physical iPhone coverage and broader WebKit test limitations remain open. Evidence: progress/2026-09-30-card-modal-layout.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "9834b95c-4e20-40df-8028-cabde13ff598",
+    "kind": "result",
+    "recorded_at": "2026-09-30T09:47:56.087Z",
+    "summary": "Responsive card modal verified across phone, tablet and desktop",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

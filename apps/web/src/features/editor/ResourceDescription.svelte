@@ -1,5 +1,6 @@
 <script lang="ts">
   import Markdown from "../../lib/ui/Markdown.svelte";
+  import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
 
   let {
@@ -71,10 +72,17 @@
   class="resource-description-field"
   aria-label={`${resourceLabel(type)} description`}
 >
-  <div class="field-label">
-    Description
-    {#if editing}<span>Markdown supported</span>{/if}
-  </div>
+  {#if type === "card"}
+    <SectionHeading title="Description" level={3}>
+      {#snippet actions()}
+        {#if editing}<span class="description-format">Markdown supported</span
+          >{/if}
+      {/snippet}
+    </SectionHeading>
+  {:else}<div class="field-label">
+      Description
+      {#if editing}<span>Markdown supported</span>{/if}
+    </div>{/if}
   {#if editing}
     <textarea
       bind:this={input}

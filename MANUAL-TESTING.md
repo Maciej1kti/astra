@@ -79,7 +79,10 @@ card is created after entering a valid title. Add tags/checklist items with thei
 Add controls, and post reports separately. Invalid input, conflicts or uncertain
 commands keep the draft available for correction or explicit recovery.
 
-Card and project editors open in centered dialogs over a dimmed, blurred workspace.
+Card editors use a wide centered dialog over a dimmed, blurred workspace on
+desktop, with Schedule and Labels beside the main content. Tablets stack these
+properties before Comments; phones use a full-height editor with a persistent
+header. Project editors remain centered dialogs.
 Their descriptions display formatted Markdown; click the description field to
 edit the source, then click outside it to return to the formatted view. Keyboard
 users can focus the description and press Enter or Space to edit, then Tab to

@@ -39,9 +39,6 @@
   padding-bottom: var(--space-9);
   border-bottom: var(--stroke) solid var(--line);
 }
-.editor .card-properties {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
 .editor .editor-properties label {
   min-width: 0;
   margin: 0;
@@ -219,14 +216,6 @@
   padding-left: var(--space-9);
   overflow-wrap: anywhere;
 }
-@media (max-width: 640px) {
-  .editor .card-properties {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .editor .card-properties label:has(input) {
-    grid-column: 1 / -1;
-  }
-}
 @media (max-width: 520px) {
   .editor .context-kind,
   .editor .context-separator {
@@ -351,4 +340,181 @@
 .editor .card-state-actions .action-menu-panel {
   max-height: 35dvh;
   overflow-y: auto;
+}
+
+/* Card content and properties share one scroll surface at every width. */
+.app-dialog.card-editor {
+  --dialog-width: var(--dialog-card);
+  --card-padding: var(--space-12);
+}
+.card-editor .dialog-header {
+  padding-inline: var(--card-padding);
+}
+.card-editor .card-heading textarea {
+  padding-inline: 0;
+  border: 0;
+  max-height: calc(2lh + var(--space-6));
+}
+.card-editor .card-header-toolbar {
+  gap: var(--space-4);
+}
+.card-editor .card-state-actions > .action-menu > button {
+  background: var(--soft);
+}
+.card-editor .card-state-actions {
+  min-width: 0;
+}
+.card-editor .card-state-actions .priority-toggle.high {
+  background: var(--notice-bg);
+  color: var(--notice-ink);
+}
+.card-editor .editor-form {
+  padding: 0;
+  scrollbar-gutter: auto;
+}
+.card-body-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 288px);
+  align-items: start;
+  font-size: var(--text-card);
+}
+.card-main,
+.card-sidebar,
+.card-editor .card-comments {
+  min-width: 0;
+  padding: var(--space-10) var(--card-padding);
+}
+.card-main {
+  display: grid;
+  gap: var(--space-10);
+}
+.card-sidebar {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding-inline: var(--space-10);
+  background: color-mix(in srgb, var(--soft) 65%, var(--paper));
+  border-left: var(--stroke) solid var(--line);
+}
+.card-editor .card-main > section,
+.card-editor .card-sidebar > section {
+  margin: 0;
+}
+.card-main > section + section {
+  border-top: var(--stroke) solid var(--line);
+  padding-top: var(--space-10);
+}
+.card-editor .sectiontitle-compact {
+  justify-content: flex-start;
+  margin: 0 0 var(--space-6);
+}
+.card-editor .sectiontitle-compact > span {
+  max-width: none;
+}
+.card-editor .description-format {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.card-editor .resource-description-rendered {
+  margin-inline: calc(-1 * var(--space-4));
+  padding-block: 0;
+  line-height: var(--leading-body);
+}
+.card-editor .resource-description-rendered .markdown > :first-child {
+  margin-top: var(--space-2);
+}
+.card-editor .resource-description-rendered .markdown > :last-child {
+  margin-bottom: var(--space-2);
+}
+.card-editor .resource-description-field > textarea {
+  margin: 0;
+}
+.card-editor .card-properties {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  border: 0;
+  padding: 0;
+}
+.card-editor .card-properties input {
+  background: var(--paper);
+  border-color: var(--line);
+}
+.card-editor .card-sidebar .tags .input-row {
+  margin-top: var(--space-6);
+}
+.card-editor .card-sidebar .chips li {
+  background: var(--paper);
+}
+.card-editor .card-comments {
+  grid-column: 1;
+}
+.card-editor .card-comments .markdown {
+  line-height: var(--leading-body);
+}
+@media (max-width: 899px) {
+  .card-body-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .card-sidebar {
+    grid-column: 1;
+    grid-row: auto;
+    padding-inline: var(--card-padding);
+    border-left: 0;
+    border-top: var(--stroke) solid var(--line);
+    gap: var(--space-10);
+  }
+  .card-editor .card-properties {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .app-dialog.card-editor {
+    --card-padding: var(--space-9);
+  }
+  .card-editor .card-properties {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .card-editor .schedule-time {
+    grid-column: 1;
+  }
+  .card-editor .card-properties:has(.schedule-duration) .schedule-start {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 520px) {
+  .app-dialog.card-editor {
+    --card-padding: var(--space-8);
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .card-editor .editor-layout {
+    flex: 1;
+  }
+  .card-editor .editor-form {
+    flex: 1;
+  }
+  .card-editor .dialog-header {
+    padding-top: max(var(--space-4), env(safe-area-inset-top));
+  }
+  .card-editor .card-heading textarea {
+    font-size: var(--text-section);
+  }
+  .card-editor .card-comments {
+    padding-bottom: max(var(--space-10), env(safe-area-inset-bottom));
+  }
+  .card-editor .card-properties input {
+    padding-inline: var(--space-4);
+  }
+}
+@media (max-width: 359px) {
+  .card-editor .card-properties {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
