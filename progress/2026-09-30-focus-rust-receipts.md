@@ -124,8 +124,17 @@ gate stopped on a test-helper clippy suggestion; it is corrected before the full
 passing run. Focus and protocol pass against real release daemons in Chromium
 and WebKit through ordinary pairing. Read decisions remain until resolved;
 unread notes disappear after reading. First-page recovery succeeds in all five
-paged views. Desktop and 320px Focus renders are inspected. Manual publication
-is pending.
+paged views. Desktop and 320px Focus renders are inspected.
+
+The original embedded frontend and release workspace are rebuilt. The existing
+manual app is restarted with its current data, connection settings and certificate.
+All 57 prior source versions, two pins, preferences and certificate are preserved.
+Trusted HTTPS remains `https://100.122.250.14:47832`; all 33 served assets match
+the rebuilt frontend. The verified application commit is `009bb27`.
+The normal explicitly selected original-project CLI appends and reads back report
+`e44ea21b-d155-4573-af98-986cba0f434d` at version
+`r1.d7b4a2ef28fb95fcc2ac4ef3719aee72bcda4b47c3db3cfd3e642cc1b9193afe`.
+No scope, priority, card status or acceptance is changed.
 Ignored evidence is in `test-results/focus-unread-2026-09-30/`: full samples,
 plans, control/prototype/selected sources and executables, process timings and
 the focused regression log. Temporary examples are removed before integration.

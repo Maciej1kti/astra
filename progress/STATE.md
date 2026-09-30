@@ -15,8 +15,10 @@ A concentrated 50k-report index comparison improves 58 to 2.1 ms without receipt
 mixed follow-ups retain 30–39 ms medians. Ten attention regressions pass, including
 request cleanup, concurrent scoped/general reads and older-index restoration.
 The full gate passes 269 Rust, 139 JavaScript and 12 Python tests; Focus/protocol
-pass in Chromium and WebKit. Manual publication is in progress; broader
-performance and acceptance remain open.
+pass in Chromium and WebKit. The original manual app is rebuilt/restarted,
+preserving 57 prior source versions, pins, preferences and certificate; trusted
+HTTPS and all 33 assets are verified. The normal CLI report is committed and
+read back. Broader performance and acceptance remain open.
 
 The [decision-history iteration](2026-09-30-focus-decision-histories.md) replaces
 per-decision history scans with statement-local closure membership and bounded

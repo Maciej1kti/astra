@@ -1,0 +1,18 @@
+{
+  "body": "Required release Engine Focus (100 projects, 10k cards, 50k note reports) improves all-read median from 52.8-53.2 to 30.5 ms and p95 from 57.6-58.3 to 31.2 ms. A concentrated 50k-note index comparison improves the Rust no-receipt path from about 58 to 2 ms; the final concentrated build measures 2.0/6.8/14.7 ms median across zero/half/all receipt profiles. Each final profile has 200 samples after 20 warm calls. Mixed histories retain 30-39 ms medians.\n\nReceipts remain durable journal state; lazy request-local Rust membership and an ordered disposable index preserve scope, cursors, decisions and source versions. The full gate passes 269 Rust, 139 JavaScript and 12 Python tests; Focus/protocol pass in Chromium and WebKit. The rebuilt manual app preserves all 57 prior source versions, pins, preferences and certificate; trusted HTTPS and all 33 assets are verified.\n\nEvidence: progress/2026-09-30-focus-rust-receipts.md. Measurements exclude transport/browser costs. Dense Calendar, broader profiles, write pauses and physical-device/full release acceptance remain open.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "e44ea21b-d155-4573-af98-986cba0f434d",
+    "kind": "result",
+    "recorded_at": "2026-09-30T22:22:43.119Z",
+    "summary": "Verified Rust receipt membership and ordered unread reads speed up large Focus histories.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
