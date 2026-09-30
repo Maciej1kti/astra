@@ -788,9 +788,10 @@
       currentResource = next;
       draft.source = next;
       if (submitted.kind === "comment") draft.fields.commentDraft = "";
-      else if (submitted.counterId)
+      else if (submitted.counterId) {
         delete draft.fields.counterDrafts.values[submitted.counterId];
-      else draft.fields.counterDrafts.configuration = null;
+        delete draft.fields.counterDrafts.inputs[submitted.counterId];
+      } else draft.fields.counterDrafts.configuration = null;
       autosave.reset(next);
       onautosaved?.(next);
       statusMessage =

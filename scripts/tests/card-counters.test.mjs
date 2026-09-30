@@ -7,6 +7,9 @@ import {
   emptyCounterDrafts,
   countersDirty,
   validCounterConfiguration,
+  parseCounterInput,
+  setCounterInput,
+  setCounterValue,
 } from "../../apps/web/src/features/cards/card-counters.ts";
 
 const counter = {
@@ -37,6 +40,32 @@ test("counter clicks are local, reversible and respect configured steps and zero
     }),
     false,
   );
+});
+
+test("numeric drafts preserve incomplete input, bounds and their original day", () => {
+  let draft = setCounterInput(counter, emptyCounterDrafts(), "2026-09-26", "");
+  assert.equal(countersDirty(draft), true);
+  assert.equal(draft.inputs.counter.text, "");
+  assert.equal(counterRecord(counter, draft, "2026-09-27").date, "2026-09-26");
+  draft = setCounterInput(counter, draft, "2026-09-27", "17");
+  assert.deepEqual(draft.values.counter, {
+    id: "counter",
+    date: "2026-09-26",
+    value: 17,
+  });
+  draft = setCounterInput(counter, draft, "2026-09-27", "1e3");
+  assert.equal(draft.inputs.counter.text, "1e3");
+  assert.equal(draft.values.counter.value, 17);
+  draft = setCounterInput(counter, draft, "2026-09-27", "10");
+  assert.equal(countersDirty(draft), false);
+  assert.deepEqual(draft.values, {});
+  assert.equal(counter.values["2026-09-26"], 10);
+  for (const invalid of ["", " ", "-1", "1.5", "1e3", "NaN", "1000000001"])
+    assert.equal(parseCounterInput(invalid), null);
+  assert.equal(parseCounterInput("0"), 0);
+  assert.equal(parseCounterInput("1000000000"), 1_000_000_000);
+  for (const invalid of [-1, 1.5, NaN, Infinity, 1_000_000_001])
+    assert.equal(setCounterValue(counter, draft, "2026-09-27", invalid), draft);
 });
 test("workspace midnight resets the view without deleting history or moving an unsaved result", () => {
   const instant = Date.parse("2026-09-26T22:30:00Z");

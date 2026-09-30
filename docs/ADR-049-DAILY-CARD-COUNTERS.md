@@ -39,3 +39,13 @@ structure limits still apply and can be reached first. A rejected write never
 truncates history. This is a daily total history, not an immutable event ledger
 of every OK; ordinary operational history is separate. Fractional quantities,
 automatic resets/writes, charts and counter deletion are outside this iteration.
+
+## Presentation follow-up — 2026-09-30
+
+The owner subsequently requested compact counter rows, gestures and charts. The
+card modal now uses horizontal value scrubbing, keyboard steps and tap-to-type
+numeric entry, with explicit Save. Incomplete text is retained beside the dated
+value draft and excluded from ordinary card autosave. A fourteen-day saved-total
+preview opens the existing full history; missing days remain distinct from zero.
+This extends presentation only. The conditional patch, source bounds, explicit
+day and command recovery rules above remain unchanged.

@@ -3,14 +3,13 @@
   import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
+  import CounterRow from "./CounterRow.svelte";
   import type {
     CardCounter,
     CardPatch,
   } from "../../lib/contracts/api.generated";
   import {
-    adjustCounter,
     counterDay,
-    counterRecord,
     counterMaximum,
     validCounterConfiguration,
     type CounterDrafts,
@@ -64,13 +63,13 @@
         }
       : { name: "", unit: "reps", step: 1, archived: false };
   }
-  function adjust(counter: CardCounter, direction: 1 | -1) {
-    now = Date.now();
-    draft = adjustCounter(counter, draft, counterDay(timezone, now), direction);
-  }
 </script>
 
-<section class="card-counters" aria-label="Card counters">
+<section
+  class="card-counters"
+  aria-label="Card counters"
+  data-counter-today={today}
+>
   <SectionHeading title="Counters" level={3}>
     {#snippet actions()}<Button
         type="button"
@@ -84,9 +83,6 @@
       >
     {/snippet}
   </SectionHeading>
-  {#if counters.length}<p class="field-hint">
-      Today · <time datetime={today}>{today}</time> · {timezone}
-    </p>{/if}
   {#if !saved}<p class="field-hint">
       Save the card title to add counters.
     </p>{/if}
@@ -161,97 +157,23 @@
       </div>
     </div>
   {/if}
-  {#each visible as counter (counter.id)}
-    {@const record = counterRecord(counter, draft, today)}
-    {@const dates = Object.keys(counter.values).sort().reverse()}
-    <div class="counter" role="group" aria-label={`Counter: ${counter.name}`}>
-      <div class="counter-heading">
-        <strong>{counter.name}</strong>
-        {#if counter.archived}<span class="badge">Hidden</span>{/if}
-        <button
-          type="button"
-          class="quiet"
-          aria-label={`Edit counter ${counter.name}`}
-          disabled={disabled ||
-            !!draft.configuration ||
-            !!draft.values[counter.id]}
-          onclick={() => configure(counter)}>Edit</button
-        >
-      </div>
-      {#if !counter.archived}
-        <div class="counter-controls">
-          <button
-            type="button"
-            aria-label={`Decrease ${counter.name} by ${counter.step}`}
-            disabled={disabled || !!draft.configuration || record.value === 0}
-            onclick={() => adjust(counter, -1)}>−</button
-          >
-          <output aria-label={`${counter.name} value`} aria-live="polite"
-            >{record.value}</output
-          >
-          <button
-            type="button"
-            aria-label={`Increase ${counter.name} by ${counter.step}`}
-            disabled={disabled ||
-              !!draft.configuration ||
-              record.value >= counterMaximum}
-            onclick={() => adjust(counter, 1)}>+</button
-          >
-          <span class="unit">{counter.unit}</span>
-          <button
-            type="button"
-            class="primary"
-            aria-label={`Confirm ${counter.name}`}
-            disabled={disabled ||
-              !!draft.configuration ||
-              !draft.values[counter.id]}
-            onclick={() =>
-              onsubmit({ record_counter: { ...record } }, counter.id)}
-            >OK</button
-          >
-        </div>
-        {#if draft.values[counter.id]}
-          <div class="draft-hint">
-            <span
-              >{record.date !== today
-                ? `Unsaved result for ${record.date}`
-                : "Not saved"}</span
-            ><button
-              type="button"
-              class="quiet"
-              {disabled}
-              onclick={() => {
-                delete draft.values[counter.id];
-              }}>Reset draft</button
-            >
-          </div>
-        {/if}
-      {/if}
-      {#if dates.length}<details>
-          <summary
-            >History · {dates.length}
-            {dates.length === 1 ? "day" : "days"}</summary
-          >
-          <!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable history needs keyboard access.) -->
-          <div
-            class="counter-history"
-            tabindex="0"
-            role="region"
-            aria-label={`${counter.name} history`}
-          >
-            <table>
-              <thead><tr><th>Date</th><th>Result</th></tr></thead><tbody
-                >{#each dates as date}<tr
-                    ><td><time datetime={date}>{date}</time></td><td
-                      >{counter.values[date]} {counter.unit}</td
-                    ></tr
-                  >{/each}</tbody
-              >
-            </table>
-          </div>
-        </details>{/if}
+  {#if visible.length}
+    <div class="counter-list">
+      {#each visible as counter (counter.id)}
+        <CounterRow
+          {counter}
+          bind:draft
+          {today}
+          {disabled}
+          onconfigure={() => configure(counter)}
+          {onsubmit}
+        />
+      {/each}
     </div>
-  {/each}
+    {#if visible.some((counter) => !counter.archived)}
+      <p class="counter-help">Swipe a value left or right · Tap to type</p>
+    {/if}
+  {/if}
   {#if counters.some((c) => c.archived)}<button
       type="button"
       class="quiet"
@@ -271,51 +193,12 @@
   .card-counters {
     min-width: 0;
   }
-  .counter-heading,
-  .draft-hint {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-  }
-  .counter-heading > button {
-    margin-left: auto;
-  }
-  .counter {
-    padding: var(--space-6);
-    margin-top: var(--space-6);
+  .counter-list {
     border: var(--stroke) solid var(--line);
     border-radius: var(--radius-control);
   }
-  .counter-heading strong {
-    overflow-wrap: anywhere;
-    min-width: 0;
-  }
-  .counter-controls {
-    display: grid;
-    grid-template-columns:
-      var(--tap-target) minmax(0, 1fr) var(--tap-target)
-      minmax(0, auto) var(--tap-target);
-    align-items: center;
-    gap: var(--space-3);
-    margin: var(--space-3) 0;
-    max-width: 420px;
-  }
-  .counter-controls button {
-    padding: 0;
-    min-height: var(--tap-target);
-  }
-  output {
-    text-align: center;
-    font-size: var(--text-xl);
-    font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
-  }
-  .unit {
-    overflow-wrap: anywhere;
-    font-size: var(--text-sm);
-  }
-  .draft-hint {
+  .counter-help {
+    margin: var(--space-4) 0 0;
     color: var(--muted);
     font-size: var(--text-sm);
   }
@@ -345,30 +228,5 @@
   }
   .archive-counter input {
     width: auto;
-  }
-  summary {
-    padding: var(--space-4) 0;
-    font-size: var(--text-sm);
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .counter-history {
-    max-height: 240px;
-    overflow: auto;
-  }
-  table {
-    width: 100%;
-    font-size: var(--text-sm);
-    border-collapse: collapse;
-  }
-  th,
-  td {
-    text-align: left;
-    padding: var(--space-4);
-    border-bottom: var(--stroke) solid var(--line);
-  }
-  th:last-child,
-  td:last-child {
-    text-align: right;
   }
 </style>

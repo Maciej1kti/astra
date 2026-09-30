@@ -230,6 +230,11 @@ test("counter drafts are exported and excluded from ordinary autosave", async ()
     date: "2026-09-26",
     value: 15,
   };
+  draft.fields.counterDrafts.inputs.c = {
+    date: "2026-09-26",
+    text: "",
+    base: 10,
+  };
   draft.fields.counterDrafts.configuration = {
     name: "Sit-ups",
     unit: "reps",
@@ -240,6 +245,10 @@ test("counter drafts are exported and excluded from ordinary autosave", async ()
   assert.equal(
     JSON.parse(draftSnapshot(draft)).counterDrafts.values.c.value,
     15,
+  );
+  assert.equal(
+    JSON.parse(draftSnapshot(draft)).counterDrafts.inputs.c.text,
+    "",
   );
   assert.equal("counters" in editorPayload(draft).set, false);
 });

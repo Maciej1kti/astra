@@ -7,6 +7,15 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [compact card counters](2026-09-30-compact-card-counters.md) add 14-day charts,
+horizontal scrubbing and guarded numeric entry in compact rows. Redundant clock
+metadata is removed; history and prior-day draft context remain available.
+Raw drafts survive reordering, autosave, session loss and midnight. The full gate
+passes 251 Rust, 133 JavaScript and 12 Python tests; eight Chromium and five
+WebKit suites pass. The rebuilt manual app preserves all 33 existing resource
+versions, pins, preferences and certificate; its HTTPS build assets are verified.
+Physical-device and full release acceptance remain open.
+
 The [unified card section order](2026-09-30-unified-card-sections.md) removes the
 Content/Properties split. All six sections can be freely interleaved in one
 responsive reading column, retaining mounted drafts, animation and prior browser

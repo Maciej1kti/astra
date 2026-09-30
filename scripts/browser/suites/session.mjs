@@ -91,15 +91,15 @@ await runBrowserSuite(
         name: "Card counters",
         exact: true,
       });
-      const day = counters.locator(":scope > .field-hint time");
+      const day = counters;
       await expect(counters).toBeVisible();
-      const before = await day.getAttribute("datetime");
+      const before = await day.getAttribute("data-counter-today");
       await counters
-        .getByRole("button", {
-          name: "Increase Existing draft by 1",
+        .getByRole("spinbutton", {
+          name: "Existing draft value",
           exact: true,
         })
-        .click();
+        .press("ArrowRight");
       const date = (zone) =>
         new Intl.DateTimeFormat("en-CA", {
           timeZone: zone,
@@ -120,7 +120,7 @@ await runBrowserSuite(
         { timezone: zone, preferences: { week_start: "sunday" } },
         prefs.version,
       );
-      await expect(day).toHaveAttribute("datetime", after);
+      await expect(day).toHaveAttribute("data-counter-today", after);
       await expect(
         counters.getByRole("group", {
           name: "Counter: Existing draft",
@@ -128,8 +128,8 @@ await runBrowserSuite(
         }),
       ).toContainText(`Unsaved result for ${before}`);
       await counters
-        .getByRole("button", { name: "Increase New draft by 1", exact: true })
-        .click();
+        .getByRole("spinbutton", { name: "New draft value", exact: true })
+        .press("ArrowRight");
       for (const name of ["Existing draft", "New draft"]) {
         const confirm = counters.getByRole("button", {
           name: `Confirm ${name}`,
@@ -142,7 +142,7 @@ await runBrowserSuite(
             .getByRole("group", { name: `Counter: ${name}`, exact: true })
             .getByRole("button", { name: "Reset draft", exact: true }),
         ).toHaveCount(0);
-        await expect(confirm).toBeDisabled();
+        await expect(confirm).toHaveCount(0);
       }
       const values = cli("get", path).metadata.counters;
       assert.deepEqual(values[0].values, { [before]: 1 });
@@ -191,7 +191,7 @@ await runBrowserSuite(
       await page.goto(
         `${config.origin}/?${new URLSearchParams({ view: "list", project: project.id, type: "card", resource: card.metadata.id })}`,
       );
-      await expect(day).toHaveAttribute("datetime", after);
+      await expect(day).toHaveAttribute("data-counter-today", after);
       const schedule = page.getByRole("button", {
         name: "Edit schedule",
         exact: true,
@@ -200,14 +200,14 @@ await runBrowserSuite(
       const comment = page.getByLabel("Write a comment", { exact: true });
       await comment.fill("Retained session-loss comment");
       await counters
-        .getByRole("button", { name: "Increase New draft by 1", exact: true })
-        .click();
+        .getByRole("spinbutton", { name: "New draft value", exact: true })
+        .press("ArrowRight");
       for (const session of cli("sessions").items)
         cli("revoke-session", session.id);
       await expect(
         page.getByText("Your session ended.", { exact: false }).first(),
       ).toBeVisible();
-      await expect(day).toHaveAttribute("datetime", after);
+      await expect(day).toHaveAttribute("data-counter-today", after);
       await expect(schedule).toContainText("Ends today");
       await expect(comment).toHaveValue("Retained session-loss comment");
       await expect(comment).toBeDisabled();

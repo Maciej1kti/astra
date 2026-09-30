@@ -1,0 +1,18 @@
+{
+  "body": "Card counters now use compact rows with 14-day saved-total charts, expandable full history, horizontal gestures and tap-to-type numeric entry. Save/Cancel appear during editing; the redundant date/timezone line is removed. Existing confirmation, conflict recovery, configuration and hidden-counter controls remain. Incomplete drafts survive reordering, autosave, session loss and midnight; a focus-scroll regression is fixed.\n\nVerification: full gate passes 251 Rust, 133 JavaScript and 12 Python tests; eight release Chromium and five WebKit suites pass. Reviewed 320–1440px, tablet and landscape, light/dark, history and maximum numeric entry. Rebuilt/restarted the existing manual application: trusted HTTPS at https://100.122.250.14:47832 serves all 33 matching build assets; all 33 prior resource versions, two pins, preferences and certificate are preserved.\n\nEvidence: progress/2026-09-30-compact-card-counters.md. Physical-device and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "09b7c10d-31e2-409d-805b-6a4e63e6423c",
+    "kind": "result",
+    "recorded_at": "2026-09-30T11:49:10.078Z",
+    "summary": "Compact card counters with gestures and daily trends",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

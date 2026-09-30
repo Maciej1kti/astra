@@ -346,6 +346,8 @@
 .app-dialog.card-editor {
   --dialog-width: var(--dialog-card);
   --card-padding: var(--space-12);
+  /* Focus may scroll the form, never the outer shell and its fixed header. */
+  overflow: clip;
 }
 .card-editor .editor-layout > .dialog-header {
   padding-inline: var(--card-padding);

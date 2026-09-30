@@ -170,6 +170,25 @@ author controls; existing attribution and CLI/API bot comments remain visible.
 The date-plan and label-entry helper sentences are omitted from the card form.
 
 
+## Compact card counters
+
+Counters share a compact divided list. Each row contains its name, a fourteen-day
+bar preview, a value with its unit, and a quiet configuration icon. Desktop places
+the preview beside the value; phones place it below the name. The repeated date
+and timezone line is omitted. Only a draft for a different day exposes its date.
+
+The value uses the pinned counter's horizontal scrub gesture and keyboard steps.
+Vertical touch movement scrolls the modal. Tap opens numeric entry in the same
+row; Save and Cancel appear only during editing. Incomplete input stays in the
+editor draft and blocks submission; autosave and session changes cannot discard
+it. Explicit acknowledgement clears that counter's draft and restores value focus.
+
+The mini chart contains confirmed daily totals, with dots for unrecorded days
+and short bars for recorded zero. Tapping the name/chart opens the full history
+table; rows are rendered only while expanded. Both themes use the shared tokens,
+and interaction/disclosure motion respects reduced motion. Inputs and actions
+retain 44px targets even when the surrounding layout is compact.
+
 ## Pinned daily controls and calendar selection
 
 Pinned cards have a project/status row, a clear title and quiet schedule/checklist/

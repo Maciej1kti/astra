@@ -90,9 +90,10 @@ expires when a release acceptance decision depends on it.
 Historical screenshots and logs are preserved at the immutable checkpoint linked
 from `progress/README.md`; concise local records retain their original limitations.
 
-The counters suite covers multiple definitions, explicit OK, dated totals, midnight
-rollover, preserved drafts, hidden counters, unit protection, mobile layout,
-response-loss replay and concurrent conflicts.
+The counters suite covers multiple definitions, explicit Save, horizontal scrub,
+touch cancellation/vertical scrolling, guarded numeric input, compact rows and
+dated history. It retains midnight rollover, preserved drafts, hidden counters,
+unit protection, response-loss replay and concurrent conflict coverage.
 
 The editor-header suite checks the three persistent header rows and conditional
 feedback row while a long card is scrolled, including visible field/save errors,
