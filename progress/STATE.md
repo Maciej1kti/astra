@@ -28,7 +28,8 @@ from 1.77 to 0.87 seconds; the 100-card project catalog from 17.7 to 8.8 ms.
 A separate 1,000-card project still has p95 78 ms. Fresh external labels, preview
 versions and partial invalid/unsafe-file issues pass focused regressions. The full
 gate passes 259 Rust, 139 JavaScript and 12 Python tests; tags/editor pass in
-Chromium and WebKit. Existing manual HTTPS publication remains pending.
+Chromium and WebKit. The rebuilt manual app preserves all 51 prior source versions,
+two pins, preferences and certificate; HTTPS and all 33 assets are verified.
 
 The [Focus receipt/prefix iteration](2026-09-30-focus-attention-prefix.md) builds
 receipt membership once and bounds eligible unread candidates before the mixed

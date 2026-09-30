@@ -54,8 +54,13 @@ The full gate passes 259 Rust, 139 JavaScript and 12 Python tests, contracts,
 formatting, Svelte, clippy, bundle bounds and release builds. Tags and editor
 suites pass in Chromium and WebKit against the real release daemon, including
 literal names, source-current catalog/rename behavior, conflicts and retained
-drafts. Existing manual HTTPS publication remains pending. No requirement,
-scope, priority or acceptance status is changed by this result.
+drafts. The original embedded frontend and release daemon are rebuilt; the
+existing manual launcher is restarted with the same data, settings and certificate.
+Trusted HTTPS remains `https://100.122.250.14:47832`, with all 33 build assets
+verified. All 51 prior source versions, two pins, preferences and certificate are
+preserved. A normal CLI project report records the result
+(`9b2728df-6ca1-488d-bc8d-ae829682c284`). No requirement, scope, priority or
+acceptance status is changed by this result.
 
 Ignored evidence in `test-results/tag-source-2026-09-30/` includes control/scoped
 JSON and time logs, per-call sample arrays, the concentrated profile, focused test

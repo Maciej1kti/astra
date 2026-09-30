@@ -1,0 +1,18 @@
+{
+  "body": "On the release 100-project / 10k-card / 50k-report fixture with two literal labels per card, global current-source catalog p50 improves from 1,767.8 to 871.0 ms (20 samples each). The 100-card project catalog p50 improves from 17.7 to 8.8 ms and p95 from 18.3 to 9.0 ms (200 samples each). A separate 1,000-card project still has p95 77.9 ms; no matching concentrated control is claimed. Catalogs/previews retain current source reads, exact byte versions, per-file guards, limits and partial issues.\n\nThe full gate passes 259 Rust, 139 JavaScript and 12 Python tests. Tags/editor pass against the real release daemon in Chromium and WebKit. Rebuilt/restarted the existing manual app: trusted HTTPS and all 33 assets are verified, with 51 prior source versions, two pins, preferences and certificate preserved. Evidence: progress/2026-09-30-tag-source-reads.md. Global file scans, large all-read report history, dense Calendar and physical/end-to-end acceptance remain open.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "9b2728df-6ca1-488d-bc8d-ae829682c284",
+    "kind": "result",
+    "recorded_at": "2026-09-30T16:38:48.588Z",
+    "summary": "Verified guarded collection readers halve current-source tag scan time.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
