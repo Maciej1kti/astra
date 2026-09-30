@@ -20,6 +20,9 @@
   import ReportFields from "./ReportFields.svelte";
   import UpdateDetails from "./UpdateDetails.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
+  import CardLayoutMenu from "./CardLayoutMenu.svelte";
+  import { readCardLayout } from "./card-layout";
+  import { layoutMotion } from "../../lib/ui/layout-motion";
   import AcceptanceChecklist from "../cards/AcceptanceChecklist.svelte";
   import TagPicker from "../tags/TagPicker.svelte";
   import ResourceDescription from "./ResourceDescription.svelte";
@@ -90,6 +93,7 @@
   let tagError = $state("");
   let tagCatalogError = $state("");
   let commentFlushing = $state(false);
+  let cardLayout = $state(readCardLayout());
 
   let projectName = $state("");
   let statusMessage = $state("");
@@ -568,7 +572,12 @@
     autosaveTimer = null;
     if (!autosaveResource || conflict || deleteBusy || deletePending) return;
     const snapshotValue = autosaveSnapshot(draft);
-    if (resource && snapshotValue === baseline && !autosave.hasWork) return;
+    if (resource && snapshotValue === baseline && !autosave.hasWork) {
+      // Reverting a local validation error requires no write or command reset.
+      if (autosaveState.phase === "idle" || autosaveState.phase === "saved")
+        validateAutosave();
+      return;
+    }
     if (!validateAutosave()) return;
     const detached = detachedEditorDraft(draft);
     void autosave.enqueue(detached, snapshotValue).catch((cause) => {
@@ -1105,6 +1114,9 @@
         {/if}
       {/snippet}
       {#snippet actions()}
+        {#if draft.type === "card"}
+          <CardLayoutMenu bind:layout={cardLayout} disabled={locked} />
+        {/if}
         {#if draft.type === "card" && resource}
           <ActionMenu label="Card actions" disabled={locked}>
             <label class="archive-action"
@@ -1200,57 +1212,82 @@
         />{:else if draft.type === "card"}
         <div class="card-body-grid">
           <div class="card-main">
-            <ResourceDescription
-              type="card"
-              bind:body={draft.common.body}
-              bind:editing={descriptionEditing}
-              disabled={locked}
-              closeButton={descriptionCloseButton}
-              onfinish={finishTextEdit}
-            />
-            <AcceptanceChecklist
-              bind:items={draft.fields.acceptance}
-              bind:draft={draft.fields.acceptanceDraft}
-              bind:error={acceptanceError}
-              messagesInHeader
-              disabled={locked}
-            />
-            <CardCounters
-              counters={resource?.type === "card"
-                ? (resource.metadata.counters ?? [])
-                : []}
-              bind:draft={draft.fields.counterDrafts}
-              timezone={workspaceTimezone}
-              disabled={locked || !!conflict}
-              saved={!!resource}
-              onsubmit={saveCounter}
-            />
+            {#each cardLayout.content as section (section)}
+              <div
+                class="card-section"
+                data-card-section={section}
+                animate:layoutMotion
+              >
+                {#if section === "description"}
+                  <ResourceDescription
+                    type="card"
+                    bind:body={draft.common.body}
+                    bind:editing={descriptionEditing}
+                    disabled={locked}
+                    closeButton={descriptionCloseButton}
+                    onfinish={finishTextEdit}
+                  />
+                {:else if section === "checklist"}
+                  <AcceptanceChecklist
+                    bind:items={draft.fields.acceptance}
+                    bind:draft={draft.fields.acceptanceDraft}
+                    bind:error={acceptanceError}
+                    messagesInHeader
+                    disabled={locked}
+                  />
+                {:else if section === "counters"}
+                  <CardCounters
+                    counters={resource?.type === "card"
+                      ? (resource.metadata.counters ?? [])
+                      : []}
+                    bind:draft={draft.fields.counterDrafts}
+                    timezone={workspaceTimezone}
+                    disabled={locked || !!conflict}
+                    saved={!!resource}
+                    onsubmit={saveCounter}
+                  />
+                {:else if section === "comments"}
+                  <CardComments
+                    comments={resource?.type === "card"
+                      ? (resource.metadata.comments ?? [])
+                      : []}
+                    bind:body={draft.fields.commentDraft}
+                    disabled={locked || !!conflict}
+                    saved={!!resource}
+                    onadd={addComment}
+                  />
+                {/if}
+              </div>
+            {/each}
           </div>
           <aside class="card-sidebar" aria-label="Card properties">
-            <CardPlanningFields
-              bind:fields={draft.fields}
-              {locked}
-              timezone={workspaceTimezone}
-            />
-            <TagPicker
-              {project}
-              bind:labels={draft.fields.labels}
-              bind:draft={draft.fields.tagDraft}
-              bind:error={tagError}
-              bind:catalogError={tagCatalogError}
-              messagesInHeader
-              disabled={locked}
-            />
+            {#each cardLayout.properties as section (section)}
+              <div
+                class="card-section"
+                data-card-section={section}
+                animate:layoutMotion
+              >
+                {#if section === "schedule"}
+                  <CardPlanningFields
+                    bind:fields={draft.fields}
+                    {locked}
+                    timezone={workspaceTimezone}
+                    initiallyExpanded={!target.resource}
+                  />
+                {:else if section === "labels"}
+                  <TagPicker
+                    {project}
+                    bind:labels={draft.fields.labels}
+                    bind:draft={draft.fields.tagDraft}
+                    bind:error={tagError}
+                    bind:catalogError={tagCatalogError}
+                    messagesInHeader
+                    disabled={locked}
+                  />
+                {/if}
+              </div>
+            {/each}
           </aside>
-          <CardComments
-            comments={resource?.type === "card"
-              ? (resource.metadata.comments ?? [])
-              : []}
-            bind:body={draft.fields.commentDraft}
-            disabled={locked || !!conflict}
-            saved={!!resource}
-            onadd={addComment}
-          />
         </div>
       {:else}
         {#if draft.type !== "update"}<div class="editor-properties">

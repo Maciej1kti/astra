@@ -37,6 +37,9 @@ await runBrowserSuite(
     };
     try {
       await route({ view: "list", type: "card", resource: id });
+      await dialog
+        .getByRole("button", { name: "Edit schedule", exact: true })
+        .click();
       await expect(
         dialog.getByLabel("Start time", { exact: true }),
       ).toHaveValue("09:30");
@@ -124,6 +127,9 @@ await runBrowserSuite(
         });
       }
       await route({ view: "list", type: "card", resource: id });
+      await dialog
+        .getByRole("button", { name: "Edit schedule", exact: true })
+        .click();
       await dialog.getByLabel("Start", { exact: true }).fill("2026-10-03");
       await expect.poll(() => get().event.start).toBe("2026-10-03T23:30");
       await dialog.getByLabel("Start time", { exact: true }).fill("");

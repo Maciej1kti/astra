@@ -21,6 +21,7 @@
   let open = $state(false);
   let root: HTMLDivElement;
   let trigger: HTMLButtonElement;
+  let pointerInside = false;
   const id = $props.id();
   function close() {
     open = false;
@@ -32,7 +33,20 @@
   $effect(() => {
     if (!open) return;
     const outside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !root.contains(event.target))
+      pointerInside =
+        event.target instanceof Node && root.contains(event.target);
+      if (!pointerInside) open = false;
+    };
+    const release = () => {
+      pointerInside = false;
+    };
+    const outsideFocus = (event: FocusEvent) => {
+      // WebKit can focus the dialog before dispatching a clicked menu button.
+      if (
+        !pointerInside &&
+        event.target instanceof Node &&
+        !root.contains(event.target)
+      )
         open = false;
     };
     const escape = (event: KeyboardEvent) => {
@@ -42,26 +56,22 @@
       close();
     };
     document.addEventListener("pointerdown", outside);
-    root.addEventListener("keydown", escape);
+    document.addEventListener("pointerup", release);
+    document.addEventListener("pointercancel", release);
+    document.addEventListener("focusin", outsideFocus);
+    document.addEventListener("keydown", escape, true);
     return () => {
       document.removeEventListener("pointerdown", outside);
-      root.removeEventListener("keydown", escape);
+      document.removeEventListener("pointerup", release);
+      document.removeEventListener("pointercancel", release);
+      document.removeEventListener("focusin", outsideFocus);
+      document.removeEventListener("keydown", escape, true);
+      pointerInside = false;
     };
   });
 </script>
 
-<div
-  class="action-menu"
-  class:align-start={align === "start"}
-  bind:this={root}
-  onfocusout={(event) => {
-    if (
-      event.relatedTarget instanceof Node &&
-      !root.contains(event.relatedTarget)
-    )
-      open = false;
-  }}
->
+<div class="action-menu" class:align-start={align === "start"} bind:this={root}>
   <button
     bind:this={trigger}
     type="button"

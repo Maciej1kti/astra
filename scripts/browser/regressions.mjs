@@ -16,6 +16,7 @@ const suites = [
   "editor",
   "editor-inputs",
   "editor-header",
+  "card-layout",
   "comments",
   "counters",
   "autosave",

@@ -466,6 +466,9 @@ export async function runCardChecks({
         body: "Decision context",
       });
       await open(card.id);
+      await dialog()
+        .getByRole("button", { name: "Edit schedule", exact: true })
+        .click();
       await dialog().getByLabel("Start", { exact: true }).fill("");
       await dialog().getByLabel("End", { exact: true }).fill("");
       await dialog()

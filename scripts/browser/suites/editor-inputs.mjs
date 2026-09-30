@@ -92,6 +92,9 @@ await runBrowserSuite(
         `${config.origin}/?${new URLSearchParams({ view: "list", project, type: "card", resource: id })}`,
       );
       await expect(time).toHaveValue("");
+      await dialog
+        .getByRole("button", { name: "Edit schedule", exact: true })
+        .click();
       const header = dialog.locator(".dialog-header");
       const title = header.getByRole("textbox", { name: "Title", exact: true });
       await expect(title).toHaveCount(1);
@@ -219,6 +222,9 @@ await runBrowserSuite(
         .poll(() => get().event)
         .toEqual({ start: "2026-09-13T09:30", duration_minutes: 90 });
       await page.reload();
+      await dialog
+        .getByRole("button", { name: "Edit schedule", exact: true })
+        .click();
       await expect(time).toHaveValue("09:30");
       await expect(duration).toHaveValue("90");
       for (const width of [320, 390, 430]) {

@@ -81,8 +81,16 @@ commands keep the draft available for correction or explicit recovery.
 
 Card editors use a wide centered dialog over a dimmed, blurred workspace on
 desktop, with Schedule and Labels beside the main content. Tablets stack these
-properties before Comments; phones use a full-height editor with a persistent
+properties after the content; phones use a full-height editor with a persistent
 header. Project editors remain centered dialogs.
+Existing cards show a one-line relative schedule; click it to edit dates/time.
+New cards keep these controls expanded, including after the first automatic save.
+Check upcoming, current, overdue, finished and timed cards in the workspace
+timezone. A partial schedule stays expanded until corrected or cleared.
+Use the layout icon beside Card actions to move sections up/down within Content
+or Properties. Check live movement, keyboard focus, unsent comment/counter drafts,
+reload persistence in the same browser, Reset layout and reduced-motion settings.
+Layout preferences are local to each browser and do not change card source data.
 Their descriptions display formatted Markdown; click the description field to
 edit the source, then click outside it to return to the formatted view. Keyboard
 users can focus the description and press Enter or Space to edit, then Tab to

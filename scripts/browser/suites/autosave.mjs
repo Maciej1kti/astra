@@ -118,6 +118,9 @@ export async function runAutosaveChecks({
   async function openCard(id) {
     await routeTo("list", { type: "card", resource: id });
     await title().waitFor();
+    await dialog()
+      .getByRole("button", { name: "Edit schedule", exact: true })
+      .click();
   }
   async function openProject() {
     await routeTo("projects", {

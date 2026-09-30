@@ -1,0 +1,18 @@
+{
+  "body": "Existing cards now show a compact relative schedule with expandable date/time controls. New cards keep these controls open during creation. A header menu changes section order within Content and Properties, preserves unfinished drafts, and remembers the order in the current browser. Motion respects the reduced-motion preference.\n\nVerified the full local gate, affected release Chromium suites and targeted WebKit behavior. Rebuilt and restarted the existing manual application; HTTPS assets and all 29 pre-existing resource versions, pins, preferences and certificate are preserved. Broader existing WebKit dialog test limitations and physical-device coverage remain documented in progress/2026-09-30-card-usage-layout.md. No project scope, priority or acceptance status was changed.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "3fde4029-b615-4b26-827e-9d3ed4954e62",
+    "kind": "result",
+    "recorded_at": "2026-09-30T10:14:26.239Z",
+    "summary": "Compact card schedules and customizable section order verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

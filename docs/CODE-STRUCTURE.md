@@ -86,6 +86,14 @@ draft body and tells the editor when editing finishes; the editor retains autosa
 conflict and close ownership. Draft snapshot classification lives with the draft
 model, so picker/checklist changes bypass only the typing debounce.
 
+`card-layout.ts` owns sanitized browser-only section ordering; `CardLayoutMenu`
+edits that preference without entering autosave. The editor keeps content and
+property sections keyed so reordering retains mounted controls and explicit
+drafts. `card-schedule.ts` derives relative schedule summaries using the workspace
+calendar; `CardPlanningFields` owns the disclosure, whose initial creation state
+does not change when the card is first acknowledged. Neither feature changes
+source formats or server preferences.
+
 `CardComments` renders source-owned conversations and an explicit comment draft.
 The editor flushes autosave before a conditional append, keeps uncertain comment
 commands in the shared controller, and preserves unsubmitted comment text across

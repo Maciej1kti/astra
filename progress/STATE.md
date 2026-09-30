@@ -86,6 +86,17 @@ six WebKit suites pass. The manual app is rebuilt/restarted; its HTTPS assets,
 Broader WebKit test limitations are recorded in the evidence; physical-device
 and release acceptance remain open.
 
+The [card usage follow-up](2026-09-30-card-usage-layout.md) collapses existing
+schedules to relative time, preserves expanded creation fields and adds browser
+preferences for section order. Keyed controls retain drafts through animated
+movement; reduced motion is respected. Shared menus now handle WebKit pointer
+focus and Escape, and restoring valid original dates clears stale validation
+feedback without a write. The final full gate passes 249 Rust, 119 JavaScript
+and 12 Python tests; affected Chromium and targeted WebKit checks pass. Existing
+broader WebKit dialog failures are reproduced against the previous frontend and
+documented. The manual app is rebuilt/restarted with all 29 existing resource
+versions, pins, preferences, certificate and 33 HTTPS assets verified.
+
 ## Implemented product
 
 - Shared Rust domain/application rules, strict JSON sources and generated browser
