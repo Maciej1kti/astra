@@ -1,0 +1,18 @@
+{
+  "body": "Entrances now emerge gently from zero opacity with shallow movement and temporary blur on bounded small titles/tags (application commit c48f38f). Context, titles, metadata, labels and daily counter footers have distinct layers in In focus, In motion, Events, Projects, List and both Board modes. Calendar reveals native grid/header/event layers after current data is ready, with matching desktop/mobile agenda and overflow-popup sequences. Card and event geometry, counter edits, refresh stability and live reduced motion remain.\n\nThe combined full gate passes 471 tests. Fifteen selected Chromium suites and thirteen selected WebKit suites pass across the refinement, including the final calendar-motion, shared motion and six planning suites in both engines. Final broad HTTPS workflows pass, including card-content roles, native dialogs, keyboard/touch, dragging and counter saves. Inspected light/dark rendered sequences at desktop and phone widths.\n\nThe existing manual application was rebuilt and restarted at https://100.122.250.14:47832. Trusted HTTPS serves all 32 expected assets; 82 prior resource versions, 3 pins, preferences, certificate, instance and command epoch are unchanged. Concurrent owner card edits remain separate.\n\nEvidence: progress/2026-10-01-soft-motion.md. Physical-device, frame-rate and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "f25d7ff7-2162-4a76-a4db-8b4e6a876470",
+    "kind": "result",
+    "recorded_at": "2026-10-01T15:09:59.590Z",
+    "summary": "Soft entrances, card content layers and Calendar motion are available",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

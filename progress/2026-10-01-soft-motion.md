@@ -69,5 +69,14 @@ The smoke now waits for native `dialog[open]` removal throughout, matching the
 maintained motion suites and retaining the actual pointer/drag assertions.
 The corrected broad HTTPS smoke passes, including actual Board dragging, keyboard
 ordering, touch hold/scroll, cancellation, conflict/retry and Calendar navigation.
-The existing manual-app rebuild/restart is the remaining publication step.
+Application commit `c48f38f` is integrated. The primary checkout's embedded
+frontend and release daemon were rebuilt; all 33 build files match the tested
+checkout. The existing manual application was restarted with its original data,
+connection settings and certificate. Trusted `https://100.122.250.14:47832` serves
+all 32 expected assets. All 82 prior resource versions, three pins, preferences,
+certificate, instance and command epoch are unchanged.
+
+Ordinary CLI report `f25d7ff7-2162-4a76-a4db-8b4e6a876470` is committed and read
+back with exact source/version equality. The two concurrent owner card edits remain
+separate. This is implementation/verification evidence, not owner acceptance.
 Raw output belongs in ignored `test-results/soft-motion-2026-10-01/`.

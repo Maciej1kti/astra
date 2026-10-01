@@ -13,7 +13,11 @@ Card context, title, metadata, labels and counter footers have distinct layers
 across Focus, Projects, List and both Board modes. Calendar adds readiness-aware
 grid/event layers, agenda day groups and a layered overflow popup on desktop and
 mobile. The combined 471-test full gate, affected Chromium/WebKit suites and
-broad HTTPS smoke pass. The existing manual-app rebuild/restart is next.
+broad HTTPS smoke pass. The rebuilt existing manual app preserves 82 prior
+versions, three pins, settings, certificate and instance/epoch; all 32 served assets
+match over trusted HTTPS. The ordinary CLI report is committed/read back, with
+concurrent owner card edits separate. Physical-device and release acceptance remain
+open.
 
 The [context entry allocation iteration](2026-10-01-context-entry-allocation.md)
 borrows validated bodies and moves selected metadata into the existing response.
