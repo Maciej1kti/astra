@@ -37,6 +37,13 @@ The events suite covers event autosave, conversion to/from date plans, hourly
 calendar movement, duration edits, slot creation, mobile layout and browser
 timezone independence.
 
+The loading suite holds preferences until Calendar, Gantt and Board have rendered
+their initial pages. Republishing that identical route must not read those pages
+again, and typing/clearing loaded-title filters remains local. A subsequent
+ordinary CLI edit must trigger a new read and publish its acknowledged title and
+source version. Widget imports still begin alongside bootstrap; failed deferred
+imports and pending pairing retain explicit recovery.
+
 The editor-inputs suite checks date/time control bounds, touch targets, empty
 time fields, event autosave/reload and conversion back to a plan at 320–1440px.
 The card-layout suite checks compact relative schedules, deliberate expansion,

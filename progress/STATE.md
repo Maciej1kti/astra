@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [planning read-scope iteration](2026-10-01-planning-read-scopes.md) removes
+redundant initial-route and loaded-title-filter reads in Calendar, Gantt and Board.
+With CPU ×4 and 100 ms latency, dense Calendar filtering improves from 262 to
+46 ms and clearing from 363 to 177 ms; Gantt filtering from 175 to 28 ms.
+All 168 measured selected filter actions issue zero planning GETs. Ordinary
+opening medians are broadly unchanged. The full gate passes 428 tests, and
+Chromium/WebKit verify current source versions and retained invalidations.
+Manual integration/report verification is pending; broader performance and
+release acceptance remain open.
+
 The [measured Calendar month renderer](2026-10-01-calendar-measured-rendering.md)
 retains every native chunk and complete popup while simplifying hidden components
 and measuring actual native snippet shapes. Quiet release 1000-card local cold

@@ -56,6 +56,13 @@ preload cache; it never reloads automatically over a draft. Explicit Calendar/Ga
 routes start their widget import alongside bootstrap through `planning-components.ts`;
 the mounted planning view owns errors and the same explicit reload recovery.
 
+Calendar, Gantt and Board subscribe through scalar read scopes. Republishing an
+identical route or editing a loaded-title filter does not request the same page
+again; actual query changes and planning revisions still read current data.
+Their read owners retain queued invalidations during active reads and gestures,
+including a fresh follow-up when source data changes while an earlier request is
+unfinished.
+
 `lib/api` owns transport, bounded reads, invalidation batching, typed resource/
 planning/tag endpoints and command execution. Feature code should use a named
 endpoint when one exists; response types are asserted only at transport boundaries. `lib/contracts` contains generated types; `lib/resources` contains

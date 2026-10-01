@@ -51,6 +51,7 @@
   let chartRoot = $state<HTMLDivElement>();
   let lastNavigation = "";
   let loadedProject: string | null = null;
+  const readScope = $derived(`${project}:${revision}`);
   const reads = new PlanningRead((value) => {
     loading = value;
   });
@@ -139,9 +140,9 @@
     },
   });
   $effect(() => {
-    const nextProject = project;
-    void revision;
+    void readScope;
     untrack(() => {
+      const nextProject = project;
       if (loadedProject !== nextProject) {
         loadedProject = nextProject;
         history = [null];

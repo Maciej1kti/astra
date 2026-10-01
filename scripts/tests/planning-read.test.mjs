@@ -62,6 +62,28 @@ test("a held gesture keeps its baseline and coalesces refreshes until release", 
   assert.deepEqual(shown, ["fresh"]);
 });
 
+test("same-scope invalidations during a read still fetch the current source afterwards", async () => {
+  const owner = new PlanningRead(() => {});
+  const first = deferred();
+  const shown = [];
+  let reads = 0;
+  const request = {
+    key: "project:range:page",
+    read: () => (++reads === 1 ? first.promise : Promise.resolve("current")),
+    apply: (value) => shown.push(value),
+    failed: assert.fail,
+  };
+  const running = owner.run(request);
+  await owner.run(request);
+  await owner.run(request);
+  assert.equal(reads, 1);
+  first.resolve("before edit");
+  await running;
+  await settle();
+  assert.equal(reads, 2);
+  assert.deepEqual(shown, ["before edit", "current"]);
+});
+
 test("a scope change during a gesture supersedes an unfinished read before release", async () => {
   const owner = new PlanningRead(() => {});
   const first = deferred();

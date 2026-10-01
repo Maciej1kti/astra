@@ -5,7 +5,8 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { runBrowserSuite } from "../runtime.mjs";
 
-await runBrowserSuite(async ({ config, newContext, evidence }) => {
+await runBrowserSuite(async (suite) => {
+  const { config, cli, runtime, newContext, evidence } = suite;
   const context = await newContext();
   const page = await context.newPage();
   const errors = [],
@@ -172,19 +173,36 @@ await runBrowserSuite(async ({ config, newContext, evidence }) => {
     checks.push(
       "Failed secondary chunk remains closable and recovers through explicit reload",
     );
-    for (const [view, asset, selector] of [
-      ["calendar", "CalendarView", "[data-calendar-item]"],
-      ["gantt", "GanttView", ".astra-gantt [data-card-id]"],
+    for (const [view, asset, selector, endpoint] of [
+      ["calendar", "CalendarView", "[data-calendar-item]", "calendar"],
+      ["gantt", "GanttView", ".astra-gantt [data-card-id]", "gantt"],
+      ["board", "Board", ".astra-board .wx-card", "board"],
     ]) {
       const planningContext = await newContext();
       const planningPage = await planningContext.newPage();
       planningPage.on("pageerror", (error) => errors.push(error.message));
       let release;
       const blocked = new Promise((resolve) => (release = resolve));
+      let releasePreferences;
+      const blockedPreferences = new Promise(
+        (resolve) => (releasePreferences = resolve),
+      );
+      const planningReads = [];
+      planningPage.on("request", (request) => {
+        if (new URL(request.url()).pathname === `/api/v1/views/${endpoint}`)
+          planningReads.push(request.url());
+      });
       await planningPage.route("**/api/v1/bootstrap", async (route) => {
         await blocked;
         await route.continue();
       });
+      await planningPage.route(
+        "**/api/v1/workspace/preferences",
+        async (route) => {
+          await blockedPreferences;
+          await route.continue();
+        },
+      );
       try {
         const requested = planningPage.waitForRequest((request) =>
           new URL(request.url()).pathname.startsWith(`/assets/${asset}-`),
@@ -197,8 +215,97 @@ await runBrowserSuite(async ({ config, newContext, evidence }) => {
         release();
         await expect(planningPage.locator(selector).first()).toBeVisible();
         checks.push(`${view} code loads before bootstrap completes`);
+
+        // A widget can already have its page when preferences finish and
+        // initialization republishes the same route object. That publication
+        // is not a source invalidation or a different planning query.
+        const editorWarmup = planningPage.waitForRequest((request) =>
+          /\/Editor-[^/]+\.js$/.test(new URL(request.url()).pathname),
+        );
+        releasePreferences();
+        await editorWarmup;
+        assert.equal(
+          planningReads.length,
+          1,
+          `${view}: an identical initial route must not read the page again`,
+        );
+
+        const filter = planningPage.getByRole("textbox", {
+          name: "Filter loaded titles",
+          exact: true,
+        });
+        for (const value of ["Design", "Design system", ""]) {
+          await filter.fill(value);
+          await planningPage.evaluate(
+            () =>
+              new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+              ),
+          );
+          assert.equal(
+            planningReads.length,
+            1,
+            `${view}: a loaded-title filter must not reread the page`,
+          );
+        }
+
+        const id = config.cards[0].id;
+        const path = `/api/v1/projects/${project}/cards/${id}`;
+        const observed = cli("get", path);
+        const title = `Fresh ${view} startup card`;
+        const payload = join(runtime, `${view}-startup-edit.json`);
+        await writeFile(payload, JSON.stringify({ set: { title } }));
+        let acknowledgedVersion;
+        const rowsOf = (value) =>
+          value.items ??
+          value.rows ??
+          value.columns.flatMap((column) => column.items);
+        const refreshed = planningPage.waitForResponse(async (response) => {
+          if (
+            new URL(response.url()).pathname !== `/api/v1/views/${endpoint}` ||
+            response.status() !== 200
+          )
+            return false;
+          return rowsOf(await response.json()).some(
+            (row) =>
+              (row.resource_id ?? row.id) === id &&
+              row.version === acknowledgedVersion,
+          );
+        });
+        const committed = cli(
+          "command",
+          "PATCH",
+          path,
+          "--json-file",
+          payload,
+          "--if-version",
+          observed.version,
+        ).result.resource;
+        acknowledgedVersion = committed.version;
+        const pageValue = await (await refreshed).json();
+        const current = rowsOf(pageValue).find(
+          (row) => (row.resource_id ?? row.id) === id,
+        );
+        assert.equal(current.title, title);
+        assert.equal(current.version, committed.version);
+        if (view === "gantt") {
+          await planningPage
+            .getByLabel("Selected card", { exact: true })
+            .selectOption(id);
+          await expect(
+            planningPage.locator(".selected-summary strong"),
+          ).toHaveText(title);
+        } else {
+          await expect(
+            planningPage.locator(selector).filter({ hasText: title }).first(),
+          ).toContainText(title);
+        }
+        checks.push(
+          `${view} ignores identical startup routes and loaded-title filters, then refreshes after an ordinary CLI edit`,
+        );
       } finally {
         release();
+        releasePreferences();
         await planningContext.close();
       }
     }

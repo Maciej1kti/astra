@@ -40,6 +40,7 @@
   type Column =
     import("../../lib/contracts/api.generated").BoardView["columns"][number];
   let columns = $state<Column[]>([]);
+  const readScope = $derived(`${project}:${revision}`);
   let error = $state("");
   let busy = $state(false);
   let pageStarts = $state<Record<string, boolean>>({});
@@ -142,8 +143,7 @@
     };
   });
   $effect(() => {
-    void project;
-    void revision;
+    void readScope;
     untrack(() => void load());
   });
   async function load(status?: string, cursor?: string | null) {

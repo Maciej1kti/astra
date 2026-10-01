@@ -95,6 +95,8 @@
   const queryScope = $derived(
     `${project}:${range.start}:${range.end}:${pageSize}`,
   );
+  // Route publication can rerun prop getters without changing this query.
+  const readScope = $derived(`${queryScope}:${revision}`);
   // A background read keeps the displayed, versioned projection interactive.
   // Scope changes still disable old events until their own page arrives.
   const ready = $derived(loadedScope === queryScope && !error);
@@ -194,10 +196,7 @@
     events = projectEvents(items, search, ready);
   });
   $effect(() => {
-    void project;
-    void revision;
-    void range;
-    void pageSize;
+    void readScope;
     untrack(() => void load(false));
   });
   async function load(more: boolean) {
