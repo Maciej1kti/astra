@@ -8,6 +8,7 @@ registration/position/workspace order remain. Every recognized source is checked
 before the existing 50,000-card and 100-pin bounds, preserving error precedence.
 Complete collection callers and the snapshot-backed browser Focus query are
 unchanged. This is a memory bound improvement; a context speedup is not claimed.
+The verified application is `cfc35c1ea6908725701ef9178157f3a4e09de4e3`.
 
 M4/macOS 27 arm64, Rust 1.92, ten available logical CPUs. Saved release binaries
 exercise ordinary `Engine::context` after normal registration/startup on synthetic
@@ -53,8 +54,20 @@ and 101/100-pin regression passes. The full gate passes 462 tests (284 Rust,
 171 JavaScript, seven Python), including six new native regressions. Normally
 paired Chromium and WebKit Focus/protocol suites pass: pin admission/order,
 archived membership, competing versions, unchanged uncertain command identity
-and stale-page recovery remain covered. Manual verification and the ordinary CLI
-result report remain pending. Raw output,
+and stale-page recovery remain covered. The original frontend and release
+workspace are rebuilt; manual launcher 8193 is replaced by 41022 using the
+existing data and HTTPS connection. Trusted `https://100.122.250.14:47832`
+verification preserves 71 prior resource versions, two pins, preferences,
+certificate, epoch/instance and the complete normalized ordinary CLI context.
+All 32 served assets match the rebuilt frontend, and all 33 dist files match the
+verified worktree. The ordinary CLI result report
+`4a8bf0ca-cf27-40ad-946b-8912c457596f` is committed and read back exactly, while
+preserving the unrelated owner card. Raw output,
 saved binaries, harness sources and failed attempts stay in ignored
 `test-results/source-focus-stream-2026-10-01/`. Broader perceived performance,
 Linux widget/QML and physical iPhone/release acceptance remain open.
+
+The next context cost investigation is supported by current code: each candidate
+performs a guarded source read, and each append serializes the complete JSON
+output again to enforce the exact byte budget. Profiling these costs is still
+pending; no skipped source validation or budget change is accepted.

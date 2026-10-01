@@ -15,9 +15,11 @@ falls from approximately 63.4 MiB to 1 MiB; whole-process RSS falls only about
 so this is accepted for its memory bound, without claiming faster readiness.
 All 480 selected latency observations retain source/order/version/budget checks.
 The full gate passes 462 tests, including real source/pin boundaries; paired
-Chromium/WebKit Focus and protocol checks pass. Existing manual rebuild,
-preservation checks and the ordinary CLI result report are pending. Broader
-performance and release acceptance remain open.
+Chromium/WebKit Focus and protocol checks pass. The rebuilt manual app preserves
+71 prior versions, two pins, preferences, certificate, epoch and complete native
+CLI context. Trusted HTTPS verifies all 32 served assets. The ordinary CLI report
+is committed/read back, preserving the owner card. Broader performance and
+release acceptance remain open.
 
 The [CLI runtime probe](2026-10-01-cli-runtime-probe.md) rejects a single-thread
 client runtime after two quiet release series show only 0.09–0.16 ms median savings.
