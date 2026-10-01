@@ -7,6 +7,19 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Calendar pass-work iteration](2026-10-01-calendar-pass-work.md) reuses
+current cell/span capacity within one layout pass and reads normalized numeric
+Date values with native exclusive/resource semantics. Quiet release constrained
+whole-month filter clearing improves from 129–145 to 96–97 ms; warm opening from
+about 601–602 to 579–580 ms, locally 58–59 to about 50 ms. Small-fixture times are
+broadly unchanged. All final/repeat 280 openings retain one Calendar GET; all
+280 filter actions retain zero. The full gate passes 433 tests. Chromium/WebKit
+verify actual geometry, complete popups, versions and interactions. A hidden-item
+startup oracle is corrected after three identical saved-control failures.
+The rebuilt manual app preserves 63 prior resource versions, two pins, preferences
+and certificate; trusted HTTPS and all 33 assets are verified. The normal CLI
+report is committed/read back. Broader performance and release acceptance remain open.
+
 The [Calendar main-grid DOM iteration](2026-10-01-calendar-sparse-grid.md)
 retains all native chunks and full day popups while mounting only visible events
 and actually measured snippet shapes. Quiet release whole-month local cold/warm

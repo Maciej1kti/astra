@@ -1,0 +1,18 @@
+{
+  "body": "Calendar layout now shares current cell/span capacity within each synchronous pass and reads normalized Date timestamps directly. All native models, positioning, full popups, observed versions and reads remain. Matched seven-sample release whole-month constrained clearing improves from 145 to 97 ms; a quiet repeat confirms 129 to 96 ms. Warm opening improves from about 601 to 579 ms, and locally from 58 to 50 ms. Small workloads are broadly unchanged. All 280 final/repeat opening samples retain one Calendar GET and all 280 filter actions retain zero planning GETs.\n\nThe full gate passes 433 tests. Five new geometry/date regressions, Chromium/WebKit interactions and exact saved-control geometry/footer/popup comparisons pass. A prior startup assertion requiring a hidden item in the main grid fails on three saved-current controls; it now uses the loaded-title filter and checks the exact DOM source version. No source, API, authorization, command or durability rules change.\n\nThe existing manual app is rebuilt/restarted with the same HTTPS address, state and certificate, preserving 63 prior resource versions, two pins and preferences. All 33 assets match the build, and the owner card remains unchanged. Evidence: progress/2026-10-01-calendar-pass-work.md. The broader performance objective and release acceptance remain open; desktop engine tests do not prove physical iPhone acceptance.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "72d43de7-c1bc-40e8-9743-61bc6c1e8092",
+    "kind": "result",
+    "recorded_at": "2026-10-01T04:16:52.333Z",
+    "summary": "Calendar pass work reduced with verified interaction gains",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

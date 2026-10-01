@@ -93,6 +93,21 @@ checks without screenshot preparation under the application's strict CSP.
 Desktop engines and emulated viewports do not prove physical iPhone or remote
 owner acceptance. No card status, priority, scope, dates or acceptance is changed.
 
+## Manual integration and report
+
+Application commit: `cebdc2b`. The original checkout was fast-forwarded and its
+embedded frontend/optimized daemon rebuilt. The existing manual launcher was
+restarted with the same state, origin, ports and certificate. Actual socket
+connection readiness and trusted `https://100.122.250.14:47832` were verified.
+All 63 prior resource versions, two pins, preferences and certificate are unchanged;
+all 33 served asset SHA-256 values match the build and no diagnostic maps are
+published. The owner's unrelated card bytes remain unchanged.
+
+The normal CLI explicitly selects `/Users/maciek/kodowanko/projekty/astra`.
+Result report `72d43de7-c1bc-40e8-9743-61bc6c1e8092` is committed and read back with its exact
+body and version `r1.1fbc2091bb48d866d447529824eff76a728acb4346e89ea4ef23e471f4e98f9f`. Its request ID, epoch and unchanged payload
+were saved before submission. No card status, priority, scope or acceptance changed.
+
 ## Evidence
 
 Ignored `test-results/calendar-remaining-2026-10-01/` retains the explicit original
