@@ -35,6 +35,8 @@ Focus reads its pinned summaries with the ordered membership snapshot. Missing
 retained references become unavailable placeholders; older hosts without summaries
 use the existing bounded detail-read path. Opening a card still reads its current
 source before editing. See [ADR-051](ADR-051-FOCUS-SNAPSHOT-SUMMARIES.md).
+The bounded daily Focus pages use the same snapshot counter projection as pins,
+including the observed workspace day and source version without counter histories.
 `PinnedCard` also presents the daily plan/event sections without pin gestures
 and avoids duplicate overdue badges. It separates the opening/reordering surface from `FocusCounterChip`.
 The cards feature owns the horizontal scrub action and a route-independent

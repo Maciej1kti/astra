@@ -152,6 +152,10 @@ expires when a release acceptance decision depends on it.
 Historical screenshots and logs are preserved at the immutable checkpoint linked
 from `progress/README.md`; concise local records retain their original limitations.
 
+The focus-controls suite also verifies active counter footers in In motion and
+Events, archived-counter omission, narrow layouts, pointer cancellation, keyboard
+saving and reload persistence without per-card detail reads.
+
 The counters suite covers multiple definitions, explicit Save, horizontal scrub,
 touch cancellation/vertical scrolling, guarded numeric input, compact rows and
 dated history. It retains midnight rollover, preserved drafts, hidden counters,

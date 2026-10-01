@@ -263,3 +263,98 @@ fn focus_counter_preview_is_a_conditional_observation_without_history_reads() {
         json!([])
     );
 }
+
+#[test]
+fn daily_focus_sections_include_conditional_counter_previews() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let now = chrono::DateTime::parse_from_rfc3339("2026-10-01T12:00:00Z")
+        .unwrap()
+        .timestamp_millis();
+    for (section, fields) in [
+        (
+            "motion",
+            json!({"schedule":{"start":"2026-10-01","end":"2026-10-02"}}),
+        ),
+        (
+            "events",
+            json!({"event":{"start":"2026-10-01T23:59","duration_minutes":60}}),
+        ),
+    ] {
+        let created = create(&engine, &project, section);
+        let id = created.body["result"]["id"].as_str().unwrap();
+        let scheduled = patch(
+            &engine,
+            &project,
+            id,
+            created.body["result"]["version"].as_str().unwrap(),
+            json!({"set":fields}),
+        );
+        let configured = patch(
+            &engine,
+            &project,
+            id,
+            scheduled.body["result"]["version"].as_str().unwrap(),
+            json!({"configure_counter":{"name":"Steps","unit":"reps","step":5,"archived":false}}),
+        );
+        let counter_id = configured.body["result"]["resource"]["metadata"]["counters"][0]["id"]
+            .as_str()
+            .unwrap();
+        let hidden = patch(
+            &engine,
+            &project,
+            id,
+            configured.body["result"]["version"].as_str().unwrap(),
+            json!({"configure_counter":{"name":"Hidden","unit":"reps","step":1,"archived":true}}),
+        );
+        let page = engine.focus_cards(section, None, None, 1, now).unwrap();
+        wire::validate("SummaryPage", &page).unwrap();
+        let summary = &page["items"][0];
+        assert_eq!(summary["version"], hidden.body["result"]["version"]);
+        assert_eq!(
+            summary["daily_counters"],
+            json!([{
+                "id":counter_id,"name":"Steps","unit":"reps","step":5,"date":"2026-10-01","value":0
+            }])
+        );
+        assert!(summary.get("counters").is_none());
+        assert!(summary.get("body").is_none());
+        let payload = json!({"record_counter":{"id":counter_id,"date":"2026-10-01","value":15}});
+        let saved = patch(
+            &engine,
+            &project,
+            id,
+            summary["version"].as_str().unwrap(),
+            payload.clone(),
+        );
+        assert_eq!(saved.http_status, 200);
+        assert_eq!(
+            patch(
+                &engine,
+                &project,
+                id,
+                summary["version"].as_str().unwrap(),
+                payload
+            )
+            .http_status,
+            412
+        );
+        let refreshed = engine.focus_cards(section, None, None, 1, now).unwrap();
+        assert_eq!(refreshed["items"][0]["daily_counters"][0]["value"], 15);
+        assert_eq!(
+            refreshed["items"][0]["version"],
+            saved.body["result"]["version"]
+        );
+        if section == "motion" {
+            let tomorrow = engine
+                .focus_cards(section, None, None, 1, now + 86_400_000)
+                .unwrap();
+            assert_eq!(
+                tomorrow["items"][0]["daily_counters"][0]["date"],
+                "2026-10-02"
+            );
+            assert_eq!(tomorrow["items"][0]["daily_counters"][0]["value"], 0);
+        }
+    }
+}

@@ -347,3 +347,8 @@ described in [ADR-056](ADR-056-CARD-SECTION-VISIBILITY.md).
 
 Exact incremental agent-context JSON byte accounting is described in
 [ADR-058](ADR-058-EXACT-CONTEXT-BUDGET.md).
+
+### ADR-059: Daily counter previews across Focus sections
+
+[ADR-059](ADR-059-FOCUS-SECTION-COUNTERS.md) extends the bounded counter
+preview to In motion and Events using the same conditional card observation.

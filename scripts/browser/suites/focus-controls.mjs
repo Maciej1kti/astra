@@ -76,6 +76,116 @@ await runBrowserSuite(
       }),
     );
     try {
+      // Unpinned daily plans/events must expose the same editable counter footer.
+      for (const [sectionName, dateFields] of [
+        ["In motion", { schedule: { start: today, end: today } }],
+        [
+          "Events",
+          { event: { start: `${today}T23:59`, duration_minutes: 60 } },
+        ],
+      ]) {
+        let daily = await mutate("POST", base, {
+          title: `Daily footer ${sectionName}`,
+          status: "active",
+          ...dateFields,
+        });
+        const dailyPath = `${base}/${daily.metadata.id}`;
+        daily = await mutate(
+          "PATCH",
+          dailyPath,
+          {
+            configure_counter: {
+              name: "Daily steps",
+              unit: "reps",
+              step: 5,
+              archived: false,
+            },
+          },
+          daily.version,
+        );
+        const activeCounter = daily.metadata.counters[0].id;
+        daily = await mutate(
+          "PATCH",
+          dailyPath,
+          {
+            configure_counter: {
+              name: "Hidden counter",
+              unit: "reps",
+              step: 1,
+              archived: true,
+            },
+          },
+          daily.version,
+        );
+        await page.goto(url);
+        const dailyCard = page
+          .getByRole("region", { name: sectionName, exact: true })
+          .locator(".focus-card")
+          .filter({ hasText: daily.metadata.title });
+        const dailyChip = dailyCard.getByRole("spinbutton", {
+          name: "Daily steps",
+          exact: true,
+        });
+        await expect(dailyChip).toHaveAttribute("aria-valuenow", "0");
+        await expect(dailyCard.getByRole("spinbutton")).toHaveCount(1);
+        assert.equal(
+          requests.filter(
+            (req) => req.method === "GET" && req.path === dailyPath,
+          ).length,
+          0,
+        );
+        for (const width of [1440, 390, 320]) {
+          await page.setViewportSize({ width, height: 1000 });
+          await dailyChip.scrollIntoViewIfNeeded();
+          await expect(dailyChip).toBeInViewport();
+          assert.equal(
+            await page.evaluate(() => document.documentElement.scrollWidth),
+            width,
+          );
+          await page.screenshot({
+            path: join(
+              evidence,
+              `${sectionName.replaceAll(" ", "-")}-${width}.png`,
+            ),
+          });
+        }
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        const bounds = await dailyChip.boundingBox();
+        await page.mouse.move(
+          bounds.x + bounds.width / 2,
+          bounds.y + bounds.height / 2,
+        );
+        await page.mouse.down();
+        await page.mouse.move(
+          bounds.x + bounds.width / 2 + 24,
+          bounds.y + bounds.height / 2,
+          { steps: 4 },
+        );
+        await page.mouse.up();
+        await expect(
+          bar.getByLabel("Daily steps total", { exact: true }),
+        ).toHaveValue("10");
+        await expect(page.getByRole("dialog")).toHaveCount(0);
+        await bar
+          .getByRole("button", { name: "Cancel counter edit", exact: true })
+          .click();
+        await dailyChip.press("ArrowUp");
+        await expect(
+          bar.getByLabel("Daily steps total", { exact: true }),
+        ).toHaveValue("5");
+        await bar.getByRole("button", { name: "Save", exact: true }).click();
+        await expect(bar).toHaveCount(0);
+        await expect(dailyChip).toHaveAttribute("aria-valuenow", "5");
+        const saved = cli("get", dailyPath);
+        assert.equal(
+          saved.metadata.counters.find(
+            (counter) => counter.id === activeCounter,
+          ).values[today],
+          5,
+        );
+        await page.reload();
+        await expect(dailyChip).toHaveAttribute("aria-valuenow", "5");
+      }
       await page.goto(url);
       await expect(chip()).toHaveAttribute("aria-valuenow", "0");
       assert.equal(

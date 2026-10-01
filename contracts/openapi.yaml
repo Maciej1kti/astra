@@ -1860,7 +1860,7 @@ paths:
       operationId: getFocusCards
       tags: [views]
       summary: Read today's planned work or timed events
-      description: Workspace-local daily membership, filtered before pagination. Motion includes inclusive date plans; events start today and have not ended. Pinned, review, completed, cancelled and archived cards and archived projects are excluded. Event order follows start time. Cursors expire when the workspace clock minute or projection changes.
+      description: Workspace-local daily membership, filtered before pagination. Motion includes inclusive date plans; events start today and have not ended. Pinned, review, completed, cancelled and archived cards and archived projects are excluded. Event order follows start time. Ready cards include bounded active daily counter previews for the workspace date, observed together with the card version; histories and archived counters are omitted. Cursors expire when the workspace date, relevant event boundary or projection changes.
       parameters:
       - $ref: '#/components/parameters/ReadAcceptEncoding'
       - name: section
@@ -3743,7 +3743,7 @@ components:
           maxItems: 20
           items:
             $ref: '#/components/schemas/DailyCounterSummary'
-          description: Focus-only daily preview. Omitted for unverified sources and older servers.
+          description: Daily preview for In focus, In motion and Events. Omitted for unverified sources and older servers.
         counter_count:
           type: integer
           minimum: 0

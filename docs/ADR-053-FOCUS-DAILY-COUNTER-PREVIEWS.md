@@ -9,7 +9,9 @@ card includes at most 20 active counters with ID, name, unit, step, explicit
 workspace-calendar date and that day's absolute value (zero if unrecorded).
 Hidden counters and historical values are omitted. Unverified retained sources
 omit the field; older hosts remain compatible. Other summary endpoints remain
-unchanged. The 100-pin cap and existing freshness/completeness rules still apply.
+unchanged in this original decision; [ADR-059](ADR-059-FOCUS-SECTION-COUNTERS.md)
+later extends daily previews to In motion and Events. The 100-pin cap and existing
+freshness/completeness rules still apply.
 
 The containing card version and daily preview are observed together. This is a
 narrow exception to ADR-051's resource-read-before-editing guidance: recording a

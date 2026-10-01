@@ -48,7 +48,7 @@ impl Engine {
             projection.mark_rows(&mut rows);
             let stale = projection.freshness == "stale" || rows.iter().any(|r| r.validity != "valid");
             Ok(json!({
-                "items": rows.iter().map(Indexed::summary).collect::<Vec<_>>(),
+                "items": rows.iter().map(|card| crate::focus::focus_summary(card, &today)).collect::<Vec<_>>(),
                 "page": page(&scope, revision, start, rows.len(), more, if stale {"stale"} else {"index_snapshot"}),
                 "warnings": projection.warnings,
             }))

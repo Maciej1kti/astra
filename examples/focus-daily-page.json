@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "type": "card",
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "id": "33333333-3333-4333-8333-333333333333",
+      "title": "Prepare the next review",
+      "version": "r1.0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "active",
+      "priority": "normal",
+      "availability": "ready",
+      "counter_count": 1,
+      "daily_counters": [
+        {
+          "id": "44444444-4444-4444-8444-444444444444",
+          "name": "Review passes",
+          "unit": "runs",
+          "step": 1,
+          "date": "2026-09-30",
+          "value": 2
+        }
+      ],
+      "schedule": {
+        "start": "2026-09-30",
+        "end": "2026-09-30"
+      }
+    }
+  ],
+  "page": {
+    "next_cursor": null,
+    "snapshot_cursor": "11111111-1111-4111-8111-111111111111:1",
+    "has_more": false,
+    "freshness": "index_snapshot"
+  },
+  "warnings": []
+}

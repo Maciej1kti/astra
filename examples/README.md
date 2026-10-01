@@ -32,3 +32,6 @@ uses an ordinary conditional card patch; see
 [CLI Focus preview](cli-focus-preview.json) illustrates ordered compact desktop
 rows and an unavailable retained pin. It is a read-only client result; see
 [ADR-057](../docs/ADR-057-FOCUS-WIDGET-READER.md).
+
+[Daily Focus page](focus-daily-page.json) shows the bounded active counter
+preview in In motion or Events, observed with its card version and workspace date.

@@ -147,7 +147,7 @@ impl Engine {
 }
 
 /// Only the current day's totals leave the index snapshot, never counter history.
-fn focus_summary(card: &Indexed, today: &str) -> Value {
+pub(crate) fn focus_summary(card: &Indexed, today: &str) -> Value {
     let mut summary = card.summary();
     if card.validity == "valid" {
         let counters: Vec<_> = card

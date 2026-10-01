@@ -95,8 +95,8 @@ These labels are not separate authenticated accounts.
 
 Counters record one absolute total per day in the workspace timezone. Give a
 counter a name, unit and step, then scrub horizontally or type a value and confirm
-it. The card editor shows a 14-day trend and saved history; Focus pins expose
-compact daily controls. Missing history is not a recorded zero. The current-day
+it. The card editor shows a 14-day trend and saved history; In focus, In motion and Events expose
+compact daily controls for their active counters. Missing history is not a recorded zero. The current-day
 control can start at zero when nothing has been saved.
 
 Use Add counter for the first counter and the counter menu for existing/archived
