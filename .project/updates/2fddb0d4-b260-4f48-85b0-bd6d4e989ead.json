@@ -1,0 +1,18 @@
+{
+  "body": "Motion now uses distinct surface, heading, section and detail timing across pages, native dialogs, menus and controls (application commit b54ef06). Tags enter after their section and pulse only on explicit addition. Calmer curves retain visible travel; refreshes and draft edits do not replay entrances. Native focus, gesture ownership and live reduced-motion behavior remain.\n\nThe full gate passes 468 tests after integrating concurrent backend work. All 28 Chromium suites, broad HTTPS workflows and seven selected WebKit suites pass. Post-integration motion/protocol checks also pass in both engines. Light/dark and 320–1440px rendered sequences are inspected.\n\nThe original manual application was rebuilt and restarted at https://100.122.250.14:47832. Trusted HTTPS serves all 32 expected assets; 78 prior resource versions, 3 pins, preferences, certificate, instance and command epoch are unchanged. Unrelated owner card edits remain separate.\n\nEvidence: progress/2026-10-01-motion-choreography.md. Physical-device, frame-rate and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "2fddb0d4-b260-4f48-85b0-bd6d4e989ead",
+    "kind": "result",
+    "recorded_at": "2026-10-01T14:28:24.945Z",
+    "summary": "Layered motion is readable and available across the application",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

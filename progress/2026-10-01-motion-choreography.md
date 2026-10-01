@@ -64,5 +64,13 @@ editor opening, editor, card layout, card calendar, Focus controls and planning.
 All 28 Chromium suites and the broad HTTPS smoke pass. Motion and normally paired
 protocol checks pass again in Chromium and WebKit after the backend integration;
 the rendered 150 ms samples and independent section/tag delays remain.
-Manual-application checks are being completed.
+Application commit `b54ef06` is integrated on top of the concurrent backend and
+verification commits. The primary frontend and release daemon are rebuilt; all
+33 frontend files match the tested checkout. The existing manual launcher is
+restarted with its current data, connection settings and certificate. Trusted
+HTTPS at `https://100.122.250.14:47832` verifies all 32 served assets; all 78 prior
+resource versions, three pins, preferences, certificate, instance and command
+epoch are unchanged. The normal CLI result report
+`2fddb0d4-b260-4f48-85b0-bd6d4e989ead` is committed and read back with matching
+source/version. The two unrelated owner card edits remain separate.
 Generated output is retained in ignored `test-results/motion-choreography-2026-10-01/`.

@@ -12,9 +12,13 @@ rushed visible motion with calmer shared curves and explicit heading/content/det
 sequences across pages, dialogs, menus and controls. Sections follow their visible
 order; tags enter after their section and only pulse when explicitly added.
 Bounded measurements, native lifetimes and live reduced-motion behavior remain.
-The 468-test integrated full gate, all 28 Chromium suites, the broad HTTPS smoke and seven
-selected WebKit suites pass. Manual-application results are being recorded in
-the dated evidence.
+The 468-test integrated full gate, all 28 Chromium suites, the broad HTTPS smoke
+and seven selected WebKit suites pass; integrated motion/protocol checks also
+pass in both engines. The rebuilt existing manual app verifies all 32 assets
+over trusted HTTPS, preserving all 78 prior versions, three pins, preferences,
+certificate and instance/epoch. The ordinary CLI report is committed/read back;
+concurrent owner card edits remain separate. Physical-device and release acceptance
+remain open.
 
 The [canonical metadata-counter iteration](2026-10-01-source-metadata-budget.md)
 uses the ordinary pretty-JSON serializer without retaining a temporary metadata
