@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [CLI runtime probe](2026-10-01-cli-runtime-probe.md) rejects a single-thread
+client runtime after two quiet release series show only 0.09–0.16 ms median savings.
+All 2,400 selected native observations retain result/identity/version checks.
+The source is restored; documentation/package validation passes, with the manual
+application unchanged. Temporary full-card retention during source pin discovery
+is the next investigation. Broader performance and release acceptance remain open.
+
 The [Focus widget Rust reader](2026-10-01-widget-focus-reader.md) replaces its
 Python status reader with the existing CLI and one bounded membership-summary
 read. Three quiet release series include complete process startup: medians fall
