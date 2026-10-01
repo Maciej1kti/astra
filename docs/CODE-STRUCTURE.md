@@ -27,7 +27,9 @@ UI actions use explicit props/callbacks.
 Workspace [screens](../apps/web/src/features/workspace/screens) own focus,
 project overview, resource lists, updates and the workspace board overview.
 Navigation exposes a read-only route and explicit actions; only navigation owns
-the generation that cancels obsolete resource reads and history restoration.
+the generation and abort signal that cancel obsolete resource reads and history
+restoration. A successful source read transfers its loaded editor target; view
+navigation does not cancel context already owned by a mounted editor.
 
 Focus reads its pinned summaries with the ordered membership snapshot. Missing
 retained references become unavailable placeholders; older hosts without summaries
@@ -56,16 +58,24 @@ preload cache; it never reloads automatically over a draft. Explicit Calendar/Ga
 routes start their widget import alongside bootstrap through `planning-components.ts`;
 the mounted planning view owns errors and the same explicit reload recovery.
 
-An existing resource still requires its current source read before editing. The
-editor starts its project and card-tag reads before native modal layout, opting
-into synchronous transport startup when a GET pool slot is free. Other reads
+An existing resource still requires its current source read before editing.
+[Editor opening](../apps/web/src/features/editor/editor-opening.ts) starts the
+source transport first, then its fresh project and card-tag reads alongside it,
+opting into synchronous transport startup when a GET pool slot is free. Optional
+context must not start transport ahead of the authoritative source. Only the
+successful current source can create a target and transfer its context reads. Failed or
+superseded openings cancel their reads; closing/replacing the target, session
+loss and application disposal release its remaining context. New drafts retain
+their ordinary context reads before native modal layout. Other reads
 retain their existing microtask cancellation window, including transient Calendar
 mode/range queries. Queued reads retain the same concurrency, cancellation and
 deadline bounds. Shared response/subscriber ownership is installed before startup,
-including reentrant reads and synchronous cancellation. The editor's opening tag request is
-consumed once by its Labels catalog; later invalidations, retries and session
-restoration use fresh requests. No source response or catalog is retained across
-editor instances. Modal rendering can overlap these ordinary reads.
+including reentrant reads and synchronous cancellation. Opening context is
+consumed once. A tag change before the Labels catalog takes its request discards
+that catalog without cancelling the current source; Labels then reads fresh
+tags. After handoff, Labels owns its existing generation checks for invalidation,
+retries and session restoration. No source response or catalog is retained across
+editor instances. Network work and modal rendering can overlap.
 
 Calendar, Gantt and Board subscribe through scalar read scopes. Republishing an
 identical route or editing a loaded-title filter does not request the same page

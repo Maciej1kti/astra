@@ -88,6 +88,7 @@
   } = $props();
 
   const project = $derived(target.project);
+  const opening = untrack(() => target.opening);
   let currentResource = $state<Resource | null>(untrack(() => target.resource));
   const resource = $derived(currentResource);
   const autoCreate = $derived(target.autoCreate ?? false);
@@ -107,14 +108,14 @@
   // Invalidation, retries and session restoration still request fresh tags.
   const takeOpeningTags = untrack(() => {
     let read =
-      draft.type === "card"
+      draft.type === "card" && !opening
         ? getProjectTags(project, { immediate: true })
         : undefined;
     void read?.catch(() => {});
     return () => {
-      const opening = read;
+      const initial = opening ? opening.takeTags() : read;
       read = undefined;
-      return opening;
+      return initial;
     };
   });
 
@@ -238,6 +239,7 @@
   }
   onMount(() => {
     const ended = () => {
+      opening?.cancel();
       if (!dirty && !pending && !deletePending && !autosave.hasWork) {
         onclose();
         return;
@@ -258,6 +260,7 @@
 
     return () => {
       disposed = true;
+      opening?.cancel();
       clearAutosaveTimer();
       unsubscribeSession();
     };
@@ -327,7 +330,9 @@
     if (target.type === "project") return;
     const selectedProject = project;
     let live = true;
-    void getProject(selectedProject, { immediate: true })
+    void (
+      opening?.takeProject() ?? getProject(selectedProject, { immediate: true })
+    )
       .then((value) => {
         if (live && !accessLost) projectName = value.metadata.name;
       })

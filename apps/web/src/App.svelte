@@ -20,7 +20,6 @@
   import ResourceListScreen from "./features/workspace/screens/ResourceListScreen.svelte";
   import "./styles/workspace.css";
   import {
-    editTarget,
     createTarget,
     resolutionTarget,
     type EditorTarget,
@@ -31,7 +30,7 @@
   import { navigationState } from "./features/workspace/navigation-state.svelte";
   import { sessionState } from "./features/session/session.svelte";
   import { viewData } from "./features/workspace/view-data.svelte";
-  import { onMount, untrack } from "svelte";
+  import { onMount, onDestroy, untrack } from "svelte";
   import {
     viewQueryKey,
     viewSections,
@@ -57,7 +56,8 @@
     MoveProposal,
   } from "./features/planning/proposals";
   import { apiCode, type Resource, type Summary } from "./lib/api/api";
-  import { getResource, getProject, replaceFocus } from "./lib/api/resources";
+  import { getProject, replaceFocus } from "./lib/api/resources";
+  import { loadEditorTarget } from "./features/editor/editor-opening";
   import type { FocusRef, FocusResource } from "./lib/contracts/api.generated";
   import { commandOperation } from "./lib/api/command-operation.svelte";
 
@@ -121,18 +121,21 @@
           choosingCardProject
         ),
       clearEditor: () => {
-        editor = null;
+        setEditor(null);
       },
-      loadResource: (target) => {
+      loadResource: (target, signal) => {
         void editorUI.load();
-        return getResource({
-          project_id: target.project,
-          type: target.type as Summary["type"],
-          id: target.id,
-        });
+        return loadEditorTarget(
+          {
+            project_id: target.project,
+            type: target.type as Summary["type"],
+            id: target.id,
+          },
+          signal,
+        );
       },
-      showResource: (target, resource) => {
-        editor = editTarget(target.project, resource);
+      showResource: (_target, loaded) => {
+        setEditor(loaded);
       },
       refresh: () => refresh(),
       error: message,
@@ -491,6 +494,11 @@
   let editorInstance = $state<{ requestClose: () => boolean }>();
 
   let editor = $state<EditorTarget | null>(null);
+  function setEditor(next: EditorTarget | null) {
+    editor?.opening?.cancel();
+    editor = next;
+  }
+  onDestroy(() => editor?.opening?.cancel());
   // Keep the editor instance and its queued draft alive when a write is acknowledged.
   let editorAcknowledgement = $state.raw<{
     target: EditorTarget;
@@ -529,6 +537,7 @@
   let queryKey = $derived(viewQueryKey(currentQuery()));
   let queryReady = $derived(loadedQueryKey === queryKey);
   function sessionEnded() {
+    editor?.opening?.cancel();
     invalidateTagSuggestions(false);
     routing.reset();
 
@@ -581,10 +590,10 @@
       return;
     }
     routing.startDraft();
-    editor = createTarget(project, type, initialMetadata, autoCreate);
+    setEditor(createTarget(project, type, initialMetadata, autoCreate));
   }
   async function saved() {
-    editor = null;
+    setEditor(null);
     if (routing.pending) await restoreRoute(routing.pending);
     else await refresh().catch(message);
   }
@@ -597,7 +606,7 @@
     const removed = editor;
     const removedResource = editorResource;
     const next = routing.pending;
-    editor = null;
+    setEditor(null);
     if (next) {
       const destination = new URLSearchParams(next);
       if (
@@ -635,7 +644,7 @@
   }
 
   function closeEditor() {
-    editor = null;
+    setEditor(null);
     if (routing.pending) void restoreRoute(routing.pending);
   }
 
@@ -959,7 +968,7 @@
     onselect={(project) => {
       choosingCardProject = null;
       routing.startDraft();
-      editor = createTarget(project, "card");
+      setEditor(createTarget(project, "card"));
     }}
   />{/if}
 {#if dateDraft}{#key dateDraft}<DateChange
@@ -1045,7 +1054,7 @@
         onchanged={() => refresh().catch(message)}
         onresolve={(decision) => {
           routing.startDraft();
-          editor = resolutionTarget(editorTarget.project, decision);
+          setEditor(resolutionTarget(editorTarget.project, decision));
         }}
         onsaved={() => void saved()}
         onautosaved={(resource) => autosaved(editorTarget, resource)}

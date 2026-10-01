@@ -7,6 +7,18 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [editor source-overlap iteration](2026-10-01-editor-source-overlap.md) starts
+the required current source first, then fresh project/tag reads alongside it.
+Quiet constrained complete readiness improves by 84–87 ms for 37 cards and
+19–21 ms for whole-month plans; dense local rendered readiness remains about
+30 ms. All 448 selected samples retain ordinary read/identity checks. A context-first
+prototype is rejected after it delays local source/rendered readiness. Cancellation,
+pre-editor tag invalidation and Labels handoff retain current-source rules.
+The full gate passes 452 tests; all 26 Chromium and 12 affected WebKit suites,
+including corrected fixture reruns, and broad HTTPS/planning interactions pass.
+Manual publication follows verification; broader performance and release
+acceptance remain open.
+
 The [complete Calendar popup renderer](2026-10-01-calendar-popup-rendering.md)
 retains every row, current version and native interaction while removing three
 component layers for known Astra content. Quiet retained-build whole-month

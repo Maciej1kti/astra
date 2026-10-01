@@ -36,11 +36,11 @@ export function getResource<K extends Resource["type"]>(
 }
 export function getProject(
   project: string,
-  options: Pick<ReadOptions, "immediate"> = {},
+  options: Pick<ReadOptions, "immediate" | "signal"> = {},
 ) {
   return getResource(
     { type: "project", project_id: project, id: project },
-    undefined,
+    options.signal,
     options,
   );
 }

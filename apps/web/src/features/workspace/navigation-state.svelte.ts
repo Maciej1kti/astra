@@ -21,27 +21,28 @@ export type RouteFilters = Pick<
   | "unreadOnly"
   | "month"
 >;
-type NavigationHooks = {
+type NavigationHooks<Loaded> = {
   today: () => string;
   hasEditor: () => boolean;
   requestClose: () => boolean;
   dialogsOpen: () => boolean;
   clearEditor: () => void;
-  loadResource: (target: ResourceRoute) => Promise<Resource>;
-  showResource: (target: ResourceRoute, resource: Resource) => void;
+  loadResource: (target: ResourceRoute, signal: AbortSignal) => Promise<Loaded>;
+  showResource: (target: ResourceRoute, resource: Loaded) => void;
   refresh: () => Promise<void>;
   error: (cause: unknown) => void;
 };
 
 /** Route state, browser history and the outstanding guarded navigation belong together. */
-export function navigationState(
+export function navigationState<Loaded = Resource>(
   initial: WorkspaceRoute,
-  hooks: NavigationHooks,
+  hooks: NavigationHooks<Loaded>,
 ) {
   let current = $state(initial);
   let restoring = $state(false);
   let pending: URLSearchParams | null = null;
   let generation = 0;
+  let resourceRead: AbortController | null = null;
   let ready = false;
   let lastUrl = location.pathname + location.search;
 
@@ -51,7 +52,8 @@ export function navigationState(
     restoring = false;
   }
   async function restore(params: URLSearchParams) {
-    const requested = ++generation;
+    invalidateResourceRead();
+    const requested = generation;
     restoring = true;
     pending = null;
     try {
@@ -59,8 +61,10 @@ export function navigationState(
       hooks.clearEditor();
       if (current.resource) {
         const target = current.resource;
-        const resource = await hooks.loadResource(target);
+        const controller = (resourceRead = new AbortController());
+        const resource = await hooks.loadResource(target, controller.signal);
         if (requested !== generation) return;
+        resourceRead = null;
         hooks.showResource(target, resource);
       }
       await hooks.refresh();
@@ -70,9 +74,15 @@ export function navigationState(
       lastUrl = location.pathname + location.search;
       ready = false;
     } catch (cause) {
-      if (requested === generation) hooks.error(cause);
+      if (requested === generation) {
+        resourceRead?.abort();
+        hooks.error(cause);
+      }
     } finally {
-      if (requested === generation) restoring = false;
+      if (requested === generation) {
+        resourceRead = null;
+        restoring = false;
+      }
     }
   }
   function fromHistory() {
@@ -107,6 +117,8 @@ export function navigationState(
   }
   function invalidateResourceRead() {
     generation++;
+    resourceRead?.abort();
+    resourceRead = null;
     pending = null;
     restoring = false;
   }
@@ -122,11 +134,18 @@ export function navigationState(
   async function openResource(target: ResourceRoute) {
     invalidateResourceRead();
     const requested = generation;
+    const controller = (resourceRead = new AbortController());
     try {
-      const resource = await hooks.loadResource(target);
-      if (requested === generation) hooks.showResource(target, resource);
+      const resource = await hooks.loadResource(target, controller.signal);
+      if (requested === generation) {
+        resourceRead = null;
+        hooks.showResource(target, resource);
+      }
     } catch (cause) {
+      controller.abort();
       if (requested === generation) hooks.error(cause);
+    } finally {
+      if (resourceRead === controller) resourceRead = null;
     }
   }
   return {

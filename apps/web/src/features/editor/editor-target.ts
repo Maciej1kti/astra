@@ -1,4 +1,5 @@
 import type { Resource } from "../../lib/api/api";
+import type { EditorOpening } from "./editor-opening";
 import type {
   CardCreate,
   MilestoneCreate,
@@ -12,6 +13,7 @@ type Existing = {
     resource: Extract<Resource, { type: K }>;
     initialMetadata?: never;
     autoCreate?: false;
+    opening?: EditorOpening;
   };
 }[Resource["type"]];
 type New<K extends string, Input> = {
@@ -20,6 +22,7 @@ type New<K extends string, Input> = {
   resource: null;
   initialMetadata?: Partial<Input>;
   autoCreate?: boolean;
+  opening?: never;
 };
 export type EditorTarget =
   | Existing
@@ -28,16 +31,20 @@ export type EditorTarget =
   | New<"update", UpdateCreate>;
 export type CreateType = Exclude<Resource["type"], "project">;
 
-export function editTarget(project: string, resource: Resource): EditorTarget {
+export function editTarget(
+  project: string,
+  resource: Resource,
+  opening?: EditorOpening,
+): EditorTarget {
   switch (resource.type) {
     case "project":
-      return { project, type: resource.type, resource };
+      return { project, type: resource.type, resource, opening };
     case "card":
-      return { project, type: resource.type, resource };
+      return { project, type: resource.type, resource, opening };
     case "milestone":
-      return { project, type: resource.type, resource };
+      return { project, type: resource.type, resource, opening };
     case "update":
-      return { project, type: resource.type, resource };
+      return { project, type: resource.type, resource, opening };
   }
 }
 

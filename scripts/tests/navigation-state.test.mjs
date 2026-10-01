@@ -104,11 +104,16 @@ test("view/project selection and draft creation invalidate a pending resource re
     (route) => route.reset(),
   ]) {
     const read = deferred();
+    let signal;
     const { routing, shown, errors } = fixture({
-      loadResource: () => read.promise,
+      loadResource: (_target, readSignal) => {
+        signal = readSignal;
+        return read.promise;
+      },
     });
     const opening = routing.openResource(target);
     invalidate(routing);
+    assert.equal(signal?.aborted, true, "Obsolete transport is cancelled");
     read.resolve({ version: "old-read" });
     await opening;
     assert.deepEqual(shown, []);
@@ -120,11 +125,17 @@ test("latest resource wins and an obsolete read failure cannot replace its resul
   const first = deferred(),
     second = deferred();
   let reads = 0;
+  const signals = [];
   const { routing, shown, errors } = fixture({
-    loadResource: () => (++reads === 1 ? first.promise : second.promise),
+    loadResource: (_target, signal) => {
+      signals.push(signal);
+      return ++reads === 1 ? first.promise : second.promise;
+    },
   });
   const old = routing.openResource(target),
     latest = routing.openResource({ ...target, id: "latest" });
+  assert.equal(signals[0]?.aborted, true);
+  assert.equal(signals[1]?.aborted, false);
   second.resolve({ version: "latest-version" });
   await latest;
   first.reject(new Error("obsolete failure"));
@@ -132,6 +143,12 @@ test("latest resource wins and an obsolete read failure cannot replace its resul
   assert.equal(shown.length, 1);
   assert.equal(shown[0][0].id, "latest");
   assert.deepEqual(errors, []);
+  routing.selectView("board");
+  assert.equal(
+    signals[1].aborted,
+    false,
+    "Delivered reads belong to the editor",
+  );
 });
 
 test("route owner preserves exact filters and calendar navigation", () => {
@@ -187,7 +204,13 @@ test("keeping a dirty editor restores its history entry without fetching another
 
 test("new view navigation cancels an in-flight history restoration without leaving routing suspended", async () => {
   const read = deferred();
-  const { routing, shown } = fixture({ loadResource: () => read.promise });
+  let signal;
+  const { routing, shown } = fixture({
+    loadResource: (_target, readSignal) => {
+      signal = readSignal;
+      return read.promise;
+    },
+  });
   const restoring = routing.restore(
     new URLSearchParams({
       view: "list",
@@ -198,9 +221,25 @@ test("new view navigation cancels an in-flight history restoration without leavi
   );
   assert.equal(routing.restoring, true);
   routing.selectView("board");
+  assert.equal(signal?.aborted, true);
   read.resolve({ version: "obsolete" });
   await restoring;
   assert.equal(routing.current.view, "board");
   assert.equal(routing.restoring, false);
   assert.deepEqual(shown, []);
+});
+
+test("a failed source cancels its opening context and exposes the original failure", async () => {
+  let signal;
+  const failure = new Error("Current source is unavailable");
+  const { routing, shown, errors } = fixture({
+    loadResource: async (_target, readSignal) => {
+      signal = readSignal;
+      throw failure;
+    },
+  });
+  await routing.openResource(target);
+  assert.equal(signal?.aborted, true);
+  assert.deepEqual(shown, []);
+  assert.deepEqual(errors, [failure]);
 });

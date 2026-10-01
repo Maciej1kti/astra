@@ -25,7 +25,7 @@ export function replaceTags(input: TagsReplace, version: string) {
 
 export function getProjectTags(
   project: string,
-  options: Pick<ReadOptions, "immediate"> = {},
+  options: Pick<ReadOptions, "immediate" | "signal"> = {},
 ) {
   return api<TagCatalog>(
     `/api/v1/projects/${project}/tags`,

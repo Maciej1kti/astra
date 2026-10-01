@@ -29,12 +29,21 @@ through normal paired HTTP reads. It checks updated usage counts after a source
 edit and the exact current card version in a browser rename preview, alongside
 project isolation, archived merges and stale-plan rejection.
 
-The `editor-opening` suite checks that a current source read and single project/tag
-reads precede native modal layout. Reopening reads the acknowledged current source.
+The `editor-opening` suite holds an ordinary source response while fresh project
+and tag transports start after its transport. The editor waits for that current
+source; ordinary opening retains exactly one source/project/tag read. Reopening reads the
+acknowledged current source.
 It holds an ordinary opening tag response, changes another card through the CLI,
 then delivers that old response after refreshed suggestions are visible. The stale
 catalog must not replace current tags or mutate the opened resource. This checks
-request order and correctness; quiet release timing measurements are separate.
+request order and correctness. Another conditional CLI tag change occurs while
+the source is held, before Labels exists: that opening catalog must be discarded
+and replaced by a fresh read. Quiet release timing measurements are separate.
+The suite also holds all three real responses, switches view and requires actual
+transport abort signals and request failures for each. The editor suite's
+late-response scenario deliberately keeps only its held source transport
+nonabortable so its completed-response assertions still exercise late delivery.
+Both cases retain the destination and reject an obsolete editor.
 
 The comments suite covers human/browser and bot/CLI attribution, source history,
 Markdown rendering, unsent draft protection, comment counts and editor access

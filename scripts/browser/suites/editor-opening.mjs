@@ -1,4 +1,4 @@
-/** Fresh editor reads begin before modal layout and retain catalog invalidation. */
+/** Source/context reads overlap without publishing an editor before its source. */
 import assert from "node:assert/strict";
 import { expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
@@ -22,7 +22,7 @@ await runBrowserSuite(
       title: "Opening reader",
       body: "**Current source description.**",
     });
-    const tagged = await mutate("POST", `${base}/cards`, {
+    let tagged = await mutate("POST", `${base}/cards`, {
       title: "Opening catalog owner",
       labels: ["Opening catalog before"],
     });
@@ -31,14 +31,26 @@ await runBrowserSuite(
     const page = await context.newPage();
     page.on("pageerror", (error) => errors.push(error.message));
     await page.addInitScript(() => {
-      window.openingProbe = { reads: [], modals: [] };
+      window.openingProbe = { reads: [], modals: [], invalidations: 0 };
+      window.addEventListener("tag-suggestions-changed", () => {
+        window.openingProbe.invalidations++;
+      });
       const fetch = window.fetch;
       window.fetch = function (input, ...args) {
         const path = new URL(
           typeof input === "string" ? input : (input.url ?? input),
           location.href,
         ).pathname;
-        if (path.startsWith("/api/")) window.openingProbe.reads.push(path);
+        if (path.startsWith("/api/")) {
+          window.openingProbe.reads.push(path);
+          args[0]?.signal?.addEventListener(
+            "abort",
+            () => {
+              (window.openingProbe.aborted ??= []).push(path);
+            },
+            { once: true },
+          );
+        }
         return fetch.call(this, input, ...args);
       };
       const show = HTMLDialogElement.prototype.showModal;
@@ -57,6 +69,7 @@ await runBrowserSuite(
       exact: true,
     });
     let releaseOld = () => {};
+    let releaseSource = () => {};
     try {
       await page.goto(
         `${config.origin}/?${new URLSearchParams({ view: "list", project: project.id })}`,
@@ -67,7 +80,20 @@ await runBrowserSuite(
           .filter({ hasText: card.metadata.title }),
       ).toBeVisible();
       await page.evaluate(() => {
-        window.openingProbe = { reads: [], modals: [] };
+        window.openingProbe = { reads: [], modals: [], invalidations: 0 };
+      });
+      let capturedSource;
+      const sourceCaptured = new Promise((resolve) => {
+        capturedSource = resolve;
+      });
+      const sourceBlocked = new Promise((resolve) => {
+        releaseSource = resolve;
+      });
+      await page.route(`**${path}`, async (route) => {
+        const response = await route.fetch();
+        capturedSource();
+        await sourceBlocked;
+        await route.fulfill({ response });
       });
       const currentRead = page.waitForResponse(
         (response) =>
@@ -78,7 +104,23 @@ await runBrowserSuite(
         .locator(".view-content .listrow")
         .filter({ hasText: card.metadata.title })
         .click();
+      await sourceCaptured;
+      await expect(dialog).toHaveCount(0);
+      await expect
+        .poll(() =>
+          page.evaluate(
+            ({ base }) =>
+              [base, `${base}/tags`].every((path) =>
+                window.openingProbe.reads.includes(path),
+              ),
+            { base },
+          ),
+        )
+        .toBe(true);
+      await expect(dialog).toHaveCount(0);
+      releaseSource();
       const current = await (await currentRead).json();
+      await page.unroute(`**${path}`);
       assert.equal(current.version, card.version);
       await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
         current.metadata.title,
@@ -97,6 +139,11 @@ await runBrowserSuite(
         }),
       ).toBeVisible();
       const probe = await page.evaluate(() => window.openingProbe);
+      assert.equal(
+        probe.reads[0],
+        path,
+        "Current source starts before optional context",
+      );
       assert.equal(probe.reads.filter((value) => value === path).length, 1);
       assert.equal(probe.reads.filter((value) => value === base).length, 1);
       assert.equal(
@@ -113,7 +160,7 @@ await runBrowserSuite(
         "Tag transport starts before modal layout",
       );
       checks.push({
-        name: "Fresh source and single project/tag reads precede native modal layout",
+        name: "Fresh project/tag reads overlap a held source; only its current version opens the editor",
         version: current.version,
       });
       await labels.fill("");
@@ -177,7 +224,7 @@ await runBrowserSuite(
       );
       await oldCaptured;
       await labels.fill("Opening catalog");
-      await mutate(
+      tagged = await mutate(
         "PATCH",
         `${base}/cards/${tagged.metadata.id}`,
         { set: { labels: ["Opening catalog current"] } },
@@ -223,8 +270,158 @@ await runBrowserSuite(
         .getByRole("button", { name: "Close editor", exact: true })
         .click();
       await expect(dialog).toHaveCount(0);
+
+      await page.evaluate(() => {
+        window.openingProbe = { reads: [], modals: [], invalidations: 0 };
+      });
+      let capturedAgain;
+      const capturedBeforeEditor = new Promise((resolve) => {
+        capturedAgain = resolve;
+      });
+      const blockedAgain = new Promise((resolve) => {
+        releaseSource = resolve;
+      });
+      await page.route(`**${path}`, async (route) => {
+        const response = await route.fetch();
+        capturedAgain();
+        await blockedAgain;
+        await route.fulfill({ response });
+      });
+      const beforeEditorCatalog = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === `${base}/tags` &&
+          response.status() === 200,
+      );
+      const sourceAfterTags = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === path &&
+          response.status() === 200,
+      );
+      await page
+        .locator(".view-content .listrow")
+        .filter({ hasText: changed.metadata.title })
+        .click();
+      await capturedBeforeEditor;
+      assert.ok(
+        (await (await beforeEditorCatalog).json()).tags.some(
+          (tag) => tag.name === "Opening catalog current",
+        ),
+      );
+      await expect(dialog).toHaveCount(0);
+      tagged = await mutate(
+        "PATCH",
+        `${base}/cards/${tagged.metadata.id}`,
+        {
+          set: { labels: ["Opening catalog changed before source"] },
+        },
+        tagged.version,
+      );
+      await expect
+        .poll(() => page.evaluate(() => window.openingProbe.invalidations))
+        .toBeGreaterThan(0);
+      releaseSource();
+      assert.equal(
+        (await (await sourceAfterTags).json()).version,
+        changed.version,
+      );
+      await page.unroute(`**${path}`);
+      await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
+        changed.metadata.title,
+      );
+      await labels.fill("Opening catalog");
+      await expect(
+        dialog.getByRole("option", {
+          name: "Opening catalog changed before source",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("option", {
+          name: "Opening catalog current",
+          exact: true,
+        }),
+      ).toHaveCount(0);
+      assert.equal(cli("get", path).version, changed.version);
+      checks.push({
+        name: "A catalog invalidated before editor creation is replaced by a fresh ordinary read",
+        version: changed.version,
+      });
+      await labels.fill("");
+      await dialog
+        .getByRole("button", { name: "Close editor", exact: true })
+        .click();
+      await expect(dialog).toHaveCount(0);
+      const openingPaths = [path, base, `${base}/tags`];
+      const claimed = new Set();
+      const capturedCancelled = new Set();
+      const failed = new Set();
+      let handledCount = 0;
+      let releaseCancelled = () => {};
+      const cancelledBlocked = new Promise((resolve) => {
+        releaseCancelled = resolve;
+      });
+      const cancelledMatcher = `**${base}**`;
+      const requestFailed = (request) => {
+        const pathname = new URL(request.url()).pathname;
+        if (openingPaths.includes(pathname) && request.method() === "GET")
+          failed.add(pathname);
+      };
+      page.on("requestfailed", requestFailed);
+      await page.evaluate(() => {
+        window.openingProbe = { reads: [], modals: [], invalidations: 0 };
+      });
+      await page.route(cancelledMatcher, async (route) => {
+        const pathname = new URL(route.request().url()).pathname;
+        if (
+          !openingPaths.includes(pathname) ||
+          claimed.has(pathname) ||
+          route.request().method() !== "GET"
+        )
+          return route.continue();
+        claimed.add(pathname);
+        try {
+          const response = await route.fetch();
+          assert.equal(response.status(), 200);
+          if (pathname === path)
+            assert.equal((await response.json()).version, changed.version);
+          capturedCancelled.add(pathname);
+          await cancelledBlocked;
+          await route.fulfill({ response });
+        } finally {
+          handledCount++;
+        }
+      });
+      try {
+        await page
+          .locator(".view-content .listrow")
+          .filter({ hasText: changed.metadata.title })
+          .click();
+        await expect.poll(() => capturedCancelled.size).toBe(3);
+        await expect(dialog).toHaveCount(0);
+        await page.getByRole("button", { name: "Board", exact: true }).click();
+        await expect.poll(() => failed.size).toBe(3);
+        const aborted = await page.evaluate(() => window.openingProbe.aborted);
+        assert.deepEqual(aborted.toSorted(), openingPaths.toSorted());
+        releaseCancelled();
+        await expect.poll(() => handledCount).toBe(3);
+        await expect(dialog).toHaveCount(0);
+        await expect(
+          page.getByRole("button", { name: "Board", exact: true }),
+        ).toHaveAttribute("aria-current", "page");
+        assert.equal(new URL(page.url()).searchParams.has("resource"), false);
+        assert.equal(cli("get", path).version, changed.version);
+        checks.push({
+          name: "A view switch aborts all three native opening transports and cannot publish the held source",
+          version: changed.version,
+        });
+      } finally {
+        releaseCancelled();
+        page.off("requestfailed", requestFailed);
+        await page.unroute(cancelledMatcher);
+      }
       assert.deepEqual(errors, []);
     } finally {
+      releaseSource();
       releaseOld();
       await writeFile(
         join(evidence, "results.json"),

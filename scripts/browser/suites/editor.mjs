@@ -704,6 +704,26 @@ export async function runEditorChecks({
             notifyHandled();
           }
         });
+        // Force a real late response even when the client cancels its subscriber.
+        // Native transport cancellation has separate editor-opening coverage.
+        await page.evaluate((path) => {
+          const fetch = window.fetch;
+          window.delayedSourceTransports = 0;
+          window.fetch = function (input, options) {
+            const pathname = new URL(
+              typeof input === "string" ? input : (input.url ?? input),
+              location.href,
+            ).pathname;
+            if (pathname === path && options?.method === "GET") {
+              window.delayedSourceTransports++;
+              return fetch.call(this, input, { ...options, signal: undefined });
+            }
+            return fetch.call(this, input, options);
+          };
+          window.restoreDelayedSourceTransport = () => {
+            window.fetch = fetch;
+          };
+        }, path);
         try {
           await row.click();
           await waitForSignal(ready, "the held resource response");
@@ -749,11 +769,16 @@ export async function runEditorChecks({
               page.getByLabel("Project", { exact: true }),
             ).toHaveValue(otherProject);
           assert.equal(new URL(page.url()).searchParams.has("resource"), false);
+          assert.equal(
+            await page.evaluate(() => window.delayedSourceTransports),
+            1,
+          );
         } finally {
           release();
           if (intercepted)
             await waitForSignal(handled, "resource interceptor cleanup");
           await page.unroute(matcher);
+          await page.evaluate(() => window.restoreDelayedSourceTransport());
         }
       }
       return "Both a view switch and a project switch stay in place after the held real resource response is released.";
