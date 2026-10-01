@@ -8,6 +8,22 @@ scripts/cargo-local build --workspace --release --locked
 ASTRA_TEST_PROFILE=release npm run test:browser
 ```
 
+## Motion verification
+
+After the build above, run the shared motion and Calendar scenarios against the
+real release daemon in both engines:
+
+```sh
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs motion calendar-motion
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs motion calendar-motion
+```
+
+Changes to native Calendar group ownership also need `planning`, `calendar-pages`,
+`calendar-layout`, `calendar-popup`, `events` and `card-calendar`. Follow the
+[design system](../../docs/DESIGN-SYSTEM.md#motion-vocabulary) for parameters and
+ownership; the [dated evidence](../../progress/2026-10-01-soft-motion.md) records
+the tested revision and rollout without implying physical-device acceptance.
+
 The `motion` suite exercises bounded loaded-content cascades, refresh stability,
 rapid navigation, selection geometry across desktop/tablet/mobile, keyboard
 opening, menu reversal, native dismissal/focus restoration, live reduced-motion
@@ -35,6 +51,8 @@ popup's gentle layers. Sampled bounds remain fixed, with no per-event animation.
 Chromium captures settled layouts and intermediate rendered frames; native drag,
 resize, cancellation, conflict/retry and touch behavior remain covered by the
 planning, events and calendar-popup suites.
+
+## Other interaction coverage
 
 The HTTPS smoke exercises broad workflows, including keyboard Focus ordering and
 reload persistence, while the planning suite covers its widgets. The portable

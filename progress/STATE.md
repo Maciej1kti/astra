@@ -17,7 +17,9 @@ broad HTTPS smoke pass. The rebuilt existing manual app preserves 82 prior
 versions, three pins, settings, certificate and instance/epoch; all 32 served assets
 match over trusted HTTPS. The ordinary CLI report is committed/read back, with
 concurrent owner card edits separate. Physical-device and release acceptance remain
-open.
+open. The [maintained motion reference](../docs/DESIGN-SYSTEM.md#motion-vocabulary)
+also records all shared parameters, component sequences, extension rules and
+focused browser checks; the documentation-only handoff passes link/command checks.
 
 The [context entry allocation iteration](2026-10-01-context-entry-allocation.md)
 borrows validated bodies and moves selected metadata into the existing response.

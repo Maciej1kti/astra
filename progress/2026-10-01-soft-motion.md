@@ -80,3 +80,19 @@ Ordinary CLI report `f25d7ff7-2162-4a76-a4db-8b4e6a876470` is committed and read
 back with exact source/version equality. The two concurrent owner card edits remain
 separate. This is implementation/verification evidence, not owner acceptance.
 Raw output belongs in ignored `test-results/soft-motion-2026-10-01/`.
+
+## Documentation handoff
+
+The maintained [motion reference](../docs/DESIGN-SYSTEM.md#motion-vocabulary)
+now includes the shared duration/curve/distance/blur values, component ownership,
+card/dialog/menu/Calendar sequence order, readiness and key selection, bounded
+effects, cleanup, reduced motion and desktop/mobile behavior. It distinguishes
+candidate measurements from the local 32-effect cap. The documentation index
+links directly to this reference; the user guide has a motion/accessibility
+section and the browser guide supplies focused Chromium/WebKit commands.
+
+The documentation-only follow-up passes `scripts/check_package.py`, Markdown
+anchor checks, timing comparisons with the source tokens and suite-command
+checks. The deployed application and the verification results above are unchanged.
+Ordinary CLI report `00af2f08-5494-43a1-be4a-7b09f998ee81` is committed and
+read back with exact source/version equality.

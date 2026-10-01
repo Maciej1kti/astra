@@ -27,6 +27,7 @@ that matches your task; historical requirements are indexed separately below.
 | [Architecture](ARCHITECTURE.md) | Runtime/storage/write diagrams and repository map |
 | [Code structure](CODE-STRUCTURE.md) | Specific feature/module owners, lock order and test boundaries |
 | [Design system](DESIGN-SYSTEM.md) | UI tokens, components, responsive behavior and interaction ownership |
+| [Motion system](DESIGN-SYSTEM.md#motion-vocabulary) | Soft entrances, layer order, timing tokens, Calendar, desktop/mobile behavior and extension rules |
 | [Security reporting](../SECURITY.md) | Reporting status, sanitization and dependency advisory checks |
 | [Scripts](../scripts/README.md) | Tool entry points and generated artifacts |
 | [Browser suites](../scripts/browser/README.md) | Real-host integration coverage and suite selection |

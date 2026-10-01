@@ -133,7 +133,7 @@ retargets from its current position and never receives pointer input.
 
 Loaded views reveal a short cascade of headings and rows. `revealScene` receives
 an explicit navigation key and readiness state; refreshes and typing do not replay
-an existing scene. At most 24 candidates are measured, only onscreen candidates
+an existing scene. At most 24 primary candidates are measured, only onscreen candidates
 animate, and primary delays stop at 340 ms. At most 72 small card layers follow
 their own surface: context at +60 ms, title +100, metadata +150, labels +200,
 attention reasons +220 and daily counter footer +250. These roles cover Focus's
@@ -153,7 +153,10 @@ weekday header, date grid and event groups at 0/100/160/240 ms; agenda day group
 follow in bounded 45 ms steps. These opacity-only layers start after the current
 project/date/layout data is ready, including mobile agenda and month grid.
 Project changes start a new sequence; refreshes and source writes do not.
-The month overflow popup separately reveals its surface, header and event group.
+The month overflow popup separately reveals its surface, header and event group
+at 0/100/220 ms. Agenda groups start at 180 ms; an empty period uses the same
+content entrance. Day and week layouts stage their all-day and timed groups
+without moving either group.
 Calendar and Timeline retain native event rendering and gesture geometry.
 Do not add per-event animations or DOM observers to dense planning widgets.
 
@@ -161,8 +164,11 @@ Native dialogs enter over 760 ms from a 12px offset and 0.992 scale, with a 360 
 backdrop. The dialog's opacity takes 80% of its duration to emerge gently.
 `revealLayers` gives context, title, actions, sections and details separate
 timelines, instead of animating the entire body over its animated children.
-Card sections follow their visible saved order. Existing tags follow their own
-section; the tag pulse is reserved for an explicit add action. Hidden sections
+Dialog context starts at 60 ms, title at 110 ms and its next heading group at
+175 ms; header actions start at 140 ms. Card sections follow their visible saved
+order from 200 ms in 50 ms steps; the footer starts at 320 ms. Existing tags
+follow their own section by at least 120 ms, with 28 ms steps between tags;
+the tag pulse is reserved for an explicit add action. Hidden sections
 are excluded. Confirmed dismissal has a 220 ms exit; Svelte makes the
 outgoing layer inert and the native modal remains present until cleanup. A
 node-local presence action mirrors inertness to `aria-hidden`, including reversed
@@ -176,6 +182,9 @@ quickly. Measured floating popovers use the same soft fade while keeping their
 placement stable. Menu surfaces precede
 their items, and suggestion rows have a short cascade. Page headings, primary
 actions and workspace/planning controls also have separate opening steps.
+Menu rows start at 100 ms with 36 ms steps; their heading starts at 50 ms and
+footer at 260 ms. Suggestions start at 80 ms with 32 ms steps; general control
+groups start at 80 ms with 40 ms steps.
 Menus, disclosures and control settling take 500 ms; navigation selection takes
 520 ms. Headings, card titles, selected tags and suggestion rows resolve from a temporary 2px
 blur. Large surfaces, gesture owners, section contents and general control groups
@@ -186,31 +195,85 @@ and acknowledged save state provide small secondary responses. Hover lift applie
 only to fine pointers and excludes draggable Focus cards. Existing drag transforms
 remain owned by their gesture implementation.
 
-| Layer | Timing and role |
-| --- | --- |
-| Surface | Backdrop first; gentle opacity onset, shallow travel and a gradual settle |
-| Heading | 600 ms; dialog context starts at 60 ms, title at 110 ms, toolbar at 175 ms |
-| Content | 640 ms; dialog sections start at 200 ms with bounded 50 ms steps |
-| Detail | 480 ms; tags follow their section by at least 120 ms, menu rows use 36 ms steps |
-| Direct feedback | Immediate press response, followed by a slower release; saves/additions acknowledge the action |
+### Shared parameters
 
-Sequences measure at most 32 visible local targets once per opening/navigation
-key and cap their delay at 560 ms. No persistent observer or per-event widget
+[Token definitions](../apps/web/src/styles/tokens.css) are the implementation
+source of truth. Durations below exclude a layer's opening delay. Use the same
+parameters in light/dark themes and desktop/mobile layouts.
+
+| Token | Current value | Purpose |
+| --- | --- | --- |
+| `--motion-quick` | 200 ms | Control colors and the parent view fade |
+| `--motion-enter` | 500 ms | Menus, disclosures and control settling |
+| `--motion-heading` | 600 ms | Headings and card titles |
+| `--motion-content` | 640 ms | Local sections and native Calendar groups |
+| `--motion-detail` | 480 ms | Metadata, labels, counters and confirmation |
+| `--motion-backdrop` | 360 ms | Dialog backdrop |
+| `--motion-dialog` | 760 ms | Dialog surface |
+| `--motion-scene` | 720 ms | Loaded rows and surfaces |
+| `--motion-selection` | 520 ms | Moving navigation selection |
+| `--motion-exit` | 220 ms | Confirmed dismissal |
+| `--motion-stagger` | 52 ms | Bounded scene steps |
+| `--motion-distance` | 6px | Ordinary scene travel; gesture surfaces override with zero |
+| `--motion-softness` | 2px | Temporary blur on selected small layers |
+| `--motion-lift` | 2px | Fine-pointer hover lift on eligible cards |
+
+Entrances use `--motion-emerge: cubic-bezier(0.32, 0, 0.24, 1)`, whose initial
+slope is zero. Layout/hover transitions use `--motion-ease` with
+`cubic-bezier(0.22, 0.61, 0.36, 1)`; interactive settling uses `--motion-spring`
+with `cubic-bezier(0.28, 0.75, 0.32, 1.04)`. Press feedback starts immediately, before
+the softer release. Adjust the shared curve and layer ownership when tuning an
+entrance: a longer duration alone does not prevent most movement being consumed
+in its first frames or while a parent is still invisible.
+
+### Extending the system
+
+| Surface | Owner and integration |
+| --- | --- |
+| Loaded Focus, Projects, List, Updates and workspace Board | `revealScene` on the view; visible card roles follow their surface |
+| Project Board | Feature-owned scene with `cardSelector`; columns and inner card groups retain native drag geometry |
+| Calendar | `calendar-motion.ts` supplies `revealLayers` with current-page readiness and project/date/widget-view keys; popup layers stay in `CalendarView` |
+| Timeline | Feature-owned `revealScene` on the native chart with zero travel |
+| Page headings, dialogs, menus, suggestions and toolbars | `revealLayers` with explicit local selectors and opening keys |
+| Navigation, shared controls and disclosures | Shared motion actions and `styles/motion.css`; no feature-specific replacement |
+
+Local sequences consider at most 16 candidates per layer descriptor and start at
+most 32 visible effects per opening/navigation key, with delays capped at 560 ms.
+This effect limit is distinct from the number of candidate measurements.
+No persistent observer or per-event widget
 animation is added. General control groups, draggable content and metadata only fade;
 their gesture geometry stays fixed. Refreshing source data, editing a draft or
 adding a tag does not replay the other layers. Cleanup cancels pending frames
 and effects, and reduced motion applies to every layer.
 
-Use `--motion-quick` for control feedback, `--motion-enter` for disclosures,
-`--motion-dialog` for dialogs, `--motion-scene` / `--motion-stagger` for content,
-`--motion-selection` for selection and `--motion-exit` for dismissal. Entrances
-use `--motion-emerge`; layout/hover transitions use `--motion-ease` and interactive
-settling uses `--motion-spring`. `--motion-softness` is reserved for the bounded
-small layers above; never apply it to a whole view or widget. Effects must not
+Feature code supplies selectors for existing semantic groups rather than adding
+animation-only wrappers. Use a key for the selected resource, view or period;
+exclude draft values, source versions and refresh counters. Set `ready` only when
+the current selection's content is rendered. A pending frame cancelled before
+readiness must not consume the opening key. Use `distance: "0px"` on gesture
+owners, and `soften: false` when a heading layer covers a large native grid.
+
+The `afterParent` option schedules details at least 120 ms after their selected
+parent starts, subject to the sequence's 560 ms delay cap; it does not wait for
+that parent's whole animation to finish.
+Use `soften: true` only on bounded small groups such as suggestions. The default
+heading role resolves from blur; content and detail roles do not blur unless
+explicitly opted in. Prefer these actions to untracked timers or global DOM scans.
+
+`--motion-softness` is reserved for the bounded small layers above; never apply it
+to a whole view or widget. Effects must not
 own data, delay requests, gate input, replay on autosave or install permanent
 compositing hints. The system reduced-motion preference removes CSS effects,
 cancels shared Web Animations and completes Svelte transitions already in flight.
 This also applies when the preference changes while a dialog is open.
+
+Check actual intermediate frames, settled sharpness, fast navigation and source
+refresh stability. Exercise keyboard/touch and native drag/resize with motion
+enabled, then change Reduce motion during an entrance. Raw background-pointer
+tests must wait for native `dialog[open]` removal, because an outgoing modal leaves
+the accessibility tree before native close. See the
+[focused browser commands](../scripts/browser/README.md#motion-verification) and
+[verified rollout](../progress/2026-10-01-soft-motion.md) for evidence and limits.
 
 ## Card modal hierarchy
 
