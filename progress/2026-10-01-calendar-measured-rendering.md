@@ -88,5 +88,17 @@ prototypes remain labeled there; they are not acceptance claims.
 
 ## Integration
 
-Manual rebuild/restart, trusted HTTPS/source preservation verification and normal
-CLI result-report publication are pending at this source checkpoint.
+Application revision `4906f1c` is rebuilt in the original checkout. The existing
+manual launcher is restarted (71205 → 16069) with the same data, origin, ports and
+certificates. Before/after ordinary source snapshots preserve all 60 prior
+resource versions, two pins and preferences. Trusted HTTPS at
+`https://100.122.250.14:47832` and all 33 frontend assets match the rebuilt files;
+no diagnostic maps are served. The owner card fingerprint is unchanged.
+
+The normal explicitly selected original-folder CLI commits result report
+`dafb05ae-9cf5-4b0f-8882-d65bd7f42d7e`, version
+`r1.da2cb428dfd6c62bfc45aba09567bc1f902b9269d75166bee6fa19623b3c3259`.
+Request identity/epoch/payload are saved before submission, and ordinary readback
+verifies the exact body and ID. Scope, priorities, dates and acceptance are not
+changed. Publication contains only this verified application, documentation and
+new report; the owner's unrelated card edit stays local. The goal remains active.

@@ -14,8 +14,10 @@ medians improve from 199–204 to about 110 ms for short plans/timed events, and
 737 to 252 ms for whole-month plans; constrained whole-month cold improves from
 3.23 to 1.48 seconds. Small-fixture medians are unchanged. The full gate passes
 427 tests; Chromium/WebKit verify natural heights, exact hidden counts, versions
-and complete interactions. Manual integration and normal CLI publication are
-pending; broader performance and acceptance remain open.
+and complete interactions. The rebuilt manual app preserves 60 prior source
+versions, two pins, preferences and certificate; trusted HTTPS and all 33 assets
+are verified. The normal CLI report is committed and read back; broader
+performance and acceptance remain open.
 
 The [Calendar hidden-list iteration](2026-10-01-calendar-hidden-lists.md)
 replaces repeated growing-array copies and linear duplicate checks with one
