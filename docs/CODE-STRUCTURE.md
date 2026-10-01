@@ -267,6 +267,12 @@ The initial envelope and final complete response retain ordinary serialization;
 accepted/rejected entries, caps, complete metadata and next-read hints keep their
 existing semantics. There is no source or response cache. See
 [ADR-058](ADR-058-EXACT-CONTEXT-BUDGET.md).
+Consecutive context candidates of one kind borrow a request-local collection
+reader; the next kind opens its own reader. A failed open retains ordinary
+per-candidate lookup rather than caching a source failure. Every candidate still
+uses current guarded bytes and the common parser. Readers end with the request;
+replaced collections are rejected within a held reader and reopened by later
+requests. See [the scoped-read decision](ADR-055-BOUNDED-SOURCE-READS.md).
 
 Source collection scans and consecutive reference checks use a scoped
 `CollectionReader`. It retains one collection descriptor, verifies the lease

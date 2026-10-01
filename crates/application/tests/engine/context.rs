@@ -196,3 +196,104 @@ fn agent_context_keeps_current_sources_and_unavailable_collection_next_reads() {
         }
     }
 }
+
+#[test]
+fn agent_context_reopens_collections_and_keeps_current_file_guards() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    create(&engine, &project, "An independent card");
+    let mut reports = Vec::new();
+    for summary in ["First report", "Second report"] {
+        let reply = engine
+            .mutate(Mutation {
+                project_id: project.clone(),
+                kind: Kind::Update,
+                id: None,
+                payload: json!({
+                    "kind":"result", "summary":summary,
+                    "target":{"type":"project","id":project},
+                    "author":{"kind":"agent","label":"Context fixture"}
+                }),
+                request_id: Uuid::now_v7().to_string(),
+                epoch: engine.journal.epoch.clone(),
+                expected: None,
+            })
+            .unwrap();
+        assert_eq!(reply.http_status, 200);
+        reports.push(reply.body["result"]["resource"].clone());
+    }
+    let directory = env.root.join("project/.project/updates");
+    let previous = env.root.join("previous-updates");
+    fs::rename(&directory, &previous).unwrap();
+    let missing = engine.context(&project, 24576).unwrap();
+    assert_eq!(missing["included"]["cards"], 1);
+    assert_eq!(missing["omitted"]["updates"], 2);
+    assert_eq!(missing["warnings"].as_array().unwrap().len(), 2);
+    for report in &reports {
+        assert!(
+            missing["next_reads"]
+                .as_array()
+                .unwrap()
+                .contains(&json!({"type":"update","id":report["metadata"]["id"]}))
+        );
+    }
+
+    // A new request must observe the replacement collection and its new bytes.
+    fs::create_dir(&directory).unwrap();
+    for report in &mut reports {
+        report.as_object_mut().unwrap().remove("version");
+        report["body"] = json!("Current replacement bytes: ą🦀");
+        project_domain::validate_document(report.clone()).unwrap();
+        fs::write(
+            directory.join(format!(
+                "{}.json",
+                report["metadata"]["id"].as_str().unwrap()
+            )),
+            serde_json::to_vec(report).unwrap(),
+        )
+        .unwrap();
+    }
+    let current = engine.context(&project, 24576).unwrap();
+    assert_eq!(current["included"]["updates"], 2);
+    assert!(current["warnings"].as_array().unwrap().is_empty());
+    for report in &reports {
+        let entry = current["updates"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|entry| entry["id"] == report["metadata"]["id"])
+            .unwrap();
+        assert_eq!(entry["excerpt"], report["body"]);
+        assert_eq!(
+            entry["version"],
+            project_store::document::version(&serde_json::to_vec(report).unwrap())
+        );
+    }
+
+    // Retaining a collection descriptor must not admit linked source files.
+    let id = reports[0]["metadata"]["id"].as_str().unwrap();
+    let path = directory.join(format!("{id}.json"));
+    fs::remove_file(&path).unwrap();
+    std::os::unix::fs::symlink(previous.join(format!("{id}.json")), &path).unwrap();
+    let linked = engine.context(&project, 24576).unwrap();
+    assert_eq!(linked["included"]["updates"], 1);
+    assert_eq!(linked["warnings"][0]["code"], "SOURCE_UNAVAILABLE");
+    assert!(
+        linked["next_reads"]
+            .as_array()
+            .unwrap()
+            .contains(&json!({"type":"update","id":id}))
+    );
+    fs::remove_file(&path).unwrap();
+    fs::hard_link(previous.join(format!("{id}.json")), &path).unwrap();
+    let linked = engine.context(&project, 24576).unwrap();
+    assert_eq!(linked["included"]["updates"], 1);
+    assert_eq!(linked["warnings"][0]["code"], "SOURCE_UNAVAILABLE");
+    assert!(
+        linked["next_reads"]
+            .as_array()
+            .unwrap()
+            .contains(&json!({"type":"update","id":id}))
+    );
+}

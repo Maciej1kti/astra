@@ -1,5 +1,10 @@
 //! Budgeted project data for a caller. No source text is promoted to instructions.
-use crate::{AppError, engine::Engine, instant, now_millis, source::read};
+use crate::{
+    AppError,
+    engine::Engine,
+    instant, now_millis,
+    source::{read, read_collection},
+};
 use project_store::document::Kind;
 use rusqlite::params;
 use serde_json::{Value, json};
@@ -109,8 +114,20 @@ LIMIT 200",
             increment(&mut out, "focus", &mut encoded_bytes);
         }
         let mut omitted = Vec::new();
+        let mut collection_kind = None;
+        let mut collection = None;
         for (kind, field, id) in candidates {
-            let value = match read(&store, kind, &id) {
+            if collection_kind != Some(kind) {
+                collection = store.collection_reader(kind).ok();
+                collection_kind = Some(kind);
+            }
+            let observed = match &collection {
+                Some(reader) => read_collection(reader, kind, &id),
+                // A failed collection open is not a cached source failure.
+                // Each candidate retains the ordinary current lookup.
+                None => read(&store, kind, &id),
+            };
+            let value = match observed {
                 Ok(value) => value,
                 Err(_) => {
                     append(

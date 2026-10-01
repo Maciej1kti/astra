@@ -95,3 +95,28 @@ noncanonical identifiers, replaced leases and the actual 50,001/50,000-source
 and 101/100-pin boundaries. Release context measurements establish substantially
 lower temporary allocation, with a small latency tradeoff rather than a speedup;
 see [the pin-read evidence](../progress/2026-10-01-source-focus-stream.md).
+
+## Sequential context candidate reads
+
+Agent context already selects consecutive milestone, card and report groups
+under its workspace gate and project lock. Each group now borrows one scoped
+collection reader instead of reopening the collection for each candidate. This
+is sequential descriptor reuse; candidate ordering, limits, current byte parsing
+and versions, metadata, excerpt/budget accounting and unavailable-source hints
+remain unchanged. A failed collection open falls back to the ordinary lookup for
+every candidate, so failure is not cached. No candidate is skipped when the
+response fills, and no source bytes or versions survive the observation.
+
+Every read retains lease, approved project/collection identity, no-follow, file
+type/link/size and validation checks. Replacing a collection during a group
+invalidates its held reader and produces the existing unavailable-source warning
+and next-read hint; a later request opens the current collection. The descriptor
+cannot outlive the caller's project lock. No new workers, protocol fields or
+write/durability exceptions are introduced.
+
+Engine regressions cover absent/replaced collections across requests, new byte
+versions, independent kinds and unsafe symbolic/hard links. Existing filesystem
+regressions replace the collection, project and lease after an earlier read,
+including reparented children and lease-directory links. Release comparison and
+coverage limits are recorded in
+[the context candidate-read evidence](../progress/2026-10-01-context-candidate-reads.md).

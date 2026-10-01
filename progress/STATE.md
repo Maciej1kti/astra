@@ -7,6 +7,18 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [scoped context-read iteration](2026-10-01-context-candidate-reads.md) reuses
+one guarded collection reader per consecutive candidate kind. Every source read,
+version, bound and unavailable-source hint remains. Balanced release comparisons
+repeat 3.2–3.4 ms savings for small contexts and 16.9–18.9 ms for ordinary/rich
+dense contexts; two later long-body pairs save about 18 ms after an unstable first
+pair. All 720 selected observations retain result checks and full normalized
+outputs match in nine pairs. Six context/three reader guard regressions pass.
+The full gate passes 467 tests before and after the independent motion integration;
+normally paired Chromium/WebKit protocol checks also pass before and after it.
+Manual refresh and ordinary result publication remain pending. Broader perceived
+performance, platform coverage and release acceptance remain open.
+
 The [shared motion system](2026-10-01-motion-system.md) adds bounded readiness
 cascades, continuous navigation selection, native dialog/menu entrances and exits,
 and shared control feedback. Reduced-motion changes settle active effects. The
