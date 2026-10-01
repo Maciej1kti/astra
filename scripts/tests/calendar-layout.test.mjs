@@ -5,8 +5,113 @@ import {
   calendarContentArgs,
   collectHiddenChunks,
   measureOnce,
+  monthChunkSamples,
 } from "../../apps/web/src/features/planning/calendar-layout.ts";
 import { calendarLayoutSource } from "../../apps/web/build/calendar-layout-plugin.ts";
+
+function monthChunk(overrides = {}) {
+  return {
+    gridRow: 1,
+    gridColumn: 2,
+    dates: [new Date("2026-09-01"), new Date("2026-09-02")],
+    event: {
+      title: "First title",
+      allDay: true,
+      display: "auto",
+      styles: [],
+      classNames: [],
+      editable: true,
+      startEditable: true,
+      durationEditable: true,
+      extendedProps: {
+        astra: {
+          kind: "card_schedule",
+          title: "First title",
+          version: "observed",
+        },
+      },
+    },
+    ...overrides,
+  };
+}
+
+test("month samples retain every current chunk while sharing only reviewed geometry", () => {
+  const first = monthChunk();
+  const second = monthChunk();
+  second.event.title = second.event.extendedProps.astra.title =
+    "Another long title 🧪";
+  second.event.extendedProps.astra.version = "changed";
+  const samples = monthChunkSamples([first, second]);
+  assert.deepEqual([...samples.representatives], [first]);
+  assert.equal(samples.sample.get(first), first);
+  assert.equal(samples.sample.get(second), first);
+  assert.equal(samples.sample.size, 2);
+  const current = monthChunk();
+  const next = monthChunkSamples([current]);
+  assert.deepEqual([...next.sample], [[current, current]]);
+  assert.equal(next.sample.has(first), false);
+  assert.equal(monthChunkSamples([]), null);
+});
+
+test("month samples separate widths, rows, snippet kinds and editability", () => {
+  const first = monthChunk();
+  const changes = [
+    monthChunk({ gridRow: 2 }),
+    monthChunk({ gridColumn: 3 }),
+    monthChunk({ dates: [new Date("2026-09-01")] }),
+    monthChunk(),
+    monthChunk(),
+    monthChunk(),
+  ];
+  changes[3].event.extendedProps.astra.kind = "milestone_due";
+  changes[4].event.editable = false;
+  changes[5].event.allDay = false;
+  Object.assign(changes[5].event.extendedProps.astra, {
+    kind: "card_event",
+    event: { start: "2026-09-01T09:30", duration_minutes: 60 },
+  });
+  const all = [first, ...changes];
+  const samples = monthChunkSamples(all);
+  assert.equal(samples.representatives.size, all.length);
+  for (const chunk of all) assert.equal(samples.sample.get(chunk), chunk);
+});
+
+test("unknown month content and style overrides retain the full native renderer", () => {
+  for (const change of [
+    (chunk) => (chunk.resource = {}),
+    (chunk) => chunk.event.styles.push("height:90px"),
+    (chunk) => chunk.event.classNames.push("custom"),
+    (chunk) => (chunk.event.display = "background"),
+    (chunk) => (chunk.event.title = "Unreviewed content"),
+    (chunk) => (chunk.event.allDay = false),
+    (chunk) => (chunk.event.extendedProps = {}),
+    (chunk) => (chunk.event.extendedProps.astra.title = " "),
+    (chunk) => (chunk.event.extendedProps.astra.kind = "unknown"),
+  ]) {
+    const unknown = monthChunk();
+    change(unknown);
+    assert.equal(monthChunkSamples([monthChunk(), unknown]), null);
+  }
+});
+
+test("month clock values share line geometry while format length remains separate", () => {
+  const chunks = [monthChunk(), monthChunk(), monthChunk()];
+  for (const [index, chunk] of chunks.entries()) {
+    chunk.event.allDay = false;
+    Object.assign(chunk.event.extendedProps.astra, {
+      kind: "card_event",
+      event: {
+        start: index === 0 ? "2026-09-01T09:01" : "2026-09-01T18:59",
+        duration_minutes: 60,
+      },
+    });
+  }
+  // A future extended clock format must not silently reuse an existing shape.
+  chunks[2].event.extendedProps.astra.event.start += ":00";
+  const samples = monthChunkSamples(chunks);
+  assert.deepEqual([...samples.representatives], [chunks[0], chunks[2]]);
+  assert.equal(samples.sample.get(chunks[1]), chunks[0]);
+});
 
 test("one hide pass retains native order, spanned days and chunk reference identity", () => {
   const actual = new Map(),
@@ -144,6 +249,7 @@ test("a changed vendor source fails the build instead of silently applying an un
     "src/lib/events.js",
     "src/lib/components/BaseEvent.svelte",
     "src/plugins/day-grid/derived.js",
+    "src/lib/chunks.js",
   ]) {
     const id = new URL(
       `../../node_modules/@event-calendar/core/${path}`,

@@ -158,7 +158,14 @@ by exact upstream source hashes and required-module checks. Planning owns its
 pass-local geometry, hidden-list collection and lazy snippet argument helpers.
 The hidden collector publishes one new array per changed day and retains
 unchanged list identity. No element measurement or duplicate-membership set
-survives a synchronous layout pass. See [ADR-054](ADR-054-CALENDAR-RENDERING.md)
+is reused by another synchronous layout pass. The month grid retains all native
+chunk models, but mounts interactive components only for visible events and
+reviewed equal-height snippet shapes. Each pass measures the actual native
+representatives and uses native positioning; hidden markers retain membership
+and projection versions. Unknown shapes/styles use the native renderer. Popup
+and preview components remain complete. Size observers schedule a shared frame;
+their previous notification sizes never supply layout geometry. Leaving measured
+rendering evicts retained placements. See [ADR-054](ADR-054-CALENDAR-RENDERING.md)
 for dependency review and retained rendering behavior.
 
 `TagManager` reads exact labels from the selected project's cards and prepares

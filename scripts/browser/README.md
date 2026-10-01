@@ -127,9 +127,11 @@ the broader month grid. The `planning` suite retains strict CSP checks in both
 engines; WebKit records layout metrics without screenshots because Playwright's
 screenshot preparation injects an inline stylesheet blocked by the app policy.
 
-The `calendar-layout` suite adds 330 densely overlapping scheduled cards,
-including plans crossing a week boundary and spanning the whole month. It checks
+The `calendar-layout` suite adds 330 densely overlapping cards, including timed
+events and plans crossing a week boundary or spanning the whole month. It checks
 measured month-grid geometry calls, exact per-day hidden counts, unused time
-formatting, complete item/popup membership, resize layout and keyboard opening
-with the observed version. Instrumented call counts are
+formatting, complete item/popup membership, changed versions, resize layout and
+keyboard opening with the observed version. It reconstructs full native elements
+for simplified hidden entries and compares natural heights, including a live
+large-text change and 390/320 px month grids. Instrumented call counts are
 regressions; release timing measurements remain separate.

@@ -10,7 +10,8 @@ does not remove them.
 
 Apply a narrow Vite transform before Svelte compilation. The repository owns
 `apps/web/build/calendar-layout-plugin.ts`; npm files remain untouched. Exact
-SHA-256 guards cover all five reviewed upstream source files. A changed source,
+SHA-256 guards cover all six reviewed upstream source files, including the native
+chunk positioning algorithm used by the measured month layout. A changed source,
 unexpected replacement shape or missing transformed module fails the production
 build, requiring an explicit dependency review instead of silently omitting an
 optimization. The plugin adds no runtime or build dependency.
@@ -43,8 +44,37 @@ growing-array copies and linear duplicate checks with bounded linear collection,
 without assuming a row height or removing hidden DOM. See the
 [hidden-list evidence](../progress/2026-10-01-calendar-hidden-lists.md).
 
+The month grid also retains every native chunk model while replacing most hidden
+interactive components with lightweight, inaccessible membership markers. A
+native component remains mounted for each reviewed shape and every visible
+event. The shape includes grid row/column/span, item kind, clock format length,
+short-event class and editability. Astra's month snippet has one explicitly sized, nonwrapping
+title line and an optional time line. Contract clock values are fixed ASCII
+`HH:mm` in tabular digits; they change text, not line geometry. Hidden detail text
+does not affect its height. Changing this snippet or its CSS requires reviewing the grouping. Unknown
+content, custom classes/styles or resources retain the full native renderer.
+
+Each reposition pass measures its actual native representatives, headers, cells
+and footers anew, then calls the unchanged native positioning algorithm for every
+chunk in its original traversal order. Placement output is retained for rendering
+and exact no-op publication checks, never as the next pass's measurement input.
+The hidden-list collector and footer rechecks still see all chunks. Markers retain
+item IDs, current projection versions and grid spans; they cannot receive focus or
+pointer gestures. Popups, backgrounds and interaction previews use full native
+components. Popup ordering and source reads before opening remain unchanged.
+
+Representative ResizeObservers compare current CSS border-box sizes to their
+last notification size; this only filters unchanged initial notifications.
+The initial computed-style value is restored to the reviewed engines' 1/64 px
+layout units to remove CSS serialization rounding. This notification comparison
+never supplies or rounds the actual geometry used for positioning.
+Changed sizes schedule one shared animation-frame reposition, whose geometry
+reader measures current elements again. Pending frames and observers are disposed
+with the view/components. Identical measured placements avoid clearing and
+republishing an unchanged hidden list. Leaving this path clears retained placements.
+
 This does not reduce the calendar's 1,000-item grid/time bound, its 200-item agenda
-page size, DOM population, accessible popup membership or observed versions.
+page size, accessible popup membership or observed versions.
 Authentication, source reads, API/protocol, command identity and durable writes
 are unchanged. Further DOM and overlap work requires new measurements and
 behavioral evidence rather than assuming these optimizations make rendering
@@ -61,9 +91,12 @@ Normal reads, request cancellation, gesture publication, freshness notices and
 current-source reads before opening remain unchanged. See
 [the refresh evidence](../progress/2026-09-30-calendar-refresh.md).
 
-Unit tests cover pass-local geometry, resized cells and lazy current details.
-The release browser regression uses 300 added source cards, including a plan
-crossing a week boundary. It checks actual geometry-read counts, unused time
-formatting, complete item membership, resize layout, popup contents and keyboard
-opening with the original item version. Measurements and verification limits
+Unit tests cover pass-local geometry, resized cells, lazy current details,
+reviewed sample grouping and native fallback. The release browser regression uses
+330 added source cards, including timed events, cross-week and whole-month plans.
+It checks actual geometry-read counts, exact hidden counts, unused time formatting,
+complete item membership, changed versions, resize layout, popup contents and
+keyboard opening. It reconstructs every simplified hidden element from its full
+native representative and compares natural heights, including large text and
+390/320 px screens. Measurements and verification limits
 live in [the rendering evidence](../progress/2026-09-30-calendar-rendering.md).

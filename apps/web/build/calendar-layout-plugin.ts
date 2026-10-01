@@ -26,6 +26,10 @@ const sources = new Map([
     "src/plugins/day-grid/derived.js",
     "8f2fc6ee93b0503c088c99515378890d9f2b75501e88664a400693b7e66eda07",
   ],
+  [
+    "src/lib/chunks.js",
+    "d0a9450bec10e910e4858cf94d98626c9c79d15b2b08d45d19281c386e38c91a",
+  ],
 ]);
 
 function replace(source: string, before: string, after: string): string {
@@ -57,6 +61,7 @@ export async function calendarLayoutSource(
     throw new Error(
       `Review calendar layout optimization before changing ${name}`,
     );
+  if (name === "src/lib/chunks.js") return source;
   if (name === "src/lib/components/BaseEvent.svelte") {
     // Astra's snippet reads the event. Defer optional library fields until a
     // consumer reads them, preserving their reactive reads and default content.
@@ -92,22 +97,118 @@ export async function calendarLayoutSource(
     source = replace(
       source,
       "<script>",
-      `<script>\n    import {collectHiddenChunks, measureOnce} from ${JSON.stringify(geometry)};`,
+      `<script>\n    import {collectHiddenChunks, measureOnce, monthChunkSamples} from ${JSON.stringify(geometry)};`,
     );
     source = replace(
       source,
       "contentFrom, empty, length, resizeObserver, runReposition",
-      "contentFrom, empty, height, length, resizeObserver, runReposition",
+      "contentFrom, empty, height, length, max, repositionEvent, resizeObserver, runReposition, toTime",
     );
     source = replace(
       source,
-      "runReposition(refs, chunks);",
-      "runReposition(refs, chunks, measureOnce(height));",
+      "getContext, setContext, tick",
+      "getContext, onDestroy, setContext, tick, untrack",
+    );
+    source = replace(
+      source,
+      "    let refs = [];",
+      `    let refs = [];
+    let samples = $derived(dayMaxEvents === true ? monthChunkSamples(chunks) : null);
+    let indices = $derived(new Map(chunks.map((chunk, index) => [chunk, index])));
+    let placements = $state.raw(new Map());
+    let pendingResize = 0;
+    function resizeSamples() {
+        if (pendingResize) return;
+        pendingResize = requestAnimationFrame(() => {
+            pendingResize = 0;
+            reposition();
+        });
+    }
+    onDestroy(() => cancelAnimationFrame(pendingResize));
+
+    function publish(next) {
+        const previous = untrack(() => placements);
+        if (previous.size === next.size && [...next].every(([chunk, value]) => {
+            const old = previous.get(chunk);
+            return old && old.top === value.top && old.height === value.height && old.hidden === value.hidden;
+        })) return false;
+        placements = next;
+        return true;
+    }
+    function dayElement(chunk) {
+        return viewState.gridEl.children.item((chunk.gridRow - 1) * grid[0].length + chunk.gridColumn - 1);
+    }
+    function isHidden(chunk, measure) {
+        const first = dayElement(chunk);
+        let day = first, footer = 0;
+        for (let i = 0; i < chunk.dates.length && day; i++, day = day.nextElementSibling) {
+            footer = max(footer, measure(day.lastElementChild));
+        }
+        return chunk.bottom > measure(first) - footer;
+    }`,
+    );
+    source = replace(
+      source,
+      "        runReposition(refs, chunks);",
+      `        const measure = measureOnce(height);
+        if (samples) {
+            const heights = new Map();
+            for (const sample of samples.representatives) {
+                const ref = refs[indices.get(sample)];
+                if (!ref) return;
+                heights.set(sample, ref.measureHeight(measure));
+            }
+            const next = new Map();
+            for (const chunk of chunks) {
+                const size = heights.get(samples.sample.get(chunk));
+                const top = repositionEvent(chunk, size, measure(dayElement(chunk).firstElementChild) || 1, eventGap);
+                next.set(chunk, {top, height: size, hidden: isHidden(chunk, measure)});
+            }
+            if (!publish(next)) return;
+        } else {
+            runReposition(refs, chunks, measure);
+            publish(new Map());
+        }`,
+    );
+    source = replace(
+      source,
+      "        refs.forEach(ref => ref?.hide());",
+      `        const measure = measureOnce(height);
+        const hidden = collectHiddenChunks(hiddenChunks);
+        if (samples) {
+            const next = new Map();
+            for (const chunk of chunks) {
+                const old = placements.get(chunk);
+                if (!old) continue;
+                const value = {...old, hidden: isHidden(chunk, measure)};
+                next.set(chunk, value);
+                if (value.hidden) for (const date of chunk.dates) hidden.add(toTime(date), chunk);
+            }
+            hidden.publish();
+            publish(next);
+        } else {
+            refs.forEach(ref => ref?.hide(measure, hidden.add));
+            hidden.publish();
+        }`,
     );
     return replace(
       source,
-      "refs.forEach(ref => ref?.hide());",
-      "const measure = measureOnce(height);\n        const hidden = collectHiddenChunks(hiddenChunks);\n        refs.forEach(ref => ref?.hide(measure, hidden.add));\n        hidden.publish();",
+      "                    <Event bind:this={refs[i]} {chunk}/>",
+      `                    {#if !samples || samples.representatives.has(chunk) || placements.get(chunk)?.hidden === false}
+                        <Event bind:this={refs[i]} {chunk} placement={samples && placements.get(chunk)} onSizeChange={samples?.representatives.has(chunk) ? resizeSamples : undefined}/>
+                    {:else}
+                        <article
+                            class={theme.event}
+                            aria-hidden="true"
+                            data-calendar-placeholder="true"
+                            data-source-version={chunk.event.extendedProps.astra.version}
+                            style:grid-column={chunk.gridColumn + ' / span ' + chunk.dates.length}
+                            style:grid-row={chunk.gridRow}
+                            style:margin-block-start={(placements.get(chunk)?.top ?? 1) + 'px'}
+                            style:height={(placements.get(chunk)?.height ?? 0) + 'px'}
+                            style="visibility:hidden;padding:0;border:0;box-sizing:border-box"
+                        ><div data-calendar-item={chunk.event.extendedProps.astra.item_id}>{chunk.event.title}</div></article>
+                    {/if}`,
     );
   }
   if (name === "src/lib/events.js") {
@@ -118,6 +219,61 @@ export async function calendarLayoutSource(
     );
     return replace(source, "ref?.reposition();", "ref?.reposition(measure);");
   }
+  source = replace(
+    source,
+    "let {chunk, inPopup = false}",
+    "let {chunk, inPopup = false, placement, onSizeChange}",
+  );
+  source = replace(
+    source,
+    "    // Style",
+    `    $effect(() => {
+        if (!onSizeChange || !el) return;
+        const style = getComputedStyle(el);
+        let observedHeight = parseFloat(style.height);
+        if (style.boxSizing !== 'border-box') {
+            for (const value of [style.paddingTop, style.paddingBottom, style.borderTopWidth, style.borderBottomWidth]) {
+                observedHeight += parseFloat(value);
+            }
+        }
+        // CSS serialization rounds fractional layout units. Normalize only
+        // the notification baseline; layout passes still read actual rects.
+        observedHeight = Math.round(observedHeight * 64) / 64;
+        const observer = new ResizeObserver(entries => {
+            const current = entries[0].borderBoxSize?.[0]?.blockSize;
+            if (current === undefined) {
+                onSizeChange();
+                return;
+            }
+            if (current === observedHeight) return;
+            observedHeight = current;
+            onSizeChange();
+        });
+        observer.observe(el);
+        return () => observer.disconnect();
+    });
+
+    export function measureHeight(measure = height) {
+        return measure(el);
+    }
+
+    // Style`,
+  );
+  source = replace(
+    source,
+    "let marginTop = inPopup ? 1 : margin;",
+    "let marginTop = inPopup ? 1 : (placement?.top ?? margin);",
+  );
+  source = replace(
+    source,
+    "if (hidden) {\n            style['visibility'] = 'hidden';",
+    "if (placement?.hidden ?? hidden) {\n            style['visibility'] = 'hidden';",
+  );
+  source = replace(
+    source,
+    "forceMargin={[margin, chunk.gridRow]}",
+    "forceMargin={[placement?.top ?? margin, chunk.gridRow]}",
+  );
   source = replace(
     source,
     "export function reposition()",

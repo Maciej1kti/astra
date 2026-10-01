@@ -764,6 +764,8 @@
     font-size: var(--text-xs);
     line-height: var(--leading-body);
   }
+  /* calendar-layout.ts groups these month shapes by their measured single-line
+     title and optional time line. Re-review grouping when this structure changes. */
   .month .calendar-item {
     flex-direction: column;
     align-items: flex-start;

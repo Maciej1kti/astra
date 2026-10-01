@@ -30,6 +30,13 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
               ? { start: "2026-09-22", end: "2026-09-22" }
               : { start: "2026-09-01", end: "2026-09-30" },
     });
+    if (index < 80 && index % 2 === 0) {
+      delete card.metadata.schedule;
+      card.metadata.event = {
+        start: `2026-09-07T${String(8 + (index % 12)).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}`,
+        duration_minutes: index % 4 === 0 ? 30 : 100,
+      };
+    }
     // External writes are confined to the suite's disposable source fixture.
     await writeFile(join(folder, `${id}.json`), JSON.stringify(card));
   }
@@ -82,12 +89,95 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
   }
   async function checkpoint(name) {
     await settled();
-    const layout = await page.evaluate(() => {
+    const layout = await page.evaluate((items) => {
       const root = document.querySelector(".ec-day-grid");
       const cells = [...root.querySelectorAll(".ec-body .ec-grid > .ec-day")];
       const events = [
         ...root.querySelectorAll(".ec-body > .ec-events > article"),
       ];
+      const byId = new Map(items.map((item) => [item.item_id, item]));
+      const shape = (element) => {
+        const item = byId.get(
+          element.querySelector("[data-calendar-item]").dataset.calendarItem,
+        );
+        const style = getComputedStyle(element);
+        return JSON.stringify([
+          style.gridRowStart,
+          style.gridColumnStart,
+          style.gridColumnEnd,
+          item.kind,
+          item.event?.start.slice(11).length,
+          item.event && item.event.duration_minutes <= 30,
+        ]);
+      };
+      const samples = new Map(
+        events
+          .filter((element) => !element.dataset.calendarPlaceholder)
+          .map((element) => [shape(element), element]),
+      );
+      const probes = [];
+      const naturalHeightMismatches = [];
+      for (const element of events.filter(
+        (element) => element.dataset.calendarPlaceholder,
+      )) {
+        const sample = samples.get(shape(element));
+        if (!sample) {
+          naturalHeightMismatches.push({
+            reason: "Missing native sample",
+            id: element.querySelector("[data-calendar-item]").dataset
+              .calendarItem,
+          });
+          continue;
+        }
+        const clone = sample.cloneNode(true);
+        for (const property of [
+          "grid-column",
+          "grid-row",
+          "margin-block-start",
+        ])
+          clone.style.setProperty(
+            property,
+            element.style.getPropertyValue(property),
+          );
+        clone.style.visibility = "hidden";
+        const item = byId.get(
+          element.querySelector("[data-calendar-item]").dataset.calendarItem,
+        );
+        clone.querySelector("strong").textContent = item.title;
+        const time = clone.querySelector(".item-time");
+        const duration = time.querySelector(".time-duration");
+        time.replaceChildren(
+          document.createTextNode(
+            item.event
+              ? item.event.start.slice(11)
+              : item.kind.endsWith("due")
+                ? "Due"
+                : "All day",
+          ),
+          ...(duration ? [duration] : []),
+        );
+        if (item.event)
+          clone.querySelector(".time-duration").textContent =
+            ` · ${item.event.duration_minutes} min`;
+        clone.querySelector("small").textContent = item.event
+          ? `${item.event.duration_minutes} min`
+          : item.kind.endsWith("due")
+            ? "Due"
+            : item.start !== item.end
+              ? "Multi-day plan"
+              : "Planned work";
+        element.parentElement.append(clone);
+        probes.push({ element, clone, item });
+      }
+      for (const { element, clone, item } of probes) {
+        const expected = window.calendarReadRect(clone).height;
+        const actual = window.calendarReadRect(element).height;
+        // Browser CSS coordinates are quantized to 1/64 px; transformed rects
+        // can differ slightly from the equivalent explicit placeholder size.
+        if (Math.abs(expected - actual) > 0.02)
+          naturalHeightMismatches.push({ id: item.item_id, expected, actual });
+      }
+      for (const { clone } of probes) clone.remove();
       const misplaced = [];
       const hiddenByDay = new Map();
       let visible = 0;
@@ -129,14 +219,17 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
         hidden: events.length - visible,
         misplaced,
         incorrectHiddenCounts,
+        naturalHeightMismatches,
+        placeholders: probes.length,
         height: window.calendarReadRect(root).height,
         counts: { ...window.calendarGeometry },
       };
-    });
+    }, expected.items);
     checkpoints.push({ ...layout, name });
     assert.ok(layout.hidden > 250);
     assert.deepEqual(layout.misplaced, []);
     assert.deepEqual(layout.incorrectHiddenCounts, []);
+    assert.deepEqual(layout.naturalHeightMismatches, []);
     const actual = await surface
       .locator("[data-calendar-item]")
       .evaluateAll((elements) =>
@@ -153,6 +246,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     );
     await expect(surface.locator("[data-calendar-item]")).not.toHaveCount(0);
     const initial = await checkpoint("desktop");
+    assert.ok(initial.placeholders > 250, JSON.stringify(initial));
     assert.ok(initial.visible > 0);
     // These bounds count actual browser geometry calls, not elapsed time. The
     // previous per-event/per-spanned-day reads exceed these limits on this fixture.
@@ -241,6 +335,36 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
         .not.toBe(checkpoints.at(-1).height);
       await checkpoint(`${viewport.width}x${viewport.height}`);
     }
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty("--text-label", "48px");
+      document.documentElement.style.setProperty("--text-xs", "42px");
+    });
+    await page.evaluate(
+      () =>
+        new Promise((done) => {
+          let remaining = 4;
+          const frame = () =>
+            --remaining ? requestAnimationFrame(frame) : done();
+          requestAnimationFrame(frame);
+        }),
+    );
+    await checkpoint("large-text-desktop");
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 320, height: 740 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page
+        .getByRole("button", { name: "Month grid", exact: true })
+        .click();
+      await checkpoint(`large-text-${viewport.width}`);
+    }
+    await page.evaluate(() => {
+      document.documentElement.style.removeProperty("--text-label");
+      document.documentElement.style.removeProperty("--text-xs");
+    });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await checkpoint("restored-text-desktop");
     const more = surface.getByRole("button", { name: /^\+\d+ more$/ }).first();
     const date = await more.evaluate((element) =>
       element.closest(".ec-day").querySelector("time").getAttribute("datetime"),

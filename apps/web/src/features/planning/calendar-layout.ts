@@ -1,3 +1,67 @@
+import type { CalendarItem } from "../../lib/contracts/api.generated";
+
+interface MonthChunk {
+  gridRow: number;
+  gridColumn: number;
+  dates: Date[];
+  resource?: unknown;
+  event: {
+    title: string;
+    allDay: boolean;
+    display: string;
+    styles: string[];
+    classNames: string[];
+    editable?: boolean;
+    startEditable?: boolean;
+    durationEditable?: boolean;
+    extendedProps: { astra?: CalendarItem };
+  };
+}
+
+/** Only Astra's single-line month snippet has reviewed equal-height shapes. */
+export function monthChunkSamples<C extends MonthChunk>(chunks: C[]) {
+  const shapes = new Map<string, C>();
+  const representatives = new Set<C>();
+  const sample = new Map<C, C>();
+  for (const chunk of chunks) {
+    const { event } = chunk;
+    const item = event.extendedProps?.astra;
+    if (
+      !item ||
+      !["card_schedule", "card_event", "milestone_due"].includes(item.kind) ||
+      !item.title.trim() ||
+      event.title !== item.title ||
+      event.allDay !== !item.event ||
+      event.display !== "auto" ||
+      event.styles.length ||
+      event.classNames.length ||
+      chunk.resource
+    )
+      return null;
+    // Contract clocks are fixed ASCII HH:mm in tabular digits; changing the
+    // value does not change the month snippet's line geometry.
+    const key = JSON.stringify([
+      chunk.gridRow,
+      chunk.gridColumn,
+      chunk.dates.length,
+      item.kind,
+      item.event?.start.slice(11).length,
+      item.event && item.event.duration_minutes <= 30,
+      event.editable,
+      event.startEditable,
+      event.durationEditable,
+    ]);
+    let representative = shapes.get(key);
+    if (!representative) {
+      representative = chunk;
+      shapes.set(key, chunk);
+      representatives.add(chunk);
+    }
+    sample.set(chunk, representative);
+  }
+  return chunks.length ? { representatives, sample } : null;
+}
+
 /** Geometry is reused only within one synchronous layout pass. */
 export function measureOnce<T extends object>(read: (element: T) => number) {
   const heights = new WeakMap<T, number>();
