@@ -1,0 +1,18 @@
+{
+  "body": "The reviewed Calendar transform now collects hidden chunks once per synchronous pass, preserving reference identity, order, unchanged arrays and native geometry. It removes repeated growing-array copies and linear duplicate checks while retaining all DOM, the 1000-item grid bound, normal source reads and complete popups.\n\nQuiet release whole-month profiles (1000 cards, 995 dated items, 44134 DOM elements, seven cold/warm samples per condition) improve local cold medians from 756-761 to 720-726 ms and constrained cold/warm medians by about 139-191 ms. Local warm readiness remains variable; no stable per-navigation guarantee is claimed. The ordinary three-day profile improves by about 4-6 ms locally and 12-27 ms constrained when warm.\n\nThe full gate passes 269 Rust, 142 JavaScript and 12 Python tests. Four release suites pass in Chromium and WebKit, including exact hidden counts, whole-month spans, full popup membership, resize, current versions and keyboard opening. The original manual app is rebuilt and restarted; all 59 prior resource versions, two pins, preferences and certificate are preserved, with trusted HTTPS and all 33 assets verified. Evidence: progress/2026-10-01-calendar-hidden-lists.md. Broader rendering, transport, concurrency, physical devices and release acceptance remain open.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "3fd92c91-9302-4a91-ab23-ba58bf1f8cce",
+    "kind": "result",
+    "recorded_at": "2026-10-01T00:24:49.940Z",
+    "summary": "Verified linear hidden-list collection improves dense Calendar rendering.",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

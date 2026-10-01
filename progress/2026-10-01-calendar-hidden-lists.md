@@ -75,8 +75,13 @@ records and source snapshots remain in ignored
 
 The full local gate passes 269 Rust, 142 JavaScript and 12 Python tests,
 including the final frontend and release workspace build. Chromium desktop
-popup and 390 px month-grid screenshots were inspected. Manual publication
-verification is pending. Dense month-wide
+popup and 390 px month-grid screenshots were inspected. The original manual
+application is rebuilt/restarted at application revision
+`e365ca684802f5cb22d9454d0ef1a79e4fddb0f7`. Trusted existing HTTPS and all 33
+embedded assets are verified; 59 prior resource versions, two pins, preferences
+and certificate are preserved. The normal CLI report
+`3fd92c91-9302-4a91-ab23-ba58bf1f8cce` is committed and read back with the same
+version/body; the owner's card is unchanged. Dense month-wide
 rendering still takes roughly 0.7 seconds locally and 3 seconds constrained in
 this fixture. Further DOM/layout work, other data distributions, concurrency,
 physical devices and full release acceptance remain open.

@@ -15,7 +15,9 @@ improve by 31–41 ms locally, with constrained cold/warm gains of about
 139–191 ms. Local warm readiness remains variable. Seven focused tests and four
 release Chromium/WebKit suites pass, including exact hidden counts across
 330 added cards. The full gate passes 269 Rust, 142 JavaScript and 12 Python
-tests; manual publication checks are pending. Broader
+tests. The rebuilt manual app preserves 59 prior resource versions, two pins,
+preferences and certificate; trusted HTTPS and all 33 assets are verified.
+The normal CLI report is committed and read back. Broader
 performance and acceptance remain open.
 
 The [Calendar geometry/query probes](2026-10-01-calendar-probes.md) reject
