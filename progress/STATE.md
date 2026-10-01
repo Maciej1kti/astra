@@ -15,7 +15,8 @@ prototypes are restored. All 560 measured samples retain full popup membership
 and current source checks, with 280 single-read Calendar openings, 140 popup
 openings without reads and 140 three-read editor openings. An exact saved-profile
 frame lookup identifies the native dialog opening callback as the hot frame,
-not chunk sorting. The deployed application remains unchanged; native DOM/layout
+not chunk sorting. The normal CLI report is committed and read back, with the
+owner card preserved. The deployed application remains unchanged; native DOM/layout
 cost and broader performance/acceptance work remain open.
 
 The [editor read-overlap iteration](2026-10-01-editor-read-overlap.md) starts fresh

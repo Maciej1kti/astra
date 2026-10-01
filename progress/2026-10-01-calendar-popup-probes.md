@@ -67,8 +67,18 @@ dependency, retained geometry, source cache or partial popup is selected.
 
 The existing manual application remains the verified editor read-overlap build.
 This documentation-only result does not require another application restart.
-The owner card is preserved. The ordinary report to the explicitly selected
-original project is pending at this evidence checkpoint.
+Trusted HTTPS at `https://100.122.250.14:47832` returns the unchanged root bytes;
+launcher PID 49561 remains live. All 34 rebuilt frontend files, including the
+Vite manifest, match the original checkout. The owner's unrelated card SHA is
+unchanged at `d79037cd72f3a1258c525cbce6056f42c2e8710a7f8340d1fb2c506bf485da9b`.
+
+The ordinary report to the explicitly selected original project is committed
+and read back with its exact body/version: report
+`fcbb5530-3049-4204-a9c4-21f97c10a231`, request
+`01a0f623-f193-7bf4-85ed-2e664b16c88c`, version
+`r1.b956c9b838f7e19d47e5eb3d2afa33726dcf6eb5878e1b0f3dd01f6a7ba40b89`.
+Identity, epoch and unchanged payload are saved before submission. No card status,
+scope, priority or acceptance decision changes.
 
 Bulk patches, control binaries, samples, comparison matrices, build/test logs and
 read-count checks remain in ignored `test-results/calendar-snippet-2026-10-01/`.
