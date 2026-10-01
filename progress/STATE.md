@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [tag-source cost probes](2026-10-01-tag-source-cost-probes.md) attribute
+ordinary source cost primarily to guarded filesystem reads. A bounded allocation
+hint saves only 0.21–0.45 ms for 1,000 ordinary cards and reverses on the global
+required fixture; paired worker handoff regresses dense reads and global catalog
+readiness. Both prototypes and the temporary example are restored. Release result
+checks and documentation/package validation pass. Application, manual instance
+and prior verification remain unchanged. The optional Python Omarchy status helper's
+six-read fan-out is identified as the next investigation; broader performance
+and release acceptance remain open.
+
 The [editor source-overlap iteration](2026-10-01-editor-source-overlap.md) starts
 the required current source first, then fresh project/tag reads alongside it.
 Quiet constrained complete readiness improves by 84–87 ms for 37 cards and
