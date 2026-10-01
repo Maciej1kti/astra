@@ -1,0 +1,18 @@
+{
+  "body": "Context reads now reuse a guarded collection descriptor for consecutive candidates\nwhile retaining every current source, version, validation and byte-budget check.\nBalanced release comparisons save 3.2–3.4 ms for 37 cards and 16.9–18.9 ms for\n1,000 ordinary/rich cards. Two later long-body pairs save about 18 ms after an\nunstable first pair. All 720 selected observations pass identity/version/budget\nchecks and full normalized outputs match. Initial measurements affected by\nindependent test work are not acceptance evidence.\n\nThe 467-test full gate and normally paired Chromium/WebKit protocol checks pass\nbefore and after incorporating the independently verified motion UI. The existing\nHTTPS app is rebuilt and restarted, preserving all 76 prior resource versions,\nthree pins, preferences, certificate, instance/epoch and complete native CLI\ncontext; all 32 served assets match the rebuilt frontend. Both owner card changes\nremain separate. Broader perceived performance, Linux widget/QML, physical iPhone\nand release acceptance remain open. See progress/2026-10-01-context-candidate-reads.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "cf11f74b-3ffd-4b56-8dcc-39b90aec6d73",
+    "kind": "result",
+    "recorded_at": "2026-10-01T13:48:10.197Z",
+    "summary": "Scoped context reads reduce repeated filesystem traversal",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

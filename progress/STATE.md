@@ -16,8 +16,11 @@ pair. All 720 selected observations retain result checks and full normalized
 outputs match in nine pairs. Six context/three reader guard regressions pass.
 The full gate passes 467 tests before and after the independent motion integration;
 normally paired Chromium/WebKit protocol checks also pass before and after it.
-Manual refresh and ordinary result publication remain pending. Broader perceived
-performance, platform coverage and release acceptance remain open.
+The original frontend/release daemon are rebuilt and the existing manual app is
+restarted, preserving all 76 prior versions, three pins, preferences, certificate,
+instance/epoch and complete CLI context. Trusted HTTPS verifies all 32 assets;
+the ordinary report is committed/read back with both owner card changes separate.
+Broader perceived performance, platform coverage and release acceptance remain open.
 
 The [shared motion system](2026-10-01-motion-system.md) adds bounded readiness
 cascades, continuous navigation selection, native dialog/menu entrances and exits,

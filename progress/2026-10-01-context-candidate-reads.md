@@ -8,6 +8,7 @@ approved ancestry, no-follow, type/link/size checks and parsing remain. A replac
 collection fails within the held reader and is reopened by a later request.
 Candidate order, caps, complete metadata, excerpts, warnings, next-read hints and
 exact byte accounting remain. There is no source cache or write/protocol change.
+The verified application is `5b7bc3ba87bc89a536151926508306fd88210cce`.
 
 M4/macOS 27 arm64, Rust 1.92, ten logical CPUs. Saved release binaries exercise
 ordinary `Engine::context` on synthetic projects after registration/startup.
@@ -41,9 +42,9 @@ identity/version are normalized; actual project/source versions are verified
 before normalization.
 
 An earlier body/metadata-materialization prototype was restored after failing to
-establish a repeatable gain. Early grouped measurements of both prototypes were
-later found to overlap independently running UI/browser work and are exploratory,
-not acceptance evidence. The guarded rich first attempt is discarded after
+establish a repeatable gain. Those earlier grouped series were not load-guarded;
+independent UI/browser work was later observed during the probes. They are
+exploratory, not acceptance evidence. The guarded rich first attempt is discarded after
 observing concurrent work. Raw failed/discarded attempts, complete outputs, load
 observations, saved binaries and benchmark sources remain ignored in
 `test-results/context-entry-2026-10-01/`; the temporary example is removed.
@@ -61,8 +62,16 @@ motion evidence and the ordinary report; application source is unchanged.
 Normally paired Chromium/WebKit protocol checks pass before integration,
 including complete HTTP/CLI context equality at 4/24/128-KiB budgets, actual UTF-8
 response bounds, out-of-range rejection and five-view stale-page recovery.
-Both integrated protocol reruns pass the same checks. Manual refresh remains
-pending.
+Both integrated protocol reruns pass the same checks. The original frontend
+and release workspace are rebuilt, and all 33 dist files match the verified
+worktree. The existing manual launcher 79050 is replaced by 86879 with the same
+data and connection. Trusted `https://100.122.250.14:47832` verification preserves
+76 prior resource versions, three pins, preferences, certificate, instance/epoch
+and the complete normalized native CLI context. All 32 served assets match the
+rebuilt frontend. The ordinary CLI report
+`cf11f74b-3ffd-4b56-8dcc-39b90aec6d73` is committed and read back exactly, with both
+unrelated owner card changes preserved. Independent UI corrections and motion
+remain in the refreshed application.
 
 Broader performance, Linux widget/QML, physical iPhone and release acceptance
 remain open. Remaining parser/metadata-budget allocation costs require separate
