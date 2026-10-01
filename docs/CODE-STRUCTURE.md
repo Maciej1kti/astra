@@ -283,6 +283,13 @@ uses current guarded bytes and the common parser. Readers end with the request;
 replaced collections are rejected within a held reader and reopened by later
 requests. See [the scoped-read decision](ADR-055-BOUNDED-SOURCE-READS.md).
 
+Context entries borrow the body from that validated typed document and serialize
+only its metadata. Selected metadata values move into the response; the complete
+body is not copied into a temporary JSON envelope before taking its UTF-8 excerpt.
+Every kind retains the existing title/status mapping, optional fields and complete
+structured metadata. This is response assembly after the ordinary source checks,
+not a partial parser or source cache.
+
 Source collection scans and consecutive reference checks use a scoped
 `CollectionReader`. It retains one collection descriptor, verifies the lease
 on every file and checks the approved project and collection identities in one

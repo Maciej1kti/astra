@@ -7,6 +7,15 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [context entry allocation iteration](2026-10-01-context-entry-allocation.md)
+borrows validated bodies and moves selected metadata into the existing response.
+Twelve release pairs preserve full normalized output and all 960 selected current
+version/order/budget checks. Rich dense medians repeat 1.0–1.4 ms savings; ordinary
+gains are negligible and tails remain variable. Eight focused context tests and
+the 471-test full gate pass; normally paired Chromium/WebKit protocol and all 14
+editor scenarios pass in both engines. Manual integration/reporting are pending;
+no new app availability or acceptance is claimed yet.
+
 The [bounded JSON map probe](2026-10-01-source-map-probe.md) is rejected and restored.
 Eight balanced release pairs preserve full normalized output and all 640 selected
 source/version/order/budget checks, but ordinary results change direction and rich

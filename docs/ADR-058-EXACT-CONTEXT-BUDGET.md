@@ -22,6 +22,14 @@ guarded reads, complete acceptance/comments/counters, excerpt boundaries,
 warnings, the 100/200-item caps and next-read references remain. The existing
 512-byte reserve and Focus half-budget check retain their exact original order.
 
+Entry construction borrows the full body from the already validated typed source,
+instead of copying it into a temporary JSON envelope before selecting an excerpt.
+Only metadata is serialized to a temporary object, and selected values move into
+the entry without another structured-metadata copy. The existing kind/title/project
+state mapping, optional fields, complete acceptance/comments/counters and UTF-8
+excerpt limits remain. All source parsing, validation and original byte versions
+still precede this projection; it creates no new source authority.
+
 After setting the final truncation flag, the ordinary complete serialization
 still checks the requested maximum and retains `CONTEXT_BUDGET_TOO_SMALL`.
 The tracker exists only while assembling this response; it grants no source
