@@ -7,6 +7,7 @@ appends and array caps leave output unchanged. The initial envelope and final
 complete serialization remain; source reads, versions, full structured metadata,
 UTF-8 excerpts, warnings, next-read hints, the reserve and budget errors remain.
 No source authority, cache, write exception or protocol change is introduced.
+The verified application is `bfbb58dbf2a7671041451f6b4e9431fba5a42a8a`.
 
 M4/macOS 27 arm64, Rust 1.92, ten available logical CPUs. Saved release binaries
 exercise ordinary `Engine::context` after registration/startup on synthetic
@@ -57,7 +58,18 @@ scenarios remain unchanged.
 
 Normally paired Chromium/WebKit protocol suites pass, including stale-page
 recovery in five views, complete HTTP/CLI context equality at all three budgets,
-actual UTF-8 response bounds and out-of-range rejection. Existing manual
-rebuild/preservation and the ordinary CLI result report remain pending.
-Broader perceived performance,
+actual UTF-8 response bounds and out-of-range rejection. The original frontend
+and release workspace are rebuilt; manual launcher 41022 is replaced by 64793
+with the existing data and connection. Trusted `https://100.122.250.14:47832`
+verification preserves 72 prior resource versions, two pins, preferences,
+certificate, epoch/instance and the complete normalized ordinary CLI context.
+All 32 served assets match the rebuilt frontend, with all 33 dist files matching
+the verified worktree. The ordinary CLI report
+`618e9be2-fe59-4539-9c62-c7a33e94f630` is committed/read back exactly, preserving
+the unrelated owner card. Broader perceived performance,
 Linux widget/QML and physical iPhone/release acceptance remain open.
+
+Further context work is supported by current code: `entry` creates a complete
+JSON document value, including the body, before selecting metadata and clipping
+the excerpt. The cost of that materialization and the remaining guarded candidate
+reads still need measurements; no further optimization is accepted here.

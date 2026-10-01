@@ -16,8 +16,12 @@ for ordinary maximum-budget contexts; small/minimum responses gain only about
 full normalized outputs match the control. The full gate passes 465 tests after
 resolving disk exhaustion with a cache discard and serial independent Rust tests.
 Normally paired Chromium/WebKit protocol checks retain complete HTTP/CLI equality,
-budget bounds and five-view stale-page recovery. Manual rebuild/preservation and
-the ordinary CLI report are pending; broader performance/release acceptance remain open.
+budget bounds and five-view stale-page recovery. The rebuilt manual app preserves
+72 prior versions, two pins, preferences, certificate, epoch and complete native
+CLI context. Trusted HTTPS verifies all 32 served assets; the ordinary CLI report
+is committed/read back with the owner card preserved. Body materialization and
+candidate-read costs remain the next context investigations; broader performance
+and release acceptance remain open.
 
 The [source pin-read iteration](2026-10-01-source-focus-stream.md) replaces full
 parsed-card retention with bounded ordered source visits and at most 101 pin
