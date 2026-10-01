@@ -1,0 +1,24 @@
+{
+  "api_version": "1",
+  "ok": true,
+  "request_id": null,
+  "command_epoch": null,
+  "http_status": 200,
+  "data": {
+    "online": true,
+    "total": 2,
+    "cards": [
+      {
+        "title": "Synthetic Focus card",
+        "status": "active",
+        "available": true
+      },
+      {
+        "title": "Unavailable pinned card",
+        "status": "",
+        "available": false
+      }
+    ],
+    "message": "Local API reachable"
+  }
+}

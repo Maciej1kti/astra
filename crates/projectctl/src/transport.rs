@@ -219,11 +219,11 @@ impl Outcome {
     }
 }
 
-async fn decode(mut response: reqwest::Response) -> Result<Value, Error> {
+async fn decode(mut response: reqwest::Response, limit: usize) -> Result<Value, Error> {
     let mut bytes = Vec::new();
     while let Some(chunk) = response.chunk().await? {
-        if bytes.len() + chunk.len() > RESPONSE_LIMIT {
-            return Err("Server response exceeds 16 MiB".into());
+        if bytes.len() + chunk.len() > limit {
+            return Err(format!("Server response exceeds {} MiB", limit / (1024 * 1024)).into());
         }
         bytes.extend_from_slice(&chunk);
     }
@@ -237,10 +237,24 @@ async fn decode(mut response: reqwest::Response) -> Result<Value, Error> {
 
 /// Preliminary reads retain server error codes/details and use the final-call limit.
 pub async fn checked(builder: RequestBuilder) -> Result<Value, Error> {
+    checked_bounded(builder, RESPONSE_LIMIT, None).await
+}
+
+/// A desktop preview retains its smaller response budget on every read.
+pub(crate) async fn checked_bounded(
+    builder: RequestBuilder,
+    limit: usize,
+    expected_status: Option<u16>,
+) -> Result<Value, Error> {
     let response = builder.send().await?;
     let status = response.status().as_u16();
-    let decoded = decode(response).await.and_then(|body| {
+    let decoded = decode(response, limit).await.and_then(|body| {
         response::validate(status, &body, Expected::Json, None)?;
+        if expected_status
+            .is_some_and(|expected| (200..300).contains(&status) && status != expected)
+        {
+            return Err("Unexpected read response status".into());
+        }
         Ok(body)
     });
     let body = match decoded {
@@ -343,7 +357,7 @@ pub async fn execute(client: &Client, mut request: Request) -> Result<Outcome, E
         }
     };
     let status = response.status().as_u16();
-    let decoded = decode(response).await.and_then(|body| {
+    let decoded = decode(response, RESPONSE_LIMIT).await.and_then(|body| {
         response::validate(
             status,
             &body,

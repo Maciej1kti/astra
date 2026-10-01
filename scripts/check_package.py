@@ -288,8 +288,10 @@ def check_api_examples() -> dict:
         Draft202012Validator(schema, format_checker=FORMAT).validate(load_json(f"examples/{filename}"))
     cli_schema = load_json("contracts/cli-output.schema.json")
     Draft202012Validator.check_schema(cli_schema)
-    for filename in ["cli-output.json", "cli-uncertain-output.json"]:
+    for filename in ["cli-output.json", "cli-uncertain-output.json", "cli-focus-preview.json"]:
         Draft202012Validator(cli_schema, format_checker=FORMAT).validate(load_json(f"examples/{filename}"))
+    preview_schema = {"$ref": "#/$defs/FocusPreview", "$defs": cli_schema["$defs"]}
+    Draft202012Validator(preview_schema).validate(load_json("examples/cli-focus-preview.json")["data"])
     COUNTS["request_examples"] = len(bindings)
     return {"examples": len(bindings)}
 

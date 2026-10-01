@@ -28,3 +28,7 @@ gzip, identity compatibility and the source-resource boundary in
 devices without removing their content. The [HTTP example](requests/card-sections.http)
 uses an ordinary conditional card patch; see
 [ADR-056](../docs/ADR-056-CARD-SECTION-VISIBILITY.md).
+
+[CLI Focus preview](cli-focus-preview.json) illustrates ordered compact desktop
+rows and an unavailable retained pin. It is a read-only client result; see
+[ADR-057](../docs/ADR-057-FOCUS-WIDGET-READER.md).

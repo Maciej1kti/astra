@@ -28,7 +28,7 @@ Panel {
       snapshot = {online: false, cards: [], total: 0, message: "Configure the local server socket in widget settings."}
       return
     }
-    reader.command = ["python3", decodeURIComponent(Qt.resolvedUrl("status.py").toString().replace(/^file:\/\//, "")), socketPath]
+    reader.command = ["projectctl", "--socket", socketPath, "focus-preview"]
     reader.running = true
   }
 
@@ -85,8 +85,9 @@ Panel {
       onStreamFinished: {
         if (reader.command[2] !== root.socketPath) return
         try {
-          var value = JSON.parse(text)
-          if (typeof value.online !== "boolean" || !Array.isArray(value.cards)) throw new Error("Invalid status")
+          var envelope = JSON.parse(text)
+          var value = envelope.data
+          if (envelope.ok !== true || !value || typeof value.online !== "boolean" || !Array.isArray(value.cards) || value.cards.length > 5) throw new Error("Invalid status")
           root.snapshot = value
           root.checkedAt = Qt.formatDateTime(new Date(), "HH:mm:ss")
         } catch (error) {
@@ -95,6 +96,7 @@ Panel {
       }
     }
     onExited: function(code) {
+      if (reader.command[2] !== root.socketPath) return
       if (code !== 0) root.snapshot = {online: false, cards: [], total: 0, message: "Unable to run server check"}
     }
   }

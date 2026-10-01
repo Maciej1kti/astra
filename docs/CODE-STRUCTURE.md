@@ -230,6 +230,12 @@ queries, operation-aware transport and optional terminal presentation in separat
 modules under `crates/projectctl/src`. `transport/response.rs` checks command
 confirmation envelopes and identity; source validation remains server-owned.
 See the [CLI guide](../CLI.md) and [ADR-032](ADR-032-EXPLICIT-CLI-OPERATIONS.md).
+`focus_preview.rs` maps the bounded membership snapshot into the optional Omarchy
+widget's first five rows. It uses the CLI's checked Unix transport with a smaller
+response/time budget; only reference-only hosts read card details. Unverified rows
+remain unavailable. The widget consumes the CLI envelope and retains its ordinary
+process/watchdog ownership; the separate window activation helper remains Python.
+See [ADR-057](ADR-057-FOCUS-WIDGET-READER.md).
 
 [Engine](../crates/application/src/engine.rs) owns storage handles and application
 services. HTTP and the CLI cannot access its journal, index or operation gate.

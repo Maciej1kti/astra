@@ -19,6 +19,8 @@ dependencies. The full application remains the existing WebUI.
 
 ## Install
 
+Install the current Rust `projectctl` client on the shell's PATH (see
+[Installation](../../INSTALL.md)). Confirm `projectctl focus-preview --help` works.
 Copy `astra.focus/` into `~/.config/omarchy/plugins/astra.focus/`, then run:
 
 ```sh
@@ -40,12 +42,21 @@ before enabling it. Back up `shell.json` before changing the bar. During local
 development, this Omarchy release can retain cached QML after a source change;
 if hot reload does not apply it, use `omarchy restart shell` after saving.
 
-The Python helper issues only bounded GET requests over the existing Unix
-socket API, authenticated by the server using the peer UID. It resolves at most
-five cards, validates reference UUIDs, and never executes document contents.
-Each response is limited to 2 MiB, each socket operation to at most two seconds,
-and the shell terminates a helper still running after eight seconds. Display
-text is plain text. No user content or tokens are cached to disk.
+The Rust `projectctl focus-preview` reader issues only bounded GET requests over
+that Unix socket, authenticated by the server using the peer UID. Current hosts
+supply membership and summaries in one Focus snapshot response; the widget shows
+the first five pins in membership order without downloading full card bodies.
+Missing, invalid, unavailable or stale summaries retain an unavailable placeholder.
+Older reference-only hosts keep the bounded path of up to five card reads. Opening
+the WebUI still uses its ordinary source-read and pairing rules.
+
+Each response is limited to 2 MiB and each request to at most two seconds. The
+whole read budget is six seconds; the shell terminates a reader still running after
+eight seconds. A lower CLI `--timeout` also shortens the whole budget. Plain-text
+output contains at most 300 title characters and 40 status characters per card.
+No user content or tokens are cached to disk. Python remains only in the separate
+window launch/focus helper. See [the CLI preview](../../CLI.md#desktop-focus-preview)
+and [ADR-057](../../docs/ADR-057-FOCUS-WIDGET-READER.md).
 
 Status IPC for troubleshooting:
 
@@ -69,6 +80,7 @@ other Linux desktops and macOS are not supported by this integration.
 ## Validation
 
 ```sh
+scripts/cargo-local test -p projectctl --test focus_preview --locked
 python3 -m unittest discover -s integrations/omarchy -p 'test_*.py'
 omarchy plugin validate integrations/omarchy/astra.focus
 ```

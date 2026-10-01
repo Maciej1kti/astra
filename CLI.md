@@ -36,6 +36,27 @@ terminal control characters from source content. The JSON envelope is the stable
 interface for scripts; text layout is intended for people. Do not combine
 `--json` with `--output`. Argument parsing errors still use JSON.
 
+## Desktop Focus preview
+
+```sh
+projectctl --socket /absolute/path/to/projectd.sock focus-preview
+```
+
+This read-only command returns the normal JSON envelope with compact `data`:
+`online`, `total`, at most five `{title, status, available}` entries and `message`.
+See the [example](examples/cli-focus-preview.json) and the `FocusPreview` definition
+in the [CLI schema](contracts/cli-output.schema.json). `online: true` means the
+Focus API responded, not that every source or the HTTPS proxy is healthy.
+
+Current hosts provide summaries in the same snapshot as membership. Missing,
+stale or invalid summaries keep unavailable placeholders in the original pin order;
+they never trigger speculative source reads. Reference-only older hosts retain up
+to five detail requests. The command uses the explicitly selected absolute socket,
+never project discovery or direct source-file access. Each response is limited to
+2 MiB, each request to two seconds and the complete read budget to six seconds;
+a lower `--timeout` shortens it. Errors use the ordinary CLI envelope and exit codes.
+No editable source version or durable command identity is introduced.
+
 ## Create and edit
 
 Simple creation and field edits use named flags:

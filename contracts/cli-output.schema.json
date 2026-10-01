@@ -81,5 +81,58 @@
         ]
       }
     }
-  ]
+  ],
+  "$defs": {
+    "FocusPreview": {
+      "type": "object",
+      "description": "Read-only focus-preview data. Successful Focus availability does not certify all sources or HTTPS.",
+      "properties": {
+        "online": {
+          "const": true
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "cards": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "status": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "available": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "title",
+              "status",
+              "available"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "message": {
+          "const": "Local API reachable"
+        }
+      },
+      "required": [
+        "online",
+        "total",
+        "cards",
+        "message"
+      ],
+      "additionalProperties": false
+    }
+  }
 }

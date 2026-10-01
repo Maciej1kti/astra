@@ -1,3 +1,4 @@
+mod focus_preview;
 mod input;
 mod output;
 mod project;
@@ -46,6 +47,8 @@ enum OutputFormat {
 }
 #[derive(Subcommand)]
 enum Action {
+    /// Read a bounded five-card Focus preview for a local desktop widget.
+    FocusPreview,
     /// Read a project deletion plan or permanently remove its `.project` tree.
     Project {
         #[command(subcommand)]
@@ -220,12 +223,23 @@ async fn run(args: Arguments) -> Result<transport::Outcome, Box<dyn std::error::
             .filter(|value| !value.is_empty())
             .map(PathBuf::from)
     });
+    let socket = socket.ok_or("Provide --socket or set ASTRA_SOCKET to the daemon socket")?;
+    if matches!(args.command, Action::FocusPreview) && !socket.is_absolute() {
+        return Err("Focus preview requires an absolute socket path".into());
+    }
     let client = reqwest::Client::builder()
-        .unix_socket(socket.ok_or("Provide --socket or set ASTRA_SOCKET to the daemon socket")?)
+        .unix_socket(socket)
         .no_proxy()
         .timeout(Duration::from_secs(args.timeout))
         .build()?;
     let request = match args.command {
+        Action::FocusPreview => {
+            let data = focus_preview::read(&client, Duration::from_secs(args.timeout)).await?;
+            return Ok(transport::Outcome {
+                code: 0,
+                output: json!({"api_version":"1","ok":true,"http_status":200,"request_id":null,"command_epoch":null,"data":data}),
+            });
+        }
         Action::Project { action } => action.prepare()?,
         Action::MaintenancePlan { json_file } => Request::local(
             "POST",
