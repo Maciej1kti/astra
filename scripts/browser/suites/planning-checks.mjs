@@ -200,7 +200,7 @@ export async function verifyPlanningFixes(
     expect(shifted.x).toBe(initial.x);
     expect(shifted.width).toBe(initial.width);
     await expect(
-      page.getByRole("button", { name: "Open card", exact: true }),
+      page.getByRole("button", { name: "Open item", exact: true }),
     ).toBeEnabled();
     await onCheckpoint("mobile-390-timeline-selection", page);
     await page.setViewportSize({ width: 1440, height: 1000 });

@@ -13,6 +13,13 @@
   import { widgetDate, type GanttPage } from "./planning";
   import type { DateProposal } from "./proposals";
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
+  import TimelineRow from "./TimelineRow.svelte";
+  import {
+    orderedTimelineRows,
+    readTimelineOrder,
+    writeTimelineOrder,
+    moveTimelineRow,
+  } from "./timeline-order";
   import GanttTask from "./GanttTask.svelte";
   import { cursorPage } from "../../lib/api/pagination";
   import { getGantt } from "../../lib/api/planning";
@@ -24,6 +31,7 @@
     project,
     month,
     revision,
+    writePending,
     search,
     open,
     onpropose,
@@ -32,6 +40,7 @@
     project: string;
     month: string;
     revision: number;
+    writePending: boolean;
     search: string;
     open: (row: Summary) => void;
     onpropose: (p: DateProposal) => void;
@@ -43,6 +52,8 @@
   let pageNotice = $state("");
   let freshness = $state("");
   let gesture = $state(false);
+  let rowOrder = $state<string[]>([]);
+  let orderNotice = $state("");
   let scale = $state("days");
   let selection = $state("");
   let history = $state<(string | null)[]>([null]);
@@ -62,7 +73,9 @@
   );
   const cards = $derived(filtered.filter((r) => r.type === "card"));
   const selected = $derived(data?.rows.find((r) => r.id === selection));
-  const tasks = $derived(ganttTasks(filtered));
+  const baseTasks = $derived(
+    ganttTasks(orderedTimelineRows(filtered, rowOrder)),
+  );
   const scales = $derived<NonNullable<IConfig["scales"]>>(
     scale === "days"
       ? [
@@ -81,9 +94,21 @@
   );
   const columns = $derived<IColumnConfig[]>(
     chartWidth < metrics.compactWidth
-      ? [{ id: "text", header: "Card / milestone", width: metrics.compactGrid }]
+      ? [
+          {
+            id: "text",
+            header: "Item",
+            cell: TimelineRow,
+            width: metrics.compactGrid,
+          },
+        ]
       : [
-          { id: "text", header: "Card / milestone", width: metrics.grid },
+          {
+            id: "text",
+            header: "Item",
+            cell: TimelineRow,
+            width: metrics.grid,
+          },
           { id: "plannedStart", header: "Start", width: metrics.startColumn },
           { id: "plannedEnd", header: "End", width: metrics.endColumn },
         ],
@@ -93,7 +118,7 @@
       shiftDate(
         [
           `${month}-01`,
-          ...tasks
+          ...baseTasks
             .map((t) => t.plannedStart ?? t.astra.due?.date)
             .filter((value): value is string => !!value),
         ].sort()[0],
@@ -107,7 +132,7 @@
         [
           `${month}-28`,
           ...filtered.flatMap((row) => (row.due ? [row.due.date] : [])),
-          ...tasks
+          ...baseTasks
             .map((t) => t.plannedEnd ?? t.astra.due?.date)
             .filter((value): value is string => !!value),
         ]
@@ -117,8 +142,23 @@
       ),
     ),
   );
-  const editable = () => (!loading || gesture) && !error;
+  const tasks = $derived([
+    ...baseTasks,
+    {
+      id: "astra-create-row",
+      text: "",
+      type: "task",
+      start: axisStart,
+      end: axisEnd,
+      astraCreate: true,
+      astraCreateDate: `${month}-01`,
+    },
+  ]);
+  const editable = () => (!loading || gesture) && !error && !writePending;
   setContext<GanttContext>(GANTT_CONTEXT, {
+    order: () => baseTasks.map((task) => String(task.id)),
+    reorder: reorderRow,
+    create: (date) => oncreate({ start: date, end: date }),
     open: (row) => open(row),
     editable,
     gesture: (active) => {
@@ -146,6 +186,8 @@
       if (loadedProject !== nextProject) {
         loadedProject = nextProject;
         history = [null];
+        rowOrder = readTimelineOrder(nextProject);
+        orderNotice = "";
         data = null;
         selection = "";
         pageNotice = "";
@@ -180,6 +222,22 @@
       },
     });
   }
+  function reorderRow(id: string, destination: number) {
+    if (!editable()) return;
+    const order = baseTasks.map((task) => String(task.id));
+    const moved = moveTimelineRow(order, id, destination);
+    const visible = new Set(order);
+    const retained = rowOrder.filter((key) => !visible.has(key));
+    rowOrder = [...moved, ...retained];
+    orderNotice = writeTimelineOrder(project, rowOrder)
+      ? ""
+      : "This browser could not save the timeline order.";
+    void tick().then(() =>
+      chartRoot
+        ?.querySelector<HTMLButtonElement>(`[data-timeline-row="${id}"] button`)
+        ?.focus({ preventScroll: true }),
+    );
+  }
   function selectCard(id: string) {
     selection = id;
     const task = tasks.find((item) => item.id === id);
@@ -194,9 +252,9 @@
     const widget = widgetApi;
     const key = `${project}:${month}:${scale}:${chartWidth < metrics.compactWidth}`;
     const task =
-      tasks.find((t) =>
+      baseTasks.find((t) =>
         (t.plannedStart ?? t.astra.due?.date ?? "").startsWith(month),
-      ) ?? tasks[0];
+      ) ?? baseTasks[0];
     if (!widget || !task || key === lastNavigation) return;
     lastNavigation = key;
     void tick()
@@ -261,18 +319,8 @@
         ><option value="months">Months</option></select
       ></label
     >
-    <button
-      onclick={() => oncreate({ start: `${month}-01`, end: `${month}-01` })}
-      >New scheduled card</button
-    >
   </div>
-  <details class="timeline-help">
-    <summary>Timeline shortcuts & editing</summary>
-    <p class="hint">
-      Drag a card’s bar or its edges. Click the bar to edit its dates. Alt+←/→
-      on a handle changes one day; hold Shift for a week.
-    </p>
-  </details>
+  {#if orderNotice}<p role="status">{orderNotice}</p>{/if}
   {#if error}<p role="alert">
       {error}
       <button
@@ -287,18 +335,18 @@
   {#if pageNotice}<p class="hint" role="status">{pageNotice}</p>{/if}
   <div class="selection-bar" aria-label="Timeline selection">
     <label>
-      Selected card<select
+      Selected item<select
         aria-label="Selected card"
         value={selection}
         onchange={(event) => selectCard(event.currentTarget.value)}
       >
-        <option value="">Choose a card or milestone</option>
+        <option value="">Choose an item</option>
         {#each filtered as row}<option value={row.id}>{row.title}</option
           >{/each}
       </select>
     </label>
     <button disabled={!selected} onclick={() => selected && open(selected)}
-      >Open card</button
+      >Open item</button
     >
     {#if selected?.schedule}<button
         onclick={() =>
@@ -421,11 +469,6 @@
     font-size: var(--text-sm);
     color: var(--muted);
     line-height: var(--leading-body);
-  }
-  .timeline-help {
-    font-size: var(--text-sm);
-    color: var(--muted);
-    margin: var(--space-4) 0;
   }
   label {
     display: grid;

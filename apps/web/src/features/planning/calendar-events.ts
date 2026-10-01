@@ -73,7 +73,13 @@ function sameItem(left: CalendarItem, right: CalendarItem): boolean {
 export function calendarEventProjection() {
   let previous = new Map<string, Calendar.EventInput>();
   let events: Calendar.EventInput[] = [];
-  return (items: CalendarItem[], search: string, editable: boolean) => {
+  return (
+    items: CalendarItem[],
+    search: string,
+    editable: boolean,
+    refresh = false,
+  ) => {
+    if (refresh) previous = new Map();
     const needle = search.toLowerCase();
     const next = new Map<string, Calendar.EventInput>();
     const result: Calendar.EventInput[] = [];

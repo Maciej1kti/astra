@@ -4,7 +4,6 @@
   import PinnedCard from "./PinnedCard.svelte";
   import type { FocusCounterSnapshot } from "../../cards/focus-counter-controller";
   import type { DailyCounterSummary } from "../../../lib/contracts/api.generated";
-  import ResourceCard from "../../../lib/ui/ResourceCard.svelte";
   import SectionHeading from "../../../lib/ui/SectionHeading.svelte";
   import Icon from "../../../lib/ui/Icon.svelte";
 
@@ -272,12 +271,17 @@
     title="In motion"
     count={`${activeCards.length} visible plans`}
   />
-  <div class="grid">
-    {#each activeCards as item (item.project_id + ":" + item.id)}<ResourceCard
+  <div class="focus-stack">
+    {#each activeCards as item (item.project_id + ":" + item.id)}<PinnedCard
         {item}
-        showStatus
+        {today}
+        {timezone}
+        {now}
+        {counterState}
+        {oncounter}
+        pinned={false}
         projectName={projectLabel(projects, item.project_id)}
-        onclick={() => open(item)}
+        open={() => open(item)}
       />{:else}<EmptyState>
         No other plans are scheduled for today on this page.
       </EmptyState>{/each}
@@ -298,13 +302,18 @@
     title="Events"
     count={`${sections.eventCards.length} visible events`}
   />
-  <div class="grid">
+  <div class="focus-stack">
     {#each sections.eventCards as item (item.project_id + ":" + item.id)}
-      <ResourceCard
+      <PinnedCard
         {item}
-        showStatus
+        {today}
+        {timezone}
+        {now}
+        {counterState}
+        {oncounter}
+        pinned={false}
         projectName={projectLabel(projects, item.project_id)}
-        onclick={() => open(item)}
+        open={() => open(item)}
       />
     {:else}<EmptyState
         >No other events are scheduled for today on this page.</EmptyState

@@ -5,6 +5,7 @@ export type DateProposal = {
   schedule?: { start: string; end: string };
   event?: import("../../lib/contracts/domain.generated").TimedEvent;
   title?: string;
+  autoCommit?: boolean;
 };
 export type MoveProposal = {
   item: Summary;

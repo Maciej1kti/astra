@@ -327,7 +327,14 @@ await runBrowserSuite(
             .getByRole("button")
             .filter({ hasText: title(pinned) })
             .locator('[aria-label="Attention reasons"] .badge');
-          await expect(pinnedReasons).toHaveText(["Overdue"]);
+          await expect(pinnedReasons).toHaveCount(0);
+          await expect(
+            focus.locator(".focus-card-facts").first(),
+          ).toContainText("overdue");
+          await expect(motion.locator(".focus-card-open")).toHaveCount(1);
+          await expect(
+            section(page, "Events").locator(".focus-card-open"),
+          ).toHaveCount(1);
           const combinedReasons = attention
             .getByRole("button")
             .filter({ hasText: title(reviewOverdue) })
@@ -346,7 +353,7 @@ await runBrowserSuite(
           });
           return {
             sections: ["In focus", "Needs my attention", "In motion", "Events"],
-            pinnedReason: "Overdue",
+            pinnedReason: "Inline schedule only",
             groupedReasons: ["Overdue", "Review"],
           };
         },

@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [owner-directed UI corrections](2026-10-01-ui-corrections.md) unify Focus card
+presentation, repair the main header corners, save Calendar pointer changes without
+a confirmation step and add Timeline row ordering and dated blank-row creation.
+The 466-test full gate and seven final WebKit suites pass. The broad HTTPS/planning checks and all 27 Chromium suites also pass. Final style reruns pass in both engines; manual application verification
+remains in progress. Independent milestones retain their
+working API/CLI and report contracts.
+
 The [context byte-accounting iteration](2026-10-01-context-budget.md) replaces
 repeated whole-response serialization with exact request-local entry/comma/count
 accounting, retaining every source read and final full JSON bound check. Two quiet

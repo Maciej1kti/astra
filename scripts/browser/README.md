@@ -58,9 +58,14 @@ The events suite covers event autosave, conversion to/from date plans, hourly
 calendar movement, duration edits, slot creation, mobile layout and browser
 timezone independence.
 
+The `ui-corrections` suite checks Timeline pointer/keyboard row ordering and
+per-project browser persistence, exact blank-row dated creation, narrow layout,
+Chromium touch input and workspace header corners.
+
 The `calendar-popup` suite checks complete month-popup membership and current
 versions, native pointer movement and both resize boundaries from the popup,
-Escape cancellation, long wrapping titles and fresh Enter/Space source opening
+automatic writes without confirmation, lost-acknowledgement replay, competing
+conditional-write conflicts, Escape cancellation, long wrapping titles and fresh Enter/Space source opening
 at 1440, 390 and 320px. It also checks the popup against its currently measured
 grid and verifies that native handles receive pointer input after list scrolling.
 The saved Chromium release control passes the native gesture scenario. The

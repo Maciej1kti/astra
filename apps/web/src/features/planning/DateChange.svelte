@@ -22,6 +22,7 @@
     schedule,
     event,
     title = "",
+    autoCommit = false,
     onclose,
     onsaved,
   }: {
@@ -30,6 +31,7 @@
     schedule?: { start: string; end: string };
     event?: TimedEvent;
     title?: string;
+    autoCommit?: boolean;
     onclose: () => void;
     onsaved: () => void;
   } = $props();
@@ -64,6 +66,8 @@
       ended: lost,
       restored: restored,
     });
+
+    if (autoCommit) void save();
 
     return () => {
       unsubscribeSession();
@@ -128,115 +132,135 @@
   }
 </script>
 
-<dialog
-  class="app-dialog dialog-small"
-  use:modal
-  aria-label={heading}
-  oncancel={(event) => {
-    event.preventDefault();
-    if (!busy && !pending) onclose();
-  }}
->
-  <DialogHeader
-    title={heading}
-    {onclose}
-    disabled={busy || !!pending}
-    closeLabel="Close planned dates"
-  />
-  <form
-    class="dialog-form"
-    onsubmit={(event) => {
+{#if autoCommit && !error}<p role="status" class="planning-save-status">
+    Saving planned dates…
+  </p>{/if}
+
+{#if !autoCommit || error}
+  <dialog
+    class="app-dialog dialog-small"
+    use:modal
+    aria-label={heading}
+    oncancel={(event) => {
       event.preventDefault();
-      void save();
+      if (!busy && !pending) onclose();
     }}
   >
-    <div class="dialog-body">
-      {#if title}<p>{title}</p>{/if}
-      <div class="date-fields">
-        <label
-          >Planned start<input
-            type="date"
-            bind:value={start}
-            required
-            disabled={busy || !!pending || !!conflict || accessLost}
-          /></label
-        >
-        {#if event}
+    <DialogHeader
+      title={heading}
+      {onclose}
+      disabled={busy || !!pending}
+      closeLabel="Close planned dates"
+    />
+    <form
+      class="dialog-form"
+      onsubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <div class="dialog-body">
+        {#if title}<p>{title}</p>{/if}
+        <div class="date-fields">
           <label
-            >Start time<input
-              type="time"
-              bind:value={time}
-              required
-              disabled={busy || !!pending || !!conflict || accessLost}
-            /></label
-          >
-          <label
-            >Duration (minutes)<input
-              type="number"
-              min="1"
-              max="10080"
-              step="1"
-              bind:value={duration}
-              required
-              disabled={busy || !!pending || !!conflict || accessLost}
-            /></label
-          >
-        {:else}
-          <label
-            >Planned end<input
+            >Planned start<input
               type="date"
-              bind:value={end}
-              min={start}
+              bind:value={start}
               required
               disabled={busy || !!pending || !!conflict || accessLost}
             /></label
           >
-        {/if}
+          {#if event}
+            <label
+              >Start time<input
+                type="time"
+                bind:value={time}
+                required
+                disabled={busy || !!pending || !!conflict || accessLost}
+              /></label
+            >
+            <label
+              >Duration (minutes)<input
+                type="number"
+                min="1"
+                max="10080"
+                step="1"
+                bind:value={duration}
+                required
+                disabled={busy || !!pending || !!conflict || accessLost}
+              /></label
+            >
+          {:else}
+            <label
+              >Planned end<input
+                type="date"
+                bind:value={end}
+                min={start}
+                required
+                disabled={busy || !!pending || !!conflict || accessLost}
+              /></label
+            >
+          {/if}
+        </div>
+        {#if error}<p role="alert">{error}</p>{/if}
+        {#if conflict?.current}<p>
+            Current saved schedule: {JSON.stringify(
+              conflict.current.type === "card"
+                ? (conflict.current.metadata.event ??
+                    conflict.current.metadata.schedule ??
+                    null)
+                : null,
+            )}. Your proposed dates remain above. Reopen the card to start a new
+            edit.
+          </p>{/if}
+        {#if pending}<p>Request: {pending.requestId}</p>
+          <button type="button" onclick={status} disabled={busy}
+            >Check status</button
+          ><button type="button" onclick={transmit} disabled={busy}
+            >Retry same command</button
+          >{/if}
+        {#if error || pending || accessLost}<button
+            type="button"
+            onclick={copyDraft}>Copy draft</button
+          >{/if}
+        {#if accessLost && pending}<details>
+            <summary>Close without resolving</summary>
+            <p>
+              Copy the request ID and proposal first. The operation may already
+              have committed.
+            </p>
+            <button type="button" onclick={onclose}
+              >Discard this proposal</button
+            >
+          </details>{/if}
       </div>
-      {#if error}<p role="alert">{error}</p>{/if}
-      {#if conflict?.current}<p>
-          Current saved schedule: {JSON.stringify(
-            conflict.current.type === "card"
-              ? (conflict.current.metadata.event ??
-                  conflict.current.metadata.schedule ??
-                  null)
-              : null,
-          )}. Your proposed dates remain above. Reopen the card to start a new
-          edit.
-        </p>{/if}
-      {#if pending}<p>Request: {pending.requestId}</p>
-        <button type="button" onclick={status} disabled={busy}
-          >Check status</button
-        ><button type="button" onclick={transmit} disabled={busy}
-          >Retry same command</button
-        >{/if}
-      {#if error || pending || accessLost}<button
-          type="button"
-          onclick={copyDraft}>Copy draft</button
-        >{/if}
-      {#if accessLost && pending}<details>
-          <summary>Close without resolving</summary>
-          <p>
-            Copy the request ID and proposal first. The operation may already
-            have committed.
-          </p>
-          <button type="button" onclick={onclose}>Discard this proposal</button>
-        </details>{/if}
-    </div>
-    <footer class="dialog-footer">
-      <button type="button" onclick={onclose} disabled={busy || !!pending}
-        >Cancel</button
-      ><Button
-        variant="primary"
-        type="submit"
-        disabled={busy || !!pending || !!conflict || accessLost}
-        >{event ? "Save event time" : "Save planned dates"}</Button
-      >
-    </footer>
-  </form>
-</dialog>
+      <footer class="dialog-footer">
+        <button type="button" onclick={onclose} disabled={busy || !!pending}
+          >Cancel</button
+        ><Button
+          variant="primary"
+          type="submit"
+          disabled={busy || !!pending || !!conflict || accessLost}
+          >{event ? "Save event time" : "Save planned dates"}</Button
+        >
+      </footer>
+    </form>
+  </dialog>
+{/if}
 
 <style>
+  .planning-save-status {
+    position: fixed;
+    inset: auto var(--space-10) var(--space-10) auto;
+    z-index: var(--layer-floating);
+    padding: var(--space-4) var(--space-6);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--paper);
+    box-shadow: var(--shadow-sm);
+    font-size: var(--text-sm);
+  }
+
   label {
     display: grid;
     gap: var(--space-4);

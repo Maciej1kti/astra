@@ -236,16 +236,18 @@ try {
     baseline.version,
   );
   await drag("move");
-  await expect(page.getByLabel("Planned start", { exact: true })).toHaveValue(
-    "2026-09-08",
-  );
-  await expect(page.getByLabel("Planned end", { exact: true })).toHaveValue(
-    "2026-09-10",
-  );
-  await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
-    .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  const designPath = `/api/v1/projects/${plan.project_id}/cards/${design.id}`;
+  const savedCalendar = async (start, end) => {
+    await expect
+      .poll(() => cli("get", designPath).metadata.schedule)
+      .toEqual({ start, end });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(locator()).toHaveAttribute(
+      "data-source-version",
+      cli("get", designPath).version,
+    );
+  };
+  await savedCalendar("2026-09-08", "2026-09-10");
   // A refresh must not move a gesture target or remove its resizer while the
   // displayed source version is still usable. Hold a real response across input.
   await expect(locator()).toHaveAttribute(
@@ -309,27 +311,9 @@ try {
     await page.unroute(calendarRead);
   }
   if (calendarRouteError) throw calendarRouteError;
-  await expect(page.getByLabel("Planned start", { exact: true })).toHaveValue(
-    "2026-09-08",
-  );
-  await expect(page.getByLabel("Planned end", { exact: true })).toHaveValue(
-    "2026-09-11",
-  );
-  await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
-    .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await savedCalendar("2026-09-08", "2026-09-11");
   await drag("start");
-  await expect(page.getByLabel("Planned start", { exact: true })).toHaveValue(
-    "2026-09-09",
-  );
-  await expect(page.getByLabel("Planned end", { exact: true })).toHaveValue(
-    "2026-09-11",
-  );
-  await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
-    .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await savedCalendar("2026-09-09", "2026-09-11");
   await expect(locator()).toHaveAttribute(
     "data-source-version",
     cli("get", `/api/v1/projects/${plan.project_id}/cards/${design.id}`)

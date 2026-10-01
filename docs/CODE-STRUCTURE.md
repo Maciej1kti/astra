@@ -35,7 +35,8 @@ Focus reads its pinned summaries with the ordered membership snapshot. Missing
 retained references become unavailable placeholders; older hosts without summaries
 use the existing bounded detail-read path. Opening a card still reads its current
 source before editing. See [ADR-051](ADR-051-FOCUS-SNAPSHOT-SUMMARIES.md).
-`PinnedCard` separates the opening/reordering surface from `FocusCounterChip`.
+`PinnedCard` also presents the daily plan/event sections without pin gestures
+and avoids duplicate overdue badges. It separates the opening/reordering surface from `FocusCounterChip`.
 The cards feature owns the horizontal scrub action and a route-independent
 `FocusCounterController`; its confirmed-response overlay prevents old projections
 from briefly replacing acknowledged totals. Daily previews and the narrow
@@ -76,6 +77,14 @@ that catalog without cancelling the current source; Labels then reads fresh
 tags. After handoff, Labels owns its existing generation checks for invalidation,
 retries and session restoration. No source response or catalog is retained across
 editor instances. Network work and modal rendering can overlap.
+
+Calendar pointer proposals use `DateChange` automatic submission. Only failures
+show the recovery dialog; command identity and version semantics are unchanged.
+Native Calendar gesture completion republishes canonical event snapshots so
+widget mutation cannot leave a retained month projection hidden.
+`timeline-order.ts` owns project-scoped browser presentation order; `TimelineRow`
+and `timeline-row-gesture.ts` own accessible row grips and cancelled previews.
+The final Timeline row creates an ordinary dated card draft.
 
 Calendar, Gantt and Board subscribe through scalar read scopes. Republishing an
 identical route or editing a loaded-title filter does not request the same page

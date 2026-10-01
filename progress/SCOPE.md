@@ -237,3 +237,22 @@ for each section; the owner confirmed that visibility belongs to the specific
 card across all devices. Hiding a section preserves its content. Existing
 browser-local section order remains separate. See
 [ADR-056](../docs/ADR-056-CARD-SECTION-VISIBILITY.md).
+
+
+## Focus, Calendar and Timeline corrections — owner direction, 2026-10-01
+
+Use the In focus card appearance in In motion and Events. Remove the duplicate
+Overdue badge where the schedule already describes lateness. Correct the upper
+corners of the main workspace panel, including Focus and Projects; leave the
+other Projects content and Needs my attention behavior as they are.
+
+Calendar pointer movement and resizing save on drop without a confirmation modal.
+Retain ordinary recovery on failed, uncertain and conflicting writes. Ensure month
+moves do not leave items hidden and render the symbols used in the legend.
+
+Remove Timeline shortcuts/editing help and its duplicate New scheduled card action;
+retain the header Add card action. Provide row dragging and allow the final empty
+row to create work on the clicked date. Review the apparently unused Milestone
+concept: it is currently an independent API/CLI resource with date projections
+and reports, rather than a card type. This review does not retire its source or
+report contracts.

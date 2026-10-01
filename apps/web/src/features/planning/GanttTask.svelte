@@ -5,13 +5,15 @@
   import type { Summary } from "../../lib/api/api";
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
   import { dateGesture } from "./date-gesture";
-  import { dayDistance } from "./dates";
+  import { dateOnly } from "./planning";
+  import { dayDistance, shiftDate } from "./dates";
 
   let { data }: { data: ITask } = $props();
+  let creationDate = $state("");
   const actions = getContext<GanttContext>(GANTT_CONTEXT);
   const row = $derived(data.astra as Summary);
   const unit = $derived(
-    row.schedule
+    row?.schedule
       ? Number(data.$w) /
           (dayDistance(row.schedule.start, row.schedule.end) + 1)
       : 48,
@@ -38,8 +40,45 @@
   }
 </script>
 
-<div class="task" use:isolate data-card-id={row.id}>
-  {#if row.type === "milestone"}
+<div
+  class="task"
+  class:create={!!data.astraCreate}
+  use:isolate
+  data-card-id={row?.id}
+>
+  {#if data.astraCreate}
+    <button
+      class="create-row"
+      aria-label="Create card on timeline"
+      title="Click a date to create a card · Arrow keys and Enter"
+      onkeydown={(event) => {
+        if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+          event.preventDefault();
+          event.stopPropagation();
+          creationDate = shiftDate(
+            creationDate || data.astraCreateDate,
+            event.key === "ArrowLeft" ? -1 : 1,
+          );
+        }
+      }}
+      onclick={(event) => {
+        if (event.detail === 0) {
+          actions.create(creationDate || data.astraCreateDate);
+          return;
+        }
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const days = dayDistance(dateOnly(data.start!), dateOnly(data.end!));
+        const offset = Math.max(
+          0,
+          Math.min(
+            days - 1,
+            Math.floor(((event.clientX - bounds.left) / bounds.width) * days),
+          ),
+        );
+        actions.create(shiftDate(dateOnly(data.start!), offset));
+      }}>+</button
+    >
+  {:else if row.type === "milestone"}
     <button
       class="milestone"
       onclick={() => actions.open(row)}
@@ -99,6 +138,19 @@
 </div>
 
 <style>
+  .task.create {
+    background: transparent;
+  }
+  .create-row {
+    width: 100%;
+    height: 100%;
+    border: var(--stroke) dashed var(--line);
+    background: transparent;
+    color: var(--muted);
+    text-align: left;
+    padding-left: var(--space-6);
+  }
+
   .task {
     position: relative;
     display: flex;

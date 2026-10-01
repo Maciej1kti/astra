@@ -7,7 +7,7 @@ import { expect } from "@playwright/test";
 import { runBrowserSuite } from "../runtime.mjs";
 
 await runBrowserSuite(
-  async ({ config, cli, newContext, evidence, browser }) => {
+  async ({ config, cli, runtime, newContext, evidence, browser }) => {
     const project = config.projects[0];
     const folder = join(project.folder, ".project/cards");
     const template = JSON.parse(
@@ -259,22 +259,12 @@ await runBrowserSuite(
     }
     async function save(start, end) {
       await expect(
-        page.getByLabel("Planned start", { exact: true }),
-      ).toHaveValue(start);
-      await expect(page.getByLabel("Planned end", { exact: true })).toHaveValue(
-        end,
-      );
-      const previous = cli("get", sourcePath).version;
-      await page
-        .getByRole("button", { name: "Save planned dates", exact: true })
-        .click();
-      await expect(
-        page.getByLabel("Planned start", { exact: true }),
+        page.getByRole("dialog", { name: "Change planned dates" }),
       ).toHaveCount(0);
       await expect
         .poll(() => cli("get", sourcePath).metadata.schedule)
         .toEqual({ start, end });
-      assert.notEqual(cli("get", sourcePath).version, previous);
+
       await expect
         .poll(
           () =>
@@ -295,12 +285,95 @@ await runBrowserSuite(
       await expect(
         page.getByLabel("Planned start", { exact: true }),
       ).toHaveCount(0);
+      const attempts = [];
+      await page.route(`**${sourcePath}`, async (route) => {
+        if (route.request().method() !== "PATCH") return route.continue();
+        attempts.push({
+          headers: route.request().headers(),
+          payload: route.request().postDataJSON(),
+        });
+        if (attempts.length === 1) {
+          const response = await route.fetch();
+          assert.equal(response.status(), 200);
+          return route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({
+              error: {
+                code: "SERVER_BUSY",
+                message: "Synthetic lost acknowledgement",
+              },
+            }),
+          });
+        }
+        return route.continue();
+      });
       await gesture("move", "2026-09-07", "2026-09-10");
+      const recovery = page.getByRole("dialog", {
+        name: "Change planned dates",
+      });
+      await expect(recovery).toBeVisible();
+      await expect
+        .poll(() => cli("get", sourcePath).metadata.schedule)
+        .toEqual({ start: "2026-09-10", end: "2026-09-12" });
+      await recovery
+        .getByRole("button", { name: "Retry same command", exact: true })
+        .click();
+      await expect(recovery).toHaveCount(0);
+      assert.equal(attempts.length, 2);
+      for (const header of ["x-request-id", "x-command-epoch", "if-match"])
+        assert.equal(attempts[0].headers[header], attempts[1].headers[header]);
+      assert.deepEqual(attempts[0].payload, attempts[1].payload);
+      await page.unroute(`**${sourcePath}`);
       await save("2026-09-10", "2026-09-12");
       await gesture("end", "2026-09-12", "2026-09-14");
       await save("2026-09-10", "2026-09-14");
       await gesture("start", "2026-09-10", "2026-09-07");
       await save("2026-09-07", "2026-09-14");
+      const conflictBaseline = cli("get", sourcePath);
+      await page.route(
+        `**${sourcePath}`,
+        async (route) => {
+          if (route.request().method() !== "PATCH") return route.continue();
+          const file = join(runtime, "calendar-competing-command.json");
+          await writeFile(
+            file,
+            JSON.stringify({
+              set: {
+                priority:
+                  conflictBaseline.metadata.priority === "high"
+                    ? "normal"
+                    : "high",
+              },
+            }),
+          );
+          cli(
+            "command",
+            "PATCH",
+            sourcePath,
+            "--json-file",
+            file,
+            "--if-version",
+            conflictBaseline.version,
+          );
+          return route.continue();
+        },
+        { times: 1 },
+      );
+      await gesture("move", "2026-09-07", "2026-09-10");
+      await expect(recovery).toBeVisible();
+      await expect(recovery.getByText(/Current saved schedule:/)).toBeVisible();
+      assert.deepEqual(
+        cli("get", sourcePath).metadata.schedule,
+        conflictBaseline.metadata.schedule,
+      );
+      await expect(
+        recovery.getByLabel("Planned start", { exact: true }),
+      ).toHaveValue("2026-09-10");
+      await recovery
+        .getByRole("button", { name: "Cancel", exact: true })
+        .click();
+      await page.unroute(`**${sourcePath}`);
       for (const width of [1440, 390, 320]) {
         if (await popup.count())
           await popup.getByRole("button", { name: /close/i }).click();
@@ -348,15 +421,16 @@ await runBrowserSuite(
         if (browser.browserType().name() === "chromium")
           await page.screenshot({
             path: join(evidence, `popup-${width}.png`),
-            fullPage: true,
+            fullPage: false,
           });
+        const freshTarget = await open("2026-09-07");
         const sourceRead = page.waitForResponse(
           (response) =>
             new URL(response.url()).pathname === sourcePath &&
             response.status() === 200,
         );
-        await target.focus();
-        await target.press(width === 390 ? " " : "Enter");
+        await freshTarget.focus();
+        await freshTarget.press(width === 390 ? " " : "Enter");
         const source = await (await sourceRead).json();
         assert.equal(source.version, cli("get", sourcePath).version);
         await expect(

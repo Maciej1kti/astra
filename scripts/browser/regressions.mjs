@@ -26,6 +26,7 @@ const suites = [
   "dialogs",
   "responsive",
   "planning",
+  "ui-corrections",
   "calendar-pages",
   "calendar-layout",
   "calendar-popup",

@@ -164,13 +164,17 @@ In **Timeline**, choose September 2026, then:
 2. Drag a bar or either edge and confirm the date proposal. Escape during a
    gesture cancels it. Alt+Left/Right on a focused handle changes one day;
    adding Shift changes a week. Open the selected card for full editing.
-3. Change the card's Start and End fields, wait for Saved, then reload and check
+3. Drag a row by its grip, try Alt+Up/Down, then reload to verify the browser
+   remembers the project order. Click a date in the final empty row and check
+   the new card draft has that date. The header Add card action remains.
+4. Change the card's Start and End fields, wait for Saved, then reload and check
    that the same inclusive range appears. There are no dependency connectors,
    forecast controls or separate card deadline/review markers.
 
 In **Calendar**, navigate to the same dates and try day, week, month and agenda.
 Select an empty day/range or use **New scheduled card** to open a prefilled draft.
-Move planned work or resize either end, then confirm the proposal. Milestone
+Move planned work or resize either end and verify that it saves without a
+confirmation dialog and stays visible at its new dates. Milestone
 date markers open the milestone editor. Date-only cards use inclusive planned
 ranges; timed events use their recorded start and duration.
 

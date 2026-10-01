@@ -29,7 +29,7 @@ Neither a report nor a completed checklist automatically changes card status.
 | Projects | Register and inspect project folders | Project context, folder category and project actions |
 | List | Find and filter resources | Bounded pages, search/filter controls and access to resource editors |
 | Board | Arrange cards by status | Manual ordering, drag/drop and keyboard alternatives; a workspace overview and project boards |
-| Calendar | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with reviewed move/resize proposals |
+| Calendar | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with direct move/resize saves |
 | Timeline | Inspect recorded schedules over time | Schedule bars and milestones; API/CLI call this view `gantt` |
 | Updates | Read project/milestone reports | Read receipts, corrections and explicit decision resolutions |
 
@@ -115,15 +115,21 @@ stages changes until Apply. Partial/invalid ranges remain visible for correction
 
 Timed events have a local start and duration. The workspace timezone controls
 their meaning, regardless of the viewing phone's timezone. Settings hold the
-workspace calendar preferences. Calendar and Timeline gestures propose a change
-for confirmation; Escape or a cancelled gesture makes no source change. Controls
+workspace calendar preferences. Calendar pointer moves and resizes save in the
+background on drop. A failed or uncertain save opens recovery controls with the
+original proposal and command; conflicts require a deliberate new edit. Timeline
+date gestures and Calendar keyboard date editing use a proposal form. Escape or
+a cancelled gesture makes no source change. Controls
 also provide keyboard editing, described in the Calendar shortcuts disclosure
 and [manual walkthrough](../MANUAL-TESTING.md#gantt-and-calendar-walkthrough).
 
 Timeline shows what has been recorded. It does not calculate dependencies, critical
 paths or automatically shift other cards. Cards have no separate deadline/review
 dates, blocked-reason field or milestone link. Milestones remain independent
-resources with project/milestone report support.
+resources with project/milestone report support; they are not a card type.
+Drag a Timeline row by its grip, or use Alt+Up/Down on the grip, to reorder it.
+This per-project presentation order is saved in the current browser. The final
+empty row creates a card on the clicked date; the main Add card action remains.
 
 ## Understand Focus
 
@@ -141,7 +147,9 @@ Focus presents these sections in order and avoids repeating a visible card:
 
 Pins take precedence over later sections. Upcoming dates alone do not put a card
 in Focus attention. The folder filter selects all projects or one project category.
-Use the floating Add card action to create work from Focus.
+Use the floating Add card action to create work from Focus. In focus, In motion
+and Events share the same card layout, including schedule, checklist and counters.
+Overdue pinned work shows its lateness in the schedule without a duplicate badge.
 
 ## Reports, history and deletion
 

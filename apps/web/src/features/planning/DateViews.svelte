@@ -11,6 +11,7 @@
     month,
     view,
     revision,
+    writePending,
     weekStart,
     calendarDate,
     calendarLayout,
@@ -26,6 +27,7 @@
     month: string;
     view: "calendar" | "gantt";
     revision: number;
+    writePending: boolean;
     weekStart: string;
     calendarDate: string;
     calendarLayout: CalendarLayout;
@@ -75,6 +77,7 @@
     {workspaceTimezone}
     {onCalendarNavigate}
     {revision}
+    {writePending}
     {weekStart}
     {search}
     {open}
@@ -85,6 +88,7 @@
     {project}
     {month}
     {revision}
+    {writePending}
     {search}
     {open}
     {onpropose}

@@ -913,7 +913,10 @@
                 onCalendarNavigate={routing.navigateCalendar}
                 search={routing.current.search}
                 {open}
-                onpropose={(proposal) => (dateDraft = proposal)}
+                writePending={!!dateDraft}
+                onpropose={(proposal) => {
+                  if (!dateDraft) dateDraft = proposal;
+                }}
                 oncreate={(initial) => create("card", initial)}
               />
             {:else if routing.current.view === "updates"}

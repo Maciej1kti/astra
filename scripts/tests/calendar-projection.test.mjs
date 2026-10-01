@@ -85,3 +85,14 @@ test("readiness, order and membership remain explicit and old pages are evicted"
   const cleared = project([plan], "", true);
   assert.notEqual(cleared[0], remaining[0]);
 });
+
+test("gesture completion republishes canonical snapshots even when source data is unchanged", () => {
+  const project = calendarEventProjection();
+  const first = project([plan], "", true);
+  // A native drag may retain mutated normalized event/layout state.
+  const restored = project([plan], "", true, true);
+  assert.notEqual(restored, first);
+  assert.notEqual(restored[0], first[0]);
+  assert.deepEqual(restored, calendarEvents([plan], "", true));
+  assert.equal(project(structuredClone([plan]), "", true), restored);
+});

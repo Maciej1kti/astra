@@ -77,6 +77,8 @@
   box-shadow: var(--shadow-sm);
 }
 .app .topbar {
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
   position: relative;
   z-index: var(--layer-navigation);
   min-height: var(--header-height);
@@ -560,9 +562,12 @@
   min-width: 0;
   touch-action: pan-y;
   user-select: none;
+  cursor: pointer;
+}
+.app [data-focus-reorderable] .focus-card-open {
   cursor: grab;
 }
-.app .focus-card:active,
+.app [data-focus-reorderable]:active,
 .focus-card[data-dragging="true"] {
   cursor: grabbing;
 }
@@ -852,7 +857,7 @@
   background: transparent;
   color: var(--ink);
   text-align: left;
-  cursor: grab;
+  cursor: pointer;
 }
 .app .focus-card-open:hover {
   background: color-mix(in srgb, var(--soft) 65%, var(--paper));

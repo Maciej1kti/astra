@@ -67,7 +67,10 @@ times and wrapping titles. All seven month columns fit the surface. Overflow
 counts open the complete day's list; hourly week columns scroll within the
 calendar to retain readable widths. Instructions and the legend follow its content.
 
-Calendar items are flat, without shadows: soft blue timed events, green plans
+The main header matches the workspace panel's upper corner radius. Focus pins,
+daily plans and events share the same card body; only pins have reorder controls.
+
+Calendar items show the same event/plan/due symbols as their legend and are flat, without shadows: soft blue timed events, green plans
 and warm due markers. Titles lead in hourly views; short events retain at least
 one readable title line, while overlapping events use separate columns. Actual
 times, durations and editing proposals remain source-owned. The agenda provides

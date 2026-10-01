@@ -46,6 +46,7 @@
     workspaceTimezone,
     onCalendarNavigate,
     revision,
+    writePending,
     weekStart,
     search,
     open,
@@ -59,6 +60,7 @@
     workspaceTimezone: string;
     onCalendarNavigate: (date: string, layout: CalendarLayout) => void;
     revision: number;
+    writePending: boolean;
     weekStart: string;
     search: string;
     open: (row: Pick<Summary, "id" | "type" | "project_id">) => void;
@@ -99,13 +101,15 @@
   const readScope = $derived(`${queryScope}:${revision}`);
   // A background read keeps the displayed, versioned projection interactive.
   // Scope changes still disable old events until their own page arrives.
-  const ready = $derived(loadedScope === queryScope && !error);
+  const ready = $derived(loadedScope === queryScope && !error && !writePending);
   const reads = new PlanningRead((value) => {
     loading = value;
   });
   let cancelled = false;
   let pointer: number | null = null;
   let reset = $state(0);
+  let gestureRevision = $state(0);
+  let projectedGesture = -1;
   let displayedDate = $state(untrack(() => calendarDate));
   let events = $state.raw<Calendar.EventInput[]>([]);
   const projectEvents = calendarEventProjection();
@@ -193,7 +197,13 @@
   });
   $effect(() => {
     if (active) return;
-    events = projectEvents(items, search, ready);
+    events = projectEvents(
+      items,
+      search,
+      ready,
+      projectedGesture !== gestureRevision,
+    );
+    projectedGesture = gestureRevision;
   });
   $effect(() => {
     void readScope;
@@ -232,6 +242,8 @@
   }
   function change(info: Calendar.EventDropInfo | Calendar.EventResizeInfo) {
     const item = info.oldEvent.extendedProps.astra as CalendarItem;
+    // Native gestures mutate the widget projection; republish owned source snapshots.
+    gestureRevision++;
     try {
       if (item.event) {
         const event = !info.event.allDay
@@ -248,6 +260,7 @@
             version: item.version,
             event,
             title: item.title,
+            autoCommit: true,
           });
         return;
       }
@@ -266,6 +279,8 @@
           path: resourcePath(calendarTarget(item)),
           version: item.version,
           schedule,
+          title: item.title,
+          autoCommit: true,
         });
     } catch (e) {
       info.revert();
@@ -400,6 +415,7 @@
       if (pointer === null) return;
       cancelled = true;
       reset++;
+      gestureRevision++;
       release();
     };
     const key = (e: KeyboardEvent) => {
@@ -516,7 +532,18 @@
                   >{/if}</span
               >
               <div class="item-copy">
-                <strong>{item.title}</strong>
+                <strong
+                  ><span class="item-kind" aria-hidden="true"
+                    ><Icon
+                      name={item.event
+                        ? "planned"
+                        : item.kind.endsWith("due")
+                          ? "flag"
+                          : "calendar"}
+                      small
+                    /></span
+                  >{item.title}</strong
+                >
                 <small
                   >{item.event
                     ? `${item.event.duration_minutes} min`
@@ -535,7 +562,7 @@
   <div class="view-meta">
     <p class="legend">
       <span><Icon name="planned" small />Event</span><span
-        ><i class="plan-mark"></i>Plan</span
+        ><Icon name="calendar" small />Plan</span
       ><span><Icon name="flag" small />Due</span>
     </p>
     <details class="help">
@@ -570,6 +597,12 @@
 </section>
 
 <style>
+  .item-kind {
+    display: inline-flex;
+    flex-shrink: 0;
+    vertical-align: middle;
+    margin-right: var(--space-2);
+  }
   .calendar-region {
     --calendar-plan-bg: var(--plan-bg);
     --calendar-due-bg: var(--notice-bg);
@@ -951,12 +984,6 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
-  }
-  .plan-mark {
-    width: var(--space-4);
-    height: var(--space-1);
-    border-radius: var(--radius-pill);
-    background: var(--success);
   }
   .help {
     font-size: var(--text-sm);

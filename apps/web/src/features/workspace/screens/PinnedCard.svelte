@@ -7,11 +7,11 @@
   import type { FocusCounterSnapshot } from "../../cards/focus-counter-controller";
   import type { DailyCounterSummary } from "../../../lib/contracts/api.generated";
   import type { Summary } from "../../../lib/api/api";
-  import type { FocusCard } from "./focus-sections";
   let {
     item,
     projectName,
-    reorderable,
+    reorderable = false,
+    pinned = true,
     today,
     timezone,
     now,
@@ -19,9 +19,10 @@
     oncounter,
     open,
   }: {
-    item: FocusCard;
+    item: Summary & { attentionReasons?: string[] };
     projectName: string;
-    reorderable: boolean;
+    reorderable?: boolean;
+    pinned?: boolean;
     today: string;
     timezone: string;
     now: number;
@@ -54,10 +55,12 @@
 <article
   class="card focus-card focus-pin"
   tabindex="-1"
-  data-focus-card={item.id}
-  data-focus-project={item.project_id}
-  data-focus-key={`${item.project_id}:${item.id}`}
-  data-focus-reorderable={item.availability === "unavailable" ? undefined : ""}
+  data-focus-card={pinned ? item.id : undefined}
+  data-focus-project={pinned ? item.project_id : undefined}
+  data-focus-key={pinned ? `${item.project_id}:${item.id}` : undefined}
+  data-focus-reorderable={pinned && item.availability !== "unavailable"
+    ? ""
+    : undefined}
   aria-labelledby={id}
 >
   <button
@@ -65,12 +68,12 @@
     type="button"
     onclick={open}
     aria-describedby={reorderable ? "focus-order-help" : undefined}
-    aria-keyshortcuts={item.availability === "unavailable"
+    aria-keyshortcuts={!pinned || item.availability === "unavailable"
       ? undefined
       : "Alt+ArrowUp Alt+ArrowDown"}
   >
     <span class="focus-card-context"
-      ><Icon name="pin" small /><span>{projectName}</span>
+      >{#if pinned}<Icon name="pin" small />{/if}<span>{projectName}</span>
       {#if item.status}<Badge class="state" data-state={item.status}
           >{resourceLabel(item.status)}</Badge
         >{/if}
@@ -79,7 +82,9 @@
           title="High priority"
           ><Icon name="flag" small /><span class="sr">High priority</span></span
         >{/if}
-      <span class="focus-card-grip"><Icon name="grip" small /></span>
+      {#if pinned && reorderable}<span class="focus-card-grip"
+          ><Icon name="grip" small /></span
+        >{/if}
     </span>
     <span class="focus-card-title" {id} role="heading" aria-level="3"
       >{item.title}</span
@@ -115,10 +120,10 @@
     {#if item.labels?.length}<span class="focus-card-labels"
         >{#each item.labels as label}<span>{label}</span>{/each}</span
       >{/if}
-    {#if item.attentionReasons.length}<span
+    {#if item.attentionReasons?.some((reason) => reason !== "overdue")}<span
         class="attention-reasons"
         aria-label="Attention reasons"
-        >{#each item.attentionReasons as reason}<Badge
+        >{#each item.attentionReasons?.filter((reason) => reason !== "overdue") ?? [] as reason}<Badge
             >{resourceLabel(reason)}</Badge
           >{/each}</span
       >{/if}
