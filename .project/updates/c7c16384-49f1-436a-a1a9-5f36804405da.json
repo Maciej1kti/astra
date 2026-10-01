@@ -1,0 +1,18 @@
+{
+  "body": "Focus plans and events now share the pinned-card layout, without duplicate overdue badges. Main-panel upper corners are corrected. Calendar pointer moves/resizes save on drop without confirmation, retain command recovery and refresh canonical widget snapshots. Timeline removes duplicate/help controls, supports browser-local project row ordering and creates dated drafts from its empty row. Milestones have working independent API/CLI/report contracts and remain supported.\n\nVerified: 466-test full gate; broad HTTPS/native planning checks; all 27 Chromium suites and seven WebKit suites; final affected style reruns. Pointer, keyboard, Chromium touch, month resize, lost acknowledgements and concurrent conflicts pass. App 39918ce runs at the existing trusted HTTPS address, preserving 74 source versions, three pins, preferences, certificates, epoch and full CLI context. Physical-device/release acceptance remains open. Evidence: progress/2026-10-01-ui-corrections.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "c7c16384-49f1-436a-a1a9-5f36804405da",
+    "kind": "result",
+    "recorded_at": "2026-10-01T13:15:47.166Z",
+    "summary": "Focus, Calendar and Timeline UI corrections verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

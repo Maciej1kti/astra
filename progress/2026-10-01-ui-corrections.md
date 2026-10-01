@@ -50,10 +50,18 @@ events, dense Calendar layout and loading. No physical-device acceptance is clai
 The full local gate passes 287 Rust, 172 JavaScript and seven Python tests
 (466 total), plus types, contracts, package/links, formatting, boundaries, Clippy,
 bundle and release build checks. The final frontend check/build follows the
-empty-row keyboard correction. The final broad HTTPS smoke, native planning suite and all 27 Chromium
-regression suites pass, including actual Chromium touch row dragging, keyboard
+empty-row keyboard correction. The broad HTTPS smoke, native planning suite and
+all 27 Chromium regression suites pass, including actual Chromium touch row dragging, keyboard
 blank-row creation, dense month layout and command recovery. A final corner/cursor
 style cleanup passes Focus/UI/responsive in Chromium and Focus/UI in WebKit.
-Integration and
-existing manual HTTPS restart/preservation verification remain in progress. Generated logs and screenshots
-are in ignored `test-results/ui-corrections/`.
+Application commit `39918ce` is integrated and rebuilt in the original checkout.
+The existing launcher is restarted with its original data, connection settings
+and certificates. Trusted `https://100.122.250.14:47832` and all 32 served assets
+match the rebuilt frontend. All 74 prior source versions, three pins, preferences,
+certificate, epoch, instance and complete normalized CLI context are preserved.
+The owner's concurrent modified card and new card remain outside this commit.
+
+The ordinary CLI result report `c7c16384-49f1-436a-a1a9-5f36804405da` is durably
+committed and read back exactly. This report does not change any card's status,
+priority, focus or acceptance. Full release and physical-device acceptance remain
+open. Generated logs and screenshots are in ignored `test-results/ui-corrections/`.

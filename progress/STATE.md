@@ -10,8 +10,10 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 The [owner-directed UI corrections](2026-10-01-ui-corrections.md) unify Focus card
 presentation, repair the main header corners, save Calendar pointer changes without
 a confirmation step and add Timeline row ordering and dated blank-row creation.
-The 466-test full gate and seven final WebKit suites pass. The broad HTTPS/planning checks and all 27 Chromium suites also pass. Final style reruns pass in both engines; manual application verification
-remains in progress. Independent milestones retain their
+The 466-test full gate and seven final WebKit suites pass. The broad HTTPS/planning checks and all 27 Chromium suites also pass. Final style reruns pass in both engines. The rebuilt existing manual app verifies
+trusted HTTPS and all 32 assets, preserving 74 prior versions, three pins,
+preferences, certificate, epoch and complete CLI context. The ordinary CLI report
+is committed and read back; concurrent owner card changes remain separate. Independent milestones retain their
 working API/CLI and report contracts.
 
 The [context byte-accounting iteration](2026-10-01-context-budget.md) replaces
