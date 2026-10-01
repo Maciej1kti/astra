@@ -90,5 +90,14 @@ and are not published assets.
 
 ## Integration
 
-Manual rebuild/restart, preservation verification and the normal CLI outcome
-report are pending at this evidence draft. No scope/card acceptance is changed.
+Application commit `b1f9039` is integrated into main, rebuilt in the original
+checkout and restarted through the existing manual launcher with the same data,
+origin, ports and certificate. Trusted `https://100.122.250.14:47832` serves all
+33 current frontend assets with matching SHA-256 hashes; all 61 prior source
+versions, two pins, preferences and certificate are preserved. The owner's
+pre-existing card change remains byte-identical and outside these commits.
+
+The normal CLI result report `09bc42fc-ed29-499f-9535-2beb625eb449` is committed
+and read back with its exact body/version. Its request ID, epoch and unchanged
+payload were saved before submission. No scope, priority, deadline, focus or
+acceptance state is changed. Detailed evidence remains outside `.project/`.

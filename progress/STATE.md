@@ -14,8 +14,9 @@ With CPU ×4 and 100 ms latency, dense Calendar filtering improves from 262 to
 All 168 measured selected filter actions issue zero planning GETs. Ordinary
 opening medians are broadly unchanged. The full gate passes 428 tests, and
 Chromium/WebKit verify current source versions and retained invalidations.
-Manual integration/report verification is pending; broader performance and
-release acceptance remain open.
+The rebuilt manual app preserves 61 prior source versions, two pins, preferences
+and certificate; trusted HTTPS and all 33 assets are verified, with the normal
+CLI report committed/read back. Broader performance and acceptance remain open.
 
 The [measured Calendar month renderer](2026-10-01-calendar-measured-rendering.md)
 retains every native chunk and complete popup while simplifying hidden components
