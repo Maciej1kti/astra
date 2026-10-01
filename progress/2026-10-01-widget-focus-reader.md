@@ -43,8 +43,13 @@ format or write exception changes.
 
 Three ordinary paired release browser suites per engine (Focus, protocol and code
 health) pass in Chromium and WebKit before the final strict preview-status check.
-Final Focus/protocol reruns also pass in both engines; manual publication
-verification is pending.
+Final Focus/protocol reruns also pass in both engines. The rebuilt manual app
+runs application commit `a6bd6eb03af70f9a882dc0c89f26ce820a570b58` at its existing
+trusted HTTPS address. All 69 prior source versions, two pins, preferences, epoch
+and certificate are preserved. All 32 served assets match the rebuilt frontend;
+all 33 dist files (including the build manifest) match the verified worktree. The
+new CLI preview matches the running Focus snapshot. The owner card SHA remains
+unchanged. An ordinary CLI result report is appended/read back and committed.
 Browser Focus screenshots are inspected at desktop and 320-pixel widths; this is
 browser coverage, not widget acceptance. Initial benchmark fixture creation tried
 `pinned` in CardCreate and was rejected; the corrected fixture uses an ordinary

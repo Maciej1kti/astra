@@ -7,6 +7,19 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Focus widget Rust reader](2026-10-01-widget-focus-reader.md) replaces its
+Python status reader with the existing CLI and one bounded membership-summary
+read. Three quiet release series include complete process startup: medians fall
+from 26–33 ms to 2.8–3.7 ms, with all 720 selected observations retaining result
+checks. Reference-only hosts keep bounded detail reads; stale/missing pins remain
+unavailable. The final full gate passes 456 tests, with nine new native reader
+regressions. Chromium/WebKit Focus, protocol and code-health checks pass, including
+final Focus/protocol reruns. The rebuilt manual app preserves 69 prior versions,
+two pins, preferences, epoch and certificate; trusted HTTPS verifies all 32 served
+assets and the new CLI preview matches the running snapshot. The ordinary CLI
+report is committed/read back. Python remains in the independent window helper;
+Linux shell/QML, broader performance and release acceptance remain open.
+
 The [tag-source cost probes](2026-10-01-tag-source-cost-probes.md) attribute
 ordinary source cost primarily to guarded filesystem reads. A bounded allocation
 hint saves only 0.21–0.45 ms for 1,000 ordinary cards and reverses on the global
