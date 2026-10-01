@@ -114,6 +114,26 @@ do not change the measured application. Source-order control cleanup is correcte
 to settle cancellation before removing the fixture window; its final saved
 prototype run has only the expected source-order failure.
 
-Manual application and ordinary project-report publication follow verification.
 Bulk saved controls, profiles, failed/selected logs and rendered screenshots remain
 in ignored `test-results/editor-source-overlap-2026-10-01/`.
+
+## Manual application and project report
+
+Application commit `186b2f8d70287dd769d1682bb230ba9b665af6f4` is integrated into
+the original checkout. Its embedded frontend and release daemon are rebuilt.
+The existing manual launcher restarts from PID 27572 to 64674 with the same data,
+connection settings and certificate. Before/after snapshots preserve all 67
+prior resource versions, two pins and preferences. Trusted HTTPS at
+`https://100.122.250.14:47832` verifies every one of the 32 served assets against
+the rebuilt frontend. The owner's unrelated card SHA remains
+`d79037cd72f3a1258c525cbce6056f42c2e8710a7f8340d1fb2c506bf485da9b`.
+
+The ordinary CLI report addresses the explicitly selected original project.
+Its identity, epoch and unchanged payload are saved before submission; the
+committed result is read back with the exact body and version. Report ID:
+`7d6d2c0d-70c2-4000-958b-73450748af82`; request ID:
+`01a0f6c1-fd8e-7c02-a8de-f97c2e7648aa`; epoch:
+`cb999e35-b0ac-40ee-b223-9a9c6c1b0b4a`; version:
+`r1.6e1b964fdd6381178aad6337e03dce8dc7c06ed6c4782924cb10475e9afd8b8d`.
+The report does not change scope, priority, deadlines, focus or card acceptance.
+Broader performance and physical-device/release acceptance remain open.

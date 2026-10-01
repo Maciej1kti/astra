@@ -1,0 +1,18 @@
+{
+  "body": "Existing editor openings now start the authoritative source transport first and overlap fresh project/tag context reads with it. Matched seven-round release comparisons and a quiet repeat improve constrained complete readiness by 84-87 ms for 37 cards and 19-21 ms for 1,000 whole-month plans. Dense local rendered readiness stays near 30 ms. All 448 selected samples retain normal read paths and current source/full-popup identities. The earlier context-first prototype is rejected because it delayed local source rendering.\n\nThe full gate passes 452 tests. All 26 Chromium and 12 affected WebKit suites pass with corrected late-response and native-cancellation fixture reruns, plus broad HTTPS/planning interactions. View changes abort all three ordinary opening transports; a deliberately nonabortable source still cannot reopen an obsolete editor. Tag changes before editor creation discard the earlier catalog. Existing physical-device and broader release/performance acceptance remain open.\n\nThe original embedded frontend and release daemon are rebuilt, and the existing manual app is restarted at the same HTTPS address. All 67 prior source versions, two pins, preferences and certificate are preserved; trusted HTTPS verifies all 32 served assets. Application commit: 186b2f8d70287dd769d1682bb230ba9b665af6f4. Evidence: progress/2026-10-01-editor-source-overlap.md. No scope, priority, deadline, focus or card acceptance change is made.\n",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "7d6d2c0d-70c2-4000-958b-73450748af82",
+    "kind": "result",
+    "recorded_at": "2026-10-01T09:18:23.644Z",
+    "summary": "Editor source-first overlap verified with native cancellation",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
