@@ -16,9 +16,11 @@ unrepeated control outlier. All 800 selected context reads retain result/version
 budget checks and full normalized equality. Isolated serializer pairs retain
 240,000 exact-length checks; they do not establish full UI or process-memory gains.
 Nine document tests and the 468-test full gate pass. Normally paired Chromium/
-WebKit protocol and all 14 editor scenarios pass in both engines. Manual refresh
-and ordinary result publication remain pending; broader performance and acceptance
-remain open.
+WebKit protocol and all 14 editor scenarios pass in both engines. The rebuilt
+manual app preserves all 77 prior versions, three pins, preferences, certificate,
+instance/epoch and complete native CLI context. Trusted HTTPS verifies all 32
+assets; the ordinary report is committed/read back with both owner card changes
+separate. Broader performance and acceptance remain open.
 
 The [scoped context-read iteration](2026-10-01-context-candidate-reads.md) reuses
 one guarded collection reader per consecutive candidate kind. Every source read,

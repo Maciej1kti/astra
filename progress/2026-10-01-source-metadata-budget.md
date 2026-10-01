@@ -7,6 +7,7 @@ validation and rejection order remain. Parsing, duplicate/depth/node/NUL checks,
 source bounds, original byte versions, normalization and actual canonical source
 serialization remain. There is no source cache, protocol or writer/durability
 exception. The counter reads the complete value and adds no early admission.
+The verified application is `31de716064687552cba7c32d229f827d921ab595`.
 
 M4/macOS 27 arm64, Rust 1.92, ten logical CPUs. Saved release binaries exercise
 ordinary `Engine::context` after registration/startup on synthetic projects.
@@ -58,7 +59,16 @@ HTTP/CLI context equality at three budgets, actual response-byte limits,
 out-of-range rejection and five-view stale-page recovery. Both engines also
 pass all 14 editor scenarios, including current sources, conflict/uncertain
 saves, late-response cancellation and autosave before Back/rapid navigation.
-Manual refresh and ordinary result publication remain pending.
+The original frontend and release workspace are rebuilt; all 33 dist files
+match the verified worktree. The existing manual launcher 86879 is replaced by
+53340 with the same data and connection. Trusted `https://100.122.250.14:47832`
+verification preserves 77 prior resource versions, three pins, preferences,
+certificate, instance/epoch and complete normalized native CLI context. All 32
+served assets match the rebuilt frontend. The ordinary CLI report
+`9323cadb-6a41-4e40-9787-e2ab8d09fca9` is committed/read back exactly, preserving
+both unrelated owner card changes. A second discard of only the verified
+worktree's 548-MiB rebuildable incremental cache permits the original release
+rebuild; runtime data and bounds remain unchanged.
 
 Broader UI/perceived performance, Linux widget/QML, physical iPhone and release
 acceptance remain open. The bounded JSON map visitor currently checks duplicate
