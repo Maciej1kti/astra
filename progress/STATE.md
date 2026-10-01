@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [bounded JSON map probe](2026-10-01-source-map-probe.md) is rejected and restored.
+Eight balanced release pairs preserve full normalized output and all 640 selected
+source/version/order/budget checks, but ordinary results change direction and rich
+savings are only 0.12–0.69 ms. Documentation/package validation passes; there is no
+new application restart or acceptance claim. The retained metadata counter and
+independent Focus counter changes remain. Context entry construction still copies
+full bodies before selecting excerpts and is the next allocation to measure.
+
 The [Focus counter footer correction](2026-10-01-focus-section-counters.md) supplies
 In motion and Events with the same bounded daily counter preview as pins. Their
 shared cards now expose the complete footer without per-card source reads. The
