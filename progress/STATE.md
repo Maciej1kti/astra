@@ -7,6 +7,19 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [canonical metadata-counter iteration](2026-10-01-source-metadata-budget.md)
+uses the ordinary pretty-JSON serializer without retaining a temporary metadata
+buffer. Exact limits, parser rejection order and canonical durable bytes remain.
+Three release comparisons show 1.4–3.2 ms gains for rich dense contexts; small
+contexts are unchanged and ordinary/long-body gains are below 1 ms outside an
+unrepeated control outlier. All 800 selected context reads retain result/version/
+budget checks and full normalized equality. Isolated serializer pairs retain
+240,000 exact-length checks; they do not establish full UI or process-memory gains.
+Nine document tests and the 468-test full gate pass. Normally paired Chromium/
+WebKit protocol and all 14 editor scenarios pass in both engines. Manual refresh
+and ordinary result publication remain pending; broader performance and acceptance
+remain open.
+
 The [scoped context-read iteration](2026-10-01-context-candidate-reads.md) reuses
 one guarded collection reader per consecutive candidate kind. Every source read,
 version, bound and unavailable-source hint remains. Balanced release comparisons

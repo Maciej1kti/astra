@@ -193,6 +193,61 @@ fn json_structure_metadata_and_document_limits_are_enforced() {
 }
 
 #[test]
+fn canonical_metadata_limit_keeps_escape_bytes_and_adjacent_boundaries() {
+    for size in [
+        document::MAX_METADATA - 1,
+        document::MAX_METADATA,
+        document::MAX_METADATA + 1,
+    ] {
+        let mut input = milestone();
+        input["metadata"]["x-escaped"] = json!({
+            "text":"ą🦀 \"quote\" \\path\n\t\u{1}",
+            "nested":[null,true,i64::MIN,u64::MAX,1.25,-1.1e-60]
+        });
+        input["metadata"]["x-padding"] = json!("");
+        let fixed = serde_json::to_vec_pretty(&input["metadata"]).unwrap().len();
+        input["metadata"]["x-padding"] = json!("a".repeat(size - fixed));
+        assert_eq!(
+            serde_json::to_vec_pretty(&input["metadata"]).unwrap().len(),
+            size
+        );
+        let bytes = serde_json::to_vec(&input).unwrap();
+        let id = input["metadata"]["id"].as_str().unwrap();
+        let parsed = document::parse(Kind::Milestone, Some(id), &bytes);
+        let validated = validate_document(input.clone()).unwrap();
+        let serialized = document::serialize(&validated);
+        if size <= document::MAX_METADATA {
+            let parsed = parsed.unwrap();
+            assert_eq!(parsed.value(), input);
+            assert_eq!(parsed.version, document::version(&bytes));
+            assert!(!parsed.normalization_required);
+            assert_eq!(
+                serde_json::from_slice::<Value>(&serialized.unwrap()).unwrap(),
+                input
+            );
+        } else {
+            assert!(matches!(parsed, Err(StoreError::Invalid("METADATA_LIMIT"))));
+            assert!(matches!(
+                serialized,
+                Err(StoreError::Invalid("METADATA_LIMIT"))
+            ));
+            assert!(matches!(
+                document::parse(Kind::Card, None, &bytes),
+                Err(StoreError::Invalid("DOCUMENT_TYPE_MISMATCH"))
+            ));
+            assert!(matches!(
+                document::parse(
+                    Kind::Milestone,
+                    Some("33333333-3333-4333-8333-333333333333"),
+                    &bytes
+                ),
+                Err(StoreError::Invalid("FILENAME_ID_MISMATCH"))
+            ));
+        }
+    }
+}
+
+#[test]
 fn card_sources_reject_retired_fields() {
     for (field, value) in [
         ("due", json!({"date":"2026-09-10"})),

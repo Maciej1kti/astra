@@ -5,7 +5,7 @@ use serde::de::{self, DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
-use std::fmt;
+use std::{fmt, io};
 
 pub const MAX_DOCUMENT: usize = 1024 * 1024;
 pub const MAX_METADATA: usize = 64 * 1024;
@@ -107,15 +107,24 @@ pub fn parse(
 }
 
 fn check_metadata(value: &Value) -> Result<(), StoreError> {
-    // Keep the existing metadata budget; changing the transport does not lift bounds.
-    if serde_json::to_vec_pretty(&value["metadata"])
-        .expect("JSON value")
-        .len()
-        > MAX_METADATA
-    {
+    // Count the same canonical bytes without retaining a metadata output buffer.
+    let mut length = JsonLength(0);
+    serde_json::to_writer_pretty(&mut length, &value["metadata"]).expect("JSON value");
+    if length.0 > MAX_METADATA {
         return Err(StoreError::Invalid("METADATA_LIMIT"));
     }
     Ok(())
+}
+
+struct JsonLength(usize);
+impl io::Write for JsonLength {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0 = self.0.saturating_add(bytes.len());
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 struct BoundedValue<'a> {

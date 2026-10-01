@@ -259,6 +259,11 @@ with their original byte versions. Workspace reads return `Versioned<Workspace>`
 Registration, workspace mutation and source-dependent ordering operate on
 these models. Projection rows and patch envelopes still use JSON where
 the schema intentionally varies; this does not replace domain validation.
+The store's canonical metadata-size check sends the ordinary pretty-JSON
+serializer to a byte counter instead of retaining its output buffer. The exact
+limit and parsing/error order remain; actual source serialization and byte
+versions still use the existing canonical/source bytes. See
+[ADR-046](ADR-046-JSON-SOURCES.md).
 
 [Agent context](../crates/application/src/context.rs) reads current source-backed
 candidates and assembles the existing budgeted response. A request-local compact

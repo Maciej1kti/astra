@@ -19,6 +19,14 @@ body. JSON transport encoding can consume additional document bytes. BOM/CRLF
 normalization remains an explicit conditional workflow; JSON comments are invalid.
 The production YAML parser/dependency is removed.
 
+The store checks canonical metadata length by sending the ordinary pretty-JSON
+serializer to a request-local byte counter. It retains no serialized metadata
+buffer during that check. Escaping, whitespace and the exact 64-KiB boundary use
+the same serializer as before, at the same stage before domain validation.
+Parsing/version/normalization checks and rejection precedence remain. Actual
+source serialization still creates the existing canonical bytes for the writer;
+the counter adds no source authority, cache or durability exception.
+
 Registration, collection discovery, source diagnostics, watching, deletion,
 reference reads and journal-relative paths use JSON names. API commands still
 require observed versions and retain their identities on uncertain retries.
