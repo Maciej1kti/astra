@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { revealScene } from "../../lib/ui/motion";
   import { timelineMetrics as metrics } from "../../lib/ui/planning-metrics";
   import { onMount, setContext, untrack, tick } from "svelte";
   import {
@@ -370,7 +371,16 @@
         </span>
       </div>{/if}
   </div>
-  <div class="astra-gantt" aria-label="Project Gantt chart">
+  <div
+    use:revealScene={{
+      ready: !loading && !!data,
+      key: `${project}:${month}:${scale}`,
+      selector: ":scope > .chart",
+      distance: "0px",
+    }}
+    class="astra-gantt"
+    aria-label="Project Gantt chart"
+  >
     <Willow fonts={false} />
     <div
       class="chart wx-theme wx-willow-theme"

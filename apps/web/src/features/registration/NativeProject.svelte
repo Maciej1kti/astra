@@ -10,7 +10,7 @@
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
   import { onMount } from "svelte";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   import {
     api,
     command,
@@ -196,6 +196,7 @@
 <dialog
   class="app-dialog"
   use:modal
+  out:layerExit|global
   aria-label="Add project"
   oncancel={(e) => {
     e.preventDefault();

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { revealScene } from "../../lib/ui/motion";
   import type { CardCreate } from "../../lib/contracts/api.generated";
   import { eventFromDates } from "../../lib/resources/timed-event.ts";
   import {
@@ -475,6 +476,12 @@
     </p>{/if}
   <div
     class="calendar-surface"
+    use:revealScene={{
+      ready: !loading,
+      key: `${date}:${mode}:${monthGrid}`,
+      selector: ":scope > .ec",
+      distance: "0px",
+    }}
     aria-busy={loading}
     class:month={monthGrid}
     class:agenda={monthAgenda || mode === "agenda"}

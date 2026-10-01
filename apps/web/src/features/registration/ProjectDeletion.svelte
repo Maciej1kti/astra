@@ -14,7 +14,7 @@
     isRejectedConflict,
   } from "../../lib/api/command-result";
   import type { Summary } from "../../lib/api/api";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   import { ApiError } from "../../lib/api/api";
 
   let {
@@ -135,6 +135,7 @@
 
 <dialog
   use:modal
+  out:layerExit|global
   class="app-dialog project-deletion"
   aria-label="Delete project"
   oncancel={(event) => {

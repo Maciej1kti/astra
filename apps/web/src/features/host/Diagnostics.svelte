@@ -3,7 +3,7 @@
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
   import { api } from "../../lib/api/api";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
 
   let { onclose }: { onclose: () => void } = $props();
   type Diagnostics = {
@@ -52,6 +52,7 @@
 <dialog
   class="app-dialog"
   use:modal
+  out:layerExit|global
   aria-label="Host diagnostics"
   oncancel={(event) => {
     event.preventDefault();

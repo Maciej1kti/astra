@@ -7,6 +7,15 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [shared motion system](2026-10-01-motion-system.md) adds bounded readiness
+cascades, continuous navigation selection, native dialog/menu entrances and exits,
+and shared control feedback. Reduced-motion changes settle active effects. The
+implementation preserves the concurrent UI corrections and passes the 466-test
+full gate, broad HTTPS/planning checks, all 28 Chromium suites and eleven selected
+WebKit suites including corrected fixture reruns. Light/dark and narrow rendered
+surfaces are inspected; physical-device and full release acceptance remain open.
+Manual-application availability will follow the verified integration and restart.
+
 The [owner-directed UI corrections](2026-10-01-ui-corrections.md) unify Focus card
 presentation, repair the main header corners, save Calendar pointer changes without
 a confirmation step and add Timeline row ordering and dated blank-row creation.

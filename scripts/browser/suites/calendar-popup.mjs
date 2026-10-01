@@ -71,6 +71,7 @@ await runBrowserSuite(
       );
     }
     async function open(date) {
+      await expect(page.locator(".app-dialog[open]")).toHaveCount(0);
       if (await popup.count())
         await popup.getByRole("button", { name: /close/i }).click();
       await settled();

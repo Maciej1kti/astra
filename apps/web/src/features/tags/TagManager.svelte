@@ -4,7 +4,7 @@
   import Button from "../../lib/ui/Button.svelte";
 
   import { onMount, untrack } from "svelte";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   import { api } from "../../lib/api/api";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
@@ -172,6 +172,7 @@
 <dialog
   class="app-dialog dialog-large"
   use:modal
+  out:layerExit|global
   aria-label="Manage project tags"
   oncancel={(event) => {
     event.preventDefault();

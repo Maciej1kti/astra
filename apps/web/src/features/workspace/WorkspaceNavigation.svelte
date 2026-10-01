@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { navigationMotion } from "../../lib/ui/motion";
   import Icon from "../../lib/ui/Icon.svelte";
 
   import { tick } from "svelte";
@@ -65,7 +66,11 @@
 </script>
 
 <aside>
-  <nav bind:this={navElement} aria-label="Workspace views">
+  <nav
+    use:navigationMotion={view}
+    bind:this={navElement}
+    aria-label="Workspace views"
+  >
     {#each views as item}<button
         aria-label={viewLabel(item)}
         data-view={item}

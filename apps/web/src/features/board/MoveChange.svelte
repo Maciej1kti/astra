@@ -9,7 +9,7 @@
   } from "../../lib/api/command-result";
   import { onMount } from "svelte";
   import { untrack } from "svelte";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   import { command, resourcePath, type Summary } from "../../lib/api/api";
 
   const operation = commandOperation(() => !accessLost);
@@ -112,6 +112,7 @@
 <dialog
   class="app-dialog dialog-small"
   use:modal
+  out:layerExit|global
   aria-label="Move card"
   oncancel={(event) => {
     event.preventDefault();

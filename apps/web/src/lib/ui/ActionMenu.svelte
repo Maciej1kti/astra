@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { layerExit, layerPresence } from "./dialog";
   import type { Snippet } from "svelte";
   import Icon from "./Icon.svelte";
   import type { IconName } from "./icons";
@@ -67,7 +68,7 @@
     return () => {
       resize.disconnect();
       window.removeEventListener("resize", position);
-      if (popover.matches(":popover-open")) popover.hidePopover();
+      // DOM removal closes the native popover after its inert exit completes.
     };
   });
   $effect(() => {
@@ -162,6 +163,8 @@
   >
   {#if open}<div
       bind:this={panel}
+      use:layerPresence
+      out:layerExit
       class="action-menu-panel"
       class:floating
       popover={floating ? "manual" : undefined}

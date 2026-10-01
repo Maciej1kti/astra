@@ -12,7 +12,7 @@
   import { commandOperation } from "../../lib/api/command-operation.svelte";
   import { onMount, tick } from "svelte";
   import { applyTheme, readTheme, type Theme } from "./appearance";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command } from "../../lib/api/api";
 
   const operation = commandOperation(() => !accessLost);
@@ -217,6 +217,7 @@
 <dialog
   class="app-dialog"
   use:modal
+  out:layerExit|global
   aria-label="Workspace settings"
   onkeydown={keydown}
   oncancel={(e) => {

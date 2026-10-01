@@ -121,6 +121,8 @@ await runBrowserSuite(
     }
 
     async function beginFocusDrag(page, movingId, targetId) {
+      // Raw pointer input must wait for the outgoing native modal to release the page.
+      await expect(page.locator("dialog[open]")).toHaveCount(0);
       const moving = focusCard(page, movingId);
       const target = focusCard(page, targetId);
       const sourceBox = await moving.boundingBox();
@@ -652,13 +654,7 @@ await runBrowserSuite(
             );
             await page.keyboard.press("Escape");
             await expect(modal).toBeHidden();
-            assert.equal(
-              await page.evaluate(() =>
-                document.activeElement?.classList.contains("focus-add-action"),
-              ),
-              true,
-              "Escape must restore focus to the Focus add action",
-            );
+            await expect(add).toBeFocused();
           }
           return {
             viewports: viewports.map(

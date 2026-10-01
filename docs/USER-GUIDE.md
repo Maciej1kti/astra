@@ -37,6 +37,12 @@ Search and filters do not change source files. Where a view offers another page,
 use its paging controls: a displayed page is not the entire dataset. Calendar
 agenda pages hold up to 200 items; its grid/time layouts up to 1,000.
 
+Navigation, loaded content, menus and dialogs share short motion effects.
+Buttons respond to a press, and the navigation highlight follows the selected
+view on desktop and mobile. To disable these effects, enable **Reduce motion**
+in your operating system; Astra follows changes immediately, including while
+an editor is open. Animations do not change save confirmation or draft protection.
+
 ## Create and edit cards
 
 A title is enough to start a card. Its statuses are **Planned**, **Active**,

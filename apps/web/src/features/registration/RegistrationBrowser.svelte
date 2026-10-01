@@ -11,7 +11,7 @@
   import { commandOperation } from "../../lib/api/command-operation.svelte";
   import { onMount, untrack } from "svelte";
   import { api, command } from "../../lib/api/api";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
 
   const operation = commandOperation();
 
@@ -173,6 +173,7 @@
 {#if open}
   <dialog
     use:modal
+    out:layerExit|global
     class="app-dialog modal"
     aria-label="Add project"
     oncancel={(e) => {

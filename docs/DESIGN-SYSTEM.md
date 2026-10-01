@@ -16,9 +16,11 @@ additional UI framework, styling runtime or component dependency is required.
   Native controls remain appropriate for DOM bindings and drag actions.
 - `styles/workspace.css` owns the responsive shell and workspace layouts;
   `styles/editor.css` and `styles/dialog.css` own editing surfaces.
-- `styles/motion.css` owns entrance and interaction motion. Durations, easing
-  and distances are tokens, with the operating system's reduced-motion setting
-  disabling animations and transitions.
+- `styles/motion.css` owns surface, disclosure and control effects.
+  `lib/ui/motion.ts` owns bounded content cascades, the moving navigation
+  selection and live motion preferences; `lib/ui/dialog.ts` owns native
+  modal lifetime and shared layer exits. Durations, easing and distances are
+  tokens, with the operating system's reduced-motion setting disabling motion.
 - Feature components keep structural layout and interaction rules. Their visual
   declarations consume tokens. Workspace screens only compose the shared UI.
 
@@ -121,10 +123,45 @@ click completes. Avoid inserting or removing help text between pointerdown and
 click in a centered dialog. Routine autosave does not insert a draft-export
 button into the document; recovery controls appear when the draft needs them.
 
-Entrances use a brief fade and small vertical movement, without delaying input.
-View motion runs on navigation, not on each data refresh or keystroke. Card hover
-lift applies only to fine pointers and excludes draggable Focus cards; existing
-drag transforms remain owned by their gesture implementation.
+## Motion vocabulary
+
+Motion uses the existing surfaces, colors and component hierarchy in both themes.
+The same selection surface travels between navigation buttons, including after
+rapid changes or rotation into the mobile dock. It measures actual button bounds,
+retargets from its current position and never receives pointer input.
+
+Loaded views reveal a short cascade of headings and rows. `revealScene` receives
+an explicit navigation key and readiness state; refreshes and typing do not replay
+an existing scene. At most 24 candidates are measured, only onscreen candidates
+animate, and stagger delays stop increasing after 160 ms. Ordinary surfaces move
+12px over 420 ms. Focus drag surfaces, Calendar, Timeline and Board widget surfaces
+only fade, preserving their gesture geometry. Do not add per-event animations or
+DOM observers to dense planning widgets.
+
+Native dialogs enter with a 380 ms lift/scale and a fading backdrop. Header and
+body enter in sequence. Confirmed dismissal has a 150 ms exit; Svelte makes the
+outgoing layer inert and the native modal remains present until cleanup. A
+node-local presence action mirrors inertness to `aria-hidden`, including reversed
+exits, so outgoing controls leave the accessibility tree immediately. Existing
+save/discard guards decide whether dismissal is allowed. Focus returns to the
+initiating control after removal, without stealing it from a newer modal. Deferred
+loading placeholders hand off immediately to the loaded component.
+
+Menus open from their anchored edge and exit quickly. Measured floating popovers
+use a fade on entry to keep their placement stable. Shared buttons compress on
+press and settle with the spring easing; navigation icons, pins, priority, chips
+and acknowledged save state provide small secondary responses. Hover lift applies
+only to fine pointers and excludes draggable Focus cards. Existing drag transforms
+remain owned by their gesture implementation.
+
+Use `--motion-quick` for control feedback, `--motion-enter` for disclosures,
+`--motion-dialog` for dialogs, `--motion-scene` / `--motion-stagger` for content,
+`--motion-selection` for selection and `--motion-exit` for dismissal. Entrances
+use `--motion-ease`; interactive settling uses `--motion-spring`. Effects must not
+own data, delay requests, gate input, replay on autosave or install permanent
+compositing hints. The system reduced-motion preference removes CSS effects,
+cancels shared Web Animations and completes Svelte transitions already in flight.
+This also applies when the preference changes while a dialog is open.
 
 ## Card modal hierarchy
 

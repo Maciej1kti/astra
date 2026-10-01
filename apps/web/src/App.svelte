@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { motionEnvironment, revealScene } from "./lib/ui/motion";
   import PageHeading from "./lib/ui/PageHeading.svelte";
   import { viewLabel } from "./features/workspace/navigation";
   import Button from "./lib/ui/Button.svelte";
@@ -31,6 +32,8 @@
   import { sessionState } from "./features/session/session.svelte";
   import { viewData } from "./features/workspace/view-data.svelte";
   import { onMount, onDestroy, untrack } from "svelte";
+
+  onMount(motionEnvironment);
   import {
     viewQueryKey,
     viewSections,
@@ -827,7 +830,16 @@
           onchange={routing.changeFilters}
           changeMonth={routing.changeMonth}
         />
-        {#key routing.current.view}<div class="view-content">
+        {#key routing.current.view}<div
+            class="view-content"
+            use:revealScene={{
+              ready:
+                queryReady &&
+                !["calendar", "gantt"].includes(routing.current.view) &&
+                !(routing.current.view === "board" && routing.current.project),
+              key: routing.current.project,
+            }}
+          >
             {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
               <div class="empty" role="status">Loading resources…</div>
             {:else if routing.current.view === "focus"}

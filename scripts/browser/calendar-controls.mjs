@@ -3,10 +3,13 @@ import { expect } from "@playwright/test";
 
 export async function calendarDate(page) {
   const input = page.getByLabel("Go to date", { exact: true });
-  if (!(await input.isVisible()))
-    await page
-      .getByRole("button", { name: "Choose calendar date", exact: true })
-      .click();
+  const toggle = page.getByRole("button", {
+    name: "Choose calendar date",
+    exact: true,
+  });
+  // An inert outgoing panel can remain painted briefly after logical dismissal.
+  if ((await toggle.getAttribute("aria-expanded")) !== "true")
+    await toggle.click();
   return input;
 }
 

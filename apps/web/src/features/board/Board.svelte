@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { revealScene } from "../../lib/ui/motion";
   import { onMount, setContext, untrack, tick } from "svelte";
   import { on } from "svelte/events";
   import { readBoardView, writeBoardView } from "./board-view";
@@ -510,7 +511,17 @@
         >{column.status} <span>{column.total}</span></button
       >{/each}
   </nav>{/if}
-<div class="astra-board" aria-busy={busy} use:scrolling>
+<div
+  use:revealScene={{
+    ready: !busy && !!columns.length,
+    key: project,
+    selector: ".board-column-nav, .wx-column",
+    distance: "0px",
+  }}
+  class="astra-board"
+  aria-busy={busy}
+  use:scrolling
+>
   <Willow fonts={false} children={undefined} />
   <div class="board-theme wx-theme wx-willow-theme">
     <Kanban

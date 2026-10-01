@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick, untrack } from "svelte";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
@@ -138,6 +138,7 @@
   bind:this={element}
   class="app-dialog schedule-calendar-dialog"
   use:modal
+  out:layerExit|global
   aria-label="Choose card dates"
   oncancel={(event) => {
     event.preventDefault();

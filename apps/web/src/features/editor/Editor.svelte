@@ -56,7 +56,7 @@
   import { editTarget, type EditorTarget } from "./editor-target";
 
   import { resourceLabel } from "../../lib/resources/resource-presentation";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command, type Resource, type Pending } from "../../lib/api/api";
   import { deleteCard } from "../../lib/api/resources";
 
@@ -873,6 +873,7 @@
 <svelte:window onbeforeunload={beforeUnload} />
 <dialog
   use:modal
+  out:layerExit|global
   class="app-dialog editor"
   class:dialog-large={draft.type !== "project"}
   class:resource-editor={draft.type === "project" || draft.type === "card"}

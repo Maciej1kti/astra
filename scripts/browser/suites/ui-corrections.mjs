@@ -93,6 +93,7 @@ await runBrowserSuite(
       await page
         .getByRole("button", { name: "Close editor", exact: true })
         .click();
+      await expect(page.locator("dialog[open]")).toHaveCount(0);
       await empty.focus();
       await empty.press("ArrowRight");
       await empty.press("Enter");
@@ -102,6 +103,7 @@ await runBrowserSuite(
       await page
         .getByRole("button", { name: "Close editor", exact: true })
         .click();
+      await expect(page.locator("dialog[open]")).toHaveCount(0);
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(grip(before[0])).toBeVisible();
       await grip(before[0]).press("Alt+ArrowDown");

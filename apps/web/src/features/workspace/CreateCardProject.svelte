@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Summary } from "../../lib/api/api";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   let {
     projects,
     onselect,
@@ -17,6 +17,7 @@
 <dialog
   class="app-dialog"
   use:modal
+  out:layerExit|global
   aria-label="Choose project for card"
   oncancel={(event) => {
     event.preventDefault();

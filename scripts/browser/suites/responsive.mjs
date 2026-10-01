@@ -370,7 +370,7 @@ await runBrowserSuite(
       await page.locator(".projectopen").first().click();
       await expect(page.locator("dialog:modal")).toHaveCSS(
         "animation-name",
-        "astra-reveal",
+        "astra-dialog",
       );
       await settle(page.locator("dialog:modal"));
       await page

@@ -107,6 +107,7 @@ try {
   await page
     .getByRole("button", { name: "Close add project", exact: true })
     .click();
+  await expect(page.locator("dialog")).toHaveCount(0);
   await page.unroute("**/api/v1/native-folder-selections");
   const nativeFolder = join(temp, "Native selection fixture");
   await mkdir(nativeFolder);
@@ -921,6 +922,7 @@ try {
     "Typed CLI task",
   );
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await expect(page.locator("dialog")).toHaveCount(0);
   const scrollColumn = reviewColumn.locator("[data-kanban-column-cards]");
   const scrollBox = await scrollColumn.boundingBox();
   const dragBox = await hitbox(boardHandle);
@@ -1033,7 +1035,7 @@ try {
           .id,
     )
     .toBe(typedId);
-  await mobile.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(mobile.locator("dialog[open]")).toHaveCount(0);
   const mobileReview = mobile.locator(
     ".astra-column-review [data-kanban-column-cards]",
   );

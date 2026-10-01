@@ -10,7 +10,7 @@
     isRejectedConflict,
   } from "../../lib/api/command-result";
   import { onMount } from "svelte";
-  import { modal } from "../../lib/ui/dialog";
+  import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command, type Resource } from "../../lib/api/api";
   import { untrack } from "svelte";
 
@@ -140,6 +140,7 @@
   <dialog
     class="app-dialog dialog-small"
     use:modal
+    out:layerExit|global
     aria-label={heading}
     oncancel={(event) => {
       event.preventDefault();
