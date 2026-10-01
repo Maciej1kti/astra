@@ -25,6 +25,46 @@ function play(
   return animation;
 }
 
+export type MotionRole = "heading" | "content" | "detail";
+
+/** One visual owner per property; surfaces become opaque before details arrive. */
+export function enter(
+  node: HTMLElement,
+  options: {
+    id: string;
+    duration: number;
+    delay: number;
+    easing: string;
+    distance: string;
+    surface?: boolean;
+  },
+) {
+  const { distance, surface, ...timing } = options;
+  const moving = distance !== "0px";
+  return play(
+    node,
+    [
+      { opacity: 0, ...(moving ? { translate: `0 ${distance}` } : {}) },
+      ...(surface ? [{ opacity: 1, offset: 0.4 }] : []),
+      { opacity: 1, ...(moving ? { translate: "0 0" } : {}) },
+    ],
+    { ...timing, fill: "backwards" },
+  );
+}
+
+export function onScreen(node: HTMLElement) {
+  if (node.closest("[inert], [aria-hidden='true']")) return false;
+  const rect = node.getBoundingClientRect();
+  return (
+    rect.width > 1 &&
+    rect.height > 1 &&
+    rect.top < window.innerHeight &&
+    rect.bottom > 0 &&
+    rect.left < window.innerWidth &&
+    rect.right > 0
+  );
+}
+
 /** One preference listener for our WAAPI effects, including changes mid-flight. */
 export function motionEnvironment() {
   const media = preference();
@@ -78,47 +118,60 @@ export function revealScene(node: HTMLElement, initial: Scene = {}) {
     frame = requestAnimationFrame(() => {
       revealed = key;
       if (preference().matches) return;
-      const duration = motionDuration(node, "--motion-scene", 420);
+      const duration = motionDuration(node, "--motion-scene", 640);
       const style = getComputedStyle(node);
       const easing = style.getPropertyValue("--motion-ease").trim();
-      const stagger = motionDuration(node, "--motion-stagger", 32);
+      const stagger = motionDuration(node, "--motion-stagger", 52);
+      const headingDuration = motionDuration(node, "--motion-heading", 480);
+      const detailDuration = motionDuration(node, "--motion-detail", 360);
       // Measure one bounded group before writing animation styles.
       const targets = Array.from(
         node.querySelectorAll<HTMLElement>(options.selector ?? sceneItems),
       )
         .slice(0, 24)
-        .filter((item) => {
-          const rect = item.getBoundingClientRect();
-          return (
-            rect.height > 0 &&
-            rect.top < window.innerHeight &&
-            rect.bottom > 0 &&
-            rect.left < window.innerWidth &&
-            rect.right > 0
-          );
-        });
+        .filter(onScreen);
+      let details = 0;
+      const planned: ({ item: HTMLElement } & Parameters<typeof enter>[1])[] =
+        [];
       for (const [index, item] of targets.entries()) {
+        const heading = item.matches(".sectiontitle, .tablehead");
+        const delay = (heading ? 0 : 80) + Math.min(index, 5) * stagger;
         // Focus owns pointer/drag geometry. Its surface only fades.
         const distance = item.matches(".focus-card")
           ? "0px"
           : (options.distance ??
             style.getPropertyValue("--motion-distance").trim());
-        const animation = play(
+        planned.push({
           item,
-          distance === "0px"
-            ? [{ opacity: 0 }, { opacity: 1 }]
-            : [
-                { opacity: 0, translate: `0 ${distance}` },
-                { opacity: 1, translate: "0 0" },
-              ],
-          {
-            duration,
-            delay: Math.min(index, 5) * stagger,
+          id: `astra-scene-${heading ? "heading" : "content"}`,
+          duration: heading ? headingDuration : duration,
+          delay,
+          easing,
+          distance: heading ? "8px" : distance,
+          surface: !heading,
+        });
+        // One bounded secondary layer; native planning widgets retain their own DOM.
+        if (options.selector) continue;
+        for (const detail of Array.from(
+          item.querySelectorAll<HTMLElement>(
+            ".resource-metadata, .project-meta, .focus-card-facts, .focus-card-labels, .focus-card-counters",
+          ),
+        ).slice(0, 2)) {
+          if (details >= 24 || !onScreen(detail)) continue;
+          planned.push({
+            item: detail,
+            id: "astra-scene-detail",
+            duration: detailDuration,
+            delay: delay + 140,
             easing,
-            fill: "backwards",
-          },
-        );
-        if (animation) animations.push(animation);
+            distance: "0px",
+          });
+          details++;
+        }
+      }
+      for (const { item, ...entrance } of planned) {
+        const effect = enter(item, entrance);
+        if (effect) animations.push(effect);
       }
     });
   };
@@ -184,7 +237,7 @@ export function navigationMotion(node: HTMLElement, selected: string) {
             { transform: "none" },
           ],
           {
-            duration: motionDuration(node, "--motion-selection", 380),
+            duration: motionDuration(node, "--motion-selection", 520),
             easing: getComputedStyle(node)
               .getPropertyValue("--motion-spring")
               .trim(),

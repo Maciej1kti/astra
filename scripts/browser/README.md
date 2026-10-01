@@ -12,6 +12,8 @@ The `motion` suite exercises bounded loaded-content cascades, refresh stability,
 rapid navigation, selection geometry across desktop/tablet/mobile, keyboard
 opening, menu reversal, native dismissal/focus restoration, live reduced-motion
 changes and the release CSP. It captures rendered light/dark surfaces in Chromium;
+rendered effects sampled at 150 ms also guard against navigation, content, menus
+and dialogs collapsing their visible travel into the first few frames.
 WebKit retains its existing screenshot/CSP restriction. These are browser checks,
 not physical-device acceptance or a frame-rate benchmark. Raw pointer/keyboard
 scenarios wait for native `dialog[open]` removal before acting on the background;

@@ -99,6 +99,8 @@ endpoint when one exists; response types are asserted only at transport boundari
 shared resource presentation; `lib/ui` contains shared rendering and dialog
 behavior and the small shared component set. `lib/ui/motion.ts` owns bounded
 scene entrances, measured navigation selection and live reduced-motion cleanup;
+`lib/ui/motion-layers.ts` owns bounded heading/content/detail sequences for native
+layers and workspace controls, with explicit per-opening keys and cleanup;
 features supply their navigation keys and readiness without changing read lifetimes. Visual values live in
 `styles/tokens.css`; workspace and editor styles consume those tokens. See the
 [UI design system](DESIGN-SYSTEM.md) for component and layout ownership.

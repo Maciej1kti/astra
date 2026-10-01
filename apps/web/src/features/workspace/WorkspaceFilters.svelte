@@ -3,6 +3,7 @@
   import type { RouteFilters } from "./navigation-state.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import Icon from "../../lib/ui/Icon.svelte";
+  import { revealLayers } from "../../lib/ui/motion-layers";
 
   let {
     route,
@@ -22,7 +23,21 @@
   );
 </script>
 
-<div class="workspace-filters" class:list-filters={route.view === "list"}>
+<div
+  class="workspace-filters"
+  class:list-filters={route.view === "list"}
+  use:revealLayers={{
+    key: route.view,
+    layers: [
+      {
+        selector: ":scope > .toolbar > *",
+        role: "detail",
+        delay: 80,
+        stagger: 40,
+      },
+    ],
+  }}
+>
   <div class="toolbar">
     <div class="filter-search-group">
       <input

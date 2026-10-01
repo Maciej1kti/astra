@@ -37,7 +37,9 @@ Search and filters do not change source files. Where a view offers another page,
 use its paging controls: a displayed page is not the entire dataset. Calendar
 agenda pages hold up to 200 items; its grid/time layouts up to 1,000.
 
-Navigation, loaded content, menus and dialogs share short motion effects.
+Navigation, loaded content, menus and dialogs share layered motion effects.
+Surfaces appear first, followed by headings, sections and small details. Existing
+tags enter with their section; adding a tag gives a separate confirmation pulse.
 Buttons respond to a press, and the navigation highlight follows the selected
 view on desktop and mobile. To disable these effects, enable **Reduce motion**
 in your operating system; Astra follows changes immediately, including while

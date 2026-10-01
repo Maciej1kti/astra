@@ -1,4 +1,5 @@
 import { motionDuration } from "./motion";
+import { dialogLayers, revealLayers } from "./motion-layers";
 
 /** Exiting controls leave the accessibility tree as soon as Svelte makes them inert. */
 export function layerPresence(element: HTMLElement) {
@@ -17,8 +18,10 @@ export function modal(element: HTMLDialogElement) {
   const previous = document.activeElement;
   const presence = layerPresence(element);
   element.showModal();
+  const entrance = revealLayers(element, dialogLayers);
   return {
     destroy() {
+      entrance.destroy();
       presence.destroy();
       element.close();
       const remaining = Array.from(
@@ -38,7 +41,7 @@ export function modal(element: HTMLDialogElement) {
 export function layerExit(node: HTMLElement) {
   // Read preferences again when a quickly reopened layer starts another exit.
   return () => ({
-    duration: motionDuration(node, "--motion-exit", 150),
+    duration: motionDuration(node, "--motion-exit", 220),
     css: (t: number) =>
       `opacity: ${t}; transform: translateY(${(1 - t) * 6}px) scale(${0.985 + t * 0.015});`,
   });

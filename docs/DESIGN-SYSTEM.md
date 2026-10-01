@@ -18,7 +18,8 @@ additional UI framework, styling runtime or component dependency is required.
   `styles/editor.css` and `styles/dialog.css` own editing surfaces.
 - `styles/motion.css` owns surface, disclosure and control effects.
   `lib/ui/motion.ts` owns bounded content cascades, the moving navigation
-  selection and live motion preferences; `lib/ui/dialog.ts` owns native
+  selection and live motion preferences; `lib/ui/motion-layers.ts` owns explicit
+  heading/content/detail sequences; `lib/ui/dialog.ts` owns native
   modal lifetime and shared layer exits. Durations, easing and distances are
   tokens, with the operating system's reduced-motion setting disabling motion.
 - Feature components keep structural layout and interaction rules. Their visual
@@ -133,13 +134,21 @@ retargets from its current position and never receives pointer input.
 Loaded views reveal a short cascade of headings and rows. `revealScene` receives
 an explicit navigation key and readiness state; refreshes and typing do not replay
 an existing scene. At most 24 candidates are measured, only onscreen candidates
-animate, and stagger delays stop increasing after 160 ms. Ordinary surfaces move
-12px over 420 ms. Focus drag surfaces, Calendar, Timeline and Board widget surfaces
+animate, and primary delays stop at 340 ms. At most 24 secondary metadata groups
+follow their own card by 140 ms. Ordinary surfaces move 12px over 640 ms; section
+headings take 480 ms. The parent view fades in over 200 ms, and card surfaces
+become opaque early so the later metadata remains visible while they travel.
+Focus drag surfaces, Calendar, Timeline and Board widget surfaces
 only fade, preserving their gesture geometry. Do not add per-event animations or
 DOM observers to dense planning widgets.
 
-Native dialogs enter with a 380 ms lift/scale and a fading backdrop. Header and
-body enter in sequence. Confirmed dismissal has a 150 ms exit; Svelte makes the
+Native dialogs enter with a 640 ms lift/scale and a 280 ms backdrop. The dialog
+becomes opaque within the first 40% of its entrance so its content's motion is
+visible. `revealLayers` gives context, title, actions, sections and details separate
+timelines, instead of animating the entire body over its animated children.
+Card sections follow their visible saved order. Existing tags follow their own
+section; the tag pulse is reserved for an explicit add action. Hidden sections
+are excluded. Confirmed dismissal has a 220 ms exit; Svelte makes the
 outgoing layer inert and the native modal remains present until cleanup. A
 node-local presence action mirrors inertness to `aria-hidden`, including reversed
 exits, so outgoing controls leave the accessibility tree immediately. Existing
@@ -148,11 +157,31 @@ initiating control after removal, without stealing it from a newer modal. Deferr
 loading placeholders hand off immediately to the loaded component.
 
 Menus open from their anchored edge and exit quickly. Measured floating popovers
-use a fade on entry to keep their placement stable. Shared buttons compress on
+use an early fade on entry to keep their placement stable. Menu surfaces precede
+their items, and suggestion rows have a short cascade. Page headings, primary
+actions and workspace/planning controls also have separate opening steps.
+Menus, disclosures and control settling take 440 ms; navigation selection takes 520 ms. The shared easing spreads
+visible movement through the entrance instead of spending most of its duration
+almost at rest. Shared buttons compress on
 press and settle with the spring easing; navigation icons, pins, priority, chips
 and acknowledged save state provide small secondary responses. Hover lift applies
 only to fine pointers and excludes draggable Focus cards. Existing drag transforms
 remain owned by their gesture implementation.
+
+| Layer | Timing and role |
+| --- | --- |
+| Surface | Backdrop first; dialog or card becomes opaque early while its movement continues |
+| Heading | 480 ms; dialog context starts at 60 ms, title at 110 ms, toolbar at 175 ms |
+| Content | 560 ms; dialog sections start at 200 ms with bounded 50 ms steps |
+| Detail | 360 ms; tags follow their section by at least 120 ms, menu rows use 36 ms steps |
+| Direct feedback | Immediate press response, followed by a slower release; saves/additions acknowledge the action |
+
+Sequences measure at most 32 visible local targets once per opening/navigation
+key and cap their delay at 560 ms. No persistent observer or per-event widget
+animation is added. Control groups, draggable content and metadata only fade;
+their gesture geometry stays fixed. Refreshing source data, editing a draft or
+adding a tag does not replay the other layers. Cleanup cancels pending frames
+and effects, and reduced motion applies to every layer.
 
 Use `--motion-quick` for control feedback, `--motion-enter` for disclosures,
 `--motion-dialog` for dialogs, `--motion-scene` / `--motion-stagger` for content,

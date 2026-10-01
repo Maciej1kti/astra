@@ -8,6 +8,7 @@
   import type { TagCatalog } from "../../lib/contracts/api.generated";
   import { isAbortError } from "../../lib/api/read-requests";
   import { addTag, matchingTags, TAG_LIMIT } from "./tags";
+  import { revealLayers, suggestionLayers } from "../../lib/ui/motion-layers";
 
   let {
     labels = $bindable<string[]>([]),
@@ -38,6 +39,7 @@
   let pointerOutside = false;
   let active = $state(-1);
   let announcement = $state("");
+  let addedLabel = $state("");
   let projectOptions = $state<string[]>([]);
   let catalogLoading = $state(false);
   let catalogLoaded = false;
@@ -160,6 +162,7 @@
     error = result.error;
     if (!error) {
       labels = result.labels;
+      addedLabel = (folder ? labels[0] : labels.at(-1)) ?? "";
       draft = "";
       announcement = folder
         ? `Set folder ${labels[0]}.`
@@ -224,7 +227,7 @@
   {#if labels.length}
     <ul class="chips" aria-label={folder ? "Selected folder" : "Selected tags"}>
       {#each labels as label (label)}
-        <li>
+        <li class:chip-added={label === addedLabel}>
           <span>{label}</span><button
             type="button"
             aria-label={`Remove ${kind} ${label}`}
@@ -298,6 +301,7 @@
     <ul
       id={`${id}-options`}
       class="suggestions"
+      use:revealLayers={suggestionLayers}
       role="listbox"
       aria-label={folder ? "Existing folders" : "Existing tags"}
     >

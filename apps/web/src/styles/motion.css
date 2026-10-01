@@ -17,10 +17,22 @@
     opacity: 1;
   }
 }
+@keyframes astra-surface-fade {
+  from {
+    opacity: 0;
+  }
+  40%,
+  to {
+    opacity: 1;
+  }
+}
 @keyframes astra-dialog {
   from {
     opacity: 0;
     transform: translateY(24px) scale(0.96);
+  }
+  40% {
+    opacity: 1;
   }
   to {
     opacity: 1;
@@ -31,6 +43,9 @@
   from {
     opacity: 0;
     transform: translateY(-6px) scale(0.96);
+  }
+  40% {
+    opacity: 1;
   }
   to {
     opacity: 1;
@@ -77,27 +92,21 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .view-content {
-    animation: astra-fade var(--motion-enter) ease;
+    /* Reveal the parent before its children's travel has nearly finished. */
+    animation: astra-fade var(--motion-quick) linear;
   }
   .app-dialog[open] {
     transform-origin: 50% 40%;
     animation: astra-dialog var(--motion-dialog) var(--motion-ease);
   }
   .app-dialog[open]::backdrop {
-    animation: astra-fade var(--motion-dialog) ease;
+    animation: astra-fade var(--motion-backdrop) ease;
   }
   .app-dialog[open][inert] {
     animation: none;
   }
   .app-dialog[open][inert]::backdrop {
     animation: astra-backdrop-out var(--motion-exit) ease-in forwards;
-  }
-  .app-dialog .dialog-header,
-  .app-dialog .dialog-body {
-    animation: astra-reveal var(--motion-dialog) var(--motion-ease) backwards;
-  }
-  .app-dialog .dialog-body {
-    animation-delay: var(--motion-stagger);
   }
   .action-menu-panel {
     transform-origin: top right;
@@ -123,9 +132,9 @@
   .tags .suggestions {
     animation: astra-reveal var(--motion-enter) var(--motion-ease);
   }
-  .tags .chips > li,
+  .tags .chips > li.chip-added,
   .save-indicator.saved {
-    animation: astra-confirm var(--motion-enter) var(--motion-spring);
+    animation: astra-confirm var(--motion-detail) var(--motion-spring);
   }
   .schedule-calendar-grid {
     animation: astra-fade var(--motion-enter) var(--motion-ease);
@@ -147,6 +156,8 @@
   :where(
     .ui-button,
     .icon-button,
+    .app-dialog button,
+    .focus-add-action,
     .action-menu > button,
     .topbar button,
     .calendar-toolbar button,
@@ -164,6 +175,8 @@
   :where(
       .ui-button,
       .icon-button,
+      .app-dialog button,
+      .focus-add-action,
       .action-menu > button,
       .topbar button,
       .calendar-toolbar button,

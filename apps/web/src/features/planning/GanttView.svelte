@@ -1,5 +1,6 @@
 <script lang="ts">
   import { revealScene } from "../../lib/ui/motion";
+  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import { timelineMetrics as metrics } from "../../lib/ui/planning-metrics";
   import { onMount, setContext, untrack, tick } from "svelte";
   import {
@@ -313,7 +314,7 @@
 
 {#if !project}<p>Select a project to see its planned dates.</p>
 {:else}
-  <div class="toolbar">
+  <div class="toolbar" use:revealLayers={controlsLayers}>
     <label
       >Timeline scale<select aria-label="Timeline scale" bind:value={scale}
         ><option value="days">Days</option><option value="weeks">Weeks</option

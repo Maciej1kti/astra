@@ -7,6 +7,15 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [motion choreography follow-up](2026-10-01-motion-choreography.md) addresses
+rushed visible motion with calmer shared curves and explicit heading/content/detail
+sequences across pages, dialogs, menus and controls. Sections follow their visible
+order; tags enter after their section and only pulse when explicitly added.
+Bounded measurements, native lifetimes and live reduced-motion behavior remain.
+The 468-test integrated full gate, all 28 Chromium suites, the broad HTTPS smoke and seven
+selected WebKit suites pass. Manual-application results are being recorded in
+the dated evidence.
+
 The [canonical metadata-counter iteration](2026-10-01-source-metadata-budget.md)
 uses the ordinary pretty-JSON serializer without retaining a temporary metadata
 buffer. Exact limits, parser rejection order and canonical durable bytes remain.

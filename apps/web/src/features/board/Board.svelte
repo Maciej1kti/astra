@@ -1,5 +1,6 @@
 <script lang="ts">
   import { revealScene } from "../../lib/ui/motion";
+  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import { onMount, setContext, untrack, tick } from "svelte";
   import { on } from "svelte/events";
   import { readBoardView, writeBoardView } from "./board-view";
@@ -504,7 +505,11 @@
     filtering.
     {#if !busy && !boardCards.length}No matching cards in the loaded pages.{/if}
   </p>{/if}
-{#if columns.length}<nav class="board-column-nav" aria-label="Board columns">
+{#if columns.length}<nav
+    class="board-column-nav"
+    aria-label="Board columns"
+    use:revealLayers={controlsLayers}
+  >
     {#each columns as column}<button
         aria-current={visibleStatus === column.status ? "true" : undefined}
         onclick={() => showColumn(column.status)}

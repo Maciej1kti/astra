@@ -1,5 +1,6 @@
 <script lang="ts">
   import { layerExit, layerPresence } from "./dialog";
+  import { menuLayers, revealLayers } from "./motion-layers";
   import type { Snippet } from "svelte";
   import Icon from "./Icon.svelte";
   import type { IconName } from "./icons";
@@ -164,6 +165,7 @@
   {#if open}<div
       bind:this={panel}
       use:layerPresence
+      use:revealLayers={menuLayers}
       out:layerExit
       class="action-menu-panel"
       class:floating
@@ -191,7 +193,7 @@
     position: fixed;
     inset: auto;
     margin: 0;
-    animation-name: astra-fade;
+    animation-name: astra-surface-fade;
   }
   .action-menu-panel.above {
     top: auto;
