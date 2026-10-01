@@ -16,9 +16,10 @@ Calendar readiness is broadly unchanged. All measured editor openings retain the
 current source and both context reads. The full gate passes 441 tests; 25 Chromium
 and nine affected WebKit suites plus broad HTTPS/planning checks pass. A default
 eager-read probe is rejected after a reproduced Calendar mode-transition failure;
-the selected mode passes the unchanged scenario. The manual rebuild/restart and
-publication are pending at this branch checkpoint. Broader performance and release
-acceptance remain open.
+the selected mode passes the unchanged scenario. The rebuilt manual app preserves
+64 prior resource versions, two pins, preferences and certificate; trusted HTTPS
+and all 33 served assets are verified. The normal CLI report is committed and
+read back. Broader performance and release acceptance remain open.
 
 The [Calendar pass-work iteration](2026-10-01-calendar-pass-work.md) reuses
 current cell/span capacity within one layout pass and reads normalized numeric

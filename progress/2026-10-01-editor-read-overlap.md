@@ -101,10 +101,22 @@ physical iPhone, Arch/ext4, remote CI or complete performance acceptance.
 
 ## Manual application and publication
 
-The existing manual application's rebuild, restart and trusted HTTPS/asset/data
-verification are pending at this branch checkpoint. A normal report to the
-explicitly selected original project and publication follow that verification.
-The owner's unrelated card remains unchanged.
+Application commit `8fdff83f387985e030f892d6441309bc7054b4a7` is integrated into
+the original checkout. Its embedded frontend and release daemon are rebuilt;
+the existing manual launcher is restarted from PID 96367 to 49561 with the same
+state, connection settings and certificate. Socket readiness and trusted HTTPS
+at `https://100.122.250.14:47832` pass. All 33 served assets match the rebuilt
+frontend bytes. Before/after snapshots preserve all 64 prior resource versions,
+two pins, preferences and certificate. The owner's unrelated card SHA remains
+`d79037cd72f3a1258c525cbce6056f42c2e8710a7f8340d1fb2c506bf485da9b`.
+
+The ordinary CLI report to the explicitly selected original project is committed
+and read back with its exact body and version. Report ID:
+`1f551013-659d-420d-8afa-c507658551b8`; request ID:
+`01a0f601-aeb0-794d-9d34-8a4e3528d72f`; version:
+`r1.34dd4cd23eb7d6d91bc5ca7014ab1878cc4a1abbc2c1bde36ef7c8f84712079f`.
+Identity, epoch and unchanged payload are saved before submission. This result
+does not change card status, scope or release acceptance.
 
 Bulk logs, profiles, matrices, saved-control failures, screenshots and read-count
 checks are retained in ignored `test-results/calendar-interactions-2026-10-01/`.
