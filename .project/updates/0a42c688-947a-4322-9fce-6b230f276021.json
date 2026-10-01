@@ -1,0 +1,18 @@
+{
+  "body": "Implemented the shared motion system in application commit ad250d0: bounded content cascades, continuous navigation selection, native dialog/menu entrances and exits, and consistent button, card and saved-state feedback. Live reduced-motion changes settle active effects. Existing components and the concurrent Focus/Calendar/Timeline corrections are preserved.\n\nThe full gate passes 466 tests. Broad HTTPS/planning workflows, all 28 Chromium suites and eleven selected WebKit suites pass, including corrected native-exit fixture reruns. Inspected light/dark, desktop/mobile, keyboard, emulated touch, interrupted navigation and reduced-motion behavior.\n\nThe original manual application was rebuilt and restarted at https://100.122.250.14:47832. Trusted HTTPS serves all 32 expected assets; 75 prior source versions, three pins, preferences, certificate, instance and command epoch are unchanged. Unrelated owner card edits remain separate.\n\nEvidence: progress/2026-10-01-motion-system.md. No card status, priority, focus or acceptance was changed by this report. Physical-device, frame-rate and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "0a42c688-947a-4322-9fce-6b230f276021",
+    "kind": "result",
+    "recorded_at": "2026-10-01T13:39:29.589Z",
+    "summary": "Shared motion verified and available in the existing application",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

@@ -13,8 +13,11 @@ and shared control feedback. Reduced-motion changes settle active effects. The
 implementation preserves the concurrent UI corrections and passes the 466-test
 full gate, broad HTTPS/planning checks, all 28 Chromium suites and eleven selected
 WebKit suites including corrected fixture reruns. Light/dark and narrow rendered
-surfaces are inspected; physical-device and full release acceptance remain open.
-Manual-application availability will follow the verified integration and restart.
+surfaces are inspected. The rebuilt existing manual app verifies trusted HTTPS
+and all 32 assets while preserving 75 prior source versions, three pins,
+preferences, certificate, instance and epoch. The ordinary CLI report is committed
+and read back; concurrent owner card edits remain separate. Physical-device and
+full release acceptance remain open.
 
 The [owner-directed UI corrections](2026-10-01-ui-corrections.md) unify Focus card
 presentation, repair the main header corners, save Calendar pointer changes without

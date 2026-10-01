@@ -60,5 +60,19 @@ WebKit 26.6, release daemon. No frame-rate benchmark or physical iPhone acceptan
 is claimed; full release acceptance remains open.
 
 Generated logs and screenshots are retained in ignored
-`test-results/motion-system-2026-10-01/`. Manual-application availability is recorded
-after integration and restart.
+`test-results/motion-system-2026-10-01/`.
+
+## Existing manual application
+
+Application commit `ad250d0` is fast-forwarded into the original checkout and
+rebuilt there; all 32 frontend assets match the verified isolated release exactly.
+Only the identified existing manual launcher is restarted, retaining its data,
+Tailscale address, ports and certificates. Trusted `https://100.122.250.14:47832`
+serves all 32 matching assets. Before/after snapshots preserve all 75 prior source
+versions, three pins and their order/version, workspace preferences, certificate,
+API version, instance and command epoch.
+
+The ordinary CLI result report `0a42c688-947a-4322-9fce-6b230f276021` is durably
+committed and read back exactly. The report changes no card status, priority,
+focus or acceptance. The owner's concurrent modified and new card remain outside
+these commits. Full release and physical-device acceptance remain open.
