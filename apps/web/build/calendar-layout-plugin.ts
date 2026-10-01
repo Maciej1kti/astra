@@ -116,6 +116,16 @@ export async function calendarLayoutSource(
     let samples = $derived(dayMaxEvents === true ? monthChunkSamples(chunks) : null);
     let indices = $derived(new Map(chunks.map((chunk, index) => [chunk, index])));
     let placements = $state.raw(new Map());
+    let renderedChunks = $derived.by(() => {
+        const result = [];
+        for (let index = 0; index < chunks.length; index++) {
+            const chunk = chunks[index];
+            if (!samples || samples.representatives.has(chunk) || placements.get(chunk)?.hidden === false) {
+                result.push({chunk, index});
+            }
+        }
+        return result;
+    });
     let pendingResize = 0;
     function resizeSamples() {
         if (pendingResize) return;
@@ -191,26 +201,18 @@ export async function calendarLayoutSource(
             hidden.publish();
         }`,
     );
+    source = replace(
+      source,
+      "{#each chunks as chunk, i (chunk.id)}",
+      "{#each renderedChunks as {chunk, index: i} (chunk.id)}",
+    );
     return replace(
       source,
       "                    <Event bind:this={refs[i]} {chunk}/>",
-      `                    {#if !samples || samples.representatives.has(chunk) || placements.get(chunk)?.hidden === false}
-                        <Event bind:this={refs[i]} {chunk} placement={samples && placements.get(chunk)} onSizeChange={samples?.representatives.has(chunk) ? resizeSamples : undefined}/>
-                    {:else}
-                        <article
-                            class={theme.event}
-                            aria-hidden="true"
-                            data-calendar-placeholder="true"
-                            data-source-version={chunk.event.extendedProps.astra.version}
-                            style:grid-column={chunk.gridColumn + ' / span ' + chunk.dates.length}
-                            style:grid-row={chunk.gridRow}
-                            style:margin-block-start={(placements.get(chunk)?.top ?? 1) + 'px'}
-                            style:height={(placements.get(chunk)?.height ?? 0) + 'px'}
-                            style="visibility:hidden;padding:0;border:0;box-sizing:border-box"
-                        ><div data-calendar-item={chunk.event.extendedProps.astra.item_id}>{chunk.event.title}</div></article>
-                    {/if}`,
+      `                    <Event bind:this={refs[i]} {chunk} placement={samples && placements.get(chunk)} onSizeChange={samples?.representatives.has(chunk) ? resizeSamples : undefined}/>`,
     );
   }
+
   if (name === "src/lib/events.js") {
     source = replace(
       source,

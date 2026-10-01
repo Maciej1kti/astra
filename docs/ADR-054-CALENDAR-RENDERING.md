@@ -41,13 +41,13 @@ remain until the widget's ordinary reposition clear; the collector is discarded
 after each pass, including when source objects change. Native geometry, footer
 rechecks and fallback hide behavior remain intact. This replaces repeated
 growing-array copies and linear duplicate checks with bounded linear collection,
-without assuming a row height or removing hidden DOM. See the
+without assuming a row height. See the
 [hidden-list evidence](../progress/2026-10-01-calendar-hidden-lists.md).
 
-The month grid also retains every native chunk model while replacing most hidden
-interactive components with lightweight, inaccessible membership markers. A
-native component remains mounted for each reviewed shape and every visible
-event. The shape includes grid row/column/span, item kind, clock format length,
+The month grid retains every native chunk model while mounting native components
+only for each reviewed shape and every visible event. Hidden events outside these
+representatives have no main-grid DOM nodes or reactive child branches. The shape
+includes grid row/column/span, item kind, clock format length,
 short-event class and editability. Astra's month snippet has one explicitly sized, nonwrapping
 title line and an optional time line. Contract clock values are fixed ASCII
 `HH:mm` in tabular digits; they change text, not line geometry. Hidden detail text
@@ -58,10 +58,14 @@ Each reposition pass measures its actual native representatives, headers, cells
 and footers anew, then calls the unchanged native positioning algorithm for every
 chunk in its original traversal order. Placement output is retained for rendering
 and exact no-op publication checks, never as the next pass's measurement input.
-The hidden-list collector and footer rechecks still see all chunks. Markers retain
-item IDs, current projection versions and grid spans; they cannot receive focus or
-pointer gestures. Popups, backgrounds and interaction previews use full native
-components. Popup ordering and source reads before opening remain unchanged.
+The hidden-list collector and footer rechecks still see all chunks. The keyed
+main-grid loop receives only visible chunks and measured representatives, carrying
+their original full-array indices so representative references do not shift when
+visible membership changes. Every chunk retains its item ID, current projection
+version and grid span in the native model. Popups, backgrounds and interaction
+previews use full native components. Popup ordering and source reads before
+opening remain unchanged. See the
+[sparse-grid evidence](../progress/2026-10-01-calendar-sparse-grid.md).
 
 Representative ResizeObservers compare current CSS border-box sizes to their
 last notification size; this only filters unchanged initial notifications.
@@ -96,7 +100,12 @@ reviewed sample grouping and native fallback. The release browser regression use
 330 added source cards, including timed events, cross-week and whole-month plans.
 It checks actual geometry-read counts, exact hidden counts, unused time formatting,
 complete item membership, changed versions, resize layout, popup contents and
-keyboard opening. It reconstructs every simplified hidden element from its full
-native representative and compares natural heights, including large text and
-390/320 px screens. Measurements and verification limits
+keyboard opening. It independently reconstructs every API-projected chunk from
+its full native
+representative and compares natural heights, including large text and 390/320 px
+screens. Each checkpoint also opens every populated day popup and verifies complete
+API membership, titles and observed versions; days without a popup must contain
+all their items visibly. Separate release comparisons retain exact footer counts,
+popup order and visible native geometry before and after the sparse main-grid
+loop. Measurements and verification limits
 live in [the rendering evidence](../progress/2026-09-30-calendar-rendering.md).

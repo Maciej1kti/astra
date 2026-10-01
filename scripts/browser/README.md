@@ -138,7 +138,10 @@ The `calendar-layout` suite adds 330 densely overlapping cards, including timed
 events and plans crossing a week boundary or spanning the whole month. It checks
 measured month-grid geometry calls, exact per-day hidden counts, unused time
 formatting, complete item/popup membership, changed versions, resize layout and
-keyboard opening with the observed version. It reconstructs full native elements
-for simplified hidden entries and compares natural heights, including a live
-large-text change and 390/320 px month grids. Instrumented call counts are
+keyboard opening with the observed version. It reconstructs every API-projected
+chunk from full native representatives and compares natural heights, including a
+live large-text change and 390/320 px month grids. Every checkpoint verifies all
+populated day popups against current API IDs, titles and versions; days without a
+popup must show all their items visibly. This also covers hidden source updates
+without requiring a DOM node for every hidden event. Instrumented call counts are
 regressions; release timing measurements remain separate.
