@@ -1,0 +1,19 @@
+{
+  "body": "",
+  "metadata": {
+    "archived": false,
+    "created_at": "2026-10-01T15:56:09.345Z",
+    "id": "08d35f92-73f1-4d07-a1cb-68a2574957bc",
+    "labels": [],
+    "position": "7fffffffffffffffffffffffffffffff",
+    "priority": "normal",
+    "schedule": {
+      "end": "2026-10-03",
+      "start": "2026-10-01"
+    },
+    "status": "review",
+    "title": "Nowe",
+    "updated_at": "2026-10-01T15:56:26.085Z"
+  },
+  "type": "card"
+}

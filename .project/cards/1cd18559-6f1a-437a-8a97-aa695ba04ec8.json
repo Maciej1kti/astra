@@ -1,0 +1,64 @@
+{
+  "body": "opis sopia\n",
+  "metadata": {
+    "acceptance": [
+      {
+        "completed": false,
+        "id": "54ed4fbf-0883-4f52-ac0a-1415098ee7d1",
+        "text": "pozycja 1"
+      },
+      {
+        "completed": false,
+        "id": "962ed66d-85db-4c49-ac2c-952a9657bcbd",
+        "text": "pozycja 2"
+      }
+    ],
+    "archived": false,
+    "comments": [
+      {
+        "author": {
+          "kind": "human",
+          "label": "Owner"
+        },
+        "body": "komentarz jakis\n",
+        "id": "263391b5-5365-448c-9b9f-d49a18e501fb",
+        "recorded_at": "2026-10-01T12:58:49.473Z"
+      },
+      {
+        "author": {
+          "kind": "human",
+          "label": "Owner"
+        },
+        "body": "koljeny\n",
+        "id": "b1054c6b-dbf1-4412-b0fc-d1dea7c7caed",
+        "recorded_at": "2026-10-01T12:58:53.992Z"
+      }
+    ],
+    "counters": [
+      {
+        "archived": false,
+        "id": "369fc08d-31dd-4c29-99f7-acb3a97f3691",
+        "name": "czas na mateme",
+        "step": 1,
+        "unit": "h",
+        "values": {
+          "2026-10-01": 11
+        }
+      }
+    ],
+    "created_at": "2026-10-01T12:58:22.829Z",
+    "id": "1cd18559-6f1a-437a-8a97-aa695ba04ec8",
+    "labels": [],
+    "pinned": true,
+    "position": "fbffffffffffffffffffffffffffffff",
+    "priority": "normal",
+    "schedule": {
+      "end": "2026-10-02",
+      "start": "2026-09-29"
+    },
+    "status": "planned",
+    "title": "jakis tytul",
+    "updated_at": "2026-10-01T15:50:26.948Z"
+  },
+  "type": "card"
+}

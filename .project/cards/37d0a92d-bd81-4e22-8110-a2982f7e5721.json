@@ -3,12 +3,12 @@
   "metadata": {
     "acceptance": [
       {
-        "completed": false,
+        "completed": true,
         "id": "0d38bb89-4981-49cd-b5b4-ef72ab2e67a8",
         "text": "jjsjzs"
       },
       {
-        "completed": false,
+        "completed": true,
         "id": "71b8b7df-793b-41cb-90d6-74359c839201",
         "text": "bbzis"
       },
@@ -58,7 +58,8 @@
         "values": {
           "2026-09-26": 9,
           "2026-09-27": 20,
-          "2026-09-30": 30
+          "2026-09-30": 30,
+          "2026-10-01": 50
         }
       },
       {
@@ -93,12 +94,12 @@
     "position": "bfffffffffffffffffffffffffffffff",
     "priority": "high",
     "schedule": {
-      "end": "2026-09-26",
-      "start": "2026-09-26"
+      "end": "2026-10-03",
+      "start": "2026-10-02"
     },
     "status": "active",
     "title": "noewvvv. ",
-    "updated_at": "2026-09-30T14:39:41.839Z"
+    "updated_at": "2026-10-01T15:50:23.111Z"
   },
   "type": "card"
 }
