@@ -142,7 +142,7 @@ try {
     .getByRole("dialog")
     .getByRole("button", { name: "Add project", exact: true })
     .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.match(
     await readFile(join(nativeFolder, ".project/project.json"), "utf8"),
     /Native-selected project/,
@@ -179,7 +179,7 @@ try {
   await page
     .getByRole("button", { name: "Add selected project", exact: true })
     .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(
     cli("projects").items.some((item) => item.title === "Chosen in browser"),
     true,
@@ -211,7 +211,7 @@ try {
   await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   await page.getByRole("button", { name: "Board", exact: true }).click();
   await page.getByRole("heading", { name: "Ship the field guide" }).waitFor();
   await page.getByText("Connected to host", { exact: false }).waitFor();
@@ -242,7 +242,7 @@ try {
     .fill("Ship the revised guide");
   await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   await mobile
     .getByLabel("Title", { exact: true })
     .fill("Keep my mobile draft");
@@ -286,7 +286,7 @@ try {
   await expect(page.getByRole("dialog")).toBeVisible();
   assert.equal(cli("get", path).metadata.title, "Ship the field guide");
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   const reopenedCard = page.locator(
     `[data-board-card="${cards[0].id}"] .title`,
   );
@@ -301,7 +301,7 @@ try {
     page.getByRole("button", { name: "Remove from focus", exact: true }),
   ).toBeEnabled();
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(
     cli("get", "/api/v1/workspace/focus").items[0].card_id,
     cards[0].id,
@@ -316,7 +316,7 @@ try {
   await page.getByRole("button", { name: "Add update", exact: false }).click();
   await page.getByLabel("Summary", { exact: true }).fill("Browser report");
   await page.getByRole("button", { name: "Create", exact: true }).click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   await page
     .getByRole("heading", { name: "Browser report", exact: true })
     .click();
@@ -325,7 +325,7 @@ try {
     page.getByRole("button", { name: "Mark unread", exact: true }),
   ).toBeEnabled();
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   await page.getByLabel("Unread only").check();
   await page
     .getByRole("heading", { name: "Browser report", exact: true })
@@ -350,7 +350,7 @@ try {
   await page
     .getByRole("button", { name: "Save preferences", exact: true })
     .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   // Saving preferences retains the current explicit route. A clean entry uses the default.
   await expect(
     page.getByRole("button", { name: "Updates", exact: true }),
@@ -509,7 +509,7 @@ try {
   await page
     .getByRole("button", { name: "Save planned dates", exact: true })
     .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.deepEqual(cli("get", path).metadata.due, beforeGesture.metadata.due);
   assert.equal(cli("get", path).metadata.schedule.start, "2026-09-08");
   await page.screenshot({
@@ -602,7 +602,7 @@ try {
   await page
     .getByRole("button", { name: "Retry same command", exact: true })
     .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(cli("get", path).metadata.schedule.end, "2026-09-14");
 
   const agentContext = cli(
@@ -675,7 +675,7 @@ try {
           .length,
     )
     .toBe(1);
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(
     cli("--project", folder, "card", "list", "--status", "review").items[0]
       .title,
@@ -703,11 +703,12 @@ try {
   await page.getByRole("button", { name: "Planned", exact: true }).click();
   await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(
     cli("--project", folder, "card", "get", typedId).metadata.status,
     "planned",
   );
+  // Native dismissal finishes after the outgoing dialog leaves the accessibility tree.
   const boardHandle = page.locator(`[data-board-card="${typedId}"] .title`);
   const boardTarget = page.locator(`[data-board-card="${cards[0].id}"] .title`);
   // Regression: dragging a card title should move the card, not open its editor.
@@ -738,7 +739,7 @@ try {
           .id,
     )
     .toBe(typedId);
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   const ordered = cli(
     "--project",
     folder,
@@ -783,7 +784,7 @@ try {
     );
     throw error;
   }
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
 
   // Drag between statuses, retaining the exact command when a response is uncertain.
   const typedPath = `/api/v1/projects/${plan.project_id}/cards/${typedId}`;
@@ -826,7 +827,7 @@ try {
     .getByRole("button", { name: "Retry same command", exact: true })
     .click();
   await expect.poll(() => cli("get", typedPath).metadata.status).toBe("active");
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(attempts.length, 2);
   assert.deepEqual(attempts[0], attempts[1]);
   await page.unroute(`**${typedPath}`);
@@ -843,7 +844,7 @@ try {
   await expect
     .poll(() => cli("get", typedPath).metadata.status)
     .toBe("planned");
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
 
   // A live refresh must not replace the version captured by a held board gesture.
   const heldSource = await hitbox(boardHandle),
@@ -1105,7 +1106,7 @@ try {
   await page
     .getByRole("button", { name: /Retry same (autosave|command)/ })
     .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(quickAttempts.length, 2);
   assert.deepEqual(quickAttempts[0], quickAttempts[1]);
   assert.equal(
@@ -1308,7 +1309,7 @@ try {
   await page.getByLabel("End", { exact: true }).fill("2026-09-11");
   await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
   await page.getByRole("button", { name: "Close editor", exact: true }).click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   const scheduledCard = cli(
     "get",
     `/api/v1/views/list?type=card&project_id=${plan.project_id}&limit=200`,
@@ -1353,7 +1354,7 @@ try {
   await page
     .getByRole("button", { name: "Save planned dates", exact: true })
     .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(cli("get", scheduledPath).metadata.schedule.end, "2026-09-12");
   await page.screenshot({
     path: join(evidenceDir, "calendar-week.png"),

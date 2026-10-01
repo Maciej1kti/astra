@@ -21,7 +21,7 @@
   from {
     opacity: 0;
   }
-  40%,
+  80%,
   to {
     opacity: 1;
   }
@@ -29,9 +29,9 @@
 @keyframes astra-dialog {
   from {
     opacity: 0;
-    transform: translateY(24px) scale(0.96);
+    transform: translateY(12px) scale(0.992);
   }
-  40% {
+  80% {
     opacity: 1;
   }
   to {
@@ -42,9 +42,9 @@
 @keyframes astra-menu {
   from {
     opacity: 0;
-    transform: translateY(-6px) scale(0.96);
+    transform: translateY(-3px) scale(0.992);
   }
-  40% {
+  80% {
     opacity: 1;
   }
   to {
@@ -59,10 +59,10 @@
 }
 @keyframes astra-confirm {
   0% {
-    scale: 0.88;
+    scale: 0.96;
   }
   55% {
-    scale: 1.08;
+    scale: 1.025;
   }
   100% {
     scale: 1;
@@ -97,10 +97,10 @@
   }
   .app-dialog[open] {
     transform-origin: 50% 40%;
-    animation: astra-dialog var(--motion-dialog) var(--motion-ease);
+    animation: astra-dialog var(--motion-dialog) var(--motion-emerge);
   }
   .app-dialog[open]::backdrop {
-    animation: astra-fade var(--motion-backdrop) ease;
+    animation: astra-fade var(--motion-backdrop) var(--motion-emerge);
   }
   .app-dialog[open][inert] {
     animation: none;
@@ -110,7 +110,7 @@
   }
   .action-menu-panel {
     transform-origin: top right;
-    animation: astra-menu var(--motion-enter) var(--motion-ease);
+    animation: astra-menu var(--motion-enter) var(--motion-emerge);
   }
   .action-menu-panel.above {
     transform-origin: bottom right;
@@ -130,14 +130,14 @@
   .focus-counter-bar,
   .focus-counter-saved,
   .tags .suggestions {
-    animation: astra-reveal var(--motion-enter) var(--motion-ease);
+    animation: astra-reveal var(--motion-enter) var(--motion-emerge);
   }
   .tags .chips > li.chip-added,
   .save-indicator.saved {
     animation: astra-confirm var(--motion-detail) var(--motion-spring);
   }
   .schedule-calendar-grid {
-    animation: astra-fade var(--motion-enter) var(--motion-ease);
+    animation: astra-fade var(--motion-enter) var(--motion-emerge);
   }
   :where(
     button,

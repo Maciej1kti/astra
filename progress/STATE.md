@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [soft-motion refinement](2026-10-01-soft-motion.md) gives entrances a gentle
+opacity onset, shallow movement and bounded blur on small headings/details.
+Card context, title, metadata, labels and counter footers have distinct layers
+across Focus, Projects, List and both Board modes. Calendar adds readiness-aware
+grid/event layers, agenda day groups and a layered overflow popup on desktop and
+mobile. The combined 471-test full gate, affected Chromium/WebKit suites and
+broad HTTPS smoke pass. The existing manual-app rebuild/restart is next.
+
 The [context entry allocation iteration](2026-10-01-context-entry-allocation.md)
 borrows validated bodies and moves selected metadata into the existing response.
 Twelve release pairs preserve full normalized output and all 960 selected current

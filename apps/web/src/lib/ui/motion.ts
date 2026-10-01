@@ -27,7 +27,7 @@ function play(
 
 export type MotionRole = "heading" | "content" | "detail";
 
-/** One visual owner per property; surfaces become opaque before details arrive. */
+/** Gentle opacity onset; only small, explicitly chosen layers resolve from blur. */
 export function enter(
   node: HTMLElement,
   options: {
@@ -37,16 +37,25 @@ export function enter(
     easing: string;
     distance: string;
     surface?: boolean;
+    softness?: string;
   },
 ) {
-  const { distance, surface, ...timing } = options;
+  const { distance, surface, softness, ...timing } = options;
   const moving = distance !== "0px";
   return play(
     node,
     [
-      { opacity: 0, ...(moving ? { translate: `0 ${distance}` } : {}) },
-      ...(surface ? [{ opacity: 1, offset: 0.4 }] : []),
-      { opacity: 1, ...(moving ? { translate: "0 0" } : {}) },
+      {
+        opacity: 0,
+        ...(moving ? { translate: `0 ${distance}` } : {}),
+        ...(softness ? { filter: `blur(${softness})` } : {}),
+      },
+      ...(surface ? [{ opacity: 1, offset: 0.8 }] : []),
+      {
+        opacity: 1,
+        ...(moving ? { translate: "0 0" } : {}),
+        ...(softness ? { filter: "blur(0px)" } : {}),
+      },
     ],
     { ...timing, fill: "backwards" },
   );
@@ -92,9 +101,37 @@ type Scene = {
   ready?: boolean;
   selector?: string;
   distance?: string;
+  cardSelector?: string;
 };
 const sceneItems =
   ".sectiontitle, .tablehead, .resource-card, .focus-card, .projectcard, .listrow, .update, .empty";
+const cardLayers = [
+  {
+    name: "context",
+    selector:
+      ".focus-card-context, .card-content > small, :scope.listrow > div:first-of-type > small, .projectinitial",
+    delay: 60,
+  },
+  {
+    name: "title",
+    selector:
+      ".focus-card-title, .card-title, :scope.listrow > div:first-of-type > strong, .projectcopy > h2, :scope[data-board-card] h3",
+    delay: 100,
+  },
+  {
+    name: "metadata",
+    selector:
+      ".focus-card-facts, .row-metadata, .resource-metadata, .projectcopy > p",
+    delay: 150,
+  },
+  {
+    name: "labels",
+    selector: ".focus-card-labels, .resource-metadata > .tags, .project-meta",
+    delay: 200,
+  },
+  { name: "reasons", selector: ".attention-reasons", delay: 220 },
+  { name: "counters", selector: ".focus-card-counters", delay: 250 },
+] as const;
 
 /** A bounded cascade, once per navigation/readiness; refreshes keep their DOM. */
 export function revealScene(node: HTMLElement, initial: Scene = {}) {
@@ -118,19 +155,20 @@ export function revealScene(node: HTMLElement, initial: Scene = {}) {
     frame = requestAnimationFrame(() => {
       revealed = key;
       if (preference().matches) return;
-      const duration = motionDuration(node, "--motion-scene", 640);
+      const duration = motionDuration(node, "--motion-scene", 720);
       const style = getComputedStyle(node);
-      const easing = style.getPropertyValue("--motion-ease").trim();
+      const easing = style.getPropertyValue("--motion-emerge").trim();
+      const softness = style.getPropertyValue("--motion-softness").trim();
       const stagger = motionDuration(node, "--motion-stagger", 52);
-      const headingDuration = motionDuration(node, "--motion-heading", 480);
-      const detailDuration = motionDuration(node, "--motion-detail", 360);
+      const headingDuration = motionDuration(node, "--motion-heading", 600);
+      const detailDuration = motionDuration(node, "--motion-detail", 480);
       // Measure one bounded group before writing animation styles.
       const targets = Array.from(
         node.querySelectorAll<HTMLElement>(options.selector ?? sceneItems),
       )
         .slice(0, 24)
         .filter(onScreen);
-      let details = 0;
+      const cards: { item: HTMLElement; delay: number }[] = [];
       const planned: ({ item: HTMLElement } & Parameters<typeof enter>[1])[] =
         [];
       for (const [index, item] of targets.entries()) {
@@ -147,24 +185,46 @@ export function revealScene(node: HTMLElement, initial: Scene = {}) {
           duration: heading ? headingDuration : duration,
           delay,
           easing,
-          distance: heading ? "8px" : distance,
+          distance: heading ? "4px" : distance,
           surface: !heading,
+          softness: heading ? softness : undefined,
         });
-        // One bounded secondary layer; native planning widgets retain their own DOM.
-        if (options.selector) continue;
-        for (const detail of Array.from(
-          item.querySelectorAll<HTMLElement>(
-            ".resource-metadata, .project-meta, .focus-card-facts, .focus-card-labels, .focus-card-counters",
-          ),
-        ).slice(0, 2)) {
-          if (details >= 24 || !onScreen(detail)) continue;
+        if (!options.selector && !heading) cards.push({ item, delay });
+      }
+      // Board columns retain their geometry; only bounded visible card children fade.
+      if (options.cardSelector) {
+        const selector = options.cardSelector;
+        cards.push(
+          ...targets
+            .flatMap((column) =>
+              Array.from(column.querySelectorAll<HTMLElement>(selector)).slice(
+                0,
+                8,
+              ),
+            )
+            .slice(0, 48)
+            .filter(onScreen)
+            .slice(0, 24)
+            .map((item, index) => ({
+              item,
+              delay: 80 + Math.min(index, 5) * stagger,
+            })),
+        );
+      }
+      let details = 0;
+      for (const { item, delay } of cards) {
+        for (const layer of cardLayers) {
+          if (details >= 72) break;
+          const detail = item.querySelector<HTMLElement>(layer.selector);
+          if (!detail || !onScreen(detail)) continue;
           planned.push({
             item: detail,
-            id: "astra-scene-detail",
-            duration: detailDuration,
-            delay: delay + 140,
+            id: `astra-scene-card-${layer.name}`,
+            duration: layer.name === "title" ? headingDuration : detailDuration,
+            delay: delay + layer.delay,
             easing,
             distance: "0px",
+            softness: layer.name === "title" ? softness : undefined,
           });
           details++;
         }

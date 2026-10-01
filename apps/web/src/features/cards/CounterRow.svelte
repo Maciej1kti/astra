@@ -424,7 +424,7 @@
   @media (prefers-reduced-motion: no-preference) {
     .counter-confirmation,
     .counter-history-panel {
-      animation: astra-reveal var(--motion-quick) var(--motion-ease);
+      animation: astra-reveal var(--motion-detail) var(--motion-emerge);
     }
     .counter-value {
       transition:

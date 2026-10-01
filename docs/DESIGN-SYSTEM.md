@@ -134,17 +134,32 @@ retargets from its current position and never receives pointer input.
 Loaded views reveal a short cascade of headings and rows. `revealScene` receives
 an explicit navigation key and readiness state; refreshes and typing do not replay
 an existing scene. At most 24 candidates are measured, only onscreen candidates
-animate, and primary delays stop at 340 ms. At most 24 secondary metadata groups
-follow their own card by 140 ms. Ordinary surfaces move 12px over 640 ms; section
-headings take 480 ms. The parent view fades in over 200 ms, and card surfaces
-become opaque early so the later metadata remains visible while they travel.
+animate, and primary delays stop at 340 ms. At most 72 small card layers follow
+their own surface: context at +60 ms, title +100, metadata +150, labels +200,
+attention reasons +220 and daily counter footer +250. These roles cover Focus's
+three card sections, Projects, List, workspace Board and project Board. Each
+role selects one existing group, so facts and labels cannot consume the footer's
+place in a per-card candidate slice. Ordinary surfaces move 6px over 720 ms; section
+headings move 4px over 600 ms. The parent view fades in over 200 ms. Entrances
+start with zero opacity velocity, gradually materialize and ease into rest.
+Surface opacity reaches its endpoint at 80% of eased progress so their details
+remain readable through the final settling movement.
 Focus drag surfaces, Calendar, Timeline and Board widget surfaces
-only fade, preserving their gesture geometry. Do not add per-event animations or
-DOM observers to dense planning widgets.
+only fade, preserving their gesture geometry. Inner card layers also keep their
+position and size. Board explicitly opts into bounded card children: up to eight
+candidates per visible column, 48 measurements and 24 visible card owners. It
+shares the 72-secondary-effect limit. Calendar layers its native surface,
+weekday header, date grid and event groups at 0/100/160/240 ms; agenda day groups
+follow in bounded 45 ms steps. These opacity-only layers start after the current
+project/date/layout data is ready, including mobile agenda and month grid.
+Project changes start a new sequence; refreshes and source writes do not.
+The month overflow popup separately reveals its surface, header and event group.
+Calendar and Timeline retain native event rendering and gesture geometry.
+Do not add per-event animations or DOM observers to dense planning widgets.
 
-Native dialogs enter with a 640 ms lift/scale and a 280 ms backdrop. The dialog
-becomes opaque within the first 40% of its entrance so its content's motion is
-visible. `revealLayers` gives context, title, actions, sections and details separate
+Native dialogs enter over 760 ms from a 12px offset and 0.992 scale, with a 360 ms
+backdrop. The dialog's opacity takes 80% of its duration to emerge gently.
+`revealLayers` gives context, title, actions, sections and details separate
 timelines, instead of animating the entire body over its animated children.
 Card sections follow their visible saved order. Existing tags follow their own
 section; the tag pulse is reserved for an explicit add action. Hidden sections
@@ -156,13 +171,16 @@ save/discard guards decide whether dismissal is allowed. Focus returns to the
 initiating control after removal, without stealing it from a newer modal. Deferred
 loading placeholders hand off immediately to the loaded component.
 
-Menus open from their anchored edge and exit quickly. Measured floating popovers
-use an early fade on entry to keep their placement stable. Menu surfaces precede
+Menus open from their anchored edge with a 3px offset and 0.992 scale, and exit
+quickly. Measured floating popovers use the same soft fade while keeping their
+placement stable. Menu surfaces precede
 their items, and suggestion rows have a short cascade. Page headings, primary
 actions and workspace/planning controls also have separate opening steps.
-Menus, disclosures and control settling take 440 ms; navigation selection takes 520 ms. The shared easing spreads
-visible movement through the entrance instead of spending most of its duration
-almost at rest. Shared buttons compress on
+Menus, disclosures and control settling take 500 ms; navigation selection takes
+520 ms. Headings, card titles, selected tags and suggestion rows resolve from a temporary 2px
+blur. Large surfaces, gesture owners, section contents and general control groups
+use opacity without blur; no blur remains after completion or cancellation.
+Shared buttons compress on
 press and settle with the spring easing; navigation icons, pins, priority, chips
 and acknowledged save state provide small secondary responses. Hover lift applies
 only to fine pointers and excludes draggable Focus cards. Existing drag transforms
@@ -170,15 +188,15 @@ remain owned by their gesture implementation.
 
 | Layer | Timing and role |
 | --- | --- |
-| Surface | Backdrop first; dialog or card becomes opaque early while its movement continues |
-| Heading | 480 ms; dialog context starts at 60 ms, title at 110 ms, toolbar at 175 ms |
-| Content | 560 ms; dialog sections start at 200 ms with bounded 50 ms steps |
-| Detail | 360 ms; tags follow their section by at least 120 ms, menu rows use 36 ms steps |
+| Surface | Backdrop first; gentle opacity onset, shallow travel and a gradual settle |
+| Heading | 600 ms; dialog context starts at 60 ms, title at 110 ms, toolbar at 175 ms |
+| Content | 640 ms; dialog sections start at 200 ms with bounded 50 ms steps |
+| Detail | 480 ms; tags follow their section by at least 120 ms, menu rows use 36 ms steps |
 | Direct feedback | Immediate press response, followed by a slower release; saves/additions acknowledge the action |
 
 Sequences measure at most 32 visible local targets once per opening/navigation
 key and cap their delay at 560 ms. No persistent observer or per-event widget
-animation is added. Control groups, draggable content and metadata only fade;
+animation is added. General control groups, draggable content and metadata only fade;
 their gesture geometry stays fixed. Refreshing source data, editing a draft or
 adding a tag does not replay the other layers. Cleanup cancels pending frames
 and effects, and reduced motion applies to every layer.
@@ -186,7 +204,9 @@ and effects, and reduced motion applies to every layer.
 Use `--motion-quick` for control feedback, `--motion-enter` for disclosures,
 `--motion-dialog` for dialogs, `--motion-scene` / `--motion-stagger` for content,
 `--motion-selection` for selection and `--motion-exit` for dismissal. Entrances
-use `--motion-ease`; interactive settling uses `--motion-spring`. Effects must not
+use `--motion-emerge`; layout/hover transitions use `--motion-ease` and interactive
+settling uses `--motion-spring`. `--motion-softness` is reserved for the bounded
+small layers above; never apply it to a whole view or widget. Effects must not
 own data, delay requests, gate input, replay on autosave or install permanent
 compositing hints. The system reduced-motion preference removes CSS effects,
 cancels shared Web Animations and completes Svelte transitions already in flight.

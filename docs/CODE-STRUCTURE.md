@@ -100,7 +100,7 @@ planning/tag endpoints and command execution. Feature code should use a named
 endpoint when one exists; response types are asserted only at transport boundaries. `lib/contracts` contains generated types; `lib/resources` contains
 shared resource presentation; `lib/ui` contains shared rendering and dialog
 behavior and the small shared component set. `lib/ui/motion.ts` owns bounded
-scene entrances, measured navigation selection and live reduced-motion cleanup;
+scene entrances, bounded inner card layers, measured navigation selection and live reduced-motion cleanup;
 `lib/ui/motion-layers.ts` owns bounded heading/content/detail sequences for native
 layers and workspace controls, with explicit per-opening keys and cleanup;
 features supply their navigation keys and readiness without changing read lifetimes. Visual values live in
@@ -194,7 +194,11 @@ source rows. Gantt gesture activity is passed through its instance context.
 `CalendarToolbar` composes the shared buttons, icons and date disclosure. It emits
 navigation and creation callbacks; `CalendarView` retains route integration,
 versioned reads, paging, gesture guards and date proposals. Calendar presentation
-does not replace or cache the source projection.
+does not replace or cache the source projection. `calendar-motion.ts` supplies
+bounded native grid/event-group layers to the shared readiness-aware sequence.
+Project/date/widget-view keys start entrances only after the current page is
+ready; refreshes and writes retain the sequence. Native events are never animated
+individually, and the month popup's opacity layers preserve positioning/gestures.
 
 The calendar's reviewed build transform lives in `apps/web/build`; it is guarded
 by exact upstream source hashes and required-module checks. Planning owns its

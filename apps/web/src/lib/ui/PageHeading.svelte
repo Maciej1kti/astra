@@ -9,7 +9,7 @@
   use:revealLayers={{
     key: title,
     layers: [
-      { selector: ":scope > h1", role: "heading", delay: 0, distance: "8px" },
+      { selector: ":scope > h1", role: "heading", delay: 0, distance: "4px" },
       { selector: ":scope > :not(h1)", role: "detail", delay: 100 },
     ],
   }}

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { revealScene } from "../../lib/ui/motion";
+  import { revealLayers } from "../../lib/ui/motion-layers";
+  import { calendarLayers } from "./calendar-motion";
   import type { CardCreate } from "../../lib/contracts/api.generated";
   import { eventFromDates } from "../../lib/resources/timed-event.ts";
   import {
@@ -476,11 +477,10 @@
     </p>{/if}
   <div
     class="calendar-surface"
-    use:revealScene={{
-      ready: !loading,
-      key: `${date}:${mode}:${monthGrid}`,
-      selector: ":scope > .ec",
-      distance: "0px",
+    use:revealLayers={{
+      ready: ready && !loading,
+      key: `${project}:${date}:${widgetView}`,
+      layers: calendarLayers,
     }}
     aria-busy={loading}
     class:month={monthGrid}
@@ -1048,7 +1048,15 @@
       transition: background-color var(--motion-quick) ease;
     }
     .calendar-surface :global(.ec-popup) {
-      animation: astra-fade var(--motion-quick) ease;
+      animation: astra-fade var(--motion-content) var(--motion-emerge);
+    }
+    .calendar-surface :global(.ec-popup > .ec-day-head) {
+      animation: astra-fade var(--motion-heading) var(--motion-emerge) 100ms
+        backwards;
+    }
+    .calendar-surface :global(.ec-popup > .ec-events) {
+      animation: astra-fade var(--motion-content) var(--motion-emerge) 220ms
+        backwards;
     }
   }
 </style>

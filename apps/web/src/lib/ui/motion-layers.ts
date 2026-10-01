@@ -7,8 +7,9 @@ type Layer = {
   stagger?: number;
   distance?: string;
   afterParent?: boolean;
+  soften?: boolean;
 };
-type Sequence = { key?: string; layers: readonly Layer[] };
+type Sequence = { key?: string; ready?: boolean; layers: readonly Layer[] };
 
 /** Explicit local sequences, measured once per opening/key, never on draft edits. */
 export function revealLayers(node: HTMLElement, initial: Sequence) {
@@ -23,16 +24,20 @@ export function revealLayers(node: HTMLElement, initial: Sequence) {
   };
   const reveal = () => {
     const next = options.key ?? "initial";
+    if (options.ready === false) {
+      cancelAnimationFrame(frame);
+      return;
+    }
     if (key === next) return;
     clear();
-    key = next;
     frame = requestAnimationFrame(() => {
+      key = next;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const owner = node.closest("dialog");
       const planned: { element: HTMLElement; layer: Layer; delay: number }[] =
         [];
       const seen = new Set<HTMLElement>();
-      // Collect/measure first; then start a bounded set of compositor effects.
+      // Collect/measure first; then start a bounded set of visual effects.
       for (const layer of options.layers) {
         const targets = Array.from(
           node.querySelectorAll<HTMLElement>(layer.selector),
@@ -58,13 +63,13 @@ export function revealLayers(node: HTMLElement, initial: Sequence) {
           seen.add(element);
         }
       }
-      const easing = getComputedStyle(node)
-        .getPropertyValue("--motion-ease")
-        .trim();
+      const style = getComputedStyle(node);
+      const easing = style.getPropertyValue("--motion-emerge").trim();
+      const softness = style.getPropertyValue("--motion-softness").trim();
       const durations = {
-        heading: motionDuration(node, "--motion-heading", 480),
-        content: motionDuration(node, "--motion-content", 560),
-        detail: motionDuration(node, "--motion-detail", 360),
+        heading: motionDuration(node, "--motion-heading", 600),
+        content: motionDuration(node, "--motion-content", 640),
+        detail: motionDuration(node, "--motion-detail", 480),
       };
       for (const { element, layer, delay } of planned) {
         const effect = enter(element, {
@@ -74,6 +79,8 @@ export function revealLayers(node: HTMLElement, initial: Sequence) {
           easing,
           distance: layer.distance ?? "0px",
           surface: layer.role === "content",
+          softness:
+            (layer.soften ?? layer.role === "heading") ? softness : undefined,
         });
         if (effect) effects.push(effect);
       }
@@ -95,14 +102,14 @@ export const dialogLayers: Sequence = {
       selector: ".dialog-heading",
       role: "heading",
       delay: 60,
-      distance: "6px",
+      distance: "3px",
     },
     {
       selector: ".dialog-header-content > *",
       role: "heading",
       delay: 110,
       stagger: 65,
-      distance: "8px",
+      distance: "4px",
     },
     { selector: ".dialog-header-actions", role: "detail", delay: 140 },
     {
@@ -119,6 +126,7 @@ export const dialogLayers: Sequence = {
       delay: 280,
       stagger: 28,
       afterParent: true,
+      soften: true,
     },
   ],
 };
@@ -143,7 +151,15 @@ export const menuLayers: Sequence = {
 };
 
 export const suggestionLayers: Sequence = {
-  layers: [{ selector: ":scope > li", role: "detail", delay: 80, stagger: 32 }],
+  layers: [
+    {
+      selector: ":scope > li",
+      role: "detail",
+      delay: 80,
+      stagger: 32,
+      soften: true,
+    },
+  ],
 };
 
 export const controlsLayers: Sequence = {

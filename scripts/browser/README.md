@@ -14,12 +14,27 @@ opening, menu reversal, native dismissal/focus restoration, live reduced-motion
 changes and the release CSP. It captures rendered light/dark surfaces in Chromium;
 rendered effects sampled at 150 ms also guard against navigation, content, menus
 and dialogs collapsing their visible travel into the first few frames.
+Samples at 50 ms verify gentle opacity onset; headings and tags also resolve
+from a small blur to fully sharp, opaque content without leaving an active filter.
+The card-layer scenarios check titles/context, metadata, labels and daily counters
+in In focus/In motion/Events, Projects, List and both Board modes. Actual bounds
+stay fixed while inner effects run; a counter save and ordinary refresh do not
+replay entrances. A narrow Focus case retains its visible footer.
 WebKit retains its existing screenshot/CSP restriction. These are browser checks,
 not physical-device acceptance or a frame-rate benchmark. Raw pointer/keyboard
 scenarios wait for native `dialog[open]` removal before acting on the background;
 exiting layers leave the accessibility tree before their brief visual exit ends.
 Disclosure helpers use `aria-expanded` to distinguish an open panel from its
 outgoing painted surface.
+
+The `calendar-motion` suite holds the real period read to verify entrance readiness,
+then checks separate native grid/event or agenda-day layers in every desktop and
+narrow-screen mode. It covers project/date changes, an empty project, source-write
+and refresh stability, source opening, live reduced motion and the month overflow
+popup's gentle layers. Sampled bounds remain fixed, with no per-event animation.
+Chromium captures settled layouts and intermediate rendered frames; native drag,
+resize, cancellation, conflict/retry and touch behavior remain covered by the
+planning, events and calendar-popup suites.
 
 The HTTPS smoke exercises broad workflows, including keyboard Focus ordering and
 reload persistence, while the planning suite covers its widgets. The portable

@@ -4,8 +4,10 @@ import { expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { runBrowserSuite } from "../runtime.mjs";
+import { checkCardLayers } from "../motion-card-layers.mjs";
 
-await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
+await runBrowserSuite(async (fixture) => {
+  const { config, evidence, newContext, browser, cli, runtime } = fixture;
   const context = await newContext({ reducedMotion: "no-preference" });
   const page = await context.newPage();
   const errors = [],
@@ -108,20 +110,37 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
         const start = new DOMMatrixReadOnly(
           getComputedStyle(animation.effect.target).transform,
         );
+        const startY = parseFloat(
+          getComputedStyle(animation.effect.target).translate.split(" ")[1] ??
+            "0",
+        );
+        animation.currentTime = animation.effect.getTiming().delay + 50;
+        const earlyOpacity = Number(
+          getComputedStyle(animation.effect.target).opacity,
+        );
         animation.currentTime = animation.effect.getTiming().delay + 150;
         const style = getComputedStyle(animation.effect.target);
         const current = new DOMMatrixReadOnly(style.transform);
         const distance = Math.hypot(start.m41, start.m42);
         const result = {
           opacity: Number(style.opacity),
+          earlyOpacity,
+          blur: parseFloat(style.filter.replace("blur(", "")) || 0,
           y: current.m42,
           remaining: distance
             ? Math.hypot(current.m41, current.m42) / distance
-            : 0,
+            : startY
+              ? Math.abs(parseFloat(style.translate.split(" ")[1]) / startY)
+              : 0,
           translateY: parseFloat(style.translate.split(" ")[1] ?? "0"),
         };
         animation.finish();
-        return result;
+        const settled = getComputedStyle(animation.effect.target);
+        return {
+          ...result,
+          settledOpacity: Number(settled.opacity),
+          settledBlur: parseFloat(settled.filter.replace("blur(", "")) || 0,
+        };
       },
       { selector, name },
     );
@@ -133,19 +152,34 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await indicatorMatches();
     const rowEntrance = await at150ms(".listrow:first-of-type");
     assert(
-      rowEntrance.translateY > 3 && rowEntrance.opacity > 0.6,
+      rowEntrance.remaining > 0.25 && rowEntrance.remaining < 0.95,
       `A row must retain visible travel after 150 ms: ${JSON.stringify(rowEntrance)}`,
     );
+    const softOnset = (effect) => {
+      assert(
+        effect.earlyOpacity < 0.1,
+        `Entrance starts gently: ${JSON.stringify(effect)}`,
+      );
+      assert(
+        effect.opacity > 0.05 && effect.opacity < 0.8,
+        `Entrance is still emerging at 150 ms: ${JSON.stringify(effect)}`,
+      );
+      assert.equal(effect.settledOpacity, 1);
+      assert.equal(effect.settledBlur, 0);
+    };
+    softOnset(rowEntrance);
     const initial = await page.evaluate(() => window.motionProbe.scenes);
-    assert(initial.length > 1 && initial.length <= 48);
+    assert(initial.length > 1 && initial.length <= 96);
     assert(
-      initial.filter((item) => item.id !== "astra-scene-detail").length <= 24,
+      initial.filter((item) => !item.id.startsWith("astra-scene-card-"))
+        .length <= 24,
     );
     assert(
-      initial.filter((item) => item.id === "astra-scene-detail").length <= 24,
+      initial.filter((item) => item.id.startsWith("astra-scene-card-"))
+        .length <= 72,
     );
     assert(initial.some((item) => item.delay > 0));
-    assert(Math.max(...initial.map((item) => item.delay)) <= 480);
+    assert(Math.max(...initial.map((item) => item.delay)) <= 600);
     await page.getByRole("button", { name: "Refresh", exact: true }).click();
     await expect(
       page.getByText("Loading resources…", { exact: true }),
@@ -231,9 +265,19 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     );
     const dialogEntrance = await at150ms(".editor", "astra-dialog");
     assert(
-      dialogEntrance.y > 5 && dialogEntrance.opacity > 0.6,
+      dialogEntrance.remaining > 0.25 && dialogEntrance.remaining < 0.95,
       `The visible dialog must retain travel after 150 ms: ${JSON.stringify(dialogEntrance)}`,
     );
+    softOnset(dialogEntrance);
+    const titleEntrance = await at150ms(".card-heading");
+    const tagEntrance = await at150ms(".tags .chips > li");
+    for (const effect of [titleEntrance, tagEntrance]) {
+      softOnset(effect);
+      assert(
+        effect.blur > 0 && effect.blur <= 2,
+        "Small layers gently resolve to sharp text",
+      );
+    }
     await screenshot("desktop-editor");
     await editor
       .getByRole("combobox", { name: "Labels", exact: true })
@@ -275,6 +319,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await expect(editor.locator(".action-menu-panel")).toBeVisible();
     await settle();
     const menuEntrance = await at150ms(".action-menu-panel .layout-order > li");
+    softOnset(menuEntrance);
     assert(
       menuEntrance.opacity < 0.9,
       `The menu entrance must remain legible after 150 ms: ${JSON.stringify(menuEntrance)}`,
@@ -284,6 +329,8 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
       selection,
       rowEntrance,
       dialogEntrance,
+      titleEntrance,
+      tagEntrance,
       menuEntrance,
       dialogLayers,
     });
@@ -367,6 +414,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
       "selection geometry and native layers at 1440/1024/768/390/320; dark appearance",
     );
     assert.deepEqual(await page.evaluate(() => window.motionProbe.csp), []);
+    checks.push(await checkCardLayers({ page, config, cli, runtime, settle }));
     assert.deepEqual(errors, []);
   } finally {
     await writeFile(

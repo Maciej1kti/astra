@@ -521,6 +521,7 @@
     ready: !busy && !!columns.length,
     key: project,
     selector: ".board-column-nav, .wx-column",
+    cardSelector: "[data-board-card]",
     distance: "0px",
   }}
   class="astra-board"

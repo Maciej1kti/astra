@@ -10,6 +10,7 @@ import { artifactManifest } from "./artifacts.mjs";
 
 const suites = [
   "motion",
+  "calendar-motion",
   "loading",
   "session",
   "card",
