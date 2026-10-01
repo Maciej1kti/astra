@@ -10,8 +10,10 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 The [Focus counter footer correction](2026-10-01-focus-section-counters.md) supplies
 In motion and Events with the same bounded daily counter preview as pins. Their
 shared cards now expose the complete footer without per-card source reads. The
-release-profile full gate passes 468 tests and affected Chromium/WebKit suites
+combined release-profile full gate passes 469 tests and affected Chromium/WebKit suites
 pass, including conditional saves, cancellation, narrow layouts and reload.
+The rebuilt manual app preserves 79 prior versions, three pins, settings,
+certificate and native CLI context; trusted HTTPS verifies all 32 assets.
 
 The [motion choreography follow-up](2026-10-01-motion-choreography.md) addresses
 rushed visible motion with calmer shared curves and explicit heading/content/detail

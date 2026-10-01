@@ -30,3 +30,12 @@ validation, durability, filesystem fixtures and test bounds remain intact.
 The release-profile gate passes 289 Rust, 172 JavaScript and seven Python tests,
 including types/contracts, boundaries, formatting, Clippy, package/link validation,
 bundle checks and release builds.
+
+The combined release-profile gate passes 469 tests (290 Rust, 172 JavaScript,
+seven Python); Chromium/WebKit Focus and focus-controls suites pass again after
+metadata and motion integration. The rebuilt manual app preserves all 79 prior
+source versions, three pins, preferences, certificate, instance/epoch and the
+complete CLI context apart from its generation timestamp. Trusted HTTPS at the
+existing address verifies all 32 embedded assets. Both live daily-page responses
+include previews for every ready card. Logs/screenshots remain in ignored
+`test-results/focus-section-counters/`. The owner’s two card edits remain separate.
