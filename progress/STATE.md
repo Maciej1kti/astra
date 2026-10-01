@@ -7,6 +7,19 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Calendar main-grid DOM iteration](2026-10-01-calendar-sparse-grid.md)
+retains all native chunks and full day popups while mounting only visible events
+and actually measured snippet shapes. Quiet release whole-month local cold/warm
+medians improve from 261/214 to 100/60 ms; with CPU ×4 and 100 ms latency, from
+1554/1265 to 946/615 ms. Live document elements fall from 10,338 to 679–682.
+Small-fixture times remain broadly unchanged; short/timed plans also improve.
+All 224 matched openings retain one Calendar GET. The full gate passes 428 tests;
+Chromium/WebKit verify exact counts, natural heights, current versions, complete
+popups and interactions. The rebuilt manual app preserves 62 prior resource
+versions, two pins, preferences and certificate; trusted HTTPS and all 33 assets
+are verified. The normal CLI report is committed and read back. Broader
+performance and release acceptance remain open.
+
 The [planning read-scope iteration](2026-10-01-planning-read-scopes.md) removes
 redundant initial-route and loaded-title-filter reads in Calendar, Gantt and Board.
 With CPU ×4 and 100 ms latency, dense Calendar filtering improves from 262 to

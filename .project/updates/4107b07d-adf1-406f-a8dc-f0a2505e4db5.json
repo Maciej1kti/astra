@@ -1,0 +1,18 @@
+{
+  "body": "The Calendar main grid now mounts only visible events and actually measured snippet representatives, retaining every native chunk and complete day popups. Matched seven-sample release medians for 1000-source-card whole-month plans improve locally from 261/214 to 100/60 ms cold/warm, and with CPU x4 plus 100 ms latency from 1554/1265 to 946/615 ms. Live document elements fall from 10,338 to 679-682; all 224 measured openings retain one Calendar data read.\n\nThe full gate passes 428 tests. Chromium and WebKit verify current versions, exact hidden counts, natural heights, resizing, large text, complete membership and interactions. Saved-control comparisons preserve popup order and visible geometry. Authentication, ordinary source reads, page bounds and durability are unchanged; no Python port is needed for this browser bottleneck.\n\nThe existing manual application is rebuilt and restarted at the same HTTPS address, preserving 62 prior resource versions, two pins, preferences and certificate. All 33 served assets match the build. The owner card remains unchanged. Evidence: progress/2026-10-01-calendar-sparse-grid.md. Broader performance and release acceptance remain open; these are desktop engine measurements, not physical iPhone acceptance.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "4107b07d-adf1-406f-a8dc-f0a2505e4db5",
+    "kind": "result",
+    "recorded_at": "2026-10-01T03:26:25.332Z",
+    "summary": "Calendar main-grid DOM reduced with verified release speed gains",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

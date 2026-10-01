@@ -87,12 +87,27 @@ loading and session suites. Focused layout tests pass 11 checks. The full gate p
 including subprocess crash/recovery checks and the optimized release build.
 Final Calendar layout repeats pass in both engines with all nine checkpoints,
 589 independent natural-height probes and complete 362-item API membership
-through 30 day popups per checkpoint. Manual integration evidence follows.
+through 30 day popups per checkpoint.
 
 Desktop and 390 px Chromium screenshots were inspected. WebKit behavior/geometry
 checks are real engine tests; screenshots are omitted under the application's
 strict CSP. These are desktop engines/emulated viewports, not physical iPhone or
 remote-owner acceptance. Broader performance and release acceptance remain open.
+
+## Manual integration and report
+
+Application commit: `82bd0e9`. The original checkout was fast-forwarded, then its
+embedded frontend and optimized daemon were rebuilt. The existing manual launcher
+was restarted with the same state, origin, port and certificate. Actual socket
+connection readiness and trusted `https://100.122.250.14:47832` were verified.
+All 62 prior resource versions, two pins, preferences and certificate are unchanged;
+all 33 served asset SHA-256 values match the local build and no diagnostic maps
+are published. The owner's unrelated card bytes remain unchanged.
+
+The normal CLI, explicitly selecting `/Users/maciek/kodowanko/projekty/astra`,
+committed result report `4107b07d-adf1-406f-a8dc-f0a2505e4db5` and read back its exact body and version
+`r1.f7dacf7afdff8fa090e02aa557ef5f1e9f342bcb1cd07b47809b6d8ae902cc22`. Its request ID, epoch and unchanged payload were saved before
+submission. No card status, scope or acceptance was changed.
 
 ## Evidence
 
