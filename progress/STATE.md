@@ -7,6 +7,17 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Calendar popup probes](2026-10-01-calendar-popup-probes.md) reject deferred
+event normalization, delegated row handlers, removal of one component layer and
+an early measured opening bound. None establishes a useful repeatable gain;
+the bound's initial improvement reverses in a quiet repeat. All application
+prototypes are restored. All 560 measured samples retain full popup membership
+and current source checks, with 280 single-read Calendar openings, 140 popup
+openings without reads and 140 three-read editor openings. An exact saved-profile
+frame lookup identifies the native dialog opening callback as the hot frame,
+not chunk sorting. The deployed application remains unchanged; native DOM/layout
+cost and broader performance/acceptance work remain open.
+
 The [editor read-overlap iteration](2026-10-01-editor-read-overlap.md) starts fresh
 project/tag reads before native modal layout with an explicit immediate-read option.
 Default read cancellation, source versions and durable command rules remain.
