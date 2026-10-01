@@ -7,6 +7,17 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Calendar hidden-list iteration](2026-10-01-calendar-hidden-lists.md)
+replaces repeated growing-array copies and linear duplicate checks with one
+pass-local collection/publication per changed day. Whole-month plans retain
+44,134 DOM elements and all popup/source behavior; quiet release cold medians
+improve by 31–41 ms locally, with constrained cold/warm gains of about
+139–191 ms. Local warm readiness remains variable. Seven focused tests and four
+release Chromium/WebKit suites pass, including exact hidden counts across
+330 added cards. The full gate passes 269 Rust, 142 JavaScript and 12 Python
+tests; manual publication checks are pending. Broader
+performance and acceptance remain open.
+
 The [Calendar geometry/query probes](2026-10-01-calendar-probes.md) reject
 initial-header removal, automatic content visibility, remembered skipped sizes,
 layout/paint containment and an early SQL type restriction. Automatic visibility

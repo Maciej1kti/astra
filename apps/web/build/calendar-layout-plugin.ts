@@ -92,7 +92,7 @@ export async function calendarLayoutSource(
     source = replace(
       source,
       "<script>",
-      `<script>\n    import {measureOnce} from ${JSON.stringify(geometry)};`,
+      `<script>\n    import {collectHiddenChunks, measureOnce} from ${JSON.stringify(geometry)};`,
     );
     source = replace(
       source,
@@ -107,7 +107,7 @@ export async function calendarLayoutSource(
     return replace(
       source,
       "refs.forEach(ref => ref?.hide());",
-      "const measure = measureOnce(height);\n        refs.forEach(ref => ref?.hide(measure));",
+      "const measure = measureOnce(height);\n        const hidden = collectHiddenChunks(hiddenChunks);\n        refs.forEach(ref => ref?.hide(measure, hidden.add));\n        hidden.publish();",
     );
   }
   if (name === "src/lib/events.js") {
@@ -131,7 +131,12 @@ export async function calendarLayoutSource(
   source = replace(
     source,
     "export function hide()",
-    "export function hide(measure = height)",
+    "export function hide(measure = height, record)",
+  );
+  source = replace(
+    source,
+    "let key = toTime(date);",
+    "let key = toTime(date);\n                    if (record) {\n                        record(key, chunk);\n                        continue;\n                    }",
   );
   source = replace(
     source,

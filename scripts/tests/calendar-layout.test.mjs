@@ -3,9 +3,85 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
   calendarContentArgs,
+  collectHiddenChunks,
   measureOnce,
 } from "../../apps/web/src/features/planning/calendar-layout.ts";
 import { calendarLayoutSource } from "../../apps/web/build/calendar-layout-plugin.ts";
+
+test("one hide pass retains native order, spanned days and chunk reference identity", () => {
+  const actual = new Map(),
+    expected = new Map();
+  const chunks = Array.from({ length: 400 }, (_, index) => ({
+    id: String(index),
+    version: "observed",
+  }));
+  // This oracle is the reviewed upstream hide-list behavior.
+  function nativeAdd(key, chunk) {
+    const values = expected.get(key);
+    if (!values) expected.set(key, [chunk]);
+    else if (!values.includes(chunk)) expected.set(key, [...values, chunk]);
+  }
+  for (const pass of [
+    chunks,
+    chunks,
+    [...chunks.slice(120), { id: "0", version: "changed" }],
+  ]) {
+    const hidden = collectHiddenChunks(actual);
+    for (const chunk of pass)
+      for (const day of [7, 8, 9]) {
+        nativeAdd(day, chunk);
+        hidden.add(day, chunk);
+        hidden.add(day, chunk);
+      }
+    hidden.publish();
+    assert.deepEqual([...actual], [...expected]);
+    for (const [day, values] of actual)
+      assert.ok(
+        values.every((chunk, index) => chunk === expected.get(day)[index]),
+      );
+  }
+});
+
+test("unchanged hide passes preserve published lists and do not retrigger map writes", () => {
+  let writes = 0;
+  class ObservedMap extends Map {
+    set(key, values) {
+      writes++;
+      return super.set(key, values);
+    }
+  }
+  const first = { id: "first" },
+    second = { id: "second" };
+  const original = [first];
+  const target = new ObservedMap([[7, original]]);
+  writes = 0;
+  const hidden = collectHiddenChunks(target);
+  hidden.add(7, first);
+  hidden.publish();
+  assert.equal(writes, 0);
+  assert.equal(target.get(7), original);
+  hidden.add(7, second);
+  hidden.add(7, second);
+  hidden.publish();
+  assert.equal(writes, 1);
+  assert.deepEqual(original, [first]);
+  assert.deepEqual(target.get(7), [first, second]);
+  hidden.publish();
+  assert.equal(writes, 1);
+});
+
+test("a new hide pass observes cleared geometry generations and current chunk objects", () => {
+  const old = { id: "same", version: "old" },
+    current = { id: "same", version: "current" };
+  const target = new Map([[7, [old]]]);
+  target.clear();
+  const hidden = collectHiddenChunks(target);
+  hidden.add(8, current);
+  hidden.publish();
+  assert.equal(target.has(7), false);
+  assert.deepEqual(target.get(8), [current]);
+  assert.equal(target.get(8)[0], current);
+});
 
 test("one layout pass reuses header, day and empty-footer geometry", () => {
   const header = { height: 24 },

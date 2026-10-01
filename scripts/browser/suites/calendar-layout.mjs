@@ -1,4 +1,4 @@
-/** Dense month geometry, complete popups and unused optional formatting. */
+/** Dense month geometry, exact hidden counts and complete cross-week popups. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
@@ -13,7 +13,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     await readFile(join(folder, `${config.cards[0].id}.json`), "utf8"),
   );
   const added = new Set();
-  for (let index = 0; index < 300; index++) {
+  for (let index = 0; index < 330; index++) {
     const card = structuredClone(template);
     const id = randomUUID();
     added.add(id);
@@ -26,7 +26,9 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
           ? { start: "2026-09-07", end: "2026-09-09" }
           : index < 200
             ? { start: "2026-09-13", end: "2026-09-16" }
-            : { start: "2026-09-22", end: "2026-09-22" },
+            : index < 300
+              ? { start: "2026-09-22", end: "2026-09-22" }
+              : { start: "2026-09-01", end: "2026-09-30" },
     });
     // External writes are confined to the suite's disposable source fixture.
     await writeFile(join(folder, `${id}.json`), JSON.stringify(card));
@@ -87,13 +89,21 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
         ...root.querySelectorAll(".ec-body > .ec-events > article"),
       ];
       const misplaced = [];
+      const hiddenByDay = new Map();
       let visible = 0;
       for (const element of events) {
         const style = getComputedStyle(element);
-        if (style.visibility === "hidden") continue;
-        visible++;
         const row = Number(style.gridRowStart);
         const column = Number(style.gridColumnStart);
+        if (style.visibility === "hidden") {
+          const span = Number(style.gridColumnEnd.split(" ")[1]);
+          for (let index = 0; index < span; index++) {
+            const day = (row - 1) * 7 + column - 1 + index;
+            hiddenByDay.set(day, (hiddenByDay.get(day) ?? 0) + 1);
+          }
+          continue;
+        }
+        visible++;
         const day = cells[(row - 1) * 7 + column - 1];
         const event = window.calendarReadRect(element);
         const header = window.calendarReadRect(day.firstElementChild);
@@ -105,11 +115,20 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
         )
           misplaced.push(element.textContent);
       }
+      const incorrectHiddenCounts = cells.flatMap((cell, index) => {
+        const more = cell.lastElementChild.querySelector('[role="button"]');
+        const actual = Number(more?.textContent.match(/\d+/)?.[0] ?? 0);
+        const expected = hiddenByDay.get(index) ?? 0;
+        return actual === expected
+          ? []
+          : [{ date: cell.querySelector("time").dateTime, actual, expected }];
+      });
       return {
         cells: cells.length,
         visible,
         hidden: events.length - visible,
         misplaced,
+        incorrectHiddenCounts,
         height: window.calendarReadRect(root).height,
         counts: { ...window.calendarGeometry },
       };
@@ -117,6 +136,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     checkpoints.push({ ...layout, name });
     assert.ok(layout.hidden > 250);
     assert.deepEqual(layout.misplaced, []);
+    assert.deepEqual(layout.incorrectHiddenCounts, []);
     const actual = await surface
       .locator("[data-calendar-item]")
       .evaluateAll((elements) =>

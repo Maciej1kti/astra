@@ -155,7 +155,9 @@ does not replace or cache the source projection.
 
 The calendar's reviewed build transform lives in `apps/web/build`; it is guarded
 by exact upstream source hashes and required-module checks. Planning owns its
-pass-local geometry and lazy snippet argument helpers. No element measurement
+pass-local geometry, hidden-list collection and lazy snippet argument helpers.
+The hidden collector publishes one new array per changed day and retains
+unchanged list identity. No element measurement or duplicate-membership set
 survives a synchronous layout pass. See [ADR-054](ADR-054-CALENDAR-RENDERING.md)
 for dependency review and retained rendering behavior.
 

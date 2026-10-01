@@ -32,6 +32,17 @@ Day-grid accumulation appends each zero-or-one chunk instead of copying all
 previous chunks for every event/week. It preserves traversal order, chunk IDs,
 preparation, background events and interaction helpers.
 
+Hidden lists also accumulate within one synchronous hide pass. A per-day set
+retains chunk reference identity and insertion order; a changed list is copied
+once and appended in place before its single publication. Unchanged lists keep
+their original arrays and do not retrigger reactive writes. Existing entries
+remain until the widget's ordinary reposition clear; the collector is discarded
+after each pass, including when source objects change. Native geometry, footer
+rechecks and fallback hide behavior remain intact. This replaces repeated
+growing-array copies and linear duplicate checks with bounded linear collection,
+without assuming a row height or removing hidden DOM. See the
+[hidden-list evidence](../progress/2026-10-01-calendar-hidden-lists.md).
+
 This does not reduce the calendar's 1,000-item grid/time bound, its 200-item agenda
 page size, DOM population, accessible popup membership or observed versions.
 Authentication, source reads, API/protocol, command identity and durable writes
