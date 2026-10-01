@@ -14,6 +14,7 @@ const suites = [
   "card",
   "tags",
   "editor",
+  "editor-opening",
   "editor-inputs",
   "editor-header",
   "card-layout",

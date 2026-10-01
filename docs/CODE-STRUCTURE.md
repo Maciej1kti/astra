@@ -56,6 +56,17 @@ preload cache; it never reloads automatically over a draft. Explicit Calendar/Ga
 routes start their widget import alongside bootstrap through `planning-components.ts`;
 the mounted planning view owns errors and the same explicit reload recovery.
 
+An existing resource still requires its current source read before editing. The
+editor starts its project and card-tag reads before native modal layout, opting
+into synchronous transport startup when a GET pool slot is free. Other reads
+retain their existing microtask cancellation window, including transient Calendar
+mode/range queries. Queued reads retain the same concurrency, cancellation and
+deadline bounds. Shared response/subscriber ownership is installed before startup,
+including reentrant reads and synchronous cancellation. The editor's opening tag request is
+consumed once by its Labels catalog; later invalidations, retries and session
+restoration use fresh requests. No source response or catalog is retained across
+editor instances. Modal rendering can overlap these ordinary reads.
+
 Calendar, Gantt and Board subscribe through scalar read scopes. Republishing an
 identical route or editing a loaded-title filter does not request the same page
 again; actual query changes and planning revisions still read current data.

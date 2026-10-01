@@ -24,17 +24,25 @@ type Reference<K extends Resource["type"] = Resource["type"]> = Pick<
 export function getResource<K extends Resource["type"]>(
   ref: Reference<K>,
   signal?: AbortSignal,
+  options: Pick<ReadOptions, "immediate"> = {},
 ) {
   return api<Extract<Resource, { type: K }>>(
     resourcePath(ref),
     "GET",
     undefined,
     {},
-    { signal },
+    { ...options, signal },
   );
 }
-export function getProject(project: string) {
-  return getResource({ type: "project", project_id: project, id: project });
+export function getProject(
+  project: string,
+  options: Pick<ReadOptions, "immediate"> = {},
+) {
+  return getResource(
+    { type: "project", project_id: project, id: project },
+    undefined,
+    options,
+  );
 }
 export function getProjectDeletionPlan(project: string) {
   return api<ProjectDeletionPlan>(`/api/v1/projects/${project}/deletion-plan`);

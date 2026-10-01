@@ -29,6 +29,13 @@ through normal paired HTTP reads. It checks updated usage counts after a source
 edit and the exact current card version in a browser rename preview, alongside
 project isolation, archived merges and stale-plan rejection.
 
+The `editor-opening` suite checks that a current source read and single project/tag
+reads precede native modal layout. Reopening reads the acknowledged current source.
+It holds an ordinary opening tag response, changes another card through the CLI,
+then delivers that old response after refreshed suggestions are visible. The stale
+catalog must not replace current tags or mutate the opened resource. This checks
+request order and correctness; quiet release timing measurements are separate.
+
 The comments suite covers human/browser and bot/CLI attribution, source history,
 Markdown rendering, unsent draft protection, comment counts and editor access
 from every card view, mobile layout, response-loss retries and concurrent conflicts.

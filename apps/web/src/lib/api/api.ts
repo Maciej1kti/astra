@@ -88,7 +88,11 @@ export function configure(value: Bootstrap) {
   clockOffset = Date.parse(value.server_time) - Date.now();
 }
 const reads = new ReadRequests();
-export type ReadOptions = { signal?: AbortSignal; fresh?: boolean };
+export type ReadOptions = {
+  signal?: AbortSignal;
+  fresh?: boolean;
+  immediate?: boolean;
+};
 let independentRead = 0;
 export function clearReads() {
   reads.clear();
@@ -117,6 +121,7 @@ export async function api<T>(
       key,
       (signal) => request<T>(path, method, payload, headers, signal),
       options.signal,
+      options.immediate,
     );
   } catch (error) {
     if (error instanceof ReadQueueFullError)

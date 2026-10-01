@@ -41,6 +41,7 @@
 
   import { acceptanceValidation } from "../cards/card-work";
   import { tagValidation } from "../tags/tags";
+  import { getProjectTags } from "../../lib/api/tags";
   import { canUndoDraft, type EditorIntent } from "./editor-actions";
   import {
     type EditorDraft,
@@ -102,6 +103,20 @@
         draft.type !== "card" || !draft.fields.hiddenSections.includes(section),
     ),
   );
+  // Only the first Labels catalog read consumes this opening request.
+  // Invalidation, retries and session restoration still request fresh tags.
+  const takeOpeningTags = untrack(() => {
+    let read =
+      draft.type === "card"
+        ? getProjectTags(project, { immediate: true })
+        : undefined;
+    void read?.catch(() => {});
+    return () => {
+      const opening = read;
+      read = undefined;
+      return opening;
+    };
+  });
 
   let projectName = $state("");
   let statusMessage = $state("");
@@ -307,10 +322,19 @@
       draft.common.title.trim()
     )
       queueAutosave();
-    if (draft.type !== "project")
-      void getProject(project)
-        .then((value) => (projectName = value.metadata.name))
-        .catch(() => {});
+  });
+  $effect.pre(() => {
+    if (target.type === "project") return;
+    const selectedProject = project;
+    let live = true;
+    void getProject(selectedProject, { immediate: true })
+      .then((value) => {
+        if (live && !accessLost) projectName = value.metadata.name;
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
   });
   async function toggleRead() {
     if (!resource || locked) return;
@@ -1289,6 +1313,7 @@
                 {:else if section === "labels"}
                   <TagPicker
                     {project}
+                    openingCatalog={takeOpeningTags}
                     bind:labels={draft.fields.labels}
                     bind:draft={draft.fields.tagDraft}
                     bind:error={tagError}

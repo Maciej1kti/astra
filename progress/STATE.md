@@ -7,6 +7,19 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [editor read-overlap iteration](2026-10-01-editor-read-overlap.md) starts fresh
+project/tag reads before native modal layout with an explicit immediate-read option.
+Default read cancellation, source versions and durable command rules remain.
+Quiet constrained editor opening improves by 65–82 ms across four workloads;
+the quiet repeat confirms 71–72 ms, and small local opening repeats at 74 → 31 ms.
+Calendar readiness is broadly unchanged. All measured editor openings retain the
+current source and both context reads. The full gate passes 441 tests; 25 Chromium
+and nine affected WebKit suites plus broad HTTPS/planning checks pass. A default
+eager-read probe is rejected after a reproduced Calendar mode-transition failure;
+the selected mode passes the unchanged scenario. The manual rebuild/restart and
+publication are pending at this branch checkpoint. Broader performance and release
+acceptance remain open.
+
 The [Calendar pass-work iteration](2026-10-01-calendar-pass-work.md) reuses
 current cell/span capacity within one layout pass and reads normalized numeric
 Date values with native exclusive/resource semantics. Quiet release constrained

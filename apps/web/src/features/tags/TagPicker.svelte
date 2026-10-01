@@ -5,6 +5,7 @@
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
   import { getProjectTags } from "../../lib/api/tags";
+  import type { TagCatalog } from "../../lib/contracts/api.generated";
   import { isAbortError } from "../../lib/api/read-requests";
   import { addTag, matchingTags, TAG_LIMIT } from "./tags";
 
@@ -17,6 +18,7 @@
     disabled = false,
     project = "",
     kind = "tag",
+    openingCatalog,
   }: {
     labels?: string[];
     draft?: string;
@@ -26,6 +28,7 @@
     disabled?: boolean;
     project?: string;
     kind?: "tag" | "folder";
+    openingCatalog?: () => Promise<TagCatalog> | undefined;
   } = $props();
   const id = $props.id();
   const folder = $derived(kind === "folder");
@@ -47,15 +50,18 @@
     catalogLoading = true;
     catalogError = "";
     try {
+      const opening = folder ? undefined : openingCatalog?.();
       const catalog = folder
         ? {
             names: await all<string>("/api/v1/views/folders"),
             complete: true,
           }
-        : await getProjectTags(project).then((result) => ({
-            names: result.tags.map((tag) => tag.name),
-            complete: result.complete,
-          }));
+        : await ((!force && opening) || getProjectTags(project)).then(
+            (result) => ({
+              names: result.tags.map((tag) => tag.name),
+              complete: result.complete,
+            }),
+          );
       if (current !== generation || accessLost) return;
       projectOptions = catalog.names;
       catalogLoaded = true;

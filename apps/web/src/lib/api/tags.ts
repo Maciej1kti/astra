@@ -23,13 +23,16 @@ export function replaceTags(input: TagsReplace, version: string) {
   return command("/api/v1/workspace/tags", "PUT", input, version);
 }
 
-export function getProjectTags(project: string) {
+export function getProjectTags(
+  project: string,
+  options: Pick<ReadOptions, "immediate"> = {},
+) {
   return api<TagCatalog>(
     `/api/v1/projects/${project}/tags`,
     "GET",
     undefined,
     {},
-    { fresh: true },
+    { ...options, fresh: true },
   );
 }
 export function planProjectTagRename(

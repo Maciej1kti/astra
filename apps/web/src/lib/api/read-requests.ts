@@ -29,18 +29,25 @@ export class ReadRequests {
     this.timeoutMs = timeoutMs;
   }
 
-  private slot(signal: AbortSignal): Promise<() => void> {
+  private slot(signal: AbortSignal): (() => void) | Promise<() => void> {
+    signal.throwIfAborted();
+    const occupy = () => {
+      this.active++;
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        this.active--;
+        this.waiting.shift()?.start();
+      };
+    };
+    if (this.active < this.concurrency) return occupy();
+    if (this.waiting.length >= this.maxQueued)
+      throw new ReadQueueFullError("Waiting for previous reads to finish.");
     return new Promise((resolve, reject) => {
       const start = () => {
         signal.removeEventListener("abort", cancel);
-        this.active++;
-        let released = false;
-        resolve(() => {
-          if (released) return;
-          released = true;
-          this.active--;
-          this.waiting.shift()?.start();
-        });
+        resolve(occupy());
       };
       const waiting = { start, cancel: () => cancel() };
       const cancel = () => {
@@ -48,12 +55,6 @@ export class ReadRequests {
         signal.removeEventListener("abort", cancel);
         reject(signal.reason ?? abortError());
       };
-      if (signal.aborted) return cancel();
-      if (this.active < this.concurrency) return start();
-      if (this.waiting.length >= this.maxQueued)
-        return reject(
-          new ReadQueueFullError("Waiting for previous reads to finish."),
-        );
       signal.addEventListener("abort", cancel, { once: true });
       this.waiting.push(waiting);
     });
@@ -63,47 +64,60 @@ export class ReadRequests {
     key: string,
     operation: (signal: AbortSignal) => Promise<T>,
     signal?: AbortSignal,
+    immediate = false,
   ): Promise<T> {
     if (signal?.aborted) return Promise.reject(abortError());
+    let startRead: (() => void) | undefined;
     let entry = this.entries.get(key);
     if (!entry) {
       const controller = new AbortController();
+      let resolveRead!: (value: unknown) => void;
+      let rejectRead!: (reason: unknown) => void;
+      const promise = new Promise<unknown>((resolve, reject) => {
+        resolveRead = resolve;
+        rejectRead = reject;
+      });
       entry = {
         controller,
         users: 0,
         settled: false,
-        promise: Promise.resolve(),
+        promise,
       };
       const created = entry;
       this.entries.set(key, created);
-      created.promise = (async () => {
-        // The deadline includes queue time; obsolete reads cannot wait indefinitely.
-        const timer = setTimeout(
-          () =>
-            controller.abort(
-              new DOMException(
-                "The read timed out. Try again.",
-                "TimeoutError",
+      startRead = () => {
+        void (async () => {
+          // The deadline includes queue time; obsolete reads cannot wait indefinitely.
+          const timer = setTimeout(
+            () =>
+              controller.abort(
+                new DOMException(
+                  "The read timed out. Try again.",
+                  "TimeoutError",
+                ),
               ),
-            ),
-          this.timeoutMs,
-        );
-        let release: (() => void) | undefined;
-        try {
-          release = await this.slot(controller.signal);
-          controller.signal.throwIfAborted();
-          return await operation(controller.signal);
-        } finally {
-          clearTimeout(timer);
-          release?.();
-          created.settled = true;
-          if (this.entries.get(key) === created) this.entries.delete(key);
-        }
-      })();
+            this.timeoutMs,
+          );
+          let release: (() => void) | undefined;
+          try {
+            const slot = this.slot(controller.signal);
+            release = typeof slot === "function" ? slot : await slot;
+            if (typeof slot === "function" && !immediate)
+              await Promise.resolve();
+            controller.signal.throwIfAborted();
+            return await operation(controller.signal);
+          } finally {
+            clearTimeout(timer);
+            release?.();
+            created.settled = true;
+            if (this.entries.get(key) === created) this.entries.delete(key);
+          }
+        })().then(resolveRead, rejectRead);
+      };
     }
     const current = entry;
     current.users++;
-    return new Promise<T>((resolve, reject) => {
+    const subscription = new Promise<T>((resolve, reject) => {
       let finished = false;
       const finish = () => {
         if (finished) return false;
@@ -129,6 +143,9 @@ export class ReadRequests {
         },
       );
     });
+    // Startup may reenter or abort: response and subscriber ownership are ready.
+    startRead?.();
+    return subscription;
   }
 
   clear() {
