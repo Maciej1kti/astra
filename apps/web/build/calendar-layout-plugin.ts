@@ -97,7 +97,7 @@ export async function calendarLayoutSource(
     source = replace(
       source,
       "<script>",
-      `<script>\n    import {collectHiddenChunks, measureOnce, monthChunkSamples} from ${JSON.stringify(geometry)};`,
+      `<script>\n    import {collectHiddenChunks, monthChunkSamples, monthLayoutGeometry} from ${JSON.stringify(geometry)};`,
     );
     source = replace(
       source,
@@ -145,22 +145,14 @@ export async function calendarLayoutSource(
         placements = next;
         return true;
     }
-    function dayElement(chunk) {
-        return viewState.gridEl.children.item((chunk.gridRow - 1) * grid[0].length + chunk.gridColumn - 1);
-    }
-    function isHidden(chunk, measure) {
-        const first = dayElement(chunk);
-        let day = first, footer = 0;
-        for (let i = 0; i < chunk.dates.length && day; i++, day = day.nextElementSibling) {
-            footer = max(footer, measure(day.lastElementChild));
-        }
-        return chunk.bottom > measure(first) - footer;
+    function monthLayoutPass() {
+        return monthLayoutGeometry(viewState.gridEl, grid[0]?.length ?? 0, height);
     }`,
     );
     source = replace(
       source,
       "        runReposition(refs, chunks);",
-      `        const measure = measureOnce(height);
+      `        const {measure, dayElement, isHidden} = monthLayoutPass();
         if (samples) {
             const heights = new Map();
             for (const sample of samples.representatives) {
@@ -172,7 +164,7 @@ export async function calendarLayoutSource(
             for (const chunk of chunks) {
                 const size = heights.get(samples.sample.get(chunk));
                 const top = repositionEvent(chunk, size, measure(dayElement(chunk).firstElementChild) || 1, eventGap);
-                next.set(chunk, {top, height: size, hidden: isHidden(chunk, measure)});
+                next.set(chunk, {top, height: size, hidden: isHidden(chunk)});
             }
             if (!publish(next)) return;
         } else {
@@ -183,14 +175,14 @@ export async function calendarLayoutSource(
     source = replace(
       source,
       "        refs.forEach(ref => ref?.hide());",
-      `        const measure = measureOnce(height);
+      `        const {measure, dayElement, isHidden} = monthLayoutPass();
         const hidden = collectHiddenChunks(hiddenChunks);
         if (samples) {
             const next = new Map();
             for (const chunk of chunks) {
                 const old = placements.get(chunk);
                 if (!old) continue;
-                const value = {...old, hidden: isHidden(chunk, measure)};
+                const value = {...old, hidden: isHidden(chunk)};
                 next.set(chunk, value);
                 if (value.hidden) for (const date of chunk.dates) hidden.add(toTime(date), chunk);
             }
@@ -214,6 +206,12 @@ export async function calendarLayoutSource(
   }
 
   if (name === "src/lib/events.js") {
+    source = `import {calendarEventIntersects} from ${JSON.stringify(geometry)};\n${source}`;
+    source = replace(
+      source,
+      "return (!resource || event.resourceIds.includes(resource.id)) && event.start < end && event.end > start;",
+      "return calendarEventIntersects(event, start, end, resource);",
+    );
     source = replace(
       source,
       "runReposition(refs, data)",

@@ -75,6 +75,70 @@ export function measureOnce<T extends object>(read: (element: T) => number) {
   };
 }
 
+/** Cell/span capacity is shared only within this synchronous layout pass. */
+export function monthLayoutGeometry(
+  grid: Element,
+  columns: number,
+  read: (element: Element) => number,
+) {
+  const measure = measureOnce(read);
+  const days = new Map<
+    number,
+    { element: Element; capacities: Map<number, number> }
+  >();
+  function cell(chunk: Pick<MonthChunk, "gridRow" | "gridColumn">) {
+    const index = (chunk.gridRow - 1) * columns + chunk.gridColumn - 1;
+    let value = days.get(index);
+    if (!value) {
+      const element = grid.children.item(index);
+      if (!element) throw new Error("Calendar layout cell is missing");
+      value = { element, capacities: new Map() };
+      days.set(index, value);
+    }
+    return value;
+  }
+  return {
+    measure,
+    dayElement: (chunk: Pick<MonthChunk, "gridRow" | "gridColumn">) =>
+      cell(chunk).element,
+    isHidden(
+      chunk: Pick<MonthChunk, "gridRow" | "gridColumn" | "dates"> & {
+        bottom: number;
+      },
+    ) {
+      const first = cell(chunk);
+      const span = chunk.dates.length;
+      let capacity = first.capacities.get(span);
+      if (capacity === undefined) {
+        let day: Element | null = first.element;
+        let footer = 0;
+        for (let index = 0; index < span && day; index++) {
+          if (day.lastElementChild)
+            footer = Math.max(footer, measure(day.lastElementChild));
+          day = day.nextElementSibling;
+        }
+        capacity = measure(first.element) - footer;
+        first.capacities.set(span, capacity);
+      }
+      return chunk.bottom > capacity;
+    },
+  };
+}
+
+/** Native date bounds stay exclusive; read current normalized Date values. */
+export function calendarEventIntersects(
+  event: { start: Date; end: Date; resourceIds: readonly unknown[] },
+  start: Date,
+  end: Date,
+  resource?: { id: unknown },
+) {
+  return (
+    (!resource || event.resourceIds.includes(resource.id)) &&
+    event.start.getTime() < end.getTime() &&
+    event.end.getTime() > start.getTime()
+  );
+}
+
 /** Collect one hide pass without recopying an expanding list for each event. */
 export function collectHiddenChunks<K, T>(target: Map<K, T[]>) {
   const pending = new Map<K, { previous: T[]; seen: Set<T>; values?: T[] }>();

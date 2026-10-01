@@ -126,6 +126,10 @@ browser timers to distinguish immediate navigation from debounced search, checks
 deferred-module failure recovery, and exercises pending pairing reload when the
 concurrent unauthorized preference read cancels bootstrap. Timing measurements
 remain separate from these controlled behavioral checks.
+After ordinary CLI edits, Calendar uses its loaded-title filter to expose a
+possibly hidden current item and checks its DOM source version. Gantt uses its
+selection control for virtualized rows. Neither assertion requires every loaded
+item to stay mounted in the main view.
 
 The `calendar-pages` suite adds 205 scheduled cards to its disposable source
 fixture. It checks complete agenda pagination, preserved item versions and keyboard

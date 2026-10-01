@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
   calendarContentArgs,
+  calendarEventIntersects,
   collectHiddenChunks,
   measureOnce,
   monthChunkSamples,
+  monthLayoutGeometry,
 } from "../../apps/web/src/features/planning/calendar-layout.ts";
 import { calendarLayoutSource } from "../../apps/web/build/calendar-layout-plugin.ts";
 
@@ -214,6 +216,153 @@ test("the next layout pass observes resized cells and changed footers", () => {
   footer.height = 25;
   const after = measureOnce(read);
   assert.equal(after(day) - after(footer), 65);
+});
+
+function geometryGrid(heights) {
+  const cells = heights.map((height) => ({
+    height,
+    firstElementChild: { height: 22 },
+    lastElementChild: { height: 0 },
+    nextElementSibling: null,
+  }));
+  for (let index = 0; index + 1 < cells.length; index++)
+    cells[index].nextElementSibling = cells[index + 1];
+  let lookups = 0;
+  return {
+    cells,
+    get lookups() {
+      return lookups;
+    },
+    children: {
+      item(index) {
+        lookups++;
+        return cells[index] ?? null;
+      },
+    },
+  };
+}
+
+test("one month pass reuses cell/span capacity and observes each current bottom", () => {
+  const grid = geometryGrid(Array(14).fill(150.25));
+  grid.cells[9].lastElementChild.height = 15.5;
+  grid.cells[10].lastElementChild.height = 8.25;
+  let reads = 0;
+  const pass = monthLayoutGeometry(grid, 7, (element) => {
+    reads++;
+    return element.height;
+  });
+  for (let index = 0; index < 1000; index++) {
+    const chunk = {
+      gridRow: 2,
+      gridColumn: 2,
+      dates: Array(index % 2 ? 3 : 1),
+      bottom: index % 3 ? 140 : 150.25,
+    };
+    // Independent native footer traversal, without any pass-local reuse.
+    let day = grid.cells[8],
+      footer = 0;
+    for (let offset = 0; offset < chunk.dates.length && day; offset++) {
+      footer = Math.max(footer, day.lastElementChild.height);
+      day = day.nextElementSibling;
+    }
+    assert.equal(pass.isHidden(chunk), chunk.bottom > 150.25 - footer);
+    assert.equal(pass.dayElement(chunk), grid.cells[8]);
+    assert.equal(pass.measure(pass.dayElement(chunk).firstElementChild), 22);
+  }
+  assert.equal(grid.lookups, 1);
+  assert.equal(reads, 5);
+});
+
+test("a new month pass observes resized cells and newly populated span footers", () => {
+  const grid = geometryGrid([140, 140, 140]);
+  const chunk = {
+    gridRow: 1,
+    gridColumn: 1,
+    dates: Array(3),
+    bottom: 120,
+  };
+  const read = (element) => element.height;
+  assert.equal(monthLayoutGeometry(grid, 3, read).isHidden(chunk), false);
+  grid.cells[0].height = 130;
+  grid.cells[2].lastElementChild.height = 25;
+  assert.equal(monthLayoutGeometry(grid, 3, read).isHidden(chunk), true);
+  grid.cells[0].height = 145;
+  // Native hiding uses a strict boundary: exact fits stay visible.
+  assert.equal(monthLayoutGeometry(grid, 3, read).isHidden(chunk), false);
+  chunk.bottom += 0.001;
+  assert.equal(monthLayoutGeometry(grid, 3, read).isHidden(chunk), true);
+});
+
+test("month capacity preserves native sibling truncation at the grid edge", () => {
+  const grid = geometryGrid([100, 100]);
+  grid.cells[1].lastElementChild.height = 18;
+  const pass = monthLayoutGeometry(grid, 2, (element) => element.height);
+  const chunk = { gridRow: 1, gridColumn: 2, dates: Array(3), bottom: 82 };
+  assert.equal(pass.isHidden(chunk), false);
+  chunk.bottom = 83;
+  assert.equal(pass.isHidden(chunk), true);
+});
+
+test("numeric calendar bounds match native exclusive dates and resource filtering", () => {
+  function native(event, start, end, resource) {
+    return (
+      (!resource || event.resourceIds.includes(resource.id)) &&
+      event.start < end &&
+      event.end > start
+    );
+  }
+  const instants = [
+    -86400001,
+    0,
+    Date.parse("2026-09-07T00:00:00Z"),
+    Date.parse("2026-10-25T02:30:00+02:00"),
+    Date.parse("9999-12-31T00:00:00Z"),
+    NaN,
+  ];
+  for (const instant of instants)
+    for (const duration of [0, 1, 1800000, 86400000])
+      for (const offset of [-86400000, -1, 0, 1, 86400000])
+        for (const resource of [
+          undefined,
+          { id: "one" },
+          { id: "missing" },
+          { id: 7 },
+          { id: "7" },
+        ]) {
+          const event = {
+            start: new Date(instant),
+            end: new Date(instant + duration),
+            resourceIds: ["one", 7],
+          };
+          const start = new Date(instant + offset),
+            end = new Date(instant + offset + 86400000);
+          assert.equal(
+            calendarEventIntersects(event, start, end, resource),
+            native(event, start, end, resource),
+          );
+        }
+});
+
+test("calendar intersection reads mutated event and query dates without caching", () => {
+  const start = new Date("2026-09-07T00:00:00Z");
+  const end = new Date("2026-09-08T00:00:00Z");
+  const event = {
+    start: new Date(start),
+    end: new Date(end),
+    resourceIds: ["one"],
+  };
+  assert.equal(calendarEventIntersects(event, start, end), true);
+  event.start.setUTCDate(8);
+  event.end.setUTCDate(9);
+  assert.equal(calendarEventIntersects(event, start, end), false);
+  start.setUTCDate(8);
+  end.setUTCDate(9);
+  assert.equal(calendarEventIntersects(event, start, end, { id: "one" }), true);
+  event.resourceIds[0] = "two";
+  assert.equal(
+    calendarEventIntersects(event, start, end, { id: "one" }),
+    false,
+  );
 });
 
 test("unused calendar snippet details are lazy and used details keep their current values", () => {

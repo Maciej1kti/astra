@@ -164,8 +164,11 @@ The calendar's reviewed build transform lives in `apps/web/build`; it is guarded
 by exact upstream source hashes and required-module checks. Planning owns its
 pass-local geometry, hidden-list collection and lazy snippet argument helpers.
 The hidden collector publishes one new array per changed day and retains
-unchanged list identity. No element measurement or duplicate-membership set
-is reused by another synchronous layout pass. The month grid retains all native
+unchanged list identity. Cell lookup and cell/span capacity share only that
+pass's measured geometry. The numeric date predicate reads current normalized
+Date values and retains native exclusive bounds/resource filtering. No date
+value, element measurement or duplicate-membership set is reused by another
+synchronous layout pass. The month grid retains all native
 chunk models, but mounts interactive components only for visible events and
 reviewed equal-height snippet shapes. Each pass measures the actual native
 representatives and uses native positioning. The main keyed loop contains only

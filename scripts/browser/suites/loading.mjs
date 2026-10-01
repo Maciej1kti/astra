@@ -288,7 +288,18 @@ await runBrowserSuite(async (suite) => {
         );
         assert.equal(current.title, title);
         assert.equal(current.version, committed.version);
-        if (view === "gantt") {
+        if (view === "calendar") {
+          // A source update can move this item below the month grid's visible
+          // stack. The loaded-title filter must expose the current projection.
+          await filter.fill(title);
+          const entry = planningPage
+            .locator(`[data-calendar-item="${current.item_id}"]`)
+            .first();
+          await expect(entry).toContainText(title);
+          await expect(
+            entry.locator("xpath=ancestor::article[1]"),
+          ).toHaveAttribute("data-source-version", committed.version);
+        } else if (view === "gantt") {
           await planningPage
             .getByLabel("Selected card", { exact: true })
             .selectOption(id);

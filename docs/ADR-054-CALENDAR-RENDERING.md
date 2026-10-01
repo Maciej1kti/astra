@@ -18,8 +18,11 @@ optimization. The plugin adds no runtime or build dependency.
 
 Each synchronous month-grid reposition/hide pass gets its own geometry reader.
 It measures an element once, including a zero-height footer. No geometry survives
-the pass. ResizeObserver, subsequent hide passes and changed footer contents
-therefore read current geometry. Event height, ordering, stack placement, popup
+the pass. Cell lookup and maximum footer height for a cell/span are also shared
+within that same pass. The next reposition/hide gets a new reader and capacity
+map; each chunk's current bottom is compared to the measured available space.
+ResizeObserver, subsequent hide passes and changed footer contents therefore
+read current geometry. Event height, ordering, stack placement, popup
 content, helper previews and default measurement behavior remain available.
 
 Snippet arguments expose time text and view conversion through live getters.
@@ -28,6 +31,14 @@ does not invoke `Intl.formatRange`. Consumers that read optional fields still
 subscribe to current values; default content, pointer time text and mount
 callbacks keep their existing paths. No formatted value is cached across a
 reactive update.
+
+The reviewed event intersection predicate reads each normalized Date's current
+numeric timestamp instead of repeatedly invoking relational Date coercion. It
+retains exclusive bounds, zero-duration behavior and the existing resource-ID
+short circuit. Event/query dates are never cached: changing a Date during a
+gesture is observed by the next check. This applies to the pinned renderer's
+existing date-filtering callers, including time and list views. See the
+[capacity/date evidence](../progress/2026-10-01-calendar-pass-work.md).
 
 Day-grid accumulation appends each zero-or-one chunk instead of copying all
 previous chunks for every event/week. It preserves traversal order, chunk IDs,
