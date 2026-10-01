@@ -90,14 +90,23 @@ LIMIT 200",
         });
         out["omitted"]["focus"] = json!(focus.len());
         let budget = max_bytes - 512;
+        // Appends and count updates keep the current compact JSON size exact.
+        // The final truncation flag is followed by ordinary full serialization.
+        let mut encoded_bytes = encoded_len(&out);
         for reference in focus {
-            if encoded_len(&out) > max_bytes / 2 {
+            if encoded_bytes > max_bytes / 2 {
                 break;
             }
-            if !append(&mut out, "focus", json!(reference), budget) {
+            if !append(
+                &mut out,
+                "focus",
+                json!(reference),
+                budget,
+                &mut encoded_bytes,
+            ) {
                 break;
             }
-            increment(&mut out, "focus");
+            increment(&mut out, "focus", &mut encoded_bytes);
         }
         let mut omitted = Vec::new();
         for (kind, field, id) in candidates {
@@ -109,20 +118,27 @@ LIMIT 200",
                         "warnings",
                         json!({"code":"SOURCE_UNAVAILABLE","message":"A source could not be verified; read the resource separately."}),
                         budget,
+                        &mut encoded_bytes,
                     );
                     omitted.push(json!({"type":kind.as_str(),"id":id}));
                     continue;
                 }
             };
             let value = entry(&value, if kind == Kind::Update { 512 } else { 1024 });
-            if append(&mut out, field, value, budget) {
-                increment(&mut out, field);
+            if append(&mut out, field, value, budget, &mut encoded_bytes) {
+                increment(&mut out, field, &mut encoded_bytes);
             } else {
                 omitted.push(json!({"type":kind.as_str(),"id":id}));
             }
         }
         for reference in omitted.into_iter().take(200) {
-            if !append(&mut out, "next_reads", reference, budget) {
+            if !append(
+                &mut out,
+                "next_reads",
+                reference,
+                budget,
+                &mut encoded_bytes,
+            ) {
                 break;
             }
         }
@@ -152,22 +168,41 @@ fn encoded_len(value: &Value) -> usize {
         .expect("JSON value serialization")
         .len()
 }
-fn append(out: &mut Value, field: &str, value: Value, budget: usize) -> bool {
+fn append(
+    out: &mut Value,
+    field: &str,
+    value: Value,
+    budget: usize,
+    encoded_bytes: &mut usize,
+) -> bool {
     let array = out[field].as_array_mut().unwrap();
     if array.len() >= if field == "warnings" { 100 } else { 200 } {
         return false;
     }
+    let added = encoded_len(&value) + usize::from(!array.is_empty());
+    if *encoded_bytes + added > budget {
+        return false;
+    }
     array.push(value);
-    if encoded_len(out) > budget {
-        out[field].as_array_mut().unwrap().pop();
-        false
-    } else {
-        true
+    *encoded_bytes += added;
+    true
+}
+fn increment(out: &mut Value, field: &str, encoded_bytes: &mut usize) {
+    for (counter, next) in [
+        ("included", out["included"][field].as_u64().unwrap() + 1),
+        (
+            "omitted",
+            out["omitted"][field].as_u64().unwrap().saturating_sub(1),
+        ),
+    ] {
+        let previous = out[counter][field].as_u64().unwrap();
+        *encoded_bytes += decimal_len(next);
+        *encoded_bytes -= decimal_len(previous);
+        out[counter][field] = json!(next);
     }
 }
-fn increment(out: &mut Value, field: &str) {
-    out["included"][field] = json!(out["included"][field].as_u64().unwrap() + 1);
-    out["omitted"][field] = json!(out["omitted"][field].as_u64().unwrap().saturating_sub(1));
+fn decimal_len(value: u64) -> usize {
+    value.checked_ilog10().unwrap_or(0) as usize + 1
 }
 fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value {
     let document = source.value();
@@ -210,4 +245,90 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
         out["status"] = metadata["state"].clone();
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn incremental_budget_matches_compact_json_at_escape_and_counter_boundaries() {
+        for initial in [0, 8, 9, 98, 99, 198, 199] {
+            for omitted in [0u64, 1, 9, 10, 99, 100, 999, 1000, 9999, 10_000] {
+                let original = json!({
+                    "cards": vec![json!({"id":"previous"}); initial],
+                    "warnings": [], "next_reads": [],
+                    "included": {"cards":initial}, "omitted": {"cards":omitted},
+                    "project": {"excerpt":"ą🦀 \"quoted\" \\path\n\t\r\u{001f}"}
+                });
+                let value = json!({
+                    "type":"card", "title":"ą🦀 \"quoted\" \\path\n\t\r\u{0001}",
+                    "acceptance":[{"text":"Structured \\ data", "completed":false}],
+                    "comments":[{"body":"ą🦀\n\t"}],
+                    "counters":[{"values":{"2026-10-01":1_000_000_000}}]
+                });
+                let mut trial = original.clone();
+                trial["cards"].as_array_mut().unwrap().push(value.clone());
+                let exact = encoded_len(&trial);
+                for budget in [exact - 1, exact, exact + 1] {
+                    let mut out = original.clone();
+                    let mut bytes = encoded_len(&out);
+                    let accepted = append(&mut out, "cards", value.clone(), budget, &mut bytes);
+                    assert_eq!(accepted, exact <= budget);
+                    assert_eq!(out, if accepted { &trial } else { &original }.clone());
+                    assert_eq!(bytes, encoded_len(&out));
+                    if accepted {
+                        increment(&mut out, "cards", &mut bytes);
+                        assert_eq!(out["included"]["cards"], initial + 1);
+                        assert_eq!(out["omitted"]["cards"], omitted.saturating_sub(1));
+                        assert_eq!(bytes, encoded_len(&out));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn array_caps_and_rejected_appends_keep_the_exact_budget_state() {
+        for (field, cap) in [
+            ("focus", 200),
+            ("cards", 200),
+            ("milestones", 200),
+            ("updates", 200),
+            ("warnings", 100),
+            ("next_reads", 200),
+        ] {
+            let mut out = json!({field: []});
+            let mut bytes = encoded_len(&out);
+            for index in 0..cap {
+                let value = json!({"id":index,"text":"ą🦀 \"quoted\" \\path\n"});
+                let mut trial = out.clone();
+                trial[field].as_array_mut().unwrap().push(value.clone());
+                let exact = encoded_len(&trial);
+                let original = out.clone();
+                assert!(!append(
+                    &mut out,
+                    field,
+                    value.clone(),
+                    exact - 1,
+                    &mut bytes
+                ));
+                assert_eq!(out, original);
+                assert_eq!(bytes, encoded_len(&out));
+                assert!(append(&mut out, field, value, exact, &mut bytes));
+                assert_eq!(out, trial);
+                assert_eq!(bytes, exact);
+            }
+            let original = out.clone();
+            assert!(!append(
+                &mut out,
+                field,
+                json!({"id":"overflow"}),
+                usize::MAX,
+                &mut bytes
+            ));
+            assert_eq!(out, original);
+            assert_eq!(bytes, encoded_len(&out));
+        }
+    }
 }

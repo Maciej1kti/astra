@@ -344,3 +344,6 @@ Reviewed calendar rendering optimizations are described in
 
 Per-card section visibility across devices and browser-local handle ordering are
 described in [ADR-056](ADR-056-CARD-SECTION-VISIBILITY.md).
+
+Exact incremental agent-context JSON byte accounting is described in
+[ADR-058](ADR-058-EXACT-CONTEXT-BUDGET.md).

@@ -163,6 +163,51 @@ await runBrowserSuite(
         });
         await page.close();
       }
+      const normalizeContext = (value) => {
+        const normalized = structuredClone(value);
+        delete normalized.generated_at;
+        return normalized;
+      };
+      for (const budget of [4096, 24576, 131072]) {
+        const response = await context.request.get(
+          `${config.origin}/api/v1/projects/${project.id}/context?max_bytes=${budget}`,
+        );
+        assert.equal(response.status(), 200);
+        const bytes = await response.body();
+        assert.ok(
+          bytes.length <= budget,
+          "The HTTP JSON budget includes UTF-8 bytes",
+        );
+        const httpContext = JSON.parse(bytes.toString("utf8"));
+        const cliContext = cli(
+          "--project",
+          project.folder,
+          "context",
+          "--max-bytes",
+          String(budget),
+        );
+        assert.deepEqual(
+          normalizeContext(httpContext),
+          normalizeContext(cliContext),
+        );
+        assert.equal(httpContext.project.id, project.id);
+        results.push({
+          check: "Context byte budget",
+          budget,
+          bytes: bytes.length,
+          fullHttpCliResultEqual: true,
+        });
+      }
+      for (const budget of [4095, 131073]) {
+        const response = await context.request.get(
+          `${config.origin}/api/v1/projects/${project.id}/context?max_bytes=${budget}`,
+        );
+        assert.equal(response.status(), 400);
+        assert.equal(
+          (await response.json()).error.code,
+          "INVALID_CONTEXT_BUDGET",
+        );
+      }
       assert.deepEqual(errors, []);
     } catch (error) {
       results.push({ check: "Protocol browser suite", error: String(error) });

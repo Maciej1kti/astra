@@ -7,6 +7,18 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [context byte-accounting iteration](2026-10-01-context-budget.md) replaces
+repeated whole-response serialization with exact request-local entry/comma/count
+accounting, retaining every source read and final full JSON bound check. Two quiet
+release series save 25.2–25.3 ms (about 20%) for rich large contexts and 5.5–6.2 ms
+for ordinary maximum-budget contexts; small/minimum responses gain only about
+0.25 ms. All 800 selected observations retain source/version/budget checks and
+full normalized outputs match the control. The full gate passes 465 tests after
+resolving disk exhaustion with a cache discard and serial independent Rust tests.
+Normally paired Chromium/WebKit protocol checks retain complete HTTP/CLI equality,
+budget bounds and five-view stale-page recovery. Manual rebuild/preservation and
+the ordinary CLI report are pending; broader performance/release acceptance remain open.
+
 The [source pin-read iteration](2026-10-01-source-focus-stream.md) replaces full
 parsed-card retention with bounded ordered source visits and at most 101 pin
 ID/position pairs. For 1,000 long-body cards, incremental live Rust allocation

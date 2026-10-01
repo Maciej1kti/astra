@@ -249,6 +249,14 @@ Registration, workspace mutation and source-dependent ordering operate on
 these models. Projection rows and patch envelopes still use JSON where
 the schema intentionally varies; this does not replace domain validation.
 
+[Agent context](../crates/application/src/context.rs) reads current source-backed
+candidates and assembles the existing budgeted response. A request-local compact
+JSON byte total accounts for appended values, array commas and count digit changes.
+The initial envelope and final complete response retain ordinary serialization;
+accepted/rejected entries, caps, complete metadata and next-read hints keep their
+existing semantics. There is no source or response cache. See
+[ADR-058](ADR-058-EXACT-CONTEXT-BUDGET.md).
+
 Source collection scans and consecutive reference checks use a scoped
 `CollectionReader`. It retains one collection descriptor, verifies the lease
 on every file and checks the approved project and collection identities in one

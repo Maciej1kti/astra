@@ -29,6 +29,11 @@ through normal paired HTTP reads. It checks updated usage counts after a source
 edit and the exact current card version in a browser rename preview, alongside
 project isolation, archived merges and stale-plan rejection.
 
+The protocol suite also compares complete normally paired HTTPS and CLI agent
+context at 4,096, 24,576 and 131,072-byte budgets. Actual response bytes remain
+bounded; only `generated_at` is removed for equality. Out-of-range budgets retain
+the existing validation error.
+
 The `editor-opening` suite holds an ordinary source response while fresh project
 and tag transports start after its transport. The editor waits for that current
 source; ordinary opening retains exactly one source/project/tag read. Reopening reads the
