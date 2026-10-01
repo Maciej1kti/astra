@@ -191,6 +191,33 @@ pub(crate) fn collection(
     })
 }
 
+/// Validate each recognized source in sorted order without retaining its body.
+pub(crate) fn visit_collection(
+    store: &ProjectStore,
+    kind: Kind,
+    mut visit: impl FnMut(document::ParsedDocument) -> Result<(), AppError>,
+) -> Result<(), AppError> {
+    if kind.directory().is_none() {
+        return Err(AppError::invariant("source collection kind"));
+    }
+    let directory = match store.collection_reader(kind) {
+        Ok(directory) => directory,
+        Err(StoreError::MissingCollection) => return Ok(()),
+        Err(error) => return Err(error.into()),
+    };
+    let names = directory.names()?;
+    let ids: Vec<_> = names
+        .iter()
+        .filter_map(|filename| filename.strip_suffix(".json"))
+        .filter(|id| Uuid::parse_str(id).is_ok())
+        .collect();
+    visit_ordered(
+        &ids,
+        |id| read_collection(&directory, kind, id),
+        |_, observed| visit(observed?),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -390,6 +417,66 @@ mod tests {
     }
 
     #[test]
+    fn visited_collection_keeps_sorted_current_sources_and_byte_versions() {
+        let (_temp, store, ids) = fixture();
+        let mut value = read(&store, Kind::Card, &ids[256]).unwrap().value();
+        value["body"] = json!("An external edit after opening the source store.");
+        let bytes = pretty(&value);
+        fs::write(
+            store
+                .directory
+                .path()
+                .join(format!("cards/{}.json", ids[256])),
+            &bytes,
+        )
+        .unwrap();
+        let mut visited = 0;
+        visit_collection(&store, Kind::Card, |parsed| {
+            assert_eq!(parsed.document.get().id(), ids[visited]);
+            if visited == 256 {
+                assert_eq!(parsed.version, document::version(&bytes));
+                assert_eq!(parsed.value(), value);
+            }
+            visited += 1;
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(visited, ids.len());
+    }
+
+    #[test]
+    fn visited_collection_retains_strict_errors_and_uuid_recognition() {
+        let (_temp, store, ids) = fixture();
+        let cards = store.directory.path().join("cards");
+        let later = cards.join(format!("{}.json", ids[256]));
+        fs::remove_file(&later).unwrap();
+        symlink(cards.join(format!("{}.json", ids[511])), &later).unwrap();
+        let first = cards.join(format!("{}.json", ids[0]));
+        fs::write(&first, b"invalid").unwrap();
+        let AppError::Rejected(reply) =
+            visit_collection(&store, Kind::Card, |_| Ok(())).unwrap_err()
+        else {
+            panic!("The first sorted source must retain its validation error");
+        };
+        assert_eq!(reply.body["error"]["code"], "DOCUMENT_INVALID");
+        fs::remove_file(first).unwrap();
+        assert!(matches!(
+            visit_collection(&store, Kind::Card, |_| Ok(())),
+            Err(AppError::Store(_))
+        ));
+        fs::remove_file(later).unwrap();
+        fs::write(
+            cards.join("00000000-0000-7000-8000-000000000000.json"),
+            b"invalid",
+        )
+        .unwrap();
+        assert!(matches!(
+            visit_collection(&store, Kind::Card, |_| Ok(())),
+            Err(AppError::Store(StoreError::Invalid("INVALID_ID")))
+        ));
+    }
+
+    #[test]
     fn contended_worker_capacity_uses_the_same_sequential_source_reads() {
         let (_temp, store, ids) = fixture();
         let capacity = PARALLEL_SOURCE_READ.lock().unwrap();
@@ -414,6 +501,15 @@ mod tests {
         )
         .unwrap();
         assert_eq!(visited, ids.len());
+        let mut streamed = 0;
+        visit_collection(&store, Kind::Card, |parsed| {
+            assert_eq!(parsed.document.get().id(), ids[streamed]);
+            assert_eq!(parsed.version, observed[streamed].version);
+            streamed += 1;
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(streamed, ids.len());
         drop(capacity);
     }
 }

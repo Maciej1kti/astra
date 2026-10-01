@@ -68,3 +68,30 @@ neighbors and the actual 50,000-file/500-issue boundary. This is read scheduling
 it adds no source authority, protocol field or write exception.
 Release comparison and coverage limits are in
 [the ordered tag-read evidence](../progress/2026-09-30-tag-parallel-reads.md).
+
+## Strict streaming pin discovery
+
+Source-backed pin discovery uses `visit_collection` to consume ordinary guarded
+card reads through the same bounded ordered visitor. It recognizes exactly the
+strict collection helper's UUID-parsable `.json` filenames; noncanonical UUIDs
+still reach ordinary identifier validation. Missing collections remain distinct
+from missing or replaced leases. At 64 recognized filenames it can use the shared
+scoped workers; smaller scans, contention and failed starts retain guarded caller
+reads. Existing callers that need the complete collection keep their 256-file
+batch threshold.
+
+Each project retains only at most 101 pin ID/position pairs, including archived
+pins, instead of every parsed card body. The caller still validates the complete
+project before checking the cumulative 50,000-card limit and then the 100-pin
+limit. A sorted source error therefore precedes either limit in that project,
+and a source-count error precedes pin overflow. Projects retain their registration
+order and locks; local position/ID order and stable workspace ranking remain.
+There is no early success after filling the pin list, cached source membership,
+new source authority or change to command durability.
+
+Regression coverage includes external source membership and exact byte versions,
+scoped/archived ordering, malformed and unsafe neighbors after pin overflow,
+noncanonical identifiers, replaced leases and the actual 50,001/50,000-source
+and 101/100-pin boundaries. Release context measurements establish substantially
+lower temporary allocation, with a small latency tradeoff rather than a speedup;
+see [the pin-read evidence](../progress/2026-10-01-source-focus-stream.md).

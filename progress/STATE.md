@@ -7,6 +7,18 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [source pin-read iteration](2026-10-01-source-focus-stream.md) replaces full
+parsed-card retention with bounded ordered source visits and at most 101 pin
+ID/position pairs. For 1,000 long-body cards, incremental live Rust allocation
+falls from approximately 63.4 MiB to 1 MiB; whole-process RSS falls only about
+5 MiB. Matched release context medians cost approximately 0.25–1.22 ms more,
+so this is accepted for its memory bound, without claiming faster readiness.
+All 480 selected latency observations retain source/order/version/budget checks.
+The full gate passes 462 tests, including real source/pin boundaries; paired
+Chromium/WebKit Focus and protocol checks pass. Existing manual rebuild,
+preservation checks and the ordinary CLI result report are pending. Broader
+performance and release acceptance remain open.
+
 The [CLI runtime probe](2026-10-01-cli-runtime-probe.md) rejects a single-thread
 client runtime after two quiet release series show only 0.09–0.16 ms median savings.
 All 2,400 selected native observations retain result/identity/version checks.

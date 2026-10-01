@@ -3,7 +3,7 @@ use crate::{
     AppError,
     engine::Engine,
     index::{Indexed, ProjectionStatus},
-    source::collection,
+    source::visit_collection,
 };
 use project_domain::models::{Document, FocusRef, Workspace};
 use project_store::document::Kind;
@@ -106,32 +106,30 @@ impl Engine {
             let store = handle
                 .lock()
                 .map_err(|_| AppError::LockPoisoned("project store"))?;
-            let mut cards = collection(&store, Kind::Card)?;
-            scanned += cards.len();
+            let mut local_pins = Vec::new();
+            visit_collection(&store, Kind::Card, |card| {
+                scanned += 1;
+                if let Document::Card { metadata, .. } = card.document.get()
+                    && metadata.pinned == Some(true)
+                    && local_pins.len() <= MAX_FOCUS
+                {
+                    local_pins.push((metadata.position.clone(), metadata.id.clone()));
+                }
+                // Validate the complete project before reporting either bound,
+                // retaining the same first source error even after overflow.
+                Ok(())
+            })?;
             if scanned > MAX_SCANNED_CARDS {
                 return Err(AppError::reject(422, "FOCUS_SOURCE_LIMIT"));
             }
-            cards.retain(|card| matches!(card.document.get(), Document::Card { metadata, .. } if metadata.pinned == Some(true)));
-            cards.sort_by(|a, b| {
-                let a = a.document.get();
-                let b = b.document.get();
-                a.position()
-                    .cmp(&b.position())
-                    .then_with(|| a.id().cmp(b.id()))
-            });
-            for card in cards {
-                if let Document::Card { metadata, .. } = card.document.get()
-                    && metadata.pinned == Some(true)
-                {
-                    pinned.push(FocusRef {
-                        project_id: registration.project_id.clone(),
-                        card_id: metadata.id.clone(),
-                    });
-                    if pinned.len() > MAX_FOCUS {
-                        return Err(AppError::reject(422, "FOCUS_LIMIT"));
-                    }
-                }
+            if pinned.len() + local_pins.len() > MAX_FOCUS {
+                return Err(AppError::reject(422, "FOCUS_LIMIT"));
             }
+            local_pins.sort();
+            pinned.extend(local_pins.into_iter().map(|(_, card_id)| FocusRef {
+                project_id: registration.project_id.clone(),
+                card_id,
+            }));
         }
         let rank = workspace
             .focus

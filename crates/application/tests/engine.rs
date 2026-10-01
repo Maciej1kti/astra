@@ -152,6 +152,9 @@ mod registration;
 #[path = "engine/workspace.rs"]
 mod workspace;
 
+#[path = "engine/source_focus.rs"]
+mod source_focus;
+
 #[path = "engine/planning.rs"]
 mod planning;
 

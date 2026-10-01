@@ -269,6 +269,13 @@ its project lock/lease; workers borrow the reader and all finish before the
 ordered result or first source error is returned. There is no new queue or source
 cache. See [ADR-055](ADR-055-BOUNDED-SOURCE-READS.md).
 
+Source-backed pin admission, ordering and agent context use `visit_collection`
+over the same bounded ordered visitor as tag reads. Only up to 101 pin ID/position
+pairs per project survive a source observation. Every recognized file is still
+validated before the 50,000-source and 100-pin checks; sorted source errors,
+archived membership, registration/position order and workspace ranking remain.
+This removes full parsed-body retention, with no membership or version cache.
+
 The tolerant tag scanner also borrows one `CollectionReader` per project and
 uses the source module's common guarded single-item parser. At 64 readable
 filenames, `visit_ordered` uses the same capacity guard and up to four workers,
