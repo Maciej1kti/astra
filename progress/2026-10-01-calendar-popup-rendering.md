@@ -108,8 +108,26 @@ inline-end list spacing fixes that input obstruction; the retained scenario
 passes. Additional WebKit responsive/header size and dialog/screenshot-CSP
 failures reproduce in the saved current control. They remain separate open
 acceptance limits; neither assertion nor CSP is relaxed.
-Manual restart verification and ordinary report publication follow integration.
 No physical-device result is claimed.
+
+## Availability and coordination
+
+Application commit: `44ebb0f38bbf543c347b89dd0fefe017ed19f7ed`. The original
+checkout rebuilds the embedded frontend and optimized daemon, then restarts the
+existing manual launcher with its current data, origin and certificate. Launcher
+PID 27572 is live at `https://100.122.250.14:47832`. All 66 prior resource versions,
+two pins, preferences and certificate match the pre-restart snapshot. Trusted
+HTTPS verifies all 33 served files against the rebuilt frontend. The owner's
+unrelated card SHA remains
+`d79037cd72f3a1258c525cbce6056f42c2e8710a7f8340d1fb2c506bf485da9b`.
+
+The ordinary CLI report to the explicitly selected original project is committed
+and read back with its exact body/version: report
+`05bf85a1-c8d4-47a2-8780-20435587fa6b`, request
+`01a0f684-c631-7a7a-902c-ce45750ae6d9`, version
+`r1.4726e585f98e020874ede3f80ede17906cfbf58d833465ce65ed381fa268f133`.
+Identity, epoch and unchanged payload are saved before submission. No card status,
+scope, priority, focus or acceptance decision changes.
 
 Bulk samples, traces, rejected patch, binaries and logs remain in ignored
 `test-results/calendar-popup-rendering-2026-10-01/` and the reused immutable

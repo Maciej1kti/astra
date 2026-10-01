@@ -14,10 +14,11 @@ popup medians improve from 87 to 69 ms locally and 292 to 240 ms with CPU ×4.
 WebKit popup margins and scrollbar-covered resize handles are corrected. All 784
 selected samples retain their ordinary read/identity checks. The full gate passes
 444 tests; 26 Chromium suites pass before final spacing, and nine affected suites
-per engine plus broad HTTPS/planning checks pass on the retained build. Existing
-WebKit header/screenshot limits remain separate open acceptance work. Manual
-restart and normal CLI report verification follow integration; broader
-performance and release acceptance remain open.
+per engine plus broad HTTPS/planning checks pass on the retained build. The
+rebuilt manual app preserves 66 prior resource versions, two pins, preferences
+and certificate; trusted HTTPS verifies all 33 served assets. The ordinary CLI
+report is committed and read back. Existing WebKit header/screenshot limits,
+broader performance and release acceptance remain open.
 
 The [Calendar popup probes](2026-10-01-calendar-popup-probes.md) reject deferred
 event normalization, delegated row handlers, removal of one component layer and

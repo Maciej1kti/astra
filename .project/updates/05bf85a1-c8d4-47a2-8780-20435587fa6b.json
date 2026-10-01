@@ -1,0 +1,18 @@
+{
+  "body": "Complete Calendar popups retain every item and current version while one application renderer replaces the native row component stack for known Astra entries. Seven-round matched release comparisons on the retained build improve the 963-entry popup from 87 to 69 ms locally and from 292 to 240 ms with CPU x4. All 784 selected samples retain complete membership/source checks and their ordinary Calendar/source/project/tag reads.\n\nThe full gate passes 444 tests. All 26 Chromium suites pass before final spacing; nine affected suites per engine plus broad HTTPS/planning checks pass on the retained build. Native WebKit popup margins and scrollbar-covered resize handles are corrected. Separate WebKit header-size and screenshot/CSP failures reproduce in the saved old release and remain open acceptance work.\n\nThe embedded frontend and release daemon are rebuilt, and the existing manual app is restarted at the same HTTPS address. All 66 prior source versions, two pins, preferences and certificate are preserved; all 33 served assets match the rebuilt frontend. Application commit: 44ebb0f38bbf543c347b89dd0fefe017ed19f7ed. Evidence: progress/2026-10-01-calendar-popup-rendering.md. Broader performance and physical-device/release acceptance remain open.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "05bf85a1-c8d4-47a2-8780-20435587fa6b",
+    "kind": "result",
+    "recorded_at": "2026-10-01T08:11:31.780Z",
+    "summary": "Complete Calendar popups faster with verified native gestures",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
