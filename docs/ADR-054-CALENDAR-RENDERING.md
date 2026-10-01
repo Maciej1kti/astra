@@ -10,7 +10,7 @@ does not remove them.
 
 Apply a narrow Vite transform before Svelte compilation. The repository owns
 `apps/web/build/calendar-layout-plugin.ts`; npm files remain untouched. Exact
-SHA-256 guards cover all six reviewed upstream source files, including the native
+SHA-256 guards cover all ten reviewed upstream source files, including the native
 chunk positioning algorithm used by the measured month layout. A changed source,
 unexpected replacement shape or missing transformed module fails the production
 build, requiring an explicit dependency review instead of silently omitting an
@@ -73,9 +73,9 @@ The hidden-list collector and footer rechecks still see all chunks. The keyed
 main-grid loop receives only visible chunks and measured representatives, carrying
 their original full-array indices so representative references do not shift when
 visible membership changes. Every chunk retains its item ID, current projection
-version and grid span in the native model. Popups, backgrounds and interaction
-previews use full native components. Popup ordering and source reads before
-opening remain unchanged. See the
+version and grid span in the native model. Popups retain every row; backgrounds
+and interaction previews use full native components. Popup ordering and source
+reads before opening remain unchanged. See the
 [sparse-grid evidence](../progress/2026-10-01-calendar-sparse-grid.md).
 
 Representative ResizeObservers compare current CSS border-box sizes to their
@@ -87,6 +87,26 @@ Changed sizes schedule one shared animation-frame reposition, whose geometry
 reader measures current elements again. Pending frames and observers are disposed
 with the view/components. Identical measured placements avoid clearing and
 republishing an unchanged hidden list. Leaving this path clears retained placements.
+
+Ordinary Astra popup rows use one application-owned `CalendarPopupEntry` instead
+of the native Event, InteractableEvent and BaseEvent component stack. This
+retains the existing Astra content snippet, natural wrapping geometry, clipping
+classes, interaction classes, local-date conversion, pointer arguments and native
+Resizer component. The private build alias reexports the pinned native helpers;
+the original Event component remains the fallback. Custom styles/classes,
+resources, content/lifecycle/mouse hooks, helper/background events and unknown
+content shapes retain that fallback. There is no popup row grouping, partial DOM,
+remembered geometry or source cache. All rows retain their current item metadata
+and version. Hash guards also cover the popup, copied interaction wrapper/date
+semantics and retained resizer. Quiet release comparisons and native popup
+gesture checks are recorded in the [popup rendering evidence](../progress/2026-10-01-calendar-popup-rendering.md).
+
+The popup's block-axis dialog margins are explicitly zero. WebKit's native
+automatic margins otherwise shift the dialog outside the currently measured
+calendar grid. The existing native positioning, measured size and scrollable
+list remain; no viewport height is guessed or retained. The list reserves
+inline-end padding so an overlaid WebKit scrollbar cannot intercept the native
+end-resize handle. Titles wrap to the actual available width; rows remain complete.
 
 This does not reduce the calendar's 1,000-item grid/time bound, its 200-item agenda
 page size, accessible popup membership or observed versions.
@@ -120,3 +140,6 @@ all their items visibly. Separate release comparisons retain exact footer counts
 popup order and visible native geometry before and after the sparse main-grid
 loop. Measurements and verification limits
 live in [the rendering evidence](../progress/2026-09-30-calendar-rendering.md).
+The separate `calendar-popup` regression checks full API membership/current
+versions, native movement and both resize handles, Escape cancellation, long
+wrapping titles and fresh keyboard source opening at 1440, 390 and 320 px.

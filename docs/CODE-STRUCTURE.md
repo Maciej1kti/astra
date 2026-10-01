@@ -186,8 +186,12 @@ representatives and uses native positioning. The main keyed loop contains only
 these representatives and visible events, with their original full-array indices.
 All chunk models retain membership and current projection versions; no main-grid
 placeholder nodes are created for other hidden events. Unknown shapes/styles use
-the native renderer. Popup
-and preview components remain complete. Size observers schedule a shared frame;
+the native renderer. Popup rows remain complete; known Astra rows use
+`CalendarPopupEntry` with the existing content snippet and native Resizer. Custom
+content/styles/resources and extension hooks retain the original Event stack.
+The build plugin guards these private vendor boundaries and reexports the native
+helpers through a private alias. Preview components remain native. Size observers
+schedule a shared frame;
 their previous notification sizes never supply layout geometry. Leaving measured
 rendering evicts retained placements. See [ADR-054](ADR-054-CALENDAR-RENDERING.md)
 for dependency review and retained rendering behavior.

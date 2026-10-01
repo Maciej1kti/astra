@@ -690,6 +690,7 @@
     color: var(--accent-ink);
   }
   .calendar-surface :global(.ec-popup) {
+    margin-block: 0;
     min-inline-size: min(var(--card-min-width), 80vw);
     max-inline-size: min(var(--dialog-small), 90vw);
     border-radius: var(--radius-card);
@@ -702,6 +703,9 @@
     font-size: var(--text-label);
     font-weight: var(--weight-semibold);
     margin-bottom: var(--space-3);
+  }
+  .calendar-surface :global(.ec-popup .ec-events) {
+    padding-inline-end: var(--space-8);
   }
   .calendar-surface :global(.ec-popup .ec-day-head a) {
     display: inline-flex;

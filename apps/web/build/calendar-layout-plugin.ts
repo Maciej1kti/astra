@@ -5,6 +5,15 @@ const geometry = decodeURIComponent(
   new URL("../src/features/planning/calendar-layout.ts", import.meta.url)
     .pathname,
 );
+const popupEntry = decodeURIComponent(
+  new URL("../src/features/planning/CalendarPopupEntry.svelte", import.meta.url)
+    .pathname,
+);
+const nativeLibrary = decodeURIComponent(
+  new URL("../src/lib/index.js", import.meta.resolve("@event-calendar/core"))
+    .pathname,
+);
+const nativeSupport = "\0astra-calendar-popup-native";
 const sources = new Map([
   [
     "src/plugins/day-grid/View.svelte",
@@ -29,6 +38,22 @@ const sources = new Map([
   [
     "src/lib/chunks.js",
     "d0a9450bec10e910e4858cf94d98626c9c79d15b2b08d45d19281c386e38c91a",
+  ],
+  [
+    "src/plugins/day-grid/Popup.svelte",
+    "0edbf61c80f8d147e642f2c01eba814b985fe5a18d2a0e49126a56d41bbcf749",
+  ],
+  [
+    "src/lib/date.js",
+    "b8fd2f0ac1a72a3cca7d5e8c3163e66514905c9ba485c16bb9249afb732d70c3",
+  ],
+  [
+    "src/plugins/interaction/Resizer.svelte",
+    "50ea6bc817c79130e556c46862f132296077405fdc1ee8fca52657762c632cc1",
+  ],
+  [
+    "src/lib/components/InteractableEvent.svelte",
+    "72c53eb647494fa25f60dabf9dc95ab76e2d26b5b68905376e9f98afc7e3d004",
   ],
 ]);
 
@@ -61,7 +86,27 @@ export async function calendarLayoutSource(
     throw new Error(
       `Review calendar layout optimization before changing ${name}`,
     );
-  if (name === "src/lib/chunks.js") return source;
+  if (
+    [
+      "src/lib/chunks.js",
+      "src/lib/date.js",
+      "src/plugins/interaction/Resizer.svelte",
+      "src/lib/components/InteractableEvent.svelte",
+    ].includes(name)
+  )
+    return source;
+  if (name === "src/plugins/day-grid/Popup.svelte") {
+    source = replace(
+      source,
+      "    import Event from './Event.svelte';",
+      `    import Event from './Event.svelte';\n    import CalendarPopupEntry from ${JSON.stringify(popupEntry)};`,
+    );
+    return replace(
+      source,
+      "            <Event {chunk} inPopup />",
+      "            <CalendarPopupEntry {chunk} Fallback={Event} />",
+    );
+  }
   if (name === "src/lib/components/BaseEvent.svelte") {
     // Astra's snippet reads the event. Defer optional library fields until a
     // consumer reads them, preserving their reactive reads and default content.
@@ -322,6 +367,14 @@ export function calendarLayoutPlugin(): Plugin {
     },
     buildStart() {
       patched.clear();
+    },
+    resolveId(id) {
+      return id === "astra-calendar-popup-native" ? nativeSupport : null;
+    },
+    load(id) {
+      return id === nativeSupport
+        ? `export {cloneDate, createEventTimeText, datesEqual, keyEnter, setMidnight, toEventWithLocalDates, toViewWithLocalDates} from ${JSON.stringify(nativeLibrary)};`
+        : null;
     },
     async transform(source, id) {
       const code = await calendarLayoutSource(source, id);

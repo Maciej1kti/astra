@@ -28,6 +28,7 @@ const suites = [
   "planning",
   "calendar-pages",
   "calendar-layout",
+  "calendar-popup",
   "events",
   "code-health",
   "protocol",

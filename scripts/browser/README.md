@@ -44,6 +44,15 @@ The events suite covers event autosave, conversion to/from date plans, hourly
 calendar movement, duration edits, slot creation, mobile layout and browser
 timezone independence.
 
+The `calendar-popup` suite checks complete month-popup membership and current
+versions, native pointer movement and both resize boundaries from the popup,
+Escape cancellation, long wrapping titles and fresh Enter/Space source opening
+at 1440, 390 and 320px. It also checks the popup against its currently measured
+grid and verifies that native handles receive pointer input after list scrolling.
+The saved Chromium release control passes the native gesture scenario. The
+WebKit control exposes automatic dialog-margin displacement and a scrollbar
+covering the end-resize handle; the maintained popup styles correct both.
+
 The loading suite holds preferences until Calendar, Gantt and Board have rendered
 their initial pages. Republishing that identical route must not read those pages
 again, and typing/clearing loaded-title filters remains local. A subsequent

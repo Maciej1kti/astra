@@ -10,6 +10,7 @@ import {
   monthLayoutGeometry,
 } from "../../apps/web/src/features/planning/calendar-layout.ts";
 import { calendarLayoutSource } from "../../apps/web/build/calendar-layout-plugin.ts";
+import { calendarPopupEligible } from "../../apps/web/src/features/planning/calendar-popup.ts";
 
 function monthChunk(overrides = {}) {
   return {
@@ -399,6 +400,10 @@ test("a changed vendor source fails the build instead of silently applying an un
     "src/lib/components/BaseEvent.svelte",
     "src/plugins/day-grid/derived.js",
     "src/lib/chunks.js",
+    "src/plugins/day-grid/Popup.svelte",
+    "src/lib/date.js",
+    "src/plugins/interaction/Resizer.svelte",
+    "src/lib/components/InteractableEvent.svelte",
   ]) {
     const id = new URL(
       `../../node_modules/@event-calendar/core/${path}`,
@@ -418,5 +423,98 @@ test("a changed vendor source fails the build instead of silently applying an un
       "/apps/web/src/features/planning/CalendarView.svelte",
     ),
     null,
+  );
+});
+
+function popupEvent() {
+  return {
+    ...monthChunk().event,
+    backgroundColor: "var(--accent)",
+    textColor: "var(--ink)",
+    resourceIds: [],
+  };
+}
+
+test("known popup kinds retain current metadata and editability without geometry grouping", () => {
+  for (const kind of ["card_schedule", "card_event", "milestone_due"]) {
+    const event = popupEvent();
+    const item = event.extendedProps.astra;
+    item.kind = kind;
+    item.title = event.title = "A long wrapping title 🧪";
+    if (kind === "card_event") {
+      event.allDay = false;
+      item.event = { start: "2026-09-07T23:30", duration_minutes: 100 };
+    }
+    for (const editable of [true, false]) {
+      event.editable = editable;
+      item.version = `current-${editable}`;
+      assert.equal(
+        calendarPopupEligible(event, undefined, [], {}, () => {}),
+        true,
+      );
+      assert.equal(event.extendedProps.astra, item);
+      assert.equal(item.version, `current-${editable}`);
+    }
+  }
+});
+
+test("popup content, lifecycle and pointer extensions use the native fallback", () => {
+  for (const name of [
+    "eventContent",
+    "eventClassNames",
+    "eventDidMount",
+    "eventMouseEnter",
+    "eventMouseLeave",
+  ]) {
+    for (const extension of [() => {}, "custom", []]) {
+      assert.equal(
+        calendarPopupEligible(
+          popupEvent(),
+          undefined,
+          [],
+          { [name]: extension },
+          () => {},
+        ),
+        false,
+      );
+    }
+  }
+  for (const snippet of [undefined, null, "content"]) {
+    assert.equal(
+      calendarPopupEligible(popupEvent(), undefined, [], {}, snippet),
+      false,
+    );
+  }
+});
+
+test("unknown popup shapes and styles cannot bypass the native renderer", () => {
+  for (const change of [
+    (event) => event.styles.push("height:90px"),
+    (event) => event.classNames.push("custom"),
+    (event) => event.resourceIds.push("resource"),
+    (event) => (event.display = "background"),
+    (event) => (event.display = "preview"),
+    (event) => (event.title = "Other content"),
+    (event) => (event.allDay = false),
+    (event) => (event.extendedProps = {}),
+    (event) => (event.extendedProps.astra.title = " "),
+    (event) => (event.extendedProps.astra.kind = "unknown"),
+    (event) => delete event.backgroundColor,
+    (event) => delete event.textColor,
+  ]) {
+    const event = popupEvent();
+    change(event);
+    assert.equal(
+      calendarPopupEligible(event, undefined, [], {}, () => {}),
+      false,
+    );
+  }
+  assert.equal(
+    calendarPopupEligible(popupEvent(), {}, [], {}, () => {}),
+    false,
+  );
+  assert.equal(
+    calendarPopupEligible(popupEvent(), undefined, [{}], {}, () => {}),
+    false,
   );
 });
