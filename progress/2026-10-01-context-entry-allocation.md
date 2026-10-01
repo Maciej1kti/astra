@@ -53,7 +53,16 @@ context at minimum/default/maximum budgets and recover stale pages in all five
 views. All 14 editor scenarios pass in both engines, retaining current versions,
 conflict/uncertain-save behavior, late cancellation and autosave/history safety.
 
-Manual application integration and the ordinary CLI result report are pending.
-No manual-restart, physical-device or release acceptance is claimed yet.
+Application commit: `3608b8a8980b05c2750b1fcd2926d14f6f2986bc`. The original checkout's
+frontend and release daemon are rebuilt; all 33 distribution files match the
+verified worktree. The existing manual launcher is restarted with the same data,
+HTTPS origin and certificate. Snapshots preserve all 81 prior resource versions,
+three pins, preferences, instance/epoch and the complete native CLI context.
+Trusted `https://100.122.250.14:47832` verifies all 32 served assets.
+
+The normal CLI result `7548f1b5-fed8-4d4c-9e25-32771394af66` is committed and read
+back exactly. Both owner card changes remain separate. The next investigation is
+complete large-view and editor/startup interaction profiling, beyond these small
+source-assembly gains. No physical-device or release acceptance is claimed.
 Broader perceived performance, Linux widget/QML, physical iPhone and release
 acceptance remain open.
