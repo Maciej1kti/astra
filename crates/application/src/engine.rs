@@ -368,8 +368,19 @@ SET value=excluded.value",
             .gate
             .read()
             .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        // Notifications may outlive the watcher's registration snapshot. The read
+        // gate keeps this membership decision ordered with deletion/unregistration.
+        let workspace = self.workspace()?.value;
+        let Some(registration) = workspace.projects.iter().find(|item| item.project_id == id)
+        else {
+            self.reconciled
+                .lock()
+                .map_err(|_| AppError::LockPoisoned("reconciliation schedule"))?
+                .remove(id);
+            return self.index.forget_project(id, now_millis());
+        };
         let result = (|| {
-            let handle = self.store(id)?;
+            let handle = self.store_path(&registration.path, false)?;
             let store = handle
                 .lock()
                 .map_err(|_| AppError::LockPoisoned("project store"))?;

@@ -960,6 +960,20 @@ await runBrowserSuite(
           );
           assert.equal(await exists(join(candidate.folder, ".project")), false);
           assert.equal(await exists(candidate.folder), true);
+          // Cover delayed native deletion events and the next membership tick.
+          for (let sample = 0; sample < 6; sample++) {
+            await page.waitForTimeout(500);
+            const diagnostics = cli("doctor");
+            assert.equal(diagnostics.invalid_documents, 0);
+            assert.deepEqual(diagnostics.issues, []);
+            assert.equal(diagnostics.index_state, "ready");
+            assert.equal(
+              cli("get", "/api/v1/workspace/focus").warnings.some(
+                (warning) => warning.code === "FOCUS_INCOMPLETE",
+              ),
+              false,
+            );
+          }
           return {
             project: candidate.id,
             metadataRemoved: true,

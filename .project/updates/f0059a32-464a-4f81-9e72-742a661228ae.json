@@ -1,0 +1,18 @@
+{
+  "body": "Fixed the reproduced delayed-watcher notification bug: refresh now checks current registration under the workspace gate and cleans absent-project projections instead of recreating PROJECT_UNAVAILABLE. The 473-test full gate, 16 focused deletion/recovery tests and all 16 release Chromium deletion scenarios pass. WebKit suite startup remains blocked by unsupported clipboard-write permission. Rebuilt/restarted the existing manual app; trusted HTTPS verifies 32 assets, diagnostics is ready with zero source issues, and 22 remaining resource versions, pin, preferences, certificate and instance/epoch are preserved. Two concurrent owner card deletions committed before restart are accounted for. Evidence: progress/2026-10-03-deleted-project-diagnostics.md. This resolves the issue described in report bfae0ade-b65d-49b3-9397-c9bb6aecd052; release acceptance remains open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "f0059a32-464a-4f81-9e72-742a661228ae",
+    "kind": "result",
+    "recorded_at": "2026-10-03T15:59:12.717Z",
+    "summary": "Deleted-project source diagnostics fixed and verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

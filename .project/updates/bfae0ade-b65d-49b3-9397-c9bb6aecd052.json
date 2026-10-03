@@ -1,0 +1,18 @@
+{
+  "body": "Host diagnostics reports one PROJECT_UNAVAILABLE issue for b2febd1b-9bd1-4e76-998b-3772c09cc6fa (technolog-cnc). Its deletion committed on 2026-10-03 at 15:39:27 UTC. The project is absent from workspace registration and its .project directory is absent. The separately registered technolog-cnc/rysunki project has a different ID. No pending commands or unresolved jobs were reported. This is an orphaned index issue after deletion; the exact race is not yet reproduced. No application or source repair was performed.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "bfae0ade-b65d-49b3-9397-c9bb6aecd052",
+    "kind": "note",
+    "recorded_at": "2026-10-03T15:49:19.550Z",
+    "summary": "Source warning traced to a deleted project",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

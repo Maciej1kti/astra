@@ -1,11 +1,19 @@
 # Current implementation state
 
-Updated 2026-10-01. The application is implemented and under verification;
+Updated 2026-10-03. The application is implemented and under verification;
 full release acceptance remains open. [Scope decisions](SCOPE.md) supersede the
 historical handoff. Use the [release checklist](../delivery/RELEASE-CHECKLIST.md)
 for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ownership.
 
 ## Current work
+
+The [deleted-project diagnostics correction](2026-10-03-deleted-project-diagnostics.md)
+prevents delayed filesystem notifications from recreating source warnings after
+successful deletion. The 473-test full gate and all 16 release Chromium deletion scenarios pass.
+The rebuilt existing manual app is restarted and verified over trusted HTTPS:
+zero source issues, all 32 assets, 22 remaining versions, pins, settings and
+certificate preserved. Two concurrent owner card deletions are accounted for;
+WebKit suite startup is blocked by its unsupported clipboard permission.
 
 The [soft-motion refinement](2026-10-01-soft-motion.md) gives entrances a gentle
 opacity onset, shallow movement and bounded blur on small headings/details.

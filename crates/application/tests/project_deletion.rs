@@ -251,6 +251,56 @@ fn deleting_last_focused_project_removes_only_project_data() {
 }
 
 #[test]
+fn stale_source_notifications_after_project_deletion_keep_diagnostics_clean() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.project_path());
+    let card = create_card(&engine, &project);
+    focus(&engine, &project, &card);
+    let preview = plan(&engine, &project);
+    delete(
+        &engine,
+        &project,
+        preview["version"].as_str().unwrap(),
+        &Uuid::now_v7().to_string(),
+    );
+
+    // A watcher can retain its membership snapshot until its next two-second tick.
+    // Deliver both full-directory and targeted notifications after durable deletion.
+    for targets in [
+        None,
+        Some(vec![
+            (Kind::Project, project.clone()),
+            (Kind::Card, card.clone()),
+        ]),
+    ] {
+        engine
+            .refresh_project(&project, targets.as_deref())
+            .unwrap();
+        let diagnostics = engine.diagnostics().unwrap();
+        assert_eq!(diagnostics["invalid_documents"], 0, "{diagnostics}");
+        assert_eq!(diagnostics["index_state"], "ready", "{diagnostics}");
+        assert_eq!(diagnostics["issues"], json!([]));
+        assert_eq!(engine.focus_resource().unwrap()["warnings"], json!([]));
+        assert!(!env.project_text_path("project.json").exists());
+        assert!(engine.workspace().unwrap().value.projects.is_empty());
+    }
+}
+
+#[test]
+fn registered_project_with_missing_sources_still_reports_unavailable() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.project_path());
+    fs::remove_file(env.project_text_path("project.json")).unwrap();
+    assert!(engine.refresh_project(&project, None).is_err());
+    let diagnostics = engine.diagnostics().unwrap();
+    assert_eq!(diagnostics["invalid_documents"], 1);
+    assert_eq!(diagnostics["issues"][0]["project_id"], project);
+    assert_eq!(diagnostics["issues"][0]["code"], "PROJECT_UNAVAILABLE");
+}
+
+#[test]
 fn changed_or_added_tree_content_rejects_stale_plan_without_unlinking() {
     for added in [false, true] {
         let env = Environment::new();

@@ -188,6 +188,9 @@ Archive, unregister and delete have different effects:
 | Delete a report through CLI/API | Permanently remove it after reference checks; delete referencing reports first |
 | Delete a project | Review a directory snapshot, then permanently remove `.project/` and its host registration; other project files remain |
 
+Deleting a project also removes its search index entries and source diagnostics.
+Delayed filesystem notifications do not restore warnings for a removed project.
+
 There is no trash or built-in restore for permanent deletion. A deleted resolution
 can reopen a decision. Use an external stopped-server backup if you need a recovery
 copy. [CLI deletion](../CLI.md#permanent-deletion) describes the conditional commands.
