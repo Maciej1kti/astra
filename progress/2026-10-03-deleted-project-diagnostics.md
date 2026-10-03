@@ -22,7 +22,7 @@ Verification:
   (473 total), including formatting, clippy, contracts, documentation and release
   build. The first sandboxed run could not create CLI test sockets; the host-access
   rerun passes. All 16 focused deletion/recovery tests pass.
-- The release Chromium deletion suite passes all 16 scenarios, including three
+- The release Chromium deletion suite passes all 14 scenarios, including three
   seconds of diagnostic/Focus sampling after UI deletion. WebKit cannot start
   this existing suite because it requests unsupported `clipboard-write` permission;
   no WebKit deletion pass is claimed.

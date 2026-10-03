@@ -9,7 +9,7 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 The [deleted-project diagnostics correction](2026-10-03-deleted-project-diagnostics.md)
 prevents delayed filesystem notifications from recreating source warnings after
-successful deletion. The 473-test full gate and all 16 release Chromium deletion scenarios pass.
+successful deletion. The 473-test full gate and all 14 release Chromium deletion scenarios pass.
 The rebuilt existing manual app is restarted and verified over trusted HTTPS:
 zero source issues, all 32 assets, 22 remaining versions, pins, settings and
 certificate preserved. Two concurrent owner card deletions are accounted for;
