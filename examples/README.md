@@ -52,3 +52,8 @@ remain separate. The CLI walkthrough is in [Trusted user profiles](../CLI.md#tru
 unrecorded date and an empty counter. The [HTTP example](requests/counter-series.http)
 reads one bounded range/page and demonstrates archived inclusion and cursor
 continuation; see [ADR-062](../docs/ADR-062-COUNTER-CHART-DASHBOARD.md).
+
+[Main default view](requests/main-view-default.json) selects the project status
+board as the profile's workspace default. Its [HTTP example](requests/main-project-board.http)
+also shows the existing conditional project state patch used to change columns;
+see [ADR-063](../docs/ADR-063-MAIN-PROJECT-STATUS-BOARD.md).

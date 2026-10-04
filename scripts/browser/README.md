@@ -54,6 +54,13 @@ planning, events and calendar-popup suites.
 
 ## Other interaction coverage
 
+The `main` suite checks the whole-project status board, all three project states,
+local folder/title filters, fresh editor opening, keyboard status moves and
+pointer cancellation. It covers conditional conflicts and unchanged retries after
+a lost response, persisted status/default-view choices and narrow touch controls.
+Chromium captures rendered desktop and phone boards; WebKit exercises behavior
+without screenshot preparation. All sources belong to the disposable test host.
+
 The `menus` suite covers the shared native action/date/navigation popover,
 lower-edge clipping, viewport bounds, start alignment, panel growth, rotation,
 scroll anchoring, Tab/Escape focus and menus inside a narrow card dialog.
@@ -69,8 +76,9 @@ ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regres
 
 The `navigation` suite checks the compact Focus/Projects/More phone bar, off-bar
 view navigation and selection, browser-local order and visibility persistence,
-all-hidden recovery, keyboard focus/dismissal, touch targets, landscape scrolling,
-desktop rotation and reduced motion at 320–1024px. Chromium captures rendered
+upgrades that append Main to existing saved order, all-hidden recovery, keyboard
+focus/dismissal, touch targets, landscape scrolling, desktop rotation and reduced
+motion at 320–1024px. Chromium captures rendered
 surfaces; WebKit checks the same behavior without screenshot preparation.
 
 The HTTPS smoke exercises broad workflows, including keyboard Focus ordering and
@@ -164,9 +172,10 @@ Chromium remains the default. WebKit on macOS does not reproduce native iOS
 pickers or establish physical iPhone acceptance. The suite records WebKit's
 deferred ResizeObserver notifications separately from application errors.
 
-The responsive suite checks all eight views at 320, 390, 768 and 1024px, readable
-List filters with reload persistence, Calendar navigation, diagonal touch swipes
-inside a long modal and the system reduced-motion preference. These checks use
+The responsive suite checks all nine views at 320, 390, 768 and 1024px, Main's
+Folder header and title filtering, readable List filters with reload persistence,
+Calendar navigation, diagonal touch swipes inside a long modal and the system
+reduced-motion preference. These checks use
 the real release app and ordinary pairing, with synthetic source data.
 It also checks sidebar touch scrolling at 844 × 390 and 740 × 320, and keeps the
 active view visible after rotation between portrait and landscape and reload.

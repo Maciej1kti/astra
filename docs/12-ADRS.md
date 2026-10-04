@@ -371,3 +371,10 @@ command journal. See [ADR-061](ADR-061-SHARED-PROFILE-PROJECTS.md).
 Chart reads bounded, date-clipped counter histories with card/project context,
 sparse zero/missing semantics and scoped snapshot pagination. Rate calculations
 remain browser presentation. See [ADR-062](ADR-062-COUNTER-CHART-DASHBOARD.md).
+
+## ADR-063 — Main project status board
+
+Main groups whole projects into their existing Active, Paused and Archived
+states. Project column changes retain conditional source writes; the additional
+`main` workspace default is the only protocol extension. See
+[ADR-063](ADR-063-MAIN-PROJECT-STATUS-BOARD.md).

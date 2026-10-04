@@ -5,7 +5,7 @@ plans, milestones and progress reports alongside your project, and use the same
 data from a browser or the command line.
 
 Project content lives in readable JSON files under `.project/`. A Rust daemon
-coordinates durable writes; a Svelte interface provides eight views of that
+coordinates durable writes; a Svelte interface provides nine views of that
 content. You select every project folder explicitly.
 
 **Status:** working software under active development, with release acceptance
@@ -23,7 +23,7 @@ collaboration; **the project license has not yet been selected**. See
 | Organize projects | Register an exact folder, describe its purpose, choose a folder category, pause or archive it |
 | Manage cards | Status, Normal/High priority, Markdown, labels, checklists, comments and daily counters |
 | Plan dates | Inclusive date ranges or timed events with a start time and duration; independent milestones |
-| Work across views | Focus, Projects, List, Board, Calendar, Timeline, Updates and Chart |
+| Work across views | Focus, Main, Projects, List, Board, Calendar, Timeline, Updates and Chart |
 | Compare counters | Daily and cumulative charts, selected overlays, statistics and rate-based valuation |
 | Record outcomes | Project/milestone reports, explicit corrections and decision resolutions, profile read receipts |
 | Automate | Local CLI with JSON output, bounded project context, conditional writes and command recovery |

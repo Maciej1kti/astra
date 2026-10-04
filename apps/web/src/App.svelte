@@ -15,7 +15,7 @@
   import { focusCounterState } from "./features/cards/focus-counter-state.svelte";
   import type { DailyCounterSummary } from "./lib/contracts/api.generated";
   import FocusScreen from "./features/workspace/screens/FocusScreen.svelte";
-  import ProjectsScreen from "./features/workspace/screens/ProjectsScreen.svelte";
+  import type { MainProjectState as ProjectState } from "./features/workspace/screens/main-projects";
   import BoardOverview from "./features/workspace/screens/BoardOverview.svelte";
   import UpdatesScreen from "./features/workspace/screens/UpdatesScreen.svelte";
   import ResourceListScreen from "./features/workspace/screens/ResourceListScreen.svelte";
@@ -105,6 +105,18 @@
     () => import("./features/charts/ChartView.svelte"),
   );
   const ChartView = $derived(chartUI.component);
+  const mainUI = deferredComponent(
+    () => import("./features/workspace/screens/MainScreen.svelte"),
+  );
+  const MainScreen = $derived(mainUI.component);
+  const projectsUI = deferredComponent(
+    () => import("./features/workspace/screens/ProjectsScreen.svelte"),
+  );
+  const ProjectsScreen = $derived(projectsUI.component);
+  const projectMoveUI = deferredComponent(
+    () => import("./features/workspace/ProjectStateChange.svelte"),
+  );
+  const ProjectStateChange = $derived(projectMoveUI.component);
 
   const routing = navigationState(
     readRoute(
@@ -123,6 +135,7 @@
         !!(
           dateDraft ||
           moveDraft ||
+          projectMove ||
           settings ||
           adding ||
           nativeAdding ||
@@ -249,10 +262,16 @@
     if (view === "calendar") void loadCalendarView().catch(() => {});
     if (view === "gantt") void loadGanttView().catch(() => {});
     if (view === "chart") void chartUI.load();
+    if (view === "main") void mainUI.load();
+    if (view === "projects") void projectsUI.load();
+  });
+  $effect(() => {
+    if (projectMove) void projectMoveUI.load();
   });
 
   let dateDraft = $state<DateProposal | null>(null);
   let moveDraft = $state<MoveProposal | null>(null);
+  let projectMove = $state<{ item: Summary; state: ProjectState } | null>(null);
 
   let manageTags = $state(false);
 
@@ -551,6 +570,9 @@
     };
   }
   let queryKey = $derived(viewQueryKey(currentQuery()));
+  const projectOverview = $derived(
+    ["projects", "main"].includes(routing.current.view),
+  );
   let queryReady = $derived(loadedQueryKey === queryKey);
   function sessionEnded() {
     editor?.opening?.cancel();
@@ -737,6 +759,7 @@
       editor ||
       dateDraft ||
       moveDraft ||
+      projectMove ||
       adding ||
       nativeAdding ||
       manageTags ||
@@ -778,6 +801,7 @@
     const leaving = (event: BeforeUnloadEvent) => {
       if (
         focusProposal ||
+        projectMove ||
         focusCommand.pending ||
         counterEditing.snapshot.draft ||
         counterEditing.snapshot.pending
@@ -827,8 +851,8 @@
         userName={boot.user?.name ?? "Owner"}
         project={routing.current.project}
         {projects}
-        selectable={routing.current.view !== "projects"}
-        focus={routing.current.view === "focus"}
+        selectable={!projectOverview}
+        focus={["focus", "main"].includes(routing.current.view)}
         folder={routing.current.folder}
         onfolderchange={(folder) => routing.changeFilters({ folder })}
         {today}
@@ -849,10 +873,10 @@
           <PageHeading title={viewLabel(routing.current.view)}>
             <Button
               variant="primary"
-              onclick={routing.current.view === "projects"
+              onclick={projectOverview
                 ? addProject
                 : () => create(primaryResource(routing.current.view))}
-              >＋ {routing.current.view === "projects"
+              >＋ {projectOverview
                 ? "Add project"
                 : `Add ${primaryResource(routing.current.view)}`}</Button
             >
@@ -881,6 +905,7 @@
         {#key routing.current.view}<div
             class="view-content"
             use:revealScene={{
+              ...(routing.current.view === "main" ? { distance: "0px" } : {}),
               ready:
                 queryReady &&
                 !["calendar", "gantt", "chart"].includes(
@@ -890,7 +915,7 @@
               key: routing.current.project,
             }}
           >
-            {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
+            {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "main", "list", "updates", "projects"].includes(routing.current.view)}
               <div class="empty" role="status">Loading resources…</div>
             {:else if routing.current.view === "focus"}
               <FocusScreen
@@ -934,16 +959,43 @@
                 {moreAttention}
                 moreActiveCards={(back = false) => more("card", back)}
               />
+            {:else if routing.current.view === "main"}
+              {#if MainScreen}<MainScreen
+                  route={routing.current}
+                  {projects}
+                  {open}
+                  {addProject}
+                  disabled={!!projectMove || !!editor || !connected}
+                  onmove={(item, state) => {
+                    if (!projectMove) projectMove = { item, state };
+                  }}
+                />
+              {:else if mainUI.error}<p role="alert">
+                  {mainUI.error}<Button
+                    variant="quiet"
+                    onclick={() => void mainUI.load()}
+                    >Retry loading Main</Button
+                  >
+                </p>
+              {:else}<p role="status">Loading Main…</p>{/if}
             {:else if routing.current.view === "projects"}
-              <ProjectsScreen
-                route={routing.current}
-                {projects}
-                {cards}
-                {updates}
-                {open}
-                {addProject}
-                onremove={deleteProject}
-              />
+              {#if ProjectsScreen}<ProjectsScreen
+                  route={routing.current}
+                  {projects}
+                  {cards}
+                  {updates}
+                  {open}
+                  {addProject}
+                  onremove={deleteProject}
+                />
+              {:else if projectsUI.error}<p role="alert">
+                  {projectsUI.error}<Button
+                    variant="quiet"
+                    onclick={() => void projectsUI.load()}
+                    >Retry loading Projects</Button
+                  >
+                </p>
+              {:else}<p role="status">Loading Projects…</p>{/if}
             {:else if routing.current.view === "board" && routing.current.project}{#if Board}{#key routing.current.project}<Board
                     project={routing.current.project}
                     search={routing.current.search}
@@ -1069,6 +1121,25 @@
         void refresh().catch(message);
       }}
     />{/key}{/if}
+{#if projectMove}{@const proposal =
+    projectMove}{#if ProjectStateChange}{#key proposal}<ProjectStateChange
+        {...proposal}
+        onclose={() => {
+          if (projectMove === proposal) projectMove = null;
+        }}
+        onsaved={() => {
+          if (projectMove !== proposal) return;
+          projectMove = null;
+          void refresh(["projects"]).catch(message);
+        }}
+      />{/key}{:else}<DeferredDialog
+      title="Move project"
+      error={projectMoveUI.error}
+      retry={projectMoveUI.load}
+      onclose={() => {
+        if (projectMove === proposal) projectMove = null;
+      }}
+    />{/if}{/if}
 {#if gitProject}{#if GitObservation}<GitObservation
       project={gitProject}
       onclose={() => (gitProject = "")}

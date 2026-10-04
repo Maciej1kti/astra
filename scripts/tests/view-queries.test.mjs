@@ -36,6 +36,135 @@ const response = (value) => ({
   json: async () => value,
 });
 
+test("Main loads projects only and keeps folder/title filtering local", async () => {
+  const main = { ...query, view: "main", folder: "Work", search: "Astra" };
+  assert.deepEqual(viewSections(main), ["projects"]);
+  assert.equal(
+    viewQueryKey(main),
+    viewQueryKey({
+      ...main,
+      folder: "Home",
+      search: "Other",
+      project: "other",
+    }),
+  );
+  for (const type of ["card", "update", "milestone"])
+    assert.deepEqual(
+      affectedSections(
+        { kind: "changed", project_id: "other", target: { type } },
+        main,
+      ),
+      [],
+    );
+  assert.deepEqual(
+    affectedSections(
+      { kind: "changed", project_id: "other", target: { type: "project" } },
+      main,
+    ),
+    ["projects"],
+  );
+  const previous = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    const first = !url.includes("cursor=");
+    const archived =
+      new URL(url, "https://example.test").searchParams.get("archived") ===
+      "true";
+    return response({
+      items: [
+        {
+          type: "project",
+          id: `${archived ? "archived" : "ordinary"}-${first ? "one" : "two"}`,
+          status: archived ? "archived" : "active",
+        },
+      ],
+      page: { next_cursor: first ? "second" : null },
+    });
+  };
+  try {
+    const result = await loadView(
+      main,
+      viewSections(main),
+      {},
+      new AbortController().signal,
+    );
+    assert.deepEqual(
+      result.projects.map((item) => item.id),
+      ["ordinary-one", "ordinary-two", "archived-one", "archived-two"],
+    );
+    assert.equal(calls.length, 4);
+    assert.equal(
+      calls.filter(
+        (url) =>
+          !new URL(url, "https://example.test").searchParams.has("archived"),
+      ).length,
+      2,
+    );
+    assert.equal(
+      calls.filter((url) => url.startsWith("/api/v1/projects?archived=true"))
+        .length,
+      2,
+    );
+    assert.deepEqual(result.pages, {});
+  } finally {
+    clearReads();
+    globalThis.fetch = previous;
+  }
+});
+
+test("Main combines overlapping archive reads as one complete observed project", async () => {
+  const previous = globalThis.fetch;
+  const calls = [];
+  const ordinary = {
+    type: "project",
+    id: "changed-project",
+    title: "Before archive",
+    status: "active",
+    version: "observed-before",
+    folder: "Work",
+  };
+  const archived = {
+    type: "project",
+    id: ordinary.id,
+    title: "Archived source",
+    status: "archived",
+    version: "observed-archived",
+  };
+  const activeOnly = { type: "project", id: "active-only", status: "active" };
+  const archivedOnly = {
+    type: "project",
+    id: "archived-only",
+    status: "archived",
+  };
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    const archiveScope =
+      new URL(url, "https://example.test").searchParams.get("archived") ===
+      "true";
+    return response({
+      items: archiveScope ? [archived, archivedOnly] : [ordinary, activeOnly],
+      page: { next_cursor: null },
+    });
+  };
+  try {
+    const result = await loadView(
+      { ...query, view: "main" },
+      ["projects"],
+      {},
+      new AbortController().signal,
+    );
+    assert.deepEqual(result.projects, [archived, activeOnly, archivedOnly]);
+    assert.equal(result.projects[0], archived);
+    assert.equal(result.projects[0].version, "observed-archived");
+    assert.equal("folder" in result.projects[0], false);
+    assert.equal(calls.length, 2, "Overlap must not introduce source rereads");
+  } finally {
+    clearReads();
+    globalThis.fetch = previous;
+  }
+});
+
 test("planning routes only load shared project context; list and reports fetch their own collection", () => {
   assert.deepEqual(viewSections({ ...query, view: "calendar" }), [
     "projects",

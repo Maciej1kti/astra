@@ -1,0 +1,30 @@
+# Main groups registered projects by their existing state: active, paused, archived.
+# Read each bounded set and follow its own cursors with the same scope and limit.
+# The ordinary list includes Active and Paused; archived=true is Archived only.
+GET /api/v1/projects?limit=200 HTTP/1.1
+
+GET /api/v1/projects?archived=true&limit=200 HTTP/1.1
+
+# Use this profile's current workspace version, a fresh request ID and command epoch.
+PATCH /api/v1/workspace/preferences HTTP/1.1
+If-Match: "r1.OBSERVED_WORKSPACE_VERSION"
+X-Request-ID: 01a1078d-0000-7000-8000-000000000001
+X-Command-Epoch: 99999999-9999-4999-8999-999999999992
+X-CSRF-Token: CURRENT_SESSION_CSRF
+Content-Type: application/json
+
+{"preferences":{"default_view":"main"}}
+
+# Changing a project's column uses the existing project mutation.
+# Retain the observed source version from the project summary or source read.
+# A version conflict requires reconciling intent, without refetching just to overwrite it.
+PATCH /api/v1/projects/11111111-1111-4111-8111-111111111111 HTTP/1.1
+If-Match: "r1.OBSERVED_PROJECT_VERSION"
+X-Request-ID: 01a1078d-0000-7000-8000-000000000002
+X-Command-Epoch: 99999999-9999-4999-8999-999999999992
+X-CSRF-Token: CURRENT_SESSION_CSRF
+Content-Type: application/json
+
+{"set":{"state":"paused"}}
+
+# An uncertain result retries the same method, path, payload, version, request ID and epoch.

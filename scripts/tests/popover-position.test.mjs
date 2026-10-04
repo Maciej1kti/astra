@@ -13,6 +13,7 @@ function fixture(t, { width = 320, height = 400, authoredHeight = 300 } = {}) {
     "MutationObserver",
     "requestAnimationFrame",
     "cancelAnimationFrame",
+    "Node",
   ];
   const saved = Object.fromEntries(
     names.map((name) => [name, globalThis[name]]),
@@ -28,6 +29,7 @@ function fixture(t, { width = 320, height = 400, authoredHeight = 300 } = {}) {
     height,
   });
   globalThis.document = new EventTarget();
+  globalThis.Node = class {};
   globalThis.innerWidth = width;
   globalThis.innerHeight = height;
   globalThis.getComputedStyle = () => ({
@@ -72,6 +74,11 @@ function fixture(t, { width = 320, height = 400, authoredHeight = 300 } = {}) {
     naturalHeight: 300,
     width: 220,
     shown: false,
+    scrollTop: 0,
+    scrollLeft: 0,
+    contains(node) {
+      return node.parent === this;
+    },
     style: {
       removeProperty(name) {
         if (name === "max-height") delete this.maxHeight;
@@ -218,4 +225,34 @@ test("resize, content and scroll notifications coalesce and clean up on removal"
   window.dispatchEvent(new Event("scroll"));
   document.dispatchEvent(new Event("animationend"));
   assert.equal(frames.size, 0);
+});
+
+test("repositioning retains scroll offsets when measuring the authored height resets them", (t) => {
+  const { panel, flush } = fixture(t);
+  const removeProperty = panel.style.removeProperty.bind(panel.style);
+  panel.style.removeProperty = (name) => {
+    removeProperty(name);
+    // Restoring the larger authored size can clamp offsets during native layout.
+    panel.scrollTop = 0;
+    panel.scrollLeft = 0;
+  };
+  panel.scrollTop = 120;
+  panel.scrollLeft = 15;
+  window.dispatchEvent(new Event("scroll"));
+  flush();
+  assert.equal(panel.scrollTop, 120);
+  assert.equal(panel.scrollLeft, 15);
+});
+
+test("scrolling within a disclosure does not schedule another height measurement", (t) => {
+  const { panel, frames } = fixture(t);
+  const child = Object.assign(new Node(), { parent: panel });
+  for (const target of [panel, child]) {
+    const scroll = new Event("scroll");
+    Object.defineProperty(scroll, "target", { value: target });
+    window.dispatchEvent(scroll);
+    assert.equal(frames.size, 0);
+  }
+  window.dispatchEvent(new Event("scroll"));
+  assert.equal(frames.size, 1);
 });

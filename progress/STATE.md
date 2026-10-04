@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Main project status board](2026-10-04-main-project-board.md) groups whole
+projects into Active, Paused and Archived, with local folder/title filters,
+conditional drag/menu status moves and a durable default-view choice. The final
+601-test gate, Main and navigation in Chromium/WebKit, shared menus and all nine
+views' 44-group Chromium responsive suite pass. The rebuilt existing HTTPS app
+preserves 31 prior versions/source hashes, two pins, both profiles' settings,
+roots and registrations, identity/epoch and certificate; all 42 served assets
+match. The normally paired live Main read shows all 15 existing projects.
+Physical-device and complete release acceptance remain open.
+
 The [UI component audit](2026-10-04-ui-component-audit.md) consolidates native
 menus, modal close/focus ownership and four vertical ordering adapters, with shared
 cancellation across Board/date/counter gestures. It fixes stale local drops,

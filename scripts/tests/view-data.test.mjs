@@ -139,3 +139,146 @@ test("focus references and their observed version move together on refresh", asy
   assert.equal(owner.state.focusVersion, "focus-v2");
   assert.deepEqual(owner.state.focusCards, snapshots[1].focusCards);
 });
+
+const projectRows = (scope) => ({
+  projects:
+    scope.view === "main"
+      ? [{ id: "active" }, { id: "archived" }]
+      : [{ id: "active" }],
+  pages: {},
+  notices: {},
+});
+
+test("ordinary project caches cannot satisfy Main's archived-inclusive scope", async () => {
+  let current = { ...query, view: "projects" };
+  const calls = [];
+  const owner = new ViewData({
+    query: () => current,
+    active: () => true,
+    error: assert.fail,
+    load: async (scope, sections) => {
+      calls.push([scope.view, sections]);
+      return sections.includes("projects")
+        ? projectRows(scope)
+        : { pages: {}, notices: {} };
+    },
+  });
+  await owner.refresh();
+  current = { ...current, view: "main" };
+  await owner.refresh();
+  assert.deepEqual(calls.at(-1), ["main", ["projects"]]);
+  assert.deepEqual(owner.state.projects, [
+    { id: "active" },
+    { id: "archived" },
+  ]);
+});
+
+for (const view of [
+  "focus",
+  "projects",
+  "list",
+  "updates",
+  "board",
+  "calendar",
+  "gantt",
+  "chart",
+]) {
+  test(`Main's archived-inclusive cache cannot satisfy ${view}'s ordinary scope`, async () => {
+    let current = { ...query, view: "main" };
+    const calls = [];
+    const owner = new ViewData({
+      query: () => current,
+      active: () => true,
+      error: assert.fail,
+      load: async (scope, sections) => {
+        calls.push([scope.view, sections]);
+        return sections.includes("projects")
+          ? projectRows(scope)
+          : { pages: {}, notices: {} };
+      },
+    });
+    await owner.refresh();
+    current = { ...current, view };
+    await owner.refresh();
+    assert.equal(calls.at(-1)[1].includes("projects"), true);
+    assert.deepEqual(owner.state.projects, [{ id: "active" }]);
+  });
+}
+
+test("ordinary project caches remain reusable between compatible view routes", async () => {
+  let current = { ...query, view: "projects" };
+  const calls = [];
+  const owner = new ViewData({
+    query: () => current,
+    active: () => true,
+    error: assert.fail,
+    load: async (scope, sections) => {
+      calls.push(sections);
+      return sections.includes("projects")
+        ? projectRows(scope)
+        : { pages: {}, notices: {} };
+    },
+  });
+  await owner.refresh();
+  for (const view of ["focus", "list", "chart"]) {
+    current = { ...current, view };
+    await owner.refresh();
+    assert.equal(calls.at(-1).includes("projects"), false);
+    assert.deepEqual(owner.state.projects, [{ id: "active" }]);
+  }
+});
+
+test("Main project-only invalidations retain the inclusive scope during a queued follow-up", async () => {
+  const current = { ...query, view: "main" };
+  const first = deferred(),
+    followed = deferred();
+  const calls = [];
+  const owner = new ViewData({
+    query: () => current,
+    active: () => true,
+    error: assert.fail,
+    load: async (scope, sections) => {
+      calls.push([scope.view, sections]);
+      return calls.length === 1 ? first.promise : followed.promise;
+    },
+  });
+  const loading = owner.refresh();
+  assert.equal(owner.refresh(["projects"]), loading);
+  first.resolve(projectRows(current));
+  await loading;
+  assert.deepEqual(calls, [
+    ["main", ["projects"]],
+    ["main", ["projects"]],
+  ]);
+  followed.resolve({
+    ...projectRows(current),
+    projects: [{ id: "updated" }, { id: "archived" }],
+  });
+  await new Promise((done) => setImmediate(done));
+  assert.deepEqual(owner.state.projects, [
+    { id: "updated" },
+    { id: "archived" },
+  ]);
+});
+
+test("late inclusive reads cannot replace ordinary projects after leaving Main", async () => {
+  let current = { ...query, view: "main" };
+  const old = deferred();
+  const signals = [];
+  const owner = new ViewData({
+    query: () => current,
+    active: () => true,
+    error: assert.fail,
+    load: async (scope, _sections, _cursors, signal) => {
+      signals.push(signal);
+      return scope.view === "main" ? old.promise : projectRows(scope);
+    },
+  });
+  const first = owner.refresh();
+  current = { ...current, view: "focus" };
+  await owner.refresh();
+  assert.equal(signals[0].aborted, true);
+  old.resolve(projectRows({ ...current, view: "main" }));
+  await first;
+  assert.deepEqual(owner.state.projects, [{ id: "active" }]);
+});

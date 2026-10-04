@@ -23,6 +23,8 @@ export function popoverPosition(panel: HTMLElement, initial: Options) {
     const bottom =
       (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight) - edge;
     const bounds = anchor.getBoundingClientRect();
+    const scrollTop = panel.scrollTop;
+    const scrollLeft = panel.scrollLeft;
 
     // Restore the authored limit before measuring, including feature size caps.
     panel.style.removeProperty("max-height");
@@ -56,11 +58,22 @@ export function popoverPosition(panel: HTMLElement, initial: Options) {
     panel.style.maxHeight = `${maxHeight}px`;
     panel.style.left = `${Math.max(left, Math.min(preferredLeft, right - width))}px`;
     panel.style.top = `${Math.max(top, Math.min(preferredTop, bottom - maxHeight))}px`;
+    // WebKit can reset scrolling while the authored height is measured.
+    panel.scrollTop = scrollTop;
+    panel.scrollLeft = scrollLeft;
     panel.classList.toggle("above", above);
     panel.classList.toggle("beside", beside);
   };
   const schedule = () => {
     if (!frame) frame = requestAnimationFrame(position);
+  };
+  const scroll = (event: Event) => {
+    if (
+      event.target === panel ||
+      (event.target instanceof Node && panel.contains(event.target))
+    )
+      return;
+    schedule();
   };
   panel.showPopover();
   position();
@@ -75,7 +88,7 @@ export function popoverPosition(panel: HTMLElement, initial: Options) {
     attributeFilter: ["open", "hidden"],
   });
   window.addEventListener("resize", schedule);
-  window.addEventListener("scroll", schedule, true);
+  window.addEventListener("scroll", scroll, true);
   window.visualViewport?.addEventListener("resize", schedule);
   window.visualViewport?.addEventListener("scroll", schedule);
   document.addEventListener("animationend", schedule);
@@ -94,7 +107,7 @@ export function popoverPosition(panel: HTMLElement, initial: Options) {
       resize.disconnect();
       content.disconnect();
       window.removeEventListener("resize", schedule);
-      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("scroll", scroll, true);
       window.visualViewport?.removeEventListener("resize", schedule);
       window.visualViewport?.removeEventListener("scroll", schedule);
       document.removeEventListener("animationend", schedule);

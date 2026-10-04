@@ -933,3 +933,6 @@ mod compression;
 
 #[path = "transport/users.rs"]
 mod users;
+
+#[path = "transport/projects.rs"]
+mod projects;

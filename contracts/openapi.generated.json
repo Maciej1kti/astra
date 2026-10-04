@@ -1007,6 +1007,15 @@
             "$ref": "#/components/parameters/ReadAcceptEncoding"
           },
           {
+            "name": "archived",
+            "in": "query",
+            "description": "False or omitted returns only Active and Paused projects. True returns only Archived projects; it does not include both sets. Cursors retain the same archive scope and limit.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
             "$ref": "#/components/parameters/Limit"
           },
           {
@@ -6446,6 +6455,7 @@
             "type": "string",
             "enum": [
               "focus",
+              "main",
               "projects",
               "board",
               "calendar",

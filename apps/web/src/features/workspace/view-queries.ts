@@ -11,7 +11,10 @@ import type { View } from "./navigation";
 import { detailSummary } from "../../lib/resources/resource-summary.ts";
 import { mapReads, isAbortError } from "../../lib/api/read-requests.ts";
 import { cursorPage, type Page } from "../../lib/api/pagination.ts";
-import { projectionNotice } from "../../lib/api/projection-state.ts";
+import {
+  projectionNotice,
+  type ProjectionState,
+} from "../../lib/api/projection-state.ts";
 
 export type ViewQuery = {
   view: View;
@@ -55,6 +58,8 @@ function unavailablePin(ref: FocusRef): Summary {
 
 export function viewSections(query: ViewQuery): Section[] {
   switch (query.view) {
+    case "main":
+      return ["projects"];
     case "focus":
       return ["projects", "focus", "attention", "card", "event"];
     case "projects":
@@ -76,7 +81,7 @@ export function viewQueryKey(query: ViewQuery) {
   // Loaded-title filters do not change the server query or discard view state.
   return JSON.stringify([
     query.view,
-    ["projects", "focus"].includes(query.view) ? "" : query.project,
+    ["projects", "focus", "main"].includes(query.view) ? "" : query.project,
     query.view === "focus" ? (query.folder ?? "") : "",
     ["list", "updates"].includes(query.view) ? query.search.trim() : "",
     ...(query.view === "list"
@@ -94,7 +99,7 @@ export function affectedSections(
       event.kind === "health_changed" &&
       event.project_id &&
       query.project &&
-      query.view !== "focus" &&
+      !["focus", "main"].includes(query.view) &&
       event.project_id !== query.project
     )
       return ["projects"];
@@ -103,7 +108,7 @@ export function affectedSections(
   const kind = event.target.type;
   if (
     query.project &&
-    !["projects", "focus"].includes(query.view) &&
+    !["projects", "focus", "main"].includes(query.view) &&
     event.project_id &&
     event.project_id !== query.project
   )
@@ -224,13 +229,25 @@ export async function loadView(
     sections.map(async (section) => {
       if (section === "projects") {
         result.notices.projects = "";
-        result.projects = await all("/api/v1/projects", {
+        const projectOptions = {
           ...options,
-          onPage: (page) => {
+          onPage: (page: ProjectionState) => {
             result.notices.projects =
               projectionNotice(page) || result.notices.projects;
           },
-        });
+        };
+        const pages = await Promise.all(
+          (query.view === "main"
+            ? ["/api/v1/projects", "/api/v1/projects?archived=true"]
+            : ["/api/v1/projects"]
+          ).map((path) => all<Summary>(path, projectOptions)),
+        );
+        const projects = pages.flat();
+        // Independent archive reads can straddle a state change. Keep one complete observation.
+        result.projects =
+          query.view === "main"
+            ? [...new Map(projects.map((item) => [item.id, item])).values()]
+            : projects;
       } else if (section === "focus") {
         result.focus = await api<FocusResource>(
           "/api/v1/workspace/focus",

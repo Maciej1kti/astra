@@ -1,6 +1,85 @@
 use super::*;
 
 #[test]
+fn main_default_view_is_conditional_replayable_and_durable() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let original = engine.workspace().unwrap();
+    let request = Uuid::now_v7().to_string();
+    let epoch = engine.journal.epoch.clone();
+    let payload: Value = serde_json::from_str(include_str!(
+        "../../../../examples/requests/main-view-default.json"
+    ))
+    .unwrap();
+    wire::validate("PreferencesPatch", &payload).unwrap();
+
+    let missing_version = engine
+        .mutate_workspace(
+            "preferences",
+            &payload,
+            &Uuid::now_v7().to_string(),
+            &epoch,
+            None,
+        )
+        .unwrap();
+    assert_eq!(missing_version.http_status, 428);
+    let reply = engine
+        .mutate_workspace(
+            "preferences",
+            &payload,
+            &request,
+            &epoch,
+            Some(&original.version),
+        )
+        .unwrap();
+    assert_eq!(reply.http_status, 200);
+    wire::validate("CommandResponse", &reply.body).unwrap();
+    let current = engine.workspace().unwrap();
+    let mut expected = json!(original.value);
+    expected["preferences"]["default_view"] = json!("main");
+    assert_eq!(json!(current.value), expected);
+    assert_ne!(current.version, original.version);
+
+    let conflict = engine
+        .mutate_workspace(
+            "preferences",
+            &json!({"preferences":{"default_view":"focus"}}),
+            &Uuid::now_v7().to_string(),
+            &epoch,
+            Some(&original.version),
+        )
+        .unwrap();
+    assert_eq!(conflict.http_status, 412);
+    let invalid = engine
+        .mutate_workspace(
+            "preferences",
+            &json!({"preferences":{"default_view":"Main"}}),
+            &Uuid::now_v7().to_string(),
+            &epoch,
+            Some(&current.version),
+        )
+        .unwrap();
+    assert_eq!(invalid.http_status, 422);
+    assert_eq!(engine.workspace().unwrap().version, current.version);
+    drop(engine);
+
+    let engine = env.engine();
+    assert_eq!(json!(engine.workspace().unwrap().value), expected);
+    let replay = engine
+        .mutate_workspace(
+            "preferences",
+            &payload,
+            &request,
+            &epoch,
+            Some(&original.version),
+        )
+        .unwrap();
+    assert_eq!(replay.http_status, 200);
+    assert_eq!(replay.body["replayed"], true);
+    assert_eq!(engine.workspace().unwrap().version, current.version);
+}
+
+#[test]
 fn workspace_writes_replay_and_recover_without_overwriting_external_changes() {
     use project_application::{AppError, writer::CommitPoint};
     let env = Environment::new();

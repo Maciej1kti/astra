@@ -42,6 +42,7 @@ await runBrowserSuite(
         await page.setViewportSize({ width, height: width > 700 ? 1024 : 844 });
         for (const view of [
           "focus",
+          "main",
           "projects",
           "board",
           "calendar",
@@ -72,12 +73,13 @@ await runBrowserSuite(
             page.locator("main").getByLabel("Project", { exact: true }),
           ).toHaveCount(0);
           if (view !== "projects") {
-            const filterLabel = view === "focus" ? "Folder" : "Project";
+            const folderScope = ["focus", "main"].includes(view);
+            const filterLabel = folderScope ? "Folder" : "Project";
             const picker = header.getByLabel(filterLabel, { exact: true });
             await expect(
               page.getByLabel(filterLabel, { exact: true }),
             ).toHaveCount(1);
-            await expect(picker).toHaveValue(view === "focus" ? "" : project);
+            await expect(picker).toHaveValue(folderScope ? "" : project);
             await expect(picker).toBeInViewport({ ratio: 1 });
             const box = await picker.boundingBox();
             assert.ok(
@@ -128,6 +130,31 @@ await runBrowserSuite(
               "Today must not shrink to a clipped label",
             );
           }
+          if (view === "main") {
+            const tiles = page.locator("[data-main-project]");
+            await expect(tiles.first()).toBeVisible();
+            const titles = await tiles.locator(".card-title").allTextContents();
+            const filter = page.getByLabel("Filter loaded titles", {
+              exact: true,
+            });
+            await filter.fill(titles[0]);
+            await expect
+              .poll(() => tiles.locator(".card-title").allTextContents())
+              .toEqual(
+                titles.filter((title) =>
+                  title.toLowerCase().includes(titles[0].toLowerCase()),
+                ),
+              );
+            await filter.fill("No matching Main project title");
+            await expect(tiles).toHaveCount(0);
+            await expect(
+              page.getByText("No projects match this selection.", {
+                exact: true,
+              }),
+            ).toBeVisible();
+            await filter.fill("");
+            await expect(tiles).toHaveCount(titles.length);
+          }
           if (view === "list" && width <= 700) {
             const toggle = page.getByRole("button", {
               name: "Filters",
@@ -169,6 +196,9 @@ await runBrowserSuite(
             noPageOverflow: true,
             headerAboveContent: true,
             singleProjectPicker: view !== "projects",
+            ...(view === "main"
+              ? { folderHeader: true, titleFiltering: true }
+              : {}),
           });
         }
       }
@@ -229,23 +259,40 @@ await runBrowserSuite(
         const x = bounds.x + bounds.width / 2;
         const y = bounds.y + bounds.height - 40;
         const touch = await context.newCDPSession(page);
-        await touch.send("Input.dispatchTouchEvent", {
-          type: "touchStart",
-          touchPoints: [{ x, y }],
-        });
-        for (let step = 1; step <= 10; step++) {
+        const swipeSidebar = async () => {
           await touch.send("Input.dispatchTouchEvent", {
-            type: "touchMove",
-            touchPoints: [{ x, y: y - (200 * step) / 10 }],
+            type: "touchStart",
+            touchPoints: [{ x, y }],
           });
-        }
-        await touch.send("Input.dispatchTouchEvent", {
-          type: "touchEnd",
-          touchPoints: [],
-        });
+          for (let step = 1; step <= 10; step++) {
+            await touch.send("Input.dispatchTouchEvent", {
+              type: "touchMove",
+              touchPoints: [{ x, y: y - (200 * step) / 10 }],
+            });
+          }
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchEnd",
+            touchPoints: [],
+          });
+        };
+        await swipeSidebar();
         await expect
           .poll(() => sidebar.evaluate((el) => el.scrollTop))
           .toBeGreaterThan(initial);
+        const signOut = sidebar.getByRole("button", {
+          name: "Sign out",
+          exact: true,
+        });
+        // Longer navigation catalogs need more than one fixed-distance swipe.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const visible = await signOut.evaluate((element) => {
+            const row = element.getBoundingClientRect();
+            const surface = element.closest("aside").getBoundingClientRect();
+            return row.top >= surface.top && row.bottom <= surface.bottom;
+          });
+          if (visible) break;
+          await swipeSidebar();
+        }
         await expect(
           sidebar.getByRole("button", { name: "Sign out", exact: true }),
         ).toBeInViewport({ ratio: 1 });

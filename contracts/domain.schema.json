@@ -722,6 +722,7 @@
           "type": "string",
           "enum": [
             "focus",
+            "main",
             "projects",
             "board",
             "calendar",

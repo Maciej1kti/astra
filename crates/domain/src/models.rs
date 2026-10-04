@@ -59,6 +59,7 @@ wire_enum!(Locale { Pl, En });
 wire_enum!(WeekStart { Monday, Sunday });
 wire_enum!(View {
     Focus,
+    Main,
     Projects,
     Board,
     Calendar,

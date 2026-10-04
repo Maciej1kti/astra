@@ -6,6 +6,7 @@ export const iconPaths = {
   done: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18m-4 9 3 3 5-6",
   cancelled: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M6 6l12 12",
   focus: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8",
+  main: "M3 4h5v16H3zM10 4h5v11h-5zM17 4h4v7h-4z",
   projects:
     "M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z",
   board:

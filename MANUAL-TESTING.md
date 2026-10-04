@@ -51,7 +51,7 @@ its folder through the normal registration flow.
 ## A useful first pass
 
 On a phone, check the compact **Focus → Projects → More** bar. Open More to reach
-Calendar, Timeline, List, Board and Updates. In **Customize navigation**, move
+Main, Calendar, Timeline, List, Board, Chart and Updates. In **Customize navigation**, move
 views earlier/later and toggle their eyes, then reload to check this browser's
 layout. Hide every shortcut and recover through More or Reset navigation. Select
 an off-bar view and rotate the screen: More should indicate it on phones, while
@@ -140,6 +140,18 @@ The prepared binary is in `target/release/`. To rebuild after changing source:
 npm run build
 scripts/cargo-local build --workspace --release --locked
 ```
+
+## Arrange projects in Main
+
+Open **Main** from the sidebar or the phone's **More** menu. In a synthetic
+workspace, give projects Active, Paused and Archived statuses and check that
+each appears in its matching column. Filter by folder and title, then open a
+project and verify its current fields. Drag its handle to a different column;
+reload to check the saved status. Escape cancels a held drag. The project's
+**Move** menu supports keyboard and touch changes. On a phone, scroll the
+columns horizontally and check that the page itself stays within the viewport.
+Select Main in **Workspace settings → Default view** and open the app without a
+view query to check the preference.
 
 ## Add an existing project folder
 

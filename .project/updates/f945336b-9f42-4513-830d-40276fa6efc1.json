@@ -1,0 +1,18 @@
+{
+  "body": "Main is available in the existing application. It groups whole projects into\nActive, Paused and Archived columns, with folder/title filters, project opening\nand conditional drag or menu status changes. It can be selected as the default\nview.\n\nThe 601-test full gate passes. Main and navigation pass in Chromium and WebKit;\nshared menus and the nine-view responsive checks also pass. The rebuilt manual\napplication verifies all 42 assets over its existing HTTPS address, preserving\n31 prior source versions/hashes, two Focus pins, both profiles' settings,\nregistrations and roots, identity/epoch and certificate. A read-only live browser\nshows all 15 existing projects. Full release acceptance remains open.\n\nEvidence: progress/2026-10-04-main-project-board.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "f945336b-9f42-4513-830d-40276fa6efc1",
+    "kind": "result",
+    "recorded_at": "2026-10-04T16:28:44.235Z",
+    "summary": "Implemented and verified the Main project status board",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

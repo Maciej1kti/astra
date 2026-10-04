@@ -297,3 +297,16 @@ Use synthetic histories only in temporary test projects and remove those project
 after verification. Do not fabricate repetitions in the existing Pompki counters.
 Rates and chart display choices are presentation settings; they do not rewrite
 counter units or recorded history.
+
+## Main project status board — owner direction, 2026-10-04
+
+Add a new workspace view named Main alongside Focus, Chart and the existing views.
+It is a board for whole projects, with columns matching project status, rather
+than a board for cards within a project. Existing project states remain Active,
+Paused and Archived. The card Board keeps its name and behavior.
+
+Main uses the existing registered-project summaries and project state commands.
+Folder/title filtering, project opening and conditional status moves support the
+board without introducing project ordering fields or custom project statuses.
+The new view may be selected as the default workspace view; see
+[ADR-063](../docs/ADR-063-MAIN-PROJECT-STATUS-BOARD.md).

@@ -5,6 +5,7 @@ import {
 
 export const workspaceViews = [
   "focus",
+  "main",
   "projects",
   "board",
   "calendar",
@@ -91,7 +92,7 @@ export function readRoute(
 export function writeRoute(state: WorkspaceRoute): URLSearchParams {
   const params = new URLSearchParams({ view: state.view });
   if (state.project) params.set("project", state.project);
-  if (state.folder && state.view === "focus")
+  if (state.folder && ["focus", "main"].includes(state.view))
     params.set("folder", state.folder);
   if (state.search) params.set("q", state.search);
   if (state.view === "list") {

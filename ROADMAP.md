@@ -24,7 +24,7 @@ verification is indexed in [current status](progress/STATE.md).
 | Project storage | Strict JSON sources, stable identity, exact-folder registration and managed project instructions | [Architecture](docs/ARCHITECTURE.md), [JSON decision](docs/ADR-046-JSON-SOURCES.md) |
 | Safe mutations | Shared domain/application rules, conditional versions, command identity, recovery, history and conditional undo | [Write contract](docs/04-WRITES-AND-RECOVERY.md), [CLI](CLI.md) |
 | Host access | Loopback server, Unix CLI, browser pairing, session revocation and private HTTPS integration | [Installation](INSTALL.md) |
-| Core views | Focus, Projects, List, Board, Calendar, Timeline, Updates and Chart | [User guide](docs/USER-GUIDE.md) |
+| Core views | Focus, Main, Projects, List, Board, Calendar, Timeline, Updates and Chart | [User guide](docs/USER-GUIDE.md) |
 | Counter analysis | Selected histories, overlays, daily/cumulative grouping, statistics and browser-local rate valuation | [Chart guide](docs/USER-GUIDE.md#compare-counters-in-chart) |
 | Card workflows | Autosave, checklist, tags, comments, daily counters, inclusive plans and timed events | [User guide](docs/USER-GUIDE.md#create-and-edit-cards) |
 | Project context | Folder categories, independent milestones, reports, corrections/resolutions and read receipts | [User guide](docs/USER-GUIDE.md#reports-history-and-deletion) |

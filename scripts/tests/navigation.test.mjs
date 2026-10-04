@@ -11,6 +11,24 @@ const project = "11111111-1111-4111-8111-111111111111";
 const card = "22222222-2222-4222-8222-222222222222";
 const today = "2026-09-08";
 
+test("Main links preserve project opening and folder scope through reload", () => {
+  const route = readRoute(
+    new URLSearchParams({
+      view: "main",
+      folder: "Work & Home",
+      resource_project: project,
+      resource: project,
+      type: "project",
+      q: "Astra",
+    }),
+    today,
+  );
+  assert.equal(route.view, "main");
+  assert.equal(route.project, "");
+  assert.deepEqual(readRoute(writeRoute(route), today), route);
+  assert.equal(readRoute(new URLSearchParams(), today, "main").view, "main");
+});
+
 test("Chart is a workspace route that retains project scope and source opening", () => {
   const route = readRoute(
     new URLSearchParams({

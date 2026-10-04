@@ -66,7 +66,7 @@ export class ViewData {
   private snapshot = emptyState();
   private generation = 0;
   private focusRevision = 0;
-  private projectsReady = false;
+  private projectsScope: "ordinary" | "all" | undefined;
   private controller: AbortController | undefined;
   private job: { key: string; promise: Promise<void> } | undefined;
   private queued = new Set<Section>();
@@ -92,7 +92,7 @@ export class ViewData {
   }
   reset() {
     this.invalidate();
-    this.projectsReady = false;
+    this.projectsScope = undefined;
     this.attentionStart = null;
     this.snapshot = emptyState();
     this.snapshot.focusRevision = this.focusRevision;
@@ -101,6 +101,7 @@ export class ViewData {
   refresh(sections?: Section[]): Promise<void> {
     const query = this.dependencies.query();
     const key = viewQueryKey(query);
+    const projectsScope = query.view === "main" ? "all" : "ordinary";
     const changedRoute = this.snapshot.loadedQueryKey !== key;
     const needed = viewSections(query);
     const requested = changedRoute ? needed : (sections ?? needed);
@@ -117,7 +118,7 @@ export class ViewData {
       (section) =>
         needed.includes(section) &&
         (section !== "projects" ||
-          !this.projectsReady ||
+          this.projectsScope !== projectsScope ||
           !changedRoute ||
           sections?.includes("projects") ||
           this.queued.has("projects")),
@@ -159,7 +160,7 @@ export class ViewData {
         };
         if (result.projects) {
           this.snapshot.projects = result.projects;
-          this.projectsReady = true;
+          this.projectsScope = projectsScope;
         }
         if (result.focus) {
           this.snapshot.focus = result.focus.items;

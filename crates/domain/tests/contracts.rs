@@ -328,6 +328,25 @@ fn structured_card_content_preserves_identity_order_and_explicit_status() {
 }
 
 #[test]
+fn workspace_default_views_round_trip_with_main_and_reject_unknown_names() {
+    let mut workspace = read("examples/workspace.json");
+    for view in [
+        "focus", "main", "projects", "board", "calendar", "gantt", "chart", "list", "updates",
+    ] {
+        workspace["preferences"]["default_view"] = json!(view);
+        assert_eq!(
+            serde_json::to_value(validate_workspace(workspace.clone()).unwrap().get()).unwrap(),
+            workspace,
+            "{view}"
+        );
+    }
+    for invalid in [json!("Main"), json!("project_board"), json!(null)] {
+        workspace["preferences"]["default_view"] = invalid;
+        assert!(validate_workspace(workspace.clone()).is_err());
+    }
+}
+
+#[test]
 fn workspace_catalog_is_optional_exact_and_bounded() {
     let original = read("examples/workspace.json");
     assert_eq!(

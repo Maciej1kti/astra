@@ -14,6 +14,7 @@ await runBrowserSuite(
       checks = [];
     const labels = {
       focus: "Focus",
+      main: "Main",
       projects: "Projects",
       board: "Board",
       calendar: "Calendar",
@@ -23,6 +24,9 @@ await runBrowserSuite(
       chart: "Chart",
     };
     const defaults = Object.keys(labels);
+    const defaultHidden = defaults.filter(
+      (view) => !["focus", "projects"].includes(view),
+    );
     const key = "astra-navigation-layout:v1";
     const originalPreferences = cli("get", "/api/v1/workspace/preferences");
     page.on("pageerror", (error) => errors.push(error.message));
@@ -103,6 +107,23 @@ await runBrowserSuite(
       await expect(panel).toBeVisible();
       return panel;
     };
+    const revealMenuControl = async (panel, control) => {
+      const direction = await control.evaluate((element) => {
+        const row = element.getBoundingClientRect();
+        const surface = element
+          .closest(".action-menu-panel")
+          .getBoundingClientRect();
+        return row.top < surface.top ? -1 : row.bottom > surface.bottom ? 1 : 0;
+      });
+      if (!direction) return;
+      const bounds = await panel.boundingBox();
+      await page.mouse.move(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2,
+      );
+      await page.mouse.wheel(0, direction * bounds.height);
+      await expect(control).toBeInViewport({ ratio: 1 });
+    };
     const customize = async (options) => {
       const panel = await openMore(options);
       const summary = panel
@@ -111,6 +132,7 @@ await runBrowserSuite(
       if (
         !(await summary.evaluate((element) => element.closest("details").open))
       ) {
+        await revealMenuControl(panel, summary);
         if (options?.touch) await summary.tap();
         else await summary.click();
       }
@@ -201,7 +223,7 @@ await runBrowserSuite(
       );
 
       let panel = await openMore();
-      for (const view of defaults.slice(2))
+      for (const view of defaultHidden)
         await expect(
           panel.getByRole("button", { name: labels[view], exact: true }),
         ).toBeVisible();
@@ -246,6 +268,7 @@ await runBrowserSuite(
         .poll(readOrder)
         .toEqual([
           "focus",
+          "main",
           "projects",
           "calendar",
           "board",
@@ -254,6 +277,7 @@ await runBrowserSuite(
           "updates",
           "chart",
         ]);
+      await move("calendar", "earlier").click();
       await move("calendar", "earlier").click();
       await visibility("calendar").click();
       await expect(visibility("calendar")).toHaveAttribute(
@@ -269,6 +293,7 @@ await runBrowserSuite(
       const changedOrder = [
         "calendar",
         "focus",
+        "main",
         "projects",
         "board",
         "gantt",
@@ -325,16 +350,19 @@ await runBrowserSuite(
       await expect(page).toHaveURL(/view=projects/);
       await expect(more).toHaveAttribute("aria-current", "page");
       panel = await customize();
-      await panel
-        .getByRole("button", { name: "Reset navigation", exact: true })
-        .click();
+      const resetNavigation = panel.getByRole("button", {
+        name: "Reset navigation",
+        exact: true,
+      });
+      await revealMenuControl(panel, resetNavigation);
+      await resetNavigation.click();
       await expect.poll(readOrder).toEqual(defaults);
       await expect(visibility("focus")).toHaveAttribute("aria-pressed", "true");
       await expect(visibility("projects")).toHaveAttribute(
         "aria-pressed",
         "true",
       );
-      for (const view of defaults.slice(2))
+      for (const view of defaultHidden)
         await expect(visibility(view)).toHaveAttribute("aria-pressed", "false");
       await closeMore();
       await expect.poll(readBar).toEqual(["Focus", "Projects"]);
@@ -413,6 +441,7 @@ await runBrowserSuite(
         .poll(readOrder)
         .toEqual([
           "focus",
+          "main",
           "projects",
           "board",
           "calendar",
@@ -445,6 +474,7 @@ await runBrowserSuite(
       await closeMore();
       const fullOrder = [
         "focus",
+        "main",
         "projects",
         "board",
         "calendar",
@@ -481,6 +511,7 @@ await runBrowserSuite(
         .poll(readOrder)
         .toEqual([
           "focus",
+          "main",
           "projects",
           "list",
           "board",
@@ -532,6 +563,7 @@ await runBrowserSuite(
       const normalizedOrder = [
         "calendar",
         "focus",
+        "main",
         "projects",
         "board",
         "gantt",
@@ -555,6 +587,43 @@ await runBrowserSuite(
       await indicatorMatches();
       checks.push(
         "malformed storage restores defaults and duplicate/unknown routes normalize to unique valid shortcuts on reload",
+      );
+
+      const previousOrder = [
+        "chart",
+        "projects",
+        "focus",
+        "calendar",
+        "board",
+        "gantt",
+        "list",
+        "updates",
+      ];
+      await page.evaluate(
+        ({ storageKey, order }) =>
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({ order, visible: ["projects", "focus"] }),
+          ),
+        { storageKey: key, order: previousOrder },
+      );
+      await page.reload();
+      await expect.poll(readBar).toEqual(["Projects", "Focus"]);
+      await customize();
+      const upgradedOrder = [...previousOrder, "main"];
+      await expect.poll(readOrder).toEqual(upgradedOrder);
+      await expect(visibility("main")).toHaveAttribute("aria-pressed", "false");
+      assert.deepEqual((await savedLayout()).order, previousOrder);
+      await visibility("main").click();
+      const upgraded = await savedLayout();
+      assert.deepEqual(upgraded.order, upgradedOrder);
+      assert.deepEqual(upgraded.visible, ["projects", "focus", "main"]);
+      await closeMore();
+      await expect.poll(readBar).toEqual(["Projects", "Focus", "Main"]);
+      await page.reload();
+      await expect.poll(readBar).toEqual(["Projects", "Focus", "Main"]);
+      checks.push(
+        "existing saved order stays intact and appends Main; its visibility remains opt-in and persists on reload",
       );
 
       assert.equal(

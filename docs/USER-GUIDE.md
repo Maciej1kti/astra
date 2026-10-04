@@ -71,6 +71,7 @@ layout. The desktop sidebar keeps every view available in the chosen order.
 | View | Use it for | Key behavior |
 | --- | --- | --- |
 | Focus | Today's work and items needing attention | Ordered pins, attention, current plans and today's events; folder-category filtering |
+| Main | Arrange whole projects by status | Active, Paused and Archived columns, folder-category and title filters, direct status moves |
 | Projects | Register and inspect project folders | Project context, folder category and project actions |
 | List | Find and filter resources | Bounded pages, search/filter controls and access to resource editors |
 | Board | Arrange cards by status | Manual ordering, drag/drop and keyboard alternatives; a workspace overview and project boards |
@@ -82,6 +83,19 @@ layout. The desktop sidebar keeps every view available in the chosen order.
 Search and filters do not change source files. Where a view offers another page,
 use its paging controls: a displayed page is not the entire dataset. Calendar
 agenda pages hold up to 200 items; its grid/time layouts up to 1,000.
+
+Open **Main** from the sidebar or the phone's **More** menu to see projects in
+their current status columns, including archived projects. Use **Folder** and
+the title filter to narrow the board. Click a project to open its editor, or use
+**Add project** to register a folder. Drag a project's handle to another column
+to save its status; Escape cancels the drag. The project's **Move** menu offers
+the same status changes with keyboard and touch controls. Columns scroll
+horizontally on narrow screens. Project order follows the loaded project list.
+
+Moves use the displayed project version. A conflict keeps the proposal for
+review; close it and inspect the current project before trying again. An uncertain
+result retains **Check status** and **Retry same command**. Main can also be chosen
+as the default view in Workspace settings.
 
 ### Motion and accessibility
 

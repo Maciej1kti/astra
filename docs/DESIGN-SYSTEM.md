@@ -86,6 +86,14 @@ times, durations and editing proposals remain source-owned. The agenda provides
 full titles and duration labels, with dividers instead of nested card boxes.
 Popovers and controls use the shared motion and reduced-motion rules.
 
+Main presents whole projects in Active, Paused and Archived columns, with a
+shared Folder header and local title filter. Its columns scroll inside the
+workspace on phones. Each project has a separate opening surface, an explicit
+drag handle and a native status menu. Main uses an opacity-only scene entrance
+to keep pointer geometry stable, and removes its preview before requesting a
+conditional state write. It shares the pointer cancellation policy used by
+Board, date and counter gestures.
+
 Board's all-project overview stacks populated statuses vertically.
 Within a project, a small status strip jumps between horizontally scrolling
 columns and opens on the first column with cards when no position was saved.
@@ -132,6 +140,8 @@ Every action/date/navigation menu uses the same native popover and
 honors start/end alignment, chooses space below/above/beside, bounds long content
 and follows scrolling, resizing and expanded content. Feature menus supply their
 content and size caps; they do not implement separate positioning or dismissal.
+External repositioning preserves internal scroll offsets; scrolling within the
+panel does not reposition it or start another measurement frame.
 The tag manager opens above settings so closing it returns to the initiating
 control. Pending operations retain their existing close restrictions.
 
