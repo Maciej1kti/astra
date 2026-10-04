@@ -335,6 +335,7 @@ export interface ApiContracts {
   UserProfile: UserProfile;
   UserList: UserList;
   UserCreate: UserCreate;
+  UserRename: UserRename;
   Bootstrap: Bootstrap;
   RegistrationPlanInput: RegistrationPlanInput;
   RegistrationPlan: RegistrationPlan;
@@ -910,6 +911,7 @@ export interface PreferencesPatch {
   preferences?: Preferences;
 }
 export interface UserList {
+  version: string;
   /**
    * @minItems 1
    * @maxItems 32
@@ -921,6 +923,9 @@ export interface UserList {
 }
 export interface UserCreate {
   id: string;
+  name: string;
+}
+export interface UserRename {
   name: string;
 }
 export interface Bootstrap {

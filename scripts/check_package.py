@@ -270,6 +270,7 @@ def check_api_examples() -> dict:
     bindings = {
         "card-create.json": "CardCreate",
         "user-create.json": "UserCreate",
+        "user-rename.json": "UserRename",
         "event-create.json": "CardCreate",
         "event-to-plan.json": "CardPatch",
         "card-patch.json": "CardPatch",

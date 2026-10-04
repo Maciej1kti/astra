@@ -2,6 +2,10 @@
 
 Status: accepted owner direction, 2026-10-04.
 
+The initial one-profile-per-folder restriction is superseded by
+[ADR-061](ADR-061-SHARED-PROFILE-PROJECTS.md), which adds shared source folders and
+conditional profile renaming while retaining trusted selection.
+
 The owner needs two or more trusted people to select their own project folders
 inside one application instance. The previous single-workspace model shared
 project registration, approved roots, preferences, Focus order and read receipts

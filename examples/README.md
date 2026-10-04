@@ -41,3 +41,9 @@ The [creation payload](requests/user-create.json) retains its chosen UUID on ret
 the [HTTP examples](requests/users.http) show profile-scoped reads/events and
 creation/status calls using the default Owner's command journal. All paired
 devices may switch profiles; profile selection assumes trusted users.
+The [rename payload](requests/user-rename.json) uses the observed registry version
+from the list in `If-Match`; the HTTP example retains the root command scope.
+Profiles can share a project's existing exact folder by registering it in each
+workspace. They edit the same sources and counter totals through one host writer;
+preferences, Focus order, receipts and each profile's command/history records
+remain separate. The CLI walkthrough is in [Trusted user profiles](../CLI.md#trusted-user-profiles).

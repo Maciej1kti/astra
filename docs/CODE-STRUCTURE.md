@@ -271,10 +271,20 @@ registry and creation recovery in the root journal. The default Owner reuses the
 existing engine; additional engines live in `users/<uuid>/` below the same data
 directory. HTTP/Unix routing chooses an engine by `X-Astra-User`, and SSE uses
 `user_id`; pairing stays with the root engine. Each engine keeps its ordinary
-workspace, roots, command journal, receipts, history, index and writer leases.
+workspace, roots, command journal, receipts, history and index. The
+[shared host state](../crates/application/src/shared.rs) supplies one operation
+gate and a project-store pool to all engines before recovery. Source folders
+registered by several profiles retain one writer lease and mutex, and journal
+readers enforce project-wide pending recovery. Shared source Focus checks every
+participating workspace; deletion/relocation requires sole membership.
 Missing ready state is rejected rather than initialized. The host watches all
 ready engines, and stopped-copy restore rotates all their epochs. See
 [ADR-060](ADR-060-TRUSTED-USER-PROFILES.md).
+
+[Profile renaming](../crates/application/src/users/rename.rs) validates an
+observed registry version and commits name and command result in the root SQLite
+transaction. IDs and original command scopes stay stable. See
+[ADR-061](ADR-061-SHARED-PROFILE-PROJECTS.md).
 
 Browser transport freezes the selected profile per tab and retains it in command
 identity, including uncertain status/retry paths. Profile creation overrides that

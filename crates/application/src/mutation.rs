@@ -122,7 +122,7 @@ impl Engine {
         if prepared.adds_pin {
             debug_assert!(membership);
             drop(store);
-            if let Err(error) = self.admit_pin() {
+            if let Err(error) = self.admit_pin(&project_id) {
                 return self.journal.reject_error(&command, error, now);
             }
             store = handle

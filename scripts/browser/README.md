@@ -217,6 +217,12 @@ protection, keyboard switching at 320 px, rendered profile settings/projects,
 reload persistence and independent selections in existing tabs. These are scope
 checks for trusted profiles, not a claim of access isolation between paired users.
 
+The `shared-users` suite renames the initial profile, registers one existing
+folder in two profiles and verifies their shared source/card version. It records
+one counter step through the second profile's UI, reads the same result from the
+first profile and rejects a stale write. Separate tabs retain their names and
+unshared projects stay outside the second profile's selected workspace.
+
 The `loading` suite holds bootstrap to verify concurrent preferences and selected
 planning-module preloads, holds List data to verify editor warming starts after
 the initial read, pauses

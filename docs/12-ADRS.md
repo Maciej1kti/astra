@@ -359,3 +359,9 @@ One daemon retains central browser pairing while selected profiles use separate
 durable workspaces and project registration. Existing data remains in Owner;
 profiles are freely selectable by trusted paired users. See
 [ADR-060](ADR-060-TRUSTED-USER-PROFILES.md).
+
+## ADR-061 — Shared profile projects and names
+
+Trusted profiles may register the same exact folder through one coordinated
+writer lease. Profile renaming uses a conditional registry version and the root
+command journal. See [ADR-061](ADR-061-SHARED-PROFILE-PROJECTS.md).

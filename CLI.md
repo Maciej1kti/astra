@@ -45,7 +45,8 @@ interface for scripts; text layout is intended for people. Do not combine
 
 ```sh
 projectctl users
-projectctl user create --id aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa --name 'Colleague'
+projectctl user rename DEFAULT_USER_ID --name 'Maciek' --if-version REGISTRY_VERSION
+projectctl user create --id aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa --name 'Tomek'
 projectctl --user aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa projects
 projectctl --user aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa registration-plan /absolute/colleague-project --name 'Colleague project'
 projectctl --user aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa register PLAN_ID
@@ -54,17 +55,38 @@ projectctl --user aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa --project /absolute/colle
 
 Use a fresh UUIDv4 for each new profile and retain it when retrying that creation.
 The host supports at most 32 profiles; names contain at most 120 characters.
-`users` returns the registry, selected `current_user_id` and the root creation
-`command_epoch`. Creation runs against the root journal even when `ASTRA_USER`
+`users` returns the registry, its `version`, selected `current_user_id` and the root
+`command_epoch`. Renaming requires that observed registry version in `--if-version`.
+Creating or renaming any profile changes the registry version. A stale rename is
+rejected; reconcile the intended name before preparing a new command.
+Creation and renaming run against the root journal even when `ASTRA_USER`
 or `--user` selects another profile. Preserve its reported request ID, root epoch
-and unchanged input when the outcome is uncertain. Query its status with
+and unchanged input and expected version when the outcome is uncertain. Query its status with
 `--user DEFAULT_USER_ID command-status REQUEST_ID --epoch ORIGINAL_EPOCH`.
+The default profile can be renamed without changing its ID, projects or sessions.
+Reload an open browser tab to display the new name; existing author labels remain
+unchanged.
 
 Each profile has its own project registration, approved roots, preferences,
-Focus order, report read receipts, command journal and history. Use the same
+Focus order, report read receipts, command journal and history of its own writes. Use the same
 profile when reading versions, submitting changes, querying status and retrying
-ordinary content commands. Existing data stays in Owner. Registering the same
-exact project folder in another profile is rejected; project sharing is deferred.
+ordinary content commands. Existing data stays in the default profile.
+
+To share an existing project, register its exact folder in the other profile
+through the ordinary registration workflow:
+
+```sh
+projectctl --user OTHER_USER_ID registration-plan /absolute/shared-project --tracked
+projectctl --user OTHER_USER_ID register PLAN_ID
+```
+
+Both profiles then read and edit the same `.project/` sources, including card
+counter totals, comments and pin membership. The host coordinates one writer for
+the folder; conditional versions still protect concurrent edits. Focus ordering,
+workspace preferences, read receipts and command/history records remain local to
+the selected profile. Sharing does not copy project files or create an independent
+counter per user. A folder inside another registered project's `.project/` tree
+cannot be registered as a separate project.
 
 Pairing and device sessions remain central. Every paired browser and the local
 OS owner can select any profile; profile selection does not authenticate a

@@ -15,6 +15,7 @@ mod mutation;
 mod receipts;
 mod retention;
 mod roots;
+mod shared;
 mod tags;
 pub mod users;
 mod views;

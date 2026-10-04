@@ -67,6 +67,9 @@ Return to the browser and connect. Each device pairs separately. Settings can ad
 and select trusted profiles, each with separate project folders and preferences.
 The CLI selects one with `--user USER_ID` or `ASTRA_USER`; omission uses the default
 Owner. Pairing remains shared, and every paired device can select every profile.
+Register the same existing folder in another profile to share its cards and counter
+values within the host. Preferences, Focus order and report read state stay personal;
+shared project deletion/relocation requires unregistering other profiles first.
 There are no profile passwords or roles. For private access isolation, run separate
 instances with separate state directories and HTTPS origins.
 

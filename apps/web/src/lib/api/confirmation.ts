@@ -28,7 +28,7 @@ function identity(value: Record<string, unknown>, pending: Pending) {
   );
 }
 function expectedType(pending: Pending) {
-  if (pending.path === "/api/v1/users") return "user";
+  if (/^\/api\/v1\/users(?:\/[^/]+)?$/.test(pending.path)) return "user";
   if (/\/cards(?:\/[^/]+)?$/.test(pending.path)) return "card";
   if (/\/milestones(?:\/[^/]+)?$/.test(pending.path)) return "milestone";
   if (/\/updates(?:\/[^/]+)?$/.test(pending.path)) return "update";
@@ -58,19 +58,25 @@ function userResource(value: unknown, id: unknown) {
     uuid(value.id, 4) &&
     value.id === id &&
     text(value.name, 120) &&
-    value.is_default === false
+    typeof value.is_default === "boolean"
   );
+}
+function userResult(value: Record<string, unknown>, pending: Pending) {
+  if (!object(pending.payload) || !userResource(value.resource, value.id))
+    return false;
+  const user = value.resource as Record<string, unknown>;
+  if (user.name !== pending.payload.name) return false;
+  return pending.method === "POST" && pending.path === "/api/v1/users"
+    ? value.id === pending.payload.id && user.is_default === false
+    : pending.method === "PATCH" &&
+        value.id === pending.path.split("/").at(-1) &&
+        version(value.version);
 }
 function result(value: unknown, pending: Pending) {
   return (
     fields(value, ["type", "id", "version", "resource", "job_id", "deleted"]) &&
     value.type === expectedType(pending) &&
-    (value.type !== "user" ||
-      (object(pending.payload) &&
-        value.id === pending.payload.id &&
-        userResource(value.resource, value.id) &&
-        (value.resource as Record<string, unknown>).name ===
-          pending.payload.name)) &&
+    (value.type !== "user" || userResult(value, pending)) &&
     (value.id === undefined || uuid(value.id, 4)) &&
     (value.job_id === undefined || uuid(value.job_id, 4)) &&
     (value.deleted === undefined || value.deleted === true) &&

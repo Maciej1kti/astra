@@ -47,6 +47,12 @@ do not delete the registry entry or create an empty replacement to conceal data
 loss. Startup can finish a recorded interrupted profile creation, which is distinct
 from a ready profile losing its durable state.
 
+Several profiles may register the same source folder. Copy that source once,
+together with the root registry and every participating profile's operational
+state while the host is stopped. A pending command in any profile guards the
+shared project's recovery; restoring only one profile's journal is not a complete
+shared-project restore.
+
 This procedure does not snapshot concurrently edited files. Database versioning
 only upgrades actual operational layouts; future source schemas are rejected
 without rewriting source files. A successful process-stop test does not establish

@@ -387,7 +387,10 @@ impl Writer<'_> {
             if self.journal.state(&intent.command)? == CommandState::NeedsReview {
                 break;
             }
-            if intent.source_root != store.directory.path().to_str().unwrap() {
+            // The pooled lease may have been opened through another profile's
+            // equivalent lexical path (for example an embedded `.` component).
+            // Path equality does not resolve symlinks or parent traversal.
+            if std::path::Path::new(&intent.source_root) != store.directory.path() {
                 self.journal
                     .mark(&intent.command, CommandState::NeedsReview)?;
                 break;

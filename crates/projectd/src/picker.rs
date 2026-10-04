@@ -283,7 +283,7 @@ mod tests {
         assert_eq!(wait(&picker, &failed_id)["state"], "failed");
     }
     #[test]
-    fn native_selection_retains_profile_owner_and_rejects_another_users_folder() {
+    fn native_selection_retains_profile_owner_and_prepares_shared_folder() {
         let temp = tempfile::tempdir().unwrap();
         let root = project_store::filesystem::Directory::open(&temp.path().canonicalize().unwrap())
             .unwrap();
@@ -336,8 +336,8 @@ mod tests {
         loop {
             let value = picker.get(&owner, &id).unwrap();
             if value["state"] != "pending" {
-                assert_eq!(value["state"], "failed");
-                assert_eq!(value["error"], "PROJECT_IN_USE");
+                assert_eq!(value["state"], "selected");
+                assert_eq!(value["plan"]["project_id"], plan["project_id"]);
                 break;
             }
             assert!(Instant::now() < deadline);

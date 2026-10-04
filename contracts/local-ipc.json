@@ -135,6 +135,6 @@
     "value": "canonical UUIDv4; omitted selects the default Owner",
     "environment": "projectctl --user overrides ASTRA_USER",
     "scope": "Every common API and local workspace operation uses the selected profile, including hello epoch, project resolution, roots, registration and maintenance. Pairing remains global. Any trusted local caller may select any profile.",
-    "global_user_creation": "POST /api/v1/users uses the default profile header and command epoch. Command status and retries retain that default selection."
+    "global_user_creation": "POST /api/v1/users and PATCH /api/v1/users/{user_id} use the default profile header and command epoch. Command status and retries retain that default selection. Rename additionally requires the observed users registry version in If-Match."
   }
 }

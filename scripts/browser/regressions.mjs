@@ -15,6 +15,7 @@ const suites = [
   "loading",
   "session",
   "users",
+  "shared-users",
   "card",
   "tags",
   "editor",

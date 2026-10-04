@@ -157,3 +157,46 @@ test("user creation confirms only the submitted profile and retains malformed ou
     globalThis.fetch = originalFetch;
   }
 });
+
+test("profile rename confirms its target and registry version without accepting another name", async () => {
+  const originalFetch = globalThis.fetch;
+  const user = {
+    id: "12345678-1234-4234-8234-123456789012",
+    name: "Maciek",
+    is_default: true,
+  };
+  const rename = {
+    ...pending,
+    path: `/api/v1/users/${user.id}`,
+    payload: { name: user.name },
+  };
+  const reply = {
+    ...committed,
+    result: {
+      type: "user",
+      id: user.id,
+      version: "r1." + "1".repeat(64),
+      resource: user,
+    },
+  };
+  try {
+    for (const result of [
+      { ...reply.result, version: undefined },
+      { ...reply.result, id: "12345678-1234-4234-8234-123456789013" },
+      { ...reply.result, resource: { ...user, name: "Other" } },
+    ]) {
+      globalThis.fetch = async () => Response.json({ ...reply, result });
+      const operation = new CommandController();
+      operation.prepare(rename);
+      await assert.rejects(operation.commit(), /Invalid command/);
+      assert.equal(operation.pending, rename);
+    }
+    globalThis.fetch = async () => Response.json(reply);
+    const operation = new CommandController();
+    operation.prepare(rename);
+    await operation.commit();
+    assert.equal(operation.pending, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -250,6 +250,7 @@ impl Engine {
         root: &Path,
         id: &str,
     ) -> Result<(), AppError> {
+        self.ensure_not_shared(root)?;
         let deleted = root.join(".project");
         if self.journal.directory.path().starts_with(&deleted) {
             return Err(AppError::reject(409, "PROJECT_CONTAINS_SERVER_STATE"));

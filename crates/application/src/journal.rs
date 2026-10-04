@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     path::Path,
-    sync::{Mutex, MutexGuard},
+    sync::{Arc, Mutex, MutexGuard},
     time::Duration,
 };
 use uuid::Uuid;
@@ -67,11 +67,32 @@ pub struct Intent {
 }
 
 pub struct Journal {
-    connection: Mutex<Connection>,
+    pub(crate) reader: Arc<JournalReader>,
+    pub(crate) shared: Option<Arc<crate::shared::SharedHost>>,
     auth_changes: tokio::sync::watch::Sender<u64>,
     pub epoch: String,
-    pub directory: Directory,
+    pub directory: Arc<Directory>,
+}
+pub(crate) struct JournalReader {
+    connection: Mutex<Connection>,
+    pub directory: Arc<Directory>,
     lease: Lease,
+}
+impl JournalReader {
+    pub fn verify(&self) -> Result<(), AppError> {
+        self.lease.verify()?;
+        self.directory.verify()?;
+        Ok(())
+    }
+    pub fn db(&self) -> Result<MutexGuard<'_, Connection>, AppError> {
+        self.verify()?;
+        self.connection
+            .lock()
+            .map_err(|_| AppError::LockPoisoned("database connection"))
+    }
+    fn has_pending(&self, project_id: &str) -> Result<bool, AppError> {
+        Ok(self.db()?.query_row("SELECT EXISTS(SELECT 1 FROM commands WHERE project_id=?1 AND state IN ('prepared','blocked','needs_review'))", [project_id], |row| row.get(0))?)
+    }
 }
 impl Journal {
     /// Wake passive session consumers after a durable session revocation.
@@ -251,20 +272,26 @@ WHERE state IN ('pending',
             }
         };
         directory.sync()?;
+        let directory = Arc::new(directory);
         Ok(Self {
             auth_changes: tokio::sync::watch::channel(0).0,
-            connection: Mutex::new(connection),
+            reader: Arc::new(JournalReader {
+                connection: Mutex::new(connection),
+                directory: directory.clone(),
+                lease,
+            }),
+            shared: None,
             epoch,
             directory,
-            lease,
         })
     }
+    pub(crate) fn share(&mut self, shared: Arc<crate::shared::SharedHost>) -> Result<(), AppError> {
+        shared.attach(&self.reader)?;
+        self.shared = Some(shared);
+        Ok(())
+    }
     pub fn db(&self) -> Result<MutexGuard<'_, Connection>, AppError> {
-        self.lease.verify()?;
-        self.directory.verify()?;
-        self.connection
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("database connection"))
+        self.reader.db()
     }
     pub(crate) fn command_target(
         &self,
@@ -452,16 +479,21 @@ ORDER BY m.rowid,
         .collect()
     }
     pub fn has_pending(&self, project_id: &str) -> Result<bool, AppError> {
-        Ok(self.db()?.query_row(
-            "SELECT EXISTS(SELECT 1
-FROM commands
-WHERE project_id=?1
-AND state IN ('prepared',
-    'blocked',
-    'needs_review'))",
-            [project_id],
-            |r| r.get(0),
-        )?)
+        if self.reader.has_pending(project_id)? {
+            return Ok(true);
+        }
+        // Workspace/admin journals remain personal. Source writers and workflows
+        // call this after locking the host's single store for this project.
+        if uuid::Uuid::parse_str(project_id).is_ok()
+            && let Some(shared) = &self.shared
+        {
+            for reader in shared.readers()? {
+                if !Arc::ptr_eq(&reader, &self.reader) && reader.has_pending(project_id)? {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
     }
     pub fn record(
         &self,

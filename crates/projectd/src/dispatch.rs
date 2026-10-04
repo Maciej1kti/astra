@@ -53,6 +53,17 @@ pub(super) fn run(
     let current = session.as_ref().map(|s| s.id.as_str());
     let picker_owner = format!("{}:{}", service.user.id, current.unwrap_or("local-uid"));
     let value = match (input.method.as_str(), parts.as_slice()) {
+        ("PATCH", ["api", "v1", "users", id]) => {
+            parameters(&input, &[])?;
+            let expected = expected_version(&input)?;
+            return Ok(response(service.users.rename(
+                id,
+                &input.body,
+                request_id,
+                epoch,
+                expected.as_deref(),
+            )?));
+        }
         ("GET", ["api", "v1", "users"]) => {
             parameters(&input, &[])?;
             service.users.list(&service.user.id)?

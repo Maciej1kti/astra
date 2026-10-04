@@ -195,6 +195,8 @@ impl Engine {
                 expected_workspace_version,
                 ..
             } => {
+                self.ensure_not_shared(Path::new(&old_path))?;
+                self.ensure_not_shared(Path::new(&new_absolute_path))?;
                 if workspace_version != expected_workspace_version {
                     return Err(AppError::reject(412, "VERSION_CONFLICT"));
                 }
@@ -294,6 +296,15 @@ impl Engine {
             .admit(&plan.command(request, epoch), now_millis())?
         {
             return Ok(reply);
+        }
+        if plan.kind == WorkflowKind::Relocate
+            && let Err(error) = self
+                .ensure_not_shared(Path::new(plan.location.previous_path()?))
+                .and_then(|_| self.ensure_not_shared(Path::new(plan.location.destination.as_str())))
+        {
+            return self
+                .journal
+                .reject_error(&plan.command(request, epoch), error, now_millis());
         }
         self.ensure_no_project_deletion()?;
         if self.journal.has_pending("workspace")? {

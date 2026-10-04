@@ -30,18 +30,27 @@ choose **Switch user**. The settings button shows the profile used by that tab.
 Finish or explicitly discard unsaved changes and resolve pending commands before
 switching; the switch is disabled while that work remains.
 
-The initial **Owner** profile keeps all existing projects and settings. Adding a
+The initial **Owner** profile keeps all existing projects and settings; its name
+can be changed through the [CLI](../CLI.md#trusted-user-profiles). Adding a
 profile does not move or copy project sources. Register that profile's exact
 folders through Projects or the [CLI](../CLI.md#trusted-user-profiles). A project
-folder can belong to only one profile in this instance; sharing a project between
-profiles is not implemented.
+folder can be registered in several profiles in the same instance. They share
+the same cards, reports, comments, counters and recorded values. Other project
+folders remain visible only in the profiles where they are registered.
+
+Shared cards have the same Focus pin membership in every participating profile;
+each profile keeps its own Focus order, preferences and report read state.
+Command history belongs to the profile that made the edit. Unregistering removes
+only that profile's registration. Before deleting or relocating a shared project,
+unregister it from the other profiles.
 
 A switch reloads the current tab. Reloading keeps that tab's profile, and already
 open tabs keep their own selection. New tabs use the last selected profile in
 that browser. Other devices select their profiles independently.
 
 If a remembered profile is unavailable, Astra reports the problem. **Use default
-user** explicitly returns that tab to Owner while keeping its paired session.
+user** explicitly returns that tab to the default profile while keeping its
+paired session.
 
 Profiles organize work for trusted people. Any paired browser can select any
 profile; pairing and device approval are shared across the instance. There are

@@ -1,0 +1,18 @@
+{
+  "body": "Implemented conditional profile renaming and shared-folder registration in the trusted host. Maciek retains all 15 existing projects; Tomek shares the existing cwiczenia source folder. Both profiles read the same Pompki card and counter, unit rep and step 1, with no repetitions added during setup. The 510-test full gate, Chromium/WebKit profile scenarios, counter regressions and broad HTTPS smoke pass. Two verified restarts preserve 28 prior source versions, preferences, identity/epoch and certificate; profile names, shared membership and the counter survive restart. Evidence: progress/2026-10-04-shared-exercise-project.md. Counter values are shared; private access control and physical-device/release acceptance remain outside this result.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "9b8ec18e-87c3-4843-8d52-cae6bc0453cb",
+    "kind": "result",
+    "recorded_at": "2026-10-04T14:21:11.536Z",
+    "summary": "Configured named profiles and the shared exercise project",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

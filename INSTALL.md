@@ -155,7 +155,10 @@ pairing if approval is too late.
 Existing installations retain their data in **Owner**. In **Workspace settings →
 User**, add an empty profile and explicitly switch to it before registering its
 folders. The CLI selects the same workspace with `--user USER_ID` or `ASTRA_USER`;
-omitting both selects Owner. See [CLI profiles](CLI.md#trusted-user-profiles).
+omitting both selects the default profile. Profiles can be renamed through the
+CLI. Register the same exact existing project folder in another profile to share
+its source data within this host; personal workspace settings remain separate.
+See [CLI profiles](CLI.md#trusted-user-profiles).
 
 Pairing remains shared across profiles, and every paired device can choose any
 profile. Profiles are intended for trusted people, without passwords or roles.

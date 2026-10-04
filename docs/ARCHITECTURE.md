@@ -86,7 +86,8 @@ merely because source files are committed.
 
 ### Profile routing and durability
 
-`X-Astra-User` chooses the HTTP/Unix content engine; omission chooses Owner.
+`X-Astra-User` chooses the HTTP/Unix content engine; omission chooses the default
+profile, initially named Owner.
 SSE selects it through `user_id`. Bootstrap returns the selected profile, while
 pairing/session administration always uses the central root engine. Browser tabs
 hold a fixed profile through every read, mutation and command recovery; an explicit
@@ -97,9 +98,19 @@ Profile creation is a durable command in the root journal. Operational schema
 version 3 stores the registry and creation intentions; startup completes interrupted
 creation before opening listeners. A ready profile with missing state fails
 visibly rather than silently creating an empty replacement. Restore rotates every
-profile's command epoch and revokes the shared sessions. Separate writer leases
-prevent registering the same project folder in two profiles. Project sharing is
-not implemented. See [ADR-060](ADR-060-TRUSTED-USER-PROFILES.md).
+profile's command epoch and revokes the shared sessions. Conditional profile
+rename uses the observed registry version and commits its name and command
+response in one root-journal transaction.
+
+Profiles may register the same exact project folder. A host-wide gate and shared
+store pool retain one writer lease and source mutex; pending recovery in any
+profile blocks competing writes to that project. Source data and counter values
+are shared, while preferences, receipts, Focus order and command history remain
+per profile. Shared source pin admission respects every participating workspace's
+bounds. Each profile's watcher refreshes its projection and events. Shared project
+deletion/relocation is blocked until other profiles unregister. See
+[ADR-060](ADR-060-TRUSTED-USER-PROFILES.md) and
+[ADR-061](ADR-061-SHARED-PROFILE-PROJECTS.md).
 
 ## Source format
 

@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [shared exercise project implementation](2026-10-04-shared-exercise-project.md)
+adds conditional profile names and shared source folders within one trusted host.
+The live Maciek profile retains all 15 projects; Tomek shares `cwiczenia` and its
+Pompki counter (`rep`, step 1). The 510-test full gate, Chromium/WebKit profile
+scenarios, counter regressions and broad HTTPS smoke pass. Two verified manual
+restarts preserve 28 source versions, settings, identity/epoch and certificate;
+the final readback confirms both profiles use one card and counter source.
+
 The [compact navigation feature](2026-10-04-compact-navigation.md) gives phones a
 Focus/Projects/More bar, off-bar view access and browser-local order/visibility
 controls. The combined 494-test full gate, Chromium/WebKit navigation and motion,
@@ -18,8 +26,8 @@ and selection pass independently. Physical-device acceptance remains open.
 
 The [trusted user profiles implementation](2026-10-04-trusted-user-profiles.md)
 adds separate project folders and workspace state in one daemon, with profile
-creation/selection in Settings and CLI. Existing data stays in Owner; pairing is
-shared, and all paired users may select every profile. The 494-test full gate,
+creation/selection in Settings and CLI. Existing data stays in the default profile;
+pairing is shared, and all paired users may select every profile. The 494-test full gate,
 affected Chromium/WebKit suites and navigation-adapted broad HTTPS smoke pass.
 The rebuilt existing application preserves 25 prior versions, one Focus pin,
 settings, instance/epoch and certificate; all 32 served assets match. The earlier

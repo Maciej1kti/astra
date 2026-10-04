@@ -81,6 +81,8 @@ export class ApiError extends Error {
       USER_NOT_FOUND:
         "This user is unavailable. Open the default user to continue.",
       USER_LIMIT_REACHED: "This host has reached its user limit.",
+      PROJECT_SHARED:
+        "This project is shared. Unregister it from the other users before deleting or relocating it.",
     };
     super(
       messages[code] ??

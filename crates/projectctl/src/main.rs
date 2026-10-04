@@ -53,7 +53,7 @@ enum OutputFormat {
 enum Action {
     /// List trusted user profiles and the currently selected profile.
     Users,
-    /// Create a trusted user profile with its own project folders and preferences.
+    /// Create or rename trusted user profiles.
     User {
         #[command(subcommand)]
         action: users::Action,

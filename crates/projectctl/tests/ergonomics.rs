@@ -233,6 +233,51 @@ fn users_and_command_status_keep_explicit_profile_selection() {
 }
 
 #[test]
+fn profile_rename_retains_observed_registry_version_and_root_retry_scope() {
+    for target in [PROJECT, HISTORY] {
+        let reply = json!({"api_version":"1","request_id":REQUEST,
+            "status":"committed","replayed":true,"warnings":[],
+            "result":{"type":"user","id":target,"version":VERSION,
+                "resource":{"id":target,"name":"Maciek","is_default":target==PROJECT}}});
+        let host = Host::new(vec![(200, user_list()), (200, reply.clone())]);
+        let mut command = host.command();
+        command.args([
+            "--user",
+            HISTORY,
+            "user",
+            "rename",
+            target,
+            "--name",
+            "Maciek",
+            "--if-version",
+            VERSION,
+            "--request-id",
+            REQUEST,
+            "--epoch",
+            EPOCH,
+        ]);
+        let output = invoke(&mut command, None);
+        assert_eq!(output.status.code(), Some(0), "{:?}", parsed(&output));
+        assert_eq!(parsed(&output)["data"], reply);
+        let requests = host.finish();
+        assert_eq!(
+            requests.len(),
+            2,
+            "The given epoch and registry version must not be replaced"
+        );
+        assert_eq!(requests[0].headers["x-astra-user"], HISTORY);
+        let renamed = &requests[1];
+        assert_eq!(renamed.path, format!("/api/v1/users/{target}"));
+        assert_eq!(renamed.method, "PATCH");
+        assert_eq!(renamed.body, json!({"name":"Maciek"}));
+        assert_eq!(renamed.headers["x-astra-user"], PROJECT);
+        assert_eq!(renamed.headers["x-request-id"], REQUEST);
+        assert_eq!(renamed.headers["x-command-epoch"], EPOCH);
+        assert_eq!(renamed.headers["if-match"], format!("\"{VERSION}\""));
+    }
+}
+
+#[test]
 fn invalid_profile_and_incomplete_creation_identity_fail_before_connecting() {
     for args in [
         vec!["--user", "not-a-uuid", "users"],
@@ -248,6 +293,7 @@ fn invalid_profile_and_incomplete_creation_identity_fail_before_connecting() {
             REQUEST,
         ],
         vec!["user", "create", "--name", "Ania"],
+        vec!["user", "rename", RESOURCE, "--name", "Tomek"],
     ] {
         let directory = tempfile::tempdir().unwrap();
         let socket = directory.path().join("unused.sock");

@@ -31,21 +31,26 @@ pub(crate) type StoreHandle = Arc<Mutex<ProjectStore>>;
 pub struct Engine {
     pub(crate) journal: Journal,
     pub(crate) index: Index,
-    pub(crate) gate: RwLock<()>,
+    pub(crate) gate: Arc<RwLock<()>>,
+    pub(crate) shared: Arc<crate::shared::SharedHost>,
     stores: Mutex<HashMap<String, StoreHandle>>,
     pub(crate) reconciled: Mutex<HashMap<String, std::time::Instant>>,
     projection_repairs: Mutex<ProjectionRepairs>,
 }
 impl Engine {
     pub fn open(data: &Path) -> Result<Self, AppError> {
-        Self::open_with_reconciliation(data, true, None)
+        Self::open_with_reconciliation(data, true, None, Arc::default())
     }
     /// Recover durable commands before admission; the service reconciles marked
     /// stale projections after listeners start, using its bounded background worker.
     pub fn open_for_service(data: &Path) -> Result<Self, AppError> {
-        Self::open_with_reconciliation(data, false, None)
+        Self::open_with_reconciliation(data, false, None, Arc::default())
     }
-    pub(crate) fn open_user(data: &Path, id: &str) -> Result<Self, AppError> {
+    pub(crate) fn open_user(
+        data: &Path,
+        id: &str,
+        shared: Arc<crate::shared::SharedHost>,
+    ) -> Result<Self, AppError> {
         // Check identity before any journal recovery can alter this workspace.
         let directory = project_store::filesystem::Directory::open(data)?;
         if let Some(bytes) = directory.read("workspace.json")? {
@@ -55,7 +60,7 @@ impl Engine {
                 return Err(AppError::Unavailable("user workspace identity"));
             }
         }
-        let engine = Self::open_with_reconciliation(data, false, Some(id))?;
+        let engine = Self::open_with_reconciliation(data, false, Some(id), shared)?;
         if engine.workspace()?.value.instance_id != id {
             return Err(AppError::Unavailable("user workspace identity"));
         }
@@ -68,8 +73,9 @@ impl Engine {
         data: &Path,
         eager: bool,
         user: Option<&str>,
+        shared: Arc<crate::shared::SharedHost>,
     ) -> Result<Self, AppError> {
-        let journal = Journal::open(data)?;
+        let mut journal = Journal::open(data)?;
         if journal
             .directory
             .read("workspace.json")
@@ -106,10 +112,12 @@ impl Engine {
             "INSERT OR IGNORE INTO meta(key,value) VALUES('workspace_initialized','1')",
             [],
         )?;
+        journal.share(shared.clone())?;
         let engine = Self {
             journal,
             index: Index::open(data)?,
-            gate: RwLock::new(()),
+            gate: shared.gate.clone(),
+            shared,
             stores: Mutex::new(HashMap::new()),
             reconciled: Mutex::new(HashMap::new()),
             projection_repairs: Mutex::new(ProjectionRepairs::default()),
@@ -296,7 +304,7 @@ SET value=excluded.value",
         if let Some(store) = stores.get(path) {
             return Ok(store.clone());
         }
-        let store = Arc::new(Mutex::new(ProjectStore::open(Path::new(path), create)?));
+        let store = self.shared.store(Path::new(path), create)?;
         stores.insert(path.into(), store.clone());
         Ok(store)
     }
@@ -311,6 +319,22 @@ SET value=excluded.value",
             .find(|r| r.project_id == id)
             .ok_or_else(|| AppError::reject(404, "PROJECT_NOT_REGISTERED"))?;
         self.store_path(&item.path, false)
+    }
+    pub(crate) fn ensure_not_shared(&self, path: &Path) -> Result<(), AppError> {
+        if self
+            .shared
+            .other_workspaces(&self.journal.reader)?
+            .iter()
+            .any(|workspace| {
+                workspace
+                    .projects
+                    .iter()
+                    .any(|project| Path::new(&project.path) == path)
+            })
+        {
+            return Err(AppError::reject(409, "PROJECT_SHARED"));
+        }
+        Ok(())
     }
     pub fn resolve_path(&self, path: &str) -> Result<String, AppError> {
         let crate::Versioned {

@@ -61,7 +61,7 @@
           "users"
         ],
         "summary": "List trusted user profiles",
-        "description": "Profiles share the paired-device trust boundary. The list includes the current selection and the default profile's command epoch for global profile creation.",
+        "description": "Profiles share the paired-device trust boundary. The list includes the current selection and the default profile's command epoch for global profile creation and renaming.",
         "responses": {
           "200": {
             "description": "Trusted profiles, including the default Owner",
@@ -139,6 +139,88 @@
           },
           "default": {
             "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        },
+        {
+          "name": "user_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/UUID"
+          }
+        }
+      ],
+      "patch": {
+        "operationId": "renameUser",
+        "tags": [
+          "users"
+        ],
+        "summary": "Rename a trusted user with the observed registry version",
+        "description": "Use If-Match with the version from GET /api/v1/users. Creation or renaming of any profile changes that version. This command belongs to the default profile's journal; retain its profile ID, epoch, request ID, payload and expected version for status and retries. The result version is the new registry version. The default profile can also be renamed without changing its identity or projects.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CSRF"
+          },
+          {
+            "$ref": "#/components/parameters/RequestID"
+          },
+          {
+            "$ref": "#/components/parameters/CommandEpoch"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRename"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Name and command outcome committed atomically",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Outcome unresolved; inspect the default profile's command status with the original identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandStatus"
+                }
+              }
+            }
+          },
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
+          "default": {
+            "description": "Controlled error, including 412 VERSION_CONFLICT and 428 PRECONDITION_REQUIRED",
             "content": {
               "application/json": {
                 "schema": {
@@ -7990,6 +8072,10 @@
       "UserList": {
         "type": "object",
         "properties": {
+          "version": {
+            "$ref": "#/components/schemas/Version",
+            "description": "Hash of profiles sorted by ID, including names and default status. Independent of the selected user and command epoch; required for conditional renaming."
+          },
           "items": {
             "type": "array",
             "items": {
@@ -8003,13 +8089,14 @@
           },
           "command_epoch": {
             "$ref": "#/components/schemas/UUID",
-            "description": "Default profile command epoch for user creation."
+            "description": "Default profile command epoch for user creation and renaming."
           }
         },
         "required": [
           "items",
           "current_user_id",
-          "command_epoch"
+          "command_epoch",
+          "version"
         ],
         "additionalProperties": false
       },
@@ -8028,6 +8115,21 @@
         },
         "required": [
           "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "UserRename": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Trimmed display name without control characters. Names need not be unique."
+          }
+        },
+        "required": [
           "name"
         ],
         "additionalProperties": false

@@ -73,15 +73,34 @@ impl Engine {
         })
     }
 
-    pub(crate) fn admit_pin(&self) -> Result<(), AppError> {
+    pub(crate) fn admit_pin(&self, project_id: &str) -> Result<(), AppError> {
         let workspace = self.workspace()?.value;
+        let path = workspace
+            .projects
+            .iter()
+            .find(|project| project.project_id == project_id)
+            .map(|project| project.path.as_str());
+        self.admit_workspace_pin(&workspace, false)?;
+        for workspace in self.shared.other_workspaces(&self.journal.reader)? {
+            if workspace.projects.iter().any(|project| {
+                project.project_id == project_id
+                    && path.is_some_and(|path| {
+                        std::path::Path::new(path) == std::path::Path::new(&project.path)
+                    })
+            }) {
+                self.admit_workspace_pin(&workspace, true)?;
+            }
+        }
+        Ok(())
+    }
+    fn admit_workspace_pin(&self, workspace: &Workspace, peer: bool) -> Result<(), AppError> {
         for project in &workspace.projects {
             // An unresolved write may already reserve a pin whose rename is not visible.
             if self.journal.has_pending(&project.project_id)? {
                 return Err(AppError::reject(409, "WORKSPACE_RECOVERY_REQUIRED"));
             }
         }
-        if self.source_focus(&workspace)?.len() >= MAX_FOCUS {
+        if self.source_focus_paths(workspace, None, peer)?.len() >= MAX_FOCUS {
             return Err(AppError::reject(422, "FOCUS_LIMIT"));
         }
         Ok(())
@@ -96,13 +115,26 @@ impl Engine {
         workspace: &Workspace,
         only_project: Option<&str>,
     ) -> Result<Vec<FocusRef>, AppError> {
+        self.source_focus_paths(workspace, only_project, false)
+    }
+    fn source_focus_paths(
+        &self,
+        workspace: &Workspace,
+        only_project: Option<&str>,
+        peer: bool,
+    ) -> Result<Vec<FocusRef>, AppError> {
         let mut pinned = Vec::new();
         let mut scanned = 0;
         for registration in &workspace.projects {
             if only_project.is_some_and(|id| id != registration.project_id) {
                 continue;
             }
-            let handle = self.store(&registration.project_id)?;
+            let handle = if peer {
+                self.shared
+                    .store(std::path::Path::new(&registration.path), false)?
+            } else {
+                self.store(&registration.project_id)?
+            };
             let store = handle
                 .lock()
                 .map_err(|_| AppError::LockPoisoned("project store"))?;

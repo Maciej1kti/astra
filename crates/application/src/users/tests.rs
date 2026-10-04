@@ -109,10 +109,11 @@ fn profiles_preserve_owner_state_and_isolate_roots_queries_settings_and_commands
         alice.workspace().unwrap().value.instance_id,
         initial.value.instance_id
     );
-    assert!(
+    assert_eq!(
         users
             .registration_plan(&id, alice_directory.path().to_str().unwrap(), None, true)
-            .is_err()
+            .unwrap()["project_id"],
+        alice_project
     );
 }
 
@@ -296,7 +297,7 @@ fn folder_reservations_are_rechecked_at_commit_and_before_relocation() {
         )
         .unwrap();
     assert_eq!(rejected.http_status, 409);
-    assert_eq!(rejected.body["error"]["code"], "PROJECT_IN_USE");
+    assert_eq!(rejected.body["error"]["code"], "PLAN_STALE");
     assert_eq!(
         other
             .command_status(&request, other.command_epoch())
@@ -306,7 +307,7 @@ fn folder_reservations_are_rechecked_at_commit_and_before_relocation() {
     let project = register(&other, own.path(), "Second project");
     let error = users.maintenance_plan(&second, &json!({"operation":"relocate","project_id":project,"new_absolute_path":shared.path(),"expected_workspace_version":other.workspace().unwrap().version})).unwrap_err();
     assert!(
-        matches!(error, AppError::Rejected(reply) if reply.body["error"]["code"] == "PROJECT_IN_USE")
+        matches!(error, AppError::Rejected(reply) if reply.body["error"]["code"] == "PROJECT_SHARED")
     );
     let nested = shared
         .child(".project", false)
@@ -454,3 +455,6 @@ fn subprocess_profile_creation_recovers_without_destructor_flushes() {
         );
     }
 }
+
+#[path = "sharing.rs"]
+mod sharing;

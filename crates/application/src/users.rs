@@ -97,9 +97,23 @@ impl Users {
         if !valid_id(&id) {
             return Err(AppError::invariant("default user identity"));
         }
+        use rusqlite::OptionalExtension;
+        let name: String = owner
+            .journal
+            .db()?
+            .query_row(
+                "SELECT value FROM meta WHERE key='default_user_name'",
+                [],
+                |row| row.get(0),
+            )
+            .optional()?
+            .unwrap_or_else(|| "Owner".into());
+        if !valid_name(&name) {
+            return Err(AppError::invariant("default user name"));
+        }
         let default = UserProfile {
             id,
-            name: "Owner".into(),
+            name,
             is_default: true,
         };
         let mut engines = BTreeMap::new();
@@ -137,7 +151,7 @@ impl Users {
                 return Err(AppError::invariant("duplicate default user"));
             }
             let directory = directory(&owner, &user, false)?;
-            let engine = Engine::open_user(directory.path(), &user.id)?;
+            let engine = Engine::open_user(directory.path(), &user.id, owner.shared.clone())?;
             engines.insert(user.id.clone(), (user, engine));
         }
         for (id, name, epoch, request) in pending {
@@ -146,7 +160,7 @@ impl Users {
                 return Err(AppError::invariant("duplicate pending user"));
             }
             let directory = directory(&owner, &user, true)?;
-            let engine = Engine::open_user(directory.path(), &user.id)?;
+            let engine = Engine::open_user(directory.path(), &user.id, owner.shared.clone())?;
             complete_creation(&owner, &user, &epoch, &request)?;
             engines.insert(user.id.clone(), (user, engine));
         }
@@ -175,8 +189,7 @@ impl Users {
             if id != user
                 && engine.workspace()?.value.projects.iter().any(|project| {
                     let registered = std::path::Path::new(&project.path);
-                    registered == candidate
-                        || candidate.starts_with(registered.join(".project"))
+                    candidate.starts_with(registered.join(".project"))
                         || registered.starts_with(candidate.join(".project"))
                 })
             {
@@ -323,7 +336,13 @@ impl Users {
             .engines
             .read()
             .map_err(|_| AppError::LockPoisoned("user engines"))?;
-        let mut items = vec![self.default.clone()];
+        let mut items = vec![
+            engines
+                .get(&self.default.id)
+                .ok_or(AppError::invariant("default user profile"))?
+                .0
+                .clone(),
+        ];
         items.extend(
             engines
                 .values()
@@ -331,7 +350,7 @@ impl Users {
                 .map(|(profile, _)| profile.clone()),
         );
         Ok(
-            json!({"items":items,"current_user_id":current,"command_epoch":self.owner.command_epoch()}),
+            json!({"items":items,"current_user_id":current,"command_epoch":self.owner.command_epoch(),"version":Self::registry_version(&engines)}),
         )
     }
     pub fn create(&self, payload: &Value, request: &str, epoch: &str) -> Result<Reply, AppError> {
@@ -344,17 +363,12 @@ impl Users {
         epoch: &str,
         mut checkpoint: impl FnMut(&str) -> Result<(), AppError>,
     ) -> Result<Reply, AppError> {
-        // Registry ownership precedes the owner workspace gate. No caller holds
-        // this registry guard while entering another existing engine operation.
+        // The registry serializes profile creation. Child initialization owns
+        // the shared workspace gate itself; do not hold it across engine open.
         let mut engines = self
             .engines
             .write()
             .map_err(|_| AppError::LockPoisoned("user engines"))?;
-        let _gate = self
-            .owner
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
         let command = Command {
             request_id: request.into(),
             epoch: epoch.into(),
@@ -387,7 +401,8 @@ impl Users {
             if let Some((id, name)) = pending {
                 let user = profile(id, name)?;
                 let directory = directory(&self.owner, &user, true)?;
-                let engine = Engine::open_user(directory.path(), &user.id)?;
+                let engine =
+                    Engine::open_user(directory.path(), &user.id, self.owner.shared.clone())?;
                 complete_creation(&self.owner, &user, epoch, request)?;
                 engines.insert(user.id.clone(), (user, Arc::new(engine)));
                 return self
@@ -435,6 +450,9 @@ impl Users {
         };
         {
             let mut db = self.owner.journal.db()?;
+            if let Some(reply) = Journal::known(&db, &command)? {
+                return Ok(reply);
+            }
             let tx = db.transaction()?;
             Journal::insert_command(
                 &tx,
@@ -454,7 +472,7 @@ impl Users {
         }
         checkpoint("prepared")?;
         let directory = directory(&self.owner, &user, true)?;
-        let engine = Engine::open_user(directory.path(), &user.id)?;
+        let engine = Engine::open_user(directory.path(), &user.id, self.owner.shared.clone())?;
         checkpoint("initialized")?;
         complete_creation(&self.owner, &user, epoch, request)?;
         engines.insert(user.id.clone(), (user, Arc::new(engine)));
@@ -463,5 +481,6 @@ impl Users {
     }
 }
 
+mod rename;
 #[cfg(test)]
 mod tests;

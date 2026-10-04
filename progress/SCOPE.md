@@ -272,3 +272,15 @@ projects and hostile-user isolation remain outside this change. Switching a
 browser profile requires finishing or discarding drafts and resolving pending
 commands. It reloads only that tab, preserving selections in other open tabs.
 See [ADR-060](../docs/ADR-060-TRUSTED-USER-PROFILES.md).
+
+## Shared exercise project — owner direction, 2026-10-04
+
+Name the existing profile Maciek and add Tomek. Register the existing exercise
+project in both profiles, preserving one shared source folder. Add a Pompki card
+with a Pompki counter, unit `rep`, step 1 and no fabricated recorded repetitions.
+This supersedes the initial restriction against sharing a folder between profiles.
+
+Keep trusted selection and personal workspace preferences/order/receipts. Shared
+card contents and counter values are common; do not duplicate the project or
+introduce passwords or roles. Conditional profile naming and coordinated shared
+source writes are specified in [ADR-061](../docs/ADR-061-SHARED-PROFILE-PROJECTS.md).

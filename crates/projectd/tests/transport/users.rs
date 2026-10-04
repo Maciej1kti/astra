@@ -148,17 +148,17 @@ async fn selected_users_scope_content_and_keep_authentication_central() {
         .status(),
         404
     );
-    let denied = app
+    let shared = app
         .local("POST", "/local/v1/registration-plans")
         .header("x-astra-user", owner_id)
         .json(&json!({"absolute_path":app.project}))
         .send()
         .await
         .unwrap();
-    assert_eq!(denied.status(), 409);
+    assert_eq!(shared.status(), 200);
     assert_eq!(
-        denied.json::<Value>().await.unwrap()["error"]["code"],
-        "PROJECT_IN_USE"
+        shared.json::<Value>().await.unwrap()["project_id"],
+        plan["project_id"]
     );
     let cookie = paired_cookie(&app).await;
     let browser = app
