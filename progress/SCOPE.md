@@ -310,3 +310,12 @@ Folder/title filtering, project opening and conditional status moves support the
 board without introducing project ordering fields or custom project statuses.
 The new view may be selected as the default workspace view; see
 [ADR-063](../docs/ADR-063-MAIN-PROJECT-STATUS-BOARD.md).
+
+## Projects replaces Main — owner direction, 2026-10-04
+
+The whole-project status board replaces the previous Projects overview. Keep
+the Projects name and folder icon, remove the separate Main entry/icon/screen,
+and expose that board under Projects. This supersedes the preceding Main naming
+and separate-view decision. Preserve project registration, opening and deletion
+alongside conditional status moves; keep legacy links/preferences usable without
+automatic source rewrites. See [ADR-064](../docs/ADR-064-PROJECTS-STATUS-BOARD.md).

@@ -1,4 +1,4 @@
-# Main groups registered projects by their existing state: active, paused, archived.
+# Projects groups registered projects by their existing state: active, paused, archived.
 # Read each bounded set and follow its own cursors with the same scope and limit.
 # The ordinary list includes Active and Paused; archived=true is Archived only.
 GET /api/v1/projects?limit=200 HTTP/1.1
@@ -13,7 +13,7 @@ X-Command-Epoch: 99999999-9999-4999-8999-999999999992
 X-CSRF-Token: CURRENT_SESSION_CSRF
 Content-Type: application/json
 
-{"preferences":{"default_view":"main"}}
+{"preferences":{"default_view":"projects"}}
 
 # Changing a project's column uses the existing project mutation.
 # Retain the observed source version from the project summary or source read.

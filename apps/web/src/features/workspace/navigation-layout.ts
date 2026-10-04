@@ -1,4 +1,4 @@
-import { workspaceViews, type View } from "./navigation";
+import { canonicalView, workspaceViews, type View } from "./navigation.ts";
 
 export type NavigationLayout = { order: View[]; visible: View[] };
 const key = "astra-navigation-layout:v1";
@@ -10,8 +10,8 @@ function normalize(value: unknown): NavigationLayout {
       : {};
   const known = (items: unknown): View[] =>
     Array.isArray(items)
-      ? [...new Set(items)].filter((item): item is View =>
-          workspaceViews.includes(item as View),
+      ? [...new Set(items.map(canonicalView))].filter(
+          (item): item is View => item !== undefined,
         )
       : [];
   const order = [...new Set([...known(saved.order), ...workspaceViews])];

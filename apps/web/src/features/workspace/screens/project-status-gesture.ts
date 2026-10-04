@@ -1,18 +1,18 @@
 import type { Summary } from "../../../lib/api/api";
 import { gestureCancellation } from "../../../lib/ui/gesture-cancellation.ts";
 import {
-  canMoveMainProject,
-  currentMainProjectSnapshot,
-  mainProjectState,
-  mainProjectStateLabels,
-  type MainProjectState,
-} from "./main-projects.ts";
+  canMoveProject,
+  currentProjectSnapshot,
+  projectState,
+  projectStateLabels,
+  type ProjectState,
+} from "./projects-board.ts";
 
 type Options = {
   projects: () => Summary[];
   scope: () => string;
   disabled: () => boolean;
-  commit: (project: Summary, state: MainProjectState) => void;
+  commit: (project: Summary, state: ProjectState) => void;
   announce: (message: string) => void;
 };
 type Pointer = {
@@ -49,7 +49,7 @@ function scrollDelta(position: number, start: number, end: number) {
 }
 
 /** Explicit handle gestures retain the observed project until a conditional proposal. */
-export function mainProjectGesture(node: HTMLElement, initial: Options) {
+export function projectStatusGesture(node: HTMLElement, initial: Options) {
   let options = initial;
   let pointer: Pointer | null = null;
   let preview: HTMLElement | null = null;
@@ -62,12 +62,12 @@ export function mainProjectGesture(node: HTMLElement, initial: Options) {
       pointer &&
       !options.disabled() &&
       pointer.scope === options.scope() &&
-      currentMainProjectSnapshot(pointer.project, options.projects())
+      currentProjectSnapshot(pointer.project, options.projects())
     );
   }
 
   function clearTarget() {
-    target?.removeAttribute("data-main-drop-target");
+    target?.removeAttribute("data-project-board-drop-target");
     target = null;
   }
 
@@ -76,15 +76,15 @@ export function mainProjectGesture(node: HTMLElement, initial: Options) {
     if (!inside(current.x, current.y, node.getBoundingClientRect()))
       return null;
     const column = [
-      ...node.querySelectorAll<HTMLElement>("[data-main-state]"),
+      ...node.querySelectorAll<HTMLElement>("[data-project-state]"),
     ].find((item) =>
       inside(current.x, current.y, item.getBoundingClientRect()),
     );
     const state =
-      column && mainProjectState({ status: column.dataset.mainState });
+      column && projectState({ status: column.dataset.projectState });
     if (!state || state === current.project.status) return null;
     target = column;
-    target?.setAttribute("data-main-drop-target", "true");
+    target?.setAttribute("data-project-board-drop-target", "true");
     return state;
   }
 
@@ -139,15 +139,15 @@ export function mainProjectGesture(node: HTMLElement, initial: Options) {
       for (const attribute of [
         "id",
         "data-dragging",
-        "data-main-project",
-        "data-main-project-handle",
-        "data-main-project-open",
+        "data-project-board-item",
+        "data-project-board-handle",
+        "data-project-board-open",
       ])
         element.removeAttribute(attribute);
     }
     preview.inert = true;
     preview.setAttribute("aria-hidden", "true");
-    preview.setAttribute("data-main-drag-preview", "");
+    preview.setAttribute("data-project-board-drag-preview", "");
     Object.assign(preview.style, {
       position: "fixed",
       pointerEvents: "none",
@@ -172,13 +172,13 @@ export function mainProjectGesture(node: HTMLElement, initial: Options) {
     if (pointer || !event.isPrimary || event.button !== 0 || options.disabled())
       return;
     const handle = (event.target as Element).closest<HTMLButtonElement>(
-      "[data-main-project-handle]",
+      "[data-project-board-handle]",
     );
-    const source = handle?.closest<HTMLElement>("[data-main-project]");
+    const source = handle?.closest<HTMLElement>("[data-project-board-item]");
     const project = options
       .projects()
-      .find((item) => item.id === source?.dataset.mainProject);
-    if (!handle || !source || !project || !canMoveMainProject(project)) return;
+      .find((item) => item.id === source?.dataset.projectBoardItem);
+    if (!handle || !source || !project || !canMoveProject(project)) return;
     event.preventDefault();
     handle.focus({ preventScroll: true });
     const bounds = source.getBoundingClientRect();
@@ -225,7 +225,7 @@ export function mainProjectGesture(node: HTMLElement, initial: Options) {
       return;
     }
     options.announce(
-      `Moving ${observed.project.title} to ${mainProjectStateLabels[state]}.`,
+      `Moving ${observed.project.title} to ${projectStateLabels[state]}.`,
     );
     options.commit(observed.project, state);
   }

@@ -568,7 +568,7 @@ export interface ProjectRegistration {
 }
 export interface Preferences {
   week_start?: "monday" | "sunday";
-  default_view?: "focus" | "main" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
+  default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
 }
 export interface Workspace {
   format_version: 1;

@@ -1,14 +1,14 @@
 use super::*;
 
 #[test]
-fn main_default_view_is_conditional_replayable_and_durable() {
+fn projects_default_view_is_conditional_replayable_and_durable() {
     let env = Environment::new();
     let engine = env.engine();
     let original = engine.workspace().unwrap();
     let request = Uuid::now_v7().to_string();
     let epoch = engine.journal.epoch.clone();
     let payload: Value = serde_json::from_str(include_str!(
-        "../../../../examples/requests/main-view-default.json"
+        "../../../../examples/requests/projects-view-default.json"
     ))
     .unwrap();
     wire::validate("PreferencesPatch", &payload).unwrap();
@@ -36,7 +36,7 @@ fn main_default_view_is_conditional_replayable_and_durable() {
     wire::validate("CommandResponse", &reply.body).unwrap();
     let current = engine.workspace().unwrap();
     let mut expected = json!(original.value);
-    expected["preferences"]["default_view"] = json!("main");
+    expected["preferences"]["default_view"] = json!("projects");
     assert_eq!(json!(current.value), expected);
     assert_ne!(current.version, original.version);
 
@@ -77,6 +77,208 @@ fn main_default_view_is_conditional_replayable_and_durable() {
     assert_eq!(replay.http_status, 200);
     assert_eq!(replay.body["replayed"], true);
     assert_eq!(engine.workspace().unwrap().version, current.version);
+}
+
+#[test]
+fn legacy_main_preferences_preserve_source_version_and_command_recovery() {
+    use project_application::{AppError, writer::CommitPoint};
+    use project_store::document::version;
+
+    let env = Environment::new();
+    let engine = env.engine();
+    let mut legacy = json!(engine.workspace().unwrap().value);
+    legacy["preferences"]["default_view"] = json!("main");
+    legacy["preferences"]["week_start"] = json!("monday");
+    drop(engine);
+    let path = env.root.join("state/workspace.json");
+    let mut original_bytes = serde_json::to_vec_pretty(&legacy).unwrap();
+    original_bytes.push(b'\n');
+    fs::write(&path, &original_bytes).unwrap();
+    let original_version = version(&original_bytes);
+
+    let engine = env.engine();
+    let observed = engine.workspace().unwrap();
+    assert_eq!(observed.version, original_version);
+    legacy["preferences"]["default_view"] = json!("projects");
+    assert_eq!(json!(observed.value), legacy);
+    assert_eq!(fs::read(&path).unwrap(), original_bytes);
+    let epoch = engine.journal.epoch.clone();
+
+    for view in ["main", "projects"] {
+        let noop = engine
+            .mutate_workspace(
+                "preferences",
+                &json!({"preferences":{"default_view":view}}),
+                &Uuid::now_v7().to_string(),
+                &epoch,
+                Some(&original_version),
+            )
+            .unwrap();
+        assert_eq!(noop.http_status, 200);
+        assert_eq!(noop.body["status"], "noop");
+        assert_eq!(noop.body["result"]["version"], original_version);
+        assert_eq!(fs::read(&path).unwrap(), original_bytes);
+    }
+    let invalid = engine
+        .mutate_workspace(
+            "preferences",
+            &json!({"preferences":{"default_view":"main","unexpected":true}}),
+            &Uuid::now_v7().to_string(),
+            &epoch,
+            Some(&original_version),
+        )
+        .unwrap();
+    assert_eq!(invalid.http_status, 422);
+    assert_eq!(fs::read(&path).unwrap(), original_bytes);
+
+    let payload = json!({"preferences":{"default_view":"main","week_start":"sunday"}});
+    let request = Uuid::now_v7().to_string();
+    let pending = engine
+        .mutate_workspace_with(
+            "preferences",
+            &payload,
+            &request,
+            &epoch,
+            Some(&original_version),
+            |point| {
+                if point == CommitPoint::Prepared {
+                    Err(AppError::invariant("injected test failure"))
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+    assert_eq!(pending.http_status, 202);
+    assert_eq!(fs::read(&path).unwrap(), original_bytes);
+    drop(engine);
+
+    let engine = env.engine();
+    let current = engine.workspace().unwrap();
+    legacy["preferences"]["week_start"] = json!("sunday");
+    assert_eq!(json!(current.value), legacy);
+    assert_ne!(current.version, original_version);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&path).unwrap()).unwrap(),
+        legacy
+    );
+    let replay = engine
+        .mutate_workspace(
+            "preferences",
+            &payload,
+            &request,
+            &epoch,
+            Some(&original_version),
+        )
+        .unwrap();
+    assert_eq!(replay.http_status, 200);
+    assert_eq!(replay.body["replayed"], true);
+    assert_eq!(replay.body["result"]["version"], current.version);
+    let changed_retry = engine
+        .mutate_workspace(
+            "preferences",
+            &json!({"preferences":{"default_view":"projects","week_start":"sunday"}}),
+            &request,
+            &epoch,
+            Some(&original_version),
+        )
+        .unwrap();
+    assert_eq!(changed_retry.http_status, 409);
+    assert_eq!(
+        changed_retry.body["error"]["code"],
+        "IDEMPOTENCY_KEY_REUSED"
+    );
+    assert_eq!(engine.workspace().unwrap().version, current.version);
+    let conflict = engine
+        .mutate_workspace(
+            "preferences",
+            &json!({"preferences":{"default_view":"main"}}),
+            &Uuid::now_v7().to_string(),
+            &epoch,
+            Some(&original_version),
+        )
+        .unwrap();
+    assert_eq!(conflict.http_status, 412);
+    assert_eq!(engine.workspace().unwrap().version, current.version);
+}
+
+#[test]
+fn legacy_main_prepared_intent_recovers_exact_saved_bytes_and_version() {
+    use project_application::{
+        command_state::CommandState,
+        journal::{Command, CommandRecord, Journal, Target},
+    };
+    use project_store::document::version;
+    use rusqlite::params;
+
+    let env = Environment::new();
+    let engine = env.engine();
+    let original = engine.workspace().unwrap();
+    let path = env.root.join("state/workspace.json");
+    let before = fs::read(&path).unwrap();
+    let mut legacy = json!(original.value);
+    legacy["preferences"]["default_view"] = json!("main");
+    let after = project_application::source::pretty(&legacy);
+    let command = Command {
+        request_id: Uuid::now_v7().to_string(),
+        epoch: engine.journal.epoch.clone(),
+        method: "WORKSPACE:preferences".into(),
+        target: Target {
+            project_id: "workspace".into(),
+            kind: Kind::Project,
+            id: "preferences".into(),
+        },
+        expected: Some(original.version),
+        payload: json!({"preferences":{"default_view":"main"}}),
+    };
+    let reply = Reply {
+        http_status: 200,
+        body: json!({"api_version":"1","request_id":command.request_id,
+            "status":"committed","result":{"type":"preferences","version":version(&after)},
+            "warnings":[],"replayed":false}),
+    };
+    // Model a durable PREPARED record created by the former Main-capable host.
+    let mut db = engine.journal.db().unwrap();
+    let tx = db.transaction().unwrap();
+    Journal::insert_command(
+        &tx,
+        CommandRecord {
+            command: &command,
+            state: CommandState::Prepared,
+            target_kind: "preferences",
+            reply: &reply,
+            received_at: now_millis(),
+        },
+    )
+    .unwrap();
+    tx.execute(
+        "INSERT INTO workspace_intents(epoch,request_id,before_bytes,after_bytes,references_json,result_json) VALUES (?1,?2,?3,?4,'[]',?5)",
+        params![command.epoch, command.request_id, before, after, serde_json::to_string(&reply).unwrap()],
+    )
+    .unwrap();
+    tx.commit().unwrap();
+    drop(db);
+    drop(engine);
+
+    let engine = env.engine();
+    let current = engine.workspace().unwrap();
+    legacy["preferences"]["default_view"] = json!("projects");
+    assert_eq!(json!(current.value), legacy);
+    assert_eq!(current.version, version(&after));
+    assert_eq!(fs::read(&path).unwrap(), after);
+    let replay = engine
+        .mutate_workspace(
+            "preferences",
+            &command.payload,
+            &command.request_id,
+            &command.epoch,
+            command.expected.as_deref(),
+        )
+        .unwrap();
+    assert_eq!(replay.http_status, 200);
+    assert_eq!(replay.body["replayed"], true);
+    assert_eq!(replay.body["result"]["version"], current.version);
+    assert_eq!(fs::read(&path).unwrap(), after);
 }
 
 #[test]

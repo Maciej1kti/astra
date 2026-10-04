@@ -115,18 +115,17 @@ const cardLayers = [
   {
     name: "title",
     selector:
-      ".focus-card-title, .card-title, :scope.listrow > div:first-of-type > strong, .projectcopy > h2, :scope[data-board-card] h3",
+      ".focus-card-title, .card-title, :scope.listrow > div:first-of-type > strong, :scope[data-board-card] h3",
     delay: 100,
   },
   {
     name: "metadata",
-    selector:
-      ".focus-card-facts, .row-metadata, .resource-metadata, .projectcopy > p",
+    selector: ".focus-card-facts, .row-metadata, .resource-metadata",
     delay: 150,
   },
   {
     name: "labels",
-    selector: ".focus-card-labels, .resource-metadata > .tags, .project-meta",
+    selector: ".focus-card-labels, .resource-metadata > .tags",
     delay: 200,
   },
   { name: "reasons", selector: ".attention-reasons", delay: 220 },

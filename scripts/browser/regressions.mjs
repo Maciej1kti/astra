@@ -9,7 +9,7 @@ import { seed } from "./fixture.mjs";
 import { artifactManifest } from "./artifacts.mjs";
 
 const suites = [
-  "main",
+  "projects",
   "navigation",
   "menus",
   "motion",

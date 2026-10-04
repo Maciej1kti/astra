@@ -57,17 +57,19 @@ wire_enum!(ReportTargetKind { Project, Milestone });
 wire_enum!(EvidenceKind { Url, Commit, Path });
 wire_enum!(Locale { Pl, En });
 wire_enum!(WeekStart { Monday, Sunday });
-wire_enum!(View {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum View {
     Focus,
-    Main,
+    #[serde(alias = "main")]
     Projects,
     Board,
     Calendar,
     Gantt,
     Chart,
     List,
-    Updates
-});
+    Updates,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -101,7 +101,7 @@ export class ViewData {
   refresh(sections?: Section[]): Promise<void> {
     const query = this.dependencies.query();
     const key = viewQueryKey(query);
-    const projectsScope = query.view === "main" ? "all" : "ordinary";
+    const projectsScope = query.view === "projects" ? "all" : "ordinary";
     const changedRoute = this.snapshot.loadedQueryKey !== key;
     const needed = viewSections(query);
     const requested = changedRoute ? needed : (sections ?? needed);

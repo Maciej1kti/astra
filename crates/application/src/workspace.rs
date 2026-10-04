@@ -87,7 +87,22 @@ impl Engine {
         if expected.is_none() {
             return reject(428, "PRECONDITION_REQUIRED");
         }
-        if wire::validate(definition, payload).is_err() {
+        // Validate the retired view spelling as Projects while keeping the original
+        // command payload and digest intact for uncertain retries and recovery.
+        let mut compatible_payload;
+        let validation_payload = if section == "preferences"
+            && payload
+                .pointer("/preferences/default_view")
+                .and_then(Value::as_str)
+                == Some("main")
+        {
+            compatible_payload = payload.clone();
+            compatible_payload["preferences"]["default_view"] = json!("projects");
+            &compatible_payload
+        } else {
+            payload
+        };
+        if wire::validate(definition, validation_payload).is_err() {
             return reject(422, "VALIDATION_FAILED");
         }
         if section == "tags"

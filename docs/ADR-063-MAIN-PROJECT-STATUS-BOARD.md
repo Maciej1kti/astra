@@ -2,6 +2,9 @@
 
 Status: implemented from owner direction, 2026-10-04.
 
+Superseded by [ADR-064](ADR-064-PROJECTS-STATUS-BOARD.md): the project status
+board is now Projects, and Main is retained only as a compatibility spelling.
+
 The owner requested a workspace board for whole projects, alongside Focus,
 Chart and the existing views. Name it Main so the per-project card Board keeps
 its established meaning. Main groups the selected profile's registered projects

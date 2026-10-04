@@ -1012,7 +1012,7 @@ await runBrowserSuite(
               !url.searchParams.get("project"),
           );
           await expect(page.locator(".empty")).toContainText(
-            "Start with a folder",
+            "Start with a project",
           );
           assert.equal(await exists(join(candidate.folder, ".project")), false);
           assert.equal(await exists(candidate.folder), true);

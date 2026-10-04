@@ -3331,9 +3331,9 @@ components:
           - sunday
         default_view:
           type: string
+          description: Canonical workspace view. The server accepts the retired main spelling as projects for compatibility, preserving original command identity on retry.
           enum:
           - focus
-          - main
           - projects
           - board
           - calendar

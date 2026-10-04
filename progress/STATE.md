@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [Projects status board consolidation](2026-10-04-projects-status-board.md)
+replaces the former project grid and separate Main view while retaining the
+Projects name/icon, registration and deletion. Legacy Main links/preferences
+remain compatible without automatic source rewrites. The independent 615-test check set and release build,
+Projects/menu/navigation Chromium and WebKit checks, eight-view responsive,
+loading, motion and deletion suites pass. The rebuilt existing HTTPS app
+preserves 33 prior versions/source hashes, two pins, both profiles' settings,
+roots/registrations, identity/epoch and certificate; all 44 served assets match.
+Physical-device and complete release acceptance remain open.
+
 The [navigation selector correction](2026-10-04-navigation-section-selector.md)
 replaces separate navigation arrows with the card menu's shared grip/eye component
 and fixes popover movement during held visibility clicks. Its independent

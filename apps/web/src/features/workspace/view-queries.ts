@@ -58,12 +58,10 @@ function unavailablePin(ref: FocusRef): Summary {
 
 export function viewSections(query: ViewQuery): Section[] {
   switch (query.view) {
-    case "main":
+    case "projects":
       return ["projects"];
     case "focus":
       return ["projects", "focus", "attention", "card", "event"];
-    case "projects":
-      return ["projects", "card", "update"];
     case "list":
       return ["projects", "card"];
     case "updates":
@@ -81,7 +79,7 @@ export function viewQueryKey(query: ViewQuery) {
   // Loaded-title filters do not change the server query or discard view state.
   return JSON.stringify([
     query.view,
-    ["projects", "focus", "main"].includes(query.view) ? "" : query.project,
+    ["projects", "focus"].includes(query.view) ? "" : query.project,
     query.view === "focus" ? (query.folder ?? "") : "",
     ["list", "updates"].includes(query.view) ? query.search.trim() : "",
     ...(query.view === "list"
@@ -99,7 +97,7 @@ export function affectedSections(
       event.kind === "health_changed" &&
       event.project_id &&
       query.project &&
-      !["focus", "main"].includes(query.view) &&
+      !["focus", "projects"].includes(query.view) &&
       event.project_id !== query.project
     )
       return ["projects"];
@@ -108,7 +106,7 @@ export function affectedSections(
   const kind = event.target.type;
   if (
     query.project &&
-    !["projects", "focus", "main"].includes(query.view) &&
+    !["projects", "focus"].includes(query.view) &&
     event.project_id &&
     event.project_id !== query.project
   )
@@ -237,7 +235,7 @@ export async function loadView(
           },
         };
         const pages = await Promise.all(
-          (query.view === "main"
+          (query.view === "projects"
             ? ["/api/v1/projects", "/api/v1/projects?archived=true"]
             : ["/api/v1/projects"]
           ).map((path) => all<Summary>(path, projectOptions)),
@@ -245,7 +243,7 @@ export async function loadView(
         const projects = pages.flat();
         // Independent archive reads can straddle a state change. Keep one complete observation.
         result.projects =
-          query.view === "main"
+          query.view === "projects"
             ? [...new Map(projects.map((item) => [item.id, item])).values()]
             : projects;
       } else if (section === "focus") {

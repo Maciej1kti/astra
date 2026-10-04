@@ -42,7 +42,6 @@ await runBrowserSuite(
         await page.setViewportSize({ width, height: width > 700 ? 1024 : 844 });
         for (const view of [
           "focus",
-          "main",
           "projects",
           "board",
           "calendar",
@@ -72,8 +71,8 @@ await runBrowserSuite(
           await expect(
             page.locator("main").getByLabel("Project", { exact: true }),
           ).toHaveCount(0);
-          if (view !== "projects") {
-            const folderScope = ["focus", "main"].includes(view);
+          {
+            const folderScope = ["focus", "projects"].includes(view);
             const filterLabel = folderScope ? "Folder" : "Project";
             const picker = header.getByLabel(filterLabel, { exact: true });
             await expect(
@@ -130,8 +129,8 @@ await runBrowserSuite(
               "Today must not shrink to a clipped label",
             );
           }
-          if (view === "main") {
-            const tiles = page.locator("[data-main-project]");
+          if (view === "projects") {
+            const tiles = page.locator("[data-project-board-item]");
             await expect(tiles.first()).toBeVisible();
             const titles = await tiles.locator(".card-title").allTextContents();
             const filter = page.getByLabel("Filter loaded titles", {
@@ -145,7 +144,7 @@ await runBrowserSuite(
                   title.toLowerCase().includes(titles[0].toLowerCase()),
                 ),
               );
-            await filter.fill("No matching Main project title");
+            await filter.fill("No matching project title");
             await expect(tiles).toHaveCount(0);
             await expect(
               page.getByText("No projects match this selection.", {
@@ -195,8 +194,8 @@ await runBrowserSuite(
             view,
             noPageOverflow: true,
             headerAboveContent: true,
-            singleProjectPicker: view !== "projects",
-            ...(view === "main"
+            singleHeaderPicker: true,
+            ...(view === "projects"
               ? { folderHeader: true, titleFiltering: true }
               : {}),
           });

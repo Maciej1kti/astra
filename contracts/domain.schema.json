@@ -720,9 +720,9 @@
         },
         "default_view": {
           "type": "string",
+          "description": "Canonical workspace view. The server reads the retired main spelling as projects without rewriting existing workspace bytes.",
           "enum": [
             "focus",
-            "main",
             "projects",
             "board",
             "calendar",

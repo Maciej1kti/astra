@@ -5,13 +5,18 @@ import {
   writeRoute,
   searchOnlyNavigation,
   primaryResource,
+  workspaceViews,
 } from "../../apps/web/src/features/workspace/navigation.ts";
+import {
+  readNavigationLayout,
+  writeNavigationLayout,
+} from "../../apps/web/src/features/workspace/navigation-layout.ts";
 
 const project = "11111111-1111-4111-8111-111111111111";
 const card = "22222222-2222-4222-8222-222222222222";
 const today = "2026-09-08";
 
-test("Main links preserve project opening and folder scope through reload", () => {
+test("retired Main links resolve to Projects with project opening and folder scope", () => {
   const route = readRoute(
     new URLSearchParams({
       view: "main",
@@ -23,10 +28,51 @@ test("Main links preserve project opening and folder scope through reload", () =
     }),
     today,
   );
-  assert.equal(route.view, "main");
+  assert.equal(route.view, "projects");
   assert.equal(route.project, "");
+  assert.equal(writeRoute(route).get("view"), "projects");
+  assert.equal(writeRoute(route).get("folder"), "Work & Home");
   assert.deepEqual(readRoute(writeRoute(route), today), route);
-  assert.equal(readRoute(new URLSearchParams(), today, "main").view, "main");
+  assert.equal(
+    readRoute(new URLSearchParams(), today, "main").view,
+    "projects",
+  );
+});
+
+test("retired Main shortcuts collapse into Projects without rewriting storage on read", () => {
+  const saved = {
+    order: ["chart", "main", "focus", "projects", "list"],
+    visible: ["main", "focus", "projects"],
+  };
+  const original = JSON.stringify(saved);
+  let stored = original;
+  const storage = {
+    getItem: () => stored,
+    setItem: (_key, value) => (stored = value),
+  };
+  const layout = readNavigationLayout(storage);
+  assert.deepEqual(layout.order, [
+    "chart",
+    "projects",
+    "focus",
+    "list",
+    "board",
+    "calendar",
+    "gantt",
+    "updates",
+  ]);
+  assert.deepEqual(layout.visible, ["projects", "focus"]);
+  assert.equal(stored, original);
+  assert.equal(layout.order.length, workspaceViews.length);
+  assert.equal(writeNavigationLayout(layout, storage), true);
+  assert.deepEqual(JSON.parse(stored), layout);
+  assert.equal(JSON.parse(stored).order.includes("main"), false);
+  assert.deepEqual(
+    readNavigationLayout({
+      getItem: () => JSON.stringify({ order: ["main"], visible: ["main"] }),
+    }).visible,
+    ["projects"],
+  );
 });
 
 test("Chart is a workspace route that retains project scope and source opening", () => {

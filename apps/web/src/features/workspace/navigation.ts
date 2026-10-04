@@ -5,7 +5,6 @@ import {
 
 export const workspaceViews = [
   "focus",
-  "main",
   "projects",
   "board",
   "calendar",
@@ -15,6 +14,11 @@ export const workspaceViews = [
   "chart",
 ] as const;
 export type View = (typeof workspaceViews)[number];
+/** Retired Main links and presentation settings resolve to the Projects board. */
+export function canonicalView(value: unknown): View | undefined {
+  const view = value === "main" ? "projects" : value;
+  return workspaceViews.includes(view as View) ? (view as View) : undefined;
+}
 export function viewLabel(view: View): string {
   return view === "gantt" ? "Timeline" : view[0].toUpperCase() + view.slice(1);
 }
@@ -42,7 +46,7 @@ const validId = (value: string | null): value is string =>
 export function readRoute(
   params: URLSearchParams,
   today: string,
-  defaultView: View = "focus",
+  defaultView: View | "main" = "focus",
 ): WorkspaceRoute {
   const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(params.get("month") ?? "")
     ? params.get("month")!
@@ -55,9 +59,10 @@ export function readRoute(
   const id = params.get("resource"),
     type = params.get("type") ?? "";
   return {
-    view: workspaceViews.includes(params.get("view") as View)
-      ? (params.get("view") as View)
-      : defaultView,
+    view:
+      canonicalView(params.get("view")) ??
+      canonicalView(defaultView) ??
+      "focus",
     project,
     folder: params.get("folder") ?? "",
     search: params.get("q") ?? "",
@@ -92,7 +97,7 @@ export function readRoute(
 export function writeRoute(state: WorkspaceRoute): URLSearchParams {
   const params = new URLSearchParams({ view: state.view });
   if (state.project) params.set("project", state.project);
-  if (state.folder && ["focus", "main"].includes(state.view))
+  if (state.folder && ["focus", "projects"].includes(state.view))
     params.set("folder", state.folder);
   if (state.search) params.set("q", state.search);
   if (state.view === "list") {

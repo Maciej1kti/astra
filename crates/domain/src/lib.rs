@@ -41,7 +41,13 @@ impl<T> Validated<T> {
 pub fn validate_document(value: Value) -> Result<Validated<Document>, DomainError> {
     decode(value)
 }
-pub fn validate_workspace(value: Value) -> Result<Validated<Workspace>, DomainError> {
+pub fn validate_workspace(mut value: Value) -> Result<Validated<Workspace>, DomainError> {
+    // Decode the retired spelling without changing stored bytes or their version.
+    if let Some(view) = value.pointer_mut("/preferences/default_view")
+        && view == "main"
+    {
+        *view = Value::String("projects".into());
+    }
     decode(value)
 }
 

@@ -278,7 +278,7 @@ def check_api_examples() -> dict:
         "card-sections.json": "CardPatch",
         "report-create.json": "UpdateCreate",
         "focus-replace.json": "FocusReplace",
-        "main-view-default.json": "PreferencesPatch",
+        "projects-view-default.json": "PreferencesPatch",
         "tags-replace.json": "TagsReplace",
         "tag-preview.json": "TagPreviewRequest",
         "delete.json": "DeleteInput",

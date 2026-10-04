@@ -12,7 +12,7 @@
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
-  import type { MainProjectState as ProjectState } from "./screens/main-projects";
+  import type { ProjectState } from "./screens/projects-board";
 
   let {
     item,

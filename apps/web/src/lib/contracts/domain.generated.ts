@@ -578,5 +578,8 @@ export interface FocusRef {
 }
 export interface Preferences {
   week_start?: "monday" | "sunday";
-  default_view?: "focus" | "main" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
+  /**
+   * Canonical workspace view. The server reads the retired main spelling as projects without rewriting existing workspace bytes.
+   */
+  default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
 }

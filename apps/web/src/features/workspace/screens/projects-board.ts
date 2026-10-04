@@ -1,22 +1,22 @@
 import type { Summary } from "../../../lib/api/api";
 import type { WorkspaceRoute } from "../navigation";
 
-export const mainProjectStates = ["active", "paused", "archived"] as const;
-export type MainProjectState = (typeof mainProjectStates)[number];
-export const mainProjectStateLabels: Record<MainProjectState, string> = {
+export const projectStates = ["active", "paused", "archived"] as const;
+export type ProjectState = (typeof projectStates)[number];
+export const projectStateLabels: Record<ProjectState, string> = {
   active: "Active",
   paused: "Paused",
   archived: "Archived",
 };
 
-export function mainProjectState(item: Pick<Summary, "status">) {
-  return mainProjectStates.includes(item.status as MainProjectState)
-    ? (item.status as MainProjectState)
+export function projectState(item: Pick<Summary, "status">) {
+  return projectStates.includes(item.status as ProjectState)
+    ? (item.status as ProjectState)
     : null;
 }
 
 /** The workspace board retains archived and unavailable projects in its scope. */
-export function visibleMainProjects(
+export function visibleProjects(
   projects: Summary[],
   route: Pick<WorkspaceRoute, "folder" | "search">,
 ) {
@@ -28,23 +28,23 @@ export function visibleMainProjects(
   );
 }
 
-export function canMoveMainProject(item: Summary) {
+export function canMoveProject(item: Summary) {
   return (
-    !!mainProjectState(item) &&
+    !!projectState(item) &&
     !!item.version &&
     (!item.availability || item.availability === "ready")
   );
 }
 
 /** A changed source cancels a gesture; it never supplies a replacement version. */
-export function currentMainProjectSnapshot(
+export function currentProjectSnapshot(
   observed: Summary,
   current: readonly Summary[],
 ) {
   const item = current.find((candidate) => candidate.id === observed.id);
   return (
     !!item &&
-    canMoveMainProject(item) &&
+    canMoveProject(item) &&
     item.version === observed.version &&
     item.status === observed.status
   );

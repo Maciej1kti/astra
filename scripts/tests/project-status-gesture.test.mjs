@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mainProjectGesture } from "../../apps/web/src/features/workspace/screens/main-project-gesture.ts";
+import { projectStatusGesture } from "../../apps/web/src/features/workspace/screens/project-status-gesture.ts";
 
 class Surface extends EventTarget {
   dataset = {};
@@ -85,7 +85,7 @@ function setup(t) {
     source = new Surface(),
     handle = new Surface(),
     app = new Surface();
-  source.dataset.mainProject = "p";
+  source.dataset.projectBoardItem = "p";
   source.bounds = {
     left: 0,
     right: 100,
@@ -95,11 +95,11 @@ function setup(t) {
     height: 100,
   };
   handle.closest = (selector) =>
-    selector === "[data-main-project-handle]" ? handle : source;
+    selector === "[data-project-board-handle]" ? handle : source;
   node.closest = () => app;
   node.children = ["active", "paused", "archived"].map((state, index) => {
     const column = new Surface();
-    column.dataset.mainState = state;
+    column.dataset.projectState = state;
     column.bounds = {
       ...node.bounds,
       left: index * 100,
@@ -138,7 +138,7 @@ function setup(t) {
     },
     announce: (message) => announcements.push(message),
   };
-  const action = mainProjectGesture(node, options);
+  const action = projectStatusGesture(node, options);
   t.after(() => {
     action.destroy();
     for (const [name, value] of Object.entries(saved)) {

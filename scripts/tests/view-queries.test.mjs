@@ -36,13 +36,18 @@ const response = (value) => ({
   json: async () => value,
 });
 
-test("Main loads projects only and keeps folder/title filtering local", async () => {
-  const main = { ...query, view: "main", folder: "Work", search: "Astra" };
-  assert.deepEqual(viewSections(main), ["projects"]);
+test("Projects loads projects only and keeps folder/title filtering local", async () => {
+  const projects = {
+    ...query,
+    view: "projects",
+    folder: "Work",
+    search: "Astra",
+  };
+  assert.deepEqual(viewSections(projects), ["projects"]);
   assert.equal(
-    viewQueryKey(main),
+    viewQueryKey(projects),
     viewQueryKey({
-      ...main,
+      ...projects,
       folder: "Home",
       search: "Other",
       project: "other",
@@ -52,14 +57,14 @@ test("Main loads projects only and keeps folder/title filtering local", async ()
     assert.deepEqual(
       affectedSections(
         { kind: "changed", project_id: "other", target: { type } },
-        main,
+        projects,
       ),
       [],
     );
   assert.deepEqual(
     affectedSections(
       { kind: "changed", project_id: "other", target: { type: "project" } },
-      main,
+      projects,
     ),
     ["projects"],
   );
@@ -84,8 +89,8 @@ test("Main loads projects only and keeps folder/title filtering local", async ()
   };
   try {
     const result = await loadView(
-      main,
-      viewSections(main),
+      projects,
+      viewSections(projects),
       {},
       new AbortController().signal,
     );
@@ -113,7 +118,7 @@ test("Main loads projects only and keeps folder/title filtering local", async ()
   }
 });
 
-test("Main combines overlapping archive reads as one complete observed project", async () => {
+test("Projects combines overlapping archive reads as one complete observed project", async () => {
   const previous = globalThis.fetch;
   const calls = [];
   const ordinary = {
@@ -149,7 +154,7 @@ test("Main combines overlapping archive reads as one complete observed project",
   };
   try {
     const result = await loadView(
-      { ...query, view: "main" },
+      { ...query, view: "projects" },
       ["projects"],
       {},
       new AbortController().signal,

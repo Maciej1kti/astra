@@ -54,10 +54,12 @@ planning, events and calendar-popup suites.
 
 ## Other interaction coverage
 
-The `main` suite checks the whole-project status board, all three project states,
+The `projects` suite checks the whole-project status board, all three project states,
 local folder/title filters, fresh editor opening, keyboard status moves and
 pointer cancellation. It covers conditional conflicts and unchanged retries after
-a lost response, persisted status/default-view choices and narrow touch controls.
+a lost response, persisted status/default-view choices, legacy Main routes/local
+navigation and narrow touch controls. Projects retains its name and icon; no
+separate Main shortcut or default-view option remains.
 Chromium captures rendered desktop and phone boards; WebKit exercises behavior
 without screenshot preparation. All sources belong to the disposable test host.
 
@@ -76,7 +78,8 @@ ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regres
 
 The `navigation` suite checks the compact Focus/Projects/More phone bar, off-bar
 view navigation and selection, browser-local order and visibility persistence,
-upgrades that append Main to existing saved order, all-hidden recovery, keyboard
+upgrades that normalize Main entries to Projects and remove duplicates, all-hidden
+recovery, keyboard
 focus/dismissal, touch targets, landscape scrolling, desktop rotation and reduced
 motion at 320–1024px. Its shared grip/eye selector covers mouse and touch ordering,
 Escape/Tab/outside cancellation, inert aligned previews, ArrowUp/Down/Home/End
@@ -174,7 +177,7 @@ Chromium remains the default. WebKit on macOS does not reproduce native iOS
 pickers or establish physical iPhone acceptance. The suite records WebKit's
 deferred ResizeObserver notifications separately from application errors.
 
-The responsive suite checks all nine views at 320, 390, 768 and 1024px, Main's
+The responsive suite checks all eight views at 320, 390, 768 and 1024px, Projects'
 Folder header and title filtering, readable List filters with reload persistence,
 Calendar navigation, diagonal touch swipes inside a long modal and the system
 reduced-motion preference. These checks use

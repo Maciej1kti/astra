@@ -378,3 +378,12 @@ Main groups whole projects into their existing Active, Paused and Archived
 states. Project column changes retain conditional source writes; the additional
 `main` workspace default is the only protocol extension. See
 [ADR-063](ADR-063-MAIN-PROJECT-STATUS-BOARD.md).
+
+## ADR-064 — Projects status board
+
+Projects replaces its former overview with the whole-project status board and
+retains its existing name, icon and canonical route. Main is removed from visible
+navigation and accepted only as a compatibility spelling for existing routes,
+browser-local order and workspace preferences. Source bytes and command identity
+remain unchanged on reads and retries. See
+[ADR-064](ADR-064-PROJECTS-STATUS-BOARD.md).

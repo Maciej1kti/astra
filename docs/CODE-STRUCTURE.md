@@ -26,13 +26,13 @@ UI actions use explicit props/callbacks.
 
 Workspace [screens](../apps/web/src/features/workspace/screens) own focus,
 project overview, resource lists, updates and the workspace board overview.
-`MainScreen` groups whole projects by Active, Paused and Archived state using
+`ProjectsScreen` groups whole projects by Active, Paused and Archived state using
 bounded ordinary and archived project pages, with local folder/title filters.
 Its handle gesture uses shared cancellation, owns only a preview and passes the observed project summary to
 `ProjectStateChange`; that application-level component retains the conditional
 state command across view changes, with ordinary conflict and uncertain-result
-recovery. Main loads no card or report collection. The shared read owner separates
-Main's archive-inclusive project cache from ordinary views' project context.
+recovery. Projects loads no card or report collection. The shared read owner separates
+Projects' archive-inclusive project cache from ordinary views' project context. The previous project grid is removed.
 `WorkspaceNavigation` owns the compact phone bar and its More disclosure;
 [navigation layout](../apps/web/src/features/workspace/navigation-layout.ts)
 normalizes browser-local view order and bar visibility without writing workspace

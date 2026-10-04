@@ -7,16 +7,16 @@ import { runBrowserSuite } from "../runtime.mjs";
 
 await runBrowserSuite(
   async ({ config, cli, runtime, evidence, newContext, browser }) => {
-    const input = join(runtime, "main-command.json");
+    const input = join(runtime, "projects-command.json");
     const projects = config.projects.map((project, index) => ({
       ...project,
       title: [
-        "Active Main project — a long wrapping title with Zażółć gęślą jaźń",
-        "Paused Main project",
-        "Archived Main project",
+        "Active Projects project — a long wrapping title with Zażółć gęślą jaźń",
+        "Paused Projects project",
+        "Archived Projects project",
       ][index],
       state: ["active", "paused", "archived"][index],
-      group: index === 2 ? "Main archive" : "Main work",
+      group: index === 2 ? "Projects archive" : "Projects work",
       path: `/api/v1/projects/${project.id}`,
     }));
     async function mutate(path, payload, version) {
@@ -80,20 +80,20 @@ await runBrowserSuite(
       }
     });
     await page.addInitScript(() => {
-      window.mainCsp = [];
+      window.projectsCsp = [];
       document.addEventListener("securitypolicyviolation", (event) =>
-        window.mainCsp.push(event.effectiveDirective),
+        window.projectsCsp.push(event.effectiveDirective),
       );
     });
     const board = page.getByRole("region", {
       name: "Project status board",
       exact: true,
     });
-    const column = (state) => board.locator(`[data-main-state="${state}"]`);
+    const column = (state) => board.locator(`[data-project-state="${state}"]`);
     const tile = (project) =>
-      board.locator(`[data-main-project="${project.id}"]`);
+      board.locator(`[data-project-board-item="${project.id}"]`);
     const handle = (project) =>
-      tile(project).locator("[data-main-project-handle]");
+      tile(project).locator("[data-project-board-handle]");
     const moveMenu = (project) =>
       tile(project).getByRole("button", {
         name: `Move ${project.title}`,
@@ -110,8 +110,8 @@ await runBrowserSuite(
     async function idle() {
       await expect.poll(() => activeReads.size).toBe(0);
     }
-    async function openMain() {
-      await page.goto(`${config.origin}/?view=main`);
+    async function openProjects(view = "projects") {
+      await page.goto(`${config.origin}/?view=${view}`);
       await expect(board).toBeVisible();
       await expect(page.locator(".asidebottom")).toContainText(
         "Connected to host",
@@ -120,7 +120,7 @@ await runBrowserSuite(
     }
     async function expectState(project, state) {
       await expect(
-        column(state).locator(`[data-main-project="${project.id}"]`),
+        column(state).locator(`[data-project-board-item="${project.id}"]`),
       ).toBeVisible();
       assert.equal(cli("get", project.path).metadata.state, state);
     }
@@ -159,7 +159,9 @@ await runBrowserSuite(
       );
       await page.mouse.down();
       await page.mouse.move(target.x, target.y, { steps: 12 });
-      await expect(page.locator("[data-main-drag-preview]")).toBeVisible();
+      await expect(
+        page.locator("[data-project-board-drag-preview]"),
+      ).toBeVisible();
       return { source, target };
     }
     async function capture(name) {
@@ -175,6 +177,31 @@ await runBrowserSuite(
             .map((animation) => animation.finished.catch(() => {})),
         );
       });
+      await expect
+        .poll(() =>
+          page
+            .getByRole("navigation", {
+              name: "Workspace views",
+              exact: true,
+            })
+            .evaluate((navigation) => {
+              const selected = navigation.querySelector(
+                '[aria-current="page"]',
+              );
+              const indicator = navigation.querySelector(
+                ".navigation-indicator",
+              );
+              if (!selected || !indicator) return Infinity;
+              const item = selected.getBoundingClientRect();
+              const surface = indicator.getBoundingClientRect();
+              return Math.max(
+                ...["x", "y", "width", "height"].map((property) =>
+                  Math.abs(item[property] - surface[property]),
+                ),
+              );
+            }),
+        )
+        .toBeLessThan(1.5);
       await page.screenshot({
         path: join(evidence, `${name}.png`),
         fullPage: true,
@@ -190,14 +217,33 @@ await runBrowserSuite(
       assert(write.epoch);
     }
     try {
-      await openMain();
-      await expect(board.locator("[data-main-state] h2")).toHaveText([
+      await openProjects("main");
+      await expect(page).toHaveURL(/view=projects/);
+      await expect(
+        page
+          .getByRole("navigation", { name: "Workspace views", exact: true })
+          .getByRole("button", { name: "Projects", exact: true }),
+      ).toHaveAttribute("aria-current", "page");
+      await expect(
+        page.getByRole("button", { name: "Main", exact: true }),
+      ).toHaveCount(0);
+      const projectShortcut = page
+        .getByRole("navigation", { name: "Workspace views", exact: true })
+        .getByRole("button", { name: "Projects", exact: true });
+      await expect(projectShortcut.locator("svg path")).toHaveAttribute(
+        "d",
+        "M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z",
+      );
+      checks.push(
+        "legacy Main URLs resolve to the Projects board and select the existing Projects shortcut",
+      );
+      await expect(board.locator("[data-project-state] h2")).toHaveText([
         "Active",
         "Paused",
         "Archived",
       ]);
       for (const project of projects) await expectState(project, project.state);
-      await expect(board.locator("[data-main-project]")).toHaveCount(3);
+      await expect(board.locator("[data-project-board-item]")).toHaveCount(3);
       assert.equal(
         requests.filter(
           ({ method, path, url }) =>
@@ -209,9 +255,9 @@ await runBrowserSuite(
                 url.searchParams.get("type") === "card")),
         ).length,
         0,
-        "Main projects come from the project summaries without card reads",
+        "Project board items come from the project summaries without card reads",
       );
-      await capture("main-desktop-light");
+      await capture("projects-desktop-light");
       checks.push(
         "all three project states include archived projects without card reads",
       );
@@ -230,31 +276,18 @@ await runBrowserSuite(
       await expect(
         page
           .getByLabel("Folder", { exact: true })
-          .locator('option[value="Main archive"]'),
+          .locator('option[value="Projects archive"]'),
       ).toHaveCount(0);
-      await navigation
-        .getByRole("button", { name: "Main", exact: true })
-        .click();
-      for (const project of projects) await expectState(project, project.state);
-      await idle();
       await navigation
         .getByRole("button", { name: "Projects", exact: true })
         .click();
-      await expect(
-        page.getByRole("heading", { name: "Projects", exact: true, level: 1 }),
-      ).toBeVisible();
-      await idle();
-      await expect(page.locator(".grid .projectcard")).toHaveCount(2);
-      await expect(
-        page.getByRole("heading", { name: projects[2].title, exact: true }),
-      ).toHaveCount(0);
-      await navigation
-        .getByRole("button", { name: "Main", exact: true })
-        .click();
       for (const project of projects) await expectState(project, project.state);
       await idle();
+      await expect(
+        navigation.getByRole("button", { name: "Main", exact: true }),
+      ).toHaveCount(0);
       checks.push(
-        "Focus and Projects reuse their ordinary project scope while Main restores archived summaries on navigation",
+        "Focus restores ordinary project summaries and Projects restores the complete status board without a separate Main shortcut",
       );
 
       const folder = page.getByLabel("Folder", { exact: true });
@@ -262,24 +295,24 @@ await runBrowserSuite(
       const readsBeforeFilters = requests.filter(
         ({ method }) => method === "GET",
       ).length;
-      await folder.selectOption("Main work");
+      await folder.selectOption("Projects work");
       await expect(tile(projects[2])).toHaveCount(0);
       await expect(tile(projects[0])).toBeVisible();
       await expect(tile(projects[1])).toBeVisible();
-      await search.fill("paused main");
+      await search.fill("paused projects");
       await expect(tile(projects[1])).toBeVisible();
       await expect(tile(projects[0])).toHaveCount(0);
-      await search.fill("missing Main project");
-      await expect(board.locator("[data-main-project]")).toHaveCount(0);
+      await search.fill("missing Projects project");
+      await expect(board.locator("[data-project-board-item]")).toHaveCount(0);
       await search.fill("");
       await folder.selectOption("");
-      await expect(board.locator("[data-main-project]")).toHaveCount(3);
-      // Search normally debounces transport; Main's already loaded titles stay local.
+      await expect(board.locator("[data-project-board-item]")).toHaveCount(3);
+      // Search normally debounces transport; Projects already loaded titles stay local.
       await page.waitForTimeout(350);
       assert.equal(
         requests.filter(({ method }) => method === "GET").length,
         readsBeforeFilters,
-        "Changing Main title and folder filters must not request project or card pages",
+        "Changing Projects title and folder filters must not request project or card pages",
       );
       checks.push(
         "title and folder filters remain local and combine correctly",
@@ -297,7 +330,7 @@ await runBrowserSuite(
         ({ method, path }) => method === "GET" && path === freshProject.path,
       ).length;
       await tile(freshProject)
-        .locator("[data-main-project-open]")
+        .locator("[data-project-board-open]")
         .press("Enter");
       await expect(editor.getByLabel("Name", { exact: true })).toHaveValue(
         freshName,
@@ -311,7 +344,7 @@ await runBrowserSuite(
           ({ method, path }) => method === "GET" && path === freshProject.path,
         ).length,
         readsBeforeOpen + 1,
-        "Opening a Main summary must read the current project source exactly once",
+        "Opening a Projects summary must read the current project source exactly once",
       );
       freshProject.title = freshName;
       await editor
@@ -327,11 +360,13 @@ await runBrowserSuite(
       await beginDrag(moving, "paused");
       await page.keyboard.press("Escape");
       await page.mouse.up();
-      await expect(page.locator("[data-main-drag-preview]")).toHaveCount(0);
+      await expect(
+        page.locator("[data-project-board-drag-preview]"),
+      ).toHaveCount(0);
       await expectState(moving, "active");
       assert.equal(writes.length, writesBeforeCancelled);
       assert.equal(cli("get", moving.path).version, beforeCancelled.version);
-      await tile(moving).locator("[data-main-project-open]").click();
+      await tile(moving).locator("[data-project-board-open]").click();
       await expect(editor.getByLabel("Name", { exact: true })).toHaveValue(
         moving.title,
       );
@@ -341,7 +376,7 @@ await runBrowserSuite(
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       assert.equal(writes.length, writesBeforeCancelled);
       await beginDrag(moving, "paused");
-      await capture("main-pointer-drag");
+      await capture("projects-pointer-drag");
       await page.mouse.up();
       await expectState(moving, "paused");
       await expect(moveDialog).toHaveCount(0);
@@ -537,10 +572,10 @@ await runBrowserSuite(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,
           ),
-          `Main has no page overflow at ${width}px`,
+          `Projects has no page overflow at ${width}px`,
         );
         const targets = await board
-          .locator("[data-main-project-handle], .action-menu > button")
+          .locator("[data-project-board-handle], .action-menu > button")
           .evaluateAll((buttons) =>
             buttons.map((button) => ({
               width: button.getBoundingClientRect().width,
@@ -552,10 +587,10 @@ await runBrowserSuite(
             ({ width: targetWidth, height }) =>
               targetWidth >= 44 && height >= 44,
           ),
-          `Main movement controls remain touch sized at ${width}px`,
+          `Projects movement controls remain touch sized at ${width}px`,
         );
         if (width <= 390) await tile(moving).scrollIntoViewIfNeeded();
-        await capture(`main-light-${width}`);
+        await capture(`projects-light-${width}`);
       }
       const beforeTouchMenu = cli("get", uncertain.path);
       await page.setViewportSize({ width: 390, height: 1000 });
@@ -596,9 +631,13 @@ await runBrowserSuite(
             x: start.x + ((end.x - start.x) * step) / 10,
             y: start.y + ((end.y - start.y) * step) / 10,
           });
-        await expect(page.locator("[data-main-drag-preview]")).toBeVisible();
+        await expect(
+          page.locator("[data-project-board-drag-preview]"),
+        ).toBeVisible();
         await touch("touchCancel");
-        await expect(page.locator("[data-main-drag-preview]")).toHaveCount(0);
+        await expect(
+          page.locator("[data-project-board-drag-preview]"),
+        ).toHaveCount(0);
         assert.equal(writes.length, writesBeforeTouchCancel);
         assert.equal(
           cli("get", uncertain.path).version,
@@ -633,18 +672,21 @@ await runBrowserSuite(
         .click();
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       await page.setViewportSize({ width: 1440, height: 1000 });
-      await capture("main-desktop-dark");
+      await capture("projects-desktop-dark");
       await page.setViewportSize({ width: 320, height: 1000 });
-      await capture("main-phone-dark");
+      await capture("projects-phone-dark");
       await page
         .getByRole("button", { name: "Workspace settings", exact: true })
         .click();
       await expect(
         settings.getByLabel("Default view", { exact: true }),
       ).toBeEnabled();
-      await settings
-        .getByLabel("Default view", { exact: true })
-        .selectOption("main");
+      const defaultView = settings.getByLabel("Default view", { exact: true });
+      await expect(defaultView.locator('option[value="main"]')).toHaveCount(0);
+      await expect(defaultView.locator('option[value="projects"]')).toHaveText(
+        "Projects",
+      );
+      await defaultView.selectOption("projects");
       await settings
         .getByRole("button", { name: "Save preferences", exact: true })
         .click();
@@ -654,21 +696,21 @@ await runBrowserSuite(
       await expect(board).toBeVisible();
       assert.equal(
         cli("get", "/api/v1/workspace/preferences").preferences.default_view,
-        "main",
+        "projects",
       );
       await page.reload();
       await expect(board).toBeVisible();
       checks.push(
-        "Main is a durable default-view preference and light/dark rendered surfaces are captured",
+        "Projects is the durable default-view preference, Main has no option and light/dark rendered surfaces are captured",
       );
       assert.deepEqual(errors, []);
-      assert.deepEqual(await page.evaluate(() => window.mainCsp), []);
+      assert.deepEqual(await page.evaluate(() => window.projectsCsp), []);
     } catch (cause) {
       await writeFile(
         join(evidence, "failure.txt"),
         await page.locator("body").ariaSnapshot(),
       );
-      await capture("main-failure").catch(() => {});
+      await capture("projects-failure").catch(() => {});
       throw cause;
     } finally {
       await writeFile(
