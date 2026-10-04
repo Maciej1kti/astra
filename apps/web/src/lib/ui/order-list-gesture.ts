@@ -129,7 +129,7 @@ export function orderListGesture<Key extends string>(
           ? panel
           : (list.closest("dialog") ?? panel)
         ).append(preview, indicator);
-        options.announce(`${options.label(snapshot.key)} picked up.`);
+        options.announce(`${options.label(snapshot.key)} podniesiono.`);
       },
       paint(pointer) {
         if (!preview) return;

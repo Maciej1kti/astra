@@ -1,3 +1,4 @@
+import { errorMessage } from "./messages.ts";
 import { ApiError, apiCode } from "./api.ts";
 import type { CommandSnapshot } from "./command-controller.ts";
 
@@ -43,7 +44,7 @@ export function isRejectedConflict(
 }
 
 export function commandErrorMessage(cause: unknown): string {
-  const message = cause instanceof Error ? cause.message : String(cause);
+  const message = errorMessage(cause);
   const code = apiCode(cause);
   return code && !message.includes(code) ? `${message} (${code})` : message;
 }

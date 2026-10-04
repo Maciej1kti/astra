@@ -113,7 +113,9 @@ can verify invalid payloads are rejected at compile time.
 
 ## Documentation changes
 
-All new code, comments, UI text, documentation and commit messages are English.
+All new code, comments, documentation and commit messages are English. Browser
+UI text is Polish, with Focus retaining its name, following the owner's
+2026-10-04 direction.
 Keep each topic's main explanation in one place and link to it:
 
 | Change | Update |

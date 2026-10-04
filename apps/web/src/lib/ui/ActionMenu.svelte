@@ -7,7 +7,7 @@
   import type { IconName } from "./icons";
 
   let {
-    label = "More actions",
+    label = "Więcej działań",
     disabled = false,
     icon = "more",
     text,

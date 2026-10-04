@@ -56,7 +56,7 @@
     } catch {
       if (view === requestedView)
         error =
-          "This planning view could not be loaded. Retry, or reload the app.";
+          "Nie udało się wczytać widoku planowania. Spróbuj ponownie lub odśwież aplikację.";
     }
   }
   $effect(() => {
@@ -66,8 +66,9 @@
 </script>
 
 {#if error}<p role="alert">
-    {error} <button onclick={loadView}>Retry planning view</button>
-    <button onclick={reloadAfterPreloadFailure}>Reload app</button>
+    {error}
+    <button onclick={loadView}>Ponów ładowanie widoku planowania</button>
+    <button onclick={reloadAfterPreloadFailure}>Odśwież aplikację</button>
   </p>{/if}
 {#if view === "calendar" && CalendarView}<CalendarView
     {project}
@@ -94,4 +95,4 @@
     {onpropose}
     oncreate={(schedule) => oncreate({ schedule })}
   />
-{:else if !error}<p role="status">Loading planning view…</p>{/if}
+{:else if !error}<p role="status">Ładowanie widoku planowania…</p>{/if}

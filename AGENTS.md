@@ -13,7 +13,8 @@ handoff. Built-in backup archives/restore tooling and source-file migration
 frameworks are deferred beyond v1; all other outstanding requirements remain.
 Preserve unresolved requirements during documentation cleanup.
 
-New code, comments, UI text, documentation and commits are English. Communication
+New code, comments, documentation and commits are English. Browser UI text is
+Polish, with Focus retaining its name, following the owner's 2026-10-04 direction. Communication
 with the owner may be Polish. Retained Polish requirement chapters are historical
 implementation references, not contributor onboarding.
 

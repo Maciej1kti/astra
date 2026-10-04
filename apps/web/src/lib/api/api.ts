@@ -1,3 +1,4 @@
+import { serverMessage, loadMessages } from "./messages.ts";
 import {
   validateCommandReply,
   validCommandError,
@@ -62,33 +63,7 @@ export class ApiError extends Error {
   data: Record<string, unknown>;
   constructor(status: number, data: Record<string, unknown>) {
     const code = (data.error as { code?: string })?.code ?? "";
-    const messages: Record<string, string> = {
-      CARD_IN_FOCUS:
-        "This card is pinned to focus. Remove it from focus before deleting it.",
-      VERSION_CONFLICT:
-        "This resource changed since you opened it. Your draft has been kept.",
-      UNDO_TARGET_CHANGED:
-        "A later change prevents this undo. The saved resource has not been changed.",
-      EPOCH_CHANGED:
-        "The server state changed. Check the current resource before starting a new command.",
-      VALIDATION_FAILED:
-        "Some fields are not valid. Check the dates and additional fields.",
-      WORKSPACE_RECOVERY_REQUIRED:
-        "The workspace has an unresolved save. Check diagnostics before retrying.",
-      SESSION_REQUIRED: "Your session ended. Connect this browser again.",
-      USER_NOT_FOUND:
-        "This user is unavailable. Open the default user to continue.",
-      USER_LIMIT_REACHED: "This host has reached its user limit.",
-      PROJECT_SHARED:
-        "This project is shared. Unregister it from the other users before deleting or relocating it.",
-    };
-    super(
-      messages[code] ??
-        String(
-          (data.error as { message?: string })?.message ??
-            `Request failed (${status})`,
-        ),
-    );
+    super(serverMessage(code, status));
     this.status = status;
     this.data = data;
   }
@@ -184,6 +159,8 @@ async function request<T>(
         if (response.ok) validateCommandReply(value, pending, response.status);
         else if (!validCommandError(value, pending)) invalidConfirmation();
       }
+      if (!response.ok || value?.warnings?.length || value?.error)
+        await loadMessages();
       if (!response.ok) throw new ApiError(response.status, value);
       return value as T;
     } catch (error) {
@@ -277,7 +254,7 @@ export function normalizeCommandReply(
     }
   }
   throw new Error(
-    "Invalid command response. Check the original command before retrying.",
+    "Nieprawidłowa odpowiedź polecenia. Sprawdź pierwotne polecenie przed ponowieniem.",
   );
 }
 export async function send(pending: Pending): Promise<CommandReply> {
@@ -327,7 +304,9 @@ export async function all<T = Summary>(
     cursor = value.next_cursor ?? value.page?.next_cursor ?? null;
     if (!cursor) return items;
   }
-  throw new Error("Result is too large. Narrow the project or search filter.");
+  throw new Error(
+    "Wynik jest zbyt duży. Zawęź projekt lub filtr wyszukiwania.",
+  );
 }
 export function resourcePath(
   item: Pick<Summary, "type" | "id" | "project_id">,

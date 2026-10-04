@@ -91,7 +91,7 @@ function fixture(t) {
   const list = new Surface();
   list.closest = (selector) =>
     selector === ".action-menu-panel" ? panel : null;
-  let order = ['key"with:punctuation', "Board", "Timeline"];
+  let order = ['key"with:punctuation', "Tablica", "Oś czasu"];
   const rows = order.map((key, index) => {
     const row = new Surface();
     const handle = new Surface();
@@ -121,7 +121,7 @@ function fixture(t) {
     disabled: () => false,
     commit: (...args) => commits.push(args),
     announce: (message) => announcements.push(message),
-    cancellationMessage: "Order unchanged.",
+    cancellationMessage: "Kolejność bez zmian.",
     rowAttribute: "data-navigation-item",
     handleAttribute: "data-navigation-handle",
   };
@@ -159,7 +159,7 @@ test("the shared list reorders arbitrary identified items with bounded keyboard 
   const h = fixture(t);
   h.key(h.rows[0].children[0], "End");
   assert.deepEqual(h.commits, [
-    [["Board", "Timeline", 'key"with:punctuation'], 'key"with:punctuation'],
+    [["Tablica", "Oś czasu", 'key"with:punctuation'], 'key"with:punctuation'],
   ]);
   h.key(h.rows[0].children[0], "Home");
   assert.equal(h.commits.length, 1);
@@ -190,7 +190,7 @@ test("the shared list owns an inert native-layer preview and drops its captured 
   );
   h.up();
   assert.deepEqual(h.commits, [
-    [["Board", 'key"with:punctuation', "Timeline"], 'key"with:punctuation'],
+    [["Tablica", 'key"with:punctuation', "Oś czasu"], 'key"with:punctuation'],
   ]);
   assert.equal(preview.removed, true);
   assert.equal(indicator.removed, true);
@@ -201,12 +201,12 @@ test("a changed order cancels the shared list instead of rebasing its proposal",
   const h = fixture(t);
   h.down();
   h.move();
-  h.changeOrder(["Timeline", "Board", 'key"with:punctuation']);
+  h.changeOrder(["Oś czasu", "Tablica", 'key"with:punctuation']);
   h.up();
   assert.deepEqual(h.commits, []);
   assert.deepEqual(h.announcements, [
-    'View key"with:punctuation picked up.',
-    "Order unchanged.",
+    'View key"with:punctuation podniesiono.',
+    "Kolejność bez zmian.",
   ]);
   assert.equal(h.rows[0].children[0].focused, true);
   assert.equal(

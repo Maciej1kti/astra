@@ -35,19 +35,19 @@
       : defaultCardLayout().filter(
           (value) => hidden.includes(value) || value === section,
         );
-    announcement = `${cardSections[section]} ${showing ? "shown" : "hidden"} on this card.`;
+    announcement = `${cardSections[section]} ${showing ? "widoczne" : "ukryte"} na tej karcie.`;
   }
 </script>
 
 <div class="card-layout-menu">
-  <ActionMenu label="Customize card layout" icon="layout" {disabled}>
+  <ActionMenu label="Dostosuj układ karty" icon="layout" {disabled}>
     {#snippet children(close)}
       <div class="layout-panel-heading">
-        <strong>Card layout</strong><Button
+        <strong>Układ karty</strong><Button
           type="button"
           variant="quiet"
           class="icon-button"
-          aria-label="Done arranging sections"
+          aria-label="Zakończ układanie sekcji"
           onclick={close}><Icon name="check" /></Button
         >
       </div>
@@ -57,19 +57,19 @@
         shown={(section) => !hidden.includes(section)}
         onmove={save}
         ontoggle={toggle}
-        ariaLabel="Section order"
+        ariaLabel="Kolejność sekcji"
         bind:announcement
         {disabled}
         {visibilityDisabled}
-        cancellationMessage="Section order unchanged."
+        cancellationMessage="Kolejność sekcji bez zmian."
         rowAttribute="data-layout-section"
         handleAttribute="data-layout-handle"
       />
       <div class="layout-panel-footer">
         <p class="layout-hint">
           {stored
-            ? "Order in this browser. Visibility on this card."
-            : "Browser storage is unavailable. This layout lasts until you close the card."}
+            ? "Kolejność w tej przeglądarce. Widoczność na tej karcie."
+            : "Pamięć przeglądarki jest niedostępna. Ten układ pozostanie do zamknięcia karty."}
         </p>
         <Button
           type="button"
@@ -79,8 +79,8 @@
             save(defaultCardLayout());
             hidden = [];
             announcement =
-              "Default order restored. All sections shown on this card.";
-          }}>Reset layout</Button
+              "Przywrócono domyślną kolejność. Wszystkie sekcje są widoczne na tej karcie.";
+          }}>Przywróć układ</Button
         >
       </div>
     {/snippet}

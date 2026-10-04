@@ -17,9 +17,9 @@ import {
 function series(name, unit, values, id = name) {
   return {
     project_id: "project",
-    project_name: "Project",
+    project_name: "Projekt",
     card_id: "card",
-    card_title: "Card",
+    card_title: "Karta",
     id,
     name,
     unit,
@@ -129,7 +129,7 @@ test("raw units retain independent scales; relative and explicit-rate modes safe
   assert.deepEqual(chartDomain(raw[0]), { min: 0, max: 20 });
   const normalized = chartPanels(rows, periods, false, "relative", {}, "PLN");
   assert.equal(normalized.length, 1);
-  assert.equal(normalized[0].unit, "% of own peak");
+  assert.equal(normalized[0].unit, "% własnego maksimum");
   assert.deepEqual(
     normalized[0].series[0].points.map((point) => point.value),
     [50, 100],
@@ -176,7 +176,6 @@ test("zero rates and all-zero normalized series remain plotted, while invalid ra
     "Infinity",
     "-1",
     "1e5",
-    "2,5",
     "1000000001",
     "0x10",
   ])
@@ -184,6 +183,8 @@ test("zero rates and all-zero normalized series remain plotted, while invalid ra
   for (const [raw, value] of [
     ["0", 0],
     [" 2.5 ", 2.5],
+    [" 2,5 ", 2.5],
+    [",5", 0.5],
     [".5", 0.5],
     ["1000000000", 1_000_000_000],
   ])

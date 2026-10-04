@@ -182,7 +182,7 @@ for (const view of [
   "gantt",
   "chart",
 ]) {
-  test(`Projects's archived-inclusive cache cannot satisfy ${view}'s ordinary scope`, async () => {
+  test(`Projekty's archived-inclusive cache cannot satisfy ${view}'s ordinary scope`, async () => {
     let current = { ...query, view: "projects" };
     const calls = [];
     const owner = new ViewData({

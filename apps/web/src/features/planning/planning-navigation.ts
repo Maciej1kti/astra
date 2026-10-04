@@ -17,7 +17,8 @@ export function navigateCalendar(
   layout: CalendarLayout,
   delta: number,
 ): string {
-  if (!isCalendarDate(date)) throw new Error("Choose a valid calendar date.");
+  if (!isCalendarDate(date))
+    throw new Error("Wybierz prawidłową datę kalendarza.");
   if (layout === "month") {
     const next = widgetDate(date);
     next.setDate(1);

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { serverMessage } from "../../lib/api/messages";
+  import { errorMessage } from "../../lib/api/messages.ts";
   import { formatTimestamp } from "../../lib/resources/resource-presentation";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
@@ -30,7 +32,7 @@
     } catch (e) {
       if (current === generation) {
         data = null;
-        error = e instanceof Error ? e.message : String(e);
+        error = errorMessage(e);
       }
     } finally {
       if (current === generation) busy = false;
@@ -42,7 +44,7 @@
       generation++;
       data = null;
       busy = false;
-      error = "Your session ended. Reconnect to inspect Git.";
+      error = "Sesja wygasła. Połącz się ponownie, aby sprawdzić Git.";
     };
     const unsubscribeSession = subscribeSession({ ended: ended });
     return () => {
@@ -56,37 +58,39 @@
   class="app-dialog"
   use:modal={{ onclose }}
   out:layerExit|global
-  aria-label="Git observation"
+  aria-label="Stan repozytorium Git"
 >
   <DialogHeader
-    title="Git observation"
+    title="Stan repozytorium Git"
     {onclose}
-    closeLabel="Close Git observation"
+    closeLabel="Zamknij stan Git"
   />
   <div class="dialog-body">
     <p>
-      HEAD and staged index only. Working-tree changes and untracked files are
-      not checked.
+      Tylko HEAD i pliki przygotowane do commita. Zmiany w katalogu roboczym i
+      nieśledzone pliki nie są sprawdzane.
     </p>
     <button onclick={load} disabled={busy}
-      >{busy ? "Checking…" : "Check again"}</button
+      >{busy ? "Sprawdzanie…" : "Sprawdź ponownie"}</button
     >
     {#if error}<p role="alert">{error}</p>{/if}
     {#if data}
-      {#if data.stale}<p role="status">Observation unavailable: {data.error}</p>
+      {#if data.stale}<p role="status">
+          Stan niedostępny: {serverMessage(data.error ?? "GIT_UNAVAILABLE")}
+        </p>
       {:else}<dl>
-          <dt>Branch</dt>
-          <dd>{data.branch ?? "Detached HEAD"}</dd>
+          <dt>Gałąź</dt>
+          <dd>{data.branch ?? "Odłączony HEAD"}</dd>
           <dt>Commit</dt>
-          <dd><code>{data.commit ?? "No commits yet"}</code></dd>
-          <dt>Staged paths</dt>
+          <dd><code>{data.commit ?? "Brak commitów"}</code></dd>
+          <dt>Przygotowane ścieżki</dt>
           <dd>{data.staged_paths}</dd>
-          <dt>Conflicted paths</dt>
+          <dt>Ścieżki z konfliktami</dt>
           <dd>{data.conflicted_paths}</dd>
         </dl>{/if}
       <small
-        >Checked {formatTimestamp(data.observed_at)}. Counts exclude .project
-        files.</small
+        >Sprawdzono {formatTimestamp(data.observed_at)}. Liczby nie obejmują
+        plików .project.</small
       >
     {/if}
   </div>

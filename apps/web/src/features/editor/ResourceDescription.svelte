@@ -70,28 +70,28 @@
 
 <section
   class="resource-description-field"
-  aria-label={`${resourceLabel(type)} description`}
+  aria-label={`${resourceLabel(type)} — opis`}
 >
   {#if type === "card"}
     {#snippet formatHint()}
-      <span class="description-format">Markdown supported</span>
+      <span class="description-format">Obsługuje Markdown</span>
     {/snippet}
     <SectionHeading
-      title="Description"
+      title="Opis"
       level={3}
       visuallyHidden
       actions={editing ? formatHint : undefined}
     />
   {:else}<div class="field-label">
-      Description
-      {#if editing}<span>Markdown supported</span>{/if}
+      Opis
+      {#if editing}<span>Obsługuje Markdown</span>{/if}
     </div>{/if}
   {#if editing}
     <textarea
       bind:this={input}
       bind:value={body}
       rows="8"
-      aria-label="Description"
+      aria-label="Opis"
       onblur={blur}
       {disabled}></textarea>
   {:else}
@@ -99,7 +99,7 @@
       class="resource-description-rendered"
       role="button"
       tabindex={disabled ? -1 : 0}
-      aria-label={`Edit ${type} description`}
+      aria-label={`Edytuj opis: ${resourceLabel(type)}`}
       aria-disabled={disabled}
       onclick={beginEdit}
       onkeydown={(event) => {
@@ -114,7 +114,7 @@
       {#if body.trim()}<Markdown source={body} />{:else}<p
           class="empty-context"
         >
-          Add a description…
+          Dodaj opis…
         </p>{/if}
     </div>
   {/if}

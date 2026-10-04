@@ -19,7 +19,7 @@
     onsettings,
     onrefresh,
     logout,
-    userName = "Owner",
+    userName = "Właściciel",
   }: {
     project: string;
     focus?: boolean;
@@ -40,7 +40,7 @@
     [...new Set(projects.flatMap((p) => (p.folder ? [p.folder] : [])))].sort(),
   );
   const projectName = $derived(
-    projects.find((item) => item.id === project)?.title ?? "All projects",
+    projects.find((item) => item.id === project)?.title ?? "Wszystkie projekty",
   );
 </script>
 
@@ -49,11 +49,11 @@
     <select
       class="workspace-project"
       aria-label="Folder"
-      title={folder || "All folders"}
+      title={folder || "Wszystkie foldery"}
       value={folder}
       onchange={(event) => onfolderchange(event.currentTarget.value)}
     >
-      <option value="">All folders</option>
+      <option value="">Wszystkie foldery</option>
       {#if folder && !folders.includes(folder)}<option value={folder}
           >{folder}</option
         >{/if}
@@ -62,17 +62,17 @@
   {:else if selectable}
     <select
       class="workspace-project"
-      aria-label="Project"
+      aria-label="Projekt"
       title={projectName}
       value={project}
       onchange={(event) => onprojectchange(event.currentTarget.value)}
     >
-      <option value="">All projects</option>
+      <option value="">Wszystkie projekty</option>
       {#each projects as item}<option value={item.id}>{item.title}</option
         >{/each}
     </select>
   {:else}
-    <span class="workspace-label">All projects</span>
+    <span class="workspace-label">Wszystkie projekty</span>
   {/if}
   <div class="workspace-actions">
     <div class="desktop-workspace-actions">
@@ -82,23 +82,23 @@
         >{/if}
       <span class="date">{today}</span><Button
         variant="quiet"
-        aria-label="Host diagnostics"
+        aria-label="Diagnostyka serwera"
         onclick={ondiagnostics}><Icon name="info" /></Button
       >
     </div>
     <Button
       variant="quiet"
-      aria-label="Workspace settings"
-      title={`User: ${userName}`}
+      aria-label="Ustawienia przestrzeni roboczej"
+      title={`Użytkownik: ${userName}`}
       onclick={onsettings}
       ><span class="current-user">{userName}</span><Icon
         name="settings"
       /></Button
-    ><Button variant="quiet" onclick={onrefresh} aria-label="Refresh"
+    ><Button variant="quiet" onclick={onrefresh} aria-label="Odśwież"
       ><Icon name="refresh" /></Button
     >
     <div class="mobile-workspace-actions">
-      <ActionMenu label="Workspace actions">
+      <ActionMenu label="Działania przestrzeni roboczej">
         {#snippet children(close)}
           {#if project && selectable && !focus}<Button
               variant="quiet"
@@ -112,14 +112,14 @@
             onclick={() => {
               close();
               ondiagnostics();
-            }}>Host diagnostics</Button
+            }}>Diagnostyka serwera</Button
           >
           <Button
             variant="quiet"
             onclick={() => {
               close();
               logout();
-            }}>Sign out</Button
+            }}>Wyloguj</Button
           >
         {/snippet}
       </ActionMenu>

@@ -36,21 +36,21 @@ await runBrowserSuite(
     const path = `${base}/${id}`;
     const get = () => cli("get", path);
     const dialog = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
     const section = dialog.getByRole("region", {
-      name: "Card counters",
+      name: "Liczniki karty",
       exact: true,
     });
     const row = (name) =>
-      section.getByRole("group", { name: `Counter: ${name}`, exact: true });
+      section.getByRole("group", { name: `Licznik: ${name}`, exact: true });
     const value = (name) =>
-      row(name).getByLabel(`${name} value`, { exact: true });
+      row(name).getByLabel(`${name} wynik`, { exact: true });
     const total = (name) =>
-      row(name).getByRole("textbox", { name: `${name} total`, exact: true });
+      row(name).getByRole("textbox", { name: `${name} wynik`, exact: true });
     const confirm = (name) =>
-      row(name).getByRole("button", { name: `Confirm ${name}`, exact: true });
+      row(name).getByRole("button", { name: `Potwierdź ${name}`, exact: true });
     const expectRecorded = async (name) => {
       await expect(row(name).locator(".draft-hint")).toHaveCount(0);
       await expect(confirm(name)).toHaveCount(0);
@@ -65,31 +65,33 @@ await runBrowserSuite(
       await open();
       for (const name of ["Push-ups", "Sit-ups", "Squats"]) {
         const menu = section.getByRole("button", {
-          name: "Counter actions",
+          name: "Działania licznika",
           exact: true,
         });
         if (name === "Push-ups") await expect(menu).toHaveCount(0);
         else await menu.click();
         await section
-          .getByRole("button", { name: "Add counter", exact: true })
+          .getByRole("button", { name: "Dodaj licznik", exact: true })
           .click();
-        await section.getByLabel("Counter name", { exact: true }).fill(name);
-        await section.getByLabel("Counter unit", { exact: true }).fill("reps");
-        await section.getByLabel("Counter step", { exact: true }).fill("5");
+        await section.getByLabel("Nazwa licznika", { exact: true }).fill(name);
         await section
-          .getByRole("button", { name: "Save counter", exact: true })
+          .getByLabel("Jednostka licznika", { exact: true })
+          .fill("reps");
+        await section.getByLabel("Krok licznika", { exact: true }).fill("5");
+        await section
+          .getByRole("button", { name: "Zapisz licznik", exact: true })
           .click();
         await expect(value(name)).toHaveAttribute("aria-valuenow", "0");
         await expect(
           section.getByRole("group", {
-            name: "Counter configuration",
+            name: "Konfiguracja licznika",
             exact: true,
           }),
         ).toHaveCount(0);
       }
       const first = get().metadata.counters[0];
       const today = await section.getAttribute("data-counter-today");
-      await expect(section).not.toContainText("Today ·");
+      await expect(section).not.toContainText("Dzisiaj ·");
       await expect(section).not.toContainText("Europe/Warsaw");
       await value("Push-ups").scrollIntoViewIfNeeded();
       const box = await value("Push-ups").boundingBox();
@@ -100,7 +102,7 @@ await runBrowserSuite(
       await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "10");
       assert.deepEqual(get().metadata.counters[0].values, {});
       await row("Push-ups")
-        .getByRole("button", { name: "Reset draft", exact: true })
+        .getByRole("button", { name: "Odrzuć wersję roboczą", exact: true })
         .click();
       if (browser.browserType().name() === "chromium") {
         await page.setViewportSize({ width: 390, height: 844 });
@@ -128,7 +130,7 @@ await runBrowserSuite(
         await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "15");
         assert.deepEqual(get().metadata.counters[0].values, {});
         await row("Push-ups")
-          .getByRole("button", { name: "Reset draft", exact: true })
+          .getByRole("button", { name: "Odrzuć wersję roboczą", exact: true })
           .click();
         await swipe(36, 0, true);
         await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "0");
@@ -149,7 +151,7 @@ await runBrowserSuite(
       }
       await value("Push-ups").click();
       await expect(
-        dialog.getByRole("button", { name: "Close editor", exact: true }),
+        dialog.getByRole("button", { name: "Zamknij edytor", exact: true }),
       ).toBeInViewport();
       assert.equal(
         await dialog.evaluate((el) => el.scrollTop),
@@ -160,26 +162,29 @@ await runBrowserSuite(
       await expect(total("Push-ups")).toHaveAttribute("aria-invalid", "true");
       await expect(confirm("Push-ups")).toBeDisabled();
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(
-        dialog.getByRole("button", { name: "Discard draft", exact: true }),
+        dialog.getByRole("alert").getByRole("button", {
+          name: "Odrzuć wersję roboczą",
+          exact: true,
+        }),
       ).toBeVisible();
       await dialog
-        .getByRole("button", { name: "Keep editing", exact: true })
+        .getByRole("button", { name: "Kontynuuj edycję", exact: true })
         .click();
       await expect(total("Push-ups")).toHaveValue("");
       await total("Push-ups").evaluate((el) => {
         el.dataset.retainedEntry = "yes";
       });
       await dialog
-        .getByRole("button", { name: "Customize card layout", exact: true })
+        .getByRole("button", { name: "Dostosuj układ karty", exact: true })
         .click();
       await dialog
-        .getByRole("button", { name: "Reorder Counters", exact: true })
+        .getByRole("button", { name: "Zmień kolejność Liczniki", exact: true })
         .press("ArrowUp");
       await dialog
-        .getByRole("button", { name: "Done arranging sections", exact: true })
+        .getByRole("button", { name: "Zakończ układanie sekcji", exact: true })
         .click();
       await expect(total("Push-ups")).toHaveValue("");
       await expect(total("Push-ups")).toHaveAttribute(
@@ -195,25 +200,30 @@ await runBrowserSuite(
       await expect(total("Push-ups")).toHaveValue("10");
       assert.deepEqual(get().metadata.counters[0].values, {});
       await dialog
-        .getByLabel("Title", { exact: true })
+        .getByLabel("Tytuł", { exact: true })
         .fill("My daily exercise");
-      await expect(dialog.getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(dialog.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       await dialog
-        .getByRole("button", { name: "Pin to focus", exact: true })
+        .getByRole("button", { name: "Przypnij do Focus", exact: true })
         .click();
       await expect(
-        dialog.getByRole("button", { name: "Remove from focus", exact: true }),
+        dialog.getByRole("button", { name: "Usuń z Focus", exact: true }),
       ).toBeEnabled();
       await expect(total("Push-ups")).toHaveValue("10");
       await expect(value("Sit-ups")).toHaveAttribute("aria-valuenow", "5");
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(
-        dialog.getByRole("button", { name: "Discard draft", exact: true }),
+        dialog.getByRole("alert").getByRole("button", {
+          name: "Odrzuć wersję roboczą",
+          exact: true,
+        }),
       ).toBeVisible();
       await dialog
-        .getByRole("button", { name: "Keep editing", exact: true })
+        .getByRole("button", { name: "Kontynuuj edycję", exact: true })
         .click();
       await confirm("Push-ups").click();
       await expectRecorded("Push-ups");
@@ -231,41 +241,41 @@ await runBrowserSuite(
       await page.reload();
       await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "10");
       await row("Push-ups")
-        .getByRole("button", { name: "Push-ups history", exact: true })
+        .getByRole("button", { name: "Push-ups — historia", exact: true })
         .click();
       await expect(row("Push-ups")).toContainText("30 reps");
       await row("Push-ups")
-        .getByRole("button", { name: "Push-ups history", exact: true })
+        .getByRole("button", { name: "Push-ups — historia", exact: true })
         .click();
       // Config changes preserve dated totals; unit changes cannot reinterpret history.
       await row("Push-ups")
-        .getByRole("button", { name: "Edit counter Push-ups", exact: true })
+        .getByRole("button", { name: "Edytuj licznik Push-ups", exact: true })
         .click();
       await expect(
-        section.getByLabel("Counter unit", { exact: true }),
+        section.getByLabel("Jednostka licznika", { exact: true }),
       ).toBeDisabled();
       await section
-        .getByLabel("Hide counter, keep history", { exact: true })
+        .getByLabel("Ukryj licznik, zachowaj historię", { exact: true })
         .check();
       await section
-        .getByRole("button", { name: "Save counter", exact: true })
+        .getByRole("button", { name: "Zapisz licznik", exact: true })
         .click();
       await expect(row("Push-ups")).toHaveCount(0);
       await section
-        .getByRole("button", { name: "Counter actions", exact: true })
+        .getByRole("button", { name: "Działania licznika", exact: true })
         .click();
       await section
-        .getByRole("button", { name: "Archived", exact: true })
+        .getByRole("button", { name: "Zarchiwizowane", exact: true })
         .click();
-      await expect(row("Push-ups")).toContainText("Hidden");
+      await expect(row("Push-ups")).toContainText("Ukryty");
       await row("Push-ups")
-        .getByRole("button", { name: "Edit counter Push-ups", exact: true })
+        .getByRole("button", { name: "Edytuj licznik Push-ups", exact: true })
         .click();
       await section
-        .getByLabel("Hide counter, keep history", { exact: true })
+        .getByLabel("Ukryj licznik, zachowaj historię", { exact: true })
         .uncheck();
       await section
-        .getByRole("button", { name: "Save counter", exact: true })
+        .getByRole("button", { name: "Zapisz licznik", exact: true })
         .click();
       await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "10");
       for (const width of [320, 390, 768, 1024, 1440]) {
@@ -303,12 +313,15 @@ await runBrowserSuite(
       await value("Push-ups").press("ArrowRight");
       await confirm("Push-ups").click();
       await expect(
-        dialog.getByRole("button", { name: "Retry same command", exact: true }),
+        dialog.getByRole("button", {
+          name: "Ponów to samo polecenie",
+          exact: true,
+        }),
       ).toBeEnabled();
       assert.equal(get().metadata.counters[0].values[today], 15);
       await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "15");
       await dialog
-        .getByRole("button", { name: "Retry same command", exact: true })
+        .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
         .click();
       await expectRecorded("Push-ups");
       assert.equal(get().metadata.counters[0].values[today], 15);
@@ -334,7 +347,9 @@ await runBrowserSuite(
         await route.continue();
       });
       await confirm("Push-ups").click();
-      await expect(dialog).toContainText(/conflict|changed/i);
+      await expect(dialog).toContainText(
+        "Ten element zmienił się od otwarcia. Wersja robocza została zachowana.",
+      );
       await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "20");
       await expect(confirm("Push-ups")).toBeDisabled();
       assert.equal(get().metadata.counters[0].values[today], 35);
@@ -361,7 +376,9 @@ await runBrowserSuite(
       await page.clock.fastForward(1000);
       await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "0");
       await expect(total("Squats")).toHaveValue("5");
-      await expect(row("Squats")).toContainText(`Unsaved result for ${today}`);
+      await expect(row("Squats")).toContainText(
+        `Niezapisany wynik na ${today}`,
+      );
       // Keep real time for admission; the counter draft retains its explicit day.
       await page.clock.setSystemTime(new Date());
       // An in-flight command disables OK before its durable acknowledgement.

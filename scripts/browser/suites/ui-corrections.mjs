@@ -55,9 +55,9 @@ await runBrowserSuite(
       );
       await expect.poll(rows).toHaveLength(3);
       await expect(
-        page.getByRole("button", { name: "New scheduled card" }),
+        page.getByRole("button", { name: "Nowa zaplanowana karta" }),
       ).toHaveCount(0);
-      await expect(page.getByText("Timeline shortcuts & editing")).toHaveCount(
+      await expect(page.getByText("Oś czasu shortcuts & editing")).toHaveCount(
         0,
       );
       const before = await rows();
@@ -76,32 +76,32 @@ await runBrowserSuite(
           "Row ordering must not change source schedules or Board placement",
         );
       const empty = page.getByRole("button", {
-        name: "Create card on timeline",
+        name: "Utwórz kartę na osi czasu",
       });
       await expect(empty).toBeVisible();
       const bar = await empty.boundingBox();
       // The displayed axis starts two days before the earliest September 1 anchor.
       await empty.click({ position: { x: 48 * 6 + 24, y: bar.height / 2 } });
-      const dialog = page.getByRole("dialog", { name: "Create resource" });
+      const dialog = page.getByRole("dialog", { name: "Utwórz element" });
       await expect(dialog).toBeVisible();
-      await expect(dialog.getByLabel("Start", { exact: true })).toHaveValue(
+      await expect(dialog.getByLabel("Początek", { exact: true })).toHaveValue(
         "2026-09-05",
       );
-      await expect(dialog.getByLabel("End", { exact: true })).toHaveValue(
+      await expect(dialog.getByLabel("Koniec", { exact: true })).toHaveValue(
         "2026-09-05",
       );
       await page
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       await empty.focus();
       await empty.press("ArrowRight");
       await empty.press("Enter");
-      await expect(dialog.getByLabel("Start", { exact: true })).toHaveValue(
+      await expect(dialog.getByLabel("Początek", { exact: true })).toHaveValue(
         "2026-09-02",
       );
       await page
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       await page.setViewportSize({ width: 390, height: 844 });

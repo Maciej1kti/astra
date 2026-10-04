@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { counted } from "../../lib/ui/locale.ts";
+  import { errorMessage } from "../../lib/api/messages.ts";
+  import { stateLabel } from "../../lib/resources/state-presentation";
   import Icon from "../../lib/ui/Icon.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
@@ -56,7 +59,7 @@
   }
   const targetError = $derived(
     target === source
-      ? "Choose a different tag name."
+      ? "Wybierz inną nazwę tagu."
       : target && catalog?.tags.some((tag) => tag.name === target)
         ? ""
         : target
@@ -74,7 +77,7 @@
     try {
       catalog = await getProjectTags(project);
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      error = errorMessage(cause);
     } finally {
       busy = false;
     }
@@ -86,7 +89,7 @@
     try {
       plan = await planProjectTagRename(project, { source, target });
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      error = errorMessage(cause);
     } finally {
       busy = false;
     }
@@ -115,10 +118,10 @@
         }, 600);
       } else {
         error =
-          "The rename needs review. Check diagnostics before starting another change.";
+          "Zmiana nazwy wymaga sprawdzenia. Sprawdź diagnostykę przed rozpoczęciem kolejnej zmiany.";
       }
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      error = errorMessage(cause);
     }
   }
   async function apply() {
@@ -136,11 +139,11 @@
         result.kind === "accepted" ? result.jobId : result.reply.result.job_id;
       if (!id)
         throw new Error(
-          "The rename outcome is unknown. Check the original command.",
+          "Wynik zmiany nazwy jest nieznany. Sprawdź pierwotne polecenie.",
         );
       await poll(id);
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      error = errorMessage(cause);
     } finally {
       busy = false;
     }
@@ -151,7 +154,7 @@
         JSON.stringify({ project, plan, pending, job }, null, 2),
       );
     } catch {
-      error = "Clipboard access is unavailable.";
+      error = "Schowek jest niedostępny.";
     }
   }
   onMount(() => {
@@ -159,7 +162,8 @@
     const unsubscribe = subscribeSession({
       ended: () => {
         accessLost = true;
-        error = "Session ended. Reconnect to check this command.";
+        error =
+          "Sesja wygasła. Połącz się ponownie, aby sprawdzić to polecenie.";
       },
       restored: () => {
         accessLost = false;
@@ -176,20 +180,20 @@
   class="app-dialog dialog-large"
   use:modal={{ onclose: close }}
   out:layerExit|global
-  aria-label="Manage project tags"
+  aria-label="Zarządzaj tagami projektu"
 >
   <DialogHeader
-    title="Project tags"
-    description="Rename or merge tags used in a project."
+    title="Tagi projektu"
+    description="Zmień nazwę lub połącz tagi używane w projekcie."
     onclose={close}
     disabled={!canClose}
-    closeLabel="Close tag manager"
+    closeLabel="Zamknij zarządzanie tagami"
   >
     {#snippet actions()}
       <button
         class="quiet icon-button"
-        aria-label="Refresh project tags"
-        title="Refresh project tags"
+        aria-label="Odśwież tagi projektu"
+        title="Odśwież tagi projektu"
         disabled={busy || !!pending || !!job}
         onclick={() => void load()}><Icon name="refresh" small /></button
       >
@@ -197,7 +201,7 @@
   </DialogHeader>
   <div class="dialog-body">
     {#if error}<p class="notice" role="alert">{error}</p>{/if}
-    <label for="tag-manager-project">Project</label>
+    <label for="tag-manager-project">Projekt</label>
     <select
       id="tag-manager-project"
       bind:value={project}
@@ -210,29 +214,30 @@
     </select>
     {#if catalog}
       {#if !catalog.complete}<p class="notice">
-          Some card sources could not be read. Rename is unavailable until they
-          are fixed.
+          Nie udało się odczytać niektórych plików kart. Zmiana nazwy jest
+          niedostępna do czasu ich naprawy.
         </p>{/if}
-      <ul class="tag-list" aria-label="Project tags">
+      <ul class="tag-list" aria-label="Tagi projektu">
         {#each catalog.tags as tag}<li>
             <strong>{tag.name}</strong>
-            <small>{tag.usage} {tag.usage === 1 ? "card" : "cards"}</small>
+            <small>{counted(tag.usage, "karta", "karty", "kart")}</small>
             <button
               disabled={busy || !!pending || !!job || !catalog.complete}
               onclick={() => {
                 source = tag.name;
                 target = "";
                 plan = null;
-              }}>Rename / merge</button
+              }}>Zmień nazwę / połącz</button
             >
           </li>{:else}<li>
-            No tags yet. Add a label to a card to create one.
+            Brak tagów. Dodaj etykietę do karty, aby utworzyć tag.
           </li>{/each}
       </ul>
       {#if source}
-        <h3>Rename or merge {source}</h3>
+        <h3>Zmień nazwę lub połącz {source}</h3>
         <p>
-          Archived cards are included. Choosing an existing tag merges them.
+          Zarchiwizowane karty są uwzględnione. Wybór istniejącego tagu łączy
+          je.
         </p>
         <form
           onsubmit={(event) => {
@@ -241,7 +246,7 @@
           }}
         >
           <label
-            >Destination tag <input
+            >Tag docelowy <input
               bind:value={target}
               list="project-tag-names"
               disabled={busy || !!pending || !!job}
@@ -259,16 +264,19 @@
               !!job ||
               !target ||
               !!targetError ||
-              !catalog.complete}>Preview changes</button
+              !catalog.complete}>Podgląd zmian</button
           >
         </form>
       {/if}
       {#if plan}
-        <section aria-label="Tag rename preview">
+        <section aria-label="Podgląd zmiany nazwy tagu">
           <h3>
-            {plan.changes.length} affected {plan.changes.length === 1
-              ? "card"
-              : "cards"}
+            Zmiana obejmie {counted(
+              plan.changes.length,
+              "kartę",
+              "karty",
+              "kart",
+            )}
           </h3>
           <ul>
             {#each plan.changes as change}<li>{change.title}</li>{/each}
@@ -276,21 +284,23 @@
           <Button
             variant="primary"
             disabled={busy || !!pending || !!job || accessLost}
-            onclick={() => void apply()}>Rename in this project</Button
+            onclick={() => void apply()}>Zmień nazwę w tym projekcie</Button
           >
         </section>
       {/if}
       {#if job}<p role="status">
-          Rename: {job.state} ({job.completed_steps}/{job.total_steps})
+          Zmiana nazwy: {stateLabel(job.state)} ({job.completed_steps}/{job.total_steps})
         </p>{/if}
-      {#if pending}<p role="status">Command ID: {pending.requestId}</p>
+      {#if pending}<p role="status">
+          Identyfikator polecenia: {pending.requestId}
+        </p>
         <button disabled={busy || accessLost} onclick={() => void retry()}
-          >Retry same command</button
+          >Ponów to samo polecenie</button
         >{/if}
-    {:else if busy}<p role="status">Loading tags…</p>{/if}
+    {:else if busy}<p role="status">Ładowanie tagów…</p>{/if}
   </div>
   {#if pending || job || error}<footer class="dialog-footer">
-      <button onclick={() => void copy()}>Copy details</button>
+      <button onclick={() => void copy()}>Kopiuj szczegóły</button>
     </footer>{/if}
 </dialog>
 

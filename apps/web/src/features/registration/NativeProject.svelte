@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { serverMessage } from "../../lib/api/messages.ts";
+  import { errorMessage } from "../../lib/api/messages.ts";
+  import { stateLabel } from "../../lib/resources/state-presentation";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
 
@@ -50,13 +53,13 @@
   function explain(code: string) {
     const messages: Record<string, string> = {
       NATIVE_FOLDER_PICKER_UNAVAILABLE:
-        "The system folder dialog is unavailable. Run the host in your desktop session and check that a file chooser portal or Zenity is installed.",
+        "Systemowe okno wyboru folderu jest niedostępne. Uruchom serwer w sesji pulpitu i sprawdź, czy zainstalowano portal wyboru plików lub Zenity.",
       NATIVE_FOLDER_PICKER_TIMEOUT:
-        "Folder selection timed out. Choose a folder again.",
+        "Upłynął czas wyboru folderu. Wybierz folder ponownie.",
       NATIVE_FOLDER_PICKER_FAILED:
-        "The system folder dialog could not open. Check the host desktop and try again.",
+        "Nie udało się otworzyć systemowego okna wyboru folderu. Sprawdź pulpit serwera i spróbuj ponownie.",
       FOLDER_PICKER_BUSY:
-        "A folder dialog is already open on the host. Finish or cancel it first.",
+        "Na serwerze jest już otwarte okno wyboru folderu. Najpierw zakończ wybór lub go anuluj.",
     };
     return messages[code] ?? code;
   }
@@ -74,8 +77,8 @@
       selection = null;
       error =
         result.state === "cancelled"
-          ? "Folder selection cancelled. No project files were changed."
-          : explain(result.error ?? "Folder selection failed.");
+          ? "Anulowano wybór folderu. Pliki projektu nie zostały zmienione."
+          : explain(result.error ?? "Wybór folderu nie powiódł się.");
     }
   }
   async function poll() {
@@ -88,7 +91,7 @@
       );
     } catch (e) {
       choosing = false;
-      error = e instanceof Error ? e.message : String(e);
+      error = errorMessage(e);
       if (e instanceof ApiError && e.status === 404) selection = null;
     }
   }
@@ -112,7 +115,7 @@
       );
     } catch (e) {
       choosing = false;
-      error = e instanceof Error ? e.message : String(e);
+      error = errorMessage(e);
       if (isDefinitiveRejection(e)) {
         error = explain((e.data.error as { code?: string })?.code ?? error);
         selection = null;
@@ -137,20 +140,19 @@
             ? result.jobId
             : (result.reply.result.job_id ?? null);
         if (!job) {
-          error =
-            "Registration outcome is unknown. Retry the same registration.";
+          error = "Wynik rejestracji jest nieznany. Ponów tę samą rejestrację.";
           return;
         }
       }
       const result = await api<{ state: string }>(`/api/v1/jobs/${job}`);
       if (result.state !== "done") {
-        error = `Registration is ${result.state}. Check its outcome before starting another request.`;
+        error = `Stan rejestracji: ${stateLabel(result.state)}. Sprawdź wynik przed rozpoczęciem kolejnego żądania.`;
         return;
       }
       if (operation.phase === "accepted") operation.finishJob();
       onadded(plan.project_id);
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      error = errorMessage(e);
       if (!job && operation.phase === "rejected") {
         plan = null;
       }
@@ -163,10 +165,10 @@
       await navigator.clipboard.writeText(
         JSON.stringify({ selection, plan, pending, job }, null, 2),
       );
-      error = "Registration details copied.";
+      error = "Skopiowano szczegóły rejestracji.";
     } catch {
       error =
-        "Clipboard is unavailable. Copy the visible request ID before closing.";
+        "Schowek jest niedostępny. Skopiuj widoczny identyfikator żądania przed zamknięciem.";
     }
   }
   onMount(() => {
@@ -175,7 +177,7 @@
       choosing = false;
       clearTimeout(timer);
       error =
-        "Your session ended. Registration details are preserved; reconnect before continuing.";
+        "Sesja wygasła. Szczegóły rejestracji zostały zachowane; połącz się ponownie przed kontynuowaniem.";
     };
     const restored = () => {
       accessLost = false;
@@ -197,23 +199,23 @@
   class="app-dialog"
   use:modal={{ onclose: close }}
   out:layerExit|global
-  aria-label="Add project"
+  aria-label="Dodaj projekt"
 >
   <DialogHeader
-    title="Add a project"
+    title="Dodaj projekt"
     onclose={close}
     disabled={busy}
-    closeLabel="Close add project"
+    closeLabel="Zamknij dodawanie projektu"
   />
   <div class="dialog-body">
     <p>
-      Choose your repository using the host's system folder dialog. The folder
-      can be anywhere on the host.
+      Wybierz repozytorium w systemowym oknie wyboru folderu na serwerze. Folder
+      może znajdować się w dowolnym miejscu na serwerze.
     </p>
     <label
-      >Project name <input
+      >Nazwa projektu <input
         bind:value={name}
-        placeholder="Use folder name"
+        placeholder="Użyj nazwy folderu"
         disabled={choosing || busy || !!selection || !!pending || !!plan}
       /></label
     >
@@ -222,34 +224,36 @@
         type="checkbox"
         bind:checked={tracked}
         disabled={choosing || busy || !!selection || !!pending || !!plan}
-      /> Track .project files in Git</label
+      /> Śledź pliki .project w Git</label
     >
     <Button
       variant="primary"
       onclick={choose}
       disabled={choosing || busy || !!pending || accessLost}
       >{choosing
-        ? "Choose a folder in the system window…"
+        ? "Wybierz folder w oknie systemowym…"
         : selection
-          ? "Check folder selection"
+          ? "Sprawdź wybór folderu"
           : plan
-            ? "Choose a different folder…"
-            : "Choose folder…"}</Button
+            ? "Wybierz inny folder…"
+            : "Wybierz folder…"}</Button
     >
     {#if choosing}<p role="status">
-        The system window opens on the computer running Local Projects. Select a
-        folder or press Cancel there.
+        Okno systemowe otwiera się na komputerze, na którym działa Astra.
+        Wybierz tam folder lub naciśnij Anuluj.
       </p>{/if}
     {#if plan}<section class="notice">
-        <strong>Selected repository</strong>
+        <strong>Wybrane repozytorium</strong>
         <p>{plan.display_path}</p>
         <p>
-          Adding creates .project planning files and a managed AGENTS.md block.
-          Existing content is preserved.
+          Dodanie tworzy pliki planowania .project i zarządzany blok AGENTS.md.
+          Istniejąca zawartość zostaje zachowana.
         </p>
-        {#each plan.warnings as warning}<p>{warning.message}</p>{/each}
+        {#each plan.warnings as warning}<p>
+            {serverMessage(warning.code)}
+          </p>{/each}
         <details>
-          <summary>Files to update</summary
+          <summary>Pliki do aktualizacji</summary
           >{#each plan.changes.filter((c) => c.action !== "no_change") as change}<p
             >
               {change.path}
@@ -257,32 +261,28 @@
         </details>
         <Button variant="primary" onclick={add} disabled={busy || accessLost}
           >{job
-            ? "Check registration"
+            ? "Sprawdź rejestrację"
             : pending
-              ? "Retry same registration"
-              : "Add project"}</Button
+              ? "Ponów tę samą rejestrację"
+              : "Dodaj projekt"}</Button
         >
       </section>{/if}
-    {#if pending}<p>Request: {pending.requestId}</p>
-      <button onclick={copy}>Copy registration details</button>{/if}
+    {#if pending}<p>Żądanie: {pending.requestId}</p>
+      <button onclick={copy}>Kopiuj szczegóły rejestracji</button>{/if}
     {#if error}<p role="alert">{error}</p>{/if}
     {#if confirmClose}<section class="notice" role="alert">
         <p>
-          Closing does not cancel an uncertain registration. Copy its request
-          details first.
+          Zamknięcie nie anuluje rejestracji o nieznanym wyniku. Najpierw
+          skopiuj szczegóły żądania.
         </p>
-        <button onclick={() => (confirmClose = false)}>Keep open</button><button
-          onclick={onclose}>Close registration</button
-        >
+        <button onclick={() => (confirmClose = false)}>Pozostaw otwarte</button
+        ><button onclick={onclose}>Zamknij rejestrację</button>
       </section>{/if}
     <details>
-      <summary>Remote host without a desktop?</summary>
-      <p>
-        You can browse directories explicitly approved by the host owner
-        instead.
-      </p>
+      <summary>Zdalny serwer bez pulpitu?</summary>
+      <p>Możesz przeglądać katalogi zatwierdzone przez właściciela serwera.</p>
       <button onclick={onbrowse} disabled={choosing || busy || !!pending}
-        >Browse approved folders</button
+        >Przeglądaj zatwierdzone foldery</button
       >
     </details>
   </div>

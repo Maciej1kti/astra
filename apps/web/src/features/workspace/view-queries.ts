@@ -1,3 +1,4 @@
+import { serverMessage } from "../../lib/api/messages.ts";
 import type { Invalidation } from "../../lib/api/invalidations";
 import {
   all,
@@ -50,7 +51,7 @@ function unavailablePin(ref: FocusRef): Summary {
     type: "card",
     id: ref.card_id,
     project_id: ref.project_id,
-    title: "Unavailable pinned card",
+    title: "Niedostępna przypięta karta",
     version: "",
     availability: "unavailable",
   };
@@ -255,8 +256,9 @@ export async function loadView(
           { ...options, fresh: true },
         );
         result.notices.focus =
-          result.focus.warnings.map((warning) => warning.message).join(" ") ||
-          projectionNotice(result.focus);
+          result.focus.warnings
+            .map((warning) => serverMessage(warning.code))
+            .join(" ") || projectionNotice(result.focus);
       } else if (section === "attention") {
         result.attention = await cursorPage(
           (cursor) => attentionPage(query, cursor, options),

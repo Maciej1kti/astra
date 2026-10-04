@@ -5,6 +5,22 @@ project folder. All views use the same host and project sources. This guide
 describes implemented behavior; [limitations](LIMITATIONS.md) lists open boundaries
 and [the roadmap](../ROADMAP.md) separates those from planned release work.
 
+## Interface language
+
+The browser interface is Polish on every device, including menus, dialogs,
+settings, status/priority labels, accessibility text, pairing and recovery messages.
+**Focus** keeps its name. Navigation uses **Projekty**, **Tablica**, **Wykres**,
+**Kalendarz**, **Oś czasu**, **Lista** and **Aktualizacje**; **Więcej** opens the
+remaining phone shortcuts. Focus sections are **W Focus**, **Potrzebuje mojej
+uwagi**, **W toku** and **Wydarzenia**.
+
+Dates, month/day names and displayed numbers use Polish formatting. Chart rates
+accept either a decimal comma or point. Source identifiers, API/CLI values,
+paths, user/profile names and user-written project content retain their meaning
+and spelling. The CLI and contributor documentation remain English. Browser
+language follows the application rather than the device language or a previously
+stored English preference; saving workspace settings records the Polish locale.
+
 ## The basic model
 
 | Term | Meaning |
@@ -24,9 +40,9 @@ Neither a report nor a completed checklist automatically changes card status.
 
 ## Choose a user
 
-Open **Workspace settings → User**. Enter a **New user name** and choose
-**Add user** to create an empty profile. To use it, select **Current user** and
-choose **Switch user**. The settings button shows the profile used by that tab.
+Open **Ustawienia przestrzeni roboczej → Użytkownik**. Enter a **Nazwa nowego użytkownika** and choose
+**Dodaj użytkownika** to create an empty profile. To use it, select **Bieżący użytkownik** and
+choose **Zmień użytkownika**. The settings button shows the profile used by that tab.
 Finish or explicitly discard unsaved changes and resolve pending commands before
 switching; the switch is disabled while that work remains.
 
@@ -48,8 +64,7 @@ A switch reloads the current tab. Reloading keeps that tab's profile, and alread
 open tabs keep their own selection. New tabs use the last selected profile in
 that browser. Other devices select their profiles independently.
 
-If a remembered profile is unavailable, Astra reports the problem. **Use default
-user** explicitly returns that tab to the default profile while keeping its
+If a remembered profile is unavailable, Astra reports the problem. **Użyj domyślnego użytkownika** explicitly returns that tab to the default profile while keeping its
 paired session.
 
 Profiles organize work for trusted people. Any paired browser can select any
@@ -60,47 +75,47 @@ other's folders. See [limitations](LIMITATIONS.md#product-boundaries).
 
 ## Choose a view
 
-On phones, the bottom bar starts with **Focus**, **Projects** and **More** (three
-dots). More opens the other views. Open **More → Customize navigation** to move
+On phones, the bottom bar starts with **Focus**, **Projekty** and **Więcej** (three
+dots). More opens the other views. Open **Więcej → Dostosuj nawigację** to move
 any view by its six-dot handle and toggle its eye to show or hide it on the bar.
 A focused handle also accepts ArrowUp/Down or Home/End, just like the card section
 selector. Escape or Tab cancels an unfinished drag; a drop outside the menu keeps
 the previous order.
 Hidden views remain available in More; when one is selected, More is highlighted.
-**Reset navigation** restores Focus and Projects. Order and bar visibility are
+**Przywróć nawigację** restores Focus and Projects. Order and bar visibility are
 saved in this browser, across projects and profiles; other devices keep their own
 layout. The desktop sidebar keeps every view available in the chosen order.
 
 | View | Use it for | Key behavior |
 | --- | --- | --- |
 | Focus | Today's work and items needing attention | Ordered pins, attention, current plans and today's events; folder-category filtering |
-| Projects | Arrange and manage whole projects | Active, Paused and Archived columns, folder/title filters, status moves and project actions |
-| List | Find and filter resources | Bounded pages, search/filter controls and access to resource editors |
-| Board | Arrange cards by status | Manual ordering, drag/drop and keyboard alternatives; a workspace overview and project boards |
-| Calendar | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with direct move/resize saves |
-| Timeline | Inspect recorded schedules over time | Schedule bars and milestones; API/CLI call this view `gantt` |
-| Chart | Compare recorded counter histories | Select counters, overlay compatible units, group dates, inspect statistics and convert values with individual rates |
-| Updates | Read project/milestone reports | Read receipts, corrections and explicit decision resolutions |
+| Projekty | Arrange and manage whole projects | Active, Paused and Archived columns, folder/title filters, status moves and project actions |
+| Lista | Find and filter resources | Bounded pages, search/filter controls and access to resource editors |
+| Tablica | Arrange cards by status | Manual ordering, drag/drop and keyboard alternatives; a workspace overview and project boards |
+| Kalendarz | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with direct move/resize saves |
+| Oś czasu | Inspect recorded schedules over time | Schedule bars and milestones; API/CLI call this view `gantt` |
+| Wykres | Compare recorded counter histories | Select counters, overlay compatible units, group dates, inspect statistics and convert values with individual rates |
+| Aktualizacje | Read project/milestone reports | Read receipts, corrections and explicit decision resolutions |
 
 Search and filters do not change source files. Where a view offers another page,
 use its paging controls: a displayed page is not the entire dataset. Calendar
 agenda pages hold up to 200 items; its grid/time layouts up to 1,000.
 
-Open **Projects** from the sidebar or the phone's navigation bar to see projects in
+Open **Projekty** from the sidebar or the phone's navigation bar to see projects in
 their current status columns, including archived projects. Use **Folder** and
 the title filter to narrow the board. Click a project to open its editor, or use
-**Add project** to register a folder. Drag a project's handle to another column
-to save its status; Escape cancels the drag. The project's **Move** menu offers
+**Dodaj projekt** to register a folder. Drag a project's handle to another column
+to save its status; Escape cancels the drag. The project's **Przenieś** menu offers
 the same status changes with keyboard and touch controls. Columns scroll
 horizontally on narrow screens. Project order follows the loaded project list.
 
 Moves use the displayed project version. A conflict keeps the proposal for
 review; close it and inspect the current project before trying again. An uncertain
-result retains **Check status** and **Retry same command**. Projects can also be chosen
+result retains **Sprawdź stan** and **Ponów to samo polecenie**. Projects can also be chosen
 as the default view in Workspace settings. The separate Main shortcut and former
 project grid are removed. Older Main links and saved defaults open Projects;
 existing navigation entries merge into one Projects shortcut.
-Use a project's **More actions → Delete project** for the existing deletion preview
+Use a project's **Więcej działań → Usuń projekt** for the existing deletion preview
 and explicit confirmation.
 
 ### Motion and accessibility
@@ -122,13 +137,13 @@ an editor is open. Animations do not change save confirmation or draft protectio
 
 ## Create and edit cards
 
-A title is enough to start a card. Its statuses are **Planned**, **Active**,
-**Review**, **Done** and **Cancelled**; priority is **Normal** or **High**.
+A title is enough to start a card. Its statuses are **Zaplanowane**, **Aktywne**,
+**Do sprawdzenia**, **Gotowe** and **Anulowane**; priority is **Normalny** or **Wysoki**.
 There is no requirement to pass through every status in order. Reopen a completed
 card when appropriate; archiving is separate from status.
 
 Card and project editors automatically save valid changes. Text saves after a
-short pause; discrete field changes save immediately. **Saved** confirms the
+short pause; discrete field changes save immediately. **Zapisano** confirms the
 acknowledged write. Incomplete fields, a conflict or a lost response can keep a
 draft open for correction or recovery. Use the editor's explicit close/discard
 flow to protect unsaved input.
@@ -184,32 +199,31 @@ acknowledged card version, while a pending edit retains its original day/version
 
 ## Compare counters in Chart
 
-Open **Chart** from the sidebar or the phone's **More** menu. Use the Project
+Open **Wykres** from the sidebar or the phone's **Więcej** menu. Use the Project
 selector to inspect one project or all registered projects, then choose up to
 eight counters
-by their name and source card. **Find a counter** filters the catalog; **Include
-archived counters** also reveals histories retained on archived counters, cards
+by their name and source card. **Znajdź licznik** filters the catalog; **Uwzględnij zarchiwizowane liczniki** also reveals histories retained on archived counters, cards
 and projects. A counter without recorded history remains available to select.
 
 Choose an inclusive date range or a period shortcut, then group results by day,
-week or month. **Daily totals** shows the sum in each group; **Running total**
+week or month. **Sumy dzienne** shows the sum in each group; **Suma narastająca**
 adds recorded values from the beginning of the selected range. Missing recordings
-stay visible as gaps, and a saved zero remains a recorded value. **Show chart data**
+stay visible as gaps, and a saved zero remains a recorded value. **Pokaż dane wykresu**
 opens the same values in a table. Use the date slider, pointer or touch to inspect
 individual groups. Statistics show each selected counter's total, recorded days,
-average and peak for the range. **Difference** compares totals with the first
+average and peak for the range. **Różnica** compares totals with the first
 counter in the statistics table that shares the same unit.
 
-**Values** overlays counters with the same unit and gives different units separate
-charts. **Relative to own peak** puts different units on a common percentage scale
+**Wartości** overlays counters with the same unit and gives different units separate
+charts. **Względem własnego maksimum** puts different units on a common percentage scale
 for comparing their patterns. To estimate a cost, payment or other derived value,
-enter an individual **Rate** and choose **Converted value**. For example, ten
-recorded hours at a rate of 100 give 1,000 in the chosen **Output unit**. Only
+enter an individual **Stawka** and choose **Przeliczona wartość**. For example, ten
+recorded hours at a rate of 100 give 1,000 in the chosen **Jednostka wynikowa**. Only
 counters with a valid rate contribute to the converted total; zero is a valid
 rate. Rates and the output label are saved in this browser for the selected
 workspace profile. These controls do not change counter units or recorded sources.
 
-Ranges are limited to 400 days. Counter catalogs are paged; use **Load more counters** when
+Ranges are limited to 400 days. Counter catalogs are paged; use **Wczytaj więcej liczników** when
 offered to discover further counters, up to 500 loaded entries; narrow the Project
 scope for larger catalogs. At most eight counters can be selected at once.
 Changes recorded in another client refresh
@@ -256,15 +270,15 @@ empty row creates a card on the clicked date; the main Add card action remains.
 
 Focus presents these sections in order and avoids repeating a visible card:
 
-1. **In focus:** pinned cards, regardless of status or dates. Reorder directly or
+1. **W Focus:** pinned cards, regardless of status or dates. Reorder directly or
    use Alt+Up/Down on a focused card; Alt+Home/End moves it to the first/last
    visible position. Filtered ordering preserves hidden entries.
-2. **Needs my attention:** actionable signals such as overdue work, review cards,
+2. **Potrzebuje mojej uwagi:** actionable signals such as overdue work, review cards,
    unresolved decisions and unread reports. Reading a decision is not resolving it.
-3. **In motion:** unfinished date-only plans whose inclusive range contains today
+3. **W toku:** unfinished date-only plans whose inclusive range contains today
    in the workspace timezone. A Planned card can be here; an undated Active card
    does not qualify merely because it is Active.
-4. **Events:** unfinished timed cards starting today, ordered by start time. Ended
+4. **Wydarzenia:** unfinished timed cards starting today, ordered by start time. Ended
    unfinished events move to attention.
 
 Pins take precedence over later sections. Upcoming dates alone do not put a card

@@ -120,7 +120,7 @@
     ...new Set(selected.map((item) => item.unit.trim() || "units")),
   ]);
   const days = $derived(chartRangeDays(from, to));
-  const valueUnit = $derived(outputUnit.trim() || "value");
+  const valueUnit = $derived(outputUnit.trim() || "wartość");
 
   function toggleSeries(item: ChartSeries) {
     const key = chartSeriesKey(item);
@@ -134,7 +134,7 @@
     const count = chartRangeDays(draftFrom, draftTo);
     if (!count || count > 400) {
       rangeError =
-        "Choose a valid date range of up to 400 days. The end must follow the start.";
+        "Wybierz prawidłowy zakres do 400 dni. Koniec musi następować po początku.";
       return;
     }
     rangeError = "";
@@ -147,7 +147,7 @@
   function savePreferences() {
     storageMessage = writeChartPreferences(preferenceKey, { rates, outputUnit })
       ? ""
-      : "Browser storage is unavailable. Rates will last for this visit.";
+      : "Pamięć przeglądarki jest niedostępna. Stawki zostaną zachowane tylko na czas tej wizyty.";
   }
   function setRate(key: string, value: string) {
     rates = { ...rates, [key]: value };
@@ -155,16 +155,16 @@
   }
 </script>
 
-<section class="chart-dashboard" aria-label="Counter dashboard">
-  <PageHeading title="Chart"
+<section class="chart-dashboard" aria-label="Panel liczników">
+  <PageHeading title="Wykres"
     ><p class="chart-intro">
-      See your counters over time. Compare activity, explore trends and turn
-      recorded units into a value.
+      Zobacz historię liczników. Porównuj aktywność, obserwuj trendy i
+      przeliczaj zapisane jednostki na wartość.
     </p></PageHeading
   >
 
   <div class="range-toolbar">
-    <div class="range-presets" role="group" aria-label="Date range shortcuts">
+    <div class="range-presets" role="group" aria-label="Skróty zakresu dat">
       {#each [7, 30, 90, 365] as count}
         <button
           class:active={from === calendarShift(today, 1 - count) &&
@@ -172,7 +172,7 @@
           aria-pressed={from === calendarShift(today, 1 - count) &&
             to === today}
           onclick={() => preset(count)}
-          >{count === 365 ? "1 year" : `${count} days`}</button
+          >{count === 365 ? "1 rok" : `${count} dni`}</button
         >
       {/each}
     </div>
@@ -183,46 +183,47 @@
         applyRange();
       }}
     >
-      <label>From date<input type="date" bind:value={draftFrom} /></label>
-      <label>To date<input type="date" bind:value={draftTo} /></label>
-      <button type="submit">Apply dates</button>
+      <label>Data początkowa<input type="date" bind:value={draftFrom} /></label>
+      <label>Data końcowa<input type="date" bind:value={draftTo} /></label>
+      <button type="submit">Zastosuj daty</button>
     </form>
   </div>
   {#if rangeError}<p class="notice" role="alert">{rangeError}</p>{/if}
   {#if error}<div class="notice" role="alert">
       <span>{error}</span><button onclick={onretry} disabled={loading}
-        >Try again</button
+        >Spróbuj ponownie</button
       >
     </div>{/if}
   {#if notice}<p class="notice">{notice}</p>{/if}
   {#if loading}<p class="chart-loading" role="status">
-      Loading counter history…
+      Ładowanie historii liczników…
     </p>{/if}
 
-  <div class="chart-summary" aria-label="Dashboard summary">
+  <div class="chart-summary" aria-label="Podsumowanie liczników">
     <div>
-      <span>Selected counters</span><strong data-chart-summary="selected"
-        >{selected.length}<small> / {series.length} loaded</small></strong
+      <span>Wybrane liczniki</span><strong data-chart-summary="selected"
+        >{selected.length}<small> / {series.length} wczytano</small></strong
       >
     </div>
     <div>
-      <span>Recorded days</span><strong data-chart-summary="records"
+      <span>Dni z zapisami</span><strong data-chart-summary="records"
         >{chartValue(records)}</strong
-      ><small>Counter recordings, including zero</small>
+      ><small>Zapisy liczników, w tym zera</small>
     </div>
     <div>
-      <span>Selected period</span><strong>{days}<small> days</small></strong
-      ><small>{chartDate(from)} – {chartDate(to, true)}</small>
+      <span>Wybrany okres</span><strong>{days}<small> dni</small></strong><small
+        >{chartDate(from)} – {chartDate(to, true)}</small
+      >
     </div>
     <div>
-      <span>Converted total</span><strong data-chart-summary="converted"
+      <span>Przeliczona suma</span><strong data-chart-summary="converted"
         >{ratedRecorded ? chartValue(convertedTotal) : "—"}<small
           >{ratedRecorded ? ` ${valueUnit}` : ""}</small
         ></strong
       ><small
         >{rated.length
-          ? `${rated.length}/${selected.length} selected counters have a rate`
-          : "Set a rate below to calculate value"}</small
+          ? `${rated.length}/${selected.length} wybranych liczników ma stawkę`
+          : "Ustaw stawkę poniżej, aby obliczyć wartość"}</small
       >
     </div>
   </div>
@@ -230,14 +231,14 @@
   <div class="dashboard-layout">
     <aside class="counter-library" aria-labelledby="counter-library-heading">
       <div class="library-heading">
-        <h2 id="counter-library-heading">Counters</h2>
-        <span>{series.length} loaded</span>
+        <h2 id="counter-library-heading">Liczniki</h2>
+        <span>{series.length} wczytano</span>
       </div>
       <label class="counter-search"
-        ><span class="sr">Find a counter</span><input
+        ><span class="sr">Znajdź licznik</span><input
           type="search"
           bind:value={search}
-          placeholder="Find a counter…"
+          placeholder="Znajdź licznik…"
         /></label
       >
       <label class="archive-choice"
@@ -245,9 +246,11 @@
           type="checkbox"
           checked={includeArchived}
           onchange={(event) => onarchivedchange(event.currentTarget.checked)}
-        />Include archived counters</label
+        />Uwzględnij zarchiwizowane liczniki</label
       >
-      <p class="selection-help">Select up to 8 counters to compare.</p>
+      <p class="selection-help">
+        Wybierz maksymalnie 8 liczników do porównania.
+      </p>
       <div class="counter-options">
         {#each filtered as item (chartSeriesKey(item))}
           {@const key = chartSeriesKey(item)}
@@ -283,87 +286,91 @@
                 >{item.project_name}{item.archived ||
                 item.card_archived ||
                 item.project_archived
-                  ? " · Archived"
-                  : ""}{item.availability === "stale" ? " · Stale" : ""}</small
+                  ? "· Zarchiwizowany"
+                  : ""}{item.availability === "stale"
+                  ? "· Nieaktualny"
+                  : ""}</small
               >
               <span class="counter-option-total"
                 >{summary.recorded
                   ? `${chartValue(summary.total)} ${item.unit}`
-                  : "No recordings in this range"}</span
+                  : "Brak zapisów w tym zakresie"}</span
               >
             </span>
           </label>
         {:else}<p class="library-empty">
             {series.length
-              ? "No counters match your search."
+              ? "Brak liczników pasujących do wyszukiwania."
               : loading
-                ? "Reading counters…"
-                : "No counters in this selection."}
+                ? "Wczytywanie liczników…"
+                : "Brak liczników w tym wyborze."}
           </p>{/each}
       </div>
       {#if onloadmore}<button
           class="load-counters"
           onclick={onloadmore}
-          disabled={loading}>Load more counters</button
+          disabled={loading}>Wczytaj więcej liczników</button
         >{/if}
       {#if selected.length}<button
           class="clear-selection quiet"
           onclick={() => {
             selectedKeys = [];
-          }}>Clear selection</button
+          }}>Wyczyść wybór</button
         >{/if}
     </aside>
 
     <div class="chart-workspace">
       <div class="plot-controls">
-        <div class="display-mode" role="group" aria-label="Chart totals">
+        <div class="display-mode" role="group" aria-label="Sumy na wykresie">
           <button
             class:active={!cumulative}
             aria-pressed={!cumulative}
             onclick={() => {
               cumulative = false;
-            }}>Daily totals</button
+            }}>Sumy dzienne</button
           >
           <button
             class:active={cumulative}
             aria-pressed={cumulative}
             onclick={() => {
               cumulative = true;
-            }}>Running total</button
+            }}>Suma narastająca</button
           >
         </div>
         <label
-          >Group by<select bind:value={bucket}
-            ><option value="day">Day</option><option value="week">Week</option
-            ><option value="month">Month</option></select
+          >Grupuj według<select bind:value={bucket}
+            ><option value="day">Dzień</option><option value="week"
+              >Tydzień</option
+            ><option value="month">Miesiąc</option></select
           ></label
         >
         <label
-          >Comparison scale<select bind:value={scale}
-            ><option value="values">Values</option><option value="relative"
-              >Relative to own peak</option
-            ><option value="converted">Converted value</option></select
+          >Skala porównania<select bind:value={scale}
+            ><option value="values">Wartości</option><option value="relative"
+              >Względem własnego maksimum</option
+            ><option value="converted">Przeliczona wartość</option></select
           ></label
         >
       </div>
       <p class="chart-explanation">
-        {#if scale === "relative"}Each counter’s highest plotted value is 100%.
-          Compare the shape of activity across different units.
-        {:else if scale === "converted"}Recorded totals × each counter’s rate.
-          Counters without a valid rate are omitted from this chart.
-        {:else if totalGroups.length > 1}Counters with the same unit share a
-          chart. Different units keep separate scales.
-        {:else}Counters share the same scale, so their totals can be compared
-          directly.{/if}
+        {#if scale === "relative"}Najwyższa wartość każdego licznika na wykresie
+          wynosi 100%. Porównuj przebieg aktywności w różnych jednostkach.
+        {:else if scale === "converted"}Zapisane wyniki × stawka każdego
+          licznika. Liczniki bez prawidłowej stawki są pomijane na tym wykresie.
+        {:else if totalGroups.length > 1}Liczniki z tą samą jednostką są na
+          jednym wykresie. Różne jednostki mają oddzielne skale.
+        {:else}Liczniki mają tę samą skalę, więc ich sumy można porównywać
+          bezpośrednio.{/if}
         {#if cumulative}
-          Running totals start at the beginning of this date range.{/if}
-        Missing days stay as gaps; a recorded zero stays zero. Weeks start on Monday.
+          Sumy narastające rozpoczynają się na początku tego zakresu dat.{/if}
+        Dni bez zapisów pozostają lukami; zapisane zero pozostaje zerem. Tygodnie
+        zaczynają się w poniedziałek.
       </p>
       {#if selected.length && records === 0}
         <EmptyState
-          ><strong>No recordings in this date range.</strong>
+          ><strong>Brak zapisów w tym zakresie dat.</strong>
           <p>
-            Choose another range or record a counter value in its card.
+            Wybierz inny zakres lub zapisz wynik licznika na jego karcie.
           </p></EmptyState
         >
       {:else if panels.length}
@@ -374,21 +381,22 @@
             />{/each}
         </div>
       {:else if selected.length && scale === "converted"}<EmptyState
-          ><strong>Add a rate to see converted values.</strong>
+          ><strong>Dodaj stawkę, aby zobaczyć przeliczone wartości.</strong>
           <p>
-            Set the value of one recorded unit in the conversion section below.
+            Ustaw wartość jednej zapisanej jednostki w sekcji przeliczeń
+            poniżej.
           </p></EmptyState
         >
       {:else}<EmptyState
           ><strong
             >{series.length
-              ? "Choose counters to start comparing."
-              : "Your counters will appear here."}</strong
+              ? "Wybierz liczniki, aby rozpocząć porównanie."
+              : "Tutaj pojawią się Twoje liczniki."}</strong
           >
           <p>
             {series.length
-              ? "Select counters from the library to see their history and statistics."
-              : "Add a counter to a card and record a value. You can then compare its daily history here."}
+              ? "Wybierz liczniki z listy, aby zobaczyć ich historię i statystyki."
+              : "Dodaj licznik do karty i zapisz wynik. Następnie możesz tutaj porównać jego dzienną historię."}
           </p></EmptyState
         >{/if}
     </div>
@@ -401,10 +409,10 @@
     >
       <div class="section-heading">
         <div>
-          <h2 id="period-statistics-heading">Period statistics</h2>
+          <h2 id="period-statistics-heading">Statystyki okresu</h2>
           <p>
-            Totals use recorded days in the selected range. Averages include
-            recorded zeroes.
+            Sumy obejmują dni z zapisami w wybranym zakresie. Średnie
+            uwzględniają zapisane zera.
           </p>
         </div>
       </div>
@@ -413,17 +421,17 @@
         class="statistics-scroll"
         tabindex="0"
         role="region"
-        aria-label="Counter statistics table"
+        aria-label="Tabela statystyk liczników"
       >
         <table class="statistics-table">
           <thead
             ><tr
-              ><th scope="col">Counter</th><th scope="col">Total</th><th
-                scope="col">Days recorded</th
-              ><th scope="col">Average / recorded day</th><th scope="col"
-                >Best day</th
-              ><th scope="col">Difference</th><th scope="col"
-                >Converted value</th
+              ><th scope="col">Licznik</th><th scope="col">Suma</th><th
+                scope="col">Dni z zapisami</th
+              ><th scope="col">Średnia / dzień z zapisem</th><th scope="col"
+                >Najlepszy dzień</th
+              ><th scope="col">Różnica</th><th scope="col"
+                >Przeliczona wartość</th
               ></tr
             ></thead
           >
@@ -466,7 +474,7 @@
                 >
                 <td
                   ><span data-chart-stat="recorded">{row.stats.recorded}</span
-                  ><small>of {days} days</small></td
+                  ><small>z {days} dni</small></td
                 >
                 <td
                   ><span data-chart-stat="average"
@@ -479,7 +487,7 @@
                   ><small
                     >{row.stats.peakDate
                       ? chartDate(row.stats.peakDate)
-                      : "No recordings"}</small
+                      : "Brak zapisów"}</small
                   ></td
                 >
                 <td
@@ -489,8 +497,8 @@
                     >{difference !== null
                       ? `vs ${baseline?.source.name}`
                       : baseline === row
-                        ? "Comparison baseline"
-                        : "No same-unit baseline"}</small
+                        ? "Podstawa porównania"
+                        : "Brak podstawy w tej samej jednostce"}</small
                   ></td
                 >
                 <td
@@ -498,7 +506,10 @@
                     >{row.rate !== null && row.stats.recorded
                       ? chartValue(row.stats.total * row.rate)
                       : "—"}</strong
-                  ><small>{row.rate !== null ? valueUnit : "No rate set"}</small
+                  ><small
+                    >{row.rate !== null
+                      ? valueUnit
+                      : "Nie ustawiono stawki"}</small
                   ></td
                 >
               </tr>
@@ -511,19 +522,19 @@
     <section class="conversion-section" aria-labelledby="conversion-heading">
       <div class="section-heading">
         <div>
-          <h2 id="conversion-heading">Turn counts into value</h2>
+          <h2 id="conversion-heading">Przelicz wyniki na wartość</h2>
           <p>
-            For example, 10 hours × 100 PLN per hour = 1,000 PLN. Rates are
-            saved in this browser for your profile.
+            Na przykład: 10 godzin × 100 PLN za godzinę = 1000 PLN. Stawki są
+            zapisywane w tej przeglądarce dla Twojego profilu.
           </p>
         </div>
         <label
-          >Output unit<input
+          >Jednostka wynikowa<input
             type="text"
             maxlength="12"
             bind:value={outputUnit}
             onchange={savePreferences}
-            placeholder="PLN, EUR, points…"
+            placeholder="PLN, EUR, punkty…"
           /></label
         >
       </div>
@@ -546,13 +557,13 @@
                 <small>{row.source.unit}</small></span
               ><span aria-hidden="true">×</span><label
                 ><span class="sr"
-                  >Rate for {row.source.name} · {row.source.card_title}</span
+                  >Stawka dla {row.source.name} · {row.source.card_title}</span
                 ><input
                   type="text"
                   inputmode="decimal"
                   maxlength="40"
                   value={raw}
-                  placeholder="Set rate"
+                  placeholder="Ustaw stawkę"
                   aria-invalid={raw.trim() !== "" && row.rate === null}
                   oninput={(event) => setRate(key, event.currentTarget.value)}
                 /></label
@@ -564,8 +575,8 @@
             </div>
             <p class:invalid={raw.trim() !== "" && row.rate === null}>
               {raw.trim() !== "" && row.rate === null
-                ? "Enter a rate from 0 to 1,000,000,000 using a decimal point."
-                : `${valueUnit} per ${row.source.unit || "unit"}`}
+                ? "Wpisz stawkę od 0 do 1 000 000 000, używając przecinka lub kropki dziesiętnej."
+                : `${valueUnit} za ${row.source.unit || "unit"}`}
             </p>
           </article>
         {/each}

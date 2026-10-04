@@ -58,7 +58,7 @@ test("malformed direct and status confirmations retain the original command", as
         controller.prepare(pending);
         await assert.rejects(
           check ? controller.check() : controller.retry(),
-          /Invalid command/,
+          /Nieprawidłowa odpowiedź polecenia/,
         );
         assert.equal(controller.state.phase, "uncertain");
         assert.equal(controller.pending, pending);
@@ -84,7 +84,10 @@ test("malformed direct and status confirmations retain the original command", as
       globalThis.fetch = async () => Response.json(response);
       const controller = new CommandController();
       controller.prepare(pending);
-      await assert.rejects(controller.check(), /Invalid command/);
+      await assert.rejects(
+        controller.check(),
+        /Nieprawidłowa odpowiedź polecenia/,
+      );
       assert.equal(controller.pending, pending);
     }
     for (const [status, response] of [
@@ -105,7 +108,10 @@ test("malformed direct and status confirmations retain the original command", as
       globalThis.fetch = async () => Response.json(response, { status });
       const controller = new CommandController();
       controller.prepare(pending);
-      await assert.rejects(controller.retry(), /Invalid command/);
+      await assert.rejects(
+        controller.retry(),
+        /Nieprawidłowa odpowiedź polecenia/,
+      );
       assert.equal(controller.pending, pending);
     }
     globalThis.fetch = async () => Response.json(committed);
@@ -145,7 +151,10 @@ test("user creation confirms only the submitted profile and retains malformed ou
       globalThis.fetch = async () => Response.json({ ...reply, result });
       const operation = new CommandController();
       operation.prepare(creation);
-      await assert.rejects(operation.commit(), /Invalid command/);
+      await assert.rejects(
+        operation.commit(),
+        /Nieprawidłowa odpowiedź polecenia/,
+      );
       assert.equal(operation.pending, creation);
     }
     globalThis.fetch = async () => Response.json(reply, { status: 201 });
@@ -188,7 +197,10 @@ test("profile rename confirms its target and registry version without accepting 
       globalThis.fetch = async () => Response.json({ ...reply, result });
       const operation = new CommandController();
       operation.prepare(rename);
-      await assert.rejects(operation.commit(), /Invalid command/);
+      await assert.rejects(
+        operation.commit(),
+        /Nieprawidłowa odpowiedź polecenia/,
+      );
       assert.equal(operation.pending, rename);
     }
     globalThis.fetch = async () => Response.json(reply);

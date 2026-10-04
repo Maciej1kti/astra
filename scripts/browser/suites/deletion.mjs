@@ -63,19 +63,19 @@ await runBrowserSuite(
       if (view !== "projects")
         await expect(page.locator("header.topbar")).toBeVisible();
       await expect(page.locator(".asidebottom")).toContainText(
-        "Connected to host",
+        "Połączono z serwerem",
       );
     }
     async function openProjectDeletion(page, title) {
       await page
-        .getByRole("button", { name: `More actions for ${title}` })
+        .getByRole("button", { name: `Więcej działań dla ${title}` })
         .click();
       await page
-        .getByRole("button", { name: "Delete project", exact: true })
+        .getByRole("button", { name: "Usuń projekt", exact: true })
         .click();
     }
     function editor(page) {
-      return page.getByRole("dialog", { name: "Edit resource", exact: true });
+      return page.getByRole("dialog", { name: "Edytuj element", exact: true });
     }
     async function openCard(page, card, view = "list") {
       if (view === "board") {
@@ -92,17 +92,17 @@ await runBrowserSuite(
       }
       await expect(editor(page)).toBeVisible();
       await expect(
-        editor(page).getByLabel("Title", { exact: true }),
+        editor(page).getByLabel("Tytuł", { exact: true }),
       ).toHaveValue(card.title);
     }
     async function closeEditor(page) {
       const dialog = editor(page);
       if (!(await dialog.count())) return;
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       const discard = dialog.getByRole("button", {
-        name: "Discard draft",
+        name: "Odrzuć wersję roboczą",
         exact: true,
       });
       if (await discard.isVisible()) await discard.click();
@@ -217,7 +217,7 @@ await runBrowserSuite(
           await expect(page.getByText(summary, { exact: true })).toHaveCount(0);
           await page.reload();
           await expect(page.locator(".asidebottom")).toContainText(
-            "Connected to host",
+            "Połączono z serwerem",
           );
           await expect(page.getByText(summary, { exact: true })).toHaveCount(0);
           return { report: id, sourceRemoved: true, viewRefreshed: true };
@@ -230,18 +230,18 @@ await runBrowserSuite(
           const card = await createCard(`Delete cancel ${Date.now()}`);
           await openCard(page, card);
           await editor(page)
-            .getByRole("button", { name: "Card actions", exact: true })
+            .getByRole("button", { name: "Działania karty", exact: true })
             .click();
           await editor(page)
-            .getByRole("button", { name: "Delete card", exact: true })
+            .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           const confirmation = page
             .getByRole("alert")
-            .filter({ hasText: "Permanently delete card?" });
+            .filter({ hasText: "Trwale usunąć kartę?" });
           await expect(confirmation).toContainText(card.title);
-          await expect(confirmation).toContainText("cannot be undone");
+          await expect(confirmation).toContainText("nie można tego cofnąć");
           await confirmation
-            .getByRole("button", { name: "Keep editing", exact: true })
+            .getByRole("button", { name: "Kontynuuj edycję", exact: true })
             .click();
           await expect(confirmation).toBeHidden();
           assert.equal(
@@ -288,22 +288,24 @@ await runBrowserSuite(
           });
           try {
             const latestTitle = "Delete after autosave acknowledgement";
-            await dialog.getByLabel("Title", { exact: true }).fill(latestTitle);
+            await dialog.getByLabel("Tytuł", { exact: true }).fill(latestTitle);
             await dialog.locator(".resource-description-rendered").click();
             await dialog
-              .getByLabel("Description", { exact: true })
-              .fill("The delete preview must use the acknowledged source.");
+              .getByLabel("Opis", { exact: true })
+              .fill(
+                "The delete preview może zawierać maksymalnie the acknowledged source.",
+              );
             await waitForSignal(autosaveStarted, "delete autosave");
             await dialog
-              .getByRole("button", { name: "Card actions", exact: true })
+              .getByRole("button", { name: "Działania karty", exact: true })
               .click();
             const deleteButton = dialog.getByRole("button", {
-              name: "Delete card",
+              name: "Usuń kartę",
               exact: true,
             });
             const final = page
               .getByRole("alert")
-              .filter({ hasText: "Permanently delete card?" });
+              .filter({ hasText: "Trwale usunąć kartę?" });
             await deleteButton.click();
             await expect.poll(() => deletes.length).toBe(0);
             const autosaveStatus = dialog.getByTestId("autosave-status");
@@ -312,21 +314,24 @@ await runBrowserSuite(
                 const status = (await autosaveStatus.textContent()) ?? "";
                 return (
                   (await dialog
-                    .getByRole("button", { name: "Card actions", exact: true })
-                    .isDisabled()) || status !== "Saved"
+                    .getByRole("button", {
+                      name: "Działania karty",
+                      exact: true,
+                    })
+                    .isDisabled()) || status !== "Zapisano"
                 );
               })
               .toBe(true);
             await expect(final).toHaveCount(0);
             assert.equal(writes.length, 1);
             releaseAutosave();
-            await expect(autosaveStatus).toHaveText("Saved");
+            await expect(autosaveStatus).toHaveText("Zapisano");
             const updated = cli("get", `${base}/cards/${card.id}`);
             assert.equal(updated.metadata.title, latestTitle);
             assert.notEqual(updated.version, card.version);
             await expect(final).toContainText(latestTitle);
             await final
-              .getByRole("button", { name: "Keep editing", exact: true })
+              .getByRole("button", { name: "Kontynuuj edycję", exact: true })
               .click();
             await expect(final).toBeHidden();
             assert.equal(deletes.length, 0);
@@ -351,61 +356,61 @@ await runBrowserSuite(
           await openCard(page, card, "board");
           const dialog = editor(page);
           await dialog
-            .getByLabel("Title", { exact: true })
+            .getByLabel("Tytuł", { exact: true })
             .fill("Autosaved delete title");
           await dialog.locator(".resource-description-rendered").click();
           await dialog
-            .getByLabel("Description", { exact: true })
+            .getByLabel("Opis", { exact: true })
             .fill("Autosaved report body");
           await expect(dialog.getByTestId("autosave-status")).toHaveText(
-            "Saved",
+            "Zapisano",
           );
-          const newItem = dialog.getByLabel("New item", { exact: true });
+          const newItem = dialog.getByLabel("Nowa pozycja", { exact: true });
           await newItem.fill("Unfinished checklist item");
           await dialog
-            .getByRole("button", { name: "Card actions", exact: true })
+            .getByRole("button", { name: "Działania karty", exact: true })
             .click();
           await dialog
-            .getByRole("button", { name: "Delete card", exact: true })
+            .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           const draftWarning = page
             .getByRole("alert")
-            .filter({ hasText: "Discard drafts before deleting?" });
+            .filter({ hasText: "Odrzucić wersje robocze przed usunięciem?" });
           await expect(draftWarning).toContainText("Autosaved delete title");
           await expect(
-            dialog.getByLabel("Title", { exact: true }),
+            dialog.getByLabel("Tytuł", { exact: true }),
           ).toBeDisabled();
           await expect(
             dialog.locator(".resource-description-rendered"),
           ).toHaveAttribute("aria-disabled", "true");
           await expect(newItem).toBeDisabled();
           await draftWarning
-            .getByRole("button", { name: "Keep editing", exact: true })
+            .getByRole("button", { name: "Kontynuuj edycję", exact: true })
             .click();
-          await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
+          await expect(dialog.getByLabel("Tytuł", { exact: true })).toHaveValue(
             "Autosaved delete title",
           );
           await dialog
-            .getByRole("button", { name: "Card actions", exact: true })
+            .getByRole("button", { name: "Działania karty", exact: true })
             .click();
           await dialog
-            .getByRole("button", { name: "Delete card", exact: true })
+            .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
             .getByRole("alert")
-            .filter({ hasText: "Discard drafts before deleting?" })
+            .filter({ hasText: "Odrzucić wersje robocze przed usunięciem?" })
             .getByRole("button", {
-              name: "Discard drafts and continue",
+              name: "Odrzuć wersje robocze i kontynuuj",
               exact: true,
             })
             .click();
           const final = page
             .getByRole("alert")
-            .filter({ hasText: "Permanently delete card?" });
+            .filter({ hasText: "Trwale usunąć kartę?" });
           await expect(final).toContainText("Autosaved delete title");
           await final
             .getByRole("button", {
-              name: "Permanently delete card",
+              name: "Trwale usuń kartę",
               exact: true,
             })
             .click();
@@ -447,27 +452,30 @@ await runBrowserSuite(
             return route.fulfill({ response });
           });
           await editor(page)
-            .getByRole("button", { name: "Card actions", exact: true })
+            .getByRole("button", { name: "Działania karty", exact: true })
             .click();
           await editor(page)
-            .getByRole("button", { name: "Delete card", exact: true })
+            .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
             .getByRole("alert")
-            .filter({ hasText: "Permanently delete card?" })
+            .filter({ hasText: "Trwale usunąć kartę?" })
             .getByRole("button", {
-              name: "Permanently delete card",
+              name: "Trwale usuń kartę",
               exact: true,
             })
             .click();
           await expect(
             editor(page).getByRole("button", {
-              name: "Retry same deletion",
+              name: "Ponów to samo usunięcie",
               exact: true,
             }),
           ).toBeVisible();
           await editor(page)
-            .getByRole("button", { name: "Retry same deletion", exact: true })
+            .getByRole("button", {
+              name: "Ponów to samo usunięcie",
+              exact: true,
+            })
             .click();
           await expect.poll(() => attempts.length).toBe(2);
           assert.deepEqual(attempts[1], attempts[0]);
@@ -496,27 +504,30 @@ await runBrowserSuite(
             await route.abort("failed").catch(() => {});
           });
           await editor(page)
-            .getByRole("button", { name: "Card actions", exact: true })
+            .getByRole("button", { name: "Działania karty", exact: true })
             .click();
           await editor(page)
-            .getByRole("button", { name: "Delete card", exact: true })
+            .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
             .getByRole("alert")
-            .filter({ hasText: "Permanently delete card?" })
+            .filter({ hasText: "Trwale usunąć kartę?" })
             .getByRole("button", {
-              name: "Permanently delete card",
+              name: "Trwale usuń kartę",
               exact: true,
             })
             .click();
           await expect(
             editor(page).getByRole("button", {
-              name: "Check deletion status",
+              name: "Sprawdź stan usunięcia",
               exact: true,
             }),
           ).toBeVisible();
           await editor(page)
-            .getByRole("button", { name: "Check deletion status", exact: true })
+            .getByRole("button", {
+              name: "Sprawdź stan usunięcia",
+              exact: true,
+            })
             .click();
           await expect(editor(page)).toBeHidden();
           assert.equal(attempts.length, 1);
@@ -563,25 +574,28 @@ await runBrowserSuite(
             return route.continue();
           });
           await editor(page)
-            .getByRole("button", { name: "Card actions", exact: true })
+            .getByRole("button", { name: "Działania karty", exact: true })
             .click();
           await editor(page)
-            .getByRole("button", { name: "Delete card", exact: true })
+            .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
             .getByRole("alert")
-            .filter({ hasText: "Permanently delete card?" })
+            .filter({ hasText: "Trwale usunąć kartę?" })
             .getByRole("button", {
-              name: "Permanently delete card",
+              name: "Trwale usuń kartę",
               exact: true,
             })
             .click();
           await editor(page)
-            .getByRole("button", { name: "Check deletion status", exact: true })
+            .getByRole("button", {
+              name: "Sprawdź stan usunięcia",
+              exact: true,
+            })
             .click();
           await expect(
             editor(page).getByRole("button", {
-              name: "Check deletion status",
+              name: "Sprawdź stan usunięcia",
               exact: true,
             }),
           ).toBeVisible();
@@ -596,7 +610,10 @@ await runBrowserSuite(
             deleteAttempts[0].epoch,
           );
           await editor(page)
-            .getByRole("button", { name: "Check deletion status", exact: true })
+            .getByRole("button", {
+              name: "Sprawdź stan usunięcia",
+              exact: true,
+            })
             .click();
           await expect.poll(() => statusUrls.length).toBe(2);
           assert.equal(statusUrls[1], statusUrls[0]);
@@ -638,28 +655,28 @@ await runBrowserSuite(
             return route.continue();
           });
           await editor(page)
-            .getByRole("button", { name: "Card actions", exact: true })
+            .getByRole("button", { name: "Działania karty", exact: true })
             .click();
           await editor(page)
-            .getByRole("button", { name: "Delete card", exact: true })
+            .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
             .getByRole("alert")
-            .filter({ hasText: "Permanently delete card?" })
+            .filter({ hasText: "Trwale usunąć kartę?" })
             .getByRole("button", {
-              name: "Permanently delete card",
+              name: "Trwale usuń kartę",
               exact: true,
             })
             .click();
           await expect(editor(page)).toContainText(
-            "Close and reopen the card before trying again.",
+            "Zamknij i otwórz ją ponownie przed kolejną próbą.",
           );
           await editor(page)
-            .getByRole("button", { name: "Card actions", exact: true })
+            .getByRole("button", { name: "Działania karty", exact: true })
             .click();
           await expect(
             editor(page).getByRole("button", {
-              name: "Delete card",
+              name: "Usuń kartę",
               exact: true,
             }),
           ).toBeDisabled();
@@ -667,7 +684,7 @@ await runBrowserSuite(
           await page.unroute(`${config.origin}${path}`);
           await openCard(page, { id: card.id, title: "Changed elsewhere" });
           await expect(
-            editor(page).getByLabel("Title", { exact: true }),
+            editor(page).getByLabel("Tytuł", { exact: true }),
           ).toHaveValue("Changed elsewhere");
           return { card: card.id, conflictPreserved: true, reopened: true };
         },
@@ -681,19 +698,19 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Delete project",
+            name: "Usuń projekt",
             exact: true,
           });
           await expect(dialog).toContainText(candidate.title);
           await expect(dialog).toContainText(".project");
           await expect(
             dialog.getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             }),
           ).toBeEnabled();
           await dialog
-            .getByRole("button", { name: "Keep project", exact: true })
+            .getByRole("button", { name: "Zachowaj projekt", exact: true })
             .click();
           await expect(dialog).toBeHidden();
           assert.equal(await exists(join(candidate.folder, ".project")), true);
@@ -722,18 +739,18 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Delete project",
+            name: "Usuń projekt",
             exact: true,
           });
           await dialog
             .getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             })
             .click();
           await expect(
             dialog.getByRole("button", {
-              name: "Check deletion status",
+              name: "Sprawdź stan usunięcia",
               exact: true,
             }),
           ).toBeVisible();
@@ -745,10 +762,13 @@ await runBrowserSuite(
           });
           assert.equal(unloadProtected, true);
           await dialog
-            .getByRole("button", { name: "Copy deletion details", exact: true })
+            .getByRole("button", {
+              name: "Kopiuj szczegóły usunięcia",
+              exact: true,
+            })
             .click();
           await expect(dialog).toContainText(
-            /Deletion details copied|Clipboard access is unavailable/,
+            /Skopiowano szczegóły usunięcia|Schowek jest niedostępny/,
           );
           const copied = await page
             .evaluate(() => navigator.clipboard?.readText().catch(() => ""))
@@ -761,7 +781,10 @@ await runBrowserSuite(
             assert.deepEqual(details.pending.payload, deletionRequest.payload);
           }
           await dialog
-            .getByRole("button", { name: "Check deletion status", exact: true })
+            .getByRole("button", {
+              name: "Sprawdź stan usunięcia",
+              exact: true,
+            })
             .click();
           await expect(dialog).toBeHidden();
           await page.unroute(projectPath);
@@ -784,12 +807,12 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Delete project",
+            name: "Usuń projekt",
             exact: true,
           });
           await dialog
             .getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             })
             .waitFor();
@@ -799,39 +822,39 @@ await runBrowserSuite(
           );
           await dialog
             .getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             })
             .click();
           await expect(dialog).toContainText(
-            "Load a new deletion preview before trying again.",
+            "Wczytaj nowy podgląd usunięcia przed kolejną próbą.",
           );
           await expect(
             dialog.getByRole("button", {
-              name: "Load a new deletion preview",
+              name: "Wczytaj nowy podgląd usunięcia",
               exact: true,
             }),
           ).toBeVisible();
           await expect(
             dialog.getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             }),
           ).toBeDisabled();
           await dialog
             .getByRole("button", {
-              name: "Load a new deletion preview",
+              name: "Wczytaj nowy podgląd usunięcia",
               exact: true,
             })
             .click();
           await expect(
             dialog.getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             }),
           ).toBeEnabled();
           await dialog
-            .getByRole("button", { name: "Keep project", exact: true })
+            .getByRole("button", { name: "Zachowaj projekt", exact: true })
             .click();
           assert.equal(await exists(join(candidate.folder, ".project")), true);
           return { project: candidate.id, newPreviewRequired: true };
@@ -847,12 +870,12 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Delete project",
+            name: "Usuń projekt",
             exact: true,
           });
           await dialog
             .getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             })
             .waitFor();
@@ -867,40 +890,40 @@ await runBrowserSuite(
           });
           await dialog
             .getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             })
             .click();
           await dialog
             .getByRole("button", {
-              name: "Check deletion status",
+              name: "Sprawdź stan usunięcia",
               exact: true,
             })
             .click();
           await expect(dialog).toContainText(
-            "Load a new deletion preview before trying again.",
+            "Wczytaj nowy podgląd usunięcia przed kolejną próbą.",
           );
           await expect(
             dialog.getByRole("button", {
-              name: "Load a new deletion preview",
+              name: "Wczytaj nowy podgląd usunięcia",
               exact: true,
             }),
           ).toBeVisible();
           await dialog
             .getByRole("button", {
-              name: "Load a new deletion preview",
+              name: "Wczytaj nowy podgląd usunięcia",
               exact: true,
             })
             .click();
           await expect(
             dialog.getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             }),
           ).toBeEnabled();
           await page.unroute(projectPath);
           await dialog
-            .getByRole("button", { name: "Keep project", exact: true })
+            .getByRole("button", { name: "Zachowaj projekt", exact: true })
             .click();
           return { project: candidate.id, statusConflictRequiresPreview: true };
         },
@@ -933,18 +956,18 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Delete project",
+            name: "Usuń projekt",
             exact: true,
           });
           await expect(
             dialog.getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             }),
           ).toBeEnabled();
           await dialog
             .getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             })
             .click();
@@ -990,18 +1013,18 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Delete project",
+            name: "Usuń projekt",
             exact: true,
           });
           await expect(
             dialog.getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             }),
           ).toBeEnabled();
           await dialog
             .getByRole("button", {
-              name: "Permanently delete project",
+              name: "Trwale usuń projekt",
               exact: true,
             })
             .click();
@@ -1012,7 +1035,7 @@ await runBrowserSuite(
               !url.searchParams.get("project"),
           );
           await expect(page.locator(".empty")).toContainText(
-            "Start with a project",
+            "Zacznij od projektu",
           );
           assert.equal(await exists(join(candidate.folder, ".project")), false);
           assert.equal(await exists(candidate.folder), true);

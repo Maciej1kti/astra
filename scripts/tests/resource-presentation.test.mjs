@@ -19,7 +19,7 @@ test("milestone summaries retain date-only due values", () => {
       type: "milestone",
       due: { date: "2026-09-20" },
     }),
-    [{ kind: "due", label: "Due", start: "2026-09-20" }],
+    [{ kind: "due", label: "Termin", start: "2026-09-20" }],
   );
 });
 

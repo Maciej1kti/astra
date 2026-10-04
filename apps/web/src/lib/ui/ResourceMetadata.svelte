@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { counted } from "./locale";
   import type { Summary } from "../api/api";
   import {
     resourceDates,
@@ -35,33 +36,37 @@
         {#if item.priority === "high"}
           <span class="badge priority" data-priority={item.priority}>
             <span aria-hidden="true">↑</span>
-            {resourceLabel(item.priority)} priority
+            {resourceLabel(item.priority)} priorytet
           </span>
         {/if}
-        {#if item.archived}<span class="badge archived">Archived</span>{/if}
+        {#if item.archived}<span class="badge archived">Zarchiwizowane</span
+          >{/if}
       </span>
     {/if}
     {#if item.acceptance_progress?.total}
       <span class="work-badges">
         <span
           class="badge acceptance"
-          title="Completed acceptance conditions; card status is set separately"
-          >Checklist {item.acceptance_progress.completed}/{item
+          title="Ukończone warunki akceptacji; status karty jest ustawiany osobno"
+          >Lista kontrolna {item.acceptance_progress.completed}/{item
             .acceptance_progress.total}</span
         >
       </span>
     {/if}
     {#if item.counter_count}<span class="badge"
-        >{item.counter_count}
-        {item.counter_count === 1 ? "counter" : "counters"}</span
+        >{counted(item.counter_count, "licznik", "liczniki", "liczników")}</span
       >{/if}
     {#if item.comment_count}
       <span
         class="badge comments"
-        aria-label={`${item.comment_count} comments`}
+        aria-label={counted(
+          item.comment_count,
+          "komentarz",
+          "komentarze",
+          "komentarzy",
+        )}
       >
-        {item.comment_count}
-        {item.comment_count === 1 ? "comment" : "comments"}
+        {counted(item.comment_count, "komentarz", "komentarze", "komentarzy")}
       </span>
     {/if}
     {#if dates.length}
@@ -80,7 +85,7 @@
       </span>
     {/if}
     {#if item.labels?.length}
-      <span class="tags" aria-label="Tags">
+      <span class="tags" aria-label="Tagi">
         {#each item.labels as label (label)}
           <span class="tag" title={label}
             ><span class="tag-symbol" aria-hidden="true">#</span>{label}</span

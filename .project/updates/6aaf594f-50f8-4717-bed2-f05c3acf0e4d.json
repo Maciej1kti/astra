@@ -1,0 +1,18 @@
+{
+  "body": "The complete browser interface now uses Polish, including all eight views, menus, editors, settings, native calendar/board/timeline words, recovery messages and accessibility labels. Focus retains its name. User-authored content and protocol/CLI identifiers are preserved.\n\nThe full 617-test gate, all 37 Chromium suites, 16 selected WebKit suites and broad HTTPS/planning smoke pass. The final chart/localization checks pass in both engines, including keyboard and narrow touch workflows. See progress/2026-10-04-polish-ui.md for reproducible evidence and coverage limits.\n\nThe rebuilt embedded release application is verified at its existing HTTPS address. Restart comparison preserves 37 prior source hashes/versions, both profiles, three pins, preferences, roots/registrations, identity/epoch and certificate; all 59 served assets match. Read-only paired checks cover all views, settings and phone navigation. Physical-device and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "6aaf594f-50f8-4717-bed2-f05c3acf0e4d",
+    "kind": "result",
+    "recorded_at": "2026-10-04T18:53:05.630Z",
+    "summary": "Polish browser interface implemented and verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

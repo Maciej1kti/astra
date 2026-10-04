@@ -76,11 +76,11 @@ await runBrowserSuite(
     }
 
     function focusButton(page) {
-      return page.getByRole("button", { name: /Add card$/ });
+      return page.getByRole("button", { name: /Dodaj kartę$/ });
     }
 
     function editor(page) {
-      return page.getByRole("dialog", { name: /^(Create|Edit) resource$/ });
+      return page.getByRole("dialog", { name: /^(Utwórz|Edytuj) element$/ });
     }
 
     function section(page, name) {
@@ -91,11 +91,11 @@ await runBrowserSuite(
       const query = new URLSearchParams({ view: "focus", ...params });
       await page.goto(`${config.origin}/?${query}`);
       await expect(page.locator(".asidebottom")).toContainText(
-        "Connected to host",
+        "Połączono z serwerem",
       );
-      await expect(section(page, "In focus")).toBeVisible();
-      await expect(section(page, "Needs my attention")).toBeVisible();
-      await expect(section(page, "In motion")).toBeVisible();
+      await expect(section(page, "W Focus")).toBeVisible();
+      await expect(section(page, "Potrzebuje mojej uwagi")).toBeVisible();
+      await expect(section(page, "W toku")).toBeVisible();
     }
 
     function cardText(region, resource) {
@@ -103,11 +103,11 @@ await runBrowserSuite(
     }
 
     function focusCards(page) {
-      return section(page, "In focus").locator("[data-focus-card]");
+      return section(page, "W Focus").locator("[data-focus-card]");
     }
 
     function focusCard(page, id) {
-      return section(page, "In focus").locator(
+      return section(page, "W Focus").locator(
         `[data-focus-card="${id}"], [data-focus-card$=":${id}"]`,
       );
     }
@@ -299,12 +299,12 @@ await runBrowserSuite(
           await routeFocus(page);
           assert.deepEqual(
             await page.locator("[data-focus-section] h2").allTextContents(),
-            ["In focus", "Needs my attention", "In motion", "Events"],
+            ["W Focus", "Potrzebuje mojej uwagi", "W toku", "Wydarzenia"],
           );
 
-          const focus = section(page, "In focus");
-          const attention = section(page, "Needs my attention");
-          const motion = section(page, "In motion");
+          const focus = section(page, "W Focus");
+          const attention = section(page, "Potrzebuje mojej uwagi");
+          const motion = section(page, "W toku");
           await expect(cardText(focus, pinned)).toBeVisible();
           await expect(cardText(focus, otherPinned)).toBeVisible();
           await expect(cardText(attention, overdue)).toBeVisible();
@@ -312,7 +312,9 @@ await runBrowserSuite(
           await expect(cardText(attention, reviewOverdue)).toBeVisible();
           await expect(cardText(motion, ordinary)).toBeVisible();
           await expect(cardText(motion, unscheduled)).toHaveCount(0);
-          await expect(cardText(section(page, "Events"), event)).toBeVisible();
+          await expect(
+            cardText(section(page, "Wydarzenia"), event),
+          ).toBeVisible();
           await expect(cardText(attention, event)).toHaveCount(0);
           await expect(cardText(attention, ordinary)).toHaveCount(0);
           await expect(cardText(motion, event)).toHaveCount(0);
@@ -328,20 +330,23 @@ await runBrowserSuite(
           const pinnedReasons = focus
             .getByRole("button")
             .filter({ hasText: title(pinned) })
-            .locator('[aria-label="Attention reasons"] .badge');
+            .locator('[aria-label="Powody wymagające uwagi"] .badge');
           await expect(pinnedReasons).toHaveCount(0);
           await expect(
             focus.locator(".focus-card-facts").first(),
-          ).toContainText("overdue");
+          ).toContainText("po terminie");
           await expect(motion.locator(".focus-card-open")).toHaveCount(1);
           await expect(
-            section(page, "Events").locator(".focus-card-open"),
+            section(page, "Wydarzenia").locator(".focus-card-open"),
           ).toHaveCount(1);
           const combinedReasons = attention
             .getByRole("button")
             .filter({ hasText: title(reviewOverdue) })
-            .locator('[aria-label="Attention reasons"] .badge');
-          await expect(combinedReasons).toHaveText(["Overdue", "Review"]);
+            .locator('[aria-label="Powody wymagające uwagi"] .badge');
+          await expect(combinedReasons).toHaveText([
+            "Po terminie",
+            "Do sprawdzenia",
+          ]);
           assert.equal(
             await attention
               .getByText(title(reviewOverdue), { exact: true })
@@ -354,9 +359,14 @@ await runBrowserSuite(
             fullPage: true,
           });
           return {
-            sections: ["In focus", "Needs my attention", "In motion", "Events"],
+            sections: [
+              "W Focus",
+              "Potrzebuje mojej uwagi",
+              "W toku",
+              "Wydarzenia",
+            ],
             pinnedReason: "Inline schedule only",
-            groupedReasons: ["Overdue", "Review"],
+            groupedReasons: ["Po terminie", "Do sprawdzenia"],
           };
         },
         page,
@@ -417,7 +427,7 @@ await runBrowserSuite(
           const original = cli("get", `/api/v1/projects/${otherProject.id}`);
           await folderInput.fill("Unadded folder");
           await modal
-            .getByLabel("Name", { exact: true })
+            .getByLabel("Nazwa", { exact: true })
             .fill(`${original.metadata.name} edited`);
           await expect
             .poll(
@@ -430,18 +440,21 @@ await runBrowserSuite(
             original.metadata.folder,
           );
           await modal
-            .getByRole("button", { name: "Close editor", exact: true })
+            .getByRole("button", { name: "Zamknij edytor", exact: true })
             .click();
           await expect(
-            modal.getByRole("button", { name: "Discard draft", exact: true }),
+            modal.getByRole("button", {
+              name: "Odrzuć wersję roboczą",
+              exact: true,
+            }),
           ).toBeVisible();
           await modal
-            .getByRole("button", { name: "Keep editing", exact: true })
+            .getByRole("button", { name: "Kontynuuj edycję", exact: true })
             .click();
           await expect(folderInput).toHaveValue("Unadded folder");
           await folderInput.fill("Home");
           await modal
-            .getByRole("button", { name: "Add folder", exact: true })
+            .getByRole("button", { name: "Dodaj folder", exact: true })
             .click();
           await expect
             .poll(
@@ -452,13 +465,13 @@ await runBrowserSuite(
             .toBe("Home");
           await expect(
             modal.getByRole("button", {
-              name: "Remove folder Home",
+              name: "Usuń folder Home",
               exact: true,
             }),
           ).toBeVisible();
           await folderInput.fill("x".repeat(49));
           await folderInput.press("Enter");
-          await expect(modal.getByRole("alert")).toContainText("48 characters");
+          await expect(modal.getByRole("alert")).toContainText("48 znaków");
           assert.equal(
             cli("get", `/api/v1/projects/${otherProject.id}`).metadata.folder,
             "Home",
@@ -470,7 +483,7 @@ await runBrowserSuite(
           await folderInput.press("ArrowDown");
           await folderInput.press("Enter");
           await expect(modal.getByTestId("autosave-status")).toHaveText(
-            "Saved",
+            "Zapisano",
           );
           await expect
             .poll(
@@ -482,7 +495,7 @@ await runBrowserSuite(
           await page.reload();
           await expect(
             editor(page).getByRole("button", {
-              name: "Remove folder Work",
+              name: "Usuń folder Work",
               exact: true,
             }),
           ).toBeVisible();
@@ -491,7 +504,7 @@ await runBrowserSuite(
           ).toHaveValue("");
           await page.setViewportSize({ width: 390, height: 844 });
           const chip = editor(page).getByRole("button", {
-            name: "Remove folder Work",
+            name: "Usuń folder Work",
             exact: true,
           });
           await chip.scrollIntoViewIfNeeded();
@@ -508,7 +521,7 @@ await runBrowserSuite(
           await routeFocus(page, { folder: "Work", project: otherProject.id });
           await expect(focusCard(page, pinned.metadata.id)).toBeVisible();
           await expect(focusCard(page, otherPinned.metadata.id)).toBeVisible();
-          await expect(page.getByLabel("Project", { exact: true })).toHaveCount(
+          await expect(page.getByLabel("Projekt", { exact: true })).toHaveCount(
             0,
           );
           await page.reload();
@@ -517,28 +530,28 @@ await runBrowserSuite(
           );
           await focusButton(page).click();
           const chooser = page.getByRole("dialog", {
-            name: "Choose project for card",
+            name: "Wybierz projekt dla karty",
           });
           await expect(chooser).toBeVisible();
           await expect(chooser.getByRole("option")).toHaveCount(3);
           await chooser
-            .getByLabel("Project", { exact: true })
+            .getByLabel("Projekt", { exact: true })
             .selectOption(project.id);
           await chooser
-            .getByRole("button", { name: "Continue", exact: true })
+            .getByRole("button", { name: "Kontynuuj", exact: true })
             .click();
           await expect(editor(page)).toBeVisible();
           await editor(page)
-            .getByRole("button", { name: "Close editor", exact: true })
+            .getByRole("button", { name: "Zamknij edytor", exact: true })
             .click();
           await page.goto(
             `${config.origin}/?view=projects&resource_project=${otherProject.id}&type=project&resource=${otherProject.id}`,
           );
           await editor(page)
-            .getByRole("button", { name: "Remove folder Work", exact: true })
+            .getByRole("button", { name: "Usuń folder Work", exact: true })
             .click();
           await expect(editor(page).getByTestId("autosave-status")).toHaveText(
-            "Saved",
+            "Zapisano",
           );
           await expect
             .poll(
@@ -568,16 +581,16 @@ await runBrowserSuite(
             "Work",
           );
           await expect(
-            page.getByLabel("Filter loaded titles", { exact: true }),
+            page.getByLabel("Filtruj wczytane tytuły", { exact: true }),
           ).toHaveValue(`Pinned overdue ${suffix}`);
           await expect(
-            cardText(section(page, "In focus"), pinned),
+            cardText(section(page, "W Focus"), pinned),
           ).toBeVisible();
           await expect(
-            cardText(section(page, "In focus"), otherPinned),
+            cardText(section(page, "W Focus"), otherPinned),
           ).toHaveCount(0);
           await expect(
-            cardText(section(page, "Needs my attention"), overdue),
+            cardText(section(page, "Potrzebuje mojej uwagi"), overdue),
           ).toHaveCount(0);
           return { project: project.id, titleFilter: title(pinned) };
         },
@@ -682,13 +695,13 @@ await runBrowserSuite(
               response.request().method() === "POST" &&
               new URL(response.url()).pathname === `${base}/cards`,
           );
-          await modal.getByLabel("Title", { exact: true }).fill(createdTitle);
+          await modal.getByLabel("Tytuł", { exact: true }).fill(createdTitle);
           const response = await post;
           assert.equal(response.status(), 200);
           const body = await response.json();
           const id = body.result.id;
           await expect(modal.getByTestId("autosave-status")).toHaveText(
-            "Saved",
+            "Zapisano",
           );
           await expect
             .poll(() => cli("get", `${base}/cards/${id}`).metadata.title)
@@ -757,7 +770,7 @@ await runBrowserSuite(
             "The unavailable detail read was exercised",
           );
           await expect(focusCard(page, unavailable.metadata.id)).toContainText(
-            "Unavailable pinned card",
+            "Niedostępna przypięta karta",
           );
           await expect(focusCard(page, hidden.metadata.id)).toHaveCount(0);
 
@@ -1005,10 +1018,13 @@ await runBrowserSuite(
             "The stale drag must not overwrite the competing full order",
           );
           await expect(
-            section(page, "In focus").getByRole("alert"),
+            section(page, "W Focus").getByRole("alert"),
           ).toBeVisible();
           await page
-            .getByRole("button", { name: "Reload focus order", exact: true })
+            .getByRole("button", {
+              name: "Wczytaj kolejność Focus ponownie",
+              exact: true,
+            })
             .click();
           await expect
             .poll(() => visibleFocusOrder(page))
@@ -1084,7 +1100,7 @@ await runBrowserSuite(
           await page.mouse.up();
           await expect(
             page.getByRole("button", {
-              name: "Retry same command",
+              name: "Ponów to samo polecenie",
               exact: true,
             }),
           ).toBeVisible();
@@ -1093,20 +1109,20 @@ await runBrowserSuite(
           assert.equal(attempts[0].version, `"${observed.version}"`);
 
           const navigation = page.getByRole("navigation", {
-            name: "Workspace views",
+            name: "Widoki przestrzeni roboczej",
           });
           await navigation
-            .getByRole("button", { name: "Board", exact: true })
+            .getByRole("button", { name: "Tablica", exact: true })
             .click();
           await expect(
-            navigation.getByRole("button", { name: "Board", exact: true }),
+            navigation.getByRole("button", { name: "Tablica", exact: true }),
           ).toHaveAttribute("aria-current", "page");
           await navigation
             .getByRole("button", { name: "Focus", exact: true })
             .click();
           await expect(focusCard(page, orderLast.metadata.id)).toBeVisible();
           const retry = page.getByRole("button", {
-            name: "Retry same command",
+            name: "Ponów to samo polecenie",
             exact: true,
           });
           await expect(retry).toBeEnabled();
@@ -1165,7 +1181,7 @@ await runBrowserSuite(
           ).items.find((item) => item.report_id === reportId);
           assert.equal(decisionRow?.target.type, "project");
           await routeFocus(page, { folder: "Work" });
-          const attention = section(page, "Needs my attention");
+          const attention = section(page, "Potrzebuje mojej uwagi");
           await expect(
             attention.getByRole("button", {
               name: new RegExp(`Second decision probe ${suffix}`),
@@ -1178,7 +1194,9 @@ await runBrowserSuite(
           });
           await expect(row).toBeVisible();
           await row.click();
-          const dialog = page.getByRole("dialog", { name: "Update details" });
+          const dialog = page.getByRole("dialog", {
+            name: "Szczegóły aktualizacji",
+          });
           await expect(dialog).toBeVisible();
           await expect(dialog.getByText("Decision details")).toBeVisible();
           assert.equal(
@@ -1186,10 +1204,16 @@ await runBrowserSuite(
             reportId,
           );
           await dialog
-            .getByRole("button", { name: "Mark read", exact: true })
+            .getByRole("button", {
+              name: "Oznacz jako przeczytane",
+              exact: true,
+            })
             .click();
           await expect(
-            dialog.getByRole("button", { name: "Mark unread", exact: true }),
+            dialog.getByRole("button", {
+              name: "Oznacz jako nieprzeczytane",
+              exact: true,
+            }),
           ).toBeVisible();
           await expect(row).toBeVisible();
           const readDecision = cli(
@@ -1198,19 +1222,19 @@ await runBrowserSuite(
           ).items.find((item) => item.report_id === reportId);
           assert.equal(readDecision?.reason, "decision_needed");
           await dialog
-            .getByRole("button", { name: "Resolve decision" })
+            .getByRole("button", { name: "Rozstrzygnij decyzję" })
             .click();
           const resolution = editor(page);
           await expect(
-            resolution.getByRole("combobox", { name: "Kind" }),
+            resolution.getByRole("combobox", { name: "Rodzaj" }),
           ).toHaveValue("resolution");
           await expect(
             resolution.getByRole("textbox", {
-              name: "Resolved report IDs, separated by commas",
+              name: "Identyfikatory rozstrzygniętych raportów, rozdzielone przecinkami",
             }),
           ).toHaveValue(reportId);
           await resolution
-            .getByRole("button", { name: "Create", exact: true })
+            .getByRole("button", { name: "Utwórz", exact: true })
             .click();
           await expect(row).toHaveCount(0);
           await expect(
@@ -1254,20 +1278,28 @@ await runBrowserSuite(
           });
           await routeFocus(page, { folder: "Work" });
           await expect(
-            cardText(section(page, "In focus"), archivedPin),
+            cardText(section(page, "W Focus"), archivedPin),
           ).toBeVisible();
-          const attention = section(page, "Needs my attention");
+          const attention = section(page, "Potrzebuje mojej uwagi");
           const row = attention.getByRole("button", {
             name: new RegExp(`Unread Focus report ${suffix}`),
           });
           await expect(row).toBeVisible();
           await row.click();
-          const dialog = page.getByRole("dialog", { name: "Update details" });
+          const dialog = page.getByRole("dialog", {
+            name: "Szczegóły aktualizacji",
+          });
           await dialog
-            .getByRole("button", { name: "Mark read", exact: true })
+            .getByRole("button", {
+              name: "Oznacz jako przeczytane",
+              exact: true,
+            })
             .click();
           await expect(
-            dialog.getByRole("button", { name: "Mark unread", exact: true }),
+            dialog.getByRole("button", {
+              name: "Oznacz jako nieprzeczytane",
+              exact: true,
+            }),
           ).toBeVisible();
           await routeFocus(page, { folder: "Work" });
           await expect(row).toHaveCount(0);

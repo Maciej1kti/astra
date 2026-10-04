@@ -25,13 +25,13 @@
     {#if error}
       <p role="alert">{error}</p>
     {:else}
-      <p role="status">Loading…</p>
+      <p role="status">Ładowanie…</p>
     {/if}
   </div>
   {#if error}
     <footer class="dialog-footer">
       <Button type="button" variant="primary" onclick={retry}
-        >Retry loading</Button
+        >Ponów ładowanie</Button
       >
       <Button
         type="button"
@@ -43,7 +43,7 @@
           } finally {
             reloading = false;
           }
-        }}>{reloading ? "Reloading…" : "Reload app"}</Button
+        }}>{reloading ? "Ponowne wczytywanie…" : "Odśwież aplikację"}</Button
       >
     </footer>
   {/if}

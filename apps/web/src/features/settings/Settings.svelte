@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { errorMessage } from "../../lib/api/messages.ts";
   import { formatTimestamp } from "../../lib/resources/resource-presentation";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
@@ -100,10 +101,10 @@
           2,
         ),
       );
-      info = "Settings draft copied.";
+      info = "Skopiowano wersję roboczą ustawień.";
     } catch {
       error =
-        "Clipboard access is unavailable. Select and copy your draft fields.";
+        "Schowek jest niedostępny. Zaznacz i skopiuj pola wersji roboczej.";
     }
   }
   onMount(() => {
@@ -116,7 +117,7 @@
       loading = false;
       accessLost = true;
       error =
-        "Your session ended. Your settings draft is preserved; copy it before closing, then reconnect.";
+        "Sesja wygasła. Wersja robocza ustawień została zachowana; skopiuj ją przed zamknięciem, a następnie połącz się ponownie.";
     };
     const restored = () => {
       accessLost = false;
@@ -159,8 +160,7 @@
       users = u;
       selectedUser = u.current_user_id;
     } catch (e) {
-      if (generation === current)
-        error = e instanceof Error ? e.message : String(e);
+      if (generation === current) error = errorMessage(e);
     } finally {
       if (generation === current) loading = false;
     }
@@ -182,7 +182,7 @@
         "PATCH",
         {
           timezone,
-          locale: "en",
+          locale: "pl",
           preferences: { week_start: week, default_view: view },
         },
         baseline.version,
@@ -199,7 +199,8 @@
       await operation.commit();
       if (commandKind === "user") {
         userName = "";
-        info = "User added. Switch to their workspace when you are ready.";
+        info =
+          "Dodano użytkownika. Przełącz się na jego przestrzeń roboczą, gdy wszystko będzie gotowe.";
         users = await api<UserList>(
           "/api/v1/users",
           "GET",
@@ -210,7 +211,7 @@
         selectedUser = (submitted.payload as { id: string }).id;
       } else onsaved();
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      error = errorMessage(cause);
     }
   }
   async function addUser() {
@@ -254,7 +255,7 @@
     try {
       onuserchange(selectedUser);
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      error = errorMessage(cause);
     }
   }
   async function revoke(id: string) {
@@ -270,9 +271,9 @@
         return;
       }
       sessions = sessions.filter((s) => s.id !== id);
-      info = "Browser access revoked.";
+      info = "Cofnięto dostęp przeglądarki.";
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      error = errorMessage(e);
     } finally {
       working = false;
     }
@@ -289,9 +290,11 @@
         approve ? { challenge: item.challenge } : {},
       );
       pairings = pairings.filter((p) => p.id !== item.id);
-      info = approve ? "Pairing request approved." : "Pairing request denied.";
+      info = approve
+        ? "Zatwierdzono prośbę o parowanie."
+        : "Odrzucono prośbę o parowanie.";
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      error = errorMessage(e);
     } finally {
       working = false;
     }
@@ -302,49 +305,52 @@
   class="app-dialog"
   use:modal={{ onclose: close }}
   out:layerExit|global
-  aria-label="Workspace settings"
+  aria-label="Ustawienia przestrzeni roboczej"
   onkeydown={keydown}
 >
   <DialogHeader
-    title="Workspace settings"
+    title="Ustawienia przestrzeni roboczej"
     onclose={close}
     disabled={busy}
-    closeLabel="Close settings"
+    closeLabel="Zamknij ustawienia"
   />
   <div class="dialog-body">
-    {#if loading}<p role="status">Loading workspace settings…</p>{/if}
+    {#if loading}<p role="status">
+        Ładowanie ustawień przestrzeni roboczej…
+      </p>{/if}
     {#if error}<div class="notice" role="alert">{error}</div>{/if}
     {#if !loading && !baseline && !accessLost}<button onclick={load}
-        >Reload settings</button
+        >Wczytaj ustawienia ponownie</button
       >{/if}
     {#if confirmClose}<section class="notice discard" role="alert">
         <p>
           {pending
-            ? "The command outcome may still be unknown. Discarding this draft does not cancel a server write."
-            : "Discard your unsaved settings?"}
+            ? "Wynik polecenia może nadal być nieznany. Odrzucenie wersji roboczej nie anuluje zapisu na serwerze."
+            : "Odrzucić niezapisane ustawienia?"}
         </p>
         <div class="actions">
           <button onclick={keepEditing} use:focusConfirmation
-            >Keep editing</button
+            >Kontynuuj edycję</button
           >
-          <button onclick={onclose}>Discard settings draft</button>
+          <button onclick={onclose}>Odrzuć wersję roboczą ustawień</button>
         </div>
       </section>{/if}
     <section class="user-section" aria-labelledby="user-settings-title">
-      <h3 id="user-settings-title">User</h3>
+      <h3 id="user-settings-title">Użytkownik</h3>
       <p>
-        Each user has their own project folders and workspace. Paired browsers
-        can switch between trusted users.
+        Każdy użytkownik ma własne foldery projektów i przestrzeń roboczą.
+        Sparowane przeglądarki mogą przełączać się między zaufanymi
+        użytkownikami.
       </p>
       <div class="row">
         <label
-          >Current user<select
-            aria-label="Current user"
+          >Bieżący użytkownik<select
+            aria-label="Bieżący użytkownik"
             bind:value={selectedUser}
             disabled={!users || busy || !!pending || dirty || accessLost}
           >
             {#each users?.items ?? [] as user}<option value={user.id}
-                >{user.name}{user.is_default ? " · default" : ""}</option
+                >{user.name}{user.is_default ? " · domyślny" : ""}</option
               >{/each}
           </select></label
         >
@@ -356,12 +362,12 @@
             dirty ||
             busy ||
             !!pending ||
-            accessLost}>Switch user</button
+            accessLost}>Zmień użytkownika</button
         >
       </div>
       {#if !canSwitchUser}<p>
-          Finish the open edit or pending project operation before switching
-          users.
+          Zakończ otwartą edycję lub oczekującą operację projektu przed zmianą
+          użytkownika.
         </p>{/if}
       <form
         class="row"
@@ -371,7 +377,7 @@
         }}
       >
         <label
-          >New user name<input
+          >Nazwa nowego użytkownika<input
             bind:value={userName}
             maxlength="120"
             autocomplete="off"
@@ -389,19 +395,19 @@
             preferencesDirty ||
             busy ||
             !!pending ||
-            accessLost}>Add user</button
+            accessLost}>Dodaj użytkownika</button
         >
       </form>
       {#if pending && commandKind === "user"}<section
           class="notice"
           role="status"
         >
-          <p>User creation is awaiting confirmation.</p>
+          <p>Utworzenie użytkownika oczekuje na potwierdzenie.</p>
           <button type="button" onclick={transmit} disabled={busy || accessLost}
-            >Retry same command</button
+            >Ponów to samo polecenie</button
           >
           <details>
-            <summary>Save details</summary><code>{pending.requestId}</code>
+            <summary>Szczegóły zapisu</summary><code>{pending.requestId}</code>
           </details>
         </section>{/if}
     </section>
@@ -414,7 +420,7 @@
       }}
     >
       <label
-        >Timezone<input
+        >Strefa czasowa<input
           bind:value={timezone}
           placeholder="Europe/Warsaw"
           required
@@ -423,21 +429,21 @@
       >
       <div class="row">
         <label
-          >Week starts<select
-            aria-label="Week starts"
+          >Początek tygodnia<select
+            aria-label="Początek tygodnia"
             bind:value={week}
             disabled={!baseline ||
               busy ||
               !!pending ||
               !!userName ||
               accessLost}
-            ><option value="monday">Monday</option><option value="sunday"
-              >Sunday</option
+            ><option value="monday">Poniedziałek</option><option value="sunday"
+              >Niedziela</option
             ></select
           ></label
         ><label
-          >Default view<select
-            aria-label="Default view"
+          >Widok domyślny<select
+            aria-label="Widok domyślny"
             bind:value={view}
             disabled={!baseline ||
               busy ||
@@ -451,90 +457,95 @@
         >
       </div>
       <p>
-        Dates follow this timezone. Changing it does not move any saved all-day
-        dates.
+        Daty są zgodne z tą strefą czasową. Jej zmiana nie przesuwa zapisanych
+        dat całodniowych.
       </p>
       {#if pending && commandKind === "preferences"}<section class="notice">
           <p>
-            Pending command: awaiting confirmation. Your submitted preferences
-            are kept unchanged.
+            Oczekujące polecenie: czeka na potwierdzenie. Przesłane ustawienia
+            pozostają niezmienione.
           </p>
           <button type="button" onclick={transmit} disabled={busy || accessLost}
-            >Retry same command</button
+            >Ponów to samo polecenie</button
           >
           <details>
-            <summary>Save details</summary><code>{pending.requestId}</code>
+            <summary>Szczegóły zapisu</summary><code>{pending.requestId}</code>
           </details>
         </section>{/if}
     </form>
     <section class="appearance">
-      <h3>Tags</h3>
-      <p>Rename or merge tags used on cards in a project.</p>
+      <h3>Tagi</h3>
+      <p>Zmień nazwę lub połącz tagi używane na kartach projektu.</p>
       <button
         disabled={dirty || busy || !!pending || accessLost}
-        onclick={ontags}>Manage tags</button
+        onclick={ontags}>Zarządzaj tagami</button
       >
       {#if dirty || pending}<p>
-          Save or discard your settings draft before managing tags.
+          Zapisz lub odrzuć wersję roboczą ustawień przed zarządzaniem tagami.
         </p>{/if}
     </section>
     <section class="appearance">
-      <h3>Appearance</h3>
+      <h3>Wygląd</h3>
       <label
-        >Theme<select
-          aria-label="Theme"
+        >Motyw<select
+          aria-label="Motyw"
           bind:value={theme}
           onchange={() => applyTheme(theme)}
-          ><option value="system">System</option><option value="light"
-            >Light</option
-          ><option value="dark">Dark</option></select
+          ><option value="system">Systemowy</option><option value="light"
+            >Jasny</option
+          ><option value="dark">Ciemny</option></select
         ></label
       >
-      <p>Theme changes apply immediately to this browser.</p>
+      <p>Zmiany motywu są od razu stosowane w tej przeglądarce.</p>
     </section>
     <details class="access-section">
-      <summary>Browser access</summary>
-      <p>Revoke a device to end its session and stop future requests.</p>
+      <summary>Dostęp przeglądarek</summary>
+      <p>
+        Cofnij dostęp urządzenia, aby zakończyć jego sesję i zatrzymać kolejne
+        żądania.
+      </p>
       {#each sessions as session}<div class="item">
           <div>
             <strong
               >{session.device_label}{session.current
-                ? " · this browser"
+                ? "· ta przeglądarka"
                 : ""}</strong
-            ><small>Last seen {formatTimestamp(session.last_seen_at)}</small>
+            ><small
+              >Ostatnia aktywność {formatTimestamp(session.last_seen_at)}</small
+            >
           </div>
           <button
             aria-label={session.current
-              ? "Sign out this browser"
-              : `Revoke access: ${session.device_label}`}
+              ? "Wyloguj tę przeglądarkę"
+              : `Cofnij dostęp: ${session.device_label}`}
             title={session.current && (dirty || pending)
-              ? "Save or discard your preferences before signing out this browser."
+              ? "Zapisz lub odrzuć ustawienia przed wylogowaniem tej przeglądarki."
               : undefined}
             onclick={() => revoke(session.id)}
             disabled={busy ||
               accessLost ||
               !!pending ||
               (session.current && dirty)}
-            >{session.current ? "Sign out" : "Revoke"}</button
+            >{session.current ? "Wyloguj" : "Cofnij dostęp"}</button
           >
         </div>{:else}<p>
           {loading
-            ? "Loading browser sessions…"
+            ? "Ładowanie sesji przeglądarek…"
             : accessLost
-              ? "Reconnect to view browser sessions."
-              : "No active browser sessions."}
+              ? "Połącz się ponownie, aby zobaczyć sesje przeglądarek."
+              : "Brak aktywnych sesji przeglądarek."}
         </p>{/each}
       {#if dirty || pending}<p>
-          Save or discard your preferences before signing out this browser.
+          Zapisz lub odrzuć ustawienia przed wylogowaniem tej przeglądarki.
         </p>{/if}
     </details>
     <details class="access-section" open={pairings.length > 0}>
       <summary
-        >Pairing requests{#if pairings.length}
+        >Prośby o parowanie{#if pairings.length}
           · {pairings.length}{/if}</summary
       >
       <p>
-        Approve only after comparing the challenge with the requesting browser.
+        Zatwierdź dopiero po porównaniu kodu z przeglądarką proszącą o dostęp.
       </p>
       {#each pairings as item}<div class="item">
           <div>
@@ -543,18 +554,18 @@
           <div class="actions">
             <button
               onclick={() => decide(item, false)}
-              disabled={busy || accessLost || !!pending}>Deny</button
+              disabled={busy || accessLost || !!pending}>Odrzuć</button
             ><button
               onclick={() => decide(item, true)}
-              disabled={busy || accessLost || !!pending}>Approve</button
+              disabled={busy || accessLost || !!pending}>Zatwierdź</button
             >
           </div>
         </div>{:else}<p>
           {loading
-            ? "Loading pairing requests…"
+            ? "Ładowanie próśb o parowanie…"
             : accessLost
-              ? "Reconnect to view pairing requests."
-              : "No pending requests."}
+              ? "Połącz się ponownie, aby zobaczyć prośby o parowanie."
+              : "Brak oczekujących próśb."}
         </p>{/each}
     </details>
   </div>
@@ -562,22 +573,22 @@
     <p class="save-state" role="status">
       {info ||
         (busy
-          ? "Applying changes…"
+          ? "Stosowanie zmian…"
           : pending
-            ? "Confirmation required"
+            ? "Wymagane potwierdzenie"
             : dirty
               ? userName
-                ? "New user draft"
-                : "Unsaved preferences"
+                ? "Wersja robocza nowego użytkownika"
+                : "Niezapisane ustawienia"
               : loading
-                ? "Loading preferences…"
+                ? "Ładowanie ustawień…"
                 : baseline
-                  ? "Preferences are up to date"
-                  : "Preferences unavailable")}
+                  ? "Ustawienia są aktualne"
+                  : "Ustawienia niedostępne")}
     </p>
     <div class="actions">
       {#if dirty || pending}<button type="button" onclick={copyDraft}
-          >Copy settings draft</button
+          >Kopiuj wersję roboczą ustawień</button
         >{/if}
       <Button
         variant="primary"
@@ -590,7 +601,7 @@
           busy ||
           !!pending ||
           accessLost ||
-          confirmClose}>Save preferences</Button
+          confirmClose}>Zapisz ustawienia</Button
       >
     </div>
   </footer>

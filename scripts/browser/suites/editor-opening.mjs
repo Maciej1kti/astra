@@ -61,11 +61,11 @@ await runBrowserSuite(
       };
     });
     const dialog = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
     const labels = dialog.getByRole("combobox", {
-      name: "Labels",
+      name: "Etykiety",
       exact: true,
     });
     let releaseOld = () => {};
@@ -122,7 +122,7 @@ await runBrowserSuite(
       const current = await (await currentRead).json();
       await page.unroute(`**${path}`);
       assert.equal(current.version, card.version);
-      await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
+      await expect(dialog.getByLabel("Tytuł", { exact: true })).toHaveValue(
         current.metadata.title,
       );
       await expect(
@@ -165,7 +165,7 @@ await runBrowserSuite(
       });
       await labels.fill("");
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(dialog).toHaveCount(0);
       assert.equal(cli("get", path).version, card.version);
@@ -219,7 +219,7 @@ await runBrowserSuite(
         (await (await reopenedRead).json()).version,
         changed.version,
       );
-      await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
+      await expect(dialog.getByLabel("Tytuł", { exact: true })).toHaveValue(
         changed.metadata.title,
       );
       await oldCaptured;
@@ -267,7 +267,7 @@ await runBrowserSuite(
         });
       await labels.fill("");
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(dialog).toHaveCount(0);
 
@@ -325,7 +325,7 @@ await runBrowserSuite(
         changed.version,
       );
       await page.unroute(`**${path}`);
-      await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
+      await expect(dialog.getByLabel("Tytuł", { exact: true })).toHaveValue(
         changed.metadata.title,
       );
       await labels.fill("Opening catalog");
@@ -348,7 +348,7 @@ await runBrowserSuite(
       });
       await labels.fill("");
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(dialog).toHaveCount(0);
       const openingPaths = [path, base, `${base}/tags`];
@@ -398,7 +398,9 @@ await runBrowserSuite(
           .click();
         await expect.poll(() => capturedCancelled.size).toBe(3);
         await expect(dialog).toHaveCount(0);
-        await page.getByRole("button", { name: "Board", exact: true }).click();
+        await page
+          .getByRole("button", { name: "Tablica", exact: true })
+          .click();
         await expect.poll(() => failed.size).toBe(3);
         const aborted = await page.evaluate(() => window.openingProbe.aborted);
         assert.deepEqual(aborted.toSorted(), openingPaths.toSorted());
@@ -406,7 +408,7 @@ await runBrowserSuite(
         await expect.poll(() => handledCount).toBe(3);
         await expect(dialog).toHaveCount(0);
         await expect(
-          page.getByRole("button", { name: "Board", exact: true }),
+          page.getByRole("button", { name: "Tablica", exact: true }),
         ).toHaveAttribute("aria-current", "page");
         assert.equal(new URL(page.url()).searchParams.has("resource"), false);
         assert.equal(cli("get", path).version, changed.version);

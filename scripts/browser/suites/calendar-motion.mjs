@@ -117,7 +117,7 @@ await runBrowserSuite(
     };
     const inspectPopup = async (name, touch = false) => {
       const more = surface
-        .getByRole("button", { name: /^\+\d+ more$/ })
+        .getByRole("button", { name: /^\+\d+ więcej$/ })
         .first();
       if (touch) await more.tap();
       else await more.press("Enter");
@@ -158,7 +158,7 @@ await runBrowserSuite(
       checks.push({ name, layers });
       if (process.env.ASTRA_TEST_BROWSER !== "webkit")
         await page.screenshot({ path: join(evidence, `${name}.png`) });
-      await popup.getByRole("button", { name: "Close", exact: true }).click();
+      await popup.getByRole("button", { name: "Zamknij", exact: true }).click();
       await expect(popup).toHaveCount(0);
     };
     let release;
@@ -192,25 +192,25 @@ await runBrowserSuite(
       for (const mode of ["week", "day", "agenda"]) {
         const before = await count();
         await page
-          .getByLabel("Calendar layout", { exact: true })
+          .getByLabel("Układ kalendarza", { exact: true })
           .selectOption(mode);
         await inspect(mode, before, mode === "agenda");
       }
       const beforeProject = await count();
       await page
-        .getByLabel("Project", { exact: true })
+        .getByLabel("Projekt", { exact: true })
         .selectOption(config.projects[2].id);
       await expect(
-        page.getByText("No dated items in this period.", { exact: true }),
+        page.getByText("Brak elementów z datą w tym okresie.", { exact: true }),
       ).toBeVisible();
       await inspect("empty-project", beforeProject, true);
       await page
-        .getByLabel("Project", { exact: true })
+        .getByLabel("Projekt", { exact: true })
         .selectOption(config.projects[0].id);
       await expect(page.locator(".calendar-item").first()).toBeAttached();
       await settle();
       const beforeRefresh = await count();
-      await page.getByRole("button", { name: "Refresh", exact: true }).click();
+      await page.getByRole("button", { name: "Odśwież", exact: true }).click();
       await expect(surface).toHaveAttribute("aria-busy", "false");
       await settle();
       assert.equal(
@@ -248,7 +248,7 @@ await runBrowserSuite(
       );
       await page.locator(".calendar-item:visible").first().click();
       const editor = page.getByRole("dialog", {
-        name: "Edit resource",
+        name: "Edytuj element",
         exact: true,
       });
       await expect(editor).toBeVisible();
@@ -257,37 +257,37 @@ await runBrowserSuite(
       await page.setViewportSize({ width: 390, height: 844 });
       let before = await count();
       await page
-        .getByLabel("Calendar layout", { exact: true })
+        .getByLabel("Układ kalendarza", { exact: true })
         .selectOption("month");
       await inspect("mobile-month-agenda", before, true);
       await page.locator(".calendar-item:visible").first().tap();
       await expect(editor).toBeVisible();
       await editor
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .tap();
       await expect(page.locator(".app-dialog[open]")).toHaveCount(0);
       before = await count();
       await page
-        .getByRole("button", { name: "Month grid", exact: true })
+        .getByRole("button", { name: "Siatka miesiąca", exact: true })
         .click();
       await inspect("mobile-grid", before);
       await inspectPopup("mobile-popup", true);
       for (const mode of ["week", "day", "agenda"]) {
         const before = await count();
         await page
-          .getByLabel("Calendar layout", { exact: true })
+          .getByLabel("Układ kalendarza", { exact: true })
           .selectOption(mode);
         await inspect(`mobile-${mode}`, before, mode === "agenda");
       }
       const beforePeriod = await count();
       await page
-        .getByRole("button", { name: "Next calendar period", exact: true })
+        .getByRole("button", { name: "Następny okres kalendarza", exact: true })
         .click();
       await inspect("mobile-next-period", beforePeriod, true);
       const previous = await count();
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page
-        .getByLabel("Calendar layout", { exact: true })
+        .getByLabel("Układ kalendarza", { exact: true })
         .selectOption("week");
       await expect(surface).toHaveAttribute("aria-busy", "false");
       await settle();

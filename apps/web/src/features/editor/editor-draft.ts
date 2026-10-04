@@ -72,7 +72,7 @@ export type EditorDraft =
 
 export function createEditorDraft(
   target: EditorTarget,
-  author = "Owner",
+  author = "Właściciel",
 ): EditorDraft {
   const common: Common = {
     title: "",
@@ -207,7 +207,7 @@ export function detachedEditorDraft(draft: EditorDraft): EditorDraft {
 function additionalFields(source: string): Record<string, unknown> {
   const extra: unknown = JSON.parse(source);
   if (!extra || Array.isArray(extra) || typeof extra !== "object")
-    throw new Error("Additional fields must be a JSON object.");
+    throw new Error("Dodatkowe pola muszą być obiektem JSON.");
   return extra as Record<string, unknown>;
 }
 type PatchSet<T> = Extract<T, { set?: unknown }>;
@@ -249,7 +249,7 @@ export function editorPayload(draft: EditorDraft) {
       } else {
         if (d.start && d.end) fields.schedule = { start: d.start, end: d.end };
         else if (d.start || d.end)
-          throw new Error("A schedule needs both start and end dates.");
+          throw new Error("Harmonogram wymaga daty początkowej i końcowej.");
         else if (metadata?.schedule) clear.push("schedule");
         if (metadata?.event) clear.push("event");
       }

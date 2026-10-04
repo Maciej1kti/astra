@@ -157,9 +157,9 @@ export function chartPoints(
 
 /** Empty input means no conversion has been chosen; zero remains a valid rate. */
 export function chartRate(raw: string | undefined): number | null {
-  if (!raw?.trim() || !/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw.trim()))
+  if (!raw?.trim() || !/^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(raw.trim()))
     return null;
-  const value = Number(raw);
+  const value = Number(raw?.trim().replace(",", "."));
   return Number.isFinite(value) && value >= 0 && value <= 1_000_000_000
     ? value
     : null;
@@ -197,7 +197,7 @@ export function chartPanels(
     }));
     const unit =
       scale === "relative"
-        ? "% of own peak"
+        ? "% własnego maksimum"
         : scale === "converted"
           ? outputUnit.trim() || "value"
           : source.unit.trim() || "units";
@@ -220,14 +220,14 @@ export function chartPanels(
 
 export function chartValue(value: number | null, compact = false): string {
   if (value === null || !Number.isFinite(value)) return "—";
-  return new Intl.NumberFormat("en", {
+  return new Intl.NumberFormat("pl-PL", {
     maximumFractionDigits: 2,
     ...(compact ? ({ notation: "compact" } as const) : {}),
   }).format(value);
 }
 
 export function chartDate(value: string, full = false): string {
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("pl-PL", {
     timeZone: "UTC",
     month: "short",
     day: "numeric",

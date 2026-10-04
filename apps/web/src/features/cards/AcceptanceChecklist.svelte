@@ -71,21 +71,21 @@
     if (disabled) return;
     const text = draft.trim();
     if (!text) {
-      error = "Enter a checklist item.";
+      error = "Wpisz treść pozycji listy kontrolnej.";
       return;
     }
     if ([...text].length > ACCEPTANCE_TEXT_LIMIT) {
-      error = `Use ${ACCEPTANCE_TEXT_LIMIT} characters or fewer for a checklist item.`;
+      error = `Użyj ${ACCEPTANCE_TEXT_LIMIT} znaków lub mniej w pozycji listy kontrolnej.`;
       return;
     }
     if (items.length >= ACCEPTANCE_LIMIT) {
-      error = `Use up to ${ACCEPTANCE_LIMIT} checklist items.`;
+      error = `Użyj maksymalnie ${ACCEPTANCE_LIMIT} pozycji listy kontrolnej.`;
       return;
     }
     items = [...items, { id: crypto.randomUUID(), text, completed: false }];
     draft = "";
     error = "";
-    announcement = `Added checklist item ${items.length}.`;
+    announcement = `Dodano pozycję listy kontrolnej ${items.length}.`;
     input?.focus();
   }
 
@@ -93,7 +93,7 @@
     const next = reorderAcceptance(items, order);
     if (next === items) return;
     items = next;
-    announcement = `Moved checklist item to position ${items.findIndex((item) => item.id === itemId) + 1}.`;
+    announcement = `Przeniesiono pozycję listy kontrolnej na miejsce ${items.findIndex((item) => item.id === itemId) + 1}.`;
   }
 
   function focusHandle(itemId: string) {
@@ -134,7 +134,7 @@
         activeDrag = { id: itemId, mode: "keyboard" };
         previewOrder = items.map((item) => item.id);
         dragMembership = [...previewOrder];
-        announcement = `Picked up checklist item ${items.findIndex((item) => item.id === itemId) + 1}.`;
+        announcement = `Podniesiono pozycję listy kontrolnej ${items.findIndex((item) => item.id === itemId) + 1}.`;
       }
       return;
     }
@@ -152,7 +152,7 @@
     const next = moveAcceptanceToIndex(displayedItems, itemId, index);
     if (next !== displayedItems) {
       previewOrder = next.map((item) => item.id);
-      announcement = `Checklist item moved to position ${index + 1}.`;
+      announcement = `Przeniesiono pozycję listy kontrolnej na miejsce ${index + 1}.`;
       void tick().then(() => {
         if (activeDrag?.mode === "keyboard" && activeDrag.id === itemId)
           focusHandle(itemId);
@@ -171,7 +171,7 @@
           event?.type === "keydown" &&
             (event as KeyboardEvent).key === "Escape",
         );
-        announcement = "Checklist item order restored.";
+        announcement = "Przywrócono kolejność listy kontrolnej.";
       },
     });
     return () => {
@@ -181,13 +181,13 @@
   });
 </script>
 
-<section class="checklist" aria-label="Checklist">
+<section class="checklist" aria-label="Lista kontrolna">
   <SectionHeading
-    title="Checklist"
+    title="Lista kontrolna"
     level={3}
     visuallyHidden
     count={`${items.filter((item) => item.completed).length} / ${items.length}`}
-    countLabel={`${items.filter((item) => item.completed).length} of ${items.length} checklist items completed`}
+    countLabel={`${items.filter((item) => item.completed).length} z ${items.length} wykonanych pozycji listy kontrolnej`}
   />
   <ul
     bind:this={list}
@@ -211,7 +211,7 @@
             type="checkbox"
             checked={item.completed}
             {disabled}
-            aria-label={`Complete checklist item ${index + 1}: ${item.text}`}
+            aria-label={`Ukończ pozycję listy kontrolnej ${index + 1}: ${item.text}`}
             onchange={(event) => {
               items = items.map((value) =>
                 value.id === item.id
@@ -225,7 +225,7 @@
           rows="1"
           value={item.text}
           {disabled}
-          aria-label={`Checklist item ${index + 1}`}
+          aria-label={`Pozycja listy kontrolnej ${index + 1}`}
           oninput={(event) => {
             items = items.map((value) =>
               value.id === item.id
@@ -238,18 +238,18 @@
           class="icon-button"
           type="button"
           {disabled}
-          aria-label={`Remove checklist item ${index + 1}`}
+          aria-label={`Usuń pozycję listy kontrolnej ${index + 1}`}
           onclick={() => {
             items = items.filter((value) => value.id !== item.id);
             error = "";
-            announcement = `Removed checklist item ${index + 1}.`;
+            announcement = `Usunięto pozycję listy kontrolnej ${index + 1}.`;
           }}><Icon name="close" small /></button
         >
         <button
           class="handle"
           type="button"
           {disabled}
-          aria-label={`Move checklist item ${index + 1}`}
+          aria-label={`Przenieś pozycję listy kontrolnej ${index + 1}`}
           aria-pressed={activeDrag?.id === item.id}
           data-checklist-handle={item.id}
           aria-keyshortcuts="Space Enter ArrowUp ArrowDown Home End"
@@ -260,15 +260,15 @@
       </li>
     {/each}
   </ul>
-  <label class="sr-only" for={`${id}-new`}>New item</label>
+  <label class="sr-only" for={`${id}-new`}>Nowa pozycja</label>
   <div class="add-row">
     <input
       id={`${id}-new`}
       bind:this={input}
       bind:value={draft}
       {disabled}
-      aria-label="New item"
-      placeholder="Add a checklist item…"
+      aria-label="Nowa pozycja"
+      placeholder="Dodaj pozycję listy kontrolnej…"
       aria-describedby={error ? `${id}-error` : undefined}
       aria-invalid={!!error}
       oninput={() => (error = "")}
@@ -283,8 +283,8 @@
       type="button"
       disabled={disabled || !draft.trim() || items.length >= ACCEPTANCE_LIMIT}
       class="add-item"
-      aria-label="Add item"
-      title="Add item"
+      aria-label="Dodaj pozycję"
+      title="Dodaj pozycję"
       onclick={add}><Icon name="plus" /></button
     >
   </div>
@@ -297,8 +297,9 @@
       {error}
     </p>{/if}
   <span class="sr-only" id={`${id}-reorder-help`}>
-    Drag to reorder. Press Space or Enter to pick up, use arrow keys, Home or
-    End to move, and press Space or Enter to drop. Escape cancels.
+    Przeciągnij, aby zmienić kolejność. Naciśnij spację lub Enter, aby podnieść
+    pozycję, użyj strzałek, Home lub End, aby ją przenieść, i spacji lub Enter,
+    aby upuścić. Escape anuluje.
   </span>
   <p role="status" aria-live="polite" aria-atomic="true" class="sr-only">
     {announcement}

@@ -170,8 +170,8 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
             item.event
               ? item.event.start.slice(11)
               : item.kind.endsWith("due")
-                ? "Due"
-                : "All day",
+                ? "Termin"
+                : "Cały dzień",
           ),
           ...(duration ? [duration] : []),
         );
@@ -181,10 +181,10 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
         clone.querySelector("small").textContent = item.event
           ? `${item.event.duration_minutes} min`
           : item.kind.endsWith("due")
-            ? "Due"
+            ? "Termin"
             : item.start !== item.end
-              ? "Multi-day plan"
-              : "Planned work";
+              ? "Plan wielodniowy"
+              : "Zaplanowana praca";
         sample.parentElement.append(clone);
         probes.push({ sample, clone, item });
       }
@@ -280,7 +280,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
       const more = surface
         .locator(".ec-body .ec-grid > .ec-day")
         .nth(index)
-        .getByRole("button", { name: /^\+\d+ more$/ });
+        .getByRole("button", { name: /^\+\d+ więcej$/ });
       if (await more.count()) {
         await more.focus();
         await more.press("Enter");
@@ -308,7 +308,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
           covered.add(item.id);
         }
         popups++;
-        await popup.getByRole("button", { name: /close/i }).click();
+        await popup.getByRole("button", { name: /zamknij/i }).click();
         await expect(popup).toHaveCount(0);
       } else {
         assert.deepEqual(
@@ -350,7 +350,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
         new URL(response.url()).pathname === "/api/v1/views/calendar" &&
         response.status() === 200,
     );
-    await page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await page.getByRole("button", { name: "Odśwież", exact: true }).click();
     await (await refreshed).finished();
     const unchanged = await checkpoint("unchanged-refresh");
     assert.equal(unchanged.counts.header, 0, JSON.stringify(unchanged));
@@ -393,7 +393,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
         new URL(response.url()).pathname === "/api/v1/views/calendar" &&
         response.status() === 200,
     );
-    await page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await page.getByRole("button", { name: "Odśwież", exact: true }).click();
     await (await latest).finished();
     const changed = expected.items.find(
       (item) => item.resource_id === config.cards[0].id,
@@ -437,7 +437,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     ]) {
       await page.setViewportSize(viewport);
       await page
-        .getByRole("button", { name: "Month grid", exact: true })
+        .getByRole("button", { name: "Siatka miesiąca", exact: true })
         .click();
       await checkpoint(`large-text-${viewport.width}`);
     }
@@ -447,7 +447,9 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     });
     await page.setViewportSize({ width: 1440, height: 1000 });
     await checkpoint("restored-text-desktop");
-    const more = surface.getByRole("button", { name: /^\+\d+ more$/ }).first();
+    const more = surface
+      .getByRole("button", { name: /^\+\d+ więcej$/ })
+      .first();
     const date = await more.evaluate((element) =>
       element.closest(".ec-day").querySelector("time").getAttribute("datetime"),
     );
@@ -475,18 +477,18 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     await entry.focus();
     await entry.press("Enter");
     const editor = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
-    await expect(editor.getByLabel("Title", { exact: true })).toHaveValue(
+    await expect(editor.getByLabel("Tytuł", { exact: true })).toHaveValue(
       target.title,
     );
     await editor
-      .getByRole("button", { name: "Close editor", exact: true })
+      .getByRole("button", { name: "Zamknij edytor", exact: true })
       .click();
     await expect(editor).toBeHidden();
     if (await popup.count())
-      await popup.getByRole("button", { name: /close/i }).click();
+      await popup.getByRole("button", { name: /zamknij/i }).click();
     await expect(surface.getByRole("dialog")).toHaveCount(0);
     assert.deepEqual(errors, []);
   } finally {

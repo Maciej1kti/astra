@@ -79,16 +79,16 @@ await runBrowserSuite(async (suite) => {
     await page.clock.pauseAt(Date.now() + 5_000);
     const navigate = async (name, selector) => {
       await page
-        .getByRole("navigation", { name: "Workspace views" })
+        .getByRole("navigation", { name: "Widoki przestrzeni roboczej" })
         .getByRole("button", { name, exact: true })
         .click();
       await expect(page.locator(selector).first()).toBeVisible();
     };
-    await navigate("Updates", ".view-content .updates .update");
-    await navigate("List", ".view-content .listrow");
+    await navigate("Aktualizacje", ".view-content .updates .update");
+    await navigate("Lista", ".view-content .listrow");
     const start = requests.length;
     const search = page.getByRole("textbox", {
-      name: "Search content",
+      name: "Szukaj w treści",
       exact: true,
     });
     await search.fill("neb");
@@ -118,7 +118,7 @@ await runBrowserSuite(async (suite) => {
       );
     });
     await page
-      .getByLabel("Status filter", { exact: true })
+      .getByLabel("Filtr statusu", { exact: true })
       .selectOption("active");
     assert.equal((await filtered).status(), 200);
     checks.push(
@@ -139,36 +139,49 @@ await runBrowserSuite(async (suite) => {
         : route.continue(),
     );
     await page
-      .getByRole("button", { name: "Workspace settings", exact: true })
+      .getByRole("button", {
+        name: "Ustawienia przestrzeni roboczej",
+        exact: true,
+      })
       .click();
     const settings = page.getByRole("dialog", {
-      name: "Workspace settings",
+      name: "Ustawienia przestrzeni roboczej",
       exact: true,
     });
     await expect(settings.getByRole("alert")).toContainText(
-      "could not be loaded",
+      "Nie udało się wczytać",
     );
-    await settings.getByRole("button", { name: "Close", exact: true }).click();
+    await settings
+      .getByRole("button", { name: "Zamknij", exact: true })
+      .click();
     await page
-      .getByRole("button", { name: "Workspace settings", exact: true })
+      .getByRole("button", {
+        name: "Ustawienia przestrzeni roboczej",
+        exact: true,
+      })
       .click();
     await expect(settings.getByRole("alert")).toContainText(
-      "could not be loaded",
+      "Nie udało się wczytać",
     );
     failSettings = false;
     await Promise.all([
       page.waitForEvent("framenavigated", {
         predicate: (frame) => frame === page.mainFrame(),
       }),
-      settings.getByRole("button", { name: "Reload app", exact: true }).click(),
+      settings
+        .getByRole("button", { name: "Odśwież aplikację", exact: true })
+        .click(),
     ]);
     await expect(page.locator(".view-content .listrow").first()).toBeVisible();
     await page
-      .getByRole("button", { name: "Workspace settings", exact: true })
+      .getByRole("button", {
+        name: "Ustawienia przestrzeni roboczej",
+        exact: true,
+      })
       .click();
-    await expect(settings.getByLabel("Theme", { exact: true })).toBeVisible();
+    await expect(settings.getByLabel("Motyw", { exact: true })).toBeVisible();
     await settings
-      .getByRole("button", { name: "Close settings", exact: true })
+      .getByRole("button", { name: "Zamknij ustawienia", exact: true })
       .click();
     checks.push(
       "Failed secondary chunk remains closable and recovers through explicit reload",
@@ -231,7 +244,7 @@ await runBrowserSuite(async (suite) => {
         );
 
         const filter = planningPage.getByRole("textbox", {
-          name: "Filter loaded titles",
+          name: "Filtruj wczytane tytuły",
           exact: true,
         });
         for (const value of ["Design", "Design system", ""]) {
@@ -301,7 +314,7 @@ await runBrowserSuite(async (suite) => {
           ).toHaveAttribute("data-source-version", committed.version);
         } else if (view === "gantt") {
           await planningPage
-            .getByLabel("Selected card", { exact: true })
+            .getByLabel("Wybrana karta", { exact: true })
             .selectOption(id);
           await expect(
             planningPage.locator(".selected-summary strong"),
@@ -331,10 +344,10 @@ await runBrowserSuite(async (suite) => {
       });
       await pairingPage.goto(config.origin);
       await pairingPage
-        .getByRole("button", { name: /^Request access/ })
+        .getByRole("button", { name: /^Poproś o dostęp/ })
         .click();
       const challenge = pairingPage.getByText(
-        "Compare this challenge on the host machine:",
+        "Porównaj ten kod na komputerze serwera:",
       );
       await expect(challenge).toBeVisible();
       await pairingPage.reload();

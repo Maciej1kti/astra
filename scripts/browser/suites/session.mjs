@@ -24,7 +24,7 @@ await runBrowserSuite(
     let card = (await mutate("POST", base, { title: "Session recovery card" }))
       .result.resource;
     const path = `${base}/${card.metadata.id}`;
-    for (const name of ["Existing draft", "New draft"])
+    for (const name of ["Existing draft", "Nowa wersja robocza"])
       card = (
         await mutate(
           "PATCH",
@@ -59,12 +59,10 @@ await runBrowserSuite(
       );
       await page.goto(config.origin);
       await expect(
-        page
-          .getByRole("alert")
-          .filter({ hasText: "Synthetic startup read failure" }),
+        page.getByRole("alert").filter({ hasText: "Serwer jest zajęty." }),
       ).toBeVisible();
       await page.unroute(fault);
-      await page.getByRole("button", { name: "List", exact: true }).click();
+      await page.getByRole("button", { name: "Lista", exact: true }).click();
       await expect(
         page
           .getByRole("button")
@@ -88,7 +86,7 @@ await runBrowserSuite(
         `${config.origin}/?${new URLSearchParams({ view: "list", project: project.id, type: "card", resource: card.metadata.id })}`,
       );
       const counters = page.getByRole("region", {
-        name: "Card counters",
+        name: "Liczniki karty",
         exact: true,
       });
       const day = counters;
@@ -96,7 +94,7 @@ await runBrowserSuite(
       const before = await day.getAttribute("data-counter-today");
       await counters
         .getByRole("spinbutton", {
-          name: "Existing draft value",
+          name: "Existing draft wynik",
           exact: true,
         })
         .press("ArrowRight");
@@ -123,24 +121,30 @@ await runBrowserSuite(
       await expect(day).toHaveAttribute("data-counter-today", after);
       await expect(
         counters.getByRole("group", {
-          name: "Counter: Existing draft",
+          name: "Licznik: Existing draft",
           exact: true,
         }),
-      ).toContainText(`Unsaved result for ${before}`);
+      ).toContainText(`Niezapisany wynik na ${before}`);
       await counters
-        .getByRole("spinbutton", { name: "New draft value", exact: true })
+        .getByRole("spinbutton", {
+          name: "Nowa wersja robocza wynik",
+          exact: true,
+        })
         .press("ArrowRight");
-      for (const name of ["Existing draft", "New draft"]) {
+      for (const name of ["Existing draft", "Nowa wersja robocza"]) {
         const confirm = counters.getByRole("button", {
-          name: `Confirm ${name}`,
+          name: `Potwierdź ${name}`,
           exact: true,
         });
         await confirm.click();
         // Disabled also covers an in-flight write; draft removal requires ACK.
         await expect(
           counters
-            .getByRole("group", { name: `Counter: ${name}`, exact: true })
-            .getByRole("button", { name: "Reset draft", exact: true }),
+            .getByRole("group", { name: `Licznik: ${name}`, exact: true })
+            .getByRole("button", {
+              name: "Odrzuć wersję roboczą",
+              exact: true,
+            }),
         ).toHaveCount(0);
         await expect(confirm).toHaveCount(0);
       }
@@ -170,7 +174,7 @@ await runBrowserSuite(
       );
       const original = await readFile(broken);
       const warning = page.getByText(
-        "Some project sources are unavailable or invalid.",
+        "Niektóre przypięte karty są niedostępne.",
         { exact: false },
       );
       try {
@@ -193,22 +197,25 @@ await runBrowserSuite(
       );
       await expect(day).toHaveAttribute("data-counter-today", after);
       const schedule = page.getByRole("button", {
-        name: "Edit schedule",
+        name: "Edytuj harmonogram",
         exact: true,
       });
-      await expect(schedule).toContainText("Ends today");
-      const comment = page.getByLabel("Write a comment", { exact: true });
+      await expect(schedule).toContainText("Kończy się dzisiaj");
+      const comment = page.getByLabel("Napisz komentarz", { exact: true });
       await comment.fill("Retained session-loss comment");
       await counters
-        .getByRole("spinbutton", { name: "New draft value", exact: true })
+        .getByRole("spinbutton", {
+          name: "Nowa wersja robocza wynik",
+          exact: true,
+        })
         .press("ArrowRight");
       for (const session of cli("sessions").items)
         cli("revoke-session", session.id);
       await expect(
-        page.getByText("Your session ended.", { exact: false }).first(),
+        page.getByText("Sesja wygasła.", { exact: false }).first(),
       ).toBeVisible();
       await expect(day).toHaveAttribute("data-counter-today", after);
-      await expect(schedule).toContainText("Ends today");
+      await expect(schedule).toContainText("Kończy się dzisiaj");
       await expect(comment).toHaveValue("Retained session-loss comment");
       await expect(comment).toBeDisabled();
       assert.deepEqual(errors, []);

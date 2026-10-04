@@ -94,7 +94,8 @@ export class EditorAutosave<D, R extends Resource> {
 
   /** Replace the acknowledged source after deliberate recovery/reopen. */
   reset(source: R | null) {
-    if (this.inFlight) throw new Error("Cannot reset an active autosave.");
+    if (this.inFlight)
+      throw new Error("Nie można zresetować trwającego automatycznego zapisu.");
     this.sourceValue = source;
     this.latest = null;
     this.active = null;
@@ -133,7 +134,9 @@ export class EditorAutosave<D, R extends Resource> {
     if (this.failure) return Promise.reject(this.failure.error);
     if (!this.latest) return Promise.resolve();
     if (this.options.allowed && !this.options.allowed()) {
-      const error = new Error("Reconnect before continuing this autosave.");
+      const error = new Error(
+        "Połącz się ponownie przed kontynuowaniem automatycznego zapisu.",
+      );
       this.publish("not-saved", error);
       return Promise.reject(error);
     }

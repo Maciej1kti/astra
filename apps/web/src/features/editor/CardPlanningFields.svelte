@@ -39,20 +39,20 @@
   });
 </script>
 
-<section class="card-schedule" aria-label="Schedule">
+<section class="card-schedule" aria-label="Harmonogram">
   <h3 class="schedule-heading">
     <Button
       type="button"
       variant="quiet"
       class="schedule-toggle"
-      aria-label="Edit schedule"
+      aria-label="Edytuj harmonogram"
       aria-describedby={`${id}-summary${!expanded && summary.detail ? ` ${id}-detail` : ""}`}
       aria-expanded={expanded}
       aria-controls={id}
       aria-disabled={cannotCollapse}
       title={cannotCollapse
-        ? "Complete or clear the schedule before collapsing it"
-        : "Edit schedule"}
+        ? "Uzupełnij lub wyczyść harmonogram przed zwinięciem"
+        : "Edytuj harmonogram"}
       onclick={() => {
         if (!cannotCollapse) expanded = !expanded;
       }}
@@ -91,13 +91,13 @@
           event.currentTarget.focus({ preventScroll: true });
           calendarOpen = true;
         }}
-        ><Icon name="calendar" small />Choose dates<span aria-hidden="true"
+        ><Icon name="calendar" small />Wybierz daty<span aria-hidden="true"
           >↗</span
         ></Button
       >
       <div class="editor-properties card-properties">
         <label class="schedule-start">
-          Start<input
+          Początek<input
             type="date"
             bind:value={fields.start}
             disabled={locked || !expanded}
@@ -105,7 +105,7 @@
         </label>
         {#if !fields.time}
           <label class="schedule-end">
-            End<input
+            Koniec<input
               type="date"
               bind:value={fields.end}
               min={fields.start}
@@ -114,7 +114,7 @@
           </label>
         {/if}
         <label class="schedule-time">
-          Start time<input
+          Godzina rozpoczęcia<input
             type="time"
             oninput={(event) => {
               if (!event.currentTarget.value) fields.end = fields.start;
@@ -125,7 +125,7 @@
         </label>
         {#if fields.time}
           <label class="schedule-duration">
-            Duration (minutes)<input
+            Czas trwania (minuty)<input
               type="number"
               min="1"
               max="10080"
@@ -134,7 +134,7 @@
               disabled={locked || !expanded}
             />
           </label>
-          <p class="field-hint">Event · {timezone}</p>
+          <p class="field-hint">Wydarzenie · {timezone}</p>
         {/if}
       </div>
     </div>

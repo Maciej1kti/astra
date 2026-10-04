@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resourceLabel } from "../../../lib/resources/resource-presentation.ts";
   import ResourceCard from "../../../lib/ui/ResourceCard.svelte";
   import SectionHeading from "../../../lib/ui/SectionHeading.svelte";
 
@@ -31,20 +32,20 @@
 </script>
 
 <p role="status" class="board-overview-hint">
-  Choose a project above to move cards.
+  Wybierz projekt powyżej, aby przenosić karty.
 </p>
 <div class="board board-overview">
   {#each statuses as status}<section
       class="column"
       class:mobile-empty={hasCards && !counts[status]}
     >
-      <SectionHeading title={status} count={counts[status]} />
+      <SectionHeading title={resourceLabel(status)} count={counts[status]} />
       {#each filtered
         .filter((c) => c.status === status)
         .sort( (a, b) => (a.position ?? "").localeCompare(b.position ?? "") ) as item}<ResourceCard
           {item}
           projectName={projectLabel(projects, item.project_id)}
           onclick={() => open(item)}
-        />{:else}<p class="columnempty">Nothing here yet</p>{/each}
+        />{:else}<p class="columnempty">Jeszcze nic tu nie ma</p>{/each}
     </section>{/each}
 </div>

@@ -79,19 +79,22 @@ await runBrowserSuite(
       await page.goto(`${config.origin}/?view=${view}&project=${project}`);
       await page.locator("header.topbar").waitFor();
       await expect(page.locator(".asidebottom")).toContainText(
-        "Connected to host",
+        "Połączono z serwerem",
       );
     }
     async function settings() {
       await page
-        .getByRole("button", { name: "Workspace settings", exact: true })
+        .getByRole("button", {
+          name: "Ustawienia przestrzeni roboczej",
+          exact: true,
+        })
         .click();
       const dialog = page.getByRole("dialog", {
-        name: "Workspace settings",
+        name: "Ustawienia przestrzeni roboczej",
         exact: true,
       });
       await expect(
-        dialog.getByLabel("Timezone", { exact: true }),
+        dialog.getByLabel("Strefa czasowa", { exact: true }),
       ).toBeEnabled();
       return dialog;
     }
@@ -144,7 +147,7 @@ await runBrowserSuite(
           await expect(
             page.locator(".astra-board .wx-theme"),
           ).not.toHaveAttribute("style");
-          await expect(primaryCard).toContainText("High priority");
+          await expect(primaryCard).toContainText("Wysoki priorytet");
           for (const text of [
             "Plan",
             "2026-09-10",
@@ -174,10 +177,10 @@ await runBrowserSuite(
           for (const theme of ["light", "dark"]) {
             const dialog = await settings();
             await dialog
-              .getByLabel("Theme", { exact: true })
+              .getByLabel("Motyw", { exact: true })
               .selectOption(theme);
             await dialog
-              .getByRole("button", { name: "Close settings", exact: true })
+              .getByRole("button", { name: "Zamknij ustawienia", exact: true })
               .click();
             for (const width of [1440, 390, 320]) {
               await page.setViewportSize({
@@ -210,11 +213,11 @@ await runBrowserSuite(
           await page.setViewportSize({ width: 1440, height: 1000 });
           const active = page.locator(".astra-column-active");
           await active
-            .getByRole("button", { name: "Collapse column", exact: true })
+            .getByRole("button", { name: "Zwiń kolumnę", exact: true })
             .click();
           await expect(primaryCard).toHaveCount(0);
           await active
-            .getByRole("button", { name: "Expand column", exact: true })
+            .getByRole("button", { name: "Rozwiń kolumnę", exact: true })
             .click();
           await primaryCard.scrollIntoViewIfNeeded();
           const source = await primaryCard.boundingBox();
@@ -265,7 +268,7 @@ await runBrowserSuite(
             widths.push(metrics);
             await snapshot(`settings-${width}`);
           }
-          const timezone = dialog.getByLabel("Timezone", { exact: true });
+          const timezone = dialog.getByLabel("Strefa czasowa", { exact: true });
           const original = await timezone.inputValue();
           await timezone.fill(original === "UTC" ? "Europe/Warsaw" : "UTC");
           const requests = [];
@@ -287,15 +290,18 @@ await runBrowserSuite(
           });
           await timezone.press("Control+Enter");
           await dialog
-            .getByText("Pending command:", { exact: false })
+            .getByText("Oczekujące polecenie:", { exact: false })
             .waitFor();
           await checkSettingsPendingFields(dialog);
           await dialog
-            .getByRole("button", { name: "Retry same command", exact: true })
+            .getByRole("button", {
+              name: "Ponów to samo polecenie",
+              exact: true,
+            })
             .click();
           await expect(
             dialog.getByRole("button", {
-              name: "Retry same command",
+              name: "Ponów to samo polecenie",
               exact: true,
             }),
           ).toBeEnabled();
@@ -303,23 +309,29 @@ await runBrowserSuite(
           assert.deepEqual(requests[0], requests[1]);
           await snapshot("settings-pending-command");
           await dialog
-            .getByRole("button", { name: "Close settings", exact: true })
+            .getByRole("button", { name: "Zamknij ustawienia", exact: true })
             .click();
           await expect(
-            dialog.getByRole("button", { name: "Keep editing", exact: true }),
+            dialog.getByRole("button", {
+              name: "Kontynuuj edycję",
+              exact: true,
+            }),
           ).toBeFocused();
           await dialog
-            .getByRole("button", { name: "Keep editing", exact: true })
+            .getByRole("button", { name: "Kontynuuj edycję", exact: true })
             .click();
           await expect(
-            dialog.getByRole("button", { name: "Close settings", exact: true }),
+            dialog.getByRole("button", {
+              name: "Zamknij ustawienia",
+              exact: true,
+            }),
           ).toBeFocused();
           await dialog
-            .getByRole("button", { name: "Close settings", exact: true })
+            .getByRole("button", { name: "Zamknij ustawienia", exact: true })
             .click();
           await dialog
             .getByRole("button", {
-              name: "Discard settings draft",
+              name: "Odrzuć wersję roboczą ustawień",
               exact: true,
             })
             .click();
@@ -344,24 +356,27 @@ await runBrowserSuite(
           await route("updates");
           await page.reload();
           const navigation = page.getByRole("navigation", {
-            name: "Workspace views",
+            name: "Widoki przestrzeni roboczej",
           });
           const selected = navigation.getByRole("button", {
-            name: "More views",
+            name: "Więcej widoków",
             exact: true,
           });
           await expect(selected).toHaveAttribute("aria-current", "page");
           await expect(
-            navigation.getByRole("button", { name: "Updates", exact: true }),
+            navigation.getByRole("button", {
+              name: "Aktualizacje",
+              exact: true,
+            }),
           ).toHaveCount(0);
           await expect(page.locator(".asidebottom")).toContainText(
-            "Connected to host",
+            "Połączono z serwerem",
           );
           await expect(
-            page.getByText("Loading resources…", { exact: true }),
+            page.getByText("Ładowanie danych…", { exact: true }),
           ).toBeHidden();
           await expect(
-            page.getByRole("heading", { name: "Updates", exact: true }),
+            page.getByRole("heading", { name: "Aktualizacje", exact: true }),
           ).toBeVisible();
           await page.evaluate(async () => {
             await new Promise(requestAnimationFrame);
@@ -375,7 +390,7 @@ await runBrowserSuite(
           const bounds = await selected.boundingBox();
           await selected.click();
           const updates = navigation.getByRole("button", {
-            name: "Updates",
+            name: "Aktualizacje",
             exact: true,
           });
           await expect(updates).toHaveAttribute("aria-current", "page");
@@ -397,7 +412,9 @@ await runBrowserSuite(
             body: "**Visible report body**",
             author: { kind: "human", label: "QA owner" },
             target: { type: "project", id: project },
-            evidence: [{ type: "commit", value: "abc1234", label: "Review" }],
+            evidence: [
+              { type: "commit", value: "abc1234", label: "Do sprawdzenia" },
+            ],
           });
           await route("updates");
           const card = page.getByRole("button", {
@@ -405,7 +422,9 @@ await runBrowserSuite(
           });
           await expect(card).toBeVisible();
           await card.click();
-          const dialog = page.getByRole("dialog", { name: "Update details" });
+          const dialog = page.getByRole("dialog", {
+            name: "Szczegóły aktualizacji",
+          });
           await expect(dialog).toBeVisible();
           await expect(dialog.getByText("Visible report body")).toBeVisible();
           await expect(dialog.getByText("QA owner")).toBeVisible();
@@ -414,15 +433,17 @@ await runBrowserSuite(
             0,
           );
           await snapshot("updates-detail");
-          await dialog.getByRole("button", { name: "Mark read" }).click();
+          await dialog
+            .getByRole("button", { name: "Oznacz jako przeczytane" })
+            .click();
           await expect(
-            dialog.getByRole("button", { name: "Mark unread" }),
+            dialog.getByRole("button", { name: "Oznacz jako nieprzeczytane" }),
           ).toBeVisible();
           await dialog
-            .getByRole("button", { name: "Close editor", exact: true })
+            .getByRole("button", { name: "Zamknij edytor", exact: true })
             .click();
           await expect(dialog).toBeHidden();
-          await expect(card).toContainText("Read");
+          await expect(card).toContainText("Przeczytane");
         },
       );
 
@@ -434,24 +455,26 @@ await runBrowserSuite(
           await route("board");
           await settings();
           await page
-            .getByRole("button", { name: "Manage tags", exact: true })
+            .getByRole("button", { name: "Zarządzaj tagami", exact: true })
             .click();
           const tags = page.getByRole("dialog", {
-            name: "Manage project tags",
+            name: "Zarządzaj tagami projektu",
           });
           await expect(
-            tags.getByLabel("Project", { exact: true }),
+            tags.getByLabel("Projekt", { exact: true }),
           ).toBeEnabled();
           await page.keyboard.press("Escape");
           await expect(tags).toHaveCount(0);
           await expect(
-            page.getByRole("button", { name: "Manage tags", exact: true }),
+            page.getByRole("button", { name: "Zarządzaj tagami", exact: true }),
           ).toBeFocused();
           await page
-            .getByRole("button", { name: "Manage tags", exact: true })
+            .getByRole("button", { name: "Zarządzaj tagami", exact: true })
             .click();
           await expect(tags).toBeVisible();
-          await tags.getByRole("button", { name: "Close tag manager" }).click();
+          await tags
+            .getByRole("button", { name: "Zamknij zarządzanie tagami" })
+            .click();
           await expect(tags).toHaveCount(0);
           return {
             escapeUnmounts: true,
@@ -468,10 +491,13 @@ await runBrowserSuite(
           await page.setViewportSize({ width: 390, height: 844 });
           await route("board");
           await page
-            .getByRole("button", { name: "Workspace actions", exact: true })
+            .getByRole("button", {
+              name: "Działania przestrzeni roboczej",
+              exact: true,
+            })
             .click();
           const signOut = page.getByRole("button", {
-            name: "Sign out",
+            name: "Wyloguj",
             exact: true,
           });
           await expect(signOut).toBeInViewport({ ratio: 1 });
@@ -479,14 +505,14 @@ await runBrowserSuite(
           await signOut.click();
           await expect(
             page.getByRole("heading", {
-              name: "Connect your browser",
+              name: "Połącz przeglądarkę",
               exact: true,
             }),
           ).toBeVisible();
           await expect(
-            page.getByRole("button", { name: "Request access" }),
+            page.getByRole("button", { name: "Poproś o dostęp" }),
           ).toBeVisible();
-          await expect(page.getByLabel("Project", { exact: true })).toHaveCount(
+          await expect(page.getByLabel("Projekt", { exact: true })).toHaveCount(
             0,
           );
           await snapshot("mobile-signed-out");

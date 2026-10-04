@@ -1,3 +1,4 @@
+import { errorMessage } from "../../lib/api/messages.ts";
 import { CommandController } from "../../lib/api/command-controller.ts";
 import { patchCard } from "../../lib/api/resources.ts";
 import type { Summary, Pending } from "../../lib/api/api.ts";
@@ -156,11 +157,11 @@ export class FocusCounterController {
       const draft = this.draft;
       const resource = reply.result.resource;
       this.draft = null;
-      this.notice = `${draft.counter.name} saved · ${draft.value} ${draft.counter.unit}`;
+      this.notice = `${draft.counter.name} zapisano · ${draft.value} ${draft.counter.unit}`;
       if (resource && "type" in resource && resource.type === "card")
         this.dependencies.saved(draft, resource);
     } catch (cause) {
-      this.error = cause instanceof Error ? cause.message : String(cause);
+      this.error = errorMessage(cause);
       this.rejected = !this.command.pending;
     }
     this.dependencies.changed();

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
+  import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { revealScene } from "../../lib/ui/motion";
   import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import { onMount, onDestroy, setContext, untrack, tick } from "svelte";
@@ -216,7 +218,7 @@
         ),
       ].join(" ");
       pageNotice = pages.some((page) => page.reset)
-        ? "The board changed. Showing the first page of the updated columns."
+        ? "Tablica się zmieniła. Wyświetlono pierwszą stronę aktualnych kolumn."
         : "";
       if (status) {
         viewState.vertical[status] = 0;
@@ -312,7 +314,7 @@
           left: rect.left + 8,
           top: Math.max(rect.top + 3, Math.min(rect.bottom - 3, edge)),
           width: rect.width - 16,
-          label: column.status,
+          label: resourceLabel(column.status),
         };
       },
       commit: () => {
@@ -328,7 +330,7 @@
   const boardColumns = $derived(
     columns.map((column) => ({
       id: column.status,
-      label: `${column.status} · ${column.total}`,
+      label: `${resourceLabel(column.status)} · ${column.total}`,
       cardLimit: false,
       collapsed: collapsed.get(column.status) ?? false,
       css: `astra-column-${column.status}`,
@@ -502,24 +504,25 @@
 {#if error}<p role="alert">
     {error}
     <button disabled={busy || gestureActive} onclick={() => load()}
-      >Reload board</button
+      >Wczytaj tablicę ponownie</button
     >
   </p>{/if}
-{#if busy && !columns.length}<p role="status">Loading board…</p>{/if}
+{#if busy && !columns.length}<p role="status">Ładowanie tablicy…</p>{/if}
 {#if search.trim()}<p>
-    Filtering searches the loaded pages only. Reordering is disabled while
-    filtering.
-    {#if !busy && !boardCards.length}No matching cards in the loaded pages.{/if}
+    Filtr obejmuje tylko wczytane strony. Zmiana kolejności jest wyłączona
+    podczas filtrowania.
+    {#if !busy && !boardCards.length}Brak pasujących kart na wczytanych
+      stronach.{/if}
   </p>{/if}
 {#if columns.length}<nav
     class="board-column-nav"
-    aria-label="Board columns"
+    aria-label="Kolumny tablicy"
     use:revealLayers={controlsLayers}
   >
     {#each columns as column}<button
         aria-current={visibleStatus === column.status ? "true" : undefined}
         onclick={() => showColumn(column.status)}
-        >{column.status} <span>{column.total}</span></button
+        >{resourceLabel(column.status)} <span>{column.total}</span></button
       >{/each}
   </nav>{/if}
 <div
@@ -534,17 +537,19 @@
   aria-busy={busy}
   use:scrolling
 >
-  <Willow fonts={false} children={undefined} />
-  <div class="board-theme wx-theme wx-willow-theme">
-    <Kanban
-      cards={boardCards}
-      columns={boardColumns}
-      cardContent={BoardCard}
-      card={{ menu: false }}
-      init={initialize}
-      render={{ fixedColumnWidth: true, virtualizeCards: false }}
-    />
-  </div>
+  <WidgetLocale>
+    <Willow fonts={false} children={undefined} />
+    <div class="board-theme wx-theme wx-willow-theme">
+      <Kanban
+        cards={boardCards}
+        columns={boardColumns}
+        cardContent={BoardCard}
+        card={{ menu: false }}
+        init={initialize}
+        render={{ fixedColumnWidth: true, virtualizeCards: false }}
+      />
+    </div>
+  </WidgetLocale>
   {#each columns as column}
     <footer class="column-footer" use:columnFooter={column.status}>
       {#if quickStatus === column.status}
@@ -556,8 +561,8 @@
           }}
         >
           <input
-            aria-label={`New card title in ${column.status}`}
-            placeholder="Card title…"
+            aria-label={`Tytuł nowej karty w ${resourceLabel(column.status)}`}
+            placeholder="Tytuł karty…"
             maxlength="240"
             required
             bind:value={quickTitles[column.status]}
@@ -574,37 +579,37 @@
               type="submit"
               disabled={busy ||
                 gestureActive ||
-                !(quickTitles[column.status] ?? "").trim()}>Add</button
+                !(quickTitles[column.status] ?? "").trim()}>Dodaj</button
             >
             <button type="button" onclick={() => (quickStatus = null)}
-              >Close</button
+              >Zamknij</button
             >
           </div>
         </form>
       {:else}
         <button
           class="add-card"
-          aria-label={`Add card in ${column.status}`}
+          aria-label={`Dodaj kartę w ${resourceLabel(column.status)}`}
           disabled={busy || gestureActive}
           onclick={() => {
             quickTitles[column.status] ??= "";
             quickStatus = column.status;
-          }}>+ Add a card</button
+          }}>+ Dodaj kartę</button
         >
       {/if}
       {#if column.total > 50}
-        <small>{column.items.length} of {column.total} loaded</small>
+        <small>{column.items.length} z {column.total} wczytano</small>
         <div class="pagination">
           {#if column.page.next_cursor}<button
-              aria-label={`Next 50 in ${column.status}`}
+              aria-label={`Następne 50 w ${resourceLabel(column.status)}`}
               disabled={busy || gestureActive}
               onclick={() => load(column.status, column.page.next_cursor)}
-              >Next 50</button
+              >Następne 50</button
             >{/if}
           <button
-            aria-label={`First page in ${column.status}`}
+            aria-label={`Pierwsza strona w ${resourceLabel(column.status)}`}
             disabled={busy || gestureActive || pageStarts[column.status]}
-            onclick={() => load(column.status)}>First page</button
+            onclick={() => load(column.status)}>Pierwsza strona</button
           >
         </div>
       {/if}

@@ -62,7 +62,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await page.setViewportSize({ width: 390, height: 360 });
     await route("projects");
     const projectActions = page.getByRole("button", {
-      name: `More actions for ${config.projects[2].title}`,
+      name: `Więcej działań dla ${config.projects[2].title}`,
       exact: true,
     });
     await projectActions.scrollIntoViewIfNeeded();
@@ -75,7 +75,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     let panel = await open(projectActions);
     await settledBounds(panel);
     const deletion = panel.getByRole("button", {
-      name: "Delete project",
+      name: "Usuń projekt",
       exact: true,
     });
     await expect(deletion).toBeVisible();
@@ -104,16 +104,16 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     );
     panel = await open(projectActions);
     await panel
-      .getByRole("button", { name: "Delete project", exact: true })
+      .getByRole("button", { name: "Usuń projekt", exact: true })
       .click();
     const confirmation = page.getByRole("dialog", {
-      name: "Delete project",
+      name: "Usuń projekt",
       exact: true,
     });
     await expect(confirmation).toBeVisible();
     await expect(
       confirmation.getByRole("button", {
-        name: "Permanently delete project",
+        name: "Trwale usuń projekt",
         exact: true,
       }),
     ).toBeEnabled();
@@ -130,7 +130,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await route("calendar");
     await expect(page.locator(".ec")).toBeVisible();
     const date = page.getByRole("button", {
-      name: "Choose calendar date",
+      name: "Wybierz datę kalendarza",
       exact: true,
     });
     panel = await open(date);
@@ -141,8 +141,10 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
       "Date disclosure aligns with the start of its trigger",
     );
     await page.keyboard.press("Tab");
-    await expect(panel.getByLabel("Go to date", { exact: true })).toBeFocused();
-    await panel.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(
+      panel.getByLabel("Przejdź do daty", { exact: true }),
+    ).toBeFocused();
+    await panel.getByRole("button", { name: "Gotowe", exact: true }).click();
     await expect(date).toBeFocused();
     await expect(date).toHaveAttribute("aria-expanded", "false");
     checks.push(
@@ -154,13 +156,13 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await route("updates");
     const sidebar = page.locator("aside");
     let selectedView = sidebar.getByRole("button", {
-      name: "Updates",
+      name: "Aktualizacje",
       exact: true,
     });
     await expect(selectedView).toBeInViewport({ ratio: 1 });
     await page.setViewportSize({ width: 390, height: 844 });
     const rotatedMore = sidebar.getByRole("button", {
-      name: "More views",
+      name: "Więcej widoków",
       exact: true,
     });
     panel = await open(rotatedMore);
@@ -177,20 +179,25 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     // Content growth, rotation and scroll all update the same anchored surface.
     await page.setViewportSize({ width: 390, height: 844 });
     await route("focus");
-    const more = page.getByRole("button", { name: "More views", exact: true });
+    const more = page.getByRole("button", {
+      name: "Więcej widoków",
+      exact: true,
+    });
     panel = await open(more);
     await panel
       .locator("summary")
-      .filter({ hasText: /^Customize navigation$/ })
+      .filter({ hasText: /^Dostosuj nawigację$/ })
       .click();
     await settledBounds(panel);
     await page.setViewportSize({ width: 640, height: 320 });
     await settledBounds(panel);
     await page.setViewportSize({ width: 390, height: 844 });
     await settledBounds(panel);
-    const nav = page.getByRole("navigation", { name: "Workspace views" });
+    const nav = page.getByRole("navigation", {
+      name: "Widoki przestrzeni roboczej",
+    });
     for (const button of await panel
-      .getByRole("button", { name: /^Show .* on navigation bar$/ })
+      .getByRole("button", { name: /^Pokaż .* na pasku nawigacji$/ })
       .all()) {
       if ((await button.getAttribute("aria-pressed")) === "false")
         await button.click();
@@ -224,19 +231,21 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await page.setViewportSize({ width: 320, height: 390 });
     await route("list", { type: "card", resource: config.cards[0].id });
     const editor = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
     const status = editor.getByRole("button", { name: /^Status: / });
     panel = await open(status);
     await settledBounds(panel);
     await screenshot("card-status-menu-320");
-    await panel.getByRole("button", { name: "Review", exact: true }).click();
+    await panel
+      .getByRole("button", { name: "Do sprawdzenia", exact: true })
+      .click();
     await expect(status).toHaveAttribute("aria-expanded", "false");
     await expect(status).toBeFocused();
-    await expect(editor.getByTestId("autosave-status")).toHaveText("Saved");
+    await expect(editor.getByTestId("autosave-status")).toHaveText("Zapisano");
     const actions = editor.getByRole("button", {
-      name: "Card actions",
+      name: "Działania karty",
       exact: true,
     });
     panel = await open(actions);

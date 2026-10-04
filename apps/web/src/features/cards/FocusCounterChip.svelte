@@ -85,7 +85,7 @@
     ></button
   >
   <span id={`${id}-help`} class="sr"
-    >Drag left or right, use arrow keys in steps of {observed.step}, or tap to
-    enter a value. Confirm to save.</span
+    >Przeciągnij w lewo lub w prawo, użyj strzałek z krokiem {observed.step}lub
+    dotknij, aby wpisać wartość. Potwierdź, aby zapisać.</span
   >
 </div>

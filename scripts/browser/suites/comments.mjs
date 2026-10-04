@@ -36,19 +36,19 @@ await runBrowserSuite(
     const get = () => cli("get", path);
     const comments = () => get().metadata.comments ?? [];
     const dialog = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
     const section = dialog.getByRole("region", {
-      name: "Card comments",
+      name: "Komentarze karty",
       exact: true,
     });
     const input = section.getByRole("textbox", {
-      name: "Write a comment",
+      name: "Napisz komentarz",
       exact: true,
     });
     const add = section.getByRole("button", {
-      name: "Add comment",
+      name: "Dodaj komentarz",
       exact: true,
     });
     const open = async (view = "list") => {
@@ -66,37 +66,42 @@ await runBrowserSuite(
         section.getByLabel("Comment author", { exact: true }),
       ).toHaveCount(0);
       await expect(
-        section.getByLabel("Author type", { exact: true }),
+        section.getByLabel("Autor type", { exact: true }),
       ).toHaveCount(0);
       await expect(
         section.getByText("New comment", { exact: true }),
       ).toHaveCount(0);
-      await expect(section.getByText(/Markdown supported/)).toHaveCount(0);
+      await expect(section.getByText(/Obsługuje Markdown/)).toHaveCount(0);
       await dialog
-        .getByLabel("Title", { exact: true })
+        .getByLabel("Tytuł", { exact: true })
         .fill("Conversation preserved");
-      await expect(dialog.getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(dialog.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       assert.equal(comments().length, 0);
       await dialog
-        .getByRole("button", { name: "Pin to focus", exact: true })
+        .getByRole("button", { name: "Przypnij do Focus", exact: true })
         .click();
       await expect(
-        dialog.getByRole("button", { name: "Remove from focus", exact: true }),
+        dialog.getByRole("button", { name: "Usuń z Focus", exact: true }),
       ).toBeEnabled();
       await expect(input).toHaveValue(/Human reply/);
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(
-        dialog.getByRole("button", { name: "Discard draft", exact: true }),
+        dialog.getByRole("button", {
+          name: "Odrzuć wersję roboczą",
+          exact: true,
+        }),
       ).toBeVisible();
       await dialog
-        .getByRole("button", { name: "Keep editing", exact: true })
+        .getByRole("button", { name: "Kontynuuj edycję", exact: true })
         .click();
       await add.click();
       await expect(input).toHaveValue("");
       await expect(section.locator("li")).toHaveCount(1);
-      await expect(section.locator("li").first()).toContainText("Human");
+      await expect(section.locator("li").first()).toContainText("Człowiek");
       assert.equal(
         await page.evaluate(() => window.commentExecuted),
         undefined,
@@ -156,7 +161,7 @@ await runBrowserSuite(
       }
       await page.setViewportSize({ width: 1440, height: 1000 });
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       for (const view of ["list", "board", "focus"]) {
         await page.goto(
@@ -166,11 +171,11 @@ await runBrowserSuite(
           .getByRole("button")
           .filter({ hasText: "Conversation preserved" })
           .first();
-        await expect(cardButton).toContainText("2 comments");
+        await expect(cardButton).toContainText("2 komentarze");
         await cardButton.click();
         await expect(section.locator("li")).toHaveCount(2);
         await dialog
-          .getByRole("button", { name: "Close editor", exact: true })
+          .getByRole("button", { name: "Zamknij edytor", exact: true })
           .click();
       }
       for (const view of ["calendar", "gantt"]) {
@@ -197,12 +202,15 @@ await runBrowserSuite(
       });
       await add.click();
       await expect(
-        dialog.getByRole("button", { name: "Retry same command", exact: true }),
+        dialog.getByRole("button", {
+          name: "Ponów to samo polecenie",
+          exact: true,
+        }),
       ).toBeEnabled();
       await expect(input).toHaveValue("Exactly once despite response loss");
       assert.equal(comments().length, 3);
       await dialog
-        .getByRole("button", { name: "Retry same command", exact: true })
+        .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
         .click();
       await expect(input).toHaveValue("");
       assert.equal(comments().length, 3);

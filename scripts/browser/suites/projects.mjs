@@ -86,7 +86,7 @@ await runBrowserSuite(
       );
     });
     const board = page.getByRole("region", {
-      name: "Project status board",
+      name: "Tablica statusów projektów",
       exact: true,
     });
     const column = (state) => board.locator(`[data-project-state="${state}"]`);
@@ -96,15 +96,15 @@ await runBrowserSuite(
       tile(project).locator("[data-project-board-handle]");
     const moveMenu = (project) =>
       tile(project).getByRole("button", {
-        name: `Move ${project.title}`,
+        name: `Przenieś ${project.title}`,
         exact: true,
       });
     const moveDialog = page.getByRole("dialog", {
-      name: "Move project",
+      name: "Przenieś projekt",
       exact: true,
     });
     const editor = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
     async function idle() {
@@ -114,7 +114,7 @@ await runBrowserSuite(
       await page.goto(`${config.origin}/?view=${view}`);
       await expect(board).toBeVisible();
       await expect(page.locator(".asidebottom")).toContainText(
-        "Connected to host",
+        "Połączono z serwerem",
       );
       await idle();
     }
@@ -133,7 +133,7 @@ await runBrowserSuite(
       }
       await expect(trigger).toHaveAttribute("aria-expanded", "true");
       const action = tile(project).getByRole("button", {
-        name: `Move to ${state[0].toUpperCase()}${state.slice(1)}`,
+        name: `Przenieś do ${{ active: "Aktywne", paused: "Wstrzymane", archived: "Zarchiwizowane" }[state]}`,
         exact: true,
       });
       await expect(action).toBeEnabled();
@@ -181,7 +181,7 @@ await runBrowserSuite(
         .poll(() =>
           page
             .getByRole("navigation", {
-              name: "Workspace views",
+              name: "Widoki przestrzeni roboczej",
               exact: true,
             })
             .evaluate((navigation) => {
@@ -221,15 +221,21 @@ await runBrowserSuite(
       await expect(page).toHaveURL(/view=projects/);
       await expect(
         page
-          .getByRole("navigation", { name: "Workspace views", exact: true })
-          .getByRole("button", { name: "Projects", exact: true }),
+          .getByRole("navigation", {
+            name: "Widoki przestrzeni roboczej",
+            exact: true,
+          })
+          .getByRole("button", { name: "Projekty", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       await expect(
         page.getByRole("button", { name: "Main", exact: true }),
       ).toHaveCount(0);
       const projectShortcut = page
-        .getByRole("navigation", { name: "Workspace views", exact: true })
-        .getByRole("button", { name: "Projects", exact: true });
+        .getByRole("navigation", {
+          name: "Widoki przestrzeni roboczej",
+          exact: true,
+        })
+        .getByRole("button", { name: "Projekty", exact: true });
       await expect(projectShortcut.locator("svg path")).toHaveAttribute(
         "d",
         "M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z",
@@ -238,9 +244,9 @@ await runBrowserSuite(
         "legacy Main URLs resolve to the Projects board and select the existing Projects shortcut",
       );
       await expect(board.locator("[data-project-state] h2")).toHaveText([
-        "Active",
-        "Paused",
-        "Archived",
+        "Aktywne",
+        "Wstrzymane",
+        "Zarchiwizowane",
       ]);
       for (const project of projects) await expectState(project, project.state);
       await expect(board.locator("[data-project-board-item]")).toHaveCount(3);
@@ -263,23 +269,23 @@ await runBrowserSuite(
       );
 
       const navigation = page.getByRole("navigation", {
-        name: "Workspace views",
+        name: "Widoki przestrzeni roboczej",
         exact: true,
       });
       await navigation
         .getByRole("button", { name: "Focus", exact: true })
         .click();
       await expect(
-        page.getByRole("region", { name: "In focus", exact: true }),
+        page.getByRole("region", { name: "W Focus", exact: true }),
       ).toBeVisible();
       await idle();
       await expect(
         page
           .getByLabel("Folder", { exact: true })
-          .locator('option[value="Projects archive"]'),
+          .locator('option[value="Projekty archive"]'),
       ).toHaveCount(0);
       await navigation
-        .getByRole("button", { name: "Projects", exact: true })
+        .getByRole("button", { name: "Projekty", exact: true })
         .click();
       for (const project of projects) await expectState(project, project.state);
       await idle();
@@ -291,7 +297,9 @@ await runBrowserSuite(
       );
 
       const folder = page.getByLabel("Folder", { exact: true });
-      const search = page.getByLabel("Filter loaded titles", { exact: true });
+      const search = page.getByLabel("Filtruj wczytane tytuły", {
+        exact: true,
+      });
       const readsBeforeFilters = requests.filter(
         ({ method }) => method === "GET",
       ).length;
@@ -332,7 +340,7 @@ await runBrowserSuite(
       await tile(freshProject)
         .locator("[data-project-board-open]")
         .press("Enter");
-      await expect(editor.getByLabel("Name", { exact: true })).toHaveValue(
+      await expect(editor.getByLabel("Nazwa", { exact: true })).toHaveValue(
         freshName,
       );
       assert.equal(
@@ -348,7 +356,7 @@ await runBrowserSuite(
       );
       freshProject.title = freshName;
       await editor
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       await idle();
@@ -367,11 +375,11 @@ await runBrowserSuite(
       assert.equal(writes.length, writesBeforeCancelled);
       assert.equal(cli("get", moving.path).version, beforeCancelled.version);
       await tile(moving).locator("[data-project-board-open]").click();
-      await expect(editor.getByLabel("Name", { exact: true })).toHaveValue(
+      await expect(editor.getByLabel("Nazwa", { exact: true })).toHaveValue(
         moving.title,
       );
       await editor
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       assert.equal(writes.length, writesBeforeCancelled);
@@ -423,14 +431,17 @@ await runBrowserSuite(
       const writesBeforeConflict = writes.length;
       await menuMove(conflicted, "active");
       await expect(moveDialog).toBeVisible();
-      await expect(moveDialog).toContainText("The project changed.");
+      await expect(moveDialog).toContainText("Projekt się zmienił.");
       assert.equal(interceptionError, undefined);
       assert.equal(writes.length, writesBeforeConflict + 1);
       assert.equal(conflictAttempt.version, `"${observed.version}"`);
       assert.deepEqual(conflictAttempt.payload, { set: { state: "active" } });
       assert.equal(cli("get", conflicted.path).metadata.state, "paused");
       await moveDialog
-        .getByRole("button", { name: "Close move project", exact: true })
+        .getByRole("button", {
+          name: "Zamknij przenoszenie projektu",
+          exact: true,
+        })
         .click();
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       await page.unroute(`${config.origin}${conflicted.path}`);
@@ -474,12 +485,12 @@ await runBrowserSuite(
       });
       await menuMove(uncertain, "active");
       const retry = moveDialog.getByRole("button", {
-        name: "Retry same command",
+        name: "Ponów to samo polecenie",
         exact: true,
       });
       await expect(retry).toBeEnabled();
       await expect(
-        moveDialog.getByRole("button", { name: "Check status", exact: true }),
+        moveDialog.getByRole("button", { name: "Sprawdź stan", exact: true }),
       ).toBeEnabled();
       assert.equal(interceptionError, undefined);
       assert.equal(attempts.length, 1);
@@ -528,7 +539,7 @@ await runBrowserSuite(
       });
       await menuMove(uncertain, "paused");
       const checkStatus = moveDialog.getByRole("button", {
-        name: "Check status",
+        name: "Sprawdź stan",
         exact: true,
       });
       await expect(checkStatus).toBeEnabled();
@@ -660,15 +671,18 @@ await runBrowserSuite(
       }
 
       await page
-        .getByRole("button", { name: "Workspace settings", exact: true })
+        .getByRole("button", {
+          name: "Ustawienia przestrzeni roboczej",
+          exact: true,
+        })
         .click();
       const settings = page.getByRole("dialog", {
-        name: "Workspace settings",
+        name: "Ustawienia przestrzeni roboczej",
         exact: true,
       });
-      await settings.getByLabel("Theme", { exact: true }).selectOption("dark");
+      await settings.getByLabel("Motyw", { exact: true }).selectOption("dark");
       await settings
-        .getByRole("button", { name: "Close settings", exact: true })
+        .getByRole("button", { name: "Zamknij ustawienia", exact: true })
         .click();
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       await page.setViewportSize({ width: 1440, height: 1000 });
@@ -676,19 +690,24 @@ await runBrowserSuite(
       await page.setViewportSize({ width: 320, height: 1000 });
       await capture("projects-phone-dark");
       await page
-        .getByRole("button", { name: "Workspace settings", exact: true })
+        .getByRole("button", {
+          name: "Ustawienia przestrzeni roboczej",
+          exact: true,
+        })
         .click();
       await expect(
-        settings.getByLabel("Default view", { exact: true }),
+        settings.getByLabel("Widok domyślny", { exact: true }),
       ).toBeEnabled();
-      const defaultView = settings.getByLabel("Default view", { exact: true });
+      const defaultView = settings.getByLabel("Widok domyślny", {
+        exact: true,
+      });
       await expect(defaultView.locator('option[value="main"]')).toHaveCount(0);
       await expect(defaultView.locator('option[value="projects"]')).toHaveText(
-        "Projects",
+        "Projekty",
       );
       await defaultView.selectOption("projects");
       await settings
-        .getByRole("button", { name: "Save preferences", exact: true })
+        .getByRole("button", { name: "Zapisz ustawienia", exact: true })
         .click();
       await expect(settings).toHaveCount(0);
       await idle();

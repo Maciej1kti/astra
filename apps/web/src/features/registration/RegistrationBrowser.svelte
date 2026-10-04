@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { serverMessage, errorMessage } from "../../lib/api/messages.ts";
+  import { stateLabel } from "../../lib/resources/state-presentation";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
@@ -48,7 +50,7 @@
     onpendingchange?.(busy || !!registrationPending || !!registrationJob);
   });
   function message(value: unknown) {
-    error = value instanceof Error ? value.message : String(value);
+    error = errorMessage(value);
   }
   $effect(() => {
     if (open) untrack(() => void browseProjects());
@@ -156,7 +158,7 @@
             : (result.reply.result.job_id ?? null);
         if (!registrationJob)
           throw new Error(
-            "Registration result is pending. Retry the same request.",
+            "Wynik rejestracji jest w toku. Ponów to samo żądanie.",
           );
       }
       const job = await api<{ state: string }>(
@@ -164,7 +166,7 @@
       );
       if (job.state !== "done")
         throw new Error(
-          `Registration is ${job.state}. Job: ${registrationJob}`,
+          `Stan rejestracji: ${stateLabel(job.state)}. Zadanie: ${registrationJob}`,
         );
       const projectId = plan.project_id;
       open = false;
@@ -184,24 +186,26 @@
     use:modal={{ onclose: close }}
     out:layerExit|global
     class="app-dialog modal"
-    aria-label="Add project"
+    aria-label="Dodaj projekt"
   >
     <DialogHeader
-      title="Add a project"
+      title="Dodaj projekt"
       onclose={close}
       disabled={busy}
-      closeLabel="Close"
+      closeLabel="Zamknij"
     />
     <div class="dialog-body">
-      <p>Choose the project folder on this host. Files stay in that folder.</p>
+      <p>
+        Wybierz folder projektu na tym serwerze. Pliki pozostaną w tym folderze.
+      </p>
       {#if !roots.length}<p>
-          No directories have been approved yet. On the host, run:
+          Nie zatwierdzono jeszcze żadnych katalogów. Na serwerze uruchom:
         </p>
         <code
           >projectctl --socket /path/to/projectd.sock add-root /absolute/path
-          --label "Projects"</code
+          --label "Projekty"</code
         >{:else}<label
-          >Project folders<select
+          >Foldery projektów<select
             bind:value={root}
             disabled={!!registrationPending || busy}
             onchange={() => browse("")}
@@ -216,14 +220,14 @@
           type="button"
           disabled={!relative || busy || !!registrationPending || browsing}
           onclick={() => browse(relative.split("/").slice(0, -1).join("/"))}
-          ><Icon name="chevronUp" small />Parent directory</Button
+          ><Icon name="chevronUp" small />Katalog nadrzędny</Button
         >
         <div class="directories">
-          {#if browsing}<p role="status">Loading folders…</p>{/if}
+          {#if browsing}<p role="status">Ładowanie folderów…</p>{/if}
           {#each directories as directory}<Button
               type="button"
               disabled={busy || !!registrationPending || browsing}
-              aria-label={`Open folder: ${directory.name}`}
+              aria-label={`Otwórz folder: ${directory.name}`}
               onclick={() => browse(directory.relative_path)}
               ><Icon name="projects" small />
               <span class="directory-name"
@@ -233,24 +237,24 @@
               >
               <Icon name="arrow" small /></Button
             >{:else}{#if directoryReady}<p>
-                No subfolders here. You can select this folder.
+                Brak podfolderów. Możesz wybrać ten folder.
               </p>{/if}{/each}
         </div>
         {#if directoryPaged}<button
             disabled={busy || browsing || !!registrationPending}
-            onclick={() => browse(relative)}>First folder page</button
+            onclick={() => browse(relative)}>Pierwsza strona folderów</button
           >{/if}
         {#if directoryCursor}<button
             disabled={busy || browsing || !!registrationPending}
             onclick={() => browse(relative, directoryCursor)}
-            >More folders</button
+            >Więcej folderów</button
           >{/if}
         <label
-          >Project name<input
+          >Nazwa projektu<input
             bind:value={projectName}
             disabled={!!registrationPending || busy}
             oninput={() => (plan = null)}
-            placeholder="Use folder name"
+            placeholder="Użyj nazwy folderu"
           /></label
         ><label class="check"
           ><input
@@ -258,17 +262,19 @@
             disabled={!!registrationPending || busy}
             bind:checked={tracked}
             onchange={() => (plan = null)}
-          /> Track .project files in the project’s Git repository</label
+          /> Śledź pliki .project w repozytorium Git projektu</label
         >{#if plan}<section class="notice">
-            <strong>Selected folder</strong>
+            <strong>Wybrany folder</strong>
             <p class="breadcrumb">{plan.display_path}</p>
             <p>
-              Add planning files in .project and project instructions in
-              AGENTS.md. Existing content is preserved.
+              Dodaj pliki planowania w .project i instrukcje projektu w
+              AGENTS.md. Istniejąca zawartość zostaje zachowana.
             </p>
-            {#each plan.warnings as warning}<p>{warning.message}</p>{/each}
+            {#each plan.warnings as warning}<p>
+                {serverMessage(warning.code)}
+              </p>{/each}
             <details>
-              <summary>Files to update</summary>
+              <summary>Pliki do aktualizacji</summary>
               {#each plan.changes.filter((change) => change.action !== "no_change") as change}<p
                   class="breadcrumb"
                 >
@@ -278,17 +284,17 @@
           </section>
           <Button variant="primary" onclick={register} disabled={busy}
             >{registrationJob
-              ? "Check registration"
+              ? "Sprawdź rejestrację"
               : registrationPending
-                ? "Retry same registration"
-                : "Add selected project"}</Button
+                ? "Ponów tę samą rejestrację"
+                : "Dodaj wybrany projekt"}</Button
           >{#if registrationPending}<p>
-              Request: {registrationPending.requestId}
+              Żądanie: {registrationPending.requestId}
             </p>{/if}{:else}<Button
             variant="primary"
             onclick={preview}
             disabled={busy || browsing || !directoryReady}
-            >Choose this folder</Button
+            >Wybierz ten folder</Button
           >{/if}{/if}{#if error}<p class="notice">{error}</p>{/if}
     </div>
   </dialog>

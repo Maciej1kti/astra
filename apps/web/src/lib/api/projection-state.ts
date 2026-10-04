@@ -7,11 +7,11 @@ export function projectionNotice(value: ProjectionState) {
   if (
     value.warnings?.some((warning) => warning.code === "PROJECTION_RECONCILING")
   )
-    return "The host is refreshing project data. These results may be incomplete until it finishes.";
+    return "Serwer odświeża dane projektów. Wyniki mogą być niekompletne do zakończenia odświeżania.";
   if (
     value.page?.freshness === "stale" ||
     value.columns?.some((column) => column.page?.freshness === "stale")
   )
-    return "Showing saved results while the host refreshes project data.";
+    return "Wyświetlono zapisane wyniki podczas odświeżania danych projektów na serwerze.";
   return "";
 }

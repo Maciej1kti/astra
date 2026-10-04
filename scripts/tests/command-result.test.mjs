@@ -119,10 +119,10 @@ test("error presentation retains the useful reason and exact code without duplic
   assert.equal(
     commandErrorMessage(
       new ApiError(422, {
-        error: { code: "FOCUS_TARGET_ARCHIVED", message: "Card archived" },
+        error: { code: "FOCUS_TARGET_ARCHIVED", message: "Karta archived" },
       }),
     ),
-    "Card archived (FOCUS_TARGET_ARCHIVED)",
+    "Ta przypięta karta jest zarchiwizowana. Sprawdź aktualny Focus. (FOCUS_TARGET_ARCHIVED)",
   );
   assert.equal(
     commandErrorMessage(
@@ -133,10 +133,10 @@ test("error presentation retains the useful reason and exact code without duplic
         },
       }),
     ),
-    "FOCUS_TARGET_ARCHIVED",
+    "Ta przypięta karta jest zarchiwizowana. Sprawdź aktualny Focus. (FOCUS_TARGET_ARCHIVED)",
   );
   assert.equal(
     commandErrorMessage(new TypeError("Response lost")),
-    "Response lost",
+    "Nie udało się połączyć z serwerem. Sprawdź połączenie i wynik oczekującego zapisu.",
   );
 });

@@ -19,7 +19,7 @@ await runBrowserSuite(
     page.setDefaultTimeout(15000);
     page.on("pageerror", (error) => errors.push(error.message));
     const manager = () =>
-      page.getByRole("dialog", { name: "Manage project tags" });
+      page.getByRole("dialog", { name: "Zarządzaj tagami projektu" });
     const get = (id) => cli("get", `${base}/cards/${id}`);
     const catalog = (id = project) => cli("get", `/api/v1/projects/${id}/tags`);
     const unique = (name) => `${name} ${Date.now().toString(36)}`;
@@ -37,19 +37,21 @@ await runBrowserSuite(
     }
     async function open(projectId = project) {
       await page.goto(`${config.origin}/?view=list&project=${projectId}`);
-      await page.getByRole("button", { name: "Workspace settings" }).click();
-      await page.getByRole("button", { name: "Manage tags" }).click();
+      await page
+        .getByRole("button", { name: "Ustawienia przestrzeni roboczej" })
+        .click();
+      await page.getByRole("button", { name: "Zarządzaj tagami" }).click();
       await expect(
-        manager().getByLabel("Project", { exact: true }),
+        manager().getByLabel("Projekt", { exact: true }),
       ).toHaveValue(projectId);
       await expect(
-        manager().getByRole("list", { name: "Project tags" }),
+        manager().getByRole("list", { name: "Tagi projektu" }),
       ).toBeVisible();
     }
     async function close() {
       if (!(await manager().count())) return;
       await manager()
-        .getByRole("button", { name: "Close tag manager" })
+        .getByRole("button", { name: "Zamknij zarządzanie tagami" })
         .click();
       await manager().waitFor({ state: "hidden" });
     }
@@ -57,12 +59,12 @@ await runBrowserSuite(
       await manager()
         .getByRole("listitem")
         .filter({ hasText: source })
-        .getByRole("button", { name: "Rename / merge" })
+        .getByRole("button", { name: "Zmień nazwę / połącz" })
         .click();
-      await manager().getByLabel("Destination tag").fill(target);
-      await manager().getByRole("button", { name: "Preview changes" }).click();
+      await manager().getByLabel("Tag docelowy").fill(target);
+      await manager().getByRole("button", { name: "Podgląd zmian" }).click();
       await expect(
-        manager().getByRole("region", { name: "Tag rename preview" }),
+        manager().getByRole("region", { name: "Podgląd zmiany nazwy tagu" }),
       ).toBeVisible();
     }
     async function check(id, name, run) {
@@ -114,10 +116,10 @@ await runBrowserSuite(
             80,
           );
           await open();
-          const list = manager().getByRole("list", { name: "Project tags" });
+          const list = manager().getByRole("list", { name: "Tagi projektu" });
           await expect(
             list.getByRole("listitem").filter({ hasText: name }),
-          ).toContainText("80 cards");
+          ).toContainText("80 kart");
           const path = join(folder, `${ids[0]}.json`);
           const source = JSON.parse(await readFile(path, "utf8"));
           source.metadata.title = "Current streamed source title";
@@ -125,14 +127,14 @@ await runBrowserSuite(
           await writeFile(path, JSON.stringify(source));
           const observed = get(ids[0]);
           await manager()
-            .getByRole("button", { name: "Refresh project tags" })
+            .getByRole("button", { name: "Odśwież tagi projektu" })
             .click();
           await expect(
             list.getByRole("listitem").filter({ hasText: name }),
-          ).toContainText("79 cards");
+          ).toContainText("79 kart");
           await expect(
             list.getByRole("listitem").filter({ hasText: fresh }),
-          ).toContainText("1 card");
+          ).toContainText("1 karta");
           const response = page.waitForResponse(
             (response) =>
               new URL(response.url()).pathname === `${base}/tags/preview` &&
@@ -185,9 +187,9 @@ await runBrowserSuite(
           await page.goto(
             `${config.origin}/?view=list&project=${other}&type=card&resource=${otherCard}`,
           );
-          const editor = page.getByRole("dialog", { name: "Edit resource" });
+          const editor = page.getByRole("dialog", { name: "Edytuj element" });
           await editor
-            .getByRole("combobox", { name: "Labels" })
+            .getByRole("combobox", { name: "Etykiety" })
             .fill(name.slice(0, 8));
           await expect(
             editor.getByRole("option", { name, exact: true }),
@@ -202,14 +204,14 @@ await runBrowserSuite(
         "One project job merges active and archived card labels",
         async () => {
           const source = unique("Source");
-          const target = unique("Target");
+          const target = unique("Cel");
           const first = await create(project, {
-            title: unique("Active"),
+            title: unique("Aktywne"),
             labels: [source, target, "Keep"],
           });
           const second = await create(project, {
-            title: unique("Archived"),
-            labels: ["Before", source],
+            title: unique("Zarchiwizowane"),
+            labels: ["Przed", source],
             archived: true,
           });
           const otherCard = await create(other, {
@@ -219,16 +221,18 @@ await runBrowserSuite(
           await open();
           await preview(source, target);
           await expect(
-            manager().getByRole("heading", { name: "2 affected cards" }),
+            manager().getByRole("heading", { name: "Zmiana obejmie 2 karty" }),
           ).toBeVisible();
           await manager()
-            .getByRole("button", { name: "Rename in this project" })
+            .getByRole("button", { name: "Zmień nazwę w tym projekcie" })
             .click();
           await expect(
-            manager().getByRole("button", { name: "Close tag manager" }),
+            manager().getByRole("button", {
+              name: "Zamknij zarządzanie tagami",
+            }),
           ).toBeEnabled();
           assert.deepEqual(get(first).metadata.labels, [target, "Keep"]);
-          assert.deepEqual(get(second).metadata.labels, ["Before", target]);
+          assert.deepEqual(get(second).metadata.labels, ["Przed", target]);
           assert.equal(get(second).metadata.archived, true);
           assert.deepEqual(
             cli("get", `/api/v1/projects/${other}/cards/${otherCard}`).metadata
@@ -264,10 +268,10 @@ await runBrowserSuite(
             before.version,
           );
           await manager()
-            .getByRole("button", { name: "Rename in this project" })
+            .getByRole("button", { name: "Zmień nazwę w tym projekcie" })
             .click();
           await expect(manager().getByRole("alert")).toContainText(
-            "PLAN_STALE",
+            "Podgląd operacji jest nieaktualny.",
           );
           assert.deepEqual(get(first).metadata.labels, [source]);
           assert.deepEqual(get(second).metadata.labels, [source]);

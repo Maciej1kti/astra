@@ -52,9 +52,11 @@ await runBrowserSuite(async (fixture) => {
       );
     });
   });
-  const nav = page.getByRole("navigation", { name: "Workspace views" });
+  const nav = page.getByRole("navigation", {
+    name: "Widoki przestrzeni roboczej",
+  });
   const editor = page.getByRole("dialog", {
-    name: "Edit resource",
+    name: "Edytuj element",
     exact: true,
   });
   const settle = () =>
@@ -67,7 +69,7 @@ await runBrowserSuite(async (fixture) => {
   const select = async (view) => {
     const direct = nav.getByRole("button", { name: view, exact: true });
     const more = nav.getByRole("button", {
-      name: "More views",
+      name: "Więcej widoków",
       exact: true,
     });
     const overflow = !(await direct.isVisible());
@@ -189,9 +191,9 @@ await runBrowserSuite(async (fixture) => {
     );
     assert(initial.some((item) => item.delay > 0));
     assert(Math.max(...initial.map((item) => item.delay)) <= 600);
-    await page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await page.getByRole("button", { name: "Odśwież", exact: true }).click();
     await expect(
-      page.getByText("Loading resources…", { exact: true }),
+      page.getByText("Ładowanie danych…", { exact: true }),
     ).toHaveCount(0);
     await settle();
     assert.equal(
@@ -201,7 +203,7 @@ await runBrowserSuite(async (fixture) => {
     );
     checks.push("bounded readiness cascade; refresh retains the scene");
 
-    await select("Projects");
+    await select("Projekty");
     await settle();
     const selection = await at150ms(".navigation-indicator");
     assert(
@@ -213,10 +215,10 @@ await runBrowserSuite(async (fixture) => {
       .getByRole("button", { name: "Focus", exact: true })
       .evaluate((node) => node.click());
     await nav
-      .getByRole("button", { name: "List", exact: true })
+      .getByRole("button", { name: "Lista", exact: true })
       .evaluate((node) => node.click());
     await expect(
-      nav.getByRole("button", { name: "List", exact: true }),
+      nav.getByRole("button", { name: "Lista", exact: true }),
     ).toHaveAttribute("aria-current", "page");
     await indicatorMatches();
     checks.push("rapid navigation ends at the actual selected view");
@@ -289,12 +291,14 @@ await runBrowserSuite(async (fixture) => {
     }
     await screenshot("desktop-editor");
     await editor
-      .getByRole("combobox", { name: "Labels", exact: true })
+      .getByRole("combobox", { name: "Etykiety", exact: true })
       .fill("Layered label");
-    await editor.getByRole("button", { name: "Add tag", exact: true }).click();
+    await editor
+      .getByRole("button", { name: "Dodaj tag", exact: true })
+      .click();
     await expect(
       editor.getByRole("button", {
-        name: "Remove tag Layered label",
+        name: "Usuń tag Layered label",
         exact: true,
       }),
     ).toBeVisible();
@@ -321,7 +325,7 @@ await runBrowserSuite(async (fixture) => {
       "An explicit tag add retains its own confirmation pulse",
     );
     const layout = editor.getByRole("button", {
-      name: "Customize card layout",
+      name: "Dostosuj układ karty",
       exact: true,
     });
     await layout.click();
@@ -360,7 +364,7 @@ await runBrowserSuite(async (fixture) => {
 
     // Switch preferences while animations are active; no delayed cascade may return.
     await nav
-      .getByRole("button", { name: "Projects", exact: true })
+      .getByRole("button", { name: "Projekty", exact: true })
       .evaluate((node) => node.click());
     await page.emulateMedia({ reducedMotion: "reduce" });
     await indicatorMatches();
@@ -378,7 +382,7 @@ await runBrowserSuite(async (fixture) => {
     const sceneCount = await page.evaluate(
       () => window.motionProbe.scenes.length,
     );
-    await select("List");
+    await select("Lista");
     await page.locator(".listrow").first().click();
     await expect(editor).toBeVisible();
     assert.equal(
@@ -398,13 +402,13 @@ await runBrowserSuite(async (fixture) => {
 
     for (const width of [1024, 768, 390, 320]) {
       await page.setViewportSize({ width, height: width < 700 ? 844 : 1000 });
-      await select("Projects");
+      await select("Projekty");
       await indicatorMatches();
-      await select("Updates");
+      await select("Aktualizacje");
       await indicatorMatches();
       await select("Focus");
       await indicatorMatches();
-      await select("List");
+      await select("Lista");
       await indicatorMatches();
       assert(
         (await page.evaluate(() => document.documentElement.scrollWidth)) <=
@@ -420,7 +424,7 @@ await runBrowserSuite(async (fixture) => {
       await expect(page.locator("dialog")).toHaveCount(0);
     }
     await page.emulateMedia({ colorScheme: "dark" });
-    await select("Projects");
+    await select("Projekty");
     await indicatorMatches();
     await screenshot("dark-mobile-projects");
     checks.push(

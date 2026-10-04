@@ -39,7 +39,7 @@ await runBrowserSuite(
       await page.goto(`${config.origin}/?${params}`);
       await expect(page.locator("header.topbar")).toBeVisible();
       await expect(page.locator(".asidebottom")).toContainText(
-        "Connected to host",
+        "Połączono z serwerem",
       );
     }
 
@@ -111,8 +111,8 @@ await runBrowserSuite(
           if (lost) {
             const check = dialog.getByRole("button", {
               name: autosave
-                ? /^(Check autosave status|Check status)$/
-                : "Check status",
+                ? /^(Check autosave status|Sprawdź stan)$/
+                : "Sprawdź stan",
               exact: !autosave,
             });
             await expect(check).toBeEnabled();
@@ -120,8 +120,8 @@ await runBrowserSuite(
             await dialog
               .getByRole("button", {
                 name: autosave
-                  ? /^(Retry same autosave|Retry same command)$/
-                  : "Retry same command",
+                  ? /^(Ponów same autosave|Ponów to samo polecenie)$/
+                  : "Ponów to samo polecenie",
                 exact: !autosave,
               })
               .click();
@@ -171,11 +171,11 @@ await runBrowserSuite(
       const path = `${base}/cards/${card.metadata.id}`;
       await open(page, "list", card);
       const dialog = page.getByRole("dialog", {
-        name: "Edit resource",
+        name: "Edytuj element",
         exact: true,
       });
-      const title = dialog.getByLabel("Title", { exact: true });
-      const body = dialog.getByLabel("Description", { exact: true });
+      const title = dialog.getByLabel("Tytuł", { exact: true });
+      const body = dialog.getByLabel("Opis", { exact: true });
       const renderedBody = dialog.locator(".resource-description-rendered");
       async function expectBodyDraft() {
         if (await body.isVisible()) {
@@ -186,7 +186,7 @@ await runBrowserSuite(
         }
       }
       await expect(
-        dialog.getByRole("button", { name: "Pin to focus", exact: true }),
+        dialog.getByRole("button", { name: "Przypnij do Focus", exact: true }),
       ).toBeEnabled();
       const code = "VERSION_CONFLICT";
       const prepareRejection = () =>
@@ -226,11 +226,13 @@ await runBrowserSuite(
       await renderedBody.click();
       await body.fill("Autosaved body\nSecond line");
       if (focus) {
-        await expect(dialog.getByTestId("autosave-status")).toHaveText("Saved");
+        await expect(dialog.getByTestId("autosave-status")).toHaveText(
+          "Zapisano",
+        );
         rejected = await prepareRejection();
         const observed = cli("get", path);
         await dialog
-          .getByRole("button", { name: "Pin to focus", exact: true })
+          .getByRole("button", { name: "Przypnij do Focus", exact: true })
           .click();
         await rejected.recover(dialog);
         assert.equal(rejected.attempts[0].version, `"${observed.version}"`);
@@ -243,10 +245,10 @@ await runBrowserSuite(
       await expectBodyDraft();
       if (focus) {
         await expect(dialog).toContainText(
-          "This resource changed since you opened it. Your draft has been kept.",
+          "Ten element zmienił się od otwarcia. Wersja robocza została zachowana.",
         );
         await expect(
-          dialog.getByText("Current saved version", {
+          dialog.getByText("Aktualna zapisana wersja", {
             exact: true,
           }),
         ).toBeVisible();
@@ -257,11 +259,11 @@ await runBrowserSuite(
       } else {
         if (unavailable)
           await expect(dialog).toContainText(
-            "The current saved version is unavailable. Your draft is preserved in the editor.",
+            "Aktualna zapisana wersja jest niedostępna. Wersja robocza została zachowana w edytorze.",
           );
         else {
           await expect(
-            dialog.getByText("Current saved version", {
+            dialog.getByText("Aktualna zapisana wersja", {
               exact: true,
             }),
           ).toBeVisible();
@@ -270,7 +272,7 @@ await runBrowserSuite(
           );
         }
         await expect(dialog.getByTestId("autosave-status")).toHaveText(
-          "Not saved",
+          "Niezapisane",
         );
         assert.equal(cli("get", path).metadata.title, "Changed elsewhere");
       }
@@ -288,20 +290,20 @@ await runBrowserSuite(
       const path = `${base}/cards/${card.metadata.id}`;
       await open(page, "gantt", card);
       await page
-        .getByLabel("Selected card", { exact: true })
+        .getByLabel("Wybrana karta", { exact: true })
         .selectOption(card.metadata.id);
       await page
-        .getByRole("button", { name: "Edit planned dates", exact: true })
+        .getByRole("button", { name: "Edytuj zaplanowane daty", exact: true })
         .click();
       const dialog = page.getByRole("dialog", {
-        name: "Change planned dates",
+        name: "Zmień zaplanowane daty",
         exact: true,
       });
       await dialog
-        .getByLabel("Planned start", { exact: true })
+        .getByLabel("Zaplanowany początek", { exact: true })
         .fill("2026-09-10");
       await dialog
-        .getByLabel("Planned end", { exact: true })
+        .getByLabel("Zaplanowany koniec", { exact: true })
         .fill("2026-09-12");
       const rejected = await rejectCommand(page, {
         path,
@@ -318,25 +320,28 @@ await runBrowserSuite(
           ),
       });
       await dialog
-        .getByRole("button", { name: "Save planned dates", exact: true })
+        .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
         .click();
       await rejected.recover(dialog);
       if (unavailable)
         await expect(dialog).toContainText(
-          "The current resource is unavailable; your proposed dates remain here.",
+          "Aktualny element jest niedostępny; proponowane daty pozostają tutaj.",
         );
       else
         await expect(
-          dialog.getByText("Current saved schedule:", { exact: false }),
+          dialog.getByText("Aktualny zapisany harmonogram:", { exact: false }),
         ).toBeVisible();
       await expect(
-        dialog.getByLabel("Planned start", { exact: true }),
+        dialog.getByLabel("Zaplanowany początek", { exact: true }),
       ).toHaveValue("2026-09-10");
       await expect(
-        dialog.getByLabel("Planned end", { exact: true }),
+        dialog.getByLabel("Zaplanowany koniec", { exact: true }),
       ).toHaveValue("2026-09-12");
       await expect(
-        dialog.getByRole("button", { name: "Save planned dates", exact: true }),
+        dialog.getByRole("button", {
+          name: "Zapisz zaplanowane daty",
+          exact: true,
+        }),
       ).toBeDisabled();
       assert.deepEqual(
         cli("get", path).metadata.schedule,
@@ -372,13 +377,18 @@ await runBrowserSuite(
       });
       await handle.press("Alt+ArrowUp");
       const dialog = page.getByRole("dialog", {
-        name: "Move card",
+        name: "Przenieś kartę",
         exact: true,
       });
       await rejected.recover(dialog);
-      await expect(dialog).toContainText("The card or its neighbors changed.");
+      await expect(dialog).toContainText(
+        "Karta lub jej sąsiedzi się zmienili.",
+      );
       await expect(
-        dialog.getByRole("button", { name: "Confirm move", exact: true }),
+        dialog.getByRole("button", {
+          name: "Potwierdź przeniesienie",
+          exact: true,
+        }),
       ).toBeDisabled();
       await expect(dialog).toContainText(card.metadata.title);
       const stored = cli("get", path);

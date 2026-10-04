@@ -110,7 +110,7 @@ export function projectStatusGesture(node: HTMLElement, initial: Options) {
     if (!previous) return;
     if (previous.handle.isConnected && !previous.handle.disabled)
       previous.handle.focus({ preventScroll: true });
-    if (previous.dragging) options.announce("Project status unchanged.");
+    if (previous.dragging) options.announce("Status projektu bez zmian.");
   }
 
   function paint() {
@@ -162,7 +162,7 @@ export function projectStatusGesture(node: HTMLElement, initial: Options) {
     });
     (node.closest(".app") ?? document.body).append(preview);
     options.announce(
-      `${current.project.title} picked up. Move to another status column.`,
+      `${current.project.title} podniesiony. Przenieś do innej kolumny statusu.`,
     );
     frame = requestAnimationFrame(paint);
   }
@@ -221,11 +221,11 @@ export function projectStatusGesture(node: HTMLElement, initial: Options) {
     const state = pointer.dragging ? destination(pointer) : null;
     const observed = release();
     if (!state || !observed) {
-      if (observed?.dragging) options.announce("Project status unchanged.");
+      if (observed?.dragging) options.announce("Status projektu bez zmian.");
       return;
     }
     options.announce(
-      `Moving ${observed.project.title} to ${projectStateLabels[state]}.`,
+      `Przenoszenie ${observed.project.title} do ${projectStateLabels[state]}.`,
     );
     options.commit(observed.project, state);
   }

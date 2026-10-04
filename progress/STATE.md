@@ -17,6 +17,15 @@ smoke and six affected WebKit suites pass. The rebuilt existing HTTPS app preser
 certificate; all 61 served assets match. Normally paired desktop/320px read-only
 checks pass. Physical-device and complete release acceptance remain open.
 
+The [Polish browser interface](2026-10-04-polish-ui.md) covers all views, menus,
+dialogs, settings, native widget words and recovery/accessibility messages, keeping
+Focus. The full 617-test gate, all 37 Chromium suites, 16 selected WebKit suites
+and broad HTTPS/planning smoke pass. The rebuilt existing HTTPS app preserves
+37 source hashes/versions, three pins, both profiles/settings/roots, identity/epoch
+and certificate; all 59 served assets match. Normally paired read-only checks
+cover all eight views, settings and phone navigation. Source data and CLI/protocol
+values retain their meaning. Physical-device and full release acceptance remain open.
+
 The [navigation selector correction](2026-10-04-navigation-section-selector.md)
 replaces separate navigation arrows with the card menu's shared grip/eye component
 and fixes popover movement during held visibility clicks. Its independent

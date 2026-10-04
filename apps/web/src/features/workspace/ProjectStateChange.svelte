@@ -39,7 +39,8 @@
     const unsubscribe = subscribeSession({
       ended: () => {
         accessLost = true;
-        error = "Your session ended. Copy this proposal before reconnecting.";
+        error =
+          "Sesja wygasła. Skopiuj tę propozycję przed ponownym połączeniem.";
       },
       restored: () => {
         accessLost = false;
@@ -76,56 +77,56 @@
       );
     } catch {
       error =
-        "Clipboard access is unavailable. Copy the proposal and request ID.";
+        "Schowek jest niedostępny. Skopiuj propozycję i identyfikator żądania.";
     }
   }
 </script>
 
 {#if !error}<p class="project-save-status" role="status">
-    Saving project status…
+    Zapisywanie statusu projektu…
   </p>{/if}
 {#if error}
   <dialog
     class="app-dialog dialog-small"
-    aria-label="Move project"
+    aria-label="Przenieś projekt"
     use:modal={{ onclose: closeWhenResolved }}
     out:layerExit|global
   >
     <DialogHeader
-      title="Move project"
+      title="Przenieś projekt"
       {onclose}
       disabled={busy || !!pending}
-      closeLabel="Close move project"
+      closeLabel="Zamknij przenoszenie projektu"
     />
     <div class="dialog-body">
       <p><strong>{item.title}</strong> → {resourceLabel(nextState)}</p>
       <p role="alert">{error}</p>
       {#if conflict}<p>
-          The project changed. Close this proposal and review the current
-          project before moving it again.
+          Projekt się zmienił. Zamknij tę propozycję i sprawdź aktualny projekt
+          przed ponownym przeniesieniem.
         </p>{/if}
-      {#if pending}<p>Request: {pending.requestId}</p>
+      {#if pending}<p>Żądanie: {pending.requestId}</p>
         <button
           type="button"
           onclick={() => transmit("status")}
-          disabled={busy || accessLost}>Check status</button
+          disabled={busy || accessLost}>Sprawdź stan</button
         ><button
           type="button"
           onclick={() => transmit()}
-          disabled={busy || accessLost}>Retry same command</button
+          disabled={busy || accessLost}>Ponów to samo polecenie</button
         >{/if}
-      <button type="button" onclick={copyDraft}>Copy draft</button>
+      <button type="button" onclick={copyDraft}>Kopiuj wersję roboczą</button>
       {#if accessLost && pending}<details>
-          <summary>Close without resolving</summary>
+          <summary>Zamknij bez rozstrzygnięcia</summary>
           <p>
-            Copy the request ID and proposal first. The operation may already
-            have committed.
+            Najpierw skopiuj identyfikator żądania i propozycję. Operacja mogła
+            już zostać zapisana.
           </p>
-          <button type="button" onclick={onclose}>Discard this proposal</button>
+          <button type="button" onclick={onclose}>Odrzuć tę propozycję</button>
         </details>{/if}
     </div>
     <footer class="dialog-footer">
-      <Button onclick={onclose} disabled={busy || !!pending}>Close</Button>
+      <Button onclick={onclose} disabled={busy || !!pending}>Zamknij</Button>
     </footer>
   </dialog>
 {/if}

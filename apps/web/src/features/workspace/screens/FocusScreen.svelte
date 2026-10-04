@@ -159,12 +159,13 @@
 >
   <SectionHeading
     id="focus-section-title"
-    title="In focus"
-    count={`${displayedFocus.length} visible ${displayedFocus.length === 1 ? "card" : "cards"}`}
+    title="W Focus"
+    count={`Widoczne karty: ${displayedFocus.length}`}
   />
   {#if focusCount > 1}<p class="sr" id="focus-order-help">
-      Drag a card to reorder it, or focus it and press Alt+↑ / Alt+↓ / Alt+Home
-      / Alt+End. Escape cancels a drag. Click a card to open it.
+      Przeciągnij kartę, aby zmienić kolejność, lub zaznacz ją i naciśnij Alt+↑
+      / Alt+↓ / Alt+Home / Alt+End. Escape anuluje przeciąganie. Kliknij kartę,
+      aby ją otworzyć.
     </p>{/if}
   <div class="focus-stack" use:focusOrderGesture={focusGestureOptions()}>
     {#each displayedFocus as item (item.project_id + ":" + item.id)}
@@ -180,32 +181,34 @@
         open={() => open(item)}
       />{:else}<EmptyState>
         {route.project || route.search
-          ? "No pinned cards match this selection. Change the project or clear the title filter."
-          : "No pinned cards yet. Open a card and pin it to keep it here."}
+          ? "Brak przypiętych kart pasujących do wyboru. Zmień projekt lub wyczyść filtr tytułu."
+          : "Brak przypiętych kart. Otwórz kartę i przypnij ją, aby zachować ją tutaj."}
       </EmptyState>{/each}
   </div>
   {#if focusBusy}<p role="status" class="focus-order-status">
-      Saving focus order…
+      Zapisywanie kolejności Focus…
     </p>{/if}
   {#if focusPending && !focusBusy}<p role="alert" class="focus-order-status">
       {focusError ||
-        "The focus order is awaiting confirmation. The same command is retained."}
+        "Kolejność Focus oczekuje na potwierdzenie. To samo polecenie zostało zachowane."}
     </p>
     <button onclick={onretry} disabled={focusRefreshing}
-      >Retry same command</button
+      >Ponów to samo polecenie</button
     >
     <details class="focus-save-details">
-      <summary>Save details</summary>
+      <summary>Szczegóły zapisu</summary>
       <code>{focusRequestId}</code>
-      <button onclick={oncopycommand}>Copy pending command</button>
+      <button onclick={oncopycommand}>Kopiuj oczekujące polecenie</button>
       {#if focusCopyMessage}<p role="status">{focusCopyMessage}</p>{/if}
     </details>{/if}
   {#if focusConflict}<p role="alert" class="focus-order-status">
       {focusError ||
-        "The focus order changed elsewhere. Reload to discard this proposal."}
+        "Kolejność Focus zmieniła się gdzie indziej. Wczytaj ponownie, aby odrzucić tę propozycję."}
     </p>
     <button onclick={onreload} disabled={focusRefreshing}>
-      {focusRefreshing ? "Reloading focus order…" : "Reload focus order"}
+      {focusRefreshing
+        ? "Wczytywanie kolejności Focus…"
+        : "Wczytaj kolejność Focus ponownie"}
     </button>{/if}
   {#if focusError && !focusPending && !focusConflict}<p
       role="alert"
@@ -213,18 +216,20 @@
     >
       {focusError}
     </p>
-    {#if focusCanRetry}<button onclick={onretrynew}>Try this order again</button
+    {#if focusCanRetry}<button onclick={onretrynew}>Ponów tę kolejność</button
       >{/if}{#if focusCanReload}<button
         onclick={onreload}
         disabled={focusRefreshing}
       >
-        {focusRefreshing ? "Reloading focus order…" : "Reload focus order"}
+        {focusRefreshing
+          ? "Wczytywanie kolejności Focus…"
+          : "Wczytaj kolejność Focus ponownie"}
       </button>{/if}{/if}
   {#if focusRefreshing && !focusConflict}<p
       role="status"
       class="focus-order-status"
     >
-      Reloading focus order…
+      Wczytywanie kolejności Focus…
     </p>{/if}
 </section>
 
@@ -234,8 +239,8 @@
 >
   <SectionHeading
     id="attention-section-title"
-    title="Needs my attention"
-    count={`${attention.length} visible items`}
+    title="Potrzebuje mojej uwagi"
+    count={`${attention.length} widocznych elementów`}
   />
   {#each attention as item (attentionKey(item))}<button
       class="listrow"
@@ -246,30 +251,31 @@
           >{projectLabel(projects, item.project_id)}</small
         >
       </div>
-      <span class="attention-reasons" aria-label="Attention reasons"
+      <span class="attention-reasons" aria-label="Powody wymagające uwagi"
         >{#each item.reasons as reason}<span class="badge"
             >{resourceLabel(reason)}</span
           >{/each}</span
       ><Icon name="arrow" /></button
     >{:else}<EmptyState>
-      <strong>A little breathing room.</strong>
-      <p>No additional items need attention on this page.</p>
+      <strong>Chwila oddechu.</strong>
+      <p>Żadne dodatkowe elementy na tej stronie nie wymagają uwagi.</p>
     </EmptyState>{/each}
   {#if attentionCursor}<button
       disabled={loadingMore}
-      onclick={() => moreAttention()}>Next attention page</button
+      onclick={() => moreAttention()}>Następna strona wymagająca uwagi</button
     >{/if}
   {#if attentionPaged}<button
       disabled={loadingMore}
-      onclick={() => moreAttention(true)}>First attention page</button
+      onclick={() => moreAttention(true)}
+      >Pierwsza strona wymagająca uwagi</button
     >{/if}
 </section>
 
 <section aria-labelledby="motion-section-title" data-focus-section="motion">
   <SectionHeading
     id="motion-section-title"
-    title="In motion"
-    count={`${activeCards.length} visible plans`}
+    title="W toku"
+    count={`${activeCards.length} widocznych planów`}
   />
   <div class="focus-stack">
     {#each activeCards as item (item.project_id + ":" + item.id)}<PinnedCard
@@ -283,24 +289,24 @@
         projectName={projectLabel(projects, item.project_id)}
         open={() => open(item)}
       />{:else}<EmptyState>
-        No other plans are scheduled for today on this page.
+        Brak innych planów na dzisiaj na tej stronie.
       </EmptyState>{/each}
   </div>
   {#if activeCardCursor}<button
       disabled={loadingMore}
-      onclick={() => moreActiveCards()}>Next plans</button
+      onclick={() => moreActiveCards()}>Następne plany</button
     >{/if}
   {#if activeCardPaged}<button
       disabled={loadingMore}
-      onclick={() => moreActiveCards(true)}>Previous plans</button
+      onclick={() => moreActiveCards(true)}>Poprzednie plany</button
     >{/if}
 </section>
 
 <section aria-labelledby="events-section-title" data-focus-section="events">
   <SectionHeading
     id="events-section-title"
-    title="Events"
-    count={`${sections.eventCards.length} visible events`}
+    title="Wydarzenia"
+    count={`${sections.eventCards.length} widocznych wydarzeń`}
   />
   <div class="focus-stack">
     {#each sections.eventCards as item (item.project_id + ":" + item.id)}
@@ -316,14 +322,14 @@
         open={() => open(item)}
       />
     {:else}<EmptyState
-        >No other events are scheduled for today on this page.</EmptyState
+        >Brak innych wydarzeń na dzisiaj na tej stronie.</EmptyState
       >{/each}
   </div>
   {#if eventCursor}<button disabled={loadingMore} onclick={() => moreEvents()}
-      >Next events</button
+      >Następne wydarzenia</button
     >{/if}
   {#if eventPaged}<button
       disabled={loadingMore}
-      onclick={() => moreEvents(true)}>Previous events</button
+      onclick={() => moreEvents(true)}>Poprzednie wydarzenia</button
     >{/if}
 </section>

@@ -52,6 +52,20 @@ Chromium captures settled layouts and intermediate rendered frames; native drag,
 resize, cancellation, conflict/retry and touch behavior remain covered by the
 planning, events and calendar-popup suites.
 
+## Polish interface verification
+
+The `localization` suite checks all eight views against an English browser and
+stored English workspace preference, translated native widget/date labels,
+card/settings dialogs, calendar keyboard focus, section controls and phone
+navigation at 320/390px and short landscape dimensions. Existing interaction
+suites use the Polish visible and accessible labels while retaining protocol
+identifiers and conditional-write assertions.
+
+```sh
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs localization
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs localization
+```
+
 ## Other interaction coverage
 
 The `projects` suite checks the whole-project status board, all three project states,

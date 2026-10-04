@@ -47,7 +47,7 @@
     disabled={actions.busy()}
     onclick={() => actions.open(item)}
     aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
-    title="Drag to move; click to edit. Alt+Up or Alt+Down changes order."
+    title="Przeciągnij, aby przenieść; kliknij, aby edytować. Alt+↑ lub Alt+↓ zmienia kolejność."
     onkeydown={(event) => {
       if (
         event.altKey &&

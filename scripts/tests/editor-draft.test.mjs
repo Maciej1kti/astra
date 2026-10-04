@@ -78,7 +78,7 @@ test("clearing optional card fields is explicit", () => {
     editTarget(
       "p",
       card({
-        acceptance: [{ id: "a", text: "Done", completed: true }],
+        acceptance: [{ id: "a", text: "Gotowe", completed: true }],
         schedule: { start: "2026-09-01", end: "2026-09-02" },
       }),
     ),
@@ -139,7 +139,7 @@ test("each resource draft emits only its own fields", () => {
       body: "",
       metadata: {
         id: "p",
-        name: "Project",
+        name: "Projekt",
         state: "paused",
         phase: "Discovery",
         review_on: "2026-09-02",
@@ -148,15 +148,15 @@ test("each resource draft emits only its own fields", () => {
     }),
   );
   assert.deepEqual(editorPayload(project), {
-    set: { body: "", name: "Project", state: "paused" },
+    set: { body: "", name: "Projekt", state: "paused" },
   });
   assert.equal("phase" in editorPayload(project).set, false);
   assert.equal("review_on" in editorPayload(project).set, false);
   assert.equal("advanced" in project.common, false);
   cardDraft.fields.end = "";
-  assert.throws(() => editorPayload(cardDraft), /both start and end/);
+  assert.throws(() => editorPayload(cardDraft), /daty początkowej i końcowej/);
   milestoneDraft.common.advanced = "[]";
-  assert.throws(() => editorPayload(milestoneDraft), /JSON object/);
+  assert.throws(() => editorPayload(milestoneDraft), /obiektem JSON/);
 });
 test("drafts own nested edits and include unfinished tag and acceptance input", () => {
   const source = card({
@@ -178,8 +178,8 @@ test("project folders are preserved, changed and explicitly cleared without affe
   const source = {
     type: "project",
     version: "v1",
-    body: "Description",
-    metadata: { id: "p", name: "Project", state: "active", folder: "Work" },
+    body: "Opis",
+    metadata: { id: "p", name: "Projekt", state: "active", folder: "Work" },
   };
   const draft = createEditorDraft(editTarget("p", source));
   draft.common.title = "Renamed";
@@ -188,7 +188,7 @@ test("project folders are preserved, changed and explicitly cleared without affe
   assert.equal(editorPayload(draft).set.folder, "Home");
   draft.fields.folder = "";
   assert.deepEqual(editorPayload(draft), {
-    set: { body: "Description", name: "Renamed", state: "active" },
+    set: { body: "Opis", name: "Renamed", state: "active" },
     clear: ["folder"],
   });
   assert.equal(
@@ -222,7 +222,7 @@ test("timed event edits retain timing and convert atomically to and from date pl
     duration_minutes: 60,
   });
   plan.fields.duration = 0;
-  assert.throws(() => editorPayload(plan), /duration/);
+  assert.throws(() => editorPayload(plan), /czasu trwania/);
 });
 
 test("unsent comments stay in exported drafts but never leak into card autosave", async () => {
@@ -232,7 +232,7 @@ test("unsent comments stay in exported drafts but never leak into card autosave"
     comments: [
       {
         id: "c",
-        body: "Saved",
+        body: "Zapisano",
         author: { kind: "agent", label: "Bot" },
         recorded_at: "2026-09-26T12:00:00Z",
       },

@@ -26,7 +26,7 @@
         value === item ? showing : layout.visible.includes(value),
       ),
     });
-    announcement = `${viewLabel(item)} ${showing ? "shown on" : "removed from"} the navigation bar.`;
+    announcement = `${viewLabel(item)} ${showing ? "na pasku" : "poza paskiem"} nawigacji.`;
   }
 </script>
 
@@ -36,10 +36,10 @@
     open = event.currentTarget.open;
   }}
 >
-  <summary>Customize navigation</summary>
+  <summary>Dostosuj nawigację</summary>
   {#if open}
     <p class="navigation-hint">
-      Drag a handle to arrange shortcuts for the bottom bar.
+      Przeciągnij uchwyt, aby ułożyć skróty na dolnym pasku.
     </p>
     <OrderVisibilityList
       order={layout.order}
@@ -51,26 +51,26 @@
           visible: order.filter((item) => layout.visible.includes(item)),
         })}
       ontoggle={toggle}
-      ariaLabel="Navigation order"
-      visibilityLabel={(item) => `Show ${viewLabel(item)} on navigation bar`}
+      ariaLabel="Kolejność nawigacji"
+      visibilityLabel={(item) => `Pokaż ${viewLabel(item)} na pasku nawigacji`}
       visibilityTitle={(item) =>
-        `${layout.visible.includes(item) ? "Hide" : "Show"} ${viewLabel(item)} on navigation bar`}
+        `${layout.visible.includes(item) ? "Ukryj" : "Pokaż"} ${viewLabel(item)} na pasku nawigacji`}
       rowAttribute="data-navigation-item"
       handleAttribute="data-navigation-handle"
       bind:announcement
     />
     <p class="navigation-hint">
       {stored
-        ? "Saved in this browser."
-        : "Browser storage is unavailable. These settings last until reload."}
+        ? "Zapisano w tej przeglądarce."
+        : "Pamięć przeglądarki jest niedostępna. Te ustawienia pozostaną do odświeżenia strony."}
     </p>
     <Button
       type="button"
       variant="quiet"
       onclick={() => {
         onsave(defaultNavigationLayout());
-        announcement = "Default navigation restored: Focus and Projects.";
-      }}>Reset navigation</Button
+        announcement = "Przywrócono domyślną nawigację: Focus i Projekty.";
+      }}>Przywróć nawigację</Button
     >
   {/if}
 </details>

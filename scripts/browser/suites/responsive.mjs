@@ -23,10 +23,12 @@ await runBrowserSuite(
       await page.goto(
         `${config.origin}/?${new URLSearchParams({ view, project, month: "2026-09", date: "2026-09-25", ...extra })}`,
       );
-      await page.getByRole("navigation", { name: "Workspace views" }).waitFor();
+      await page
+        .getByRole("navigation", { name: "Widoki przestrzeni roboczej" })
+        .waitFor();
       await expect(
         page.getByText(
-          /^(Loading resources…|Loading planning view…|Loading board…|Loading date views…|Loading calendar…|Loading timeline…|Loading Chart…)$/,
+          /^(Ładowanie danych…|Ładowanie widoku planowania…|Ładowanie tablicy…|Ładowanie date views…|Ładowanie kalendarza…|Ładowanie osi czasu…|Ładowanie wykresu…)$/,
         ),
       ).toHaveCount(0);
       if (view === "board")
@@ -69,11 +71,11 @@ await runBrowserSuite(
             "Workspace header must precede every view, including Focus",
           );
           await expect(
-            page.locator("main").getByLabel("Project", { exact: true }),
+            page.locator("main").getByLabel("Projekt", { exact: true }),
           ).toHaveCount(0);
           {
             const folderScope = ["focus", "projects"].includes(view);
-            const filterLabel = folderScope ? "Folder" : "Project";
+            const filterLabel = folderScope ? "Folder" : "Projekt";
             const picker = header.getByLabel(filterLabel, { exact: true });
             await expect(
               page.getByLabel(filterLabel, { exact: true }),
@@ -88,41 +90,41 @@ await runBrowserSuite(
           }
           if (view === "focus" && width <= 700) {
             const actions = header.getByRole("button", {
-              name: "Workspace actions",
+              name: "Działania przestrzeni roboczej",
               exact: true,
             });
             await actions.click();
             await expect(
               header.getByRole("button", {
-                name: "Host diagnostics",
+                name: "Diagnostyka serwera",
                 exact: true,
               }),
             ).toBeInViewport({ ratio: 1 });
             await expect(
-              header.getByRole("button", { name: "Sign out", exact: true }),
+              header.getByRole("button", { name: "Wyloguj", exact: true }),
             ).toBeInViewport({ ratio: 1 });
             await page.keyboard.press("Escape");
             await expect(actions).toBeFocused();
             await expect(actions).toHaveAttribute("aria-expanded", "false");
             await actions.click();
             await header
-              .getByRole("button", { name: "Host diagnostics", exact: true })
+              .getByRole("button", { name: "Diagnostyka serwera", exact: true })
               .click();
             await expect(
               page.getByRole("dialog", {
-                name: "Host diagnostics",
+                name: "Diagnostyka serwera",
                 exact: true,
               }),
             ).toBeVisible();
             await page
-              .getByRole("button", { name: "Close diagnostics", exact: true })
+              .getByRole("button", { name: "Zamknij diagnostykę", exact: true })
               .click();
             await expect(actions).toBeFocused();
             await expect(actions).toHaveAttribute("aria-expanded", "false");
           }
           if (view === "calendar") {
             const today = await page
-              .getByRole("button", { name: "Today", exact: true })
+              .getByRole("button", { name: "Dzisiaj", exact: true })
               .boundingBox();
             assert.ok(
               today.width >= 60,
@@ -133,7 +135,7 @@ await runBrowserSuite(
             const tiles = page.locator("[data-project-board-item]");
             await expect(tiles.first()).toBeVisible();
             const titles = await tiles.locator(".card-title").allTextContents();
-            const filter = page.getByLabel("Filter loaded titles", {
+            const filter = page.getByLabel("Filtruj wczytane tytuły", {
               exact: true,
             });
             await filter.fill(titles[0]);
@@ -147,7 +149,7 @@ await runBrowserSuite(
             await filter.fill("No matching project title");
             await expect(tiles).toHaveCount(0);
             await expect(
-              page.getByText("No projects match this selection.", {
+              page.getByText("Brak projektów pasujących do wyboru.", {
                 exact: true,
               }),
             ).toBeVisible();
@@ -156,36 +158,36 @@ await runBrowserSuite(
           }
           if (view === "list" && width <= 700) {
             const toggle = page.getByRole("button", {
-              name: "Filters",
+              name: "Filtry",
               exact: true,
             });
             await expect(
-              page.getByLabel("Status filter", { exact: true }),
+              page.getByLabel("Filtr statusu", { exact: true }),
             ).toBeHidden();
             await expect(
               page.getByLabel("Resource type", { exact: true }),
             ).toHaveCount(0);
             await toggle.click();
             await page
-              .getByLabel("Status filter", { exact: true })
+              .getByLabel("Filtr statusu", { exact: true })
               .selectOption("active");
             await expect(page).toHaveURL(/status=active/);
-            await page.getByRole("button", { name: /^Filters\s*1$/ }).click();
+            await page.getByRole("button", { name: /^Filtry\s*1$/ }).click();
             await expect(
-              page.getByLabel("Status filter", { exact: true }),
+              page.getByLabel("Filtr statusu", { exact: true }),
             ).toBeHidden();
             await page.reload();
-            await page.getByRole("button", { name: /^Filters\s*1$/ }).click();
+            await page.getByRole("button", { name: /^Filtry\s*1$/ }).click();
             await expect(
-              page.getByLabel("Status filter", { exact: true }),
+              page.getByLabel("Filtr statusu", { exact: true }),
             ).toHaveValue("active");
             await settle(page.locator(".list-filter-fields"));
             await screenshot(`${width}-list-filters`);
             await page
-              .getByRole("button", { name: "Clear filters", exact: true })
+              .getByRole("button", { name: "Wyczyść filtry", exact: true })
               .click();
             await expect(
-              page.getByLabel("Status filter", { exact: true }),
+              page.getByLabel("Filtr statusu", { exact: true }),
             ).toHaveValue("");
           }
           await screenshot(`${width}-${view}`);
@@ -204,7 +206,7 @@ await runBrowserSuite(
       await route("list", { project: "" });
       const picker = page
         .locator("header.topbar")
-        .getByLabel("Project", { exact: true });
+        .getByLabel("Projekt", { exact: true });
       await expect(page.locator(".listrow").first()).toBeVisible();
       await picker.selectOption(config.projects[2].id);
       await expect(page).toHaveURL(
@@ -212,7 +214,7 @@ await runBrowserSuite(
       );
       await expect(
         page.getByText(
-          "No cards match this selection. Try another project or clear the filters.",
+          "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry.",
           { exact: true },
         ),
       ).toBeVisible();
@@ -229,7 +231,7 @@ await runBrowserSuite(
       await expect(page.getByLabel("Folder", { exact: true })).toHaveValue("");
       await expect(picker).toHaveCount(0);
       await expect(page).toHaveURL(/view=focus/);
-      await page.getByRole("button", { name: "List", exact: true }).click();
+      await page.getByRole("button", { name: "Lista", exact: true }).click();
       await expect(picker).toHaveValue(project);
       results.push({
         headerProjectSelection: true,
@@ -279,7 +281,7 @@ await runBrowserSuite(
           .poll(() => sidebar.evaluate((el) => el.scrollTop))
           .toBeGreaterThan(initial);
         const signOut = sidebar.getByRole("button", {
-          name: "Sign out",
+          name: "Wyloguj",
           exact: true,
         });
         // Longer navigation catalogs need more than one fixed-distance swipe.
@@ -293,22 +295,22 @@ await runBrowserSuite(
           await swipeSidebar();
         }
         await expect(
-          sidebar.getByRole("button", { name: "Sign out", exact: true }),
+          sidebar.getByRole("button", { name: "Wyloguj", exact: true }),
         ).toBeInViewport({ ratio: 1 });
         await sidebar
-          .getByRole("button", { name: "Updates", exact: true })
+          .getByRole("button", { name: "Aktualizacje", exact: true })
           .click();
         await expect(
-          page.getByRole("heading", { name: "Updates", exact: true }),
+          page.getByRole("heading", { name: "Aktualizacje", exact: true }),
         ).toBeVisible();
         await screenshot(`${width}-${height}-sidebar`);
         await page.setViewportSize({ width: 390, height: 844 });
         const active = sidebar.getByRole("button", {
-          name: "Updates",
+          name: "Aktualizacje",
           exact: true,
         });
         const overflow = sidebar.getByRole("button", {
-          name: "More views",
+          name: "Więcej widoków",
           exact: true,
         });
         await expect(active).toHaveCount(0);
@@ -358,7 +360,7 @@ await runBrowserSuite(
         await page.setViewportSize({ width, height: 844 });
         await route("list");
         await page
-          .getByLabel("Search content", { exact: true })
+          .getByLabel("Szukaj w treści", { exact: true })
           .fill(card.title);
         await page
           .getByRole("button", { name: new RegExp(card.title) })
@@ -405,7 +407,7 @@ await runBrowserSuite(
         assert.equal(after.left, before.left);
         await screenshot(`${width}-vertical-modal`);
         await page
-          .getByRole("button", { name: "Close editor", exact: true })
+          .getByRole("button", { name: "Zamknij edytor", exact: true })
           .click();
         results.push({
           width,
@@ -423,7 +425,7 @@ await runBrowserSuite(
         "none",
       );
       await page
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await page.emulateMedia({ reducedMotion: "no-preference" });
       await page.locator(".projectopen").first().click();
@@ -433,7 +435,7 @@ await runBrowserSuite(
       );
       await settle(page.locator("dialog:modal"));
       await page
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       results.push({ reducedMotion: true, dialogMotion: true });
       assert.deepEqual(errors, []);

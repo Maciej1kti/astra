@@ -8,25 +8,25 @@
 </script>
 
 <fieldset disabled={locked}>
-  <legend>Report details</legend>
+  <legend>Szczegóły raportu</legend>
   <label
-    >Target type<select bind:value={fields.targetType}
-      ><option value="project">Project</option><option value="milestone"
-        >Milestone</option
+    >Typ celu<select bind:value={fields.targetType}
+      ><option value="project">Projekt</option><option value="milestone"
+        >Kamień milowy</option
       ></select
     ></label
   >
   {#if fields.targetType !== "project"}<label
-      >Target ID<input bind:value={fields.targetId} required /></label
+      >Identyfikator celu<input bind:value={fields.targetId} required /></label
     >{/if}
   {#if fields.kind === "resolution"}<label
-      >Resolved report IDs, separated by commas<input
+      >Identyfikatory rozstrzygniętych raportów, rozdzielone przecinkami<input
         bind:value={fields.resolves}
         required
       /></label
     >{/if}
   {#if fields.kind === "correction"}<label
-      >Corrected report ID<input
+      >Identyfikator poprawianego raportu<input
         bind:value={fields.supersedes}
         required
       /></label

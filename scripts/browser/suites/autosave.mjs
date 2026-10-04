@@ -25,10 +25,10 @@ export async function runAutosaveChecks({
   page.setDefaultTimeout(15000);
   page.on("pageerror", (error) => errors.push(error.message));
   const dialog = () =>
-    page.getByRole("dialog", { name: /^(Edit|Create) resource$/ });
-  const title = () => dialog().getByLabel("Title", { exact: true });
-  const startDate = () => dialog().getByLabel("Start", { exact: true });
-  const endDate = () => dialog().getByLabel("End", { exact: true });
+    page.getByRole("dialog", { name: /^(Edytuj|Utwórz) element$/ });
+  const title = () => dialog().getByLabel("Tytuł", { exact: true });
+  const startDate = () => dialog().getByLabel("Początek", { exact: true });
+  const endDate = () => dialog().getByLabel("Koniec", { exact: true });
   const cardPath = (id) => `${base}/cards/${id}`;
   const projectPath = `${base}`;
 
@@ -112,14 +112,14 @@ export async function runAutosaveChecks({
     const query = new URLSearchParams({ view, project, ...params });
     await page.goto(`${config.origin}/?${query}`);
     await expect(page.locator(".asidebottom")).toContainText(
-      "Connected to host",
+      "Połączono z serwerem",
     );
   }
   async function openCard(id) {
     await routeTo("list", { type: "card", resource: id });
     await title().waitFor();
     await dialog()
-      .getByRole("button", { name: "Edit schedule", exact: true })
+      .getByRole("button", { name: "Edytuj harmonogram", exact: true })
       .click();
   }
   async function openProject() {
@@ -129,18 +129,18 @@ export async function runAutosaveChecks({
       resource: project,
     });
     await dialog().waitFor();
-    await dialog().getByLabel("Name", { exact: true }).waitFor();
+    await dialog().getByLabel("Nazwa", { exact: true }).waitFor();
   }
   async function closeDialog() {
     if (!(await dialog().count())) return;
     const close = dialog().getByRole("button", {
-      name: "Close editor",
+      name: "Zamknij edytor",
       exact: true,
     });
     if ((await close.isVisible()) && (await close.isEnabled()))
       await close.click();
     const discard = dialog().getByRole("button", {
-      name: "Discard draft",
+      name: "Odrzuć wersję roboczą",
       exact: true,
     });
     if (await discard.isVisible()) await discard.click();
@@ -195,14 +195,14 @@ export async function runAutosaveChecks({
       await routeTo("list");
       await page
         .locator(".heading")
-        .getByRole("button", { name: /Add card$/ })
+        .getByRole("button", { name: /Dodaj kartę$/ })
         .click();
       await dialog().waitFor();
       await expect(
-        dialog().getByRole("button", { name: "Save changes", exact: true }),
+        dialog().getByRole("button", { name: "Zapisz zmiany", exact: true }),
       ).toHaveCount(0);
       await expect(
-        dialog().getByRole("button", { name: "Cancel", exact: true }),
+        dialog().getByRole("button", { name: "Anuluj", exact: true }),
       ).toHaveCount(0);
       const name = `Autosave new card ${Date.now().toString(36)}`;
       const post = page.waitForResponse(
@@ -250,7 +250,9 @@ export async function runAutosaveChecks({
         await route.fulfill({ response });
       };
       await page.route(delayedStatusPath, delayStatusReply);
-      await expect(dialog().getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(dialog().getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       // A discrete change must send with browser timers paused. Response latency
       // and runner speed do not determine whether the text debounce was bypassed.
       await page.clock.pauseAt(Date.now() + 5_000);
@@ -264,7 +266,7 @@ export async function runAutosaveChecks({
           .getByRole("button", { name: /^Status:/ })
           .click();
         await dialog()
-          .getByRole("button", { name: "Active", exact: true })
+          .getByRole("button", { name: "Aktywne", exact: true })
           .click();
         const immediateResponse = await immediate;
         assert.equal(immediateResponse.status(), 200);
@@ -282,19 +284,19 @@ export async function runAutosaveChecks({
           value.metadata.title === later && value.metadata.status === "active",
       );
       await dialog()
-        .getByRole("button", { name: "Card actions", exact: true })
+        .getByRole("button", { name: "Działania karty", exact: true })
         .click();
       await dialog()
-        .getByRole("button", { name: "Delete card", exact: true })
+        .getByRole("button", { name: "Usuń kartę", exact: true })
         .click();
-      await expect(dialog()).toContainText("Permanently delete card?");
+      await expect(dialog()).toContainText("Trwale usunąć kartę?");
       const deletion = page.waitForResponse(
         (response) =>
           response.request().method() === "DELETE" &&
           response.url().endsWith(`/cards/${id}`),
       );
       await dialog()
-        .getByRole("button", { name: "Permanently delete card", exact: true })
+        .getByRole("button", { name: "Trwale usuń kartę", exact: true })
         .click();
       const deletionResponse = await deletion;
       assert.equal(deletionResponse.status(), 200);
@@ -389,7 +391,7 @@ export async function runAutosaveChecks({
             !Object.hasOwn(value.metadata, "schedule"),
         );
         await expect(dialog().getByTestId("autosave-status")).toHaveText(
-          "Saved",
+          "Zapisano",
         );
         let releaseThird = () => {};
         let thirdReady;
@@ -422,9 +424,9 @@ export async function runAutosaveChecks({
           const tagDraft = `buffered-tag-${Date.now().toString(36)}`;
           const acceptanceDraft = "Buffered acceptance entry";
           const tagInput = dialog().locator(
-            'input[placeholder="Find or create a tag"]',
+            'input[placeholder="Znajdź lub utwórz tag"]',
           );
-          const acceptanceInput = dialog().getByLabel("New item", {
+          const acceptanceInput = dialog().getByLabel("Nowa pozycja", {
             exact: true,
           });
           await tagInput.fill(tagDraft);
@@ -484,7 +486,7 @@ export async function runAutosaveChecks({
       const next = "Latest value before close";
       await title().fill(next);
       await dialog()
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await waitForWrite(path, "PATCH", 1);
       await expect(dialog()).toBeHidden();
@@ -505,20 +507,23 @@ export async function runAutosaveChecks({
       await page.waitForTimeout(550);
       assert.equal(writes.length, 0);
       await dialog()
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(dialog()).toBeVisible();
       await expect(
-        dialog().getByRole("button", { name: "Copy draft", exact: true }),
+        dialog().getByRole("button", {
+          name: "Kopiuj wersję roboczą",
+          exact: true,
+        }),
       ).toBeVisible();
       await expect(dialog().getByTestId("autosave-status")).toHaveText(
-        "Not saved",
+        "Niezapisane",
       );
       await expect(
         dialog()
           .getByRole("alert")
-          .filter({ hasText: /title|required|valid/i }),
-      ).toContainText(/title|required|valid/i);
+          .filter({ hasText: /tytuł|wymagan|nieprawidłow/i }),
+      ).toContainText(/tytuł|wymagan|nieprawidłow/i);
       return { invalidDraftPreserved: true, copyVisible: true };
     },
   );
@@ -552,13 +557,16 @@ export async function runAutosaveChecks({
         await expect(dialog()).toBeVisible();
         await expect(title()).toHaveValue(draftTitle);
         await expect(dialog().getByTestId("autosave-status")).toHaveText(
-          "Not saved",
+          "Niezapisane",
         );
         await expect(dialog().getByRole("alert")).toContainText(
-          /conflict|version|changed/i,
+          /konflikt|wersj|zmienił/i,
         );
         await expect(
-          dialog().getByRole("button", { name: "Copy draft", exact: true }),
+          dialog().getByRole("button", {
+            name: "Kopiuj wersję roboczą",
+            exact: true,
+          }),
         ).toBeVisible();
         return { conflictPreserved: true };
       } finally {
@@ -597,41 +605,41 @@ export async function runAutosaveChecks({
       );
       await openProject();
       await expect(
-        dialog().getByRole("button", { name: "Save changes", exact: true }),
+        dialog().getByRole("button", { name: "Zapisz zmiany", exact: true }),
       ).toHaveCount(0);
       await expect(
-        dialog().getByRole("button", { name: "Cancel", exact: true }),
+        dialog().getByRole("button", { name: "Anuluj", exact: true }),
       ).toHaveCount(0);
       await expect(
         dialog().getByRole("button", {
-          name: "Preview Markdown",
+          name: "Podgląd Markdown",
           exact: true,
         }),
       ).toHaveCount(0);
       await expect(
-        dialog().getByLabel("Review on", { exact: true }),
+        dialog().getByLabel("Do sprawdzenia on", { exact: true }),
       ).toHaveCount(0);
       await expect(dialog().getByLabel("Phase", { exact: true })).toHaveCount(
         0,
       );
       await expect(
-        dialog().getByText("Additional fields", { exact: true }),
+        dialog().getByText("Dodatkowe pola", { exact: true }),
       ).toHaveCount(0);
       await expect(dialog().locator(".project-description-edit")).toHaveCount(
         0,
       );
       await expect(
-        dialog().getByText("Change history", { exact: true }),
+        dialog().getByText("Historia zmian", { exact: true }),
       ).toHaveCount(0);
       const name = `Autosave project ${Date.now().toString(36)}`;
       const projectWrites = () => writesFor(projectPath, "PATCH").length;
-      await dialog().getByLabel("Name", { exact: true }).fill(name);
+      await dialog().getByLabel("Nazwa", { exact: true }).fill(name);
       await waitForWrite(projectPath, "PATCH", 1);
       await waitForSaved(projectPath, (value) => value.metadata.name === name);
       const renderedBox = dialog().locator(".resource-description-rendered");
       await renderedBox.click();
       const sourceEditor = dialog().getByRole("textbox", {
-        name: "Description",
+        name: "Opis",
         exact: true,
       });
       await sourceEditor.focus();
@@ -703,11 +711,9 @@ export async function runAutosaveChecks({
       );
       const closeSource = `${nextSource}\n\nPointer close source is saved.`;
       await renderedBox.click();
+      await dialog().getByLabel("Opis", { exact: true }).fill(closeSource);
       await dialog()
-        .getByLabel("Description", { exact: true })
-        .fill(closeSource);
-      await dialog()
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await waitForWrite(projectPath, "PATCH", 5);
       await waitForSaved(projectPath, (value) => value.body === closeSource);
@@ -890,7 +896,7 @@ export async function runAutosaveChecks({
         path,
         (value) => !Object.hasOwn(value.metadata, "schedule"),
       );
-      const acceptance = dialog().getByLabel("New item", {
+      const acceptance = dialog().getByLabel("Nowa pozycja", {
         exact: true,
       });
       await acceptance.fill("The autosave acceptance condition is met.");
@@ -901,7 +907,7 @@ export async function runAutosaveChecks({
         (value) => value.metadata.acceptance?.length === 1,
       );
       await dialog()
-        .getByRole("checkbox", { name: /^Complete checklist item 1:/ })
+        .getByRole("checkbox", { name: /^Ukończ pozycję listy kontrolnej 1:/ })
         .check();
       await waitForWrite(path, "PATCH", 4);
       await waitForSaved(
@@ -910,10 +916,10 @@ export async function runAutosaveChecks({
       );
       const tag = `autosave-tag-${Date.now().toString(36)}`;
       await dialog()
-        .locator('input[placeholder="Find or create a tag"]')
+        .locator('input[placeholder="Znajdź lub utwórz tag"]')
         .fill(tag);
       await dialog()
-        .locator('input[placeholder="Find or create a tag"]')
+        .locator('input[placeholder="Znajdź lub utwórz tag"]')
         .press("Enter");
       await waitForWrite(path, "PATCH", 5);
       await waitForSaved(path, (value) => value.metadata.labels?.includes(tag));
@@ -951,7 +957,10 @@ export async function runAutosaveChecks({
         first = writesFor(path, "PATCH")[0];
         await expect(dialog()).toContainText(first.requestId);
         await expect(
-          dialog().getByRole("button", { name: "Copy draft", exact: true }),
+          dialog().getByRole("button", {
+            name: "Kopiuj wersję roboczą",
+            exact: true,
+          }),
         ).toBeVisible();
         const statusPattern = `**/api/v1/commands/${first.requestId}*`;
         await page.route(statusPattern, async (route) => {
@@ -969,16 +978,19 @@ export async function runAutosaveChecks({
           });
         });
         await dialog()
-          .getByRole("button", { name: "Check status", exact: true })
+          .getByRole("button", { name: "Sprawdź stan", exact: true })
           .click();
         await expect(dialog()).toContainText(first.requestId);
         await expect(
-          dialog().getByRole("button", { name: "Copy draft", exact: true }),
+          dialog().getByRole("button", {
+            name: "Kopiuj wersję roboczą",
+            exact: true,
+          }),
         ).toBeVisible();
         await page.unroute(statusPattern);
         await page.unroute(`${config.origin}${path}`);
         await dialog()
-          .getByRole("button", { name: "Retry same command", exact: true })
+          .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
           .click();
         await waitForWrite(path, "PATCH", 2);
         const retry = writesFor(path, "PATCH")[1];

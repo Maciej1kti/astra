@@ -44,9 +44,9 @@
       await navigator.clipboard.writeText(
         JSON.stringify(snapshot.pending, null, 2),
       );
-      copied = "Command copied";
+      copied = "Skopiowano polecenie";
     } catch {
-      copied = "Could not copy. Select the command details below.";
+      copied = "Nie udało się skopiować. Zaznacz szczegóły polecenia poniżej.";
     }
   }
 </script>
@@ -55,14 +55,14 @@
   {@const draft = snapshot.draft}
   <section
     class="focus-counter-bar"
-    aria-label="Edit focus counter"
+    aria-label="Edytuj licznik Focus"
     data-focus-interactive
   >
     <div class="focus-counter-bar-heading">
       <strong>{draft.counter.name}</strong>
       <span title={draft.title}>{draft.title}</span>
       <small
-        >{draft.counter.date === today ? "Today" : draft.counter.date} · {draft
+        >{draft.counter.date === today ? "Dzisiaj" : draft.counter.date} · {draft
           .counter.unit}</small
       >
     </div>
@@ -78,7 +78,7 @@
         max={counterLimit}
         step="1"
         value={draft.value}
-        aria-label={`${draft.counter.name} total`}
+        aria-label={`${draft.counter.name} wynik`}
         aria-invalid={invalid}
         disabled={!!snapshot.pending || snapshot.rejected}
         oninput={(event) => {
@@ -99,14 +99,14 @@
           variant="primary"
           disabled={snapshot.busy || !connected}
           onclick={onretry}
-          >{snapshot.busy ? "Saving…" : "Retry same command"}</Button
+          >{snapshot.busy ? "Zapisywanie…" : "Ponów to samo polecenie"}</Button
         >
       {:else if snapshot.rejected}
-        <Button onclick={oncancel}>Discard and refresh</Button>
+        <Button onclick={oncancel}>Odrzuć i odśwież</Button>
       {:else}
         <Button
           variant="quiet"
-          aria-label="Cancel counter edit"
+          aria-label="Anuluj edycję licznika"
           onclick={oncancel}><Icon name="close" small /></Button
         >
         <Button
@@ -114,27 +114,28 @@
           disabled={invalid ||
             !connected ||
             draft.value === draft.counter.value}
-          onclick={onsave}><Icon name="check" small />Save</Button
+          onclick={onsave}><Icon name="check" small />Zapisz</Button
         >
       {/if}
     </div>
     {#if snapshot.error}<p role="alert">
         {snapshot.error}
         {snapshot.pending
-          ? "Your original command is retained."
-          : "Your value is kept above. Discard it to load the current card."}
+          ? "Pierwotne polecenie zostało zachowane."
+          : "Wartość pozostaje powyżej. Odrzuć ją, aby wczytać aktualną kartę."}
       </p>{/if}
     {#if !connected}<p role="status">
-        Reconnect to save this result. Your draft is kept here.
+        Połącz się ponownie, aby zapisać ten wynik. Wersja robocza jest
+        zachowana.
       </p>{/if}
     {#if invalid}<p role="alert">
-        Enter a whole number from 0 to {counterLimit}.
+        Wpisz liczbę całkowitą od 0 do {counterLimit}.
       </p>{/if}
     {#if snapshot.pending && !snapshot.busy}
       <details class="focus-counter-recovery">
-        <summary>Save details</summary>
-        <Button disabled={!connected} onclick={oncheck}>Check result</Button>
-        <Button onclick={copyCommand}>Copy pending command</Button>
+        <summary>Szczegóły zapisu</summary>
+        <Button disabled={!connected} onclick={oncheck}>Sprawdź wynik</Button>
+        <Button onclick={copyCommand}>Kopiuj oczekujące polecenie</Button>
         <pre>{JSON.stringify(snapshot.pending, null, 2)}</pre>
         {#if copied}<p role="status">{copied}</p>{/if}
       </details>
@@ -144,7 +145,7 @@
   <p class="focus-counter-saved" role="status">
     <Icon name="check" small />{snapshot.notice}<Button
       variant="quiet"
-      aria-label="Dismiss counter confirmation"
+      aria-label="Zamknij potwierdzenie licznika"
       onclick={oncancel}><Icon name="close" small /></Button
     >
   </p>

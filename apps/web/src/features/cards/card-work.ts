@@ -6,7 +6,7 @@ export const ACCEPTANCE_TEXT_LIMIT = 500;
 
 export function acceptanceValidation(items: AcceptanceItem[]) {
   if (items.length > ACCEPTANCE_LIMIT)
-    return `Use up to ${ACCEPTANCE_LIMIT} checklist items.`;
+    return `Użyj maksymalnie ${ACCEPTANCE_LIMIT} pozycji listy kontrolnej.`;
   const ids = new Set<string>();
   for (let index = 0; index < items.length; index++) {
     const item = items[index];
@@ -16,12 +16,12 @@ export function acceptanceValidation(items: AcceptanceItem[]) {
       ) ||
       ids.has(item.id)
     )
-      return `Checklist item ${index + 1} has an invalid or repeated identifier. Copy your draft before reopening this card.`;
+      return `Pozycja listy kontrolnej ${index + 1} ma nieprawidłowy lub powtórzony identyfikator. Skopiuj wersję roboczą przed ponownym otwarciem karty.`;
     ids.add(item.id);
     if (!item.text.trim())
-      return `Add text to checklist item ${index + 1}, or remove it.`;
+      return `Dodaj treść do pozycji listy kontrolnej ${index + 1} lub ją usuń.`;
     if ([...item.text].length > ACCEPTANCE_TEXT_LIMIT)
-      return `Checklist item ${index + 1} must use ${ACCEPTANCE_TEXT_LIMIT} characters or fewer.`;
+      return `Pozycja listy kontrolnej ${index + 1} może zawierać maksymalnie ${ACCEPTANCE_TEXT_LIMIT} znaków.`;
   }
   return "";
 }

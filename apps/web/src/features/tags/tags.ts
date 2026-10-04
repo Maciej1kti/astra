@@ -6,12 +6,12 @@ export type TagResult = { labels: string[]; error: string };
 /** Labels are opaque, case-sensitive strings in the persisted contract. */
 export function tagValidation(labels: readonly string[]): string {
   if (labels.length > TAG_LIMIT)
-    return `Use up to ${TAG_LIMIT} tags per card. Remove a tag before adding another.`;
-  if (labels.some((label) => !label.length)) return "Enter a tag name.";
+    return `Użyj maksymalnie ${TAG_LIMIT} tagów na kartę. Usuń tag przed dodaniem kolejnego.`;
+  if (labels.some((label) => !label.length)) return "Wpisz nazwę tagu.";
   if (labels.some((label) => [...label].length > TAG_LENGTH_LIMIT))
-    return `A tag can contain up to ${TAG_LENGTH_LIMIT} characters.`;
+    return `Tag może zawierać maksymalnie ${TAG_LENGTH_LIMIT} znaków.`;
   if (new Set(labels).size !== labels.length)
-    return "This tag is already on the card.";
+    return "Ten tag jest już na karcie.";
   return "";
 }
 

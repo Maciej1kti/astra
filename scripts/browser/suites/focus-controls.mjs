@@ -59,13 +59,13 @@ await runBrowserSuite(
     const chip = () =>
       pin.getByRole("spinbutton", { name: "Push-ups", exact: true });
     const bar = page.getByRole("region", {
-      name: "Edit focus counter",
+      name: "Edytuj licznik Focus",
       exact: true,
     });
-    const numeric = () => bar.getByLabel("Push-ups total", { exact: true });
+    const numeric = () => bar.getByLabel("Push-ups wynik", { exact: true });
     const cancel = () =>
       bar
-        .getByRole("button", { name: "Cancel counter edit", exact: true })
+        .getByRole("button", { name: "Anuluj edycję licznika", exact: true })
         .click();
     const savedValue = () => get().metadata.counters[0].values[today] ?? 0;
     const requests = [];
@@ -78,9 +78,9 @@ await runBrowserSuite(
     try {
       // Unpinned daily plans/events must expose the same editable counter footer.
       for (const [sectionName, dateFields] of [
-        ["In motion", { schedule: { start: today, end: today } }],
+        ["W toku", { schedule: { start: today, end: today } }],
         [
-          "Events",
+          "Wydarzenia",
           { event: { start: `${today}T23:59`, duration_minutes: 60 } },
         ],
       ]) {
@@ -163,17 +163,17 @@ await runBrowserSuite(
         );
         await page.mouse.up();
         await expect(
-          bar.getByLabel("Daily steps total", { exact: true }),
+          bar.getByLabel("Daily steps wynik", { exact: true }),
         ).toHaveValue("10");
         await expect(page.getByRole("dialog")).toHaveCount(0);
         await bar
-          .getByRole("button", { name: "Cancel counter edit", exact: true })
+          .getByRole("button", { name: "Anuluj edycję licznika", exact: true })
           .click();
         await dailyChip.press("ArrowUp");
         await expect(
-          bar.getByLabel("Daily steps total", { exact: true }),
+          bar.getByLabel("Daily steps wynik", { exact: true }),
         ).toHaveValue("5");
-        await bar.getByRole("button", { name: "Save", exact: true }).click();
+        await bar.getByRole("button", { name: "Zapisz", exact: true }).click();
         await expect(bar).toHaveCount(0);
         await expect(dailyChip).toHaveAttribute("aria-valuenow", "5");
         const saved = cli("get", dailyPath);
@@ -214,7 +214,7 @@ await runBrowserSuite(
       await expect(page.locator("[data-focus-drag-preview]")).toHaveCount(0);
       await expect(page.getByRole("dialog")).toHaveCount(0);
       assert.equal(savedValue(), 0);
-      await bar.getByRole("button", { name: "Save", exact: true }).click();
+      await bar.getByRole("button", { name: "Zapisz", exact: true }).click();
       await expect(bar).toHaveCount(0);
       await expect(chip()).toHaveAttribute("aria-valuenow", "15");
       assert.equal(savedValue(), 15);
@@ -225,7 +225,7 @@ await runBrowserSuite(
       await numeric().fill("25");
       await page
         .getByRole("navigation")
-        .getByRole("button", { name: "Board", exact: true })
+        .getByRole("button", { name: "Tablica", exact: true })
         .click();
       await expect(numeric()).toHaveValue("25");
       await page
@@ -272,11 +272,11 @@ await runBrowserSuite(
         { set: { title: "Updated by another client" } },
         get().version,
       );
-      await bar.getByRole("button", { name: "Save", exact: true }).click();
-      await expect(bar.getByRole("alert")).toContainText("changed");
+      await bar.getByRole("button", { name: "Zapisz", exact: true }).click();
+      await expect(bar.getByRole("alert")).toContainText("zmienił");
       await expect(numeric()).toHaveValue("30");
       assert.equal(savedValue(), 15);
-      await bar.getByRole("button", { name: "Discard and refresh" }).click();
+      await bar.getByRole("button", { name: "Odrzuć i odśwież" }).click();
       await expect(pin).toContainText("Updated by another client");
 
       // Lose a committed response, navigate away, then retry the identical request.
@@ -298,17 +298,19 @@ await runBrowserSuite(
       });
       await chip().click();
       await numeric().fill("40");
-      await bar.getByRole("button", { name: "Save", exact: true }).click();
+      await bar.getByRole("button", { name: "Zapisz", exact: true }).click();
       await expect(
-        bar.getByRole("button", { name: "Retry same command" }),
+        bar.getByRole("button", { name: "Ponów to samo polecenie" }),
       ).toBeVisible();
       await expect(numeric()).toBeDisabled();
       assert.equal(savedValue(), 40);
       await page
         .getByRole("navigation")
-        .getByRole("button", { name: "Board", exact: true })
+        .getByRole("button", { name: "Tablica", exact: true })
         .click();
-      await bar.getByRole("button", { name: "Retry same command" }).click();
+      await bar
+        .getByRole("button", { name: "Ponów to samo polecenie" })
+        .click();
       await expect(bar).toHaveCount(0);
       assert.deepEqual(attempts[0], attempts[1]);
       await page.unroute(`${config.origin}${path}`);
@@ -318,7 +320,7 @@ await runBrowserSuite(
         .click();
       await expect(chip()).toHaveAttribute("aria-valuenow", "40");
       const notice = page.getByRole("button", {
-        name: "Dismiss counter confirmation",
+        name: "Zamknij potwierdzenie licznika",
       });
       if (await notice.count()) await notice.click();
 
@@ -492,7 +494,7 @@ await runBrowserSuite(
       await page.screenshot({ path: join(evidence, "focus-dark.png") });
       await mutate("PATCH", path, { set: { archived: true } }, get().version);
       await page.reload();
-      await expect(pin).toContainText("Archived");
+      await expect(pin).toContainText("Zarchiwizowane");
       await expect(chip()).toBeEnabled();
       await chip().click();
       await expect(numeric()).toHaveValue("40");

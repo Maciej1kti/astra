@@ -1,5 +1,5 @@
 function abortError() {
-  return new DOMException("The read was cancelled.", "AbortError");
+  return new DOMException("Odczyt został anulowany.", "AbortError");
 }
 export function isAbortError(error: unknown) {
   return error instanceof Error && error.name === "AbortError";
@@ -43,7 +43,9 @@ export class ReadRequests {
     };
     if (this.active < this.concurrency) return occupy();
     if (this.waiting.length >= this.maxQueued)
-      throw new ReadQueueFullError("Waiting for previous reads to finish.");
+      throw new ReadQueueFullError(
+        "Oczekiwanie na zakończenie wcześniejszych odczytów.",
+      );
     return new Promise((resolve, reject) => {
       const start = () => {
         signal.removeEventListener("abort", cancel);
@@ -92,7 +94,7 @@ export class ReadRequests {
             () =>
               controller.abort(
                 new DOMException(
-                  "The read timed out. Try again.",
+                  "Upłynął czas odczytu. Spróbuj ponownie.",
                   "TimeoutError",
                 ),
               ),

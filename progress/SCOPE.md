@@ -319,3 +319,11 @@ and expose that board under Projects. This supersedes the preceding Main naming
 and separate-view decision. Preserve project registration, opening and deletion
 alongside conditional status moves; keep legacy links/preferences usable without
 automatic source rewrites. See [ADR-064](../docs/ADR-064-PROJECTS-STATUS-BOARD.md).
+
+## Polish browser interface — owner direction, 2026-10-04
+
+Present the complete browser interface in Polish, including navigation, menus,
+modals, settings, accessibility labels, calendar/widget words and recovery/error
+messages. Focus retains its name. This supersedes the English UI-text rule;
+code identifiers, comments, maintained documentation, commits and CLI/protocol
+values remain English. User-authored source content is preserved.

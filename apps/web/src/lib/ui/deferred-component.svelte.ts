@@ -16,7 +16,7 @@ export function deferredComponent<T>(
       })
       .catch(() => {
         error =
-          "This part of the app could not be loaded. Retry, or reload after preserving any open draft.";
+          "Nie udało się wczytać tej części aplikacji. Spróbuj ponownie lub odśwież stronę po zachowaniu otwartej wersji roboczej.";
       })
       .finally(() => {
         pending = undefined;

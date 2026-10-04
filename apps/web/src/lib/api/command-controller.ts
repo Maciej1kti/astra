@@ -1,3 +1,4 @@
+import { resourceLabel } from "../resources/resource-presentation.ts";
 import { validateCommandStatus } from "./confirmation.ts";
 import {
   ApiError,
@@ -49,13 +50,13 @@ export class CommandController {
   prepare(pending: Pending) {
     if (this.pending)
       throw new Error(
-        "Resolve the unresolved command before starting another.",
+        "Rozstrzygnij oczekujące polecenie przed rozpoczęciem kolejnego.",
       );
     this.update({ phase: "ready", pending });
   }
   finishJob() {
     if (this.snapshot.phase !== "accepted")
-      throw new Error("No accepted job to finish.");
+      throw new Error("Brak przyjętego zadania do zakończenia.");
     this.update({ phase: "committed", pending: null });
   }
   retry() {
@@ -75,7 +76,7 @@ export class CommandController {
   ) {
     if (reply.kind !== "committed")
       throw new Error(
-        `Command accepted as job ${reply.jobId}. Check the job before continuing.`,
+        `Polecenie przyjęto jako zadanie ${reply.jobId}. Sprawdź zadanie przed kontynuowaniem.`,
       );
     return reply.reply;
   }
@@ -84,11 +85,13 @@ export class CommandController {
     phase: "submitting" | "checking",
   ): Promise<Exclude<CommandReply, { kind: "unresolved" }>> {
     if (this.busy)
-      throw new Error("This command is already being checked or submitted.");
+      throw new Error("To polecenie jest już sprawdzane lub przesyłane.");
     const pending = this.pending;
-    if (!pending) throw new Error("No pending command.");
+    if (!pending) throw new Error("Brak oczekującego polecenia.");
     if (this.dependencies.allowed?.() === false)
-      throw new Error("Reconnect before continuing this command.");
+      throw new Error(
+        "Połącz się ponownie przed kontynuowaniem tego polecenia.",
+      );
     this.update({ phase, pending });
     let rejected = false;
     try {
@@ -112,7 +115,7 @@ export class CommandController {
       } else reply = await (this.dependencies.send ?? send)(pending);
       if (reply.kind === "unresolved")
         throw new Error(
-          `Command is ${reply.state}. Check its status or retry the same command.`,
+          `Stan polecenia: ${resourceLabel(reply.state)}. Sprawdź stan lub ponów to samo polecenie.`,
         );
       this.update(
         reply.kind === "accepted"

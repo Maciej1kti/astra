@@ -22,7 +22,7 @@
 
 <div class="table">
   <div class="tablehead">
-    <span>Title / project</span><span>Card details</span>
+    <span>Tytuł / projekt</span><span>Szczegóły karty</span>
   </div>
   {#each items as item}<button class="listrow" onclick={() => open(item)}
       ><div>
@@ -35,7 +35,7 @@
       </div></button
     >{:else}<EmptyState>
       {route.archived
-        ? "No archived cards match this selection. Clear filters to see more archived cards."
-        : "No cards match this selection. Try another project or clear the filters."}
+        ? "Brak zarchiwizowanych kart pasujących do wyboru. Wyczyść filtry, aby zobaczyć więcej zarchiwizowanych kart."
+        : "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry."}
     </EmptyState>{/each}
 </div>

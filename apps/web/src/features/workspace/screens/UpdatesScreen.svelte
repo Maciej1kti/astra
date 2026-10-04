@@ -43,10 +43,10 @@
         <h3>{item.title}</h3>
         <Badge>{resourceLabel(item.kind ?? "update")}</Badge>
         <Badge class={item.read ? "" : "unread"}
-          >{item.read ? "Read" : "Unread"}</Badge
+          >{item.read ? "Przeczytane" : "Nieprzeczytane"}</Badge
         >
       </div></button
     >{:else}<EmptyState>
-      No updates yet. Record a result, blocker or decision.
+      Brak aktualizacji. Zapisz wynik, przeszkodę lub decyzję.
     </EmptyState>{/each}
 </div>

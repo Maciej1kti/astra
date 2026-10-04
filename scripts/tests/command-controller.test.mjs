@@ -44,9 +44,9 @@ test("lost replies retain identity and concurrent submissions cannot replace a c
   assert.equal(operation.busy, true);
   assert.throws(
     () => operation.prepare({ ...pending, requestId: "replacement" }),
-    /unresolved/,
+    /oczekujące/,
   );
-  await assert.rejects(operation.retry(), /already/);
+  await assert.rejects(operation.retry(), /już/);
   release(new TypeError("Response lost"));
   await assert.rejects(first, /Response lost/);
   assert.equal(operation.state.phase, "uncertain");
@@ -69,7 +69,7 @@ test("session access is independent of an uncertain command and restored access 
   operation.prepare(pending);
   await assert.rejects(operation.retry(), { status: 401 });
   allowed = false;
-  await assert.rejects(operation.retry(), /Reconnect/);
+  await assert.rejects(operation.retry(), /Połącz się ponownie/);
   assert.equal(calls, 1);
   assert.equal(operation.pending, pending);
   allowed = true;
@@ -104,12 +104,16 @@ test("definitive rejection releases the command; status rejection preserves its 
 });
 
 test("blocked and needs-review responses remain unresolved, while accepted jobs retain identity", async () => {
-  for (const state of ["prepared", "blocked", "needs_review"]) {
+  for (const [state, label] of [
+    ["prepared", "Przygotowane"],
+    ["blocked", "Zablokowane"],
+    ["needs_review", "Wymaga sprawdzenia"],
+  ]) {
     const operation = new CommandController({
       send: async () => ({ kind: "unresolved", state }),
     });
     operation.prepare(pending);
-    await assert.rejects(operation.retry(), new RegExp(state));
+    await assert.rejects(operation.retry(), new RegExp(label));
     assert.equal(operation.pending, pending);
   }
   const operation = new CommandController({
@@ -142,7 +146,10 @@ test("status confirmation completes only with a committed result; malformed repl
     { state: "committed" },
     { status: "running" },
   ]) {
-    assert.throws(() => normalizeCommandReply(value), /Invalid command/);
+    assert.throws(
+      () => normalizeCommandReply(value),
+      /Nieprawidłowa odpowiedź polecenia/,
+    );
   }
   assert.deepEqual(
     normalizeCommandReply({ status: "running", job_id: "job" }),

@@ -16,7 +16,7 @@ export function widgetDate(day: string): Date {
 export function dateOnly(date: Date): string {
   const value = `${String(date.getFullYear()).padStart(4, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()))
-    throw new Error("Date is outside the supported calendar.");
+    throw new Error("Data wykracza poza obsługiwany kalendarz.");
   return value;
 }
 export function exclusiveSchedule(schedule: { start: string; end: string }) {
@@ -28,7 +28,7 @@ export function exclusiveSchedule(schedule: { start: string; end: string }) {
 export function inclusiveSchedule(start: Date, end: Date) {
   const result = { start: dateOnly(start), end: shiftDate(dateOnly(end), -1) };
   if (result.start > result.end)
-    throw new Error("A plan must cover at least one day.");
+    throw new Error("Plan musi obejmować co najmniej jeden dzień.");
   return result;
 }
 export function calendarTarget(
@@ -46,8 +46,8 @@ export function calendarTarget(
 }
 export function calendarLabel(item: CalendarItem) {
   return item.event
-    ? `Event ${item.event.start.slice(11)} · ${item.event.duration_minutes} min`
+    ? `Wydarzenie ${item.event.start.slice(11)} · ${item.event.duration_minutes} min`
     : item.kind.endsWith("due")
-      ? "Due"
-      : "Planned work";
+      ? "Termin"
+      : "Zaplanowana praca";
 }

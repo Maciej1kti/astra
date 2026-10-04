@@ -153,11 +153,11 @@ test("an already cancelled opening starts no transport or invalidation listener"
 test("source failure cancels pending context without replacing the source error", async (t) => {
   const { reads, finish } = fixture(t);
   const opening = loadEditorTarget(reference, new AbortController().signal);
-  const rejected = assert.rejects(opening, /Current source unavailable/);
+  const rejected = assert.rejects(opening, /Nie znaleziono elementu/);
   await turn();
   finish(
     sourcePath,
-    { error: { code: "NOT_FOUND", message: "Current source unavailable" } },
+    { error: { code: "NOT_FOUND", message: "Nie znaleziono elementu" } },
     404,
   );
   await rejected;

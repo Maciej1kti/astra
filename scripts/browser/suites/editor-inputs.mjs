@@ -41,11 +41,13 @@ await runBrowserSuite(
       .metadata.id;
     const get = () => cli("get", `${base}/${id}`).metadata;
     const dialog = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
-    const time = dialog.getByLabel("Start time", { exact: true });
-    const duration = dialog.getByLabel("Duration (minutes)", { exact: true });
+    const time = dialog.getByLabel("Godzina rozpoczęcia", { exact: true });
+    const duration = dialog.getByLabel("Czas trwania (minuty)", {
+      exact: true,
+    });
     async function checkControls() {
       const fields = dialog.locator(".editor-properties input");
       for (const field of await fields.all()) {
@@ -93,21 +95,21 @@ await runBrowserSuite(
       );
       await expect(time).toHaveValue("");
       await dialog
-        .getByRole("button", { name: "Edit schedule", exact: true })
+        .getByRole("button", { name: "Edytuj harmonogram", exact: true })
         .click();
       const header = dialog.locator(".dialog-header");
-      const title = header.getByRole("textbox", { name: "Title", exact: true });
+      const title = header.getByRole("textbox", { name: "Tytuł", exact: true });
       await expect(title).toHaveCount(1);
       await expect(
         dialog
           .locator(".dialog-body")
-          .getByRole("textbox", { name: "Title", exact: true }),
+          .getByRole("textbox", { name: "Tytuł", exact: true }),
       ).toHaveCount(0);
       await expect(
         dialog.getByRole("combobox", { name: "Status", exact: true }),
       ).toHaveCount(0);
       await expect(
-        dialog.getByRole("combobox", { name: "Priority", exact: true }),
+        dialog.getByRole("combobox", { name: "Priorytet", exact: true }),
       ).toHaveCount(0);
       await expect(dialog.getByText(/Plan · dates only/)).toHaveCount(0);
       await expect(dialog.getByText(/Enter adds a tag/)).toHaveCount(0);
@@ -120,7 +122,13 @@ await runBrowserSuite(
         "planned",
       ]) {
         await header.getByRole("button", { name: /^Status:/ }).click();
-        const name = status[0].toUpperCase() + status.slice(1);
+        const name = {
+          planned: "Zaplanowane",
+          active: "Aktywne",
+          review: "Do sprawdzenia",
+          done: "Gotowe",
+          cancelled: "Anulowane",
+        }[status];
         await header.getByRole("button", { name, exact: true }).click();
         await expect.poll(() => get().status).toBe(status);
         const trigger = header.getByRole("button", {
@@ -132,7 +140,7 @@ await runBrowserSuite(
       }
       assert.equal(paths.size, 5, "Every status has its own icon");
       const statusTrigger = header.getByRole("button", {
-        name: "Status: Planned",
+        name: "Status: Zaplanowane",
         exact: true,
       });
       await statusTrigger.press("Enter");
@@ -145,14 +153,14 @@ await runBrowserSuite(
           : "Tab",
       );
       await expect(
-        header.getByRole("button", { name: "Planned", exact: true }),
+        header.getByRole("button", { name: "Zaplanowane", exact: true }),
       ).toBeFocused();
       await page.keyboard.press("Escape");
       await expect(statusTrigger).toHaveAttribute("aria-expanded", "false");
       await expect(statusTrigger).toBeFocused();
       await expect(dialog).toBeVisible();
       const priority = header.getByRole("button", {
-        name: "High priority",
+        name: "Wysoki priorytet",
         exact: true,
       });
       for (const value of ["high", "normal"]) {
@@ -202,7 +210,7 @@ await runBrowserSuite(
         );
         if (width <= 640) {
           const startBox = await dialog
-            .getByLabel("Start", { exact: true })
+            .getByLabel("Początek", { exact: true })
             .boundingBox();
           const timeBox = await time.boundingBox();
           assert.ok(
@@ -223,7 +231,7 @@ await runBrowserSuite(
         .toEqual({ start: "2026-09-13T09:30", duration_minutes: 90 });
       await page.reload();
       await dialog
-        .getByRole("button", { name: "Edit schedule", exact: true })
+        .getByRole("button", { name: "Edytuj harmonogram", exact: true })
         .click();
       await expect(time).toHaveValue("09:30");
       await expect(duration).toHaveValue("90");

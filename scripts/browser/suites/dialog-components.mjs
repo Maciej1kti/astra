@@ -59,25 +59,27 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
           await route.continue();
         });
         const trigger = page.getByRole("button", {
-          name: "Workspace settings",
+          name: "Ustawienia przestrzeni roboczej",
           exact: true,
         });
         try {
           await trigger.focus();
           await trigger.press("Enter");
           const dialog = page.getByRole("dialog", {
-            name: "Workspace settings",
+            name: "Ustawienia przestrzeni roboczej",
             exact: true,
           });
           await expect(
-            dialog.getByText("Loading…", { exact: true }),
+            dialog.getByText("Ładowanie…", { exact: true }),
           ).toBeVisible();
           assert(held, "The deferred module must be held before its handoff");
           release();
           await expect(
-            dialog.getByLabel("Timezone", { exact: true }),
+            dialog.getByLabel("Strefa czasowa", { exact: true }),
           ).toBeEnabled();
-          await dialog.getByRole("button", { name: "Close settings" }).click();
+          await dialog
+            .getByRole("button", { name: "Zamknij ustawienia" })
+            .click();
           await expect(nativeDialogs).toHaveCount(0);
           await expect(trigger).toBeFocused();
           return { deferredHandoff: true, triggerRestored: true };
@@ -92,25 +94,25 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
       "Project registration replacement restores the original trigger",
       async () => {
         await expect(nativeDialogs).toHaveCount(0);
-        const trigger = page.getByRole("button", { name: /Add project/ });
+        const trigger = page.getByRole("button", { name: /Dodaj projekt/ });
         await trigger.focus();
         await trigger.press("Enter");
         const dialog = page.getByRole("dialog", {
-          name: "Add project",
+          name: "Dodaj projekt",
           exact: true,
         });
         const disclosure = dialog
           .locator("summary")
-          .filter({ hasText: "Remote host" });
+          .filter({ hasText: "Zdalny serwer" });
         await expect(disclosure).toBeVisible();
         await disclosure.click();
         const browse = dialog.getByRole("button", {
-          name: "Browse approved folders",
+          name: "Przeglądaj zatwierdzone foldery",
         });
         await browse.focus();
         await browse.press("Enter");
         await expect(
-          dialog.getByText("Choose the project folder on this host.", {
+          dialog.getByText("Wybierz folder projektu na tym serwerze.", {
             exact: false,
           }),
         ).toBeVisible();
@@ -126,27 +128,27 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
       async () => {
         await page.setViewportSize({ width: 390, height: 844 });
         const trigger = page.getByRole("button", {
-          name: "Workspace settings",
+          name: "Ustawienia przestrzeni roboczej",
           exact: true,
         });
         await trigger.focus();
         await trigger.press("Enter");
         const settings = page.getByRole("dialog", {
-          name: "Workspace settings",
+          name: "Ustawienia przestrzeni roboczej",
           exact: true,
         });
         const tagsTrigger = settings.getByRole("button", {
-          name: "Manage tags",
+          name: "Zarządzaj tagami",
           exact: true,
         });
         await expect(tagsTrigger).toBeEnabled();
         await tagsTrigger.focus();
         await tagsTrigger.press("Enter");
         const tags = page.getByRole("dialog", {
-          name: "Manage project tags",
+          name: "Zarządzaj tagami projektu",
           exact: true,
         });
-        await expect(tags.getByLabel("Project", { exact: true })).toBeEnabled();
+        await expect(tags.getByLabel("Projekt", { exact: true })).toBeEnabled();
         await snapshot("nested-tags-phone");
         await page.keyboard.press("Escape");
         await expect(tags).toHaveCount(0);
@@ -162,7 +164,7 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
       "Card project selection shares bounded footer and replacement focus",
       async () => {
         await page.goto(`${config.origin}/?view=focus`);
-        const trigger = page.getByRole("button", { name: /Add card/ });
+        const trigger = page.getByRole("button", { name: /Dodaj kartę/ });
         const layouts = [];
         for (const viewport of [
           { width: 1440, height: 1000 },
@@ -174,13 +176,13 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
           await trigger.focus();
           await trigger.press("Enter");
           const dialog = page.getByRole("dialog", {
-            name: "Choose project for card",
+            name: "Wybierz projekt dla karty",
             exact: true,
           });
           await expect(dialog).toBeVisible();
           const footer = dialog.locator(".dialog-footer");
           await expect(
-            footer.getByRole("button", { name: "Continue", exact: true }),
+            footer.getByRole("button", { name: "Kontynuuj", exact: true }),
           ).toBeDisabled();
           const metrics = await dialog.evaluate((node) => {
             const rect = node.getBoundingClientRect();
@@ -207,23 +209,23 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
         }
         await trigger.press("Enter");
         const chooser = page.getByRole("dialog", {
-          name: "Choose project for card",
+          name: "Wybierz projekt dla karty",
           exact: true,
         });
         await chooser
-          .getByLabel("Project", { exact: true })
+          .getByLabel("Projekt", { exact: true })
           .selectOption(config.projects[0].id);
         const continueButton = chooser.getByRole("button", {
-          name: "Continue",
+          name: "Kontynuuj",
           exact: true,
         });
         await continueButton.focus();
         await continueButton.press("Enter");
         const editor = page.getByRole("dialog", {
-          name: "Create resource",
+          name: "Utwórz element",
           exact: true,
         });
-        await expect(editor.getByLabel("Title", { exact: true })).toBeVisible();
+        await expect(editor.getByLabel("Tytuł", { exact: true })).toBeVisible();
         await page.keyboard.press("Escape");
         await expect(nativeDialogs).toHaveCount(0);
         await expect(trigger).toBeFocused();

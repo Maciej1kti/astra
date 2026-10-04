@@ -35,12 +35,12 @@ export function pinUserToTab(id: string) {
 }
 
 export function rememberUser(id: string) {
-  if (!validId(id)) throw new Error("Invalid user.");
+  if (!validId(id)) throw new Error("Nieprawidłowy użytkownik.");
   try {
     sessionStorage.setItem(key, id);
   } catch {
     throw new Error(
-      "Browser storage is unavailable. Enable it to switch users.",
+      "Pamięć przeglądarki jest niedostępna. Włącz ją, aby zmieniać użytkowników.",
     );
   }
   try {
@@ -55,7 +55,7 @@ export function rememberDefaultUser() {
     sessionStorage.setItem(key, "");
   } catch {
     throw new Error(
-      "Browser storage is unavailable. Enable it to switch users.",
+      "Pamięć przeglądarki jest niedostępna. Włącz ją, aby zmieniać użytkowników.",
     );
   }
   try {

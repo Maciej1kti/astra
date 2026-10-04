@@ -13,12 +13,12 @@
     ontoggle,
     ariaLabel,
     announcement = $bindable(""),
-    visibilityLabel = (key: Key) => `Show ${label(key)}`,
+    visibilityLabel = (key: Key) => `Pokaż ${label(key)}`,
     visibilityTitle = (key: Key) =>
-      `${shown(key) ? "Hide" : "Show"} ${label(key)}`,
+      `${shown(key) ? "Ukryj" : "Pokaż"} ${label(key)}`,
     disabled = false,
     visibilityDisabled = false,
-    cancellationMessage = "Order unchanged.",
+    cancellationMessage = "Kolejność bez zmian.",
     rowAttribute,
     handleAttribute,
   }: {
@@ -43,7 +43,7 @@
   async function move(next: Key[], key: Key) {
     await onmove(next, key);
     await tick();
-    announcement = `${label(key)} moved to position ${order.indexOf(key) + 1} of ${order.length}.`;
+    announcement = `${label(key)} przeniesiono na miejsce ${order.indexOf(key) + 1} z ${order.length}.`;
     const handle = [
       ...(list?.querySelectorAll<HTMLButtonElement>("[data-order-handle]") ??
         []),
@@ -54,8 +54,8 @@
 </script>
 
 <span class="sr" id={`${id}-reorder-help`}>
-  Drag the handle to arrange items. Use the arrow keys, Home or End to move a
-  focused handle. Escape or Tab cancels a drag.
+  Przeciągnij uchwyt, aby ułożyć elementy. Użyj strzałek, Home lub End, aby
+  przenieść zaznaczony uchwyt. Escape lub Tab anuluje przeciąganie.
 </span>
 <ol
   class="layout-order"
@@ -86,7 +86,7 @@
         {disabled}
         data-order-handle={key}
         {...handleAttribute ? { [handleAttribute]: key } : {}}
-        aria-label={`Reorder ${label(key)}`}
+        aria-label={`Zmień kolejność ${label(key)}`}
         aria-describedby={`${id}-reorder-help`}
         aria-keyshortcuts="ArrowUp ArrowDown Home End"
         aria-pressed="false"><Icon name="grip" small /></Button

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
+  import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { revealScene } from "../../lib/ui/motion";
   import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import { timelineMetrics as metrics } from "../../lib/ui/planning-metrics";
@@ -99,7 +101,7 @@
       ? [
           {
             id: "text",
-            header: "Item",
+            header: "Element",
             cell: TimelineRow,
             width: metrics.compactGrid,
           },
@@ -107,12 +109,16 @@
       : [
           {
             id: "text",
-            header: "Item",
+            header: "Element",
             cell: TimelineRow,
             width: metrics.grid,
           },
-          { id: "plannedStart", header: "Start", width: metrics.startColumn },
-          { id: "plannedEnd", header: "End", width: metrics.endColumn },
+          {
+            id: "plannedStart",
+            header: "Początek",
+            width: metrics.startColumn,
+          },
+          { id: "plannedEnd", header: "Koniec", width: metrics.endColumn },
         ],
   );
   const axisStart = $derived(
@@ -214,7 +220,7 @@
         if (result.reset) {
           history = [null];
           pageNotice =
-            "The timeline changed. Showing the first page of the updated plan.";
+            "Oś czasu się zmieniła. Wyświetlono pierwszą stronę aktualnego planu.";
         }
         data = result.value;
         freshness = result.value ? projectionNotice(result.value) : "";
@@ -233,7 +239,7 @@
     rowOrder = [...moved, ...retained];
     orderNotice = writeTimelineOrder(project, rowOrder)
       ? ""
-      : "This browser could not save the timeline order.";
+      : "Przeglądarka nie mogła zapisać kolejności na osi czasu.";
     void tick().then(() =>
       chartRoot
         ?.querySelector<HTMLButtonElement>(`[data-timeline-row="${id}"] button`)
@@ -312,13 +318,13 @@
   }
 </script>
 
-{#if !project}<p>Select a project to see its planned dates.</p>
+{#if !project}<p>Wybierz projekt, aby zobaczyć jego zaplanowane daty.</p>
 {:else}
   <div class="toolbar" use:revealLayers={controlsLayers}>
     <label
-      >Timeline scale<select aria-label="Timeline scale" bind:value={scale}
-        ><option value="days">Days</option><option value="weeks">Weeks</option
-        ><option value="months">Months</option></select
+      >Skala osi czasu<select aria-label="Skala osi czasu" bind:value={scale}
+        ><option value="days">Dni</option><option value="weeks">Tygodnie</option
+        ><option value="months">Miesiące</option></select
       ></label
     >
   </div>
@@ -329,26 +335,26 @@
         onclick={() => {
           history = [null];
           void load(null);
-        }}>Reload timeline</button
+        }}>Wczytaj oś czasu ponownie</button
       >
     </p>{/if}
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
-  {#if loading}<p role="status">Loading timeline…</p>{/if}
+  {#if loading}<p role="status">Ładowanie osi czasu…</p>{/if}
   {#if pageNotice}<p class="hint" role="status">{pageNotice}</p>{/if}
-  <div class="selection-bar" aria-label="Timeline selection">
+  <div class="selection-bar" aria-label="Wybór na osi czasu">
     <label>
-      Selected item<select
-        aria-label="Selected card"
+      Wybrany element<select
+        aria-label="Wybrana karta"
         value={selection}
         onchange={(event) => selectCard(event.currentTarget.value)}
       >
-        <option value="">Choose an item</option>
+        <option value="">Wybierz element</option>
         {#each filtered as row}<option value={row.id}>{row.title}</option
           >{/each}
       </select>
     </label>
     <button disabled={!selected} onclick={() => selected && open(selected)}
-      >Open item</button
+      >Otwórz element</button
     >
     {#if selected?.schedule}<button
         onclick={() =>
@@ -357,18 +363,20 @@
             path: resourcePath(selected),
             version: selected.version,
             schedule: selected.schedule,
-          })}>Edit planned dates</button
+          })}>Edytuj zaplanowane daty</button
       >{/if}
     {#if selected}<div class="selected-summary" aria-live="polite">
         <strong>{selected.title}</strong>
         <span
           >{selected.type === "milestone"
-            ? "Milestone"
-            : (selected.status?.replaceAll("_", " ") ?? "Card")}
+            ? "Kamień milowy"
+            : selected.status
+              ? resourceLabel(selected.status)
+              : "Karta"}
           {selected.schedule
             ? ` · ${selected.schedule.start} → ${selected.schedule.end}`
-            : " · No recorded plan"}
-          {selected.due ? ` · ◆ Due: ${selected.due.date}` : ""}
+            : "· Brak zapisanego planu"}
+          {selected.due ? ` · ◆ Termin: ${selected.due.date}` : ""}
         </span>
       </div>{/if}
   </div>
@@ -380,64 +388,66 @@
       distance: "0px",
     }}
     class="astra-gantt"
-    aria-label="Project Gantt chart"
+    aria-label="Wykres Gantta projektu"
   >
-    <Willow fonts={false} />
-    <div
-      class="chart wx-theme wx-willow-theme"
-      class:compact={chartWidth < metrics.compactWidth}
-      bind:clientWidth={chartWidth}
-      bind:this={chartRoot}
-    >
-      <Gantt
-        {tasks}
-        {scales}
-        {columns}
-        {init}
-        taskTemplate={GanttTask}
-        readonly={true}
-        cellWidth={scale === "days"
-          ? chartWidth < metrics.compactWidth
-            ? metrics.compactDay
-            : metrics.day
-          : scale === "weeks"
-            ? metrics.week
-            : metrics.month}
-        cellHeight={metrics.row}
-        scaleHeight={metrics.scale}
-        gridWidth={chartWidth < metrics.compactWidth
-          ? metrics.compactGrid
-          : metrics.grid}
-        start={axisStart}
-        end={axisEnd}
-      />
-    </div>
+    <WidgetLocale>
+      <Willow fonts={false} />
+      <div
+        class="chart wx-theme wx-willow-theme"
+        class:compact={chartWidth < metrics.compactWidth}
+        bind:clientWidth={chartWidth}
+        bind:this={chartRoot}
+      >
+        <Gantt
+          {tasks}
+          {scales}
+          {columns}
+          {init}
+          taskTemplate={GanttTask}
+          readonly={true}
+          cellWidth={scale === "days"
+            ? chartWidth < metrics.compactWidth
+              ? metrics.compactDay
+              : metrics.day
+            : scale === "weeks"
+              ? metrics.week
+              : metrics.month}
+          cellHeight={metrics.row}
+          scaleHeight={metrics.scale}
+          gridWidth={chartWidth < metrics.compactWidth
+            ? metrics.compactGrid
+            : metrics.grid}
+          start={axisStart}
+          end={axisEnd}
+        />
+      </div>
+    </WidgetLocale>
   </div>
   <section>
-    <h3>Unscheduled cards</h3>
+    <h3>Karty bez harmonogramu</h3>
     <div class="unscheduled">
       {#each cards.filter((r) => !r.schedule && !r.event) as row}<button
-          onclick={() => open(row)}>{row.title} · Set planned dates</button
-        >{:else}<p>No unscheduled cards on this page.</p>{/each}
+          onclick={() => open(row)}>{row.title} · Ustaw zaplanowane daty</button
+        >{:else}<p>Brak kart bez harmonogramu na tej stronie.</p>{/each}
     </div>
   </section>
   {#if data?.page.next_cursor || history.length > 1}<nav
-      aria-label="Timeline pages"
+      aria-label="Strony osi czasu"
     >
       <button
         disabled={loading || history.length === 1}
         onclick={() => {
           history = history.slice(0, -1);
           void load(history.at(-1) ?? null);
-        }}>Previous page</button
-      ><span>Page {history.length} · project totals include other pages</span
+        }}>Poprzednia strona</button
+      ><span>Strona {history.length} · sumy projektu obejmują inne strony</span
       ><button
         disabled={loading || !data?.page.next_cursor}
         onclick={() => {
           const cursor = data!.page.next_cursor;
           history = [...history, cursor];
           void load(cursor);
-        }}>Next page of dated resources</button
+        }}>Następna strona elementów z datą</button
       >
     </nav>{/if}
 {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { counted } from "../../../lib/ui/locale.ts";
   import type { Summary } from "../../../lib/api/api";
   import ActionMenu from "../../../lib/ui/ActionMenu.svelte";
   import Badge from "../../../lib/ui/Badge.svelte";
@@ -102,10 +103,10 @@
         type="button"
         class="quiet icon-button project-board-handle"
         data-project-board-handle
-        aria-label={`Drag ${item.title} to change project status`}
+        aria-label={`Przeciągnij ${item.title} aby zmienić status projektu`}
         aria-describedby={helpId}
         aria-pressed="false"
-        title="Drag to change status"
+        title="Przeciągnij, aby zmienić status"
         disabled={disabled || !canMoveProject(item)}
         ><Icon name="grip" /></button
       >
@@ -113,7 +114,7 @@
         <ActionMenu
           placement="auto"
           icon="arrow"
-          label={`Move ${item.title}`}
+          label={`Przenieś ${item.title}`}
           disabled={disabled || !canMoveProject(item)}
         >
           {#snippet children(close)}
@@ -125,14 +126,14 @@
                   move(item, state);
                 }}
               >
-                Move to {projectStateLabels[state]}
+                Przenieś do {projectStateLabels[state]}
               </button>
             {/each}
           {/snippet}
         </ActionMenu>
         <ActionMenu
           placement="auto"
-          label={`More actions for ${item.title}`}
+          label={`Więcej działań dla ${item.title}`}
           {disabled}
         >
           {#snippet children(close)}
@@ -141,7 +142,7 @@
               onclick={() => {
                 close();
                 onremove(item);
-              }}>Delete project</button
+              }}>Usuń projekt</button
             >
           {/snippet}
         </ActionMenu>
@@ -152,45 +153,51 @@
 
 <div class="projects-screen">
   <p class="projects-help" id={helpId}>
-    Drag a project by its handle, or use its move menu to change status.
+    Przeciągnij projekt za uchwyt lub użyj menu przenoszenia, aby zmienić
+    status.
   </p>
   <span class="sr" aria-live="polite" aria-atomic="true">{announcement}</span>
   {#if !visibleProjects.length}
     <EmptyState
       title={projects.length
-        ? "No projects match this selection."
-        : "Start with a project."}
+        ? "Brak projektów pasujących do wyboru."
+        : "Zacznij od projektu."}
     >
       <p>
         {projects.length
-          ? "Choose another folder or clear the title filter."
-          : "Add a project from an approved directory to begin."}
+          ? "Wybierz inny folder lub wyczyść filtr tytułu."
+          : "Dodaj projekt z zatwierdzonego katalogu, aby rozpocząć."}
       </p>
       {#if !projects.length}<button onclick={addProject}
-          >Add your first project</button
+          >Dodaj pierwszy projekt</button
         >{/if}
     </EmptyState>
   {/if}
   <div
     class="project-status-board"
     role="region"
-    aria-label="Project status board"
+    aria-label="Tablica statusów projektów"
     use:projectStatusGesture={gestureOptions()}
   >
     {#each columns as column (column.state)}
       <section
         class="project-state-column"
         data-project-state={column.state}
-        aria-label={`${projectStateLabels[column.state]} projects`}
+        aria-label={`${projectStateLabels[column.state]} projekty`}
       >
         <SectionHeading
           title={projectStateLabels[column.state]}
           count={column.projects.length}
-          countLabel={`${column.projects.length} projects`}
+          countLabel={counted(
+            column.projects.length,
+            "projekt",
+            "projekty",
+            "projektów",
+          )}
         />
         {#each column.projects as item (item.id)}
           {@render projectTile(item)}
-        {:else}<p class="columnempty">No {column.state} projects</p>{/each}
+        {:else}<p class="columnempty">Brak projektów w tym statusie</p>{/each}
       </section>
     {/each}
   </div>
@@ -198,16 +205,21 @@
     <section
       class="projects-unavailable"
       data-project-state="unavailable"
-      aria-label="Unavailable projects"
+      aria-label="Niedostępne projekty"
     >
       <SectionHeading
-        title="Unavailable"
+        title="Niedostępne"
         count={unavailable.length}
-        countLabel={`${unavailable.length} projects`}
+        countLabel={counted(
+          unavailable.length,
+          "projekt",
+          "projekty",
+          "projektów",
+        )}
       />
       <p class="projects-help">
-        These projects have no available status. Open a project to inspect its
-        source.
+        Te projekty nie mają dostępnego statusu. Otwórz projekt, aby sprawdzić
+        jego źródło.
       </p>
       <div class="grid">
         {#each unavailable as item (item.id)}{@render projectTile(item)}{/each}

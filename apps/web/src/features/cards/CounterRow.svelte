@@ -102,35 +102,35 @@
   class="counter"
   class:editing={changed}
   role="group"
-  aria-label={`Counter: ${counter.name}`}
+  aria-label={`Licznik: ${counter.name}`}
   data-counter-day={record.date}
 >
   <div class="counter-overview">
     <button
       type="button"
       class="quiet counter-insight"
-      aria-label={`${counter.name} history`}
+      aria-label={`${counter.name} — historia`}
       aria-expanded={historyOpen}
       aria-controls={`${id}-history`}
-      title="Saved totals · Last 14 days · Open full history"
+      title="Zapisane wyniki · Ostatnie 14 dni · Otwórz pełną historię"
       onclick={() => {
         historyOpen = !historyOpen;
       }}
     >
       <span class="counter-name"
         ><strong>{counter.name}</strong>{#if counter.archived}<Badge
-            >Hidden</Badge
+            >Ukryty</Badge
           >{/if}</span
       >
       <CounterTrend values={counter.values} {today} />
       <span class="sr"
-        >Saved totals over the last 14 days. Dots are unrecorded days.</span
+        >Zapisane wyniki z ostatnich 14 dni. Kropki oznaczają dni bez zapisów.</span
       >
     </button>
     {#if !counter.archived}
       {#if editing}
         <label class="counter-entry">
-          <span class="sr">{counter.name} total</span>
+          <span class="sr">{counter.name} wynik</span>
           <input
             bind:this={input}
             type="text"
@@ -138,7 +138,7 @@
             autocomplete="off"
             maxlength="32"
             value={textDraft?.text ?? String(record.value)}
-            aria-label={`${counter.name} total`}
+            aria-label={`${counter.name} wynik`}
             aria-invalid={invalid}
             aria-describedby={invalid ? `${id}-error` : `${id}-entry-help`}
             disabled={locked}
@@ -171,7 +171,7 @@
           class="counter-value"
           class:large={value >= 1_000_000}
           role="spinbutton"
-          aria-label={`${counter.name} value`}
+          aria-label={`${counter.name} wynik`}
           aria-valuenow={value}
           aria-valuemin={0}
           aria-valuemax={counterMaximum}
@@ -192,58 +192,58 @@
       type="button"
       variant="quiet"
       class="icon-button"
-      aria-label={`Edit counter ${counter.name}`}
-      title="Edit counter"
+      aria-label={`Edytuj licznik ${counter.name}`}
+      title="Edytuj licznik"
       disabled={locked || changed || editing}
       onclick={onconfigure}><Icon name="settings" small /></Button
     >
   </div>
   <span class="sr" id={`${id}-help`}
-    >Drag left or right, use arrow keys in steps of {counter.step}, or tap to
-    enter a whole number. Confirm to save.</span
+    >Przeciągnij w lewo lub w prawo, użyj strzałek z krokiem {counter.step}, lub
+    dotknij, aby wpisać liczbę całkowitą. Potwierdź, aby zapisać.</span
   >
   <span class="sr" id={`${id}-entry-help`}
-    >Enter a whole number in {counter.unit}. Press Enter to save or Escape to
-    cancel.</span
+    >Wpisz liczbę całkowitą w {counter.unit}. Naciśnij Enter, aby zapisać, lub
+    Escape, aby anulować.</span
   >
   {#if changed || editing}
     <div class="counter-confirmation">
       <span class="draft-hint" role="status"
         >{record.date !== today
-          ? `Unsaved result for ${record.date}`
+          ? `Niezapisany wynik na ${record.date}`
           : changed
-            ? "Not saved"
-            : "Enter a total"}</span
+            ? "Niezapisane"
+            : "Wpisz wynik"}</span
       >
       <Button
         type="button"
         variant="quiet"
-        aria-label="Reset draft"
+        aria-label="Odrzuć wersję roboczą"
         {disabled}
-        onclick={reset}>Cancel</Button
+        onclick={reset}>Anuluj</Button
       >
       <Button
         type="button"
         variant="primary"
-        aria-label={`Confirm ${counter.name}`}
+        aria-label={`Potwierdź ${counter.name}`}
         disabled={locked || invalid || !draft.values[counter.id]}
-        onclick={save}><Icon name="check" small />Save</Button
+        onclick={save}><Icon name="check" small />Zapisz</Button
       >
     </div>
   {/if}
   {#if invalid}<p class="counter-error" role="alert" id={`${id}-error`}>
-      Enter a whole number from 0 to {counterMaximum.toLocaleString("en")}.
+      Wpisz liczbę całkowitą od 0 do {counterMaximum.toLocaleString("pl-PL")}.
     </p>{/if}
   {#if historyOpen}
     <div class="counter-history-panel" id={`${id}-history`}>
       <div class="counter-history-heading">
-        <strong>History</strong><span
-          >{dates.length} {dates.length === 1 ? "day" : "days"}</span
+        <strong>Historia</strong><span
+          >{dates.length} {dates.length === 1 ? "dzień" : "dni"}</span
         >
       </div>
       <p class="field-hint">
-        Saved daily totals. The preview covers 14 days; dots mark unrecorded
-        days.
+        Zapisane wyniki dzienne. Podgląd obejmuje 14 dni; kropki oznaczają dni
+        bez zapisów.
       </p>
       {#if dates.length}
         <!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable history needs keyboard access.) -->
@@ -251,10 +251,10 @@
           class="counter-history"
           tabindex="0"
           role="region"
-          aria-label={`${counter.name} saved results`}
+          aria-label={`${counter.name} zapisanych wyników`}
         >
           <table>
-            <thead><tr><th>Date</th><th>Result</th></tr></thead>
+            <thead><tr><th>Data</th><th>Wynik</th></tr></thead>
             <tbody
               >{#each dates as date}<tr
                   ><td><time datetime={date}>{date}</time></td><td
@@ -264,7 +264,7 @@
             >
           </table>
         </div>
-      {:else}<p class="field-hint">No recorded results yet.</p>{/if}
+      {:else}<p class="field-hint">Brak zapisanych wyników.</p>{/if}
     </div>
   {/if}
 </div>

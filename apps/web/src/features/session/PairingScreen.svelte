@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { stateLabel } from "../../lib/resources/state-presentation";
   import Brand from "../../lib/ui/Brand.svelte";
 
   import Button from "../../lib/ui/Button.svelte";
@@ -32,42 +33,42 @@
 
 <main class="welcome">
   <Brand />
-  <p class="eyebrow">Your work, on your own machine</p>
-  <h1>A clearer view<br />of what’s next.</h1>
+  <p class="eyebrow">Twoja praca na Twoim komputerze</p>
+  <h1>Jaśniejszy obraz<br />kolejnych kroków.</h1>
   <p class="lead">
-    Projects, decisions and progress.<br />Connected to the folders you already
-    use.
+    Projekty, decyzje i postępy.<br />Połączone z folderami, których już
+    używasz.
   </p>
   <section class="pairbox">
-    <h2>{pairing ? "Approve this browser" : "Connect your browser"}</h2>
-    {#if loading}<p>Checking connection…</p>{:else if pairing}<p>
-        Compare this challenge on the host machine:
+    <h2>{pairing ? "Zatwierdź tę przeglądarkę" : "Połącz przeglądarkę"}</h2>
+    {#if loading}<p>Sprawdzanie połączenia…</p>{:else if pairing}<p>
+        Porównaj ten kod na komputerze serwera:
       </p>
       <div class="challenge">{pairing.challenge}</div>
-      <p>Status: <strong>{pairing.state}</strong></p>
+      <p>Status: <strong>{stateLabel(pairing.state)}</strong></p>
       <code
         >projectctl --socket /path/to/projectd.sock approve {pairing.id} --challenge
         "{pairing.challenge}"</code
       ><Button variant="primary" onclick={checkPairing} disabled={busy}
-        >I approved this browser</Button
-      ><Button variant="quiet" onclick={onrestart}>Start again</Button
+        >Przeglądarka została zatwierdzona</Button
+      ><Button variant="quiet" onclick={onrestart}>Zacznij ponownie</Button
       >{:else}<label
-        >Device name<input bind:value={device} maxlength="120" /></label
+        >Nazwa urządzenia<input bind:value={device} maxlength="120" /></label
       ><Button
         variant="primary"
         onclick={startPairing}
-        disabled={busy || !device.trim()}>Request access <span>↗</span></Button
+        disabled={busy || !device.trim()}>Poproś o dostęp <span>↗</span></Button
       >
       <p class="small">
-        Approval is required on the host. This app does not grant access from a
-        link alone.
+        Wymagane jest zatwierdzenie na serwerze. Sam link nie zapewnia dostępu
+        do aplikacji.
       </p>{/if}{#if error}<p class="notice" role="alert">{error}</p>{/if}
     {#if error && ondefaultuser}<Button
         variant="quiet"
         onclick={ondefaultuser}
-        disabled={loading || busy}>Use default user</Button
+        disabled={loading || busy}>Użyj domyślnego użytkownika</Button
       >{/if}
-    <button onclick={ondiagnostics}>Host diagnostics</button>
+    <button onclick={ondiagnostics}>Diagnostyka serwera</button>
   </section>
 </main>
 

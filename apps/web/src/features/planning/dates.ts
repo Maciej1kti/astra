@@ -3,7 +3,7 @@ export function shiftDate(date: string, days: number): string {
   value.setUTCDate(value.getUTCDate() + days);
   const result = value.toISOString().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(result))
-    throw new Error("Date is outside the supported calendar.");
+    throw new Error("Data wykracza poza obsługiwany kalendarz.");
   return result;
 }
 export function shiftedSchedule(

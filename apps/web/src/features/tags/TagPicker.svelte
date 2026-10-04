@@ -33,7 +33,7 @@
   } = $props();
   const id = $props.id();
   const folder = $derived(kind === "folder");
-  const catalogLabel = $derived(folder ? "folders" : "project tags");
+  const catalogLabel = $derived(folder ? "foldery" : "tagi projektu");
   let input = $state<HTMLInputElement>();
   let expanded = $state(false);
   let pointerOutside = false;
@@ -68,10 +68,10 @@
       projectOptions = catalog.names;
       catalogLoaded = true;
       if (!catalog.complete)
-        catalogError = `Some ${catalogLabel} are unavailable. Available suggestions are shown.`;
+        catalogError = `Niektóre ${catalogLabel} są niedostępne. Wyświetlono dostępne podpowiedzi.`;
     } catch (error) {
       if (current === generation && !isAbortError(error))
-        catalogError = `${folder ? "Folders" : "Project tags"} could not be loaded.`;
+        catalogError = `${folder ? "Foldery" : "Tagi projektu"} nie mogły zostać wczytane.`;
     } finally {
       if (current === generation) catalogLoading = false;
     }
@@ -149,13 +149,13 @@
       ? {
           labels: [name],
           error: !name
-            ? "Enter a folder name."
+            ? "Wpisz nazwę folderu."
             : [...name].length > 48
-              ? "A folder can contain up to 48 characters."
+              ? "Folder może zawierać maksymalnie 48 znaków."
               : /[\r\n\0]/.test(name)
-                ? "Use a single-line folder name."
+                ? "Nazwa folderu musi mieścić się w jednym wierszu."
                 : labels.includes(name)
-                  ? "This folder is already assigned."
+                  ? "Ten folder jest już przypisany."
                   : "",
         }
       : addTag(labels, value, fromSuggestion);
@@ -165,8 +165,8 @@
       addedLabel = (folder ? labels[0] : labels.at(-1)) ?? "";
       draft = "";
       announcement = folder
-        ? `Set folder ${labels[0]}.`
-        : `Added tag ${labels.at(-1)}.`;
+        ? `Ustaw folder ${labels[0]}.`
+        : `Dodano tag ${labels.at(-1)}.`;
       active = -1;
     }
     input?.focus();
@@ -176,8 +176,8 @@
     labels = labels.filter((item) => item !== label);
     error = "";
     announcement = folder
-      ? `Removed folder ${label} from this project.`
-      : `Removed tag ${label} from this card.`;
+      ? `Usunięto folder ${label} z tego projektu.`
+      : `Usunięto tag ${label} z tej karty.`;
     input?.focus();
   }
 
@@ -210,27 +210,27 @@
   }
 </script>
 
-<section class="tags" aria-label={folder ? "Project folder" : "Card tags"}>
+<section class="tags" aria-label={folder ? "Folder projektu" : "Tagi karty"}>
   {#if folder}<div class="heading">
-      <label for={`${id}-input`}>{folder ? "Folder" : "Labels"}</label><span
+      <label for={`${id}-input`}>{folder ? "Folder" : "Etykiety"}</label><span
         >{labels.length}/{folder ? 1 : TAG_LIMIT}</span
       >
     </div>{:else}
     <SectionHeading
-      title="Labels"
+      title="Etykiety"
       level={3}
       visuallyHidden
       count={`${labels.length}/${TAG_LIMIT}`}
     />
-    <label class="sr-only" for={`${id}-input`}>Labels</label>
+    <label class="sr-only" for={`${id}-input`}>Etykiety</label>
   {/if}
   {#if labels.length}
-    <ul class="chips" aria-label={folder ? "Selected folder" : "Selected tags"}>
+    <ul class="chips" aria-label={folder ? "Wybrany folder" : "Wybrane tagi"}>
       {#each labels as label (label)}
         <li class:chip-added={label === addedLabel}>
           <span>{label}</span><button
             type="button"
-            aria-label={`Remove ${kind} ${label}`}
+            aria-label={`Usuń ${kind === "folder" ? "folder" : "tag"} ${label}`}
             {disabled}
             onclick={() => remove(label)}><Icon name="close" small /></button
           >
@@ -238,7 +238,7 @@
       {/each}
     </ul>
   {:else}<p class="empty">
-      {folder ? "No folder on this project." : "No tags on this card."}
+      {folder ? "Ten projekt nie ma folderu." : "Ta karta nie ma tagów."}
     </p>{/if}
   <div class="input-row">
     <input
@@ -256,7 +256,9 @@
         .filter(Boolean)
         .join(" ") || undefined}
       aria-invalid={!!error}
-      placeholder={folder ? "Find or create a folder" : "Find or create a tag"}
+      placeholder={folder
+        ? "Znajdź lub utwórz folder"
+        : "Znajdź lub utwórz tag"}
       autocomplete="off"
       {disabled}
       oninput={() => {
@@ -277,17 +279,17 @@
     <button
       type="button"
       class:tag-add={!folder}
-      aria-label={folder ? undefined : "Add tag"}
-      title={folder ? undefined : "Add tag"}
+      aria-label={folder ? undefined : "Dodaj tag"}
+      title={folder ? undefined : "Dodaj tag"}
       disabled={disabled || !draft.trim()}
       onclick={() => add()}
-      >{#if folder}{labels.length ? "Set folder" : "Add folder"}{:else}<Icon
+      >{#if folder}{labels.length ? "Ustaw folder" : "Dodaj folder"}{:else}<Icon
           name="plus"
         />{/if}</button
     >
   </div>
   {#if folder}<p id={`${id}-hint`} class="hint">
-      Enter sets the folder. One folder per project.
+      Enter ustawia folder. Jeden folder na projekt.
     </p>{/if}
   {#if error}<p
       id={`${id}-error`}
@@ -303,7 +305,7 @@
       class="suggestions"
       use:revealLayers={suggestionLayers}
       role="listbox"
-      aria-label={folder ? "Existing folders" : "Existing tags"}
+      aria-label={folder ? "Istniejące foldery" : "Istniejące tagi"}
     >
       {#each suggestions as label, index}
         <li role="presentation">
@@ -322,11 +324,11 @@
     </ul>
   {/if}
   {#if catalogLoading}<p class="hint" role="status">
-      Loading {catalogLabel}…
+      Ładowanie {catalogLabel}…
     </p>{:else if catalogError}<p class="hint">
       {catalogError}
       <button type="button" {disabled} onclick={() => void loadCatalog()}
-        >Retry {catalogLabel}</button
+        >Ponów {catalogLabel}</button
       >
     </p>{/if}
   <p class="sr-only" role="status" aria-live="polite">{announcement}</p>

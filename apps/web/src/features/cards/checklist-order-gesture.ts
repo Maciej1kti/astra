@@ -141,7 +141,7 @@ export function checklistOrderGesture(list: HTMLElement, initial: Options) {
         (list.closest("dialog") ?? document.body).append(preview, indicator);
         snapshot.handle.setAttribute("aria-pressed", "true");
         options.announce(
-          `Picked up checklist item ${snapshot.order.indexOf(snapshot.id) + 1}.`,
+          `Podniesiono pozycję listy kontrolnej ${snapshot.order.indexOf(snapshot.id) + 1}.`,
         );
       },
       paint(pointer) {
@@ -181,7 +181,8 @@ export function checklistOrderGesture(list: HTMLElement, initial: Options) {
         options.released();
       },
       cancelled({ dragging }) {
-        if (dragging) options.announce("Checklist item order restored.");
+        if (dragging)
+          options.announce("Przywrócono kolejność listy kontrolnej.");
       },
     };
   }

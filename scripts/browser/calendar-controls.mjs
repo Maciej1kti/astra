@@ -2,9 +2,9 @@
 import { expect } from "@playwright/test";
 
 export async function calendarDate(page) {
-  const input = page.getByLabel("Go to date", { exact: true });
+  const input = page.getByLabel("Przejdź do daty", { exact: true });
   const toggle = page.getByRole("button", {
-    name: "Choose calendar date",
+    name: "Wybierz datę kalendarza",
     exact: true,
   });
   // An inert outgoing panel can remain painted briefly after logical dismissal.
@@ -15,10 +15,10 @@ export async function calendarDate(page) {
 
 export async function setCalendarDate(page, value) {
   await (await calendarDate(page)).fill(value);
-  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Gotowe", exact: true }).click();
 }
 
 export async function expectCalendarDate(page, value) {
   await expect(await calendarDate(page)).toHaveValue(value);
-  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: "Gotowe", exact: true }).click();
 }

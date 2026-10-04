@@ -43,13 +43,13 @@
       <input
         class="search"
         aria-label={["list", "updates"].includes(route.view)
-          ? "Search content"
-          : "Filter loaded titles"}
+          ? "Szukaj w treści"
+          : "Filtruj wczytane tytuły"}
         value={route.search}
         oninput={(event) => onchange({ search: event.currentTarget.value })}
         placeholder={["list", "updates"].includes(route.view)
-          ? "Search content…"
-          : "Filter titles…"}
+          ? "Szukaj w treści…"
+          : "Filtruj tytuły…"}
       />
       {#if route.view === "list"}
         <button
@@ -58,7 +58,7 @@
           aria-expanded={filtersExpanded}
           aria-controls={id}
           onclick={() => (filtersExpanded = !filtersExpanded)}
-          ><Icon name="filter" small />Filters{#if filterCount}<span
+          ><Icon name="filter" small />Filtry{#if filterCount}<span
               class="filter-count">{filterCount}</span
             >{/if}</button
         >
@@ -71,21 +71,22 @@
           checked={route.unreadOnly}
           onchange={(event) =>
             onchange({ unreadOnly: event.currentTarget.checked })}
-        /> Unread only</label
+        /> Tylko nieprzeczytane</label
       >
     {/if}
     {#if route.view === "gantt"}
       <div class="month">
-        <button onclick={() => changeMonth(-1)} aria-label="Previous month"
+        <button onclick={() => changeMonth(-1)} aria-label="Poprzedni miesiąc"
           >←</button
         >
         <input
           type="month"
-          aria-label="Month"
+          aria-label="Miesiąc"
           value={route.month}
           onchange={(event) => onchange({ month: event.currentTarget.value })}
         />
-        <button onclick={() => changeMonth(1)} aria-label="Next month">→</button
+        <button onclick={() => changeMonth(1)} aria-label="Następny miesiąc"
+          >→</button
         >
       </div>
     {/if}
@@ -94,36 +95,36 @@
     <div class="list-filter-fields" class:expanded={filtersExpanded} {id}>
       <label
         >Status<select
-          aria-label="Status filter"
+          aria-label="Filtr statusu"
           value={route.status}
           onchange={(event) => onchange({ status: event.currentTarget.value })}
         >
-          <option value="">All statuses</option>
+          <option value="">Wszystkie statusy</option>
           {#each statuses as status}<option value={status}
               >{resourceLabel(status)}</option
             >{/each}
         </select></label
       >
       <label
-        >Visibility<select
-          aria-label="Card visibility"
+        >Widoczność<select
+          aria-label="Widoczność kart"
           value={String(route.archived)}
           onchange={(event) =>
             onchange({ archived: event.currentTarget.value === "true" })}
         >
-          <option value="false">Active cards</option><option value="true"
-            >Archived cards</option
+          <option value="false">Aktywne karty</option><option value="true"
+            >Zarchiwizowane karty</option
           >
         </select></label
       >
       <label
-        >Priority<select
-          aria-label="Priority filter"
+        >Priorytet<select
+          aria-label="Filtr priorytetu"
           value={route.priority}
           onchange={(event) =>
             onchange({ priority: event.currentTarget.value })}
         >
-          <option value="">All priorities</option>
+          <option value="">Wszystkie priorytety</option>
           {#each ["normal", "high"] as priority}<option value={priority}
               >{resourceLabel(priority)}</option
             >{/each}
@@ -131,8 +132,8 @@
       >
       <label
         >Tag<input
-          aria-label="Tag filter"
-          placeholder="Exact tag…"
+          aria-label="Filtr tagu"
+          placeholder="Dokładny tag…"
           value={route.label}
           oninput={(event) => onchange({ label: event.currentTarget.value })}
         /></label
@@ -142,7 +143,7 @@
           class="quiet clear-filters"
           onclick={() =>
             onchange({ status: "", priority: "", label: "", archived: false })}
-          >Clear filters</button
+          >Wyczyść filtry</button
         >
       {/if}
     </div>

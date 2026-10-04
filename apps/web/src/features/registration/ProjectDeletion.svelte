@@ -15,7 +15,7 @@
   } from "../../lib/api/command-result";
   import type { Summary } from "../../lib/api/api";
   import { modal, layerExit } from "../../lib/ui/dialog";
-  import { ApiError } from "../../lib/api/api";
+  import { errorMessage } from "../../lib/api/messages";
 
   let {
     project,
@@ -39,9 +39,10 @@
   let busy = $derived(operation.busy);
 
   function bytes(value: number) {
-    if (value < 1024) return `${value} bytes`;
-    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
-    return `${(value / (1024 * 1024)).toFixed(1)} MiB`;
+    if (value < 1024) return `${value} bajtów`;
+    if (value < 1024 * 1024)
+      return `${(value / 1024).toLocaleString("pl-PL", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KiB`;
+    return `${(value / (1024 * 1024)).toLocaleString("pl-PL", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MiB`;
   }
   async function loadPlan() {
     if (busy || pending) return;
@@ -52,12 +53,7 @@
     try {
       plan = await getProjectDeletionPlan(project.id);
     } catch (cause) {
-      error =
-        cause instanceof ApiError
-          ? cause.message
-          : cause instanceof Error
-            ? cause.message
-            : String(cause);
+      error = errorMessage(cause);
     } finally {
       loading = false;
     }
@@ -94,7 +90,7 @@
       error = commandErrorMessage(cause);
       if (isRejectedConflict(operation.phase, cause)) {
         conflict = true;
-        error = `${error} Load a new deletion preview before trying again.`;
+        error = `${error} Wczytaj nowy podgląd usunięcia przed kolejną próbą.`;
       }
     }
   }
@@ -103,10 +99,10 @@
       await navigator.clipboard.writeText(
         JSON.stringify({ project_id: project.id, plan, pending }, null, 2),
       );
-      error = "Deletion details copied.";
+      error = "Skopiowano szczegóły usunięcia.";
     } catch {
       error =
-        "Clipboard access is unavailable. Keep this dialog open until the deletion command is resolved.";
+        "Schowek jest niedostępny. Pozostaw to okno otwarte do rozstrzygnięcia polecenia usunięcia.";
     }
   }
   function beforeUnload(event: BeforeUnloadEvent) {
@@ -121,7 +117,7 @@
     const ended = () => {
       accessLost = true;
       error =
-        "Your session ended. The deletion command is preserved; reconnect before continuing.";
+        "Sesja wygasła. Polecenie usunięcia zostało zachowane; połącz się ponownie przed kontynuowaniem.";
     };
     const restored = () => {
       accessLost = false;
@@ -137,59 +133,61 @@
   use:modal={{ onclose: close }}
   out:layerExit|global
   class="app-dialog project-deletion"
-  aria-label="Delete project"
+  aria-label="Usuń projekt"
 >
   <DialogHeader
-    title={`Delete “${project.title}”?`}
+    title={`Usuń „${project.title}”?`}
     onclose={close}
     disabled={busy || !!pending}
-    closeLabel="Close delete project"
+    closeLabel="Zamknij usuwanie projektu"
   />
   <div class="dialog-body">
     <p>
-      This permanently deletes the project’s <code>.project</code> folder, including
-      its cards, milestones and reports. Files elsewhere in the repository are preserved.
-      There is no restore.
+      Spowoduje to trwałe usunięcie folderu projektu <code>.project</code> wraz z
+      kartami, kamieniami milowymi i raportami. Pliki w innych częściach repozytorium
+      zostaną zachowane. Przywrócenie nie jest możliwe.
     </p>
-    {#if loading}<p role="status">Reading the deletion preview…</p>{/if}
+    {#if loading}<p role="status">Wczytywanie podglądu usunięcia…</p>{/if}
     {#if plan && !conflict}<section
         class="notice"
-        aria-label="Deletion preview"
+        aria-label="Podgląd usunięcia"
       >
-        <strong>Deletion preview</strong>
+        <strong>Podgląd usunięcia</strong>
         <p class="breadcrumb">{plan.display_path}</p>
-        <p>{plan.file_count} files · {bytes(plan.total_bytes)}</p>
+        <p>{plan.file_count} plików · {bytes(plan.total_bytes)}</p>
       </section>{/if}
     {#if conflict}<section class="notice" role="alert">
-        <p>The deletion preview is no longer current.</p>
+        <p>Podgląd usunięcia jest już nieaktualny.</p>
         <button onclick={() => void loadPlan()} disabled={busy || !!pending}
-          >Load a new deletion preview</button
+          >Wczytaj nowy podgląd usunięcia</button
         >
       </section>{/if}
     {#if pending}<section class="notice" role="alert">
         <p>
-          Deletion is awaiting confirmation. Keep this request ID while checking
-          its result.
+          Usunięcie oczekuje na potwierdzenie. Zachowaj identyfikator żądania
+          podczas sprawdzania wyniku.
         </p>
-        <p>Request: <code>{pending.requestId}</code></p>
+        <p>Żądanie: <code>{pending.requestId}</code></p>
         <button onclick={() => void copyDetails()} disabled={busy}
-          >Copy deletion details</button
+          >Kopiuj szczegóły usunięcia</button
         >
         <button onclick={() => void check()} disabled={busy || accessLost}
-          >Check deletion status</button
+          >Sprawdź stan usunięcia</button
         ><button onclick={() => void retry()} disabled={busy || accessLost}
-          >Retry same deletion</button
+          >Ponów to samo usunięcie</button
         >
       </section>{/if}
     {#if error}<p class="notice" role="alert">{error}</p>{/if}
   </div>
   <footer class="dialog-footer">
-    <button onclick={close} disabled={busy || !!pending}>Keep project</button>
+    <button onclick={close} disabled={busy || !!pending}
+      >Zachowaj projekt</button
+    >
     <Button
       variant="danger"
       onclick={() => void remove()}
       disabled={!plan || loading || busy || !!pending || accessLost || conflict}
-      >Permanently delete project</Button
+      >Trwale usuń projekt</Button
     >
   </footer>
 </dialog>

@@ -21,20 +21,20 @@
   } = $props();
 </script>
 
-<section class="card-comments" aria-label="Card comments">
+<section class="card-comments" aria-label="Komentarze karty">
   <SectionHeading
-    title="Comments"
+    title="Komentarze"
     level={3}
     count={comments.length}
     visuallyHidden
   />
   <div class="comment-composer">
     <textarea
-      aria-label="Write a comment"
+      aria-label="Napisz komentarz"
       bind:value={body}
       rows="3"
       maxlength="4000"
-      placeholder="Write a comment…"
+      placeholder="Napisz komentarz…"
       {disabled}></textarea>
     <div class="comment-composer-actions">
       <Button
@@ -42,21 +42,21 @@
         variant="primary"
         onclick={onadd}
         disabled={disabled || !saved || !body.trim() || comments.length >= 200}
-        >Add comment</Button
+        >Dodaj komentarz</Button
       >
     </div>
   </div>
   {#if comments.length >= 200}<p class="field-hint">
-      This card has reached its 200-comment limit.
+      Osiągnięto limit 200 komentarzy na tej karcie.
     </p>{/if}
   {#if comments.length}
-    <ol class="comment-history" aria-label="Comment history">
+    <ol class="comment-history" aria-label="Historia komentarzy">
       {#each comments as comment (comment.id)}
         <li data-comment-id={comment.id}>
           <div class="comment-heading">
             <strong>{comment.author.label}</strong>
             <Badge class={comment.author.kind === "agent" ? "bot" : undefined}>
-              {comment.author.kind === "agent" ? "Bot" : "Human"}
+              {comment.author.kind === "agent" ? "Bot" : "Człowiek"}
             </Badge>
             <time datetime={comment.recorded_at}
               >{formatTimestamp(comment.recorded_at)}</time

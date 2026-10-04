@@ -47,11 +47,11 @@
   const cells = $derived(calendarCells(`${month}-01`, weekStart));
   const weekdays = $derived(
     weekStart === "sunday"
-      ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
-      : ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+      ? ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "Sb"]
+      : ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"],
   );
   const monthLabel = $derived(
-    new Intl.DateTimeFormat("en", {
+    new Intl.DateTimeFormat("pl-PL", {
       timeZone: "UTC",
       month: "long",
       year: "numeric",
@@ -139,11 +139,11 @@
   class="app-dialog schedule-calendar-dialog"
   use:modal={{ onclose }}
   out:layerExit|global
-  aria-label="Choose card dates"
+  aria-label="Wybierz daty karty"
 >
   <DialogHeader
-    title={single ? "Event date" : "Plan your card"}
-    closeLabel="Close calendar"
+    title={single ? "Data wydarzenia" : "Zaplanuj kartę"}
+    closeLabel="Zamknij kalendarz"
     {onclose}
   />
   <div class="dialog-body schedule-calendar-body">
@@ -161,10 +161,10 @@
           }
         }}
       >
-        <small>{single ? "Date" : "Start"}</small><strong
+        <small>{single ? "Data" : "Początek"}</small><strong
           >{selection.start
             ? calendarLabel(selection.start)
-            : "Choose a date"}</strong
+            : "Wybierz datę"}</strong
         >
       </Button>
       {#if !single}<Button
@@ -180,10 +180,10 @@
             }
           }}
         >
-          <small>End</small><strong
+          <small>Koniec</small><strong
             >{selection.end
               ? calendarLabel(selection.end)
-              : "Choose a date"}</strong
+              : "Wybierz datę"}</strong
           >
         </Button>{/if}
     </div>
@@ -192,7 +192,7 @@
         type="button"
         variant="quiet"
         class="calendar-prev"
-        aria-label="Previous month"
+        aria-label="Poprzedni miesiąc"
         disabled={month === "0001-01"}
         onclick={() => moveMonth(-1)}><Icon name="arrow" small /></Button
       >
@@ -200,14 +200,14 @@
       <Button
         type="button"
         variant="quiet"
-        aria-label="Next month"
+        aria-label="Następny miesiąc"
         disabled={month === "9999-12"}
         onclick={() => moveMonth(1)}><Icon name="arrow" small /></Button
       >
     </div>
     <p class="sr" id={`${id}-help`}>
-      Use arrow keys for days, Home and End for the week, Page Up and Page Down
-      for months. Hold Shift for years. Press Enter to select.
+      Użyj strzałek do wyboru dnia, Home i End do tygodnia, Page Up i Page Down
+      do miesięcy. Przytrzymaj Shift, aby zmienić rok. Enter wybiera datę.
     </p>
     {#key month}<table
         class="schedule-calendar-grid"
@@ -276,16 +276,16 @@
           cursor = today;
           month = today.slice(0, 7);
           target = single ? "start" : "end";
-        }}>Today</Button
+        }}>Dzisiaj</Button
       >
       <span aria-live="polite"
         >{single
-          ? "Choose the event day"
+          ? "Wybierz dzień wydarzenia"
           : target === "end"
-            ? "Choose an end date"
+            ? "Wybierz datę końcową"
             : length
-              ? `${length} ${length === 1 ? "day" : "days"} planned`
-              : "Choose a start date"}</span
+              ? `${length} ${length === 1 ? "dzień" : "dni"} zaplanowanych`
+              : "Wybierz datę początkową"}</span
       >
       <Button
         type="button"
@@ -293,18 +293,18 @@
         onclick={() => {
           selection = { start: "", end: "" };
           target = "start";
-        }}>Clear</Button
+        }}>Wyczyść</Button
       >
     </div>
   </div>
   <footer class="dialog-footer">
-    <Button type="button" variant="quiet" onclick={onclose}>Cancel</Button
+    <Button type="button" variant="quiet" onclick={onclose}>Anuluj</Button
     ><Button
       type="button"
       variant="primary"
       disabled={locked || !valid}
       onclick={() => onapply(selection)}
-      >{selection.start ? "Apply dates" : "Remove schedule"}</Button
+      >{selection.start ? "Zastosuj daty" : "Usuń harmonogram"}</Button
     >
   </footer>
 </dialog>

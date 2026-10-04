@@ -27,7 +27,7 @@ await runBrowserSuite(
     const path = `${base}/${id}`;
     const get = () => cli("get", path).metadata;
     const dialog = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
     const route = async (params) => {
@@ -39,32 +39,34 @@ await runBrowserSuite(
     try {
       await route({ view: "list", type: "card", resource: id });
       await dialog
-        .getByRole("button", { name: "Edit schedule", exact: true })
+        .getByRole("button", { name: "Edytuj harmonogram", exact: true })
         .click();
       await expect(
-        dialog.getByLabel("Start time", { exact: true }),
+        dialog.getByLabel("Godzina rozpoczęcia", { exact: true }),
       ).toHaveValue("09:30");
       await expect(
-        dialog.getByLabel("Duration (minutes)", { exact: true }),
+        dialog.getByLabel("Czas trwania (minuty)", { exact: true }),
       ).toHaveValue("90");
       await dialog
-        .getByLabel("Title", { exact: true })
+        .getByLabel("Tytuł", { exact: true })
         .fill("Timed review renamed");
       await expect.poll(() => get().title).toBe("Timed review renamed");
       assert.deepEqual(get().event, {
         start: "2026-09-30T09:30",
         duration_minutes: 90,
       });
-      await dialog.getByLabel("Start time", { exact: true }).fill("23:30");
+      await dialog
+        .getByLabel("Godzina rozpoczęcia", { exact: true })
+        .fill("23:30");
       await expect.poll(() => get().event.start).toBe("2026-09-30T23:30");
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(dialog).toBeHidden();
       await route({});
       await setCalendarDate(page, "2026-09-30");
 
-      await page.getByLabel("Calendar layout").selectOption("week");
+      await page.getByLabel("Układ kalendarza").selectOption("week");
       const event = page
         .locator(`[data-calendar-item="${id}:card_event"]`)
         .first();
@@ -81,18 +83,22 @@ await runBrowserSuite(
       assert.ok(bounds.x >= surface.x && bounds.x < surface.x + surface.width);
       await page
         .getByRole("button", {
-          name: "Event 23:30 · 90 min: Timed review renamed",
+          name: "Wydarzenie 23:30 · 90 min: Timed review renamed",
           exact: true,
         })
         .first()
         .press("Alt+ArrowRight");
-      const proposal = page.getByRole("dialog", { name: "Change event time" });
+      const proposal = page.getByRole("dialog", {
+        name: "Zmień godzinę wydarzenia",
+      });
       await expect(proposal).toBeVisible();
-      await expect(proposal.getByLabel("Planned start")).toHaveValue(
+      await expect(proposal.getByLabel("Zaplanowany początek")).toHaveValue(
         "2026-10-01",
       );
-      await proposal.getByLabel("Duration (minutes)").fill("30");
-      await proposal.getByRole("button", { name: "Save event time" }).click();
+      await proposal.getByLabel("Czas trwania (minuty)").fill("30");
+      await proposal
+        .getByRole("button", { name: "Zapisz godzinę wydarzenia" })
+        .click();
       await expect(proposal).toBeHidden();
       assert.deepEqual(get().event, {
         start: "2026-10-01T23:30",
@@ -100,7 +106,7 @@ await runBrowserSuite(
       });
       await setCalendarDate(page, "2026-10-01");
 
-      await page.getByLabel("Calendar layout").selectOption("day");
+      await page.getByLabel("Układ kalendarza").selectOption("day");
       await expect(event).toContainText("30 min");
       await expect(async () => {
         await event.scrollIntoViewIfNeeded();
@@ -129,28 +135,30 @@ await runBrowserSuite(
       }
       await route({ view: "list", type: "card", resource: id });
       await dialog
-        .getByRole("button", { name: "Edit schedule", exact: true })
+        .getByRole("button", { name: "Edytuj harmonogram", exact: true })
         .click();
-      await dialog.getByLabel("Start", { exact: true }).fill("2026-10-03");
+      await dialog.getByLabel("Początek", { exact: true }).fill("2026-10-03");
       await expect.poll(() => get().event.start).toBe("2026-10-03T23:30");
-      await dialog.getByLabel("Start time", { exact: true }).fill("");
+      await dialog.getByLabel("Godzina rozpoczęcia", { exact: true }).fill("");
       await expect.poll(() => get().event).toBe(undefined);
       assert.deepEqual(get().schedule, {
         start: "2026-10-03",
         end: "2026-10-03",
       });
-      await dialog.getByLabel("Start time", { exact: true }).fill("10:00");
+      await dialog
+        .getByLabel("Godzina rozpoczęcia", { exact: true })
+        .fill("10:00");
       await expect.poll(() => get().event?.start).toBe("2026-10-03T10:00");
       assert.equal(get().schedule, undefined);
       await page.reload();
       await expect(
-        dialog.getByLabel("Start time", { exact: true }),
+        dialog.getByLabel("Godzina rozpoczęcia", { exact: true }),
       ).toHaveValue("10:00");
       await expect(
-        dialog.getByLabel("Duration (minutes)", { exact: true }),
+        dialog.getByLabel("Czas trwania (minuty)", { exact: true }),
       ).toHaveValue("30");
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await page.setViewportSize({ width: 1440, height: 1000 });
       await route({ date: "2026-10-02", layout: "day" });
@@ -166,25 +174,27 @@ await runBrowserSuite(
         header.y + header.height + 100,
       );
       const draft = page.getByRole("dialog", {
-        name: "Create resource",
+        name: "Utwórz element",
         exact: true,
       });
       await expect(draft).toBeVisible();
-      await expect(draft.getByLabel("Start", { exact: true })).toHaveValue(
+      await expect(draft.getByLabel("Początek", { exact: true })).toHaveValue(
         "2026-10-02",
       );
-      await expect(draft.getByLabel("Start time", { exact: true })).toHaveValue(
-        /^\d{2}:\d{2}$/,
-      );
       await expect(
-        draft.getByLabel("Duration (minutes)", { exact: true }),
+        draft.getByLabel("Godzina rozpoczęcia", { exact: true }),
+      ).toHaveValue(/^\d{2}:\d{2}$/);
+      await expect(
+        draft.getByLabel("Czas trwania (minuty)", { exact: true }),
       ).toHaveValue("60");
       await draft
-        .getByLabel("Title", { exact: true })
+        .getByLabel("Tytuł", { exact: true })
         .fill("Created from an hour slot");
-      await expect(dialog.getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(dialog.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(dialog).toBeHidden();
       await expect(

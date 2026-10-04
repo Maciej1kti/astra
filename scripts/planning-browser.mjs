@@ -83,12 +83,14 @@ try {
       externalRequests.push(request.url());
   });
   await page.goto(origin);
-  await page.getByRole("button", { name: "Request access" }).click();
-  await page.getByText("Compare this challenge on the host machine:").waitFor();
+  await page.getByRole("button", { name: "Poproś o dostęp" }).click();
+  await page.getByText("Porównaj ten kod na komputerze serwera:").waitFor();
   const pending = cli("pairings").items[0];
   cli("approve", pending.id, "--challenge", pending.challenge);
-  await page.getByRole("button", { name: "I approved this browser" }).click();
-  await page.getByRole("region", { name: "In focus", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Przeglądarka została zatwierdzona" })
+    .click();
+  await page.getByRole("region", { name: "W Focus", exact: true }).waitFor();
 
   page.setDefaultTimeout(10000);
   const commandFile = join(temp, "command.json");
@@ -116,14 +118,14 @@ try {
     "2026-09-09",
     "2026-09-10",
   );
-  await page.getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
   await page
-    .getByLabel("Project", { exact: true })
+    .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
-  await page.getByLabel("Month", { exact: true }).fill("2026-09");
+  await page.getByLabel("Miesiąc", { exact: true }).fill("2026-09");
   await page
     .getByRole("button", {
-      name: "Move plan: Build the field guide",
+      name: "Przenieś plan: Build the field guide",
       exact: true,
     })
     .waitFor();
@@ -153,17 +155,19 @@ try {
     return route.continue();
   });
   await page
-    .getByLabel("Selected card", { exact: true })
+    .getByLabel("Wybrana karta", { exact: true })
     .selectOption(review.id);
   await page
-    .getByRole("button", { name: "Edit planned dates", exact: true })
-    .click();
-  await page.getByLabel("Planned end", { exact: true }).fill("2026-09-11");
-  await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
+    .getByRole("button", { name: "Edytuj zaplanowane daty", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Retry same command", exact: true })
+    .getByLabel("Zaplanowany koniec", { exact: true })
+    .fill("2026-09-11");
+  await page
+    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
     .click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   assert.equal(scheduleRequests.length, 2);
@@ -182,14 +186,14 @@ try {
     page.getByLabel("Dependency forecast", { exact: true }),
   ).toHaveCount(0);
   await expect(page.getByLabel("Predecessor", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "Calendar", exact: true }).click();
+  await page.getByRole("button", { name: "Kalendarz", exact: true }).click();
   await setCalendarDate(page, "2026-09-07");
   await page
-    .getByLabel("Calendar layout", { exact: true })
+    .getByLabel("Układ kalendarza", { exact: true })
     .selectOption("week");
   const locator = () =>
     page.getByRole("button", {
-      name: "Planned work: Design the field guide",
+      name: "Zaplanowana praca: Design the field guide",
       exact: true,
     });
   await locator().waitFor();
@@ -295,9 +299,9 @@ try {
     { times: 1 },
   );
   try {
-    await page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await page.getByRole("button", { name: "Odśwież", exact: true }).click();
     await expect(
-      page.getByText("Loading calendar…", { exact: true }),
+      page.getByText("Ładowanie kalendarza…", { exact: true }),
     ).toBeVisible();
     assert.deepEqual(
       await documentBox(),
@@ -334,25 +338,27 @@ try {
   );
   await page.mouse.up();
   const selectedDraft = page.getByRole("dialog", {
-    name: "Create resource",
+    name: "Utwórz element",
     exact: true,
   });
-  await expect(selectedDraft.getByLabel("Start", { exact: true })).toHaveValue(
-    "2026-09-07",
-  );
-  await expect(selectedDraft.getByLabel("End", { exact: true })).toHaveValue(
+  await expect(
+    selectedDraft.getByLabel("Początek", { exact: true }),
+  ).toHaveValue("2026-09-07");
+  await expect(selectedDraft.getByLabel("Koniec", { exact: true })).toHaveValue(
     "2026-09-08",
   );
   await selectedDraft
-    .getByRole("button", { name: "Close editor", exact: true })
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
     .click();
   const discardSelection = selectedDraft.getByRole("button", {
-    name: "Discard draft",
+    name: "Odrzuć wersję roboczą",
     exact: true,
   });
   if (await discardSelection.isVisible()) await discardSelection.click();
   await selectedDraft.waitFor({ state: "hidden" });
-  await page.getByLabel("Calendar layout", { exact: true }).selectOption("day");
+  await page
+    .getByLabel("Układ kalendarza", { exact: true })
+    .selectOption("day");
   await setCalendarDate(page, "2026-09-09");
   await locator().waitFor();
   await page.screenshot({
@@ -360,7 +366,7 @@ try {
     fullPage: true,
   });
   await page
-    .getByLabel("Calendar layout", { exact: true })
+    .getByLabel("Układ kalendarza", { exact: true })
     .selectOption("agenda");
   await locator().first().waitFor();
   await page.screenshot({
@@ -371,16 +377,16 @@ try {
     document.documentElement.dataset.theme = "dark";
   });
   await page
-    .getByLabel("Calendar layout", { exact: true })
+    .getByLabel("Układ kalendarza", { exact: true })
     .selectOption("month");
   await page.screenshot({
     path: join(evidenceDir, "calendar-dark.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
   await page
     .getByRole("button", {
-      name: "Move plan: Build the field guide",
+      name: "Przenieś plan: Build the field guide",
       exact: true,
     })
     .waitFor();
@@ -393,7 +399,7 @@ try {
     .poll(async () =>
       page
         .getByRole("button", {
-          name: "Move plan: Design the field guide",
+          name: "Przenieś plan: Design the field guide",
           exact: true,
         })
         .evaluate((element) => {

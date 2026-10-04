@@ -1,21 +1,41 @@
 import type { Summary } from "../api/api";
 
 const labels: Record<string, string> = {
-  planned: "Planned",
-  active: "Active",
-  review: "Review",
-  done: "Done",
-  cancelled: "Cancelled",
-  normal: "Normal",
-  high: "High",
-  decision_needed: "Decision needed",
+  planned: "Zaplanowane",
+  active: "Aktywne",
+  review: "Do sprawdzenia",
+  done: "Gotowe",
+  achieved: "Osiągnięte",
+  cancelled: "Anulowane",
+  normal: "Normalny",
+  high: "Wysoki",
+  decision_needed: "Potrzebna decyzja",
+  paused: "Wstrzymane",
+  archived: "Zarchiwizowane",
+  overdue: "Po terminie",
+  due_soon: "Zbliżający się termin",
+  unread_report: "Nieprzeczytany raport",
+  review_card: "Karta do sprawdzenia",
+  project: "Projekt",
+  card: "Karta",
+  milestone: "Kamień milowy",
+  update: "Aktualizacja",
+  result: "Wynik",
+  blocker: "Przeszkoda",
+  decision: "Decyzja",
+  note: "Notatka",
+  correction: "Poprawka",
+  human: "Człowiek",
+  agent: "Bot",
+  bot: "Bot",
+  unavailable: "Niedostępne",
+  prepared: "Przygotowane",
+  blocked: "Zablokowane",
+  needs_review: "Wymaga sprawdzenia",
 };
 
 export function resourceLabel(value: string): string {
-  return (
-    labels[value] ??
-    value.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
-  );
+  return labels[value] ?? "Nieznane";
 }
 
 export type ResourceDateBadge = {
@@ -32,7 +52,7 @@ export function resourceDates(item: Summary): ResourceDateBadge[] {
   if (item.type === "milestone" && item.due) {
     dates.push({
       kind: "due",
-      label: "Due",
+      label: "Termin",
       start: item.due.date,
     });
   }
@@ -49,7 +69,7 @@ export function resourceDates(item: Summary): ResourceDateBadge[] {
   if (item.event)
     dates.push({
       kind: "event",
-      label: "Event",
+      label: "Wydarzenie",
       start: item.event.start,
       duration: item.event.duration_minutes,
     });
@@ -60,7 +80,7 @@ export function resourceDates(item: Summary): ResourceDateBadge[] {
 export function formatTimestamp(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return `${new Intl.DateTimeFormat("en", {
+  return `${new Intl.DateTimeFormat("pl-PL", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "UTC",

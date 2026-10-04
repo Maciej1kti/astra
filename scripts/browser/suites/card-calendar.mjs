@@ -30,15 +30,15 @@ await runBrowserSuite(
     const path = `/api/v1/projects/${project}/cards/${card.metadata.id}`;
     const get = () => cli("get", path);
     const editor = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
     const calendar = page.getByRole("dialog", {
-      name: "Choose card dates",
+      name: "Wybierz daty karty",
       exact: true,
     });
     const openCalendar = () =>
-      editor.getByRole("button", { name: /Choose dates/ }).click();
+      editor.getByRole("button", { name: /Wybierz daty/ }).click();
     const day = (date) => calendar.locator(`[data-calendar-day="${date}"]`);
     await page.route(
       `${config.origin}/api/v1/workspace/preferences`,
@@ -55,37 +55,39 @@ await runBrowserSuite(
         `${config.origin}/?${new URLSearchParams({ view: "list", project, type: "card", resource: card.metadata.id })}`,
       );
       await editor
-        .getByRole("button", { name: "Edit schedule", exact: true })
+        .getByRole("button", { name: "Edytuj harmonogram", exact: true })
         .click();
       await openCalendar();
-      await expect(calendar.locator("thead th").first()).toHaveText("Su");
+      await expect(calendar.locator("thead th").first()).toHaveText("Nd");
       await expect(calendar.getByRole("grid")).toHaveAttribute(
         "aria-multiselectable",
         "true",
       );
       await day("2026-09-30").click();
       await day("2026-10-05").click();
-      await expect(calendar).toContainText("6 days planned");
+      await expect(calendar).toContainText("6 dni zaplanowanych");
       assert.equal(
         get().version,
         card.version,
         "Calendar exploration is local until Apply",
       );
       await calendar
-        .getByRole("button", { name: "Cancel", exact: true })
+        .getByRole("button", { name: "Anuluj", exact: true })
         .click();
       await expect(
-        editor.getByRole("button", { name: /Choose dates/ }),
+        editor.getByRole("button", { name: /Wybierz daty/ }),
       ).toBeFocused();
       assert.equal(get().version, card.version);
       await openCalendar();
       await day("2026-09-30").click();
       await day("2026-10-05").click();
       await calendar
-        .getByRole("button", { name: "Apply dates", exact: true })
+        .getByRole("button", { name: "Zastosuj daty", exact: true })
         .click();
       await expect(calendar).toHaveCount(0);
-      await expect(editor.getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(editor.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       assert.deepEqual(get().metadata.schedule, {
         start: "2026-09-30",
         end: "2026-10-05",
@@ -144,45 +146,53 @@ await runBrowserSuite(
           path: join(evidence, `calendar-${width}.png`),
         });
         await calendar
-          .getByRole("button", { name: "Close calendar", exact: true })
+          .getByRole("button", { name: "Zamknij kalendarz", exact: true })
           .click();
       }
       await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
       await openCalendar();
       await page.screenshot({ path: join(evidence, "calendar-dark.png") });
       await calendar
-        .getByRole("button", { name: "Clear", exact: true })
+        .getByRole("button", { name: "Wyczyść", exact: true })
         .click();
       await calendar
-        .getByRole("button", { name: "Remove schedule", exact: true })
+        .getByRole("button", { name: "Usuń harmonogram", exact: true })
         .click();
-      await expect(editor.getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(editor.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       assert.equal(get().metadata.schedule, undefined);
       await openCalendar();
       await expect(calendar.locator('[aria-selected="true"]')).toHaveCount(0);
       await expect(calendar.locator("td.in-range")).toHaveCount(0);
       await calendar
-        .getByRole("button", { name: "Cancel", exact: true })
+        .getByRole("button", { name: "Anuluj", exact: true })
         .click();
       await page.setViewportSize({ width: 844, height: 390 });
       await openCalendar();
       await calendar
-        .getByRole("button", { name: "Today", exact: true })
+        .getByRole("button", { name: "Dzisiaj", exact: true })
         .click();
       await expect(
-        calendar.getByRole("button", { name: "Apply dates", exact: true }),
+        calendar.getByRole("button", { name: "Zastosuj daty", exact: true }),
       ).toBeInViewport();
       await page.screenshot({ path: join(evidence, "calendar-landscape.png") });
       await calendar
-        .getByRole("button", { name: "Cancel", exact: true })
+        .getByRole("button", { name: "Anuluj", exact: true })
         .click();
       await page.setViewportSize({ width: 390, height: 844 });
 
       // Event date selection preserves the existing time/duration fields.
-      await editor.getByLabel("Start", { exact: true }).fill("2026-10-01");
-      await editor.getByLabel("Start time", { exact: true }).fill("09:30");
-      await editor.getByLabel("Duration (minutes)", { exact: true }).fill("90");
-      await expect(editor.getByTestId("autosave-status")).toHaveText("Saved");
+      await editor.getByLabel("Początek", { exact: true }).fill("2026-10-01");
+      await editor
+        .getByLabel("Godzina rozpoczęcia", { exact: true })
+        .fill("09:30");
+      await editor
+        .getByLabel("Czas trwania (minuty)", { exact: true })
+        .fill("90");
+      await expect(editor.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       await openCalendar();
       await expect(calendar.getByRole("grid")).toHaveAttribute(
         "aria-multiselectable",
@@ -190,9 +200,11 @@ await runBrowserSuite(
       );
       await day("2026-10-02").click();
       await calendar
-        .getByRole("button", { name: "Apply dates", exact: true })
+        .getByRole("button", { name: "Zastosuj daty", exact: true })
         .click();
-      await expect(editor.getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(editor.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       assert.deepEqual(get().metadata.event, {
         start: "2026-10-02T09:30",
         duration_minutes: 90,

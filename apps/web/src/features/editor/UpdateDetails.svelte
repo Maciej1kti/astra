@@ -21,18 +21,18 @@
   );
 </script>
 
-<section class="update-record" aria-label="Report content">
+<section class="update-record" aria-label="Treść raportu">
   <dl>
     <div>
-      <dt>Kind</dt>
+      <dt>Rodzaj</dt>
       <dd>{resourceLabel(metadata.kind)}</dd>
     </div>
     <div>
-      <dt>Author</dt>
+      <dt>Autor</dt>
       <dd>{metadata.author.label}</dd>
     </div>
     <div>
-      <dt>Recorded</dt>
+      <dt>Zapisano</dt>
       <dd>
         <time datetime={metadata.recorded_at} title={metadata.recorded_at}
           >{formatTimestamp(metadata.recorded_at)}</time
@@ -40,7 +40,7 @@
       </dd>
     </div>
     {#if metadata.observed_at}<div>
-        <dt>Observed</dt>
+        <dt>Zaobserwowano</dt>
         <dd>
           <time datetime={metadata.observed_at} title={metadata.observed_at}
             >{formatTimestamp(metadata.observed_at)}</time
@@ -48,7 +48,7 @@
         </dd>
       </div>{/if}
     <div>
-      <dt>Target</dt>
+      <dt>Cel</dt>
       <dd>
         {resourceLabel(metadata.target.type)} · {metadata.target.type ===
           "project" &&
@@ -59,11 +59,11 @@
       </dd>
     </div>
     {#if metadata.supersedes}<div>
-        <dt>Corrects</dt>
+        <dt>Poprawia</dt>
         <dd><code>{metadata.supersedes}</code></dd>
       </div>{/if}
     {#if metadata.resolves?.length}<div>
-        <dt>Resolves</dt>
+        <dt>Rozstrzyga</dt>
         <dd>
           {#each metadata.resolves as id, index}{#if index},
             {/if}<code>{id}</code>{/each}
@@ -74,11 +74,11 @@
     {#if resource.body.trim()}<Markdown source={resource.body} />{:else}<p
         class="empty-context"
       >
-        No description.
+        Brak opisu.
       </p>{/if}
   </div>
-  {#if metadata.evidence?.length}<section aria-label="Evidence">
-      <h3>Evidence</h3>
+  {#if metadata.evidence?.length}<section aria-label="Dowody">
+      <h3>Dowody</h3>
       <ul>
         {#each metadata.evidence as item}<li>
             {item.label ? `${item.label} · ` : ""}{resourceLabel(item.type)}:
@@ -87,11 +87,11 @@
       </ul>
     </section>{/if}
   {#if extensions.length}<details>
-      <summary>Additional fields</summary>
+      <summary>Dodatkowe pola</summary>
       <pre>{JSON.stringify(Object.fromEntries(extensions), null, 2)}</pre>
     </details>{/if}
   <p class="update-record-note">
-    Updates are permanent records. Add a correction or resolution to change a
-    previous update.
+    Aktualizacje są trwałymi zapisami. Dodaj poprawkę lub rozstrzygnięcie, aby
+    zmienić poprzednią aktualizację.
   </p>
 </section>

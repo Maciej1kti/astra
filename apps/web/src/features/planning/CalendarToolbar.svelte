@@ -31,7 +31,7 @@
     changeMonthGrid: (grid: boolean) => void;
     create: () => void;
   } = $props();
-  const monthFormat = new Intl.DateTimeFormat("en-GB", {
+  const monthFormat = new Intl.DateTimeFormat("pl-PL", {
     month: "long",
     year: "numeric",
   });
@@ -41,53 +41,54 @@
 <div class="calendar-toolbar" use:revealLayers={controlsLayers}>
   <div class="period-title">
     <ActionMenu
-      label="Choose calendar date"
+      label="Wybierz datę kalendarza"
       text={title}
       icon="chevronDown"
       align="start"
     >
       {#snippet children(close)}
         <label class="date-control"
-          >Go to date<input
+          >Przejdź do daty<input
             type="date"
-            aria-label="Go to date"
+            aria-label="Przejdź do daty"
             value={date}
             onchange={(event) => changeDate(event.currentTarget)}
             required
           /></label
         >
-        <Button variant="quiet" onclick={close}>Done</Button>
+        <Button variant="quiet" onclick={close}>Gotowe</Button>
       {/snippet}
     </ActionMenu>
   </div>
   <div class="navigation">
-    <Button variant="quiet" class="today" onclick={today}>Today</Button>
+    <Button variant="quiet" class="today" onclick={today}>Dzisiaj</Button>
     <Button
       variant="quiet"
       class="icon-button previous"
-      aria-label="Previous calendar period"
+      aria-label="Poprzedni okres kalendarza"
       onclick={() => navigate(-1)}><Icon name="chevronDown" /></Button
     >
     <Button
       variant="quiet"
       class="icon-button next"
-      aria-label="Next calendar period"
+      aria-label="Następny okres kalendarza"
       onclick={() => navigate(1)}><Icon name="chevronDown" /></Button
     >
   </div>
   <div class="view-controls">
     <select
-      aria-label="Calendar layout"
+      aria-label="Układ kalendarza"
       value={mode}
       onchange={(event) =>
         changeLayout(event.currentTarget.value as CalendarLayout)}
     >
-      <option value="day">Day</option><option value="week">Week</option><option
-        value="month">Month</option
-      ><option value="agenda">Agenda</option>
+      <option value="day">Dzień</option><option value="week">Tydzień</option
+      ><option value="month">Miesiąc</option><option value="agenda"
+        >Agenda</option
+      >
     </select>
     {#if compact && mode === "month"}
-      <div class="month-display" role="group" aria-label="Month display">
+      <div class="month-display" role="group" aria-label="Widok miesiąca">
         <Button
           variant="quiet"
           class="icon-button"
@@ -100,8 +101,8 @@
         <Button
           variant="quiet"
           class="icon-button"
-          aria-label="Month grid"
-          title="Month grid"
+          aria-label="Siatka miesiąca"
+          title="Siatka miesiąca"
           aria-pressed={monthGrid}
           onclick={() => changeMonthGrid(true)}
           ><Icon name="calendar" small /></Button
@@ -112,10 +113,11 @@
       <Button
         variant="quiet"
         class="create-scheduled"
-        aria-label="New scheduled card"
-        title="New scheduled card"
+        aria-label="Nowa zaplanowana karta"
+        title="Nowa zaplanowana karta"
         disabled={!isCalendarDate(date)}
-        onclick={create}><Icon name="plus" small /><span>New card</span></Button
+        onclick={create}
+        ><Icon name="plus" small /><span>Nowa karta</span></Button
       >
     {/if}
   </div>

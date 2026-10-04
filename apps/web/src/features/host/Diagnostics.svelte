@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { serverMessage } from "../../lib/api/messages.ts";
+  import { errorMessage } from "../../lib/api/messages.ts";
+  import { stateLabel } from "../../lib/resources/state-presentation";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
@@ -32,7 +35,7 @@
       data = await api<Diagnostics>("/api/v1/diagnostics");
     } catch (e) {
       data = null;
-      error = e instanceof Error ? e.message : String(e);
+      error = errorMessage(e);
     } finally {
       busy = false;
     }
@@ -42,7 +45,7 @@
     const ended = () => {
       data = null;
       error =
-        "Your session ended. Reconnect or run projectctl doctor on the host.";
+        "Sesja wygasła. Połącz się ponownie lub uruchom projectctl doctor na serwerze.";
     };
     const unsubscribeSession = subscribeSession({ ended: ended });
     return () => unsubscribeSession();
@@ -53,48 +56,53 @@
   class="app-dialog"
   use:modal={{ onclose }}
   out:layerExit|global
-  aria-label="Host diagnostics"
+  aria-label="Diagnostyka serwera"
 >
   <DialogHeader
-    title="Host diagnostics"
+    title="Diagnostyka serwera"
     {onclose}
-    closeLabel="Close diagnostics"
+    closeLabel="Zamknij diagnostykę"
   />
   <div class="dialog-body">
     <button onclick={load} disabled={busy}
-      >{busy ? "Checking…" : "Refresh diagnostics"}</button
+      >{busy ? "Sprawdzanie…" : "Odśwież diagnostykę"}</button
     >
     {#if error}<p role="alert">{error}</p>{/if}
     {#if data}
-      <p>Host: <strong>{data.state}</strong> · Index: {data.index_state}</p>
       <p>
-        {data.invalid_documents} source issues · {data.pending_commands} unresolved
-        commands
+        Serwer: <strong>{stateLabel(data.state)}</strong> · Indeks: {stateLabel(
+          data.index_state,
+        )}
+      </p>
+      <p>
+        {data.invalid_documents} problemów ze źródłami · {data.pending_commands} nierozstrzygniętych
+        poleceń
       </p>
       {#each data.warnings as warning}<section class="notice">
           <strong>{warning.code}</strong>
-          <p>{warning.message}</p>
+          <p>{serverMessage(warning.code)}</p>
         </section>{/each}
-      <h3>History</h3>
+      <h3>Historia</h3>
       <p>
-        {data.history.entries} entries · {(
-          data.history.bytes / 1048576
-        ).toFixed(1)} MiB. Optional history is retained for {data.history
-          .retention_days} days or up to {(
+        {data.history.entries} wpisów · {(data.history.bytes / 1048576).toFixed(
+          1,
+        )} MiB. Opcjonalna historia jest zachowywana przez {data.history
+          .retention_days} dni lub do {(
           data.history.byte_budget / 1048576
-        ).toFixed(0)} MiB. Pending operations and live retry records remain protected.
+        ).toFixed(0)} MiB. Oczekujące operacje i aktywne zapisy ponowień pozostają
+        chronione.
       </p>
-      {#if data.issues.length}<h3>Source issues · first 100</h3>
+      {#if data.issues.length}<h3>Problemy ze źródłami · pierwsze 100</h3>
         {#each data.issues as issue}<p>
-            <code>{issue.path}</code><br />{issue.code} · Project {issue.project_id}
+            <code>{issue.path}</code><br />{issue.code} · Projekt {issue.project_id}
           </p>{/each}{/if}
-      {#if data.jobs.length}<h3>Unresolved jobs · first 50</h3>
+      {#if data.jobs.length}<h3>Nierozstrzygnięte zadania · pierwsze 50</h3>
         {#each data.jobs as job}<p>
-            <code>{job.id}</code> · {job.state}<br />Project {job.project_id}
+            <code>{job.id}</code> · {stateLabel(job.state)}<br />Projekt {job.project_id}
           </p>{/each}{/if}
       <small
-        >Instance: {data.instance_id ??
-          "Unavailable until the workspace is repaired"}</small
+        >Instancja: {data.instance_id ??
+          "Niedostępne do czasu naprawy przestrzeni roboczej"}</small
       >
     {/if}
   </div>

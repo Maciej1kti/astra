@@ -4,9 +4,9 @@ import type { WorkspaceRoute } from "../navigation";
 export const projectStates = ["active", "paused", "archived"] as const;
 export type ProjectState = (typeof projectStates)[number];
 export const projectStateLabels: Record<ProjectState, string> = {
-  active: "Active",
-  paused: "Paused",
-  archived: "Archived",
+  active: "Aktywne",
+  paused: "Wstrzymane",
+  archived: "Zarchiwizowane",
 };
 
 export function projectState(item: Pick<Summary, "status">) {

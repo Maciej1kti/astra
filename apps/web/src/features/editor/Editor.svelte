@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { errorMessage } from "../../lib/api/messages.ts";
   import Icon from "../../lib/ui/Icon.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
@@ -67,7 +68,7 @@
     target,
     workspaceTimezone = "UTC",
     weekStart = "monday",
-    userName = "Owner",
+    userName = "Właściciel",
     onclose,
     onsaved,
     onautosaved,
@@ -233,10 +234,10 @@
           2,
         ),
       );
-      error = "Draft copied.";
+      error = "Skopiowano wersję roboczą.";
     } catch {
       error =
-        "Clipboard access is unavailable. Select and copy your draft fields.";
+        "Schowek jest niedostępny. Zaznacz i skopiuj pola wersji roboczej.";
     }
   }
   onMount(() => {
@@ -250,7 +251,7 @@
       history = [];
       conflict = null;
       error =
-        "Your session ended. Your draft is preserved; copy it before closing, then reconnect.";
+        "Sesja wygasła. Wersja robocza została zachowana; skopiuj ją przed zamknięciem, a następnie połącz się ponownie.";
     };
     const restored = () => {
       accessLost = false;
@@ -299,7 +300,7 @@
   function finishTextEdit() {
     if (autosaveResource && persistedDirty && !closing)
       void flushAutosave().catch((cause) => {
-        autosaveError = cause instanceof Error ? cause.message : String(cause);
+        autosaveError = errorMessage(cause);
       });
   }
   function focusDeleteAction(node: HTMLButtonElement) {
@@ -437,14 +438,14 @@
       historyCursor = page.page.next_cursor;
       historyLoaded = true;
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      error = errorMessage(e);
     }
   }
   async function undo(id: string) {
     if (!resource) return;
     if (locked || autosave.hasWork || !canUndoDraft(dirty, !!pending, busy)) {
       error =
-        "Wait for changes to save, or resolve your draft before undoing a saved change.";
+        "Poczekaj na zapis zmian lub rozstrzygnij wersję roboczą przed cofnięciem zapisanej zmiany.";
       return;
     }
     prepare(
@@ -510,7 +511,9 @@
     resourceFromReply: (reply) => {
       const next = reply.result.resource;
       if (!next || !("type" in next))
-        throw new Error("Autosave reply did not include the resource.");
+        throw new Error(
+          "Odpowiedź automatycznego zapisu nie zawierała elementu.",
+        );
       return next;
     },
     allowed: () =>
@@ -565,13 +568,13 @@
         autosaveState.phase === "conflict" ||
         autosaveState.phase === "uncertain" ||
         autosaveState.phase === "not-saved"
-        ? "Not saved"
+        ? "Niezapisane"
         : autosaveState.phase === "submitting" ||
             autosaveState.queued ||
             persistedDirty
-          ? "Saving…"
+          ? "Zapisywanie…"
           : autosaveState.phase === "saved" || resource
-            ? "Saved"
+            ? "Zapisano"
             : ""
       : "",
   );
@@ -586,9 +589,9 @@
     try {
       const title = draft.common.title.trim();
       const maxTitle = draft.type === "project" ? 120 : 240;
-      if (!title) throw new Error("Enter a title before saving.");
+      if (!title) throw new Error("Wpisz tytuł przed zapisaniem.");
       if ([...title].length > maxTitle)
-        throw new Error(`Use ${maxTitle} characters or fewer for the title.`);
+        throw new Error(`Użyj ${maxTitle} znaków lub mniej w tytule.`);
       if (draft.type === "card") {
         acceptanceError = acceptanceValidation(draft.fields.acceptance);
         if (acceptanceError) throw new Error(acceptanceError);
@@ -603,7 +606,7 @@
       autosaveError = "";
       return true;
     } catch (cause) {
-      autosaveError = cause instanceof Error ? cause.message : String(cause);
+      autosaveError = errorMessage(cause);
       return false;
     }
   }
@@ -620,7 +623,7 @@
     if (!validateAutosave()) return;
     const detached = detachedEditorDraft(draft);
     void autosave.enqueue(detached, snapshotValue).catch((cause) => {
-      autosaveError = cause instanceof Error ? cause.message : String(cause);
+      autosaveError = errorMessage(cause);
     });
   }
   function scheduleAutosave(immediate = false) {
@@ -631,12 +634,12 @@
   }
   function autosaveRetry() {
     void autosave.retry().catch((cause) => {
-      autosaveError = cause instanceof Error ? cause.message : String(cause);
+      autosaveError = errorMessage(cause);
     });
   }
   function autosaveCheck() {
     void autosave.check().catch((cause) => {
-      autosaveError = cause instanceof Error ? cause.message : String(cause);
+      autosaveError = errorMessage(cause);
     });
   }
   async function flushAutosave() {
@@ -644,7 +647,9 @@
     if (!autosaveResource) return;
     if (autosave.hasWork || persistedDirty) {
       if (!validateAutosave())
-        throw new Error(autosaveError || "The draft is not valid yet.");
+        throw new Error(
+          autosaveError || "Wersja robocza nie jest jeszcze prawidłowa.",
+        );
       await autosave.enqueue(
         detachedEditorDraft(draft),
         autosaveSnapshot(draft),
@@ -676,7 +681,7 @@
   async function save() {
     if (autosaveResource) {
       await flushAutosave().catch((cause) => {
-        autosaveError = cause instanceof Error ? cause.message : String(cause);
+        autosaveError = errorMessage(cause);
       });
       return;
     }
@@ -696,7 +701,7 @@
       );
       await transmit();
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      error = errorMessage(e);
     }
   }
 
@@ -715,7 +720,7 @@
       try {
         await flushAutosave();
       } catch (cause) {
-        autosaveError = cause instanceof Error ? cause.message : String(cause);
+        autosaveError = errorMessage(cause);
         return;
       } finally {
         deleteFlushing = false;
@@ -779,7 +784,7 @@
       deleteError = commandErrorMessage(cause);
       if (isRejectedConflict(deleteOperation.phase, cause)) {
         deleteConflict = true;
-        deleteError = `${deleteError} Card was not deleted. Close and reopen the card before trying again.`;
+        deleteError = `${deleteError} Karta nie została usunięta. Zamknij i otwórz ją ponownie przed kolejną próbą.`;
       }
     }
   }
@@ -826,7 +831,7 @@
         next.type !== "card" ||
         draft.type !== "card"
       )
-        throw new Error("The saved card was not returned.");
+        throw new Error("Nie zwrócono zapisanej karty.");
       currentResource = next;
       draft.source = next;
       if (submitted.kind === "comment") draft.fields.commentDraft = "";
@@ -837,7 +842,9 @@
       autosave.reset(next);
       onautosaved?.(next);
       statusMessage =
-        submitted.kind === "comment" ? "Comment added." : "Counter saved.";
+        submitted.kind === "comment"
+          ? "Dodano komentarz."
+          : "Zapisano licznik.";
       onchanged?.();
       return;
     }
@@ -845,7 +852,7 @@
       const next = reply.result.resource;
       if (autosaveResource) {
         if (!next || !("type" in next))
-          throw new Error("The saved resource was not returned.");
+          throw new Error("Nie zwrócono zapisanego elementu.");
         currentResource = next;
         const previousFields = draft.type === "card" ? draft.fields : null;
         draft = draftForResource(next);
@@ -858,7 +865,7 @@
         autosave.reset(next);
         onautosaved?.(next);
         if (historyLoaded) void loadHistory();
-        statusMessage = "Saved";
+        statusMessage = "Zapisano";
         onchanged?.();
       } else {
         onsaved();
@@ -866,7 +873,9 @@
       return;
     }
     read = submitted.read;
-    statusMessage = read ? "Marked as read." : "Marked as unread.";
+    statusMessage = read
+      ? "Oznaczono jako przeczytane."
+      : "Oznaczono jako nieprzeczytane.";
     onchanged?.();
   }
   $effect(() => {
@@ -888,20 +897,24 @@
   class:project-editor={draft.type === "project"}
   class:card-editor={draft.type === "card"}
   aria-label={readonly
-    ? "Update details"
+    ? "Szczegóły aktualizacji"
     : resource
-      ? "Edit resource"
-      : "Create resource"}
+      ? "Edytuj element"
+      : "Utwórz element"}
 >
   <div class="editor-layout">
     {#snippet savedIndicator()}
       {#if autosaveStatus}<span
           class="draft-state save-indicator"
-          class:saved={autosaveStatus === "Saved" && !busy && !pending}
-          class:unsaved={autosaveStatus === "Not saved" || !!pending}
+          class:saved={autosaveStatus === "Zapisano" && !busy && !pending}
+          class:unsaved={autosaveStatus === "Niezapisane" || !!pending}
           data-testid="autosave-status"
           role="status"
-          >{busy ? "Saving…" : pending ? "Not saved" : autosaveStatus}</span
+          >{busy
+            ? "Zapisywanie…"
+            : pending
+              ? "Niezapisane"
+              : autosaveStatus}</span
         >{/if}
     {/snippet}
     {#snippet cardHeaderContent()}
@@ -909,8 +922,8 @@
         <div class="card-heading">
           <EditableTitle
             bind:value={draft.common.title}
-            label="Title"
-            placeholder="Card title"
+            label="Tytuł"
+            placeholder="Tytuł karty"
             disabled={locked}
             focus={!resource && !autoCreate}
             onfinish={finishTextEdit}
@@ -944,8 +957,8 @@
               type="button"
               class="quiet icon-button priority-toggle"
               class:high={draft.fields.priority === "high"}
-              aria-label="High priority"
-              title="High priority"
+              aria-label="Wysoki priorytet"
+              title="Wysoki priorytet"
               aria-pressed={draft.fields.priority === "high"}
               disabled={locked}
               onclick={() => {
@@ -959,8 +972,8 @@
                 type="button"
                 class="quiet icon-button focus-toggle"
                 class:pinned
-                aria-label={pinned ? "Remove from focus" : "Pin to focus"}
-                title={pinned ? "Remove from focus" : "Pin to focus"}
+                aria-label={pinned ? "Usuń z Focus" : "Przypnij do Focus"}
+                title={pinned ? "Usuń z Focus" : "Przypnij do Focus"}
                 aria-pressed={pinned}
                 onclick={toggleFocus}
                 disabled={locked || persistedDirty || autosaveWork}
@@ -976,7 +989,7 @@
       {#if autoCreate && !error && !autosaveError && !conflict && !discard}<p
           role="status"
         >
-          Creating card…
+          Tworzenie karty…
         </p>{/if}
       {#if fieldMessages.length}
         <div class="notice" role="alert">
@@ -1001,7 +1014,7 @@
         </div>{/if}
       {#if conflict}
         {#if conflict.current}<details>
-            <summary>Current saved version</summary>
+            <summary>Aktualna zapisana wersja</summary>
             <pre>{JSON.stringify(
                 conflict.current.metadata,
                 null,
@@ -1009,63 +1022,66 @@
               )}{"\n"}{conflict.current.body}</pre>
           </details>
         {:else}<p>
-            The current saved version is unavailable. Your draft is preserved in
-            the editor.
+            Aktualna zapisana wersja jest niedostępna. Wersja robocza została
+            zachowana w edytorze.
           </p>{/if}
         <p>
-          Close and reopen to edit the current version. Copy any draft changes
-          you want to keep first.
+          Zamknij i otwórz ponownie, aby edytować aktualną wersję. Najpierw
+          skopiuj zmiany, które chcesz zachować.
         </p>{/if}
-      {#if pending}<p>Request <code>{pending.requestId}</code></p>
+      {#if pending}<p>Żądanie <code>{pending.requestId}</code></p>
         <div class="row">
           <button type="button" onclick={resolve} disabled={busy || accessLost}
-            >Check status</button
+            >Sprawdź stan</button
           ><button
             type="button"
             onclick={transmit}
-            disabled={busy || accessLost}>Retry same command</button
+            disabled={busy || accessLost}>Ponów to samo polecenie</button
           >
         </div>{/if}
       {#if (dirty || pending || deletePending || autosaveState.pending) && (!autosaveResource || discard || accessLost || !!error || !!autosaveError || !!conflict || !!pending || !!deletePending)}<button
           type="button"
-          onclick={copyDraft}>Copy draft</button
+          onclick={copyDraft}>Kopiuj wersję roboczą</button
         >{/if}
       {#if autosaveResource && autosaveState.pending && (autosaveState.phase === "uncertain" || autosaveState.phase === "conflict")}<p
         >
-          Autosave request <code>{autosaveState.pending.requestId}</code>
+          Żądanie automatycznego zapisu <code
+            >{autosaveState.pending.requestId}</code
+          >
         </p>
         {#if autosaveState.phase === "uncertain"}<div class="row">
             <button type="button" onclick={autosaveCheck} disabled={accessLost}
-              >Check status</button
+              >Sprawdź stan</button
             ><button type="button" onclick={autosaveRetry} disabled={accessLost}
-              >Retry same command</button
+              >Ponów to samo polecenie</button
             >
           </div>{/if}{/if}
       {#if deletePending}<p>
-          Deletion request <code>{deletePending.requestId}</code>
+          Żądanie usunięcia <code>{deletePending.requestId}</code>
         </p>
         <div class="row">
           <button
             type="button"
             onclick={() => void checkDelete()}
-            disabled={deleteBusy || accessLost}>Check deletion status</button
+            disabled={deleteBusy || accessLost}>Sprawdź stan usunięcia</button
           ><button
             type="button"
             onclick={() => void retryDelete()}
-            disabled={deleteBusy || accessLost}>Retry same deletion</button
+            disabled={deleteBusy || accessLost}>Ponów to samo usunięcie</button
           >
         </div>{/if}
       {#if discard}<div role="alert" class="notice">
           <p>
             {pending || deletePending || autosaveWork
-              ? "The command result may still be unknown. Keep its request ID before closing."
-              : "Discard your unsaved draft?"}
+              ? "Wynik polecenia może nadal być nieznany. Zachowaj identyfikator żądania przed zamknięciem."
+              : "Odrzucić niezapisaną wersję roboczą?"}
           </p>
           <button
             type="button"
             onclick={onclose}
-            disabled={busy || deleteBusy || autosaveBusy}>Discard draft</button
-          ><button type="button" onclick={keepEditing}>Keep editing</button>
+            disabled={busy || deleteBusy || autosaveBusy}
+            >Odrzuć wersję roboczą</button
+          ><button type="button" onclick={keepEditing}>Kontynuuj edycję</button>
         </div>{/if}
       {#if deleteConfirmation}<section
           class="notice delete-confirmation"
@@ -1075,16 +1091,16 @@
         >
           <h3 id="delete-card-heading">
             {deleteConfirmation === "drafts"
-              ? "Discard drafts before deleting?"
-              : "Permanently delete card?"}
+              ? "Odrzucić wersje robocze przed usunięciem?"
+              : "Trwale usunąć kartę?"}
           </h3>
           <p id="delete-card-description">
             {#if deleteConfirmation === "drafts"}
-              Your unsaved card or report drafts will be discarded before
-              permanently deleting card “{draft.common.title}”.
+              Niezapisane wersje robocze karty lub raportu zostaną odrzucone
+              przed trwałym usunięciem karty „{draft.common.title}”.
             {:else}
-              Permanently delete card “{draft.common.title}”? This removes its
-              source file and cannot be undone.
+              Trwale usunąć kartę „{draft.common.title}”? Spowoduje to usunięcie
+              pliku źródłowego i nie można tego cofnąć.
             {/if}
           </p>
           <div class="row">
@@ -1093,21 +1109,20 @@
                 class="primary"
                 onclick={continueDelete}
                 use:focusDeleteAction
-                disabled={deleteBusy}>Discard drafts and continue</button
+                disabled={deleteBusy}>Odrzuć wersje robocze i kontynuuj</button
               >{:else}<button
                 type="button"
                 class="danger"
                 onclick={() => void deleteSavedCard()}
                 use:focusDeleteAction
-                disabled={deleteBusy || accessLost}
-                >Permanently delete card</button
+                disabled={deleteBusy || accessLost}>Trwale usuń kartę</button
               >{/if}
             <button type="button" onclick={cancelDelete} disabled={deleteBusy}
-              >Keep editing</button
+              >Kontynuuj edycję</button
             >
           </div>
         </section>{/if}
-      {#if statusMessage && statusMessage !== "Saved" && !error && !autosaveError && !deleteError && !conflict && !pending && !deletePending && !discard && !deleteConfirmation}<p
+      {#if statusMessage && statusMessage !== "Zapisano" && !error && !autosaveError && !deleteError && !conflict && !pending && !deletePending && !discard && !deleteConfirmation}<p
           class="action-status"
           role="status"
         >
@@ -1118,7 +1133,7 @@
       content={draft.type === "card" ? cardHeaderContent : undefined}
       messages={editorMessages}
       onclose={close}
-      closeLabel="Close editor"
+      closeLabel="Zamknij edytor"
       disabled={busy || deleteBusy || closing}
       bind:closeButton={descriptionCloseButton}
       onclosepointerdown={(event) => {
@@ -1131,7 +1146,7 @@
           <div class="editor-context">
             <Icon name="projects" small />
             <span class="card-project-name" title={projectName}
-              >{projectName || "Card"}</span
+              >{projectName || "Karta"}</span
             >
           </div>
         {:else}
@@ -1147,7 +1162,7 @@
             <span
               >{projectName ||
                 (draft.type === "project"
-                  ? "Project"
+                  ? "Projekt"
                   : resourceLabel(draft.type))}</span
             >
             {#if projectName}<span class="context-separator">/</span><span
@@ -1166,21 +1181,21 @@
           />
         {/if}
         {#if draft.type === "card" && resource}
-          <ActionMenu label="Card actions" disabled={locked}>
+          <ActionMenu label="Działania karty" disabled={locked}>
             <label class="archive-action"
               ><input
                 type="checkbox"
                 bind:checked={draft.fields.archived}
                 disabled={locked}
-              /> Archived</label
+              /> Zarchiwizowane</label
             >
-            <p class="menu-hint">Archived cards stay in the project.</p>
+            <p class="menu-hint">Zarchiwizowane karty pozostają w projekcie.</p>
             <button
               type="button"
               class="quiet destructive-action"
               onclick={requestDelete}
               disabled={locked || !!conflict || deleteConflict}
-              >Delete card</button
+              >Usuń kartę</button
             >
           </ActionMenu>
         {:else if draft.type !== "card"}{@render savedIndicator()}{/if}
@@ -1200,36 +1215,41 @@
       }}
     >
       {#if readonly}
-        <h2 class="record-title">{draft.common.title || "Update record"}</h2>
+        <h2 class="record-title">
+          {draft.common.title || "Zapis aktualizacji"}
+        </h2>
         <div class="record-actions">
           <Button
             type="button"
             variant="quiet"
             onclick={toggleRead}
-            disabled={locked}>{read ? "Mark unread" : "Mark read"}</Button
+            disabled={locked}
+            >{read
+              ? "Oznacz jako nieprzeczytane"
+              : "Oznacz jako przeczytane"}</Button
           >
           {#if resource?.type === "update" && resource.metadata.kind === "decision_needed"}<Button
               type="button"
               variant="primary"
               onclick={() => onresolve?.(resource)}
-              disabled={locked}>Resolve decision</Button
+              disabled={locked}>Rozstrzygnij decyzję</Button
             >{/if}
         </div>
       {:else if draft.type !== "card"}
         <EditableTitle
           bind:value={draft.common.title}
           label={draft.type === "project"
-            ? "Name"
+            ? "Nazwa"
             : draft.type === "update"
-              ? "Summary"
-              : "Title"}
+              ? "Podsumowanie"
+              : "Tytuł"}
           placeholder={draft.type === "project"
-            ? "Project name"
+            ? "Nazwa projektu"
             : draft.type === "update"
-              ? "Write a summary…"
+              ? "Napisz podsumowanie…"
               : draft.type === "milestone"
-                ? "Milestone title"
-                : "Card title"}
+                ? "Tytuł kamienia milowego"
+                : "Tytuł karty"}
           maxlength={draft.type === "project"
             ? 120
             : draft.type === "update"
@@ -1241,16 +1261,16 @@
         />
         {#if !autosaveResource}<p class="draft-state" role="status">
             {busy
-              ? "Saving…"
+              ? "Zapisywanie…"
               : pending
-                ? "Awaiting command confirmation"
+                ? "Oczekiwanie na potwierdzenie polecenia"
                 : conflict
-                  ? "Conflict · draft preserved"
+                  ? "Konflikt · zachowano wersję roboczą"
                   : dirty
-                    ? "Unsaved changes"
+                    ? "Niezapisane zmiany"
                     : resource
-                      ? "Saved version"
-                      : "New draft"}
+                      ? "Zapisana wersja"
+                      : "Nowa wersja robocza"}
           </p>{/if}
       {/if}
       {#if resource?.type === "update"}<UpdateDetails
@@ -1350,8 +1370,8 @@
             >
           </div>{/if}
         {#if draft.type === "update"}<label
-            >Kind<select
-              aria-label="Kind"
+            >Rodzaj<select
+              aria-label="Rodzaj"
               bind:value={draft.fields.kind}
               disabled={readonly || locked}
               >{#each ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
@@ -1375,19 +1395,19 @@
           />
         {:else}
           <label class="description-label"
-            >Description <span>Markdown source</span><textarea
+            >Opis <span>Źródło Markdown</span><textarea
               bind:value={draft.common.body}
               rows="8"
               disabled={readonly || locked}></textarea></label
           >
           <button type="button" onclick={() => (preview = !preview)}
-            >{preview ? "Hide preview" : "Preview Markdown"}</button
+            >{preview ? "Ukryj podgląd" : "Podgląd Markdown"}</button
           >
           {#if preview}<Markdown source={draft.common.body} />{/if}
         {/if}
         {#if draft.type === "milestone"}<div class="row">
             <label
-              >Due date<input
+              >Termin<input
                 type="date"
                 bind:value={draft.fields.due}
                 disabled={locked}
@@ -1395,7 +1415,7 @@
             >
           </div>{/if}
         {#if draft.type === "update" && !readonly}<label
-            >Author<input
+            >Autor<input
               bind:value={draft.fields.author}
               required
               maxlength="120"
@@ -1409,13 +1429,13 @@
       {/if}
       {#if !readonly && (draft.type === "milestone" || draft.type === "update")}<details
         >
-          <summary>Additional fields</summary>
+          <summary>Dodatkowe pola</summary>
           <p>
-            Technical extensions and report evidence. Use the named fields above
-            for ordinary changes. The server validates every field.
+            Rozszerzenia techniczne i dowody raportu. Do zwykłych zmian używaj
+            nazwanych pól powyżej. Serwer sprawdza każde pole.
           </p>
           <textarea
-            aria-label="Additional fields JSON"
+            aria-label="Dodatkowe pola JSON"
             bind:value={draft.common.advanced}
             rows="5"
             spellcheck="false"
@@ -1423,13 +1443,13 @@
         </details>{/if}
       {#if resource && !readonly && draft.type !== "project" && draft.type !== "card"}<details
         >
-          <summary>Change history</summary><button
+          <summary>Historia zmian</summary><button
             type="button"
             onclick={() => loadHistory()}
-            disabled={busy || accessLost}>First history page</button
+            disabled={busy || accessLost}>Pierwsza strona historii</button
           >{#if dirty}<p class="empty-context">
-              Wait for changes to save, or resolve your draft before undoing a
-              saved change.
+              Poczekaj na zapis zmian lub rozstrzygnij wersję roboczą przed
+              cofnięciem zapisanej zmiany.
             </p>{/if}{#each history as entry}<div class="historyentry">
               <small>{entry.recorded_at}</small>
               <p>{entry.changed_fields.join(", ")}</p>
@@ -1440,22 +1460,26 @@
                   !entry.can_undo ||
                   !canUndoDraft(dirty, !!pending, busy) ||
                   accessLost}
-                onclick={() => undo(entry.id)}>Undo this change</button
+                onclick={() => undo(entry.id)}>Cofnij tę zmianę</button
               >
             </div>{/each}{#if historyCursor}<button
               type="button"
               disabled={busy || accessLost}
-              onclick={() => loadHistory(true)}>Older changes</button
+              onclick={() => loadHistory(true)}>Starsze zmiany</button
             >{/if}
         </details>{/if}
       {#if !autosaveResource && !readonly}<footer class="dialog-footer">
           <button type="button" onclick={close} disabled={busy || deleteBusy}
-            >Cancel</button
+            >Anuluj</button
           >{#if !readonly}<Button
               variant="primary"
               type="submit"
               disabled={locked || !!conflict}
-              >{busy ? "Saving…" : resource ? "Save changes" : "Create"}</Button
+              >{busy
+                ? "Zapisywanie…"
+                : resource
+                  ? "Zapisz zmiany"
+                  : "Utwórz"}</Button
             >{/if}
         </footer>{/if}
     </form>

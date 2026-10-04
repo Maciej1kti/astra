@@ -10,7 +10,7 @@
     messages,
     actions,
     onclose,
-    closeLabel = "Close",
+    closeLabel = "Zamknij",
     disabled = false,
     onclosepointerdown,
     closeButton = $bindable(),
@@ -53,7 +53,7 @@
   {#if content}<div class="dialog-header-content">{@render content()}</div>{/if}
   {#if messages}<div
       class="dialog-header-messages"
-      aria-label="Editor messages"
+      aria-label="Komunikaty edytora"
     >
       {@render messages()}
     </div>{/if}

@@ -28,7 +28,7 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
     cli("get", projectPath).version,
   );
   const focusUrl = `${config.origin}/?view=focus&folder=Motion%20fixture`;
-  for (const section of ["Pinned", "Motion", "Events"]) {
+  for (const section of ["Pinned", "Motion", "Wydarzenia"]) {
     let card = await mutate("POST", base, {
       title: `Soft ${section}`,
       status: "active",
@@ -36,7 +36,7 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
       ...(section === "Motion"
         ? { schedule: { start: today, end: today } }
         : {}),
-      ...(section === "Events"
+      ...(section === "Wydarzenia"
         ? { event: { start: `${today}T23:59`, duration_minutes: 60 } }
         : {}),
     });
@@ -124,7 +124,7 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
   };
   await page.setViewportSize({ width: 1440, height: 1600 });
   await page.goto(focusUrl);
-  for (const section of ["In focus", "In motion", "Events"]) {
+  for (const section of ["W Focus", "W toku", "Wydarzenia"]) {
     await inspect(
       page
         .getByRole("region", { name: section, exact: true })
@@ -138,18 +138,18 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
     () => window.motionProbe.scenes.length,
   );
   const pin = page
-    .getByRole("region", { name: "In focus", exact: true })
+    .getByRole("region", { name: "W Focus", exact: true })
     .locator(".focus-card")
     .first();
   await pin
     .getByRole("spinbutton", { name: "Soft count", exact: true })
     .click();
   const bar = page.getByRole("region", {
-    name: "Edit focus counter",
+    name: "Edytuj licznik Focus",
     exact: true,
   });
-  await bar.getByLabel("Soft count total", { exact: true }).fill("1");
-  await bar.getByRole("button", { name: "Save", exact: true }).click();
+  await bar.getByLabel("Soft count wynik", { exact: true }).fill("1");
+  await bar.getByRole("button", { name: "Zapisz", exact: true }).click();
   await expect(
     pin.getByRole("spinbutton", { name: "Soft count", exact: true }),
   ).toHaveAttribute("aria-valuenow", "1");
@@ -159,7 +159,7 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
     beforeWrite,
     "Counter writes must not replay card content",
   );
-  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await page.getByRole("button", { name: "Odśwież", exact: true }).click();
   await settle();
   assert.equal(
     await page.evaluate(() => window.motionProbe.scenes.length),
@@ -168,13 +168,13 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
   );
   for (const [view, query, selector, expected] of [
     [
-      "List",
+      "Lista",
       `view=list&project=${project}`,
       ".listrow",
       ["context", "title", "metadata", "labels"],
     ],
     [
-      "Projects",
+      "Projekty",
       "view=projects",
       "[data-project-board-item]",
       ["title", "metadata"],
@@ -199,7 +199,7 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
   await page.goto(focusUrl);
   await inspect(
     page
-      .getByRole("region", { name: "In focus", exact: true })
+      .getByRole("region", { name: "W Focus", exact: true })
       .locator(".focus-card")
       .first(),
     ["context", "title", "metadata", "labels", "counters"],

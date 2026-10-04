@@ -85,7 +85,7 @@ test("Chart never appends a page from an expired snapshot", async () => {
     owner.state.series.map((row) => row.id),
     ["fresh"],
   );
-  assert.match(owner.state.notice, /first page/);
+  assert.match(owner.state.notice, /pierwszą stronę/);
   owner.dispose();
 });
 
@@ -95,7 +95,7 @@ test("Chart appends compatible pages and preserves results on a failed read", as
     () => {},
     async () => {
       calls++;
-      if (calls === 3) throw new Error("Unavailable");
+      if (calls === 3) throw new Error("Niedostępne");
       return calls === 1 ? page(["a"], "cursor") : page(["b"]);
     },
   );
@@ -106,7 +106,7 @@ test("Chart appends compatible pages and preserves results on a failed read", as
     ["a", "b"],
   );
   await owner.refresh(query);
-  assert.equal(owner.state.error, "Unavailable");
+  assert.equal(owner.state.error, "Niedostępne");
   assert.deepEqual(
     owner.state.series.map((row) => row.id),
     ["a", "b"],
@@ -141,6 +141,6 @@ test("Chart refresh keeps loaded later pages and stops catalog growth at its exp
   for (let i = 0; i < 5; i++) await owner.more();
   assert.equal(owner.state.series.length, 500);
   assert.equal(owner.state.cursor, null);
-  assert.match(owner.state.notice, /500 counters/);
+  assert.match(owner.state.notice, /500 liczników/);
   owner.dispose();
 });

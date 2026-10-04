@@ -3,8 +3,8 @@
 
   let {
     value = $bindable(""),
-    label = "Title",
-    placeholder = "Untitled",
+    label = "Tytuł",
+    placeholder = "Bez tytułu",
     maxlength = 240,
     disabled = false,
     focus = false,
@@ -52,7 +52,7 @@
     bind:value
     use:size={value}
     aria-label={label}
-    title={`Click to edit ${label.toLowerCase()}`}
+    title={`Kliknij, aby edytować ${label.toLowerCase()}`}
     {placeholder}
     {maxlength}
     {disabled}

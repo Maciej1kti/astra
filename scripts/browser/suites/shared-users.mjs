@@ -41,7 +41,7 @@ await runBrowserSuite(
     async function ready(page, name) {
       await expect(page.locator(".current-user")).toHaveText(name);
       await expect(page.locator(".asidebottom")).toContainText(
-        "Connected to host",
+        "Połączono z serwerem",
       );
     }
     let card, counter, oldVersion;
@@ -110,17 +110,20 @@ await runBrowserSuite(
         await tomekPage.goto(`${config.origin}/?view=projects`);
         await ready(tomekPage, "Maciek");
         await tomekPage
-          .getByRole("button", { name: "Workspace settings", exact: true })
+          .getByRole("button", {
+            name: "Ustawienia przestrzeni roboczej",
+            exact: true,
+          })
           .click();
         const settings = tomekPage.getByRole("dialog", {
-          name: "Workspace settings",
+          name: "Ustawienia przestrzeni roboczej",
           exact: true,
         });
         await settings
-          .getByLabel("Current user", { exact: true })
+          .getByLabel("Bieżący użytkownik", { exact: true })
           .selectOption(tomek);
         await settings
-          .getByRole("button", { name: "Switch user", exact: true })
+          .getByRole("button", { name: "Zmień użytkownika", exact: true })
           .click();
         await ready(tomekPage, "Tomek");
         await ownerPage.reload();
@@ -158,14 +161,14 @@ await runBrowserSuite(
         await tomekPage.goto(`${config.origin}/?${params}`);
         await ready(tomekPage, "Tomek");
         const region = tomekPage.getByRole("region", {
-          name: "Card counters",
+          name: "Liczniki karty",
           exact: true,
         });
         const row = region.getByRole("group", {
-          name: "Counter: Pompki",
+          name: "Licznik: Pompki",
           exact: true,
         });
-        const value = row.getByLabel("Pompki value", { exact: true });
+        const value = row.getByLabel("Pompki wynik", { exact: true });
         await expect(value).toHaveAttribute("aria-valuenow", "0");
         await value.focus();
         await tomekPage.keyboard.press("ArrowRight");
@@ -177,7 +180,7 @@ await runBrowserSuite(
           {},
         );
         await row
-          .getByRole("button", { name: "Confirm Pompki", exact: true })
+          .getByRole("button", { name: "Potwierdź Pompki", exact: true })
           .click();
         await expect(row.locator(".draft-hint")).toHaveCount(0);
         const maciekCopy = asUser(
@@ -204,7 +207,7 @@ await runBrowserSuite(
         await ownerPage.goto(`${config.origin}/?${params}`);
         await ready(ownerPage, "Maciek");
         await expect(
-          ownerPage.getByLabel("Pompki value", { exact: true }),
+          ownerPage.getByLabel("Pompki wynik", { exact: true }),
         ).toHaveAttribute("aria-valuenow", "1");
         await tomekPage.setViewportSize({ width: 320, height: 844 });
         await expect(value).toHaveAttribute("aria-valuenow", "1");

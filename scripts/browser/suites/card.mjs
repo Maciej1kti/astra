@@ -49,25 +49,25 @@ export async function runCardChecks({
     });
   });
   const dialog = () =>
-    page.getByRole("dialog", { name: /^(Edit|Create) resource$/ });
-  const title = () => dialog().getByLabel("Title", { exact: true });
+    page.getByRole("dialog", { name: /^(Edytuj|Utwórz) element$/ });
+  const title = () => dialog().getByLabel("Tytuł", { exact: true });
   const descriptionRendered = () =>
     dialog().locator(".resource-description-rendered");
-  const description = () => dialog().getByLabel("Description", { exact: true });
+  const description = () => dialog().getByLabel("Opis", { exact: true });
   async function editDescription() {
     await descriptionRendered().click();
     await expect(description()).toBeVisible();
   }
   const item = (index) =>
     dialog().getByRole("textbox", {
-      name: `Checklist item ${index}`,
+      name: `Pozycja listy kontrolnej ${index}`,
       exact: true,
     });
   const checklist = () =>
-    dialog().getByRole("region", { name: "Checklist", exact: true });
+    dialog().getByRole("region", { name: "Lista kontrolna", exact: true });
   const grip = (index) =>
     dialog().getByRole("button", {
-      name: `Move checklist item ${index}`,
+      name: `Przenieś pozycję listy kontrolnej ${index}`,
       exact: true,
     });
   const keyboardMove = async (index, direction = "ArrowDown") => {
@@ -107,10 +107,10 @@ export async function runCardChecks({
   async function close() {
     if (!(await dialog().count())) return;
     await dialog()
-      .getByRole("button", { name: "Close editor", exact: true })
+      .getByRole("button", { name: "Zamknij edytor", exact: true })
       .click();
     const discard = dialog().getByRole("button", {
-      name: "Discard draft",
+      name: "Odrzuć wersję roboczą",
       exact: true,
     });
     if (await discard.isVisible()) await discard.click();
@@ -123,7 +123,7 @@ export async function runCardChecks({
     );
     await page.locator("header.topbar").waitFor();
     await expect(page.locator(".asidebottom")).toContainText(
-      "Connected to host",
+      "Połączono z serwerem",
     );
   }
   async function open(id) {
@@ -131,7 +131,7 @@ export async function runCardChecks({
     await title().waitFor();
     await expect(
       dialog().getByRole("button", {
-        name: /^(Pin to focus|Remove from focus)$/,
+        name: /^(Przypnij do Focus|Usuń z Focus)$/,
       }),
     ).toBeEnabled();
   }
@@ -144,7 +144,9 @@ export async function runCardChecks({
     );
   }
   async function waitForAutosaveACK() {
-    await expect(dialog().getByTestId("autosave-status")).toHaveText("Saved");
+    await expect(dialog().getByTestId("autosave-status")).toHaveText(
+      "Zapisano",
+    );
   }
   async function screenshot(name) {
     if (page.context().browser().browserType().name() !== "chromium") return;
@@ -201,13 +203,13 @@ export async function runCardChecks({
       await route();
       await page
         .locator(".heading")
-        .getByRole("button", { name: /Add card$/ })
+        .getByRole("button", { name: /Dodaj kartę$/ })
         .click();
       await title().fill(name);
       await waitForAutosaveACK();
       await expect(dialog()).toBeVisible();
       await dialog()
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await dialog().waitFor({ state: "hidden" });
       const matches = all(
@@ -241,21 +243,21 @@ export async function runCardChecks({
       await open(card.id);
       await expect(descriptionRendered()).toBeVisible();
       await expect(
-        dialog().getByRole("button", { name: "Save changes", exact: true }),
+        dialog().getByRole("button", { name: "Zapisz zmiany", exact: true }),
       ).toHaveCount(0);
       await expect(
-        dialog().getByRole("button", { name: "Cancel", exact: true }),
+        dialog().getByRole("button", { name: "Anuluj", exact: true }),
       ).toHaveCount(0);
-      for (const field of ["Kind", "Expected result", "Owner"])
+      for (const field of ["Rodzaj", "Expected result", "Owner"])
         await expect(dialog().getByLabel(field, { exact: true })).toHaveCount(
           0,
         );
       await expect(
-        dialog().getByText("Change history", { exact: true }),
+        dialog().getByText("Historia zmian", { exact: true }),
       ).toHaveCount(0);
       await expect(
         dialog().getByRole("button", {
-          name: "Preview Markdown",
+          name: "Podgląd Markdown",
           exact: true,
         }),
       ).toHaveCount(0);
@@ -298,7 +300,7 @@ export async function runCardChecks({
       await rendered.click();
       await description().fill(closeSource);
       await dialog()
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(dialog()).toBeHidden();
       await expect
@@ -331,7 +333,7 @@ export async function runCardChecks({
       });
       await open(card.id);
       for (const field of [
-        "Due date",
+        "Termin",
         "Review on",
         "Blocked reason",
         "Find by title",
@@ -342,24 +344,24 @@ export async function runCardChecks({
       await expect(
         dialog().getByText("Connections and blockers", { exact: true }),
       ).toHaveCount(0);
-      await expect(dialog().getByLabel("Start", { exact: true })).toHaveValue(
-        "2026-09-12",
-      );
-      await expect(dialog().getByLabel("End", { exact: true })).toHaveValue(
+      await expect(
+        dialog().getByLabel("Początek", { exact: true }),
+      ).toHaveValue("2026-09-12");
+      await expect(dialog().getByLabel("Koniec", { exact: true })).toHaveValue(
         "2026-09-14",
       );
       await dialog()
-        .getByLabel("New item", { exact: true })
+        .getByLabel("Nowa pozycja", { exact: true })
         .fill("The intended result is visible.");
-      await dialog().getByLabel("New item", { exact: true }).press("Enter");
+      await dialog().getByLabel("Nowa pozycja", { exact: true }).press("Enter");
       await dialog()
-        .getByLabel("New item", { exact: true })
+        .getByLabel("Nowa pozycja", { exact: true })
         .fill("Keyboard and narrow layouts are verified.");
       await dialog()
-        .getByRole("button", { name: "Add item", exact: true })
+        .getByRole("button", { name: "Dodaj pozycję", exact: true })
         .click();
       await dialog()
-        .getByRole("checkbox", { name: /^Complete checklist item 1:/ })
+        .getByRole("checkbox", { name: /^Ukończ pozycję listy kontrolnej 1:/ })
         .check();
       await keyboardMove(1);
       await expect(item(1)).toHaveValue(
@@ -368,11 +370,11 @@ export async function runCardChecks({
       await expect(item(2)).toHaveValue("The intended result is visible.");
       await expect(
         dialog().getByRole("checkbox", {
-          name: /^Complete checklist item 2:/,
+          name: /^Ukończ pozycję listy kontrolnej 2:/,
         }),
       ).toBeChecked();
       await expect(
-        dialog().getByRole("button", { name: "Status: Active", exact: true }),
+        dialog().getByRole("button", { name: "Status: Aktywne", exact: true }),
       ).toBeVisible();
       await checklist().scrollIntoViewIfNeeded();
       await screenshot("C02-acceptance-draft");
@@ -406,19 +408,19 @@ export async function runCardChecks({
         );
       await open(card.id);
       await page.reload();
-      await expect(dialog().getByLabel("Start", { exact: true })).toHaveValue(
-        saved.metadata.schedule.start,
-      );
-      await expect(dialog().getByLabel("End", { exact: true })).toHaveValue(
+      await expect(
+        dialog().getByLabel("Początek", { exact: true }),
+      ).toHaveValue(saved.metadata.schedule.start);
+      await expect(dialog().getByLabel("Koniec", { exact: true })).toHaveValue(
         saved.metadata.schedule.end,
       );
       await expect(item(1)).toHaveValue(saved.metadata.acceptance[0].text);
       await expect(item(2)).toHaveValue(saved.metadata.acceptance[1].text);
       await dialog()
-        .getByRole("checkbox", { name: /^Complete checklist item 1:/ })
+        .getByRole("checkbox", { name: /^Ukończ pozycję listy kontrolnej 1:/ })
         .check();
       await expect(
-        dialog().getByRole("button", { name: "Status: Active", exact: true }),
+        dialog().getByRole("button", { name: "Status: Aktywne", exact: true }),
       ).toBeVisible();
       await waitForAutosaveACK();
       const completed = get(card.id);
@@ -437,11 +439,11 @@ export async function runCardChecks({
         .locator("main .table")
         .getByRole("button")
         .filter({ hasText: card.title });
-      await expect(row).toContainText("Checklist 2/2");
+      await expect(row).toContainText("Lista kontrolna 2/2");
       await screenshot("C02-list-summary");
       await route("board", { q: card.title });
       const boardCard = page.locator(`[data-board-card="${card.id}"]`);
-      await expect(boardCard).toContainText("Checklist 2/2");
+      await expect(boardCard).toContainText("Lista kontrolna 2/2");
       await screenshot("C02-board-summary");
       return {
         card: card.id,
@@ -471,12 +473,15 @@ export async function runCardChecks({
       });
       await open(card.id);
       await dialog()
-        .getByRole("button", { name: "Edit schedule", exact: true })
+        .getByRole("button", { name: "Edytuj harmonogram", exact: true })
         .click();
-      await dialog().getByLabel("Start", { exact: true }).fill("");
-      await dialog().getByLabel("End", { exact: true }).fill("");
+      await dialog().getByLabel("Początek", { exact: true }).fill("");
+      await dialog().getByLabel("Koniec", { exact: true }).fill("");
       await dialog()
-        .getByRole("button", { name: "Remove checklist item 1", exact: true })
+        .getByRole("button", {
+          name: "Usuń pozycję listy kontrolnej 1",
+          exact: true,
+        })
         .click();
       await waitForAutosaveACK();
       const saved = get(card.id);
@@ -493,10 +498,12 @@ export async function runCardChecks({
       assert.equal(saved.metadata.status, "review");
       assert.equal(saved.body, "Decision context");
       await open(card.id);
-      await expect(dialog().getByLabel("Start", { exact: true })).toHaveValue(
+      await expect(
+        dialog().getByLabel("Początek", { exact: true }),
+      ).toHaveValue("");
+      await expect(dialog().getByLabel("Koniec", { exact: true })).toHaveValue(
         "",
       );
-      await expect(dialog().getByLabel("End", { exact: true })).toHaveValue("");
       await expect(checklist().locator("li")).toHaveCount(0);
       await screenshot("C03-cleared-optional-fields");
       return {
@@ -809,12 +816,12 @@ export async function runCardChecks({
       await item(1).fill("  ");
       await expect(
         dialog().locator(".dialog-header").getByRole("alert"),
-      ).toContainText("Add text to checklist item 1");
+      ).toContainText("Dodaj treść do pozycji listy kontrolnej 1");
       assert.equal(get(card.id).version, before.version);
       await item(1).fill("x".repeat(501));
       await expect(
         dialog().locator(".dialog-header").getByRole("alert"),
-      ).toContainText("500 characters");
+      ).toContainText("500 znaków");
       assert.equal(get(card.id).version, before.version);
       await item(1).fill("A valid condition after local feedback");
       await waitForAutosaveACK();
@@ -860,7 +867,7 @@ export async function runCardChecks({
         for (const section of [
           "Record progress",
           "Card updates",
-          "Additional fields",
+          "Dodatkowe pola",
         ])
           await expect(
             dialog().getByText(section, { exact: true }),

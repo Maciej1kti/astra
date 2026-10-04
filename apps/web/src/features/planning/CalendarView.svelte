@@ -115,19 +115,21 @@
   let displayedDate = $state(untrack(() => calendarDate));
   let events = $state.raw<Calendar.EventInput[]>([]);
   const projectEvents = calendarEventProjection();
-  const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
+  const weekday = new Intl.DateTimeFormat("pl-PL", { weekday: "long" });
   const callbacks: Calendar.Options = {
     headerToolbar: { start: "", center: "", end: "" },
-    locale: "en-GB",
+    locale: "pl-PL",
     scrollTime: "08:00:00",
     editable: true,
     eventResizableFromStart: true,
     eventLongPressDelay: 350,
     longPressDelay: 350,
     dragScroll: true,
-    noEventsContent: "No dated items in this period.",
+    allDayContent: "Cały dzień",
+    moreLinkContent: ({ num }) => `+${num} więcej`,
+    noEventsContent: "Brak elementów z datą w tym okresie.",
     eventDurationEditable: true,
-    buttonText: { today: "Today", close: "Close" },
+    buttonText: { today: "Dzisiaj", close: "Zamknij" },
     datesSet: (info) => {
       const next = {
         start: dateOnly(info.start),
@@ -234,7 +236,7 @@
         paged = pageStart !== null;
         freshness = projectionNotice(result.value);
         pageNotice = result.reset
-          ? "The calendar changed. Showing the first page of the latest results."
+          ? "Kalendarz się zmienił. Wyświetlono pierwszą stronę aktualnych wyników."
           : "";
       },
       failed: (cause) => {
@@ -453,7 +455,7 @@
 <!-- Shortcuts are scoped to the planning region and never intercept text editing. -->
 <section
   class="calendar-region"
-  aria-label="Calendar planning"
+  aria-label="Planowanie w kalendarzu"
   tabindex="-1"
   use:shortcutRegion
 >
@@ -473,7 +475,8 @@
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
   {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
   {#if error}<p role="alert">
-      {error} <button onclick={() => load(false)}>Reload calendar</button>
+      {error}
+      <button onclick={() => load(false)}>Wczytaj kalendarz ponownie</button>
     </p>{/if}
   <div
     class="calendar-surface"
@@ -488,7 +491,7 @@
     use:guard
   >
     {#if loading}<p class="loading-indicator" role="status">
-        Loading calendar…
+        Ładowanie kalendarza…
       </p>{/if}
     {#key reset}<Calendar
         plugins={[DayGrid, TimeGrid, List, Interaction]}
@@ -504,7 +507,7 @@
               <span class="day-number">{day.getDate()}</span>
               <span>{weekday.format(day)}</span>
               {#if dateOnly(day) === workspaceToday}<span class="today-label"
-                  >Today</span
+                  >Dzisiaj</span
                 >{/if}
             {:else if mode === "month"}
               <span class="day-number">{day.getDate()}</span>
@@ -513,7 +516,7 @@
         {/snippet}
         {#snippet moreLinkContent({ num })}
           <span class="more-count">+{num}</span><span class="more-label">
-            more</span
+            więcej</span
           >
         {/snippet}
         {#snippet eventContent({ event })}
@@ -533,8 +536,8 @@
                 >{item.event
                   ? item.event.start.slice(11)
                   : item.kind.endsWith("due")
-                    ? "Due"
-                    : "All day"}{#if item.event}<span class="time-duration">
+                    ? "Termin"
+                    : "Cały dzień"}{#if item.event}<span class="time-duration">
                     · {item.event.duration_minutes} min</span
                   >{/if}</span
               >
@@ -555,10 +558,10 @@
                   >{item.event
                     ? `${item.event.duration_minutes} min`
                     : item.kind.endsWith("due")
-                      ? "Due"
+                      ? "Termin"
                       : item.start !== item.end
-                        ? "Multi-day plan"
-                        : "Planned work"}</small
+                        ? "Plan wielodniowy"
+                        : "Zaplanowana praca"}</small
                 >
               </div>
             </div>
@@ -568,38 +571,39 @@
   </div>
   <div class="view-meta">
     <p class="legend">
-      <span><Icon name="planned" small />Event</span><span
+      <span><Icon name="planned" small />Wydarzenie</span><span
         ><Icon name="calendar" small />Plan</span
-      ><span><Icon name="flag" small />Due</span>
+      ><span><Icon name="flag" small />Termin</span>
     </p>
     <details class="help">
-      <summary>Calendar shortcuts & editing</summary>
+      <summary>Skróty i edycja kalendarza</summary>
       <p>
-        Event times use {workspaceTimezone}. Select an hour in Day or Week to
-        create an event. Date-only cards stay in the all-day row.
+        Godziny wydarzeń według strefy {workspaceTimezone}. Wybierz godzinę w
+        widoku dnia lub tygodnia, aby utworzyć wydarzenie. Karty z samą datą
+        pozostają w wierszu całodniowym.
       </p>
       <p>
-        Drag planned work to move it; drag either edge to resize. On touch, hold
-        a plan to select it. Click a day or select a range to create a card.
-        Enter opens a focused item. Alt+←/→ on a plan moves it one day; Shift
-        changes a week. Elsewhere in this view, Alt+←/→ navigates, Alt+T opens
-        today, and Alt+1/2/3/4 selects day/week/month/agenda. Escape cancels a
-        gesture.
+        Przeciągnij zaplanowaną pracę, aby ją przenieść; przeciągnij krawędź,
+        aby zmienić czas trwania. Na ekranie dotykowym przytrzymaj plan, aby go
+        wybrać. Kliknij dzień lub zaznacz zakres, aby utworzyć kartę. Enter
+        otwiera zaznaczony element. Alt+←/→ przesuwa plan o dzień; Shift zmienia
+        tydzień. Poza planem Alt+←/→ zmienia okres, Alt+T otwiera dzisiaj, a
+        Alt+1/2/3/4 wybiera dzień/tydzień/miesiąc/agendę. Escape anuluje gest.
       </p>
     </details>
   </div>
   {#if cursor || paged}<p class="hint">
-      Showing {items.length} dated items on this page.
+      Wyświetlono {items.length} elementów z datą na tej stronie.
     </p>{/if}
   {#if cursor}<button disabled={loading} onclick={() => load(true)}
-      >Next page of dated resources</button
+      >Następna strona elementów z datą</button
     >{/if}
   {#if paged}<button
       disabled={loading}
       onclick={() => {
         pageStart = null;
         void load(false);
-      }}>First page</button
+      }}>Pierwsza strona</button
     >{/if}
 </section>
 

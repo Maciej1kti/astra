@@ -34,7 +34,7 @@ export function sessionState(hooks: SessionHooks) {
   let boot = $state<Bootstrap | null>(null);
   let timezone = $state("UTC");
   let pairing = $state<Pairing | null>(null);
-  let device = $state("My browser");
+  let device = $state("Moja przeglądarka");
   let busy = $state(false);
   let loading = $state(true);
   let connected = $state(false);
@@ -201,7 +201,7 @@ export function sessionState(hooks: SessionHooks) {
       if (pairing.state === "approved" || pairing.state === "claimed") {
         if (!pairing.pending_csrf_token)
           throw new Error(
-            "The pairing challenge is unavailable. Request access again.",
+            "Kod parowania jest niedostępny. Poproś o dostęp ponownie.",
           );
         await api(
           "/api/v1/auth/pairings/claim",

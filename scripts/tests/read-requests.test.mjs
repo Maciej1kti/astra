@@ -192,7 +192,7 @@ test("session cleanup aborts active reads and prevents queued operations", async
     (signal) =>
       new Promise((_, reject) =>
         signal.addEventListener("abort", () =>
-          reject(new DOMException("Ended", "AbortError")),
+          reject(new DOMException("Zakończone", "AbortError")),
         ),
       ),
   );

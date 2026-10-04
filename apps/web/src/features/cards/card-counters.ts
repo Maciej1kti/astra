@@ -30,7 +30,7 @@ export function counterInputDirty(input: CounterInputDraft): boolean {
   return parseCounterInput(input.text) !== input.base;
 }
 export function counterDay(timezone: string, now = Date.now()): string {
-  const parts = new Intl.DateTimeFormat("en", {
+  const parts = new Intl.DateTimeFormat("pl-PL", {
     timeZone: timezone,
     year: "numeric",
     month: "2-digit",

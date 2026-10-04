@@ -106,8 +106,9 @@ await runBrowserSuite(
         ),
         calendarEvents: document.querySelectorAll("[data-calendar-item]")
           .length,
-        calendarLayout: document.querySelector('[aria-label="Calendar layout"]')
-          ?.value,
+        calendarLayout: document.querySelector(
+          '[aria-label="Układ kalendarza"]',
+        )?.value,
         selectedTitle: document.querySelector(".selected-summary strong")
           ?.textContent,
       }));
@@ -136,7 +137,7 @@ await runBrowserSuite(
     try {
       await pair(page);
       await expect(page.locator(".asidebottom")).toContainText(
-        "Connected to host",
+        "Połączono z serwerem",
       );
       await context.storageState({ path: join(runtime, "browser-state.json") });
       const workspaceToday = (

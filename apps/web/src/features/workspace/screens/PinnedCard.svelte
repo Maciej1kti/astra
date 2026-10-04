@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { counted } from "../../../lib/ui/locale.ts";
   import Icon from "../../../lib/ui/Icon.svelte";
   import Badge from "../../../lib/ui/Badge.svelte";
   import { resourceLabel } from "../../../lib/resources/resource-presentation";
@@ -79,8 +80,9 @@
         >{/if}
       {#if item.priority === "high"}<span
           class="focus-high"
-          title="High priority"
-          ><Icon name="flag" small /><span class="sr">High priority</span></span
+          title="Wysoki priorytet"
+          ><Icon name="flag" small /><span class="sr">Wysoki priorytet</span
+          ></span
         >{/if}
       {#if pinned && reorderable}<span class="focus-card-grip"
           ><Icon name="grip" small /></span
@@ -90,7 +92,7 @@
       >{item.title}</span
     >
     <span class="focus-card-facts">
-      {#if item.archived}<span>Archived</span>{/if}
+      {#if item.archived}<span>Zarchiwizowane</span>{/if}
       {#if item.availability !== "ready"}<span
           >{resourceLabel(item.availability ?? "stale")}</span
         >{/if}
@@ -102,19 +104,27 @@
               >· {schedule.detail}</span
             >{/if}</span
         >{/if}
-      {#if item.acceptance_progress?.total}<span title="Checklist"
+      {#if item.acceptance_progress?.total}<span title="Lista kontrolna"
           ><Icon name="check" small />{item.acceptance_progress.completed}/{item
             .acceptance_progress.total}<span class="sr">
-            checklist items</span
+            pozycji listy kontrolnej</span
           ></span
         >{/if}
       {#if item.comment_count}<span
-          >{item.comment_count}
-          {item.comment_count === 1 ? "comment" : "comments"}</span
+          >{counted(
+            item.comment_count,
+            "komentarz",
+            "komentarze",
+            "komentarzy",
+          )}</span
         >{/if}
       {#if item.counter_count && !item.daily_counters?.length}<span
-          >{item.counter_count}
-          {item.counter_count === 1 ? "counter" : "counters"}</span
+          >{counted(
+            item.counter_count,
+            "licznik",
+            "liczniki",
+            "liczników",
+          )}</span
         >{/if}
     </span>
     {#if item.labels?.length}<span class="focus-card-labels"
@@ -122,7 +132,7 @@
       >{/if}
     {#if item.attentionReasons?.some((reason) => reason !== "overdue")}<span
         class="attention-reasons"
-        aria-label="Attention reasons"
+        aria-label="Powody wymagające uwagi"
         >{#each item.attentionReasons?.filter((reason) => reason !== "overdue") ?? [] as reason}<Badge
             >{resourceLabel(reason)}</Badge
           >{/each}</span
@@ -131,13 +141,13 @@
   {#if item.daily_counters?.length}
     <div
       class="focus-card-counters"
-      aria-label="Daily counters"
+      aria-label="Dzienne liczniki"
       role="group"
       data-focus-interactive
     >
       <span class="focus-counter-day"
         >{item.daily_counters[0].date === today
-          ? "Today"
+          ? "Dzisiaj"
           : item.daily_counters[0].date}</span
       >
       {#each item.daily_counters as counter (counter.id)}

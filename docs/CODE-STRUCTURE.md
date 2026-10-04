@@ -45,6 +45,14 @@ the generation and abort signal that cancel obsolete resource reads and history
 restoration. A successful source read transfers its loaded editor target; view
 navigation does not cancel context already owned by a mounted editor.
 
+Shared `lib/ui/locale.ts` owns the fixed Polish locale and count forms.
+`WidgetLocale` supplies native Board/Timeline translations without changing
+resource identifiers. `lib/resources/state-presentation.ts` owns operational
+labels used by deferred administrative screens. `lib/api/messages.ts` translates
+server codes and browser transport/JSON failures at presentation boundaries; its
+detailed `message-catalog.ts` loads only for responses with errors or warnings.
+Server/CLI protocol messages and write recovery remain unchanged.
+
 The charts feature owns Chart's bounded counter-series reads, selection,
 aggregation, statistics and SVG plots. `chart-data.ts` owns cancellation,
 generation checks, stale-page restart and invalidations received during active
@@ -72,8 +80,10 @@ server-side searches retain the 200 ms debounce. Bootstrap and preferences load
 concurrently; either request can end an expired session, and initialization still
 recovers an existing pairing if the other request is cancelled.
 
-Editor, settings and administrative components load on demand through
-`lib/ui/deferred-component.svelte.ts`. Editor code warms immediately after the
+Editor, settings, pairing and administrative components load on demand through
+`lib/ui/deferred-component.svelte.ts`, along with List/Updates views and card-project,
+move/date proposal dialogs. This keeps Polish presentation within the initial
+80 KiB gzip budget. Deferred routes retain visible loading and retry controls. Editor code warms immediately after the
 initial ordinary view read, without competing for its network transfer, and
 loads alongside resource reads on an early click. Once loaded, the registration
 browser stays mounted while hidden so its pending command is retained. Loading

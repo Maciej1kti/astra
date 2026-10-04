@@ -42,7 +42,7 @@
   let time = $state(untrack(() => event?.start.slice(11) ?? ""));
   let duration = $state(untrack(() => event?.duration_minutes ?? 60));
   const heading = $derived(
-    event ? "Change event time" : "Change planned dates",
+    event ? "Zmień godzinę wydarzenia" : "Zmień zaplanowane daty",
   );
   const proposal = () =>
     event
@@ -60,7 +60,7 @@
     const lost = () => {
       accessLost = true;
       error =
-        "Your session ended. Copy this proposal before closing and reconnecting.";
+        "Sesja wygasła. Skopiuj tę propozycję przed zamknięciem i ponownym połączeniem.";
     };
     const restored = () => {
       accessLost = false;
@@ -81,10 +81,10 @@
       await navigator.clipboard.writeText(
         JSON.stringify({ path, version, ...proposal(), pending }, null, 2),
       );
-      error = "Proposal copied.";
+      error = "Skopiowano propozycję.";
     } catch {
       error =
-        "Clipboard access is unavailable. Select and copy the proposal and request ID.";
+        "Schowek jest niedostępny. Zaznacz i skopiuj propozycję oraz identyfikator żądania.";
     }
   }
   async function transmit() {
@@ -108,7 +108,7 @@
           conflict = { current: await api<Resource>(path) };
         } catch {
           error +=
-            " The current resource is unavailable; your proposed dates remain here.";
+            "Aktualny element jest niedostępny; proponowane daty pozostają tutaj.";
         }
       }
     }
@@ -136,7 +136,7 @@
 </script>
 
 {#if autoCommit && !error}<p role="status" class="planning-save-status">
-    Saving planned dates…
+    Zapisywanie zaplanowanych dat…
   </p>{/if}
 
 {#if !autoCommit || error}
@@ -150,7 +150,7 @@
       title={heading}
       onclose={close}
       disabled={busy || !!pending}
-      closeLabel="Close planned dates"
+      closeLabel="Zamknij zaplanowane daty"
     />
     <form
       class="dialog-form"
@@ -163,7 +163,7 @@
         {#if title}<p>{title}</p>{/if}
         <div class="date-fields">
           <label
-            >Planned start<input
+            >Zaplanowany początek<input
               type="date"
               bind:value={start}
               required
@@ -172,7 +172,7 @@
           >
           {#if event}
             <label
-              >Start time<input
+              >Godzina rozpoczęcia<input
                 type="time"
                 bind:value={time}
                 required
@@ -180,7 +180,7 @@
               /></label
             >
             <label
-              >Duration (minutes)<input
+              >Czas trwania (minuty)<input
                 type="number"
                 min="1"
                 max="10080"
@@ -192,7 +192,7 @@
             >
           {:else}
             <label
-              >Planned end<input
+              >Zaplanowany koniec<input
                 type="date"
                 bind:value={end}
                 min={start}
@@ -204,44 +204,45 @@
         </div>
         {#if error}<p role="alert">{error}</p>{/if}
         {#if conflict?.current}<p>
-            Current saved schedule: {JSON.stringify(
+            Aktualny zapisany harmonogram: {JSON.stringify(
               conflict.current.type === "card"
                 ? (conflict.current.metadata.event ??
                     conflict.current.metadata.schedule ??
                     null)
                 : null,
-            )}. Your proposed dates remain above. Reopen the card to start a new
-            edit.
+            )}. Proponowane daty pozostają powyżej. Otwórz kartę ponownie, aby
+            rozpocząć nową edycję.
           </p>{/if}
-        {#if pending}<p>Request: {pending.requestId}</p>
+        {#if pending}<p>Żądanie: {pending.requestId}</p>
           <button type="button" onclick={status} disabled={busy}
-            >Check status</button
+            >Sprawdź stan</button
           ><button type="button" onclick={transmit} disabled={busy}
-            >Retry same command</button
+            >Ponów to samo polecenie</button
           >{/if}
         {#if error || pending || accessLost}<button
             type="button"
-            onclick={copyDraft}>Copy draft</button
+            onclick={copyDraft}>Kopiuj wersję roboczą</button
           >{/if}
         {#if accessLost && pending}<details>
-            <summary>Close without resolving</summary>
+            <summary>Zamknij bez rozstrzygnięcia</summary>
             <p>
-              Copy the request ID and proposal first. The operation may already
-              have committed.
+              Najpierw skopiuj identyfikator żądania i propozycję. Operacja
+              mogła już zostać zapisana.
             </p>
-            <button type="button" onclick={onclose}
-              >Discard this proposal</button
+            <button type="button" onclick={onclose}>Odrzuć tę propozycję</button
             >
           </details>{/if}
       </div>
       <footer class="dialog-footer">
         <button type="button" onclick={close} disabled={busy || !!pending}
-          >Cancel</button
+          >Anuluj</button
         ><Button
           variant="primary"
           type="submit"
           disabled={busy || !!pending || !!conflict || accessLost}
-          >{event ? "Save event time" : "Save planned dates"}</Button
+          >{event
+            ? "Zapisz godzinę wydarzenia"
+            : "Zapisz zaplanowane daty"}</Button
         >
       </footer>
     </form>

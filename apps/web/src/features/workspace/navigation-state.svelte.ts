@@ -95,7 +95,7 @@ export function navigationState<Loaded = Resource>(
       keepEditing();
       hooks.error(
         new Error(
-          "Close the open dialog before changing views with browser navigation.",
+          "Zamknij otwarte okno przed zmianą widoku przez nawigację przeglądarki.",
         ),
       );
     } else void restore(target);

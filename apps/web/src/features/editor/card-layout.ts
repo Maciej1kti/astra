@@ -2,12 +2,12 @@ import type { CardSection } from "../../lib/contracts/api.generated";
 export type { CardSection };
 
 export const cardSections = {
-  description: "Description",
-  checklist: "Checklist",
-  counters: "Counters",
-  comments: "Comments",
-  schedule: "Schedule",
-  labels: "Labels",
+  description: "Opis",
+  checklist: "Lista kontrolna",
+  counters: "Liczniki",
+  comments: "Komentarze",
+  schedule: "Harmonogram",
+  labels: "Etykiety",
 } as const satisfies Record<CardSection, string>;
 export type CardLayout = CardSection[];
 const defaults: CardLayout = [

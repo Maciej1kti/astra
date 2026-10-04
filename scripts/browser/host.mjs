@@ -201,18 +201,18 @@ export async function pair(
   { deviceName, requireRequest = false } = {},
 ) {
   await page.goto(host.origin);
-  const request = page.getByRole("button", { name: /^Request access/ });
+  const request = page.getByRole("button", { name: /^Poproś o dostęp/ });
   const project = page.locator("header.topbar");
   await request.or(project).waitFor();
   if (requireRequest)
     assert(await request.isVisible(), "Expected a fresh unpaired browser");
   if (await request.isVisible()) {
     if (deviceName)
-      await page.getByLabel("Device name", { exact: true }).fill(deviceName);
+      await page
+        .getByLabel("Nazwa urządzenia", { exact: true })
+        .fill(deviceName);
     await request.click();
-    await page
-      .getByText("Compare this challenge on the host machine:")
-      .waitFor();
+    await page.getByText("Porównaj ten kod na komputerze serwera:").waitFor();
     const text = await page.locator("body").innerText();
     const matching = host
       .cli("pairings")
@@ -224,7 +224,10 @@ export async function pair(
     );
     host.cli("approve", matching[0].id, "--challenge", matching[0].challenge);
     await page
-      .getByRole("button", { name: "I approved this browser", exact: true })
+      .getByRole("button", {
+        name: "Przeglądarka została zatwierdzona",
+        exact: true,
+      })
       .click();
   }
   await project.waitFor();

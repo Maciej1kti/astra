@@ -1,3 +1,5 @@
+import { serverMessage } from "../../lib/api/messages.ts";
+import { errorMessage } from "../../lib/api/messages.ts";
 import { getCounterSeries, type CounterQuery } from "../../lib/api/counters.ts";
 import { cursorPage } from "../../lib/api/pagination.ts";
 import { projectionNotice } from "../../lib/api/projection-state.ts";
@@ -112,12 +114,12 @@ export class ChartData {
           series.length >= chartCatalogLimit && !!page.page.next_cursor;
         const notices = [
           result.reset
-            ? "Counter data changed. Showing the first page of the latest results."
+            ? "Dane liczników się zmieniły. Wyświetlono pierwszą stronę aktualnych wyników."
             : "",
           projectionNotice(page),
-          ...page.warnings.map((warning) => warning.message),
+          ...page.warnings.map((warning) => serverMessage(warning.code)),
           capped
-            ? "The catalog is limited to 500 counters. Select a project to narrow the results."
+            ? "Lista jest ograniczona do 500 liczników. Wybierz projekt, aby zawęzić wyniki."
             : "",
         ].filter(Boolean);
         this.publish({
@@ -132,7 +134,7 @@ export class ChartData {
           !this.disposed
         )
           this.publish({
-            error: cause instanceof Error ? cause.message : String(cause),
+            error: errorMessage(cause),
           });
       } finally {
         if (generation === this.generation && !this.disposed) {

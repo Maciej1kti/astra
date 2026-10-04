@@ -19,20 +19,20 @@ export async function verifyPlanningFixes(
 ) {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(calendarUrl);
-  const layout = page.getByLabel("Calendar layout");
+  const layout = page.getByLabel("Układ kalendarza");
   const dateToggle = page.getByRole("button", {
-    name: "Choose calendar date",
+    name: "Wybierz datę kalendarza",
     exact: true,
   });
   await dateToggle.click();
-  await expect(page.getByLabel("Go to date")).toBeVisible();
+  await expect(page.getByLabel("Przejdź do daty")).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByLabel("Go to date")).toHaveCount(0);
+  await expect(page.getByLabel("Przejdź do daty")).toHaveCount(0);
   await expect(dateToggle).toBeFocused();
   await setCalendarDate(page, fixtureDate);
   await layout.selectOption("month");
   await expect(
-    page.getByText("Loading calendar…", { exact: true }),
+    page.getByText("Ładowanie kalendarza…", { exact: true }),
   ).toHaveCount(0);
 
   const calendar = page.locator(".calendar-surface");
@@ -51,7 +51,7 @@ export async function verifyPlanningFixes(
       calendar.evaluate((el) => el.getBoundingClientRect().height),
     )
     .toBeLessThan(900);
-  const more = calendar.getByRole("button", { name: /^\+\d+ more$/ }).first();
+  const more = calendar.getByRole("button", { name: /^\+\d+ więcej$/ }).first();
   await expect(more).toBeVisible();
   await onCheckpoint("desktop-calendar-month", page);
   await more.focus();
@@ -63,7 +63,7 @@ export async function verifyPlanningFixes(
   await onCheckpoint("desktop-calendar-overflow", page);
   await calendar
     .getByRole("dialog")
-    .getByRole("button", { name: /close/i })
+    .getByRole("button", { name: /zamknij/i })
     .click();
   await expect(calendar.getByRole("dialog")).toHaveCount(0);
 
@@ -74,14 +74,14 @@ export async function verifyPlanningFixes(
   await expectCalendarDate(page, "2026-10-13");
   await expect(layout).toHaveValue("week");
   await expect(page).toHaveURL(sharedUrl);
-  await page.getByRole("button", { name: "Next calendar period" }).click();
+  await page.getByRole("button", { name: "Następny okres kalendarza" }).click();
   await expectCalendarDate(page, "2026-10-20");
   await page.goBack();
   await expectCalendarDate(page, "2026-10-13");
   await expect(layout).toHaveValue("week");
   await page.goForward();
   await expectCalendarDate(page, "2026-10-20");
-  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await page.getByRole("button", { name: "Dzisiaj", exact: true }).click();
   await expectCalendarDate(page, workspaceToday);
   const todayCells = calendar.locator('[data-workspace-today="true"]');
   // Hourly views have a day cell in both the all-day and timed lanes.
@@ -127,7 +127,9 @@ export async function verifyPlanningFixes(
     element.scrollTop = 0;
   });
   await onCheckpoint("mobile-390-calendar-agenda", page);
-  await page.getByRole("button", { name: "Month grid", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Siatka miesiąca", exact: true })
+    .click();
   await expect(calendar.locator(".ec-day-grid.ec-month-view")).toBeVisible();
   await expect
     .poll(async () =>
@@ -149,7 +151,7 @@ export async function verifyPlanningFixes(
     for (const day of await days.all())
       await expect(day).toBeInViewport({ ratio: 1 });
     const overflow = calendar
-      .getByRole("button", { name: /^\+\d+ more$/ })
+      .getByRole("button", { name: /^\+\d+ więcej$/ })
       .first();
     await overflow.click();
     const popup = calendar.getByRole("dialog");
@@ -159,7 +161,7 @@ export async function verifyPlanningFixes(
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
     const entry = popup.locator(".ec-event[role=button]").first();
     await entry.click({ trial: true });
-    await popup.getByRole("button", { name: /close/i }).click();
+    await popup.getByRole("button", { name: /zamknij/i }).click();
   }
   await page.getByRole("button", { name: "Agenda", exact: true }).click();
   await layout.selectOption("week");
@@ -187,7 +189,7 @@ export async function verifyPlanningFixes(
   if (timelineUrl && timelineCardId && timelineCardTitle) {
     await page.goto(timelineUrl);
     await page
-      .getByLabel("Selected card", { exact: true })
+      .getByLabel("Wybrana karta", { exact: true })
       .selectOption(timelineCardId);
     const summary = page.locator(".selected-summary");
     await expect(summary).toContainText(timelineCardTitle);
@@ -200,7 +202,7 @@ export async function verifyPlanningFixes(
     expect(shifted.x).toBe(initial.x);
     expect(shifted.width).toBe(initial.width);
     await expect(
-      page.getByRole("button", { name: "Open item", exact: true }),
+      page.getByRole("button", { name: "Otwórz element", exact: true }),
     ).toBeEnabled();
     await onCheckpoint("mobile-390-timeline-selection", page);
     await page.setViewportSize({ width: 1440, height: 1000 });

@@ -50,15 +50,15 @@ its folder through the normal registration flow.
 
 ## A useful first pass
 
-On a phone, check the compact **Focus → Projects → More** bar. Open More to reach
-Calendar, Timeline, List, Board, Chart and Updates. In **Customize navigation**, move
+On a phone, check the compact **Focus → Projekty → Więcej** bar. Open More to reach
+Calendar, Timeline, List, Board, Chart and Updates. In **Dostosuj nawigację**, move
 views earlier/later and toggle their eyes, then reload to check this browser's
 layout. Hide every shortcut and recover through More or Reset navigation. Select
 an off-bar view and rotate the screen: More should indicate it on phones, while
 the desktop sidebar shows that view. Check Escape, keyboard focus and menu
 scrolling in landscape.
 
-1. Select **Try Local Projects**, open a card and change its title/description.
+1. Select **Try Local Projekty**, open a card and change its title/description.
 2. Set start/end dates; move it on Board and Timeline.
 3. Create another card and a milestone. Change their statuses.
 4. Pin two cards to Focus and arrange their order.
@@ -69,7 +69,7 @@ scrolling in landscape.
 Report the action, expected result and actual result. A screenshot helps with
 layout issues. This handoff is for practical feedback, not final release acceptance.
 
-On Focus, check **In focus → Needs my attention → In motion → Events**.
+On Focus, check **W Focus → Potrzebuje mojej uwagi → W toku → Wydarzenia**.
 Pinned cards stay at the top regardless of status, archive state or dates.
 Attention contains overdue items, review cards, unresolved decisions and unread
 reports. Reading a report removes its unread reminder; reading a decision does
@@ -82,7 +82,7 @@ and each visible card appears once. Check folder/title filters, separate plan an
 event pagination, and the floating Add card action on a narrow viewport.
 
 Card and project fields save automatically. Text saves after a short pause;
-selections save immediately. Wait for **Saved** to confirm persistence. Use the
+selections save immediately. Wait for **Zapisano** to confirm persistence. Use the
 header X to close the editor; there are no Save changes or Cancel buttons. A new
 card is created after entering a valid title. Add tags/checklist items with their
 Add controls, and post reports separately. Invalid input, conflicts or uncertain
@@ -143,21 +143,21 @@ scripts/cargo-local build --workspace --release --locked
 
 ## Arrange projects in Projects
 
-Open **Projects** from the sidebar or the phone's navigation bar. In a synthetic
+Open **Projekty** from the sidebar or the phone's navigation bar. In a synthetic
 workspace, give projects Active, Paused and Archived statuses and check that
 each appears in its matching column. Filter by folder and title, then open a
 project and verify its current fields. Drag its handle to a different column;
 reload to check the saved status. Escape cancels a held drag. The project's
-**Move** menu supports keyboard and touch changes. On a phone, scroll the
+**Przenieś** menu supports keyboard and touch changes. On a phone, scroll the
 columns horizontally and check that the page itself stays within the viewport.
-Select Projects in **Workspace settings → Default view** and open the app without a
+Select Projects in **Ustawienia przestrzeni roboczej → Widok domyślny** and open the app without a
 view query to check the preference.
 
 ## Add an existing project folder
 
-Open **Projects → Add project → Choose folder…**. The host's operating-system
+Open **Projekty → Dodaj projekt → Wybierz folder…**. The host's operating-system
 folder dialog opens. Select any repository folder, review the displayed path and
-click **Add project**. There is no restriction to a Projects directory. Cancelling
+click **Dodaj projekt**. There is no restriction to a Projects directory. Cancelling
 the system dialog creates no project files. The app opens the selected project's
 board after registration succeeds.
 
@@ -165,7 +165,7 @@ The dialog appears on the computer running projectd. On macOS it uses the system
 folder picker; Linux desktop hosts use XDG Desktop Portal with a FileChooser backend (such as
 xdg-desktop-portal-gtk or KDE); Zenity is a fallback. Run the host in the desktop
 session so it can reach the user session bus. For a remote host without a desktop,
-**Remote host without a desktop? → Browse approved folders** retains the existing
+**Zdalny serwer bez pulpitu? → Przeglądaj zatwierdzone foldery** retains the existing
 owner-approved directory browser as an alternative.
 
 Registration adds `.project` planning files and a managed `AGENTS.md` block while
@@ -177,7 +177,7 @@ or automatic repository discovery are involved.
 
 Use a sample project and three cards named Design, Build and Review. Set their
 inclusive schedules to September 7–9, September 8–10 and September 9–10, 2026.
-In **Timeline**, choose September 2026, then:
+In **Oś czasu**, choose September 2026, then:
 
 1. Inspect the recorded schedule bars. With only these three cards, the latest
    recorded end date is September 10.
@@ -191,14 +191,14 @@ In **Timeline**, choose September 2026, then:
    that the same inclusive range appears. There are no dependency connectors,
    forecast controls or separate card deadline/review markers.
 
-In **Calendar**, navigate to the same dates and try day, week, month and agenda.
-Select an empty day/range or use **New scheduled card** to open a prefilled draft.
+In **Kalendarz**, navigate to the same dates and try day, week, month and agenda.
+Select an empty day/range or use **Nowa zaplanowana karta** to open a prefilled draft.
 Move planned work or resize either end and verify that it saves without a
 confirmation dialog and stays visible at its new dates. Milestone
 date markers open the milestone editor. Date-only cards use inclusive planned
 ranges; timed events use their recorded start and duration.
 
-The **Calendar shortcuts & editing** disclosure lists controls. Alt+1 through
+The **Skróty i edycja kalendarza** disclosure lists controls. Alt+1 through
 Alt+4 select the four layouts; Alt+T returns to today. Alt+Left/Right navigates
 when the calendar region has focus and moves dates when a planned event has
 focus; Shift changes that move to a week. Normal text-entry shortcuts are kept.
@@ -206,7 +206,7 @@ Date-only plans keep whole-day dates. Timed events appear in hourly calendar
 views; their local start time follows the workspace timezone.
 
 Repeat an edit in two browser tabs to inspect conflict handling. Keep an uncertain
-proposal open and use **Retry same command** or check its status; do not submit
+proposal open and use **Ponów to samo polecenie** or check its status; do not submit
 an independent replacement without knowing the first outcome. On a narrow
 screen, pan inside the timeline and use the selected-card controls as an editing
 alternative. Record physical-device findings separately from browser emulation.

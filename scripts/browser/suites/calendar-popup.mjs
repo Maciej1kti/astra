@@ -73,12 +73,12 @@ await runBrowserSuite(
     async function open(date) {
       await expect(page.locator(".app-dialog[open]")).toHaveCount(0);
       if (await popup.count())
-        await popup.getByRole("button", { name: /close/i }).click();
+        await popup.getByRole("button", { name: /zamknij/i }).click();
       await settled();
       const items = cli("get", calendarPath).items.filter(
         (item) => item.start <= date && item.end >= date,
       );
-      const more = cell(date).getByRole("button", { name: /^\+\d+ more$/ });
+      const more = cell(date).getByRole("button", { name: /^\+\d+ więcej$/ });
       await more.focus();
       await more.press("Enter");
       await expect(popup).toBeVisible();
@@ -103,7 +103,7 @@ await runBrowserSuite(
         assert.equal(entry.version, item.version);
       }
       const target = popup.getByRole("button", {
-        name: `Planned work: ${title}`,
+        name: `Zaplanowana praca: ${title}`,
         exact: true,
       });
       await expect(target).toHaveAttribute(
@@ -260,7 +260,7 @@ await runBrowserSuite(
     }
     async function save(start, end) {
       await expect(
-        page.getByRole("dialog", { name: "Change planned dates" }),
+        page.getByRole("dialog", { name: "Zmień zaplanowane daty" }),
       ).toHaveCount(0);
       await expect
         .poll(() => cli("get", sourcePath).metadata.schedule)
@@ -284,7 +284,7 @@ await runBrowserSuite(
       await settled();
       assert.equal(cli("get", sourcePath).version, baseline.version);
       await expect(
-        page.getByLabel("Planned start", { exact: true }),
+        page.getByLabel("Zaplanowany początek", { exact: true }),
       ).toHaveCount(0);
       const attempts = [];
       await page.route(`**${sourcePath}`, async (route) => {
@@ -311,14 +311,14 @@ await runBrowserSuite(
       });
       await gesture("move", "2026-09-07", "2026-09-10");
       const recovery = page.getByRole("dialog", {
-        name: "Change planned dates",
+        name: "Zmień zaplanowane daty",
       });
       await expect(recovery).toBeVisible();
       await expect
         .poll(() => cli("get", sourcePath).metadata.schedule)
         .toEqual({ start: "2026-09-10", end: "2026-09-12" });
       await recovery
-        .getByRole("button", { name: "Retry same command", exact: true })
+        .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
         .click();
       await expect(recovery).toHaveCount(0);
       assert.equal(attempts.length, 2);
@@ -363,28 +363,30 @@ await runBrowserSuite(
       );
       await gesture("move", "2026-09-07", "2026-09-10");
       await expect(recovery).toBeVisible();
-      await expect(recovery.getByText(/Current saved schedule:/)).toBeVisible();
+      await expect(
+        recovery.getByText(/Aktualny zapisany harmonogram:/),
+      ).toBeVisible();
       assert.deepEqual(
         cli("get", sourcePath).metadata.schedule,
         conflictBaseline.metadata.schedule,
       );
       await expect(
-        recovery.getByLabel("Planned start", { exact: true }),
+        recovery.getByLabel("Zaplanowany początek", { exact: true }),
       ).toHaveValue("2026-09-10");
       await recovery
-        .getByRole("button", { name: "Cancel", exact: true })
+        .getByRole("button", { name: "Anuluj", exact: true })
         .click();
       await page.unroute(`**${sourcePath}`);
       for (const width of [1440, 390, 320]) {
         if (await popup.count())
-          await popup.getByRole("button", { name: /close/i }).click();
+          await popup.getByRole("button", { name: /zamknij/i }).click();
         await page.setViewportSize({
           width,
           height: width === 1440 ? 1000 : 844,
         });
         if (width < 768)
           await page
-            .getByRole("button", { name: "Month grid", exact: true })
+            .getByRole("button", { name: "Siatka miesiąca", exact: true })
             .click();
         const target = await open("2026-09-07");
         const geometry = await popup.evaluate((element) => {
@@ -436,14 +438,14 @@ await runBrowserSuite(
         assert.equal(source.version, cli("get", sourcePath).version);
         await expect(
           page
-            .getByRole("dialog", { name: "Edit resource", exact: true })
-            .getByLabel("Title", { exact: true }),
+            .getByRole("dialog", { name: "Edytuj element", exact: true })
+            .getByLabel("Tytuł", { exact: true }),
         ).toHaveValue(title);
         await page
-          .getByRole("button", { name: "Close editor", exact: true })
+          .getByRole("button", { name: "Zamknij edytor", exact: true })
           .click();
         await expect(
-          page.getByRole("dialog", { name: "Edit resource", exact: true }),
+          page.getByRole("dialog", { name: "Edytuj element", exact: true }),
         ).toBeHidden();
         checkpoints.at(-1).geometry = geometry;
       }

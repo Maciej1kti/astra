@@ -47,7 +47,7 @@ export function calendarRange(
     : { start, end: selected };
 }
 export function calendarLabel(value: string, full = false): string {
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("pl-PL", {
     timeZone: "UTC",
     ...(full ? ({ weekday: "long", year: "numeric" } as const) : {}),
     month: "long",

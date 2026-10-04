@@ -14,18 +14,18 @@ await runBrowserSuite(
       checks = [];
     const labels = {
       focus: "Focus",
-      projects: "Projects",
-      board: "Board",
-      calendar: "Calendar",
-      gantt: "Timeline",
-      list: "List",
-      updates: "Updates",
-      chart: "Chart",
+      main: "Main",
+      projects: "Projekty",
+      board: "Tablica",
+      calendar: "Kalendarz",
+      gantt: "Oś czasu",
+      list: "Lista",
+      updates: "Aktualizacje",
+      chart: "Wykres",
     };
-    const defaults = Object.keys(labels);
-    const defaultHidden = defaults.filter(
-      (view) => !["focus", "projects"].includes(view),
-    );
+    let defaults, defaultHidden;
+    const availableOrder = (values) =>
+      values.filter((view) => Object.hasOwn(labels, view));
     const key = "astra-navigation-layout:v1";
     const originalPreferences = cli("get", "/api/v1/workspace/preferences");
     page.on("pageerror", (error) => errors.push(error.message));
@@ -35,17 +35,22 @@ await runBrowserSuite(
         window.navigationCsp.push(event.effectiveDirective),
       );
     });
-    const nav = page.getByRole("navigation", { name: "Workspace views" });
-    const more = nav.getByRole("button", { name: "More views", exact: true });
-    const order = page.getByRole("list", { name: "Navigation order" });
+    const nav = page.getByRole("navigation", {
+      name: "Widoki przestrzeni roboczej",
+    });
+    const more = nav.getByRole("button", {
+      name: "Więcej widoków",
+      exact: true,
+    });
+    const order = page.getByRole("list", { name: "Kolejność nawigacji" });
     const grip = (view) =>
       order.getByRole("button", {
-        name: `Reorder ${labels[view]}`,
+        name: `Zmień kolejność ${labels[view]}`,
         exact: true,
       });
     const visibility = (view) =>
       order.getByRole("button", {
-        name: `Show ${labels[view]} on navigation bar`,
+        name: `Pokaż ${labels[view]} na pasku nawigacji`,
         exact: true,
       });
     const readOrder = () =>
@@ -88,7 +93,7 @@ await runBrowserSuite(
       if (browser.browserType().name() !== "chromium") return;
       await expect(
         page.getByText(
-          /^(Loading resources…|Loading planning view…|Loading board…|Loading date views…|Loading calendar…|Loading timeline…)$/,
+          /^(Ładowanie danych…|Ładowanie widoku planowania…|Ładowanie tablicy…|Ładowanie date views…|Ładowanie kalendarza…|Ładowanie osi czasu…)$/,
         ),
       ).toHaveCount(0);
       await settle();
@@ -127,7 +132,7 @@ await runBrowserSuite(
       const panel = await openMore(options);
       const summary = panel
         .locator("summary")
-        .filter({ hasText: /^Customize navigation$/ });
+        .filter({ hasText: /^Dostosuj nawigację$/ });
       if (
         !(await summary.evaluate((element) => element.closest("details").open))
       ) {
@@ -270,10 +275,21 @@ await runBrowserSuite(
         .toBeLessThan(1.5);
     };
     try {
+      // Main's concurrent merge into Projects must not change ordering coverage.
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await route("focus");
+      if (
+        !(await nav.getByRole("button", { name: "Main", exact: true }).count())
+      )
+        delete labels.main;
+      defaults = Object.keys(labels);
+      defaultHidden = defaults.filter(
+        (view) => !["focus", "projects"].includes(view),
+      );
       await page.setViewportSize({ width: 390, height: 844 });
       await route("focus");
-      await expect.poll(readBar).toEqual(["Focus", "Projects"]);
-      await expect(more).toHaveText("More");
+      await expect.poll(readBar).toEqual(["Focus", "Projekty"]);
+      await expect(more).toHaveText("Więcej");
       await expect(
         nav.getByRole("button", { name: "Focus", exact: true }),
       ).toHaveAttribute("aria-current", "page");
@@ -297,16 +313,16 @@ await runBrowserSuite(
         panel.getByRole("button", { name: "Focus", exact: true }),
       ).toHaveCount(0);
       await expect(
-        panel.getByRole("button", { name: "Projects", exact: true }),
+        panel.getByRole("button", { name: "Projekty", exact: true }),
       ).toHaveCount(0);
       await panel
-        .getByRole("button", { name: "Calendar", exact: true })
+        .getByRole("button", { name: "Kalendarz", exact: true })
         .click();
       await expect(page).toHaveURL(/view=calendar/);
       await expect(page.locator(".ec")).toBeVisible();
       await expect(more).toHaveAttribute("aria-current", "page");
       await expect(more).toHaveAttribute("aria-expanded", "false");
-      await expect.poll(readBar).toEqual(["Focus", "Projects"]);
+      await expect.poll(readBar).toEqual(["Focus", "Projekty"]);
       checks.push(
         "hidden Calendar navigates through More and marks More as current",
       );
@@ -378,10 +394,10 @@ await runBrowserSuite(
         "shared grip/eye rows, inert aligned drag preview, mouse ordering, Escape/Tab/outside cancellation and immediate eye interactions",
       );
       await expect(
-        order.getByRole("button", { name: /^Reorder / }),
+        order.getByRole("button", { name: /^Zmień kolejność / }),
       ).toHaveCount(defaults.length);
       await expect(
-        order.getByRole("button", { name: /^Move .+ (earlier|later)$/ }),
+        order.getByRole("button", { name: /^Przenieś .+ (earlier|later)$/ }),
       ).toHaveCount(0);
       await grip("focus").press("ArrowUp");
       await expect.poll(readOrder).toEqual(defaults);
@@ -399,17 +415,21 @@ await runBrowserSuite(
       await expect(grip("calendar")).toBeFocused();
       await expect
         .poll(readOrder)
-        .toEqual([
-          "focus",
-          "projects",
-          "calendar",
-          "board",
-          "gantt",
-          "list",
-          "updates",
-          "chart",
-        ]);
+        .toEqual(
+          availableOrder([
+            "focus",
+            "main",
+            "projects",
+            "calendar",
+            "board",
+            "gantt",
+            "list",
+            "updates",
+            "chart",
+          ]),
+        );
       await grip("calendar").press("ArrowUp");
+      if (labels.main) await grip("calendar").press("ArrowUp");
       await visibility("calendar").click();
       await expect(visibility("calendar")).toHaveAttribute(
         "aria-pressed",
@@ -421,28 +441,29 @@ await runBrowserSuite(
         "false",
       );
       await grip("focus").press("ArrowDown");
-      const changedOrder = [
+      const changedOrder = availableOrder([
         "calendar",
         "focus",
+        "main",
         "projects",
         "board",
         "gantt",
         "list",
         "updates",
         "chart",
-      ];
+      ]);
       await expect.poll(readOrder).toEqual(changedOrder);
       await closeMore();
-      await expect.poll(readBar).toEqual(["Calendar", "Focus"]);
+      await expect.poll(readBar).toEqual(["Kalendarz", "Focus"]);
       await expect(
-        nav.getByRole("button", { name: "Calendar", exact: true }),
+        nav.getByRole("button", { name: "Kalendarz", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       await expect(more).not.toHaveAttribute("aria-current", "page");
       const persisted = await savedLayout();
       assert.deepEqual(persisted.order, changedOrder);
       assert.deepEqual([...persisted.visible].sort(), ["calendar", "focus"]);
       await page.reload();
-      await expect.poll(readBar).toEqual(["Calendar", "Focus"]);
+      await expect.poll(readBar).toEqual(["Kalendarz", "Focus"]);
       assert.deepEqual(await savedLayout(), persisted);
       await customize();
       await expect.poll(readOrder).toEqual(changedOrder);
@@ -475,13 +496,13 @@ await runBrowserSuite(
           panel.getByRole("button", { name: labels[view], exact: true }),
         ).toBeVisible();
       await panel
-        .getByRole("button", { name: "Projects", exact: true })
+        .getByRole("button", { name: "Projekty", exact: true })
         .click();
       await expect(page).toHaveURL(/view=projects/);
       await expect(more).toHaveAttribute("aria-current", "page");
       panel = await customize();
       const resetNavigation = panel.getByRole("button", {
-        name: "Reset navigation",
+        name: "Przywróć nawigację",
         exact: true,
       });
       await revealMenuControl(panel, resetNavigation);
@@ -495,9 +516,9 @@ await runBrowserSuite(
       for (const view of defaultHidden)
         await expect(visibility(view)).toHaveAttribute("aria-pressed", "false");
       await closeMore();
-      await expect.poll(readBar).toEqual(["Focus", "Projects"]);
+      await expect.poll(readBar).toEqual(["Focus", "Projekty"]);
       await expect(
-        nav.getByRole("button", { name: "Projects", exact: true }),
+        nav.getByRole("button", { name: "Projekty", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       checks.push(
         "all-hidden state persists, retains every route in More and recovers through Reset",
@@ -519,9 +540,9 @@ await runBrowserSuite(
           `No page overflow at ${width} × ${height}`,
         );
         if (width <= 700) {
-          await expect.poll(readBar).toEqual(["Focus", "Projects"]);
+          await expect.poll(readBar).toEqual(["Focus", "Projekty"]);
           await expect(more).toHaveAttribute("aria-current", "page");
-          for (const name of ["Focus", "Projects"])
+          for (const name of ["Focus", "Projekty"])
             await checkBounds(
               nav.getByRole("button", { name, exact: true }),
               width,
@@ -546,10 +567,10 @@ await runBrowserSuite(
           await expect(more).toBeVisible();
           await expect.poll(readBar).toEqual(Object.values(labels));
           await expect(
-            nav.getByRole("button", { name: "Calendar", exact: true }),
+            nav.getByRole("button", { name: "Kalendarz", exact: true }),
           ).toHaveAttribute("aria-current", "page");
           await expect(
-            nav.getByRole("button", { name: "Calendar", exact: true }),
+            nav.getByRole("button", { name: "Kalendarz", exact: true }),
           ).toBeInViewport({ ratio: 1 });
         }
         await screenshot(`navigation-${width}x${height}`);
@@ -561,7 +582,7 @@ await runBrowserSuite(
       await page.setViewportSize({ width: 390, height: 844 });
       await page.emulateMedia({ reducedMotion: "reduce" });
       panel = await openMore({ touch: true });
-      await panel.getByRole("button", { name: "List", exact: true }).tap();
+      await panel.getByRole("button", { name: "Lista", exact: true }).tap();
       await expect(page).toHaveURL(/view=list/);
       await expect(more).toHaveAttribute("aria-current", "page");
       await customize({ touch: true });
@@ -624,20 +645,23 @@ await runBrowserSuite(
       }
       await expect
         .poll(readOrder)
-        .toEqual([
-          "focus",
-          "projects",
-          "board",
-          "calendar",
-          "list",
-          "gantt",
-          "updates",
-          "chart",
-        ]);
+        .toEqual(
+          availableOrder([
+            "focus",
+            "main",
+            "projects",
+            "board",
+            "calendar",
+            "list",
+            "gantt",
+            "updates",
+            "chart",
+          ]),
+        );
       await closeMore();
-      await expect.poll(readBar).toEqual(["Focus", "Projects", "List"]);
+      await expect.poll(readBar).toEqual(["Focus", "Projekty", "Lista"]);
       await expect(
-        nav.getByRole("button", { name: "List", exact: true }),
+        nav.getByRole("button", { name: "Lista", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       assert.equal(
         await page.evaluate(
@@ -656,8 +680,9 @@ await runBrowserSuite(
         if ((await visibility(view).getAttribute("aria-pressed")) !== "true")
           await visibility(view).click();
       await closeMore();
-      const fullOrder = [
+      const fullOrder = availableOrder([
         "focus",
+        "main",
         "projects",
         "board",
         "calendar",
@@ -665,7 +690,7 @@ await runBrowserSuite(
         "gantt",
         "updates",
         "chart",
-      ];
+      ]);
       await expect.poll(readBar).toEqual(fullOrder.map((view) => labels[view]));
       assert.equal(
         await nav.evaluate(
@@ -678,13 +703,13 @@ await runBrowserSuite(
       await expect(more).toBeInViewport({ ratio: 1 });
       assert.ok((await nav.evaluate((element) => element.scrollLeft)) > 0);
       await nav
-        .getByRole("button", { name: "List", exact: true })
+        .getByRole("button", { name: "Lista", exact: true })
         .evaluate((element) => {
           element.dataset.navigationProbe = "retained";
         });
       panel = await customize({ touch: true });
       await expect(
-        panel.getByText("All views are on the navigation bar.", {
+        panel.getByText("Wszystkie widoki są na pasku nawigacji.", {
           exact: true,
         }),
       ).toBeVisible();
@@ -692,18 +717,24 @@ await runBrowserSuite(
       await grip("list").press("ArrowUp");
       await expect
         .poll(readOrder)
-        .toEqual([
-          "focus",
-          "projects",
-          "list",
-          "board",
-          "calendar",
-          "gantt",
-          "updates",
-          "chart",
-        ]);
+        .toEqual(
+          availableOrder([
+            "focus",
+            "main",
+            "projects",
+            "list",
+            "board",
+            "calendar",
+            "gantt",
+            "updates",
+            "chart",
+          ]),
+        );
       await closeMore();
-      const activeList = nav.getByRole("button", { name: "List", exact: true });
+      const activeList = nav.getByRole("button", {
+        name: "Lista",
+        exact: true,
+      });
       await expect(activeList).toHaveAttribute(
         "data-navigation-probe",
         "retained",
@@ -722,7 +753,7 @@ await runBrowserSuite(
         key,
       );
       await page.reload();
-      await expect.poll(readBar).toEqual(["Focus", "Projects"]);
+      await expect.poll(readBar).toEqual(["Focus", "Projekty"]);
       await expect(more).toHaveAttribute("aria-current", "page");
       await indicatorMatches();
       await customize();
@@ -740,18 +771,19 @@ await runBrowserSuite(
         key,
       );
       await page.reload();
-      await expect.poll(readBar).toEqual(["Focus", "Projects"]);
+      await expect.poll(readBar).toEqual(["Focus", "Projekty"]);
       await customize();
-      const normalizedOrder = [
+      const normalizedOrder = availableOrder([
         "calendar",
         "focus",
+        "main",
         "projects",
         "board",
         "gantt",
         "list",
         "updates",
         "chart",
-      ];
+      ]);
       await expect.poll(readOrder).toEqual(normalizedOrder);
       for (const view of defaults)
         await expect(visibility(view)).toHaveAttribute(
@@ -764,63 +796,106 @@ await runBrowserSuite(
       assert.equal(new Set(recovered.order).size, defaults.length);
       assert.deepEqual(recovered.visible, ["calendar", "focus", "projects"]);
       await closeMore();
-      await expect.poll(readBar).toEqual(["Calendar", "Focus", "Projects"]);
+      await expect.poll(readBar).toEqual(["Kalendarz", "Focus", "Projekty"]);
       await indicatorMatches();
       checks.push(
         "malformed storage restores defaults and duplicate/unknown routes normalize to unique valid shortcuts on reload",
       );
 
-      const previousOrder = [
-        "chart",
-        "main",
-        "focus",
-        "calendar",
-        "projects",
-        "board",
-        "gantt",
-        "list",
-        "updates",
-      ];
-      await page.evaluate(
-        ({ storageKey, order }) =>
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify({ order, visible: ["main", "focus", "projects"] }),
-          ),
-        { storageKey: key, order: previousOrder },
-      );
-      await page.reload();
-      await expect.poll(readBar).toEqual(["Projects", "Focus"]);
-      await customize();
-      const upgradedOrder = [
-        "chart",
-        "projects",
-        "focus",
-        "calendar",
-        "board",
-        "gantt",
-        "list",
-        "updates",
-      ];
-      await expect.poll(readOrder).toEqual(upgradedOrder);
-      assert.deepEqual((await savedLayout()).order, previousOrder);
-      await expect(order.getByRole("button", { name: /Main/ })).toHaveCount(0);
-      await expect(visibility("projects")).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
-      await visibility("chart").click();
-      const upgraded = await savedLayout();
-      assert.deepEqual(upgraded.order, upgradedOrder);
-      assert.deepEqual(upgraded.visible, ["chart", "projects", "focus"]);
-      assert.equal(new Set(upgraded.order).size, defaults.length);
-      await closeMore();
-      await expect.poll(readBar).toEqual(["Chart", "Projects", "Focus"]);
-      await page.reload();
-      await expect.poll(readBar).toEqual(["Chart", "Projects", "Focus"]);
-      checks.push(
-        "the saved nine-view Main/Projects layout becomes eight unique views, keeps Projects at the first legacy position and retains visibility on reload",
-      );
+      if (labels.main) {
+        const previousOrder = [
+          "chart",
+          "projects",
+          "focus",
+          "calendar",
+          "board",
+          "gantt",
+          "list",
+          "updates",
+        ];
+        await page.evaluate(
+          ({ storageKey, order }) =>
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify({ order, visible: ["projects", "focus"] }),
+            ),
+          { storageKey: key, order: previousOrder },
+        );
+        await page.reload();
+        await expect.poll(readBar).toEqual(["Projekty", "Focus"]);
+        await customize();
+        const upgradedOrder = [...previousOrder, "main"];
+        await expect.poll(readOrder).toEqual(upgradedOrder);
+        await expect(visibility("main")).toHaveAttribute(
+          "aria-pressed",
+          "false",
+        );
+        assert.deepEqual((await savedLayout()).order, previousOrder);
+        await visibility("main").click();
+        const upgraded = await savedLayout();
+        assert.deepEqual(upgraded.order, upgradedOrder);
+        assert.deepEqual(upgraded.visible, ["projects", "focus", "main"]);
+        await closeMore();
+        await expect.poll(readBar).toEqual(["Projekty", "Focus", "Main"]);
+        await page.reload();
+        await expect.poll(readBar).toEqual(["Projekty", "Focus", "Main"]);
+        checks.push(
+          "existing saved order stays intact and appends Main; its visibility remains opt-in and persists on reload",
+        );
+      } else {
+        const previousOrder = [
+          "chart",
+          "main",
+          "focus",
+          "calendar",
+          "projects",
+          "board",
+          "gantt",
+          "list",
+          "updates",
+        ];
+        await page.evaluate(
+          ({ storageKey, order }) =>
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify({ order, visible: ["main", "focus", "projects"] }),
+            ),
+          { storageKey: key, order: previousOrder },
+        );
+        await page.reload();
+        await expect.poll(readBar).toEqual(["Projekty", "Focus"]);
+        await customize();
+        const upgradedOrder = [
+          "chart",
+          "projects",
+          "focus",
+          "calendar",
+          "board",
+          "gantt",
+          "list",
+          "updates",
+        ];
+        await expect.poll(readOrder).toEqual(upgradedOrder);
+        await expect(order.getByRole("button", { name: /Main/ })).toHaveCount(
+          0,
+        );
+        await expect(visibility("projects")).toHaveAttribute(
+          "aria-pressed",
+          "true",
+        );
+        await visibility("chart").click();
+        const upgraded = await savedLayout();
+        assert.deepEqual(upgraded.order, upgradedOrder);
+        assert.deepEqual(upgraded.visible, ["chart", "projects", "focus"]);
+        assert.equal(new Set(upgraded.order).size, defaults.length);
+        await closeMore();
+        await expect.poll(readBar).toEqual(["Wykres", "Projekty", "Focus"]);
+        await page.reload();
+        await expect.poll(readBar).toEqual(["Wykres", "Projekty", "Focus"]);
+        checks.push(
+          "the saved nine-view Main/Projects layout becomes eight unique views, keeps Projects at the first legacy position and retains visibility on reload",
+        );
+      }
 
       assert.equal(
         cli("get", "/api/v1/workspace/preferences").version,

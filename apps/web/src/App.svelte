@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { serverMessage } from "./lib/api/messages.ts";
+  import { errorMessage } from "./lib/api/messages.ts";
   import { motionEnvironment, revealScene } from "./lib/ui/motion";
   import PageHeading from "./lib/ui/PageHeading.svelte";
   import { viewLabel } from "./features/workspace/navigation";
@@ -10,15 +12,13 @@
   import WorkspaceNavigation from "./features/workspace/WorkspaceNavigation.svelte";
   import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
   import WorkspaceFilters from "./features/workspace/WorkspaceFilters.svelte";
-  import CreateCardProject from "./features/workspace/CreateCardProject.svelte";
   import FocusCounterBar from "./features/cards/FocusCounterBar.svelte";
   import { focusCounterState } from "./features/cards/focus-counter-state.svelte";
   import type { DailyCounterSummary } from "./lib/contracts/api.generated";
   import FocusScreen from "./features/workspace/screens/FocusScreen.svelte";
   import type { ProjectState } from "./features/workspace/screens/projects-board";
   import BoardOverview from "./features/workspace/screens/BoardOverview.svelte";
-  import UpdatesScreen from "./features/workspace/screens/UpdatesScreen.svelte";
-  import ResourceListScreen from "./features/workspace/screens/ResourceListScreen.svelte";
+
   import "./styles/workspace.css";
   import {
     createTarget,
@@ -27,7 +27,7 @@
     type CreateType,
   } from "./features/editor/editor-target";
   import type { CardCreate } from "./lib/contracts/api.generated";
-  import PairingScreen from "./features/session/PairingScreen.svelte";
+
   import { navigationState } from "./features/workspace/navigation-state.svelte";
   import { sessionState } from "./features/session/session.svelte";
   import { viewData } from "./features/workspace/view-data.svelte";
@@ -47,13 +47,11 @@
   import { readRoute, primaryResource } from "./features/workspace/navigation";
 
   import { applyTheme, readTheme } from "./features/settings/appearance";
-  import DateChange from "./features/planning/DateChange.svelte";
   import DateViews from "./features/planning/DateViews.svelte";
   import {
     loadCalendarView,
     loadGanttView,
   } from "./features/planning/planning-components";
-  import MoveChange from "./features/board/MoveChange.svelte";
   import type {
     DateProposal,
     MoveProposal,
@@ -68,6 +66,24 @@
   import { loadEditorTarget } from "./features/editor/editor-opening";
   import type { FocusRef, FocusResource } from "./lib/contracts/api.generated";
   import { commandOperation } from "./lib/api/command-operation.svelte";
+
+  const moveUI = deferredComponent(
+    () => import("./features/board/MoveChange.svelte"),
+  );
+  const MoveChange = $derived(moveUI.component);
+  const dateUI = deferredComponent(
+    () => import("./features/planning/DateChange.svelte"),
+  );
+  const DateChange = $derived(dateUI.component);
+  const cardProjectUI = deferredComponent(
+    () => import("./features/workspace/CreateCardProject.svelte"),
+  );
+  const CreateCardProject = $derived(cardProjectUI.component);
+  $effect(() => {
+    if (choosingCardProject) void cardProjectUI.load();
+    if (dateDraft) void dateUI.load();
+    if (moveDraft) void moveUI.load();
+  });
 
   const registrationUI = deferredComponent(
     () => import("./features/registration/RegistrationBrowser.svelte"),
@@ -101,6 +117,14 @@
     () => import("./features/host/Diagnostics.svelte"),
   );
   const Diagnostics = $derived(diagnosticsUI.component);
+  const updatesUI = deferredComponent(
+    () => import("./features/workspace/screens/UpdatesScreen.svelte"),
+  );
+  const UpdatesScreen = $derived(updatesUI.component);
+  const listUI = deferredComponent(
+    () => import("./features/workspace/screens/ResourceListScreen.svelte"),
+  );
+  const ResourceListScreen = $derived(listUI.component);
   const chartUI = deferredComponent(
     () => import("./features/charts/ChartView.svelte"),
   );
@@ -226,6 +250,14 @@
     }
   }
 
+  const pairingUI = deferredComponent(
+    () => import("./features/session/PairingScreen.svelte"),
+  );
+  const PairingScreen = $derived(pairingUI.component);
+  $effect(() => {
+    if (!boot && !loading) void pairingUI.load();
+  });
+
   const data = viewData(currentQuery, () => !!boot, message);
   const refresh = data.refresh;
   const more = data.more;
@@ -246,7 +278,7 @@
       Board = (await import("./features/board/Board.svelte")).default;
     } catch {
       boardLoadError =
-        "The board could not be loaded. Retry, or reload after preserving any open draft.";
+        "Nie udało się wczytać tablicy. Spróbuj ponownie lub odśwież stronę po zachowaniu otwartej wersji roboczej.";
     }
   }
   $effect(() => {
@@ -258,6 +290,8 @@
     if (view === "calendar") void loadCalendarView().catch(() => {});
     if (view === "gantt") void loadGanttView().catch(() => {});
     if (view === "chart") void chartUI.load();
+    if (view === "updates") void updatesUI.load();
+    if (view === "list") void listUI.load();
     if (view === "projects") void projectsUI.load();
   });
   $effect(() => {
@@ -365,7 +399,7 @@
           type: "card",
           project_id: item.project_id,
           id: item.card_id,
-          title: "Unavailable pinned card",
+          title: "Niedostępna przypięta karta",
           version: "",
           availability: "unavailable",
         }
@@ -455,7 +489,7 @@
       focusConflict = false;
       void refresh().catch(message);
     } catch (cause) {
-      focusError = cause instanceof Error ? cause.message : String(cause);
+      focusError = errorMessage(cause);
       focusConflict =
         focusCommand.phase === "rejected" &&
         apiCode(cause) === "VERSION_CONFLICT";
@@ -483,10 +517,10 @@
           2,
         ),
       );
-      focusCopyMessage = "Pending focus command copied.";
+      focusCopyMessage = "Skopiowano oczekujące polecenie Focus.";
     } catch {
       focusCopyMessage =
-        "Clipboard access is unavailable. The request ID and order remain below.";
+        "Schowek jest niedostępny. Identyfikator żądania i kolejność są widoczne poniżej.";
     }
   }
 
@@ -511,7 +545,7 @@
       focusAcknowledged = null;
       focusConflict = false;
     } catch (cause) {
-      focusError = `The current focus order could not be reloaded: ${cause instanceof Error ? cause.message : String(cause)}`;
+      focusError = `Nie udało się ponownie wczytać kolejności Focus: ${errorMessage(cause)}`;
     } finally {
       focusReloading = false;
     }
@@ -575,16 +609,16 @@
 
     adding = false;
     choosingCardProject = null;
-    error = "Your session ended. Reconnect this browser to continue.";
+    error = "Sesja wygasła. Połącz tę przeglądarkę ponownie, aby kontynuować.";
   }
   function commandWarning(event: Event) {
     const warnings = (event as CustomEvent<{ code: string; message: string }[]>)
       .detail;
-    error = warnings.map((item) => item.message || item.code).join(" ");
+    error = warnings.map((item) => serverMessage(item.code)).join(" ");
   }
   function message(e: unknown) {
     if (isAbortError(e)) return;
-    error = e instanceof Error ? e.message : String(e);
+    error = errorMessage(e);
   }
 
   async function open(item: Pick<Summary, "type" | "id" | "project_id">) {
@@ -616,7 +650,7 @@
       project = candidates[0]?.id ?? "";
     }
     if (!project) {
-      error = "Select a project before creating a resource.";
+      error = "Wybierz projekt przed utworzeniem elementu.";
       return;
     }
     routing.startDraft();
@@ -816,20 +850,31 @@
 
 <svelte:head><title>Astra</title></svelte:head>
 {#if !boot}
-  <PairingScreen
-    {pairing}
-    {loading}
-    {busy}
-    {error}
-    bind:device={session.device}
-    {startPairing}
-    {checkPairing}
-    onrestart={session.restartPairing}
-    ondiagnostics={() => (diagnostics = true)}
-    ondefaultuser={selectedUserId() && canSwitchUser
-      ? openDefaultUser
-      : undefined}
-  />
+  {#if PairingScreen}
+    <PairingScreen
+      {pairing}
+      {loading}
+      {busy}
+      {error}
+      bind:device={session.device}
+      {startPairing}
+      {checkPairing}
+      onrestart={session.restartPairing}
+      ondiagnostics={() => (diagnostics = true)}
+      ondefaultuser={selectedUserId() && canSwitchUser
+        ? openDefaultUser
+        : undefined}
+    />
+  {:else}
+    <main class="welcome">
+      <p role="status">Sprawdzanie połączenia…</p>
+      {#if pairingUI.error}
+        <p class="notice" role="alert">{pairingUI.error}</p>
+        <Button onclick={() => void pairingUI.load()}>Spróbuj ponownie</Button>
+        <Button onclick={() => location.reload()}>Odśwież aplikację</Button>
+      {/if}
+    </main>
+  {/if}
 {:else}
   <div class="app" class:counter-editing={!!counterEditing.snapshot.draft}>
     <WorkspaceNavigation
@@ -840,7 +885,7 @@
     />
     <div class="workspace">
       <WorkspaceHeader
-        userName={boot.user?.name ?? "Owner"}
+        userName={boot.user?.name ?? "Właściciel"}
         project={routing.current.project}
         {projects}
         selectable={!projectOverview}
@@ -869,8 +914,10 @@
                 ? addProject
                 : () => create(primaryResource(routing.current.view))}
               >＋ {projectOverview
-                ? "Add project"
-                : `Add ${primaryResource(routing.current.view)}`}</Button
+                ? "Dodaj projekt"
+                : routing.current.view === "updates"
+                  ? "Dodaj aktualizację"
+                  : "Dodaj kartę"}</Button
             >
           </PageHeading>
         {/if}
@@ -878,12 +925,12 @@
             {error}<Button
               variant="quiet"
               onclick={() => (error = "")}
-              aria-label="Dismiss error">✕</Button
+              aria-label="Zamknij komunikat błędu">✕</Button
             >
           </div>{/if}
         {#if !connected}<div class="connection">
-            Connection is recovering. Drafts remain open; verify the result of
-            any interrupted save.
+            Trwa przywracanie połączenia. Wersje robocze pozostają otwarte;
+            sprawdź wynik przerwanego zapisu.
           </div>{/if}
         {#if projectionMessage}<p role="status" class="notice">
             {projectionMessage}
@@ -910,7 +957,7 @@
             }}
           >
             {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
-              <div class="empty" role="status">Loading resources…</div>
+              <div class="empty" role="status">Ładowanie danych…</div>
             {:else if routing.current.view === "focus"}
               <FocusScreen
                 {today}
@@ -969,10 +1016,10 @@
                   {projectsUI.error}<Button
                     variant="quiet"
                     onclick={() => void projectsUI.load()}
-                    >Retry loading Projects</Button
+                    >Ponów ładowanie projektów</Button
                   >
                 </p>
-              {:else}<p role="status">Loading Projects…</p>{/if}
+              {:else}<p role="status">Ładowanie projektów…</p>{/if}
             {:else if routing.current.view === "board" && routing.current.project}{#if Board}{#key routing.current.project}<Board
                     project={routing.current.project}
                     search={routing.current.search}
@@ -983,8 +1030,8 @@
                     ondraftchange={(value) => (boardDraft = value)}
                   />{/key}{:else if boardLoadError}<p role="alert">
                   {boardLoadError}
-                  <button onclick={loadBoard}>Retry loading board</button>
-                </p>{:else}<p role="status">Loading board…</p>{/if}
+                  <button onclick={loadBoard}>Ponów ładowanie tablicy</button>
+                </p>{:else}<p role="status">Ładowanie tablicy…</p>{/if}
             {:else if routing.current.view === "board"}
               <BoardOverview
                 route={routing.current}
@@ -1023,24 +1070,34 @@
                   {chartUI.error}<Button
                     variant="quiet"
                     onclick={() => void chartUI.load()}
-                    >Retry loading Chart</Button
+                    >Ponów ładowanie wykresu</Button
                   >
                 </p>
-              {:else}<p role="status">Loading Chart…</p>{/if}
+              {:else}<p role="status">Ładowanie wykresu…</p>{/if}
             {:else if routing.current.view === "updates"}
-              <UpdatesScreen
-                route={routing.current}
-                {projects}
-                {updates}
-                {open}
-              />
+              {#if UpdatesScreen}<UpdatesScreen
+                  route={routing.current}
+                  {projects}
+                  {updates}
+                  {open}
+                />{:else if updatesUI.error}<p role="alert">
+                  {updatesUI.error}<Button onclick={() => void updatesUI.load()}
+                    >Spróbuj ponownie</Button
+                  >
+                </p>
+              {:else}<p role="status">Ładowanie aktualizacji…</p>{/if}
             {:else}
-              <ResourceListScreen
-                route={routing.current}
-                {projects}
-                {cards}
-                {open}
-              />
+              {#if ResourceListScreen}<ResourceListScreen
+                  route={routing.current}
+                  {projects}
+                  {cards}
+                  {open}
+                />{:else if listUI.error}<p role="alert">
+                  {listUI.error}<Button onclick={() => void listUI.load()}
+                    >Spróbuj ponownie</Button
+                  >
+                </p>
+              {:else}<p role="status">Ładowanie listy…</p>{/if}
             {/if}
           </div>{/key}
         {#if routing.current.view === "focus"}
@@ -1050,16 +1107,16 @@
             onclick={(event) => {
               event.currentTarget.focus({ preventScroll: true });
               create("card");
-            }}>＋ Add card</Button
+            }}>＋ Dodaj kartę</Button
           >
         {/if}
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =
             routing.current.view === "updates"
               ? "update"
               : "card"}{#if pageCursors[kind]}<div class="sectiontitle">
-              <span>More resources are available.</span><button
+              <span>Dostępne są kolejne dane.</span><button
                 disabled={loadingMore}
-                onclick={() => more(kind)}>Next page</button
+                onclick={() => more(kind)}>Następna strona</button
               >
             </div>{/if}{/if}
         {#if queryReady && ["list", "updates"].includes(routing.current.view)}{@const kind =
@@ -1067,37 +1124,52 @@
               ? "update"
               : "card"}{#if (pageHistory[kind]?.length ?? 0) > 1}<button
               disabled={loadingMore}
-              onclick={() => more(kind, true)}>Previous page</button
+              onclick={() => more(kind, true)}>Poprzednia strona</button
             >{/if}{/if}
       </main>
     </div>
   </div>
 {/if}
-{#if choosingCardProject}<CreateCardProject
-    projects={choosingCardProject}
-    onclose={() => (choosingCardProject = null)}
-    onselect={(project) => {
-      choosingCardProject = null;
-      routing.startDraft();
-      setEditor(createTarget(project, "card"));
-    }}
-  />{/if}
-{#if dateDraft}{#key dateDraft}<DateChange
-      {...dateDraft}
+{#if choosingCardProject}{#if CreateCardProject}<CreateCardProject
+      projects={choosingCardProject}
+      onclose={() => (choosingCardProject = null)}
+      onselect={(project) => {
+        choosingCardProject = null;
+        routing.startDraft();
+        setEditor(createTarget(project, "card"));
+      }}
+    />{:else}<DeferredDialog
+      title="Dodaj kartę"
+      error={cardProjectUI.error}
+      retry={cardProjectUI.load}
+      onclose={() => (choosingCardProject = null)}
+    />{/if}{/if}
+{#if dateDraft}{#if DateChange}{#key dateDraft}<DateChange
+        {...dateDraft}
+        onclose={() => (dateDraft = null)}
+        onsaved={() => {
+          dateDraft = null;
+          void refresh().catch(message);
+        }}
+      />{/key}{:else}<DeferredDialog
+      title="Zmień daty"
+      error={dateUI.error}
+      retry={dateUI.load}
       onclose={() => (dateDraft = null)}
-      onsaved={() => {
-        dateDraft = null;
-        void refresh().catch(message);
-      }}
-    />{/key}{/if}
-{#if moveDraft}{#key moveDraft}<MoveChange
-      {...moveDraft}
+    />{/if}{/if}
+{#if moveDraft}{#if MoveChange}{#key moveDraft}<MoveChange
+        {...moveDraft}
+        onclose={() => (moveDraft = null)}
+        onsaved={() => {
+          moveDraft = null;
+          void refresh().catch(message);
+        }}
+      />{/key}{:else}<DeferredDialog
+      title="Przenieś kartę"
+      error={moveUI.error}
+      retry={moveUI.load}
       onclose={() => (moveDraft = null)}
-      onsaved={() => {
-        moveDraft = null;
-        void refresh().catch(message);
-      }}
-    />{/key}{/if}
+    />{/if}{/if}
 {#if projectMove}{@const proposal =
     projectMove}{#if ProjectStateChange}{#key proposal}<ProjectStateChange
         {...proposal}
@@ -1110,7 +1182,7 @@
           void refresh(["projects"]).catch(message);
         }}
       />{/key}{:else}<DeferredDialog
-      title="Move project"
+      title="Przenieś projekt"
       error={projectMoveUI.error}
       retry={projectMoveUI.load}
       onclose={() => {
@@ -1121,7 +1193,7 @@
       project={gitProject}
       onclose={() => (gitProject = "")}
     />{:else}<DeferredDialog
-      title="Git status"
+      title="Stan Git"
       error={gitUI.error}
       retry={gitUI.load}
       onclose={() => {
@@ -1131,7 +1203,7 @@
 {#if diagnostics}{#if Diagnostics}<Diagnostics
       onclose={() => (diagnostics = false)}
     />{:else}<DeferredDialog
-      title="Diagnostics"
+      title="Diagnostyka"
       error={diagnosticsUI.error}
       retry={diagnosticsUI.load}
       onclose={() => {
@@ -1150,7 +1222,7 @@
         void initialize();
       }}
     />{:else}<DeferredDialog
-      title="Workspace settings"
+      title="Ustawienia przestrzeni roboczej"
       error={settingsUI.error}
       retry={settingsUI.load}
       onclose={() => {
@@ -1167,7 +1239,7 @@
       onclose={() => (manageTags = false)}
       onchanged={() => void refresh().catch(message)}
     />{:else}<DeferredDialog
-      title="Project tags"
+      title="Tagi projektu"
       error={tagsUI.error}
       retry={tagsUI.load}
       onclose={() => {
@@ -1176,7 +1248,7 @@
     />{/if}{/if}
 {#if editor}{#if Editor}{#key editor}{@const editorTarget = editor}<Editor
         workspaceTimezone={session.timezone}
-        userName={boot?.user?.name ?? "Owner"}
+        userName={boot?.user?.name ?? "Właściciel"}
         {weekStart}
         target={editor}
         bind:this={editorInstance}
@@ -1193,7 +1265,7 @@
         onautosaved={(resource) => autosaved(editorTarget, resource)}
         ondeleted={() => void deleted()}
       />{/key}{:else}<DeferredDialog
-      title="Edit resource"
+      title="Edytuj element"
       error={editorUI.error}
       retry={editorUI.load}
       onclose={() => {
@@ -1205,7 +1277,7 @@
       onclose={() => (projectDeletion = null)}
       ondeleted={projectDeleted}
     />{:else}<DeferredDialog
-      title="Delete project"
+      title="Usuń projekt"
       error={deletionUI.error}
       retry={deletionUI.load}
       onclose={() => {
@@ -1221,7 +1293,7 @@
       await refresh().catch(message);
     }}
   />{:else if adding}<DeferredDialog
-    title="Add project"
+    title="Dodaj projekt"
     error={registrationUI.error}
     retry={registrationUI.load}
     onclose={() => {
@@ -1241,7 +1313,7 @@
         void refresh().catch(message);
       }}
     />{:else}<DeferredDialog
-      title="Add project"
+      title="Dodaj projekt"
       error={nativeUI.error}
       retry={nativeUI.load}
       onclose={() => {

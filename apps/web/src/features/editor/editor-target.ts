@@ -58,7 +58,7 @@ export function resolutionTarget(
     resource: null,
     initialMetadata: {
       kind: "resolution",
-      summary: `Resolved: ${decision.metadata.summary}`.slice(0, 500),
+      summary: `Rozstrzygnięto: ${decision.metadata.summary}`.slice(0, 500),
       target: decision.metadata.target,
       resolves: [decision.metadata.id],
     },

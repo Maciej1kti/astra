@@ -72,12 +72,14 @@ try {
     console.error(error.stack);
   });
   await page.goto(origin);
-  await page.getByRole("button", { name: "Request access" }).click();
-  await page.getByText("Compare this challenge on the host machine:").waitFor();
+  await page.getByRole("button", { name: "Poproś o dostęp" }).click();
+  await page.getByText("Porównaj ten kod na komputerze serwera:").waitFor();
   const pending = cli("pairings").items[0];
   cli("approve", pending.id, "--challenge", pending.challenge);
-  await page.getByRole("button", { name: "I approved this browser" }).click();
-  await page.getByRole("heading", { name: "In focus" }).waitFor();
+  await page
+    .getByRole("button", { name: "Przeglądarka została zatwierdzona" })
+    .click();
+  await page.getByRole("heading", { name: "W Focus" }).waitFor();
   let pickerRequests = 0;
   await page.route("**/api/v1/native-folder-selections", (route) => {
     pickerRequests++;
@@ -93,19 +95,24 @@ try {
       }),
     });
   });
-  await page.getByRole("button", { name: "Projects", exact: true }).click();
-  await page.getByRole("button", { name: "Add project", exact: false }).click();
+  await page.getByRole("button", { name: "Projekty", exact: true }).click();
   await page
-    .getByRole("button", { name: "Choose folder…", exact: true })
+    .getByRole("button", { name: "Dodaj projekt", exact: false })
     .click();
   await page
-    .getByText("Folder selection cancelled. No project files were changed.", {
-      exact: true,
-    })
+    .getByRole("button", { name: "Wybierz folder…", exact: true })
+    .click();
+  await page
+    .getByText(
+      "Anulowano wybór folderu. Pliki projektu nie zostały zmienione.",
+      {
+        exact: true,
+      },
+    )
     .waitFor();
   assert.equal(pickerRequests, 1);
   await page
-    .getByRole("button", { name: "Close add project", exact: true })
+    .getByRole("button", { name: "Zamknij dodawanie projektu", exact: true })
     .click();
   await expect(page.locator("dialog")).toHaveCount(0);
   await page.unroute("**/api/v1/native-folder-selections");
@@ -130,9 +137,11 @@ try {
       }),
     });
   });
-  await page.getByRole("button", { name: "Add project", exact: false }).click();
   await page
-    .getByRole("button", { name: "Choose folder…", exact: true })
+    .getByRole("button", { name: "Dodaj projekt", exact: false })
+    .click();
+  await page
+    .getByRole("button", { name: "Wybierz folder…", exact: true })
     .click();
   await page.getByText(nativeFolder, { exact: true }).waitFor();
   await assert.rejects(readFile(join(nativeFolder, ".project/project.json")), {
@@ -140,7 +149,7 @@ try {
   });
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Add project", exact: true })
+    .getByRole("button", { name: "Dodaj projekt", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.match(
@@ -152,26 +161,29 @@ try {
   const selectedFolder = join(pickRoot, "Chosen project");
   await mkdir(selectedFolder, { recursive: true });
   cli("add-root", pickRoot, "--label", "Test projects");
-  await page.getByRole("button", { name: "Projects", exact: true }).click();
-  await page.getByRole("button", { name: "Add project", exact: false }).click();
+  await page.getByRole("button", { name: "Projekty", exact: true }).click();
   await page
-    .getByText("Remote host without a desktop?", { exact: true })
+    .getByRole("button", { name: "Dodaj projekt", exact: false })
+    .click();
+  await page.getByText("Zdalny serwer bez pulpitu?", { exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Przeglądaj zatwierdzone foldery",
+      exact: true,
+    })
     .click();
   await page
-    .getByRole("button", { name: "Browse approved folders", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Open folder: Chosen project", exact: true })
+    .getByRole("button", { name: "Otwórz folder: Chosen project", exact: true })
     .click();
   const registration = page.locator("dialog:modal:not([inert])");
   await expect(registration).toHaveCount(1);
   await registration
-    .getByLabel("Project name", { exact: true })
+    .getByLabel("Nazwa projektu", { exact: true })
     .fill("Chosen in browser");
   await page
-    .getByRole("button", { name: "Choose this folder", exact: true })
+    .getByRole("button", { name: "Wybierz ten folder", exact: true })
     .click();
-  await page.getByText("Selected folder", { exact: true }).waitFor();
+  await page.getByText("Wybrany folder", { exact: true }).waitFor();
   await assert.rejects(
     readFile(join(selectedFolder, ".project/project.json")),
     {
@@ -179,7 +191,7 @@ try {
     },
   );
   await page
-    .getByRole("button", { name: "Add selected project", exact: true })
+    .getByRole("button", { name: "Dodaj wybrany projekt", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(
@@ -191,32 +203,36 @@ try {
     /Chosen in browser/,
   );
   await page
-    .getByLabel("Project", { exact: true })
+    .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
-  await page.getByRole("button", { name: "＋ Add card", exact: true }).click();
-  await page.getByLabel("Title", { exact: true }).fill("Ship the field guide");
-  await page.getByLabel("Start", { exact: true }).fill("2026-09-07");
-  await page.getByLabel("End", { exact: true }).fill("2026-09-12");
-  await expect(page.getByLabel("Due date", { exact: true })).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "＋ Dodaj kartę", exact: true })
+    .click();
+  await page.getByLabel("Tytuł", { exact: true }).fill("Ship the field guide");
+  await page.getByLabel("Początek", { exact: true }).fill("2026-09-07");
+  await page.getByLabel("Koniec", { exact: true }).fill("2026-09-12");
+  await expect(page.getByLabel("Termin", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Deadline type", { exact: true })).toHaveCount(
     0,
   );
   await page.locator(".resource-description-rendered").click();
   await page
-    .getByLabel("Description", { exact: true })
+    .getByLabel("Opis", { exact: true })
     .fill('A real browser write.\n\n<script>alert("untrusted")</script>');
   await page.getByRole("dialog").locator(".card-project-name").click();
   assert.equal(
     await page.locator(".markdown script, .markdown img").count(),
     0,
   );
-  await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
+  await expect(page.getByTestId("autosave-status")).toHaveText("Zapisano");
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
+    .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
-  await page.getByRole("button", { name: "Board", exact: true }).click();
+  await page.getByRole("button", { name: "Tablica", exact: true }).click();
   await page.getByRole("heading", { name: "Ship the field guide" }).waitFor();
-  await page.getByText("Connected to host", { exact: false }).waitFor();
+  await page.getByText("Połączono z serwerem", { exact: false }).waitFor();
   await mkdir(evidenceDir, { recursive: true });
   await page.screenshot({
     path: join(evidenceDir, "desktop-board.png"),
@@ -236,10 +252,10 @@ try {
   const mobile = await second.newPage();
   const selectMobileView = async (name) => {
     const navigation = mobile.getByRole("navigation", {
-      name: "Workspace views",
+      name: "Widoki przestrzeni roboczej",
     });
     const more = navigation.getByRole("button", {
-      name: "More views",
+      name: "Więcej widoków",
       exact: true,
     });
     await more.click();
@@ -248,23 +264,25 @@ try {
     await expect(more).toHaveAttribute("aria-expanded", "false");
   };
   await mobile.goto(origin);
-  await mobile.getByRole("heading", { name: "In focus" }).waitFor();
-  await selectMobileView("Board");
+  await mobile.getByRole("heading", { name: "W Focus" }).waitFor();
+  await selectMobileView("Tablica");
   await mobile.getByRole("heading", { name: "Ship the field guide" }).click();
   await page.getByRole("heading", { name: "Ship the field guide" }).click();
   await page
-    .getByLabel("Title", { exact: true })
+    .getByLabel("Tytuł", { exact: true })
     .fill("Ship the revised guide");
-  await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
-  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await expect(page.getByTestId("autosave-status")).toHaveText("Zapisano");
+  await page
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
+    .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await mobile
-    .getByLabel("Title", { exact: true })
+    .getByLabel("Tytuł", { exact: true })
     .fill("Keep my mobile draft");
-  await expect(mobile.getByTestId("autosave-status")).toHaveText("Not saved");
-  await mobile.getByText("Current saved version").waitFor();
+  await expect(mobile.getByTestId("autosave-status")).toHaveText("Niezapisane");
+  await mobile.getByText("Aktualna zapisana wersja").waitFor();
   assert.equal(
-    await mobile.getByLabel("Title", { exact: true }).inputValue(),
+    await mobile.getByLabel("Tytuł", { exact: true }).inputValue(),
     "Keep my mobile draft",
   );
   assert.equal(cli("get", path).metadata.title, "Ship the revised guide");
@@ -272,9 +290,9 @@ try {
     path: join(evidenceDir, "mobile-conflict.png"),
     fullPage: true,
   });
-  await mobile.getByRole("button", { name: "Close editor" }).click();
+  await mobile.getByRole("button", { name: "Zamknij edytor" }).click();
   await mobile
-    .getByRole("button", { name: "Discard draft", exact: true })
+    .getByRole("button", { name: "Odrzuć wersję roboczą", exact: true })
     .click();
 
   await page.getByRole("heading", { name: "Ship the revised guide" }).click();
@@ -300,7 +318,9 @@ try {
   );
   await expect(page.getByRole("dialog")).toBeVisible();
   assert.equal(cli("get", path).metadata.title, "Ship the field guide");
-  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
+    .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   const reopenedCard = page.locator(
     `[data-board-card="${cards[0].id}"] .title`,
@@ -309,13 +329,17 @@ try {
   await reopenedCard.click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Pin to focus", exact: true }),
+    page.getByRole("button", { name: "Przypnij do Focus", exact: true }),
   ).toBeEnabled();
-  await page.getByRole("button", { name: "Pin to focus", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Przypnij do Focus", exact: true })
+    .click();
   await expect(
-    page.getByRole("button", { name: "Remove from focus", exact: true }),
+    page.getByRole("button", { name: "Usuń z Focus", exact: true }),
   ).toBeEnabled();
-  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
+    .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(
     cli("get", "/api/v1/workspace/focus").items[0].card_id,
@@ -323,25 +347,40 @@ try {
   );
   await page.getByRole("button", { name: "Focus", exact: true }).click();
   await page.getByRole("heading", { name: "Ship the field guide" }).waitFor();
-  for (const view of ["Calendar", "Timeline", "List", "Updates", "Projects"]) {
+  for (const view of [
+    "Kalendarz",
+    "Oś czasu",
+    "Lista",
+    "Aktualizacje",
+    "Projekty",
+  ]) {
     await page.getByRole("button", { name: view, exact: true }).click();
   }
 
-  await page.getByRole("button", { name: "Updates", exact: true }).click();
-  await page.getByRole("button", { name: "Add update", exact: false }).click();
-  await page.getByLabel("Summary", { exact: true }).fill("Browser report");
-  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await page.getByRole("button", { name: "Aktualizacje", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Dodaj aktualizację", exact: false })
+    .click();
+  await page.getByLabel("Podsumowanie", { exact: true }).fill("Browser report");
+  await page.getByRole("button", { name: "Utwórz", exact: true }).click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await page
     .getByRole("heading", { name: "Browser report", exact: true })
     .click();
-  await page.getByRole("button", { name: "Mark read", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Oznacz jako przeczytane", exact: true })
+    .click();
   await expect(
-    page.getByRole("button", { name: "Mark unread", exact: true }),
+    page.getByRole("button", {
+      name: "Oznacz jako nieprzeczytane",
+      exact: true,
+    }),
   ).toBeEnabled();
-  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
+    .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
-  await page.getByLabel("Unread only").check();
+  await page.getByLabel("Tylko nieprzeczytane").check();
   await page
     .getByRole("heading", { name: "Browser report", exact: true })
     .waitFor({ state: "hidden" });
@@ -355,20 +394,23 @@ try {
       .read,
     true,
   );
-  await page.getByLabel("Unread only").uncheck();
+  await page.getByLabel("Tylko nieprzeczytane").uncheck();
 
   await page
-    .getByRole("button", { name: "Workspace settings", exact: true })
+    .getByRole("button", {
+      name: "Ustawienia przestrzeni roboczej",
+      exact: true,
+    })
     .click();
-  await page.getByLabel("Timezone", { exact: true }).fill("UTC");
-  await page.getByLabel("Default view", { exact: true }).selectOption("list");
+  await page.getByLabel("Strefa czasowa", { exact: true }).fill("UTC");
+  await page.getByLabel("Widok domyślny", { exact: true }).selectOption("list");
   await page
-    .getByRole("button", { name: "Save preferences", exact: true })
+    .getByRole("button", { name: "Zapisz ustawienia", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   // Saving preferences retains the current explicit route. A clean entry uses the default.
   await expect(
-    page.getByRole("button", { name: "Updates", exact: true }),
+    page.getByRole("button", { name: "Aktualizacje", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   assert.equal(cli("get", "/api/v1/workspace/preferences").timezone, "UTC");
   assert.equal(
@@ -376,9 +418,9 @@ try {
     "list",
   );
   await page.goto(origin);
-  await page.getByRole("heading", { name: "List", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Lista", exact: true }).waitFor();
   await page.reload();
-  await page.getByRole("heading", { name: "List", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Lista", exact: true }).waitFor();
   const cardFile = join(folder, ".project", "cards", `${cards[0].id}.json`);
   const source = await readFile(cardFile, "utf8");
   await writeFile(
@@ -390,12 +432,12 @@ try {
     .waitFor({ timeout: 10000 });
   assert.equal(cli("get", path).metadata.title, "External editor update");
   await page
-    .getByLabel("Project", { exact: true })
+    .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
-  await page.getByRole("button", { name: "Timeline", exact: true }).click();
-  await page.getByLabel("Month", { exact: true }).fill("2026-09");
+  await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
+  await page.getByLabel("Miesiąc", { exact: true }).fill("2026-09");
   const moveHandle = page.getByRole("button", {
-    name: "Move plan: External editor update",
+    name: "Przenieś plan: External editor update",
     exact: true,
   });
   await moveHandle.waitFor();
@@ -464,10 +506,12 @@ try {
   );
   await page.mouse.up();
   await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
+    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
     .click();
-  await page.getByText("Current saved schedule:", { exact: false }).waitFor();
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page
+    .getByText("Aktualny zapisany harmonogram:", { exact: false })
+    .waitFor();
+  await page.getByRole("button", { name: "Anuluj", exact: true }).click();
   let busyReads = 0;
   await page.route("**/api/v1/views/gantt?*", async (route) => {
     if (busyReads++ === 0)
@@ -512,17 +556,17 @@ try {
     { steps: 4 },
   );
   await page.mouse.up();
-  await page.getByRole("dialog", { name: "Change planned dates" }).waitFor();
+  await page.getByRole("dialog", { name: "Zmień zaplanowane daty" }).waitFor();
   assert.equal(
-    await page.getByLabel("Planned start", { exact: true }).inputValue(),
+    await page.getByLabel("Zaplanowany początek", { exact: true }).inputValue(),
     "2026-09-08",
   );
   assert.equal(
-    await page.getByLabel("Planned end", { exact: true }).inputValue(),
+    await page.getByLabel("Zaplanowany koniec", { exact: true }).inputValue(),
     "2026-09-13",
   );
   await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
+    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.deepEqual(cli("get", path).metadata.due, beforeGesture.metadata.due);
@@ -533,7 +577,7 @@ try {
   });
 
   const resize = page.getByRole("button", {
-    name: "Resize end: External editor update",
+    name: "Zmień koniec: External editor update",
     exact: true,
   });
   const resizeBounds = await hitbox(resize);
@@ -549,11 +593,11 @@ try {
   );
   await page.mouse.up();
   assert.equal(
-    await page.getByLabel("Planned start", { exact: true }).inputValue(),
+    await page.getByLabel("Zaplanowany początek", { exact: true }).inputValue(),
     "2026-09-08",
   );
   assert.equal(
-    await page.getByLabel("Planned end", { exact: true }).inputValue(),
+    await page.getByLabel("Zaplanowany koniec", { exact: true }).inputValue(),
     "2026-09-14",
   );
   const conflictingPatch = join(temp, "date-conflict.json");
@@ -571,20 +615,22 @@ try {
     cli("get", path).version,
   );
   await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
+    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
     .click();
-  await page.getByText("Current saved schedule:", { exact: false }).waitFor();
+  await page
+    .getByText("Aktualny zapisany harmonogram:", { exact: false })
+    .waitFor();
   assert.equal(
-    await page.getByLabel("Planned end", { exact: true }).inputValue(),
+    await page.getByLabel("Zaplanowany koniec", { exact: true }).inputValue(),
     "2026-09-14",
   );
   assert.equal(cli("get", path).metadata.schedule.end, "2026-09-13");
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Anuluj", exact: true }).click();
 
   try {
     await page
       .getByRole("button", {
-        name: "Move plan: Competing timeline edit",
+        name: "Przenieś plan: Competing timeline edit",
         exact: true,
       })
       .click();
@@ -592,7 +638,9 @@ try {
     console.error(await page.locator("body").innerText(), errors, daemonLog);
     throw error;
   }
-  await page.getByLabel("Planned end", { exact: true }).fill("2026-09-14");
+  await page
+    .getByLabel("Zaplanowany koniec", { exact: true })
+    .fill("2026-09-14");
   await page.route(`**${path}`, async (route) => {
     if (route.request().method() === "PATCH")
       await route.fulfill({
@@ -607,15 +655,15 @@ try {
     else await route.continue();
   });
   await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
+    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
     .click();
   await page
-    .getByText("Command is prepared.", { exact: false })
+    .getByText("Stan polecenia: Przygotowane.", { exact: false })
     .waitFor({ timeout: 2000 });
   assert.equal(cli("get", path).metadata.schedule.end, "2026-09-13");
   await page.unroute(`**${path}`);
   await page
-    .getByRole("button", { name: "Retry same command", exact: true })
+    .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(cli("get", path).metadata.schedule.end, "2026-09-14");
@@ -659,25 +707,25 @@ try {
     cli("--project", folder, "card", "get", typedId).metadata.status,
     "active",
   );
-  await page.getByRole("button", { name: "Board", exact: true }).click();
+  await page.getByRole("button", { name: "Tablica", exact: true }).click();
   await expect(page.locator(".astra-board .date-scroll")).toHaveCount(1);
   const activeColumn = page.locator(".astra-column-active");
   await activeColumn
-    .getByRole("button", { name: "Collapse column", exact: true })
+    .getByRole("button", { name: "Zwiń kolumnę", exact: true })
     .click();
   await expect(page.locator(`[data-board-card="${typedId}"]`)).toHaveCount(0);
   await activeColumn
-    .getByRole("button", { name: "Expand column", exact: true })
+    .getByRole("button", { name: "Rozwiń kolumnę", exact: true })
     .click();
   const footerAdd = page.getByRole("button", {
-    name: "Add card in review",
+    name: "Dodaj kartę w Do sprawdzenia",
     exact: true,
   });
   await hitbox(footerAdd);
   await footerAdd.focus();
   await expect(footerAdd).toBeFocused();
   await page.keyboard.press("Enter");
-  const quickTitle = page.getByLabel("New card title in review", {
+  const quickTitle = page.getByLabel("Tytuł nowej karty w Do sprawdzenia", {
     exact: true,
   });
   await expect(quickTitle).toBeFocused();
@@ -700,7 +748,7 @@ try {
   // open composer restores its input focus when its column is refreshed.
   await page
     .locator(".astra-column-review")
-    .getByRole("button", { name: "Close", exact: true })
+    .getByRole("button", { name: "Zamknij", exact: true })
     .click();
   await expect(quickTitle).toHaveCount(0);
   await expect(
@@ -712,12 +760,14 @@ try {
   await hitbox(statusCardTitle);
   await statusCardTitle.click();
   await expect(
-    page.getByRole("dialog", { name: "Edit resource", exact: true }),
+    page.getByRole("dialog", { name: "Edytuj element", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: /^Status:/ }).click();
-  await page.getByRole("button", { name: "Planned", exact: true }).click();
-  await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
-  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await page.getByRole("button", { name: "Zaplanowane", exact: true }).click();
+  await expect(page.getByTestId("autosave-status")).toHaveText("Zapisano");
+  await page
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
+    .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(
     cli("--project", folder, "card", "get", typedId).metadata.status,
@@ -835,11 +885,11 @@ try {
   await expect(page.locator("[data-board-drop-indicator]")).toBeVisible();
   await page.mouse.up();
   await page
-    .getByRole("button", { name: "Retry same command", exact: true })
+    .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
     .waitFor();
   assert.equal(cli("get", typedPath).metadata.status, "planned");
   await page
-    .getByRole("button", { name: "Retry same command", exact: true })
+    .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
     .click();
   await expect.poll(() => cli("get", typedPath).metadata.status).toBe("active");
   await expect(page.locator("dialog[open]")).toHaveCount(0);
@@ -896,12 +946,12 @@ try {
   );
   await page.mouse.up();
   await page
-    .getByText("The card or its neighbors changed.", { exact: false })
+    .getByText("Karta lub jej sąsiedzi się zmienili.", { exact: false })
     .waitFor();
   await expect(
-    page.getByRole("button", { name: "Confirm move", exact: true }),
+    page.getByRole("button", { name: "Potwierdź przeniesienie", exact: true }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Anuluj", exact: true }).click();
   assert.equal(
     cli("--project", folder, "card", "list", "--status", "planned").items.at(-1)
       .id,
@@ -929,15 +979,20 @@ try {
   }
   const reviewColumn = page.locator(".astra-column-review");
   await expect(
-    reviewColumn.getByRole("heading", { name: "review · 51", exact: true }),
+    reviewColumn.getByRole("heading", {
+      name: "Do sprawdzenia · 51",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(50);
   await expect(reviewColumn.locator(".column-footer")).toHaveCount(1);
   await page.locator(`[data-board-card="${typedId}"] .title`).click();
-  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("Tytuł", { exact: true })).toHaveValue(
     "Typed CLI task",
   );
-  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
+    .click();
   await expect(page.locator("dialog")).toHaveCount(0);
   const scrollColumn = reviewColumn.locator("[data-kanban-column-cards]");
   const scrollBox = await scrollColumn.boundingBox();
@@ -968,7 +1023,7 @@ try {
   );
   await scrollColumn.evaluate((node) => (node.scrollTop = 0));
   await page
-    .getByRole("button", { name: "Next 50 in review", exact: true })
+    .getByRole("button", { name: "Następne 50 w Do sprawdzenia", exact: true })
     .click();
   await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(1);
   // The preceding card is unknown on page two, so dropping before its first card is illegal.
@@ -992,7 +1047,10 @@ try {
     dragVersion,
   );
   await page
-    .getByRole("button", { name: "First page in review", exact: true })
+    .getByRole("button", {
+      name: "Pierwsza strona w Do sprawdzenia",
+      exact: true,
+    })
     .click();
   await expect(reviewColumn.locator("[data-board-card]")).toHaveCount(50);
   await page.evaluate(() => {
@@ -1018,9 +1076,9 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   // Touch starts with a hold; an immediate swipe must remain normal scrolling.
-  await selectMobileView("Board");
+  await selectMobileView("Tablica");
   await mobile
-    .getByLabel("Project", { exact: true })
+    .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
   const mobileSource = mobile.locator(`[data-board-card="${typedId}"] .title`);
   const mobileTarget = mobile.locator(
@@ -1104,22 +1162,22 @@ try {
     },
   );
   await page
-    .getByRole("button", { name: "Add card in active", exact: true })
+    .getByRole("button", { name: "Dodaj kartę w Aktywne", exact: true })
     .click();
   await page
-    .getByLabel("New card title in active", { exact: true })
+    .getByLabel("Tytuł nowej karty w Aktywne", { exact: true })
     .fill("Quick retry card");
   await page
-    .getByLabel("New card title in active", { exact: true })
+    .getByLabel("Tytuł nowej karty w Aktywne", { exact: true })
     .press("Enter");
   await page
-    .getByRole("button", { name: /Retry same (autosave|command)/ })
+    .getByRole("button", { name: /Ponów (ten sam zapis|to samo polecenie)/ })
     .waitFor();
-  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("Tytuł", { exact: true })).toHaveValue(
     "Quick retry card",
   );
   await page
-    .getByRole("button", { name: /Retry same (autosave|command)/ })
+    .getByRole("button", { name: /Ponów (ten sam zapis|to samo polecenie)/ })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(quickAttempts.length, 2);
@@ -1137,7 +1195,7 @@ try {
   await page.setViewportSize({ width: 1000, height: 1000 });
   await page
     .locator(".astra-column-active")
-    .getByRole("button", { name: "Collapse column", exact: true })
+    .getByRole("button", { name: "Zwiń kolumnę", exact: true })
     .click();
   const savedScroll = await page.evaluate(() => {
     const horizontal = document.querySelector(".astra-board .date-scroll");
@@ -1150,12 +1208,12 @@ try {
   });
   assert(savedScroll.horizontal > 0 && savedScroll.vertical > 0);
   await page.getByRole("button", { name: "Focus", exact: true }).click();
-  await page.getByRole("button", { name: "Board", exact: true }).click();
+  await page.getByRole("button", { name: "Tablica", exact: true }).click();
   const assertRestored = async () => {
     await expect(
       page
         .locator(".astra-column-active")
-        .getByRole("button", { name: "Expand column", exact: true }),
+        .getByRole("button", { name: "Rozwiń kolumnę", exact: true }),
     ).toBeVisible();
     await expect
       .poll(() =>
@@ -1174,15 +1232,15 @@ try {
   };
   await assertRestored();
   await page
-    .getByLabel("Project", { exact: true })
+    .getByLabel("Projekt", { exact: true })
     .selectOption(nativePlan.project_id);
   await expect(
     page
       .locator(".astra-column-active")
-      .getByRole("button", { name: "Collapse column", exact: true }),
+      .getByRole("button", { name: "Zwiń kolumnę", exact: true }),
   ).toBeVisible();
   await page
-    .getByLabel("Project", { exact: true })
+    .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
   await assertRestored();
   await page.reload();
@@ -1284,16 +1342,16 @@ try {
     "--json-file",
     milestoneFile,
   );
-  await page.getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
   await page
     .getByRole("button", {
-      name: "Due milestone: Release gate",
+      name: "Termin kamienia milowego: Release gate",
       exact: true,
     })
     .waitFor();
-  await page.getByRole("button", { name: "Calendar", exact: true }).click();
+  await page.getByRole("button", { name: "Kalendarz", exact: true }).click();
   await page
-    .getByLabel("Calendar layout", { exact: true })
+    .getByLabel("Układ kalendarza", { exact: true })
     .selectOption("week");
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(7);
   await expectCalendarDate(
@@ -1301,36 +1359,40 @@ try {
     (await page.locator(".topbar .date").innerText()).trim(),
   );
   await setCalendarDate(page, "2026-09-08");
-  await page.getByLabel("Calendar layout", { exact: true }).selectOption("day");
+  await page
+    .getByLabel("Układ kalendarza", { exact: true })
+    .selectOption("day");
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(1);
   await page
-    .getByRole("button", { name: "Next calendar period", exact: true })
+    .getByRole("button", { name: "Następny okres kalendarza", exact: true })
     .click();
   await expectCalendarDate(page, "2026-09-09");
   await page
-    .getByRole("button", { name: "Previous calendar period", exact: true })
+    .getByRole("button", { name: "Poprzedni okres kalendarza", exact: true })
     .focus();
   await page.keyboard.press("Alt+2");
-  await expect(page.getByLabel("Calendar layout", { exact: true })).toHaveValue(
-    "week",
-  );
+  await expect(
+    page.getByLabel("Układ kalendarza", { exact: true }),
+  ).toHaveValue("week");
   await page
-    .getByRole("button", { name: "New scheduled card", exact: true })
+    .getByRole("button", { name: "Nowa zaplanowana karta", exact: true })
     .click();
-  await expect(page.getByLabel("Start", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("Początek", { exact: true })).toHaveValue(
     "2026-09-09",
   );
-  await page.getByLabel("Title", { exact: true }).fill("Scheduled follow-up");
-  await page.getByLabel("End", { exact: true }).fill("2026-09-11");
-  await expect(page.getByTestId("autosave-status")).toHaveText("Saved");
-  await page.getByRole("button", { name: "Close editor", exact: true }).click();
+  await page.getByLabel("Tytuł", { exact: true }).fill("Scheduled follow-up");
+  await page.getByLabel("Koniec", { exact: true }).fill("2026-09-11");
+  await expect(page.getByTestId("autosave-status")).toHaveText("Zapisano");
+  await page
+    .getByRole("button", { name: "Zamknij edytor", exact: true })
+    .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   const scheduledCard = cli(
     "get",
     `/api/v1/views/list?type=card&project_id=${plan.project_id}&limit=200`,
   ).items.find((row) => row.title === "Scheduled follow-up");
   assert(scheduledCard);
-  await page.getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
   const scheduledPath = `/api/v1/projects/${plan.project_id}/cards/${scheduledCard.id}`;
   const recorded = cli("get", scheduledPath);
   assert.deepEqual(recorded.metadata.schedule, {
@@ -1343,7 +1405,7 @@ try {
   await expect(page.getByLabel("Predecessor", { exact: true })).toHaveCount(0);
   await expect(
     page.getByRole("button", {
-      name: "Move plan: Scheduled follow-up",
+      name: "Przenieś plan: Scheduled follow-up",
       exact: true,
     }),
   ).toBeEnabled();
@@ -1351,23 +1413,23 @@ try {
     path: join(evidenceDir, "gantt-recorded-schedule.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Calendar", exact: true }).click();
+  await page.getByRole("button", { name: "Kalendarz", exact: true }).click();
   await setCalendarDate(page, "2026-09-09");
   await page
-    .getByLabel("Calendar layout", { exact: true })
+    .getByLabel("Układ kalendarza", { exact: true })
     .selectOption("week");
   const calendarCard = page.getByRole("button", {
-    name: "Planned work: Scheduled follow-up",
+    name: "Zaplanowana praca: Scheduled follow-up",
     exact: true,
   });
   await calendarCard.waitFor();
   await calendarCard.focus();
   await page.keyboard.press("Alt+ArrowRight");
-  await expect(page.getByLabel("Planned start", { exact: true })).toHaveValue(
-    "2026-09-10",
-  );
+  await expect(
+    page.getByLabel("Zaplanowany początek", { exact: true }),
+  ).toHaveValue("2026-09-10");
   await page
-    .getByRole("button", { name: "Save planned dates", exact: true })
+    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(cli("get", scheduledPath).metadata.schedule.end, "2026-09-12");
@@ -1376,36 +1438,39 @@ try {
     fullPage: true,
   });
   await page
-    .getByLabel("Calendar layout", { exact: true })
+    .getByLabel("Układ kalendarza", { exact: true })
     .selectOption("month");
-  await page.getByRole("button", { name: "List", exact: true }).click();
-  await page.getByLabel("Search content", { exact: true }).fill("untrusted");
+  await page.getByRole("button", { name: "Lista", exact: true }).click();
+  await page.getByLabel("Szukaj w treści", { exact: true }).fill("untrusted");
   await page.getByText("Competing timeline edit", { exact: true }).waitFor();
   await page
     .getByText("Typed CLI task", { exact: true })
     .waitFor({ state: "hidden" });
-  await page.getByLabel("Search content", { exact: true }).fill("");
+  await page.getByLabel("Szukaj w treści", { exact: true }).fill("");
   assert.equal(cli("--project", folder, "git").error, "NOT_A_GIT_ROOT");
   await page.getByRole("button", { name: "Git", exact: true }).click();
+  await page.getByText(/Stan niedostępny: .*NOT_A_GIT_ROOT/).waitFor();
   await page
-    .getByText("Observation unavailable: NOT_A_GIT_ROOT", { exact: true })
+    .getByRole("button", { name: "Zamknij stan Git", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Diagnostyka serwera", exact: true })
+    .click();
+  await page
+    .getByText("0 problemów ze źródłami · 0 nierozstrzygniętych poleceń", {
+      exact: true,
+    })
     .waitFor();
   await page
-    .getByRole("button", { name: "Close Git observation", exact: true })
+    .getByRole("button", { name: "Zamknij diagnostykę", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Host diagnostics", exact: true })
+    .getByRole("button", {
+      name: "Ustawienia przestrzeni roboczej",
+      exact: true,
+    })
     .click();
-  await page
-    .getByText("0 source issues · 0 unresolved commands", { exact: true })
-    .waitFor();
-  await page
-    .getByRole("button", { name: "Close diagnostics", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Workspace settings", exact: true })
-    .click();
-  await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+  await page.getByLabel("Motyw", { exact: true }).selectOption("dark");
   assert.equal(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).colorScheme,
@@ -1413,14 +1478,14 @@ try {
     "dark",
   );
   await page
-    .getByRole("button", { name: "Close settings", exact: true })
+    .getByRole("button", { name: "Zamknij ustawienia", exact: true })
     .click();
   await page.screenshot({
     path: join(evidenceDir, "desktop-dark.png"),
     fullPage: true,
   });
   await page.reload();
-  await page.getByRole("heading", { name: "List", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Lista", exact: true }).waitFor();
   assert.equal(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).colorScheme,
@@ -1449,28 +1514,33 @@ try {
     }
   });
   await page
-    .getByLabel("Title", { exact: true })
+    .getByLabel("Tytuł", { exact: true })
     .fill("Queued revocation autosave");
   await expect.poll(() => revocationAutosaveStarted).toBe(1);
-  await selectMobileView("Timeline");
+  await selectMobileView("Oś czasu");
   await mobile
-    .getByLabel("Project", { exact: true })
+    .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
-  await mobile.getByLabel("Month", { exact: true }).fill("2026-09");
+  await mobile.getByLabel("Miesiąc", { exact: true }).fill("2026-09");
   await mobile
     .getByRole("button", {
-      name: "Move plan: Competing timeline edit",
+      name: "Przenieś plan: Competing timeline edit",
       exact: true,
     })
     .click();
-  await mobile.getByLabel("Planned end", { exact: true }).fill("2026-09-16");
+  await mobile
+    .getByLabel("Zaplanowany koniec", { exact: true })
+    .fill("2026-09-16");
   const settingsPage = await context.newPage();
   await settingsPage.goto(origin);
   await settingsPage
-    .getByRole("button", { name: "Workspace settings", exact: true })
+    .getByRole("button", {
+      name: "Ustawienia przestrzeni roboczej",
+      exact: true,
+    })
     .click();
   await settingsPage
-    .getByLabel("Timezone", { exact: true })
+    .getByLabel("Strefa czasowa", { exact: true })
     .fill("Europe/Warsaw");
   await settingsPage.route("**/api/v1/workspace/preferences", (route) =>
     route.request().method() === "PATCH"
@@ -1482,44 +1552,52 @@ try {
       : route.continue(),
   );
   await settingsPage
-    .getByRole("button", { name: "Save preferences", exact: true })
+    .getByRole("button", { name: "Zapisz ustawienia", exact: true })
     .click();
-  await settingsPage.getByText("Pending command:", { exact: false }).waitFor();
+  await settingsPage
+    .getByText("Oczekujące polecenie:", { exact: false })
+    .waitFor();
   for (const session of cli("sessions").items)
     cli("revoke-session", session.id);
   await page
-    .getByRole("heading", { name: "List", exact: true })
+    .getByRole("heading", { name: "Lista", exact: true })
     .waitFor({ state: "hidden", timeout: 5000 });
   assert.equal(
-    await page.getByLabel("Title", { exact: true }).inputValue(),
+    await page.getByLabel("Tytuł", { exact: true }).inputValue(),
     "Queued revocation autosave",
   );
-  await page.getByRole("button", { name: "Copy draft", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Kopiuj wersję roboczą", exact: true })
+    .waitFor();
   releaseRevocationAutosave();
   await expect.poll(() => revocationAutosaveFinished).toBe(true);
   assert.equal(revocationRouteError, undefined);
   await page.unroute(revocationMatcher);
   assert.equal(
-    await mobile.getByLabel("Planned end", { exact: true }).inputValue(),
+    await mobile.getByLabel("Zaplanowany koniec", { exact: true }).inputValue(),
     "2026-09-16",
   );
+  await mobile.getByText("Sesja wygasła.", { exact: false }).first().waitFor();
   await mobile
-    .getByText("Your session ended.", { exact: false })
-    .first()
-    .waitFor();
-  await mobile
-    .getByRole("button", { name: "Copy draft", exact: true })
+    .getByRole("button", { name: "Kopiuj wersję roboczą", exact: true })
     .waitFor();
   await settingsPage
-    .getByText("Your session ended. Your settings draft", { exact: false })
+    .getByText("Sesja wygasła. Wersja robocza ustawień", { exact: false })
     .waitFor();
   assert.equal(
-    await settingsPage.getByLabel("Timezone", { exact: true }).inputValue(),
+    await settingsPage
+      .getByLabel("Strefa czasowa", { exact: true })
+      .inputValue(),
     "Europe/Warsaw",
   );
-  await settingsPage.getByText("Pending command:", { exact: false }).waitFor();
   await settingsPage
-    .getByRole("button", { name: "Copy settings draft", exact: true })
+    .getByText("Oczekujące polecenie:", { exact: false })
+    .waitFor();
+  await settingsPage
+    .getByRole("button", {
+      name: "Kopiuj wersję roboczą ustawień",
+      exact: true,
+    })
     .waitFor();
   assert.deepEqual(errors, []);
   console.log(

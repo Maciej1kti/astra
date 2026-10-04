@@ -12,11 +12,11 @@ export function eventEnd(event: TimedEvent): string {
     event.duration_minutes > 10080
   )
     throw new Error(
-      "An event needs a valid start date, time and duration of 1–10080 minutes.",
+      "Wydarzenie wymaga prawidłowej daty, godziny i czasu trwania od 1 do 10080 minut.",
     );
   const end = new Date(start + event.duration_minutes * 60000).toISOString();
   if (end.length !== 24)
-    throw new Error("Event end is outside the supported calendar.");
+    throw new Error("Koniec wydarzenia wykracza poza obsługiwany kalendarz.");
   return end.slice(0, 16);
 }
 

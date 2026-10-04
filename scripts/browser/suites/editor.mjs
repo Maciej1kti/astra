@@ -24,9 +24,9 @@ export async function runEditorChecks({
   page.setDefaultTimeout(12000);
   const commandFile = join(runtimeDir, "repair-browser-command.json");
   const dialog = () =>
-    page.getByRole("dialog", { name: /^(Edit|Create) resource$/ });
-  const title = () => dialog().getByLabel("Title", { exact: true });
-  const tags = () => dialog().getByLabel("Labels", { exact: true });
+    page.getByRole("dialog", { name: /^(Edytuj|Utwórz) element$/ });
+  const title = () => dialog().getByLabel("Tytuł", { exact: true });
+  const tags = () => dialog().getByLabel("Etykiety", { exact: true });
   const get = (id) => cli("get", `${base}/cards/${id}`);
   async function mutate(method, path, payload, version) {
     await writeFile(commandFile, JSON.stringify(payload), { mode: 0o600 });
@@ -40,10 +40,10 @@ export async function runEditorChecks({
   async function close() {
     if (!(await dialog().count())) return;
     await dialog()
-      .getByRole("button", { name: "Close editor", exact: true })
+      .getByRole("button", { name: "Zamknij edytor", exact: true })
       .click();
     const discard = dialog().getByRole("button", {
-      name: "Discard draft",
+      name: "Odrzuć wersję roboczą",
       exact: true,
     });
     if (await discard.isVisible()) await discard.click();
@@ -55,7 +55,7 @@ export async function runEditorChecks({
     await page.goto(`${config.origin}/?${params}`);
     await page.locator("header.topbar").waitFor();
     await expect(page.locator(".asidebottom")).toContainText(
-      "Connected to host",
+      "Połączono z serwerem",
     );
   }
   async function open(id) {
@@ -63,12 +63,14 @@ export async function runEditorChecks({
     await title().waitFor();
     await expect(
       dialog().getByRole("button", {
-        name: /^(Pin to focus|Remove from focus)$/,
+        name: /^(Przypnij do Focus|Usuń z Focus)$/,
       }),
     ).toBeEnabled();
   }
   async function waitForAutosaveACK() {
-    await expect(dialog().getByTestId("autosave-status")).toHaveText("Saved");
+    await expect(dialog().getByTestId("autosave-status")).toHaveText(
+      "Zapisano",
+    );
   }
   async function screenshot(name) {
     await page.screenshot({
@@ -134,15 +136,15 @@ export async function runEditorChecks({
       await title().fill("Repair draft — preserved after pin");
       await dialog().locator(".resource-description-rendered").click();
       await dialog()
-        .getByLabel("Description", { exact: true })
+        .getByLabel("Opis", { exact: true })
         .fill("Autosaved body — Zażółć gęślą jaźń.");
       await waitForAutosaveACK();
       await dialog()
-        .getByRole("button", { name: "Pin to focus", exact: true })
+        .getByRole("button", { name: "Przypnij do Focus", exact: true })
         .click();
       await expect(
         dialog().getByRole("button", {
-          name: "Remove from focus",
+          name: "Usuń z Focus",
           exact: true,
         }),
       ).toBeEnabled();
@@ -152,15 +154,18 @@ export async function runEditorChecks({
         "Repair draft — preserved after pin",
       );
       await dialog()
-        .getByRole("button", { name: "Remove from focus", exact: true })
+        .getByRole("button", { name: "Usuń z Focus", exact: true })
         .click();
       await expect(
-        dialog().getByRole("button", { name: "Pin to focus", exact: true }),
+        dialog().getByRole("button", {
+          name: "Przypnij do Focus",
+          exact: true,
+        }),
       ).toBeEnabled();
       await dialog().locator(".resource-description-rendered").click();
-      await expect(
-        dialog().getByLabel("Description", { exact: true }),
-      ).toHaveValue("Autosaved body — Zażółć gęślą jaźń.");
+      await expect(dialog().getByLabel("Opis", { exact: true })).toHaveValue(
+        "Autosaved body — Zażółć gęślą jaźń.",
+      );
       await screenshot("A01-preserved-draft");
       await waitForAutosaveACK();
       assert.equal(
@@ -206,12 +211,12 @@ export async function runEditorChecks({
       });
       try {
         await dialog()
-          .getByRole("button", { name: "Pin to focus", exact: true })
+          .getByRole("button", { name: "Przypnij do Focus", exact: true })
           .click();
         // Pending controls appear as soon as the request starts. Wait until the
         // completed interception has released the in-flight command first.
         await expect(
-          dialog().getByRole("button", { name: "Check status", exact: true }),
+          dialog().getByRole("button", { name: "Sprawdź stan", exact: true }),
         ).toBeEnabled();
         assert.equal(interceptionError, undefined);
         await expect(title()).toHaveValue(
@@ -224,11 +229,11 @@ export async function runEditorChecks({
           ),
         );
         await dialog()
-          .getByRole("button", { name: "Check status", exact: true })
+          .getByRole("button", { name: "Sprawdź stan", exact: true })
           .click();
         await expect(
           dialog().getByRole("button", {
-            name: "Remove from focus",
+            name: "Usuń z Focus",
             exact: true,
           }),
         ).toBeEnabled();
@@ -268,14 +273,14 @@ export async function runEditorChecks({
         get(card.id).version,
       );
       await dialog()
-        .getByRole("button", { name: "Pin to focus", exact: true })
+        .getByRole("button", { name: "Przypnij do Focus", exact: true })
         .click();
       await expect(dialog().getByRole("alert")).toContainText(
-        "changed since you opened it",
+        "zmienił się od otwarcia",
       );
       await expect(title()).toHaveValue("Autosaved focus conflict draft");
       await expect(
-        dialog().getByText("Current saved version", {
+        dialog().getByText("Aktualna zapisana wersja", {
           exact: true,
         }),
       ).toBeVisible();
@@ -296,7 +301,7 @@ export async function runEditorChecks({
       await open(card.id);
       await expect(
         dialog()
-          .getByRole("list", { name: "Selected tags", exact: true })
+          .getByRole("list", { name: "Wybrane tagi", exact: true })
           .locator("li"),
       ).toHaveCount(labels.length);
       await title().fill("Repair literal tags — renamed");
@@ -324,14 +329,12 @@ export async function runEditorChecks({
       const before = get(card.id).version;
       await tags().fill("qa");
       await tags().press("Enter");
-      await expect(dialog().getByRole("alert")).toContainText(
-        "already on the card",
-      );
+      await expect(dialog().getByRole("alert")).toContainText("już na karcie");
       await expect(tags()).toHaveAttribute("aria-invalid", "true");
       assert.equal(get(card.id).version, before);
       await tags().fill("x".repeat(49));
       await tags().press("Enter");
-      await expect(dialog().getByRole("alert")).toContainText("48 characters");
+      await expect(dialog().getByRole("alert")).toContainText("48 znaków");
       await tags().fill("Existing, suggested");
       await expect(
         dialog().getByRole("option", {
@@ -343,14 +346,14 @@ export async function runEditorChecks({
       await tags().press("Enter");
       await expect(
         dialog().getByRole("button", {
-          name: "Remove tag Existing, suggested tag",
+          name: "Usuń tag Existing, suggested tag",
           exact: true,
         }),
       ).toBeVisible();
       await tags().fill("Nowy, ważny tag");
       await tags().press("Enter");
       await dialog()
-        .getByRole("button", { name: "Remove tag qa", exact: true })
+        .getByRole("button", { name: "Usuń tag qa", exact: true })
         .click();
       await screenshot("A10-tag-chips");
       await waitForAutosaveACK();
@@ -376,15 +379,15 @@ export async function runEditorChecks({
         await open(card.id);
         await tags().fill("another");
         await tags().press("Enter");
-        await expect(dialog().getByRole("alert")).toContainText("20 tags");
+        await expect(dialog().getByRole("alert")).toContainText("20 tagów");
         await dialog()
-          .getByRole("button", { name: "Remove tag Repair tag 1", exact: true })
+          .getByRole("button", { name: "Usuń tag Repair tag 1", exact: true })
           .click();
         await tags().fill("😀".repeat(48));
         await tags().press("Enter");
         await expect(
           dialog()
-            .getByRole("list", { name: "Selected tags", exact: true })
+            .getByRole("list", { name: "Wybrane tagi", exact: true })
             .locator("li"),
         ).toHaveCount(20);
         const metrics = await dialog().evaluate((element) => ({
@@ -396,7 +399,7 @@ export async function runEditorChecks({
           JSON.stringify(metrics),
         );
         const target = await dialog()
-          .getByRole("button", { name: "Remove tag Repair tag 2", exact: true })
+          .getByRole("button", { name: "Usuń tag Repair tag 2", exact: true })
           .boundingBox();
         assert(
           target.width >= 44 && target.height >= 44,
@@ -461,24 +464,26 @@ export async function runEditorChecks({
         page.getByLabel("Resource type", { exact: true }),
       ).toHaveCount(0);
       await expect(
-        page.getByLabel("Status filter", { exact: true }),
+        page.getByLabel("Filtr statusu", { exact: true }),
       ).toHaveValue("");
       await expect(page.locator(".listrow").first()).toBeVisible();
       await expect(page).not.toHaveURL(/collection=|status=/);
       await page.reload();
       await expect(page.locator(".listrow").first()).toBeVisible();
-      for (const view of ["List", "Board", "Calendar", "Timeline"]) {
+      for (const view of ["Lista", "Tablica", "Kalendarz", "Oś czasu"]) {
         await page.getByRole("button", { name: view, exact: true }).click();
         await expect(
-          page.locator(".heading").getByRole("button", { name: /Add card$/ }),
+          page
+            .locator(".heading")
+            .getByRole("button", { name: /Dodaj kartę$/ }),
         ).toBeVisible();
         await page
           .locator(".heading")
-          .getByRole("button", { name: /Add card$/ })
+          .getByRole("button", { name: /Dodaj kartę$/ })
           .click();
-        await expect(dialog().getByLabel("Kind", { exact: true })).toHaveCount(
-          0,
-        );
+        await expect(
+          dialog().getByLabel("Rodzaj", { exact: true }),
+        ).toHaveCount(0);
         await close();
       }
       return "Legacy links resolve to cards after reload; List and all three planning views create card drafts.";
@@ -499,12 +504,12 @@ export async function runEditorChecks({
         page.locator("main").getByText(card.title, { exact: true });
       const archivedEmpty = () =>
         page.getByText(
-          "No archived cards match this selection. Clear filters to see more archived cards.",
+          "Brak zarchiwizowanych kart pasujących do wyboru. Wyczyść filtry, aby zobaczyć więcej zarchiwizowanych kart.",
           { exact: true },
         );
       await open(card.id);
       const priority = dialog().getByRole("button", {
-        name: "High priority",
+        name: "Wysoki priorytet",
         exact: true,
       });
       await expect(priority).toHaveAttribute("aria-pressed", "true");
@@ -518,96 +523,98 @@ export async function runEditorChecks({
         assert.equal(get(card.id).metadata.priority, value);
       }
       await dialog()
-        .getByRole("button", { name: "Card actions", exact: true })
+        .getByRole("button", { name: "Działania karty", exact: true })
         .click();
-      await dialog().getByLabel("Archived", { exact: true }).check();
+      await dialog().getByLabel("Zarchiwizowane", { exact: true }).check();
       await waitForAutosaveACK();
       assert.equal(get(card.id).metadata.archived, true);
       await route();
-      await page.getByLabel("Search content", { exact: true }).fill(card.title);
+      await page
+        .getByLabel("Szukaj w treści", { exact: true })
+        .fill(card.title);
       assert.deepEqual(
         await page
-          .getByLabel("Priority filter", { exact: true })
+          .getByLabel("Filtr priorytetu", { exact: true })
           .locator("option")
           .evaluateAll((options) => options.map((option) => option.value)),
         ["", "normal", "high"],
       );
       await expect(
         page.getByText(
-          "No cards match this selection. Try another project or clear the filters.",
+          "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry.",
           { exact: true },
         ),
       ).toBeVisible();
       await expect(row()).not.toBeVisible();
       await page
-        .getByLabel("Card visibility", { exact: true })
+        .getByLabel("Widoczność kart", { exact: true })
         .selectOption("true");
       await expect(row()).toBeVisible();
       await page
-        .getByLabel("Status filter", { exact: true })
+        .getByLabel("Filtr statusu", { exact: true })
         .selectOption("done");
       await expect(archivedEmpty()).toBeVisible();
       await expect(row()).not.toBeVisible();
       await page
-        .getByLabel("Status filter", { exact: true })
+        .getByLabel("Filtr statusu", { exact: true })
         .selectOption("active");
       await expect(row()).toBeVisible();
       await page
-        .getByLabel("Priority filter", { exact: true })
+        .getByLabel("Filtr priorytetu", { exact: true })
         .selectOption("normal");
       await expect(archivedEmpty()).toBeVisible();
       await expect(row()).not.toBeVisible();
       await page
-        .getByLabel("Priority filter", { exact: true })
+        .getByLabel("Filtr priorytetu", { exact: true })
         .selectOption("high");
       await page
-        .getByLabel("Tag filter", { exact: true })
+        .getByLabel("Filtr tagu", { exact: true })
         .fill("Archive, literal");
       await expect(row()).toBeVisible();
       await page.reload();
       await expect(
-        page.getByLabel("Card visibility", { exact: true }),
+        page.getByLabel("Widoczność kart", { exact: true }),
       ).toHaveValue("true");
       await expect(
-        page.getByLabel("Status filter", { exact: true }),
+        page.getByLabel("Filtr statusu", { exact: true }),
       ).toHaveValue("active");
       await expect(
-        page.getByLabel("Priority filter", { exact: true }),
+        page.getByLabel("Filtr priorytetu", { exact: true }),
       ).toHaveValue("high");
-      await expect(page.getByLabel("Tag filter", { exact: true })).toHaveValue(
+      await expect(page.getByLabel("Filtr tagu", { exact: true })).toHaveValue(
         "Archive, literal",
       );
       await expect(row()).toBeVisible();
       // A substring is not the exact stored tag, even though the literal name
       // contains a comma. This must exclude the otherwise matching card.
-      await page.getByLabel("Tag filter", { exact: true }).fill("Archive");
+      await page.getByLabel("Filtr tagu", { exact: true }).fill("Archive");
       await expect(archivedEmpty()).toBeVisible();
       await expect(row()).not.toBeVisible();
       await page
-        .getByLabel("Tag filter", { exact: true })
+        .getByLabel("Filtr tagu", { exact: true })
         .fill("Archive, literal");
       await row().click();
       await dialog()
-        .getByRole("button", { name: "Card actions", exact: true })
+        .getByRole("button", { name: "Działania karty", exact: true })
         .click();
-      await dialog().getByLabel("Archived", { exact: true }).uncheck();
+      await dialog().getByLabel("Zarchiwizowane", { exact: true }).uncheck();
       await waitForAutosaveACK();
       assert.equal(get(card.id).metadata.archived, false);
       await page
-        .getByLabel("Card visibility", { exact: true })
+        .getByLabel("Widoczność kart", { exact: true })
         .selectOption("false");
       await expect(row()).toBeVisible();
       await page.reload();
       await expect(
-        page.getByLabel("Card visibility", { exact: true }),
+        page.getByLabel("Widoczność kart", { exact: true }),
       ).toHaveValue("false");
       await expect(
-        page.getByLabel("Status filter", { exact: true }),
+        page.getByLabel("Filtr statusu", { exact: true }),
       ).toHaveValue("active");
       await expect(
-        page.getByLabel("Priority filter", { exact: true }),
+        page.getByLabel("Filtr priorytetu", { exact: true }),
       ).toHaveValue("high");
-      await expect(page.getByLabel("Tag filter", { exact: true })).toHaveValue(
+      await expect(page.getByLabel("Filtr tagu", { exact: true })).toHaveValue(
         "Archive, literal",
       );
       await expect(row()).toBeVisible();
@@ -631,28 +638,30 @@ export async function runEditorChecks({
         labels: [" QA "],
       });
       await route();
-      await page.getByLabel("Search content", { exact: true }).fill(card.title);
+      await page
+        .getByLabel("Szukaj w treści", { exact: true })
+        .fill(card.title);
       const row = page.locator("main").getByText(card.title, { exact: true });
       await expect(row).toBeVisible();
-      await page.getByLabel("Tag filter", { exact: true }).fill(" QA ");
+      await page.getByLabel("Filtr tagu", { exact: true }).fill(" QA ");
       await expect(row).toBeVisible();
       await expect(page).toHaveURL(
         (url) => url.searchParams.get("label") === " QA ",
       );
       await page.reload();
-      await expect(page.getByLabel("Tag filter", { exact: true })).toHaveValue(
+      await expect(page.getByLabel("Filtr tagu", { exact: true })).toHaveValue(
         " QA ",
       );
       await expect(row).toBeVisible();
-      await page.getByLabel("Tag filter", { exact: true }).fill("QA");
+      await page.getByLabel("Filtr tagu", { exact: true }).fill("QA");
       await expect(
         page.getByText(
-          "No cards match this selection. Try another project or clear the filters.",
+          "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry.",
           { exact: true },
         ),
       ).toBeVisible();
       await expect(row).not.toBeVisible();
-      await page.getByLabel("Tag filter", { exact: true }).fill(" QA ");
+      await page.getByLabel("Filtr tagu", { exact: true }).fill(" QA ");
       await expect(row).toBeVisible();
       assert.deepEqual(get(card.id).metadata.labels, [" QA "]);
       return "The exact source name including both outer spaces matches; its trimmed spelling does not.";
@@ -669,7 +678,7 @@ export async function runEditorChecks({
       for (const destination of ["view", "project"]) {
         await route();
         await page
-          .getByLabel("Search content", { exact: true })
+          .getByLabel("Szukaj w treści", { exact: true })
           .fill(card.title);
         const row = page.locator("main").getByText(card.title, { exact: true });
         await expect(row).toBeVisible();
@@ -730,17 +739,17 @@ export async function runEditorChecks({
           assert.equal(interceptionError, undefined);
           if (destination === "view") {
             await page
-              .getByRole("button", { name: "Board", exact: true })
+              .getByRole("button", { name: "Tablica", exact: true })
               .click();
             await expect(
-              page.getByRole("button", { name: "Board", exact: true }),
+              page.getByRole("button", { name: "Tablica", exact: true }),
             ).toHaveAttribute("aria-current", "page");
           } else {
             await page
-              .getByLabel("Project", { exact: true })
+              .getByLabel("Projekt", { exact: true })
               .selectOption(otherProject);
             await expect(
-              page.getByLabel("Project", { exact: true }),
+              page.getByLabel("Projekt", { exact: true }),
             ).toHaveValue(otherProject);
           }
           const responseReceived = page.waitForResponse(
@@ -762,11 +771,11 @@ export async function runEditorChecks({
           await expect(dialog()).toHaveCount(0);
           if (destination === "view")
             await expect(
-              page.getByRole("button", { name: "Board", exact: true }),
+              page.getByRole("button", { name: "Tablica", exact: true }),
             ).toHaveAttribute("aria-current", "page");
           else
             await expect(
-              page.getByLabel("Project", { exact: true }),
+              page.getByLabel("Projekt", { exact: true }),
             ).toHaveValue(otherProject);
           assert.equal(new URL(page.url()).searchParams.has("resource"), false);
           assert.equal(
@@ -790,21 +799,25 @@ export async function runEditorChecks({
     "Browser Back waits for an unresolved autosave before leaving the editor",
     async () => {
       await route("focus");
-      await page.getByRole("button", { name: "Board", exact: true }).click();
+      await page.getByRole("button", { name: "Tablica", exact: true }).click();
       await expect(
-        page.getByRole("button", { name: "Board", exact: true }),
+        page.getByRole("button", { name: "Tablica", exact: true }),
       ).toHaveAttribute("aria-current", "page");
-      await page.getByRole("button", { name: "Calendar", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Kalendarz", exact: true })
+        .click();
       await expect(
-        page.getByRole("button", { name: "Calendar", exact: true }),
+        page.getByRole("button", { name: "Kalendarz", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       await page.goBack();
       await expect(
-        page.getByRole("button", { name: "Board", exact: true }),
+        page.getByRole("button", { name: "Tablica", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       const card = await create({ title: unique("Repair browser Back draft") });
       await route();
-      await page.getByLabel("Search content", { exact: true }).fill(card.title);
+      await page
+        .getByLabel("Szukaj w treści", { exact: true })
+        .fill(card.title);
       await page.locator("main").getByText(card.title, { exact: true }).click();
       const path = `${config.origin}${base}/cards/${card.id}`;
       let autosaveStartedResolve;
@@ -854,7 +867,9 @@ export async function runEditorChecks({
     async () => {
       const card = await create({ title: unique("Repair Back save probe") });
       await route();
-      await page.getByLabel("Search content", { exact: true }).fill(card.title);
+      await page
+        .getByLabel("Szukaj w treści", { exact: true })
+        .fill(card.title);
       await page.locator("main").getByText(card.title, { exact: true }).click();
       const savedTitle = `${card.title} — saved after navigation request`;
       await title().fill(savedTitle);
@@ -869,13 +884,13 @@ export async function runEditorChecks({
       await expect(
         page.locator("main").getByText(savedTitle, { exact: true }),
       ).toBeVisible();
-      await page.getByRole("button", { name: "Board", exact: true }).click();
+      await page.getByRole("button", { name: "Tablica", exact: true }).click();
       await expect(
-        page.getByRole("button", { name: "Board", exact: true }),
+        page.getByRole("button", { name: "Tablica", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       await page.goBack();
       await expect(
-        page.getByRole("button", { name: "List", exact: true }),
+        page.getByRole("button", { name: "Lista", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       await page.locator("main").getByText(savedTitle, { exact: true }).click();
       await expect(title()).toHaveValue(savedTitle);
@@ -921,7 +936,7 @@ export async function runEditorChecks({
         cli("get", projectPath).version,
       );
       await route("focus", { folder: "Work" });
-      const pins = page.getByRole("region", { name: "In focus", exact: true });
+      const pins = page.getByRole("region", { name: "W Focus", exact: true });
       await expect(
         pins.getByRole("heading", { name: own.title, exact: true }),
       ).toBeVisible();
@@ -933,7 +948,7 @@ export async function runEditorChecks({
         pins.getByRole("heading", { name: other.title, exact: true }),
       ).toBeVisible();
       await page
-        .getByLabel("Filter loaded titles", { exact: true })
+        .getByLabel("Filtruj wczytane tytuły", { exact: true })
         .fill(other.title);
       await expect(
         pins.getByRole("heading", { name: own.title, exact: true }),

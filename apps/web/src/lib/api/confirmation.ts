@@ -178,6 +178,6 @@ export function validateCommandReply(
 }
 export function invalidConfirmation(): never {
   throw new Error(
-    "Invalid command response. Check the original command before retrying.",
+    "Nieprawidłowa odpowiedź polecenia. Sprawdź pierwotne polecenie przed ponowieniem.",
   );
 }

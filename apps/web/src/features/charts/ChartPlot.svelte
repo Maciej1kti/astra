@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { counted } from "../../lib/ui/locale.ts";
   import {
     chartDate,
     chartDomain,
@@ -56,17 +57,16 @@
   }
 </script>
 
-<section class="chart-panel" aria-label={`Chart in ${panel.unit}`}>
+<section class="chart-panel" aria-label={`Wykres w ${panel.unit}`}>
   <div class="plot-heading">
     <div>
       <span class="eyebrow"
-        >{cumulative ? "RUNNING TOTAL" : "PERIOD TOTALS"}</span
+        >{cumulative ? "SUMA NARASTAJĄCA" : "SUMY OKRESÓW"}</span
       >
       <h2>{panel.unit}</h2>
     </div>
     <span class="plot-series-count"
-      >{panel.series.length}
-      {panel.series.length === 1 ? "counter" : "counters"}</span
+      >{counted(panel.series.length, "licznik", "liczniki", "liczników")}</span
     >
   </div>
   <div class="plot-canvas" bind:clientWidth={containerWidth}>
@@ -74,14 +74,14 @@
       class="chart-svg"
       viewBox={`0 0 ${width} 294`}
       role="img"
-      aria-label={`Counter chart: ${panel.unit}`}
+      aria-label={`Wykres licznika: ${panel.unit}`}
       onpointermove={inspect}
       onpointerdown={inspect}
     >
-      <title>Counter chart: {panel.unit}</title>
+      <title>Wykres licznika: {panel.unit}</title>
       <desc
-        >Recorded period totals. Gaps represent periods with no recordings. Use
-        the date slider or Show chart data for exact values.</desc
+        >Zapisane sumy okresów. Luki oznaczają okresy bez zapisów. Użyj suwaka
+        daty lub opcji Pokaż dane wykresu, aby zobaczyć dokładne wartości.</desc
       >
       {#each ticks as tick}
         <line
@@ -147,7 +147,7 @@
   {#if period}
     <div class="inspection">
       <div class="inspection-label">
-        <label for={inputId}>Inspect {panel.unit} date</label>
+        <label for={inputId}>Sprawdź {panel.unit} datę</label>
         <strong
           >{chartDate(period.from, true)}{period.from !== period.to
             ? ` – ${chartDate(period.to, true)}`
@@ -156,7 +156,7 @@
       </div>
       <input
         id={inputId}
-        aria-label={`Inspect ${panel.unit} date`}
+        aria-label={`Sprawdź ${panel.unit} datę`}
         type="range"
         min="0"
         max={Math.max(0, count - 1)}
@@ -174,11 +174,11 @@
             <span>{row.source.name}</span>
             <strong
               >{point.value === null
-                ? "No recording"
+                ? "Brak zapisu"
                 : `${chartValue(point.value)} ${panel.unit}`}</strong
             >
             {#if point.days > 1 && point.recorded > 0}<small
-                >{point.recorded}/{point.days} days recorded</small
+                >{point.recorded}/{point.days} dni z zapisami</small
               >{/if}
           </span>
         {/each}
@@ -186,21 +186,21 @@
     </div>
   {/if}
   <details class="chart-data">
-    <summary>Show chart data</summary>
+    <summary>Pokaż dane wykresu</summary>
     <!-- svelte-ignore a11y_no_noninteractive_tabindex (The scrollable data table needs keyboard access.) -->
     <div
       class="data-scroll"
       tabindex="0"
       role="region"
-      aria-label={`Data table in ${panel.unit}`}
+      aria-label={`Tabela danych w ${panel.unit}`}
     >
       <table>
         <caption
-          >Exact plotted values in {panel.unit}. A dash means no recording.</caption
+          >Dokładne wartości wykresu w {panel.unit}. Kreska oznacza brak zapisu.</caption
         >
         <thead
           ><tr
-            ><th scope="col">Period</th>{#each panel.series as row}<th
+            ><th scope="col">Okres</th>{#each panel.series as row}<th
                 scope="col"
                 >{row.source.name}<small>{row.source.card_title}</small></th
               >{/each}</tr
@@ -216,7 +216,7 @@
               >
               {#each panel.series as row}<td
                   >{chartValue(row.points[i].value)}<small
-                    >{row.points[i].recorded}/{point.days} days recorded</small
+                    >{row.points[i].recorded}/{point.days} dni z zapisami</small
                   ></td
                 >{/each}
             </tr>

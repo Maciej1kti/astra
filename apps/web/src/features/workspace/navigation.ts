@@ -20,7 +20,16 @@ export function canonicalView(value: unknown): View | undefined {
   return workspaceViews.includes(view as View) ? (view as View) : undefined;
 }
 export function viewLabel(view: View): string {
-  return view === "gantt" ? "Timeline" : view[0].toUpperCase() + view.slice(1);
+  return {
+    focus: "Focus",
+    projects: "Projekty",
+    board: "Tablica",
+    calendar: "Kalendarz",
+    gantt: "Oś czasu",
+    list: "Lista",
+    updates: "Aktualizacje",
+    chart: "Wykres",
+  }[view];
 }
 export type WorkspaceRoute = {
   view: View;

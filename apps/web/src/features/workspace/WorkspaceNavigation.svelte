@@ -108,7 +108,7 @@
   <nav
     use:navigationMotion={{ selected, layout: views.join(",") }}
     bind:this={navElement}
-    aria-label="Workspace views"
+    aria-label="Widoki przestrzeni roboczej"
   >
     {#each views as item (item)}<button
         aria-label={viewLabel(item)}
@@ -119,8 +119,8 @@
         ><Icon name={item} /><span>{viewLabel(item)}</span></button
       >{/each}
     <ActionMenu
-      label="More views"
-      text="More"
+      label="Więcej widoków"
+      text="Więcej"
       current={overflowActive}
       navigationKey="more"
       panelClass="navigation-menu-panel"
@@ -128,7 +128,7 @@
     >
       {#snippet children(close)}
         <div class="navigation-panel">
-          <strong>More views</strong>
+          <strong>Więcej widoków</strong>
           {#each overflow as item (item)}
             <button
               type="button"
@@ -143,7 +143,7 @@
             >
           {/each}
           {#if !overflow.length}<p class="navigation-hint">
-              All views are on the navigation bar.
+              Wszystkie widoki są na pasku nawigacji.
             </p>{/if}
           {#if customization.component}
             {@const Customization = customization.component}
@@ -154,11 +154,11 @@
               type="button"
               variant="quiet"
               onclick={() => void customization.load()}
-              >Retry loading navigation options</Button
+              >Ponów ładowanie opcji nawigacji</Button
             >
           {:else}
             <p class="navigation-hint" role="status">
-              Loading navigation options…
+              Ładowanie opcji nawigacji…
             </p>
           {/if}
         </div>
@@ -167,7 +167,9 @@
   </nav>
   <div class="asidebottom">
     <span class:live={connected} class="dot"></span>{connected
-      ? "Connected to host"
-      : "Reconnecting…"}<button class="quiet" onclick={logout}>Sign out</button>
+      ? "Połączono z serwerem"
+      : "Ponowne łączenie…"}<button class="quiet" onclick={logout}
+      >Wyloguj</button
+    >
   </div>
 </aside>

@@ -13,10 +13,10 @@
     <button
       type="button"
       class="row-grip"
-      aria-label={`Reorder: ${row.text}`}
+      aria-label={`Zmień kolejność: ${row.text}`}
       aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+Home Alt+End"
       aria-pressed="false"
-      title="Drag to reorder · Alt+↑/↓/Home/End"
+      title="Przeciągnij, aby zmienić kolejność · Alt+↑/↓/Home/End"
       disabled={!actions.editable()}
       use:timelineRowGesture={{
         id: String(row.id),
@@ -27,7 +27,7 @@
       }}><Icon name="grip" small /></button
     >
     <span>{row.text}</span>
-  {:else}<span class="empty-label">Choose a date →</span>{/if}
+  {:else}<span class="empty-label">Wybierz datę →</span>{/if}
 </div>
 
 <style>

@@ -43,7 +43,7 @@ await runBrowserSuite(
         `${config.origin}/?${new URLSearchParams({ view: "list", project })}`,
       );
       await expect(page.locator(".asidebottom")).toContainText(
-        "Connected to host",
+        "Połączono z serwerem",
       );
       const row = page.locator("main").getByText(card.title, { exact: true });
       await row.waitFor();
@@ -54,10 +54,10 @@ await runBrowserSuite(
             response.url().includes("/views/list?") &&
             new URL(response.url()).searchParams.get("type") === "card",
         ),
-        page.getByRole("button", { name: "Refresh", exact: true }).click(),
+        page.getByRole("button", { name: "Odśwież", exact: true }).click(),
       ]);
       await expect(
-        page.getByText("Loading resources…", { exact: true }),
+        page.getByText("Ładowanie danych…", { exact: true }),
       ).toHaveCount(0);
       const refresh = requests
         .slice(start)
@@ -117,10 +117,10 @@ await runBrowserSuite(
       start = requests.length;
       await row.click();
       const dialog = page.getByRole("dialog", {
-        name: "Edit resource",
+        name: "Edytuj element",
         exact: true,
       });
-      await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
+      await expect(dialog.getByLabel("Tytuł", { exact: true })).toHaveValue(
         card.title,
       );
       await expect
@@ -147,7 +147,7 @@ await runBrowserSuite(
         "Editor must not enumerate relation collections",
       );
       await expect(
-        dialog.getByText("Card updates", { exact: true }),
+        dialog.getByText("Karta updates", { exact: true }),
       ).toHaveCount(0);
       await expect(
         dialog.getByText("Record progress", { exact: true }),
@@ -156,7 +156,7 @@ await runBrowserSuite(
         check: "Card editor omits report UI and makes no report requests",
       });
       for (const field of [
-        "Due date",
+        "Termin",
         "Review on",
         "Blocked reason",
         "Find by title",
@@ -169,24 +169,24 @@ await runBrowserSuite(
         check: "Card editor exposes only schedule dates for card planning",
       });
       await dialog
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await dialog.waitFor({ state: "hidden" });
       const tagReads = requests.filter(
         (path) => path === `${base}/tags`,
       ).length;
       await row.click();
-      await expect(dialog.getByLabel("Title", { exact: true })).toHaveValue(
+      await expect(dialog.getByLabel("Tytuł", { exact: true })).toHaveValue(
         card.title,
       );
       await dialog
-        .getByRole("combobox", { name: "Labels", exact: true })
+        .getByRole("combobox", { name: "Etykiety", exact: true })
         .focus();
       await expect(
         dialog.getByRole("option", { name: "frontend", exact: true }),
       ).toBeVisible();
       await expect(
-        dialog.getByText("Loading project tags…", { exact: true }),
+        dialog.getByText("Ładowanie tagi projektu…", { exact: true }),
       ).toHaveCount(0);
       assert.equal(
         requests.filter((path) => path === `${base}/tags`).length,

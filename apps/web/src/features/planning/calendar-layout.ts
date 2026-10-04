@@ -91,7 +91,7 @@ export function monthLayoutGeometry(
     let value = days.get(index);
     if (!value) {
       const element = grid.children.item(index);
-      if (!element) throw new Error("Calendar layout cell is missing");
+      if (!element) throw new Error("Brakuje komórki układu kalendarza");
       value = { element, capacities: new Map() };
       days.set(index, value);
     }

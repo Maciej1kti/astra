@@ -176,7 +176,7 @@ export class ViewData {
           if (result.attention.reset) {
             this.attentionStart = null;
             this.snapshot.queryNotice =
-              "Attention changed. Showing the first page of the latest results.";
+              "Lista wymagająca uwagi się zmieniła. Wyświetlono pierwszą stronę aktualnych wyników.";
           }
           this.snapshot.attentionPaged = this.attentionStart !== null;
         }
@@ -187,7 +187,7 @@ export class ViewData {
             this.snapshot.pageHistory[kind] = [null];
           if (page.reset)
             this.snapshot.queryNotice =
-              "This collection changed. Showing the first page of the latest results.";
+              "Ta kolekcja się zmieniła. Wyświetlono pierwszą stronę aktualnych wyników.";
         }
         this.snapshot.loadedQueryKey = key;
         if (
@@ -253,7 +253,7 @@ export class ViewData {
       );
       if (result.reset)
         this.snapshot.queryNotice =
-          "This collection changed. Showing the first page of the latest results.";
+          "Ta kolekcja się zmieniła. Wyświetlono pierwszą stronę aktualnych wyników.";
     } catch (cause) {
       if (generation === this.generation) this.dependencies.error(cause);
     } finally {
@@ -287,7 +287,7 @@ export class ViewData {
       this.snapshot.attentionPaged = this.attentionStart !== null;
       if (result.reset)
         this.snapshot.queryNotice =
-          "Attention changed. Showing the first page of the latest results.";
+          "Lista wymagająca uwagi się zmieniła. Wyświetlono pierwszą stronę aktualnych wyników.";
     } catch (cause) {
       if (generation === this.generation) this.dependencies.error(cause);
     } finally {

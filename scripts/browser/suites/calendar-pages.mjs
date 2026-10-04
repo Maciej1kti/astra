@@ -84,13 +84,15 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     assert.equal(first.items.length, 200);
     assert.equal(first.page.has_more, true);
     await expect(
-      page.getByText("Showing 200 dated items on this page.", { exact: true }),
+      page.getByText("Wyświetlono 200 elementów z datą na tej stronie.", {
+        exact: true,
+      }),
     ).toBeVisible();
 
     const nextRead = responseFor(200, true);
     await page
       .getByRole("button", {
-        name: "Next page of dated resources",
+        name: "Następna strona elementów z datą",
         exact: true,
       })
       .click();
@@ -109,22 +111,26 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     await event.focus();
     await event.press("Enter");
     await expect(
-      page.getByRole("dialog").getByLabel("Title", { exact: true }),
+      page.getByRole("dialog").getByLabel("Tytuł", { exact: true }),
     ).toHaveValue(item.title);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toBeHidden();
 
     const firstAgain = responseFor(200);
-    await page.getByRole("button", { name: "First page", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Pierwsza strona", exact: true })
+      .click();
     assert.deepEqual((await agendaPage(await firstAgain)).items, first.items);
 
     const gridRead = responseFor(1000);
-    await page.getByRole("button", { name: "Month grid", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Siatka miesiąca", exact: true })
+      .click();
     const grid = await (await gridRead).json();
     assert.equal(grid.items.length, all.length);
     assert.equal(grid.page.has_more, false);
     await expect(
-      page.getByRole("button", { name: "First page", exact: true }),
+      page.getByRole("button", { name: "Pierwsza strona", exact: true }),
     ).toHaveCount(0);
 
     const agendaRead = responseFor(200);

@@ -49,8 +49,8 @@
   {#if data.astraCreate}
     <button
       class="create-row"
-      aria-label="Create card on timeline"
-      title="Click a date to create a card · Arrow keys and Enter"
+      aria-label="Utwórz kartę na osi czasu"
+      title="Kliknij datę, aby utworzyć kartę · Strzałki i Enter"
       onkeydown={(event) => {
         if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
           event.preventDefault();
@@ -82,21 +82,22 @@
     <button
       class="milestone"
       onclick={() => actions.open(row)}
-      aria-label={`Due milestone: ${row.title}`}>◆ {row.title}</button
+      aria-label={`Termin kamienia milowego: ${row.title}`}
+      >◆ {row.title}</button
     >
   {:else if row.event}
     <button
       class="move"
       onclick={() => actions.open(row)}
-      aria-label={`Event: ${row.title}`}
-      >Event {row.event.start.slice(11)} · {row.title}</button
+      aria-label={`Wydarzenie: ${row.title}`}
+      >Wydarzenie {row.event.start.slice(11)} · {row.title}</button
     >
   {:else if row.schedule}
     <button
       class="handle edge"
       disabled={!actions.editable()}
-      aria-label={`Resize start: ${row.title}`}
-      title="Resize start · Alt+←/→"
+      aria-label={`Zmień początek: ${row.title}`}
+      title="Zmień początek · Alt+←/→"
       use:dateGesture={{
         active: actions.gesture,
         delta: (x, _y, sx) => Math.round((x - sx) / unit),
@@ -109,8 +110,8 @@
     <button
       class="handle move"
       disabled={!actions.editable()}
-      aria-label={`Move plan: ${row.title}`}
-      title={`${row.title} · Alt+←/→ to move; Shift for a week`}
+      aria-label={`Przenieś plan: ${row.title}`}
+      title={`${row.title} · Alt+←/→ przenosi; Shift zmienia tydzień`}
       use:dateGesture={{
         active: actions.gesture,
         delta: (x, _y, sx) => Math.round((x - sx) / unit),
@@ -123,8 +124,8 @@
     <button
       class="handle edge"
       disabled={!actions.editable()}
-      aria-label={`Resize end: ${row.title}`}
-      title="Resize end · Alt+←/→"
+      aria-label={`Zmień koniec: ${row.title}`}
+      title="Zmień koniec · Alt+←/→"
       use:dateGesture={{
         active: actions.gesture,
         delta: (x, _y, sx) => Math.round((x - sx) / unit),

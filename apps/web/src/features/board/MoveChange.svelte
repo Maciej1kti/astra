@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resourceLabel } from "../../lib/resources/resource-presentation.ts";
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
@@ -48,7 +49,7 @@
     const lost = () => {
       accessLost = true;
       error =
-        "Your session ended. Copy this proposal before closing and reconnecting.";
+        "Sesja wygasła. Skopiuj tę propozycję przed zamknięciem i ponownym połączeniem.";
     };
     const restored = () => {
       accessLost = false;
@@ -68,10 +69,10 @@
       await navigator.clipboard.writeText(
         JSON.stringify({ item, status, before, pending }, null, 2),
       );
-      error = "Proposal copied.";
+      error = "Skopiowano propozycję.";
     } catch {
       error =
-        "Clipboard access is unavailable. Select and copy the proposal and request ID.";
+        "Schowek jest niedostępny. Zaznacz i skopiuj propozycję oraz identyfikator żądania.";
     }
   }
   async function transmit() {
@@ -116,63 +117,64 @@
   class="app-dialog dialog-small"
   use:modal={{ onclose: close }}
   out:layerExit|global
-  aria-label="Move card"
+  aria-label="Przenieś kartę"
 >
   <DialogHeader
-    title="Move card"
+    title="Przenieś kartę"
     onclose={close}
     disabled={busy || !!pending}
-    closeLabel="Close move card"
+    closeLabel="Zamknij przenoszenie karty"
   />
   <div class="dialog-body">
-    <p><strong>{item.title}</strong> → {status}</p>
+    <p><strong>{item.title}</strong> → {resourceLabel(status)}</p>
     <label
-      >Position<select
-        aria-label="Position"
+      >Pozycja<select
+        aria-label="Pozycja"
         bind:value={before}
         disabled={busy || !!pending || conflict}
       >
         <option value="" disabled={!lastPage && status === item.status}
-          >End of column</option
+          >Koniec kolumny</option
         >
         {#each neighbors as neighbor, index}
           <option value={neighbor.id} disabled={index === 0 && !firstPage}
-            >Before {neighbor.title}</option
+            >Przed {neighbor.title}</option
           >
         {/each}
       </select></label
     >
     {#if error}<p role="alert">{error}</p>{/if}{#if conflict}<p>
-        The card or its neighbors changed. Close this proposal and review the
-        current board.
+        Karta lub jej sąsiedzi się zmienili. Zamknij tę propozycję i sprawdź
+        aktualną tablicę.
       </p>{/if}
-    {#if pending}<p>Request: {pending.requestId}</p>
-      <button onclick={check} disabled={busy}>Check status</button><button
+    {#if pending}<p>Żądanie: {pending.requestId}</p>
+      <button onclick={check} disabled={busy}>Sprawdź stan</button><button
         onclick={transmit}
-        disabled={busy}>Retry same command</button
+        disabled={busy}>Ponów to samo polecenie</button
       >{/if}
     {#if error || pending || accessLost}<button
         type="button"
-        onclick={copyDraft}>Copy draft</button
+        onclick={copyDraft}>Kopiuj wersję roboczą</button
       >{/if}
     {#if accessLost && pending}<details>
-        <summary>Close without resolving</summary>
+        <summary>Zamknij bez rozstrzygnięcia</summary>
         <p>
-          Copy the request ID and proposal first. The operation may already have
-          committed.
+          Najpierw skopiuj identyfikator żądania i propozycję. Operacja mogła
+          już zostać zapisana.
         </p>
-        <button type="button" onclick={onclose}>Discard this proposal</button>
+        <button type="button" onclick={onclose}>Odrzuć tę propozycję</button>
       </details>{/if}
   </div>
   <footer class="dialog-footer">
-    <button onclick={close} disabled={busy || !!pending}>Cancel</button><Button
+    <button onclick={close} disabled={busy || !!pending}>Anuluj</button><Button
       variant="primary"
       onclick={save}
       disabled={busy ||
         !!pending ||
         conflict ||
         accessLost ||
-        (!before && !lastPage && status === item.status)}>Confirm move</Button
+        (!before && !lastPage && status === item.status)}
+      >Potwierdź przeniesienie</Button
     >
   </footer>
 </dialog>

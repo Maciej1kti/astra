@@ -26,14 +26,14 @@ await runBrowserSuite(
       .resource;
     const path = `${base}/${card.metadata.id}`;
     const dialog = page.getByRole("dialog", {
-      name: "Edit resource",
+      name: "Edytuj element",
       exact: true,
     });
     const header = dialog.locator(".dialog-header");
     const messages = header.locator(".dialog-header-messages");
     const body = dialog.locator(".dialog-body");
-    const comment = dialog.getByLabel("Write a comment", { exact: true });
-    const title = header.getByLabel("Title", { exact: true });
+    const comment = dialog.getByLabel("Napisz komentarz", { exact: true });
+    const title = header.getByLabel("Tytuł", { exact: true });
     const open = async () => {
       await page.goto(
         `${config.origin}/?${new URLSearchParams({ view: "list", project: project.id, type: "card", resource: card.metadata.id })}`,
@@ -92,13 +92,18 @@ await runBrowserSuite(
         );
         await expect(messages).toBeHidden();
         await header.getByRole("button", { name: /^Status:/ }).click();
-        const done = header.getByRole("button", { name: "Done", exact: true });
+        const done = header.getByRole("button", {
+          name: "Gotowe",
+          exact: true,
+        });
         await done.scrollIntoViewIfNeeded();
         await done.click();
         await expect(
-          header.getByRole("button", { name: "Status: Done", exact: true }),
+          header.getByRole("button", { name: "Status: Gotowe", exact: true }),
         ).toBeVisible();
-        await expect(header.getByTestId("autosave-status")).toHaveText("Saved");
+        await expect(header.getByTestId("autosave-status")).toHaveText(
+          "Zapisano",
+        );
         await page.screenshot({
           path: join(evidence, `header-${size.width}x${size.height}.png`),
         });
@@ -108,7 +113,9 @@ await runBrowserSuite(
       await expect
         .poll(() => cli("get", path).metadata.title)
         .toBe("Refine the onboarding experience");
-      await expect(header.getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(header.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       const titleLines = await title.evaluate((el) => {
         const style = getComputedStyle(el);
         return {
@@ -126,21 +133,21 @@ await runBrowserSuite(
       await page.setViewportSize({ width: 390, height: 844 });
       await comment.fill("Visible confirmation from the bottom of a long card");
       await dialog
-        .getByRole("button", { name: "Add comment", exact: true })
+        .getByRole("button", { name: "Dodaj komentarz", exact: true })
         .click();
-      const success = messages.getByText("Comment added.", { exact: true });
+      const success = messages.getByText("Dodano komentarz.", { exact: true });
       await expect(success).toBeVisible();
       await visibleInside(success);
       assert.ok(await body.evaluate((el) => el.scrollTop > 500));
       // Client-side field errors are also routed to row four.
       const tags = dialog.getByRole("region", {
-        name: "Card tags",
+        name: "Tagi karty",
         exact: true,
       });
       const tagInput = tags.getByRole("combobox");
       await tagInput.fill("Existing");
       await tagInput.press("Enter");
-      await expect(messages.getByRole("alert")).toContainText(/already/i);
+      await expect(messages.getByRole("alert")).toContainText(/już/i);
       await visibleInside(messages.getByRole("alert"));
       await tagInput.fill("");
       // Autosave errors and recovery controls stay in the header after response loss.
@@ -153,12 +160,12 @@ await runBrowserSuite(
       await title.fill("Lost response header draft");
       await comment.scrollIntoViewIfNeeded();
       await expect(
-        messages.getByRole("button", { name: "Check status", exact: true }),
+        messages.getByRole("button", { name: "Sprawdź stan", exact: true }),
       ).toBeVisible();
       await expect(messages.getByRole("alert")).toBeVisible();
       await visibleInside(messages.getByRole("alert"));
       await expect(
-        messages.getByText("Comment added.", { exact: true }),
+        messages.getByText("Dodano komentarz.", { exact: true }),
       ).toHaveCount(0);
       await expect(messages.locator(":scope > :first-child")).toHaveAttribute(
         "role",
@@ -167,33 +174,38 @@ await runBrowserSuite(
       await page.screenshot({ path: join(evidence, "header-error-390.png") });
       await page.unroute(matcher);
       await messages
-        .getByRole("button", { name: "Check status", exact: true })
+        .getByRole("button", { name: "Sprawdź stan", exact: true })
         .click();
-      await expect(header.getByTestId("autosave-status")).toHaveText("Saved");
+      await expect(header.getByTestId("autosave-status")).toHaveText(
+        "Zapisano",
+      );
       await header
-        .getByRole("button", { name: "Card actions", exact: true })
+        .getByRole("button", { name: "Działania karty", exact: true })
         .click();
       await header
-        .getByRole("button", { name: "Delete card", exact: true })
+        .getByRole("button", { name: "Usuń kartę", exact: true })
         .click();
       await expect(
         messages.getByRole("button", {
-          name: "Permanently delete card",
+          name: "Trwale usuń kartę",
           exact: true,
         }),
       ).toBeVisible();
       await messages
-        .getByRole("button", { name: "Keep editing", exact: true })
+        .getByRole("button", { name: "Kontynuuj edycję", exact: true })
         .click();
       await comment.fill("Keep this draft");
       await header
-        .getByRole("button", { name: "Close editor", exact: true })
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(
-        messages.getByRole("button", { name: "Discard draft", exact: true }),
+        messages.getByRole("button", {
+          name: "Odrzuć wersję roboczą",
+          exact: true,
+        }),
       ).toBeVisible();
       await messages
-        .getByRole("button", { name: "Keep editing", exact: true })
+        .getByRole("button", { name: "Kontynuuj edycję", exact: true })
         .click();
       await expect(comment).toHaveValue("Keep this draft");
       assert.deepEqual(errors, []);

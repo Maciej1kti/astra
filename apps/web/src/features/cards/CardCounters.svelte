@@ -74,22 +74,22 @@
 
 <section
   class="card-counters"
-  aria-label="Card counters"
+  aria-label="Liczniki karty"
   data-counter-today={today}
 >
-  <SectionHeading title="Counters" level={3} visuallyHidden />
+  <SectionHeading title="Liczniki" level={3} visuallyHidden />
   {#if !saved}<p class="field-hint">
-      Save the card title to add counters.
+      Zapisz tytuł karty, aby dodać liczniki.
     </p>{/if}
   {#if draft.configuration}
     <div
       class="counter-configuration"
       role="group"
-      aria-label="Counter configuration"
+      aria-label="Konfiguracja licznika"
     >
       <label
-        >Name<input
-          aria-label="Counter name"
+        >Nazwa<input
+          aria-label="Nazwa licznika"
           bind:this={configurationName}
           maxlength="80"
           bind:value={draft.configuration.name}
@@ -98,17 +98,17 @@
       >
       <div class="configuration-fields">
         <label
-          >Unit<input
-            aria-label="Counter unit"
+          >Jednostka<input
+            aria-label="Jednostka licznika"
             maxlength="5"
             bind:value={draft.configuration.unit}
             disabled={disabled || unitLocked}
           /></label
         >
         <label
-          >Step<input
+          >Krok<input
             type="number"
-            aria-label="Counter step"
+            aria-label="Krok licznika"
             min="1"
             max={counterMaximum}
             step="1"
@@ -118,14 +118,14 @@
         >
       </div>
       {#if unitLocked}<p class="field-hint">
-          Unit is fixed once results are recorded.
+          Po zapisaniu wyników jednostki nie można zmienić.
         </p>{/if}
       {#if draft.configuration.id}<label class="archive-counter"
           ><input
             type="checkbox"
             bind:checked={draft.configuration.archived}
             {disabled}
-          /> Hide counter, keep history</label
+          /> Ukryj licznik, zachowaj historię</label
         >{/if}
       <div class="row">
         <button
@@ -141,14 +141,14 @@
                   unit: draft.configuration.unit.trim(),
                 },
               });
-          }}>Save counter</button
+          }}>Zapisz licznik</button
         >
         <button
           type="button"
           {disabled}
           onclick={() => {
             draft.configuration = null;
-          }}>Cancel</button
+          }}>Anuluj</button
         >
       </div>
     </div>
@@ -173,10 +173,10 @@
         type="button"
         variant="quiet"
         disabled={!canAdd}
-        onclick={() => void configure()}>Add counter</Button
+        onclick={() => void configure()}>Dodaj licznik</Button
       >
     {:else}
-      <ActionMenu label="Counter actions">
+      <ActionMenu label="Działania licznika">
         {#snippet children(close)}
           <Button
             type="button"
@@ -185,7 +185,7 @@
             onclick={() => {
               close();
               void configure();
-            }}>Add counter</Button
+            }}>Dodaj licznik</Button
           >
           <Button
             type="button"
@@ -196,7 +196,7 @@
               close();
               showArchived = !showArchived;
             }}
-            ><span>Archived</span>{#if showArchived}<Icon
+            ><span>Zarchiwizowane</span>{#if showArchived}<Icon
                 name="check"
                 small
               />{/if}</Button
@@ -206,7 +206,7 @@
     {/if}
   </div>
   {#if counters.length >= 20}<p class="field-hint">
-      This card has reached its 20-counter limit.
+      Osiągnięto limit 20 liczników na tej karcie.
     </p>{/if}
 </section>
 
