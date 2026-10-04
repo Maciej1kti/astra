@@ -1,0 +1,18 @@
+{
+  "body": "The navigation customization menu and card section menu now render the same\nOrderVisibilityList component: six-dot grips, eye controls, row styling, pointer\npreviews, scrolling, cancellation, keyboard ordering and retained focus. Feature\nwrappers preserve their existing storage and visibility rules. Shared popovers\nalso keep visibility targets stationary during held presses while a modal resizes.\n\nThe independent 612-test gate passes. The integrated committed source has 615\npassing tests across the complete check set and an unchanged CLI/daemon retry;\nChromium/WebKit navigation, card layout and menus pass, plus 40 Chromium responsive\nchecks. Two CLI socket mocks initially timed out; no bounds or source were changed.\n\nThe rebuilt manual application is restarted and verified at the existing HTTPS\naddress. All 35 prior resource versions, two pins, both profiles' settings,\nidentity/epoch and certificate are preserved; all 46 served assets match. Live\n320/390px checks confirm grip/eye controls, keyboard order/focus, visibility and\nreset. Pending unrelated work is preserved. Physical-device and full release\nacceptance remain open.\n\nEvidence: progress/2026-10-04-navigation-section-selector.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "43d9594c-79d6-4086-86d3-2748557f7249",
+    "kind": "result",
+    "recorded_at": "2026-10-04T18:13:48.381Z",
+    "summary": "Shared navigation and card section controls verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

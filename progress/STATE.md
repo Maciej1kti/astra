@@ -7,6 +7,15 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [navigation selector correction](2026-10-04-navigation-section-selector.md)
+replaces separate navigation arrows with the card menu's shared grip/eye component
+and fixes popover movement during held visibility clicks. Its independent
+612-test gate and integrated 615-test check set pass, as do navigation/card/menu
+Chromium and WebKit and 40 Chromium responsive checks. The rebuilt existing HTTPS
+app preserves 35 prior resource versions, two pins, both profiles' settings and
+certificate; all 46 served assets match. Live 320/390px checks confirm the shared
+controls. Physical-device and complete release acceptance remain open.
+
 The [Projects status board consolidation](2026-10-04-projects-status-board.md)
 replaces the former project grid and separate Main view while retaining the
 Projects name/icon, registration and deletion. Legacy Main links/preferences
@@ -16,13 +25,6 @@ loading, motion and deletion suites pass. The rebuilt existing HTTPS app
 preserves 33 prior versions/source hashes, two pins, both profiles' settings,
 roots/registrations, identity/epoch and certificate; all 44 served assets match.
 Physical-device and complete release acceptance remain open.
-
-The [navigation selector correction](2026-10-04-navigation-section-selector.md)
-replaces separate navigation arrows with the card menu's shared grip/eye component
-and fixes popover movement during held visibility clicks. Its independent
-612-test gate and navigation/card/menu Chromium and WebKit checks pass. Final
-integration and restart verification are pending while concurrent UI changes
-are preserved. Physical-device and complete release acceptance remain open.
 
 The [definition and consumer audit](2026-10-04-definition-usage-audit.md) finds
 two unimplemented OpenAPI operations, a reproduced CLI tag-rename confirmation

@@ -47,7 +47,32 @@ Browser emulation does not establish physical iPhone/Safari acceptance.
 
 ## Integration and existing application
 
-The isolated gate deliberately excludes simultaneous Projects consolidation and
-Polish translation edits. Those edits are preserved in the working tree. Final
-integration and the existing application's restart verification are pending;
-this checkpoint does not claim that the final release has been installed.
+The independent snapshot excludes simultaneous Projects consolidation and Polish
+translation edits. The integrated eight-view source is now committed at
+`0e55703`: all 424 application, contract, build and test files match the tested
+snapshot. Its complete check set passes 615 tests (339 Rust, 269 JavaScript,
+seven Python), types, format, boundaries, schema/documentation checks, Clippy,
+frontend and embedded release builds. Initial JS/CSS is 81,683 bytes gzip.
+Two CLI socket-mock tests initially returned `WouldBlock`; an unchanged retry of
+the complete CLI/daemon crates passes. No source or test bounds were changed.
+The initial failure and successful continuation remain in
+`test-results/projects-rollout/isolated-{gate,rust-retry,release}.log`.
+
+Integrated release Chromium and WebKit pass navigation, card layout and menus
+again; Chromium passes 40 responsive checkpoints. All application-error and CSP
+collections are empty. Evidence is in `test-results/navigation-grip/integrated-*`,
+including the committed-source equality manifest and check summary.
+
+The embedded frontend and release daemon are rebuilt, and the existing manual
+app is restarted at `https://100.122.250.14:47832` with its original data folder,
+ports, certificates and connection settings. Trusted HTTPS returns the verified
+release; all 46 served assets match the integrated build. All 35 pre-existing
+resource versions, two pins, both user profiles' preferences/roots/registrations,
+identity/epoch and certificate are preserved.
+
+A normally paired live browser confirms eight shared grips and eight eyes, no
+arrow controls, keyboard ordering/focus, visibility, reset and bounded 320/390px
+surfaces. Rendered output was inspected; no application errors were recorded.
+Ignored runtime evidence is in `test-results/navigation-grip/rollout/`.
+Pending Polish translation and definition-cleanup source changes are preserved.
+Physical-device and full release acceptance remain open.
