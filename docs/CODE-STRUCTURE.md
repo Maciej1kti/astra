@@ -19,7 +19,7 @@ and connects their callbacks. Long-lived state has three owners:
 - [view data](../apps/web/src/features/workspace/view-data.ts) owns loaded rows,
   cursors, request cancellation, generations and queued invalidations.
 
-Features live under `apps/web/src/features/`: workspace, editor, cards, board,
+Features live under `apps/web/src/features/`: workspace, editor, cards, charts, board,
 planning, tags, session, settings, registration and host diagnostics. Import the
 specific module needed; there are no catch-all feature barrels. Cross-feature
 UI actions use explicit props/callbacks.
@@ -34,6 +34,14 @@ Navigation exposes a read-only route and explicit actions; only navigation owns
 the generation and abort signal that cancel obsolete resource reads and history
 restoration. A successful source read transfers its loaded editor target; view
 navigation does not cancel context already owned by a mounted editor.
+
+The charts feature owns Chart's bounded counter-series reads, selection,
+aggregation, statistics and SVG plots. `chart-data.ts` owns cancellation,
+generation checks, stale-page restart and invalidations received during active
+reads; workspace view revisions trigger refresh without replacing browser-local
+chart choices. `chart-model.ts` keeps quantity and valuation calculations separate
+from rendering. The Chart component loads on demand and uses the named counter
+endpoint in `lib/api/counters.ts`.
 
 Focus reads its pinned summaries with the ordered membership snapshot. Missing
 retained references become unavailable placeholders; older hosts without summaries

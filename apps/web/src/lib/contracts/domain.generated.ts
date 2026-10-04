@@ -578,5 +578,5 @@ export interface FocusRef {
 }
 export interface Preferences {
   week_start?: "monday" | "sunday";
-  default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "list" | "updates";
+  default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
 }

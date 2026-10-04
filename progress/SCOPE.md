@@ -284,3 +284,16 @@ Keep trusted selection and personal workspace preferences/order/receipts. Shared
 card contents and counter values are common; do not duplicate the project or
 introduce passwords or roles. Conditional profile naming and coordinated shared
 source writes are specified in [ADR-061](../docs/ADR-061-SHARED-PROFILE-PROJECTS.md).
+
+## Counter Chart view — owner direction, 2026-10-04
+
+Add Chart as a workspace view alongside Focus, Projects and Board. Visualize
+saved counter histories with selectable overlays, comparisons and statistics.
+Support multiplying counter quantities by a configured rate to show a calculated
+value, including quantities such as hours. This extends the counter presentation
+scope of ADR-049; recorded daily totals and ordinary source/write rules remain.
+
+Use synthetic histories only in temporary test projects and remove those projects
+after verification. Do not fabricate repetitions in the existing Pompki counters.
+Rates and chart display choices are presentation settings; they do not rewrite
+counter units or recorded history.

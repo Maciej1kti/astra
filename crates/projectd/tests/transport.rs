@@ -634,6 +634,12 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
             "CalendarPage",
         ),
         ("/api/v1/views/attention".into(), "AttentionPage"),
+        (
+            format!(
+                "/api/v1/views/counters?project_id={project}&from=2026-09-01&to=2026-09-30&include_archived=true&limit=100"
+            ),
+            "CounterSeriesPage",
+        ),
     ] {
         let response = app.local("GET", &path).send().await.unwrap();
         assert_eq!(response.status(), 200, "{path}");
@@ -742,6 +748,11 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
         "/api/v1/views/list?type=unknown",
         "/api/v1/views/list?type=card&type=update",
         "/api/v1/search?search=socket",
+        "/api/v1/views/counters?from=2026-09-01",
+        "/api/v1/views/counters?from=2026-09-01&to=2026-09-30&include_archived=1",
+        "/api/v1/views/counters?from=2026-09-01&to=2026-09-30&include_archived=false&include_archived=true",
+        "/api/v1/views/counters?from=2026-09-01&to=2026-09-30&limit=101",
+        "/api/v1/views/counters?from=2026-09-01&to=2026-09-30&unknown=value",
     ] {
         assert_eq!(app.local("GET", path).send().await.unwrap().status(), 400);
     }

@@ -63,6 +63,7 @@ wire_enum!(View {
     Board,
     Calendar,
     Gantt,
+    Chart,
     List,
     Updates
 });

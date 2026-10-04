@@ -206,6 +206,8 @@ export interface ApiContracts {
   CounterConfiguration: CounterConfiguration;
   CounterRecord: CounterRecord;
   DailyCounterSummary: DailyCounterSummary;
+  CounterSeries: CounterSeries;
+  CounterSeriesPage: CounterSeriesPage;
   CardSection: "description" | "checklist" | "counters" | "comments" | "schedule" | "labels";
   CardHiddenSections: CardHiddenSections;
   CardMetadata: CardMetadata;
@@ -470,6 +472,36 @@ export interface DailyCounterSummary {
   date: string;
   value: number;
 }
+export interface CounterSeries {
+  project_id: string;
+  project_name: string;
+  project_archived: boolean;
+  card_id: string;
+  card_title: string;
+  card_archived: boolean;
+  version: string;
+  id: string;
+  name: string;
+  unit: string;
+  step: number;
+  archived: boolean;
+  availability: "ready" | "stale";
+  values: {
+    [k: string]: number;
+  };
+}
+export interface CounterSeriesPage {
+  /**
+   * @maxItems 100
+   */
+  items: CounterSeries[];
+  page: PageMeta;
+  /**
+   * @maxItems 100
+   */
+  warnings: Warning[];
+  minItems?: 0;
+}
 export interface CardMetadata {
   hidden_sections?: CardHiddenSections;
   counters?: CardCounters;
@@ -536,7 +568,7 @@ export interface ProjectRegistration {
 }
 export interface Preferences {
   week_start?: "monday" | "sunday";
-  default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "list" | "updates";
+  default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
 }
 export interface Workspace {
   format_version: 1;

@@ -1,0 +1,12 @@
+# Use an existing paired session; X-Astra-User selects its trusted profile.
+# Only recorded range dates are returned; saved zero differs from an absent date.
+GET /api/v1/views/counters?from=2026-09-01&to=2026-09-30&limit=100
+Accept-Encoding: gzip
+
+# Include archived counters/cards/projects in exactly this project.
+GET /api/v1/views/counters?project_id=11111111-1111-4111-8111-111111111111&from=2026-09-01&to=2026-09-30&include_archived=true&limit=20
+Accept-Encoding: identity
+
+# To continue, URL-encode the returned next_cursor and retain all original filters
+# and the limit. A relevant projection or filter change returns 409 PAGE_STALE.
+# Responses have no source ETag; each series carries its observed card version.

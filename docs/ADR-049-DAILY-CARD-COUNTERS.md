@@ -49,3 +49,6 @@ value draft and excluded from ordinary card autosave. A fourteen-day saved-total
 preview opens the existing full history; missing days remain distinct from zero.
 This extends presentation only. The conditional patch, source bounds, explicit
 day and command recovery rules above remain unchanged.
+
+The workspace comparison dashboard and bounded history API are introduced in
+[ADR-062](ADR-062-COUNTER-CHART-DASHBOARD.md).

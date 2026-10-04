@@ -15,6 +15,7 @@ export const iconPaths = {
   gantt: "M3 4h9v4H3zM8 10h11v4H8zM13 16h8v4h-8z",
   list: "M8 5h13M8 12h13M8 19h13M3 5h.01M3 12h.01M3 19h.01",
   updates: "M5 17V9a7 7 0 0 1 14 0v8l2 2H3l2-2ZM10 22h4",
+  chart: "M4 3v17h17M7 15l4-6 4 3 5-7",
   settings:
     "m9 3-1 3-3 1-2 4 2 3v4l4 2 3-1 3 1 4-2v-4l2-3-2-4-3-1-1-3H9ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6",
   refresh:

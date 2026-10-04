@@ -11,6 +11,20 @@ const project = "11111111-1111-4111-8111-111111111111";
 const card = "22222222-2222-4222-8222-222222222222";
 const today = "2026-09-08";
 
+test("Chart is a workspace route that retains project scope and source opening", () => {
+  const route = readRoute(
+    new URLSearchParams({
+      view: "chart",
+      project,
+      resource: card,
+      type: "card",
+    }),
+    today,
+  );
+  assert.equal(route.view, "chart");
+  assert.deepEqual(readRoute(writeRoute(route), today), route);
+});
+
 test("calendar deep links retain day and layout through reload and browser history", () => {
   const route = readRoute(
     new URLSearchParams("view=calendar&date=2026-10-13&layout=week"),

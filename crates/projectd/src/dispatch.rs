@@ -143,6 +143,14 @@ pub(super) fn run(
                 &input,
                 match *view {
                     "calendar" => &["project_id", "from", "to", "cursor", "limit"][..],
+                    "counters" => &[
+                        "project_id",
+                        "from",
+                        "to",
+                        "include_archived",
+                        "cursor",
+                        "limit",
+                    ],
                     "board" | "gantt" => &["project_id", "cursor", "limit"],
                     "attention" => &["cursor", "limit", "project_id", "folder", "focus"],
                     "focus-cards" => &["cursor", "limit", "folder", "section"],
@@ -156,6 +164,8 @@ pub(super) fn run(
                 "limit",
                 if *view == "board" || *view == "attention" {
                     50
+                } else if *view == "counters" {
+                    100
                 } else {
                     200
                 },
@@ -189,6 +199,22 @@ pub(super) fn run(
                     fields.get("project_id").map(String::as_str),
                     parameter(&fields, "from")?,
                     parameter(&fields, "to")?,
+                    cursor,
+                    limit,
+                )?,
+                "counters" => engine.counter_series(
+                    fields.get("project_id").map(String::as_str),
+                    parameter(&fields, "from")?,
+                    parameter(&fields, "to")?,
+                    fields
+                        .get("include_archived")
+                        .map(|value| {
+                            value
+                                .parse::<bool>()
+                                .map_err(|_| AppError::reject(400, "INVALID_QUERY"))
+                        })
+                        .transpose()?
+                        .unwrap_or(false),
                     cursor,
                     limit,
                 )?,

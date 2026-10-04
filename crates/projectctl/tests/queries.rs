@@ -192,6 +192,7 @@ fn named_views_forward_exact_project_scope_and_bounded_pagination() {
         ("board", "200"),
         ("gantt", "500"),
         ("calendar", "1000"),
+        ("counters", "100"),
         ("attention", "200"),
     ] {
         let mut args = vec!["view", name, "--limit", limit, "--cursor", cursor];
@@ -200,9 +201,13 @@ fn named_views_forward_exact_project_scope_and_bounded_pagination() {
             ("limit", limit),
             ("cursor", cursor),
         ];
-        if name == "calendar" {
+        if name == "calendar" || name == "counters" {
             args.extend(["--from", "2026-09-01", "--to", "2026-09-30"]);
             query.extend([("from", "2026-09-01"), ("to", "2026-09-30")]);
+        }
+        if name == "counters" {
+            args.push("--include-archived");
+            query.push(("include_archived", "true"));
         }
         let output = run_read(
             &args,
@@ -219,12 +224,19 @@ fn named_views_forward_exact_project_scope_and_bounded_pagination() {
 
 #[test]
 fn optional_views_without_project_read_only_the_current_instance() {
-    for (name, limit) in [("calendar", "200"), ("attention", "50")] {
+    for (name, limit) in [
+        ("calendar", "200"),
+        ("counters", "100"),
+        ("attention", "50"),
+    ] {
         let mut args = vec!["view", name];
         let mut query = vec![("limit", limit)];
-        if name == "calendar" {
+        if name == "calendar" || name == "counters" {
             args.extend(["--from", "2026-09-01", "--to", "2026-09-30"]);
             query.extend([("from", "2026-09-01"), ("to", "2026-09-30")]);
+        }
+        if name == "counters" {
+            query.push(("include_archived", "false"));
         }
         let output = run_read(
             &args,
@@ -268,6 +280,18 @@ fn missing_scope_required_dates_and_invalid_limits_fail_before_a_request() {
         vec!["view", "gantt"],
         vec!["view", "calendar", "--from", "2026-09-01"],
         vec!["view", "calendar", "--to", "2026-09-30"],
+        vec!["view", "counters", "--from", "2026-09-01"],
+        vec!["view", "counters", "--to", "2026-09-30"],
+        vec![
+            "view",
+            "counters",
+            "--from",
+            "2026-09-01",
+            "--to",
+            "2026-09-30",
+            "--limit",
+            "101",
+        ],
         vec!["search", "query", "--limit", "0"],
         vec!["search", "query", "--limit", "201"],
         vec!["view", "board", "--limit", "201"],

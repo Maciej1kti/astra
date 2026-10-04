@@ -42,6 +42,10 @@ test("planning routes only load shared project context; list and reports fetch t
     "planning",
   ]);
   assert.deepEqual(viewSections(query), ["projects", "card"]);
+  assert.deepEqual(viewSections({ ...query, view: "chart" }), [
+    "projects",
+    "chart",
+  ]);
   assert.deepEqual(viewSections({ ...query, view: "updates" }), [
     "projects",
     "update",
@@ -52,6 +56,42 @@ test("planning routes only load shared project context; list and reports fetch t
     "attention",
     "card",
     "event",
+  ]);
+});
+
+test("Chart invalidates for its card and project sources while ignoring unrelated report writes", () => {
+  const chart = { ...query, view: "chart" };
+  assert.deepEqual(
+    affectedSections(
+      { kind: "changed", project_id: "p", target: { type: "card" } },
+      chart,
+    ),
+    ["chart"],
+  );
+  assert.deepEqual(
+    affectedSections(
+      { kind: "changed", project_id: "p", target: { type: "project" } },
+      chart,
+    ),
+    ["projects", "chart"],
+  );
+  assert.deepEqual(
+    affectedSections(
+      { kind: "changed", project_id: "p", target: { type: "update" } },
+      chart,
+    ),
+    [],
+  );
+  assert.deepEqual(
+    affectedSections(
+      { kind: "changed", project_id: "other", target: { type: "card" } },
+      chart,
+    ),
+    [],
+  );
+  assert.deepEqual(affectedSections({ kind: "resync_required" }, chart), [
+    "projects",
+    "chart",
   ]);
 });
 

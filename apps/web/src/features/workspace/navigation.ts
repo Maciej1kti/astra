@@ -11,6 +11,7 @@ export const workspaceViews = [
   "gantt",
   "list",
   "updates",
+  "chart",
 ] as const;
 export type View = (typeof workspaceViews)[number];
 export function viewLabel(view: View): string {

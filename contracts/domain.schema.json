@@ -726,6 +726,7 @@
             "board",
             "calendar",
             "gantt",
+            "chart",
             "list",
             "updates"
           ]

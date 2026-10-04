@@ -24,7 +24,14 @@ export type ViewQuery = {
   label: string;
 };
 export type Section =
-  "projects" | "focus" | "attention" | "card" | "event" | "update" | "planning";
+  | "projects"
+  | "focus"
+  | "attention"
+  | "card"
+  | "event"
+  | "update"
+  | "planning"
+  | "chart";
 export type {
   FocusRef,
   AttentionItem as Attention,
@@ -61,6 +68,8 @@ export function viewSections(query: ViewQuery): Section[] {
     case "calendar":
     case "gantt":
       return ["projects", "planning"];
+    case "chart":
+      return ["projects", "chart"];
   }
 }
 export function viewQueryKey(query: ViewQuery) {
@@ -101,13 +110,21 @@ export function affectedSections(
     return kind === "project" ? ["projects"] : [];
   const changed: Section[] =
     kind === "card"
-      ? ["focus", "attention", "card", "event", "planning"]
+      ? ["focus", "attention", "card", "event", "planning", "chart"]
       : kind === "milestone"
         ? ["attention", "planning"]
         : kind === "update"
           ? ["attention", "update"]
           : kind === "project"
-            ? ["projects", "focus", "card", "event", "attention", "planning"]
+            ? [
+                "projects",
+                "focus",
+                "card",
+                "event",
+                "attention",
+                "planning",
+                "chart",
+              ]
             : needed;
   return needed.filter((section) => changed.includes(section));
 }
@@ -231,7 +248,7 @@ export async function loadView(
           cursors.attention ?? null,
         );
         result.notices.attention = projectionNotice(result.attention.value);
-      } else if (section !== "planning") {
+      } else if (section !== "planning" && section !== "chart") {
         const page = await cursorPage(
           (cursor) => resourcePage(query, section, cursor, options),
           cursors[section] ?? null,

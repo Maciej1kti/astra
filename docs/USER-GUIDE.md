@@ -76,6 +76,7 @@ layout. The desktop sidebar keeps every view available in the chosen order.
 | Board | Arrange cards by status | Manual ordering, drag/drop and keyboard alternatives; a workspace overview and project boards |
 | Calendar | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with direct move/resize saves |
 | Timeline | Inspect recorded schedules over time | Schedule bars and milestones; API/CLI call this view `gantt` |
+| Chart | Compare recorded counter histories | Select counters, overlay compatible units, group dates, inspect statistics and convert values with individual rates |
 | Updates | Read project/milestone reports | Read receipts, corrections and explicit decision resolutions |
 
 Search and filters do not change source files. Where a view offers another page,
@@ -160,6 +161,40 @@ ones. Archiving hides a counter
 without erasing its history. Units cannot change after a result has been recorded;
 counter data has no destructive clear/undo operation. New edits use the latest
 acknowledged card version, while a pending edit retains its original day/version.
+
+## Compare counters in Chart
+
+Open **Chart** from the sidebar or the phone's **More** menu. Use the Project
+selector to inspect one project or all registered projects, then choose up to
+eight counters
+by their name and source card. **Find a counter** filters the catalog; **Include
+archived counters** also reveals histories retained on archived counters, cards
+and projects. A counter without recorded history remains available to select.
+
+Choose an inclusive date range or a period shortcut, then group results by day,
+week or month. **Daily totals** shows the sum in each group; **Running total**
+adds recorded values from the beginning of the selected range. Missing recordings
+stay visible as gaps, and a saved zero remains a recorded value. **Show chart data**
+opens the same values in a table. Use the date slider, pointer or touch to inspect
+individual groups. Statistics show each selected counter's total, recorded days,
+average and peak for the range. **Difference** compares totals with the first
+counter in the statistics table that shares the same unit.
+
+**Values** overlays counters with the same unit and gives different units separate
+charts. **Relative to own peak** puts different units on a common percentage scale
+for comparing their patterns. To estimate a cost, payment or other derived value,
+enter an individual **Rate** and choose **Converted value**. For example, ten
+recorded hours at a rate of 100 give 1,000 in the chosen **Output unit**. Only
+counters with a valid rate contribute to the converted total; zero is a valid
+rate. Rates and the output label are saved in this browser for the selected
+workspace profile. These controls do not change counter units or recorded sources.
+
+Ranges are limited to 400 days. Counter catalogs are paged; use **Load more counters** when
+offered to discover further counters, up to 500 loaded entries; narrow the Project
+scope for larger catalogs. At most eight counters can be selected at once.
+Changes recorded in another client refresh
+the dashboard, and opening a source card still reads its current version before
+editing.
 
 ## Plan work and events
 

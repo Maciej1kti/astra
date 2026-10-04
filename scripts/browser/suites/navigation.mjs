@@ -20,6 +20,7 @@ await runBrowserSuite(
       gantt: "Timeline",
       list: "List",
       updates: "Updates",
+      chart: "Chart",
     };
     const defaults = Object.keys(labels);
     const key = "astra-navigation-layout:v1";
@@ -114,7 +115,9 @@ await runBrowserSuite(
         else await summary.click();
       }
       await expect(order).toBeVisible();
-      await expect(order.locator("[data-navigation-item]")).toHaveCount(7);
+      await expect(order.locator("[data-navigation-item]")).toHaveCount(
+        defaults.length,
+      );
       return panel;
     };
     const closeMore = async () => {
@@ -235,7 +238,7 @@ await runBrowserSuite(
       await customize();
       await expect.poll(readOrder).toEqual(defaults);
       await expect(move("focus", "earlier")).toBeDisabled();
-      await expect(move("updates", "later")).toBeDisabled();
+      await expect(move("chart", "later")).toBeDisabled();
       await move("calendar", "earlier").focus();
       await move("calendar", "earlier").press("Enter");
       await expect(move("calendar", "earlier")).toBeFocused();
@@ -249,6 +252,7 @@ await runBrowserSuite(
           "gantt",
           "list",
           "updates",
+          "chart",
         ]);
       await move("calendar", "earlier").click();
       await visibility("calendar").click();
@@ -270,6 +274,7 @@ await runBrowserSuite(
         "gantt",
         "list",
         "updates",
+        "chart",
       ];
       await expect.poll(readOrder).toEqual(changedOrder);
       await closeMore();
@@ -414,6 +419,7 @@ await runBrowserSuite(
           "list",
           "gantt",
           "updates",
+          "chart",
         ]);
       await closeMore();
       await expect.poll(readBar).toEqual(["Focus", "Projects", "List"]);
@@ -445,6 +451,7 @@ await runBrowserSuite(
         "list",
         "gantt",
         "updates",
+        "chart",
       ];
       await expect.poll(readBar).toEqual(fullOrder.map((view) => labels[view]));
       assert.equal(
@@ -452,7 +459,7 @@ await runBrowserSuite(
           (element) => element.scrollWidth > element.clientWidth,
         ),
         true,
-        "All seven shortcuts use horizontal dock scrolling",
+        "All shortcuts use horizontal dock scrolling",
       );
       await more.scrollIntoViewIfNeeded();
       await expect(more).toBeInViewport({ ratio: 1 });
@@ -480,6 +487,7 @@ await runBrowserSuite(
           "calendar",
           "gantt",
           "updates",
+          "chart",
         ]);
       await closeMore();
       const activeList = nav.getByRole("button", { name: "List", exact: true });
@@ -493,7 +501,7 @@ await runBrowserSuite(
       await expect(more).toBeInViewport({ ratio: 1 });
       await screenshot("navigation-all-visible-390");
       checks.push(
-        "all seven shortcuts scroll with reachable More; reorder retains mounted active button and matching indicator",
+        "all shortcuts scroll with reachable More; reorder retains mounted active button and matching indicator",
       );
 
       await page.evaluate(
@@ -529,6 +537,7 @@ await runBrowserSuite(
         "gantt",
         "list",
         "updates",
+        "chart",
       ];
       await expect.poll(readOrder).toEqual(normalizedOrder);
       for (const view of defaults)
@@ -539,7 +548,7 @@ await runBrowserSuite(
       await visibility("calendar").click();
       const recovered = await savedLayout();
       assert.deepEqual(recovered.order, normalizedOrder);
-      assert.equal(new Set(recovered.order).size, 7);
+      assert.equal(new Set(recovered.order).size, defaults.length);
       assert.deepEqual(recovered.visible, ["calendar", "focus", "projects"]);
       await closeMore();
       await expect.poll(readBar).toEqual(["Calendar", "Focus", "Projects"]);

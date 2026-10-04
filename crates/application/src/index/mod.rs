@@ -298,6 +298,9 @@ impl ProjectionStatus {
             }
         }
     }
+    pub(crate) fn project_pending(&self, project: &str) -> bool {
+        self.pending_projects.contains(project)
+    }
 }
 
 pub struct Index {

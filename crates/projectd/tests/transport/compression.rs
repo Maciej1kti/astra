@@ -50,6 +50,14 @@ async fn summary_reads_negotiate_gzip_without_compressing_source_or_credentials(
             .unwrap();
         assert_eq!(pin.status(), 200);
         assert!(!pin.headers().contains_key("content-encoding"));
+        let pin: Value = pin.json().await.unwrap();
+        let configured = app.local("PATCH", &source)
+            .header("x-request-id", Uuid::now_v7().to_string())
+            .header("x-command-epoch", &epoch)
+            .header("if-match", format!("\"{}\"", pin["result"]["version"].as_str().unwrap()))
+            .json(&json!({"configure_counter":{"name":"Training","unit":"reps","step":5,"archived":false}}))
+            .send().await.unwrap();
+        assert_eq!(configured.status(), 200);
     }
     let (cookie, _) = deletion::browser_session(&app).await;
     for (path, schema, field) in [
@@ -71,6 +79,13 @@ async fn summary_reads_negotiate_gzip_without_compressing_source_or_credentials(
             "items",
         ),
         ("/api/v1/workspace/focus".into(), "FocusResource", "cards"),
+        (
+            format!(
+                "/api/v1/views/counters?project_id={project}&from=2026-09-01&to=2026-09-30&limit=100"
+            ),
+            "CounterSeriesPage",
+            "items",
+        ),
     ] {
         let unauthorized = app
             .browser("GET", &path)

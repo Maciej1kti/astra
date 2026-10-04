@@ -16,7 +16,7 @@ pub enum Action {
         #[arg(long)]
         cursor: Option<String>,
     },
-    /// Read a bounded board, timeline, calendar or attention view.
+    /// Read a bounded board, timeline, calendar, counter or attention view.
     View {
         #[command(subcommand)]
         action: View,
@@ -58,6 +58,21 @@ pub enum View {
         #[arg(long, default_value_t = 200, value_parser = clap::value_parser!(u32).range(1..=1000))]
         limit: u32,
         /// Continue with the returned cursor and unchanged dates, project and limit.
+        #[arg(long)]
+        cursor: Option<String>,
+    },
+    /// Read saved daily counter totals in an inclusive range (maximum 400 days).
+    Counters {
+        #[arg(long)]
+        from: String,
+        #[arg(long)]
+        to: String,
+        /// Include archived counters, cards and projects.
+        #[arg(long)]
+        include_archived: bool,
+        #[arg(long, default_value_t = 100, value_parser = clap::value_parser!(u32).range(1..=100))]
+        limit: u32,
+        /// Continue with unchanged project, dates, archive flag and limit.
         #[arg(long)]
         cursor: Option<String>,
     },
@@ -122,6 +137,26 @@ impl View {
                 limit,
                 cursor,
                 &[("from", &from), ("to", &to)],
+            ),
+            Self::Counters {
+                from,
+                to,
+                include_archived,
+                limit,
+                cursor,
+            } => paged_request(
+                "/api/v1/views/counters",
+                optional_project(client, project).await?,
+                limit,
+                cursor,
+                &[
+                    ("from", &from),
+                    ("to", &to),
+                    (
+                        "include_archived",
+                        if include_archived { "true" } else { "false" },
+                    ),
+                ],
             ),
             Self::Attention { limit, cursor } => paged_request(
                 "/api/v1/views/attention",

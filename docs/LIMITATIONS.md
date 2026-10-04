@@ -22,6 +22,7 @@ An implemented feature and a passed release acceptance scenario are different cl
 | Git | Observes HEAD and staged changes excluding `.project`; does not claim unstaged/untracked coverage, auto-commit or auto-fetch |
 | Markdown | Text formatting and deliberate links; no executed HTML, remote image loading or automatic link previews |
 | Attribution | Human/bot labels on comments and reports are declarations, not separate authenticated identities |
+| Counter charts | Inclusive ranges of at most 400 days, 100 series per page, 500 loaded catalog entries and eight selected series per chart; daily source quantities are integers. Rates and display choices are browser-local calculations, not stored monetary transactions |
 | CLI | Bounded single-page reads; no streaming `watch`, automatic pagination or general batch mutation transaction |
 
 Changing these boundaries requires an explicit scope decision. Missing CLI aliases

@@ -227,16 +227,26 @@ projectctl --project /absolute/project search 'guide' --limit 20
 projectctl --project /absolute/project view board
 projectctl --project /absolute/project view gantt
 projectctl view calendar --from 2026-09-01 --to 2026-09-30
+projectctl --project /absolute/project view counters --from 2026-09-01 --to 2026-09-30
+projectctl view counters --from 2026-09-01 --to 2026-09-30 --include-archived
 projectctl --project /absolute/project view attention
 ```
 
-Search, calendar and attention cover the selected instance unless `--project` is
+Search, calendar, counters and attention cover the selected instance unless `--project` is
 provided. Board and Gantt require an explicitly selected project. These commands
 read one bounded page; pass the returned cursor with the same filters and limit
 to continue. Board cursors belong to individual columns. Stale cursors are
 reported as errors; the CLI does not silently restart or combine different
 snapshots. Timeline and calendar show explicitly recorded schedules; dependency
 forecasts are not supported.
+
+Counter reads return at most 100 series per page and at most 400 inclusive dates.
+Each series includes its card/project names, observed card version, unit and
+archive state. Saved daily totals form a sparse map: an explicit zero is present,
+and an unrecorded date is absent. Counters with no values in the selected range
+still appear. Completed/cancelled cards retain their history. `--include-archived`
+adds archived counters, cards and projects. Unverified sources produce a warning
+and stale freshness; reads never repair or write those sources.
 
 ## History, undo and background work
 

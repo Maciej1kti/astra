@@ -2,7 +2,7 @@
 
 Astra has a working daemon, CLI and browser application. The next release still
 needs explicit acceptance and publication decisions. This roadmap summarizes
-existing scope as of 2026-09-30; it sets no new deadlines, priorities or acceptance
+existing scope as of 2026-10-04; it sets no new deadlines, priorities or acceptance
 results. Active project outcomes live in `.project/`, and revision-specific
 verification is indexed in [current status](progress/STATE.md).
 
@@ -24,7 +24,8 @@ verification is indexed in [current status](progress/STATE.md).
 | Project storage | Strict JSON sources, stable identity, exact-folder registration and managed project instructions | [Architecture](docs/ARCHITECTURE.md), [JSON decision](docs/ADR-046-JSON-SOURCES.md) |
 | Safe mutations | Shared domain/application rules, conditional versions, command identity, recovery, history and conditional undo | [Write contract](docs/04-WRITES-AND-RECOVERY.md), [CLI](CLI.md) |
 | Host access | Loopback server, Unix CLI, browser pairing, session revocation and private HTTPS integration | [Installation](INSTALL.md) |
-| Core views | Focus, Projects, List, Board, Calendar, Timeline and Updates | [User guide](docs/USER-GUIDE.md) |
+| Core views | Focus, Projects, List, Board, Calendar, Timeline, Updates and Chart | [User guide](docs/USER-GUIDE.md) |
+| Counter analysis | Selected histories, overlays, daily/cumulative grouping, statistics and browser-local rate valuation | [Chart guide](docs/USER-GUIDE.md#compare-counters-in-chart) |
 | Card workflows | Autosave, checklist, tags, comments, daily counters, inclusive plans and timed events | [User guide](docs/USER-GUIDE.md#create-and-edit-cards) |
 | Project context | Folder categories, independent milestones, reports, corrections/resolutions and read receipts | [User guide](docs/USER-GUIDE.md#reports-history-and-deletion) |
 | Maintenance | Diagnostics, Git observation, index rebuild, durable workflows and explicit permanent deletion | [CLI](CLI.md), [operations](ops/README.md) |

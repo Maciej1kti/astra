@@ -365,3 +365,9 @@ profiles are freely selectable by trusted paired users. See
 Trusted profiles may register the same exact folder through one coordinated
 writer lease. Profile renaming uses a conditional registry version and the root
 command journal. See [ADR-061](ADR-061-SHARED-PROFILE-PROJECTS.md).
+
+## ADR-062 — Counter Chart dashboard
+
+Chart reads bounded, date-clipped counter histories with card/project context,
+sparse zero/missing semantics and scoped snapshot pagination. Rate calculations
+remain browser presentation. See [ADR-062](ADR-062-COUNTER-CHART-DASHBOARD.md).

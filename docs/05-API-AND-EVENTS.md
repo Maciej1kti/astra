@@ -42,6 +42,19 @@ existing admission limit bounds compression workers. See
 [ADR-052](ADR-052-BOUNDED-SUMMARY-COMPRESSION.md) and the
 [HTTP example](../examples/requests/summary-compression.http).
 
+## Counter history reads
+
+`GET /api/v1/views/counters` reads counter configuration and sparse saved daily
+totals with card/project context. `from`/`to` are required, inclusive civil dates
+with a maximum of 400 dates; `limit` is at most 100 series. Optional `project_id`
+limits the selected trusted profile's workspace to one project.
+`include_archived=true` includes archived counters, cards and projects.
+Unverified source data is omitted with a warning and stale freshness. The cursor
+binds the dates, scope, archive flag, limit and projection revision; a changed
+identity returns `PAGE_STALE`. Reads preserve source versions and never write
+history. See [ADR-062](ADR-062-COUNTER-CHART-DASHBOARD.md) and the
+[HTTP example](../examples/requests/counter-series.http).
+
 ## Mutacje
 
 Domenowe POST/PATCH/PUT wymagają `X-Request-ID` UUIDv7, `X-Command-Epoch` i przeglądarkowego `X-CSRF-Token`. Zmiana istniejącego dokumentu wymaga `If-Match`. Brak precondition → 428; niezgodna → 412. Zasób nieistniejący → 404. Stary epoch → 409. Zepsute źródło → 409 DOCUMENT_INVALID. Niedostępny projekt → 503. Zbyt duży payload → 413. Niepoprawne dane → 422. Request rate → 429. Utrata storage → 507 lub 503 z konkretnym code i bez fałszywego committed.

@@ -26,7 +26,7 @@ await runBrowserSuite(
       await page.getByRole("navigation", { name: "Workspace views" }).waitFor();
       await expect(
         page.getByText(
-          /^(Loading resources…|Loading planning view…|Loading board…|Loading date views…|Loading calendar…|Loading timeline…)$/,
+          /^(Loading resources…|Loading planning view…|Loading board…|Loading date views…|Loading calendar…|Loading timeline…|Loading Chart…)$/,
         ),
       ).toHaveCount(0);
       if (view === "board")
@@ -48,6 +48,7 @@ await runBrowserSuite(
           "gantt",
           "list",
           "updates",
+          "chart",
         ]) {
           await route(view);
           const layout = await page.evaluate(() => ({

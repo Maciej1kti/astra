@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [counter Chart dashboard](2026-10-04-counter-chart.md) adds selectable histories,
+unit-aware overlays, aggregation, statistics and browser-local rate valuation.
+The 528-test full gate, nine Chart scenarios in Chromium/WebKit and affected
+navigation/counter/loading suites pass. The rebuilt existing HTTPS app verifies
+all 36 assets while preserving 29 prior versions, two pins, both profiles' settings,
+roots and registrations, identity/epoch and certificate. Synthetic histories are
+limited to removed temporary hosts; existing counters remain unchanged.
+
 The [shared exercise project implementation](2026-10-04-shared-exercise-project.md)
 adds conditional profile names and shared source folders within one trusted host.
 The live Maciek profile retains all 15 projects; Tomek shares `cwiczenia` and its

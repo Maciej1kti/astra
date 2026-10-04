@@ -356,6 +356,20 @@ The date-plan and label-entry helper sentences are omitted from the card form.
 
 ## Compact card counters
 
+The workspace Chart view has its own counter catalog and analysis surface in
+`features/charts`. A desktop catalog sits beside the plots; on narrow screens
+it follows the statistics and precedes the plots in one column. Date, grouping
+and scale controls wrap without horizontal page overflow. Raw quantities share
+a plot only when their units match; relative and configured-value modes have
+explicit axis labels. Series colors apply consistently to catalog swatches,
+plots, inspection values and comparison rows in both themes.
+
+Each plot provides a keyboard/touch date slider and an expandable exact-value
+table. Gaps preserve unrecorded dates, while recorded zero has a visible point.
+Grouping labels show recorded-day coverage. Browser-local rates and selections
+are separate from the source-read lifecycle, so acknowledged source changes
+refresh data while preserving the chosen analysis.
+
 Counters share a compact divided list. Each row contains its name, a fourteen-day
 bar preview, a value with its unit, and a quiet configuration icon. Desktop places
 the preview beside the value; phones place it below the name. The repeated date

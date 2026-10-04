@@ -27,6 +27,7 @@ const suites = [
   "focus-controls",
   "comments",
   "counters",
+  "charts",
   "autosave",
   "dialogs",
   "responsive",

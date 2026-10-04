@@ -151,7 +151,7 @@ Chromium remains the default. WebKit on macOS does not reproduce native iOS
 pickers or establish physical iPhone acceptance. The suite records WebKit's
 deferred ResizeObserver notifications separately from application errors.
 
-The responsive suite checks all seven views at 320, 390, 768 and 1024px, readable
+The responsive suite checks all eight views at 320, 390, 768 and 1024px, readable
 List filters with reload persistence, Calendar navigation, diagonal touch swipes
 inside a long modal and the system reduced-motion preference. These checks use
 the real release app and ordinary pairing, with synthetic source data.
@@ -199,6 +199,14 @@ The counters suite covers multiple definitions, explicit Save, horizontal scrub,
 touch cancellation/vertical scrolling, guarded numeric input, compact rows and
 dated history. It retains midnight rollover, preserved drafts, hidden counters,
 unit protection, response-loss replay and concurrent conflict coverage.
+
+The `charts` suite creates temporary counter histories through ordinary conditional
+CLI writes. It checks counter selection, shared-unit overlays, separate unit
+panels, daily and running totals, date grouping, conversion rates and statistics,
+project filtering, empty history and source refreshes. Keyboard and touch scenarios
+exercise the Chart view at desktop, 390 and 320 px; Chromium captures the rendered
+dashboard and WebKit checks behavior without screenshot preparation. Synthetic
+counter sources and credentials are removed with the temporary host at teardown.
 
 The editor-header suite checks the three persistent header rows and conditional
 feedback row while a long card is scrolled, including visible field/save errors,

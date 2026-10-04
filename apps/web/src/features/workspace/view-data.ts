@@ -189,7 +189,10 @@ export class ViewData {
               "This collection changed. Showing the first page of the latest results.";
         }
         this.snapshot.loadedQueryKey = key;
-        if (!changedRoute && selected.includes("planning"))
+        if (
+          !changedRoute &&
+          (selected.includes("planning") || selected.includes("chart"))
+        )
           this.snapshot.revision++;
         this.publish();
       } finally {

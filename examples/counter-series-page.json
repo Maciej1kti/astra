@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "project_name": "Synthetic training",
+      "project_archived": false,
+      "card_id": "22222222-2222-4222-8222-222222222222",
+      "card_title": "Training",
+      "card_archived": false,
+      "version": "r1.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "Push-ups",
+      "unit": "reps",
+      "step": 5,
+      "archived": false,
+      "availability": "ready",
+      "values": {"2026-09-25": 10, "2026-09-26": 0, "2026-09-28": 20}
+    },
+    {
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "project_name": "Synthetic training",
+      "project_archived": false,
+      "card_id": "22222222-2222-4222-8222-222222222222",
+      "card_title": "Training",
+      "card_archived": false,
+      "version": "r1.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "name": "Distance",
+      "unit": "km",
+      "step": 1,
+      "archived": false,
+      "availability": "ready",
+      "values": {}
+    }
+  ],
+  "page": {
+    "next_cursor": null,
+    "snapshot_cursor": "33333333-3333-4333-8333-333333333333:12",
+    "has_more": false,
+    "freshness": "index_snapshot"
+  },
+  "warnings": []
+}

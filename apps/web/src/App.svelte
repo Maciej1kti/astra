@@ -101,6 +101,10 @@
     () => import("./features/host/Diagnostics.svelte"),
   );
   const Diagnostics = $derived(diagnosticsUI.component);
+  const chartUI = deferredComponent(
+    () => import("./features/charts/ChartView.svelte"),
+  );
+  const ChartView = $derived(chartUI.component);
 
   const routing = navigationState(
     readRoute(
@@ -244,6 +248,7 @@
     const view = routing.current.view;
     if (view === "calendar") void loadCalendarView().catch(() => {});
     if (view === "gantt") void loadGanttView().catch(() => {});
+    if (view === "chart") void chartUI.load();
   });
 
   let dateDraft = $state<DateProposal | null>(null);
@@ -840,7 +845,7 @@
       >
         {#if routing.current.view === "focus"}
           <h1 class="sr">Focus</h1>
-        {:else}
+        {:else if routing.current.view !== "chart"}
           <PageHeading title={viewLabel(routing.current.view)}>
             <Button
               variant="primary"
@@ -868,17 +873,19 @@
             {projectionMessage}
           </p>{/if}
         {#if queryNotice}<p role="status" class="notice">{queryNotice}</p>{/if}
-        <WorkspaceFilters
-          route={routing.current}
-          onchange={routing.changeFilters}
-          changeMonth={routing.changeMonth}
-        />
+        {#if routing.current.view !== "chart"}<WorkspaceFilters
+            route={routing.current}
+            onchange={routing.changeFilters}
+            changeMonth={routing.changeMonth}
+          />{/if}
         {#key routing.current.view}<div
             class="view-content"
             use:revealScene={{
               ready:
                 queryReady &&
-                !["calendar", "gantt"].includes(routing.current.view) &&
+                !["calendar", "gantt", "chart"].includes(
+                  routing.current.view,
+                ) &&
                 !(routing.current.view === "board" && routing.current.project),
               key: routing.current.project,
             }}
@@ -975,6 +982,22 @@
                 }}
                 oncreate={(initial) => create("card", initial)}
               />
+            {:else if routing.current.view === "chart"}
+              {#if ChartView}<ChartView
+                  project={routing.current.project}
+                  {today}
+                  revision={viewRevision}
+                  preferenceKey={`${boot.instance_id}:${boot.user?.id ?? "default"}`}
+                  {open}
+                />
+              {:else if chartUI.error}<p role="alert">
+                  {chartUI.error}<Button
+                    variant="quiet"
+                    onclick={() => void chartUI.load()}
+                    >Retry loading Chart</Button
+                  >
+                </p>
+              {:else}<p role="status">Loading Chart…</p>{/if}
             {:else if routing.current.view === "updates"}
               <UpdatesScreen
                 route={routing.current}

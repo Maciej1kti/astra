@@ -15,6 +15,7 @@
   import { applyTheme, readTheme, type Theme } from "./appearance";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command } from "../../lib/api/api";
+  import { workspaceViews, viewLabel } from "../workspace/navigation";
 
   const operation = commandOperation(() => !accessLost);
 
@@ -447,11 +448,8 @@
               !!pending ||
               !!userName ||
               accessLost}
-            >{#each ["focus", "projects", "board", "calendar", "gantt", "list", "updates"] as name}<option
-                value={name}
-                >{name === "gantt"
-                  ? "Timeline"
-                  : name[0].toUpperCase() + name.slice(1)}</option
+            >{#each workspaceViews as name}<option value={name}
+                >{viewLabel(name)}</option
               >{/each}</select
           ></label
         >

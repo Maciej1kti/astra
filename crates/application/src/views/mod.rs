@@ -131,6 +131,7 @@ pub(crate) fn validate_folder(folder: &str) -> Result<(), AppError> {
 mod attention;
 mod board;
 mod calendar;
+mod counters;
 mod focus;
 mod folders;
 mod gantt;

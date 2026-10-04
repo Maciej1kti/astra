@@ -47,3 +47,8 @@ Profiles can share a project's existing exact folder by registering it in each
 workspace. They edit the same sources and counter totals through one host writer;
 preferences, Focus order, receipts and each profile's command/history records
 remain separate. The CLI walkthrough is in [Trusted user profiles](../CLI.md#trusted-user-profiles).
+
+[Counter series](counter-series-page.json) illustrates a saved zero, an omitted
+unrecorded date and an empty counter. The [HTTP example](requests/counter-series.http)
+reads one bounded range/page and demonstrates archived inclusion and cursor
+continuation; see [ADR-062](../docs/ADR-062-COUNTER-CHART-DASHBOARD.md).

@@ -4266,6 +4266,106 @@
         ]
       }
     },
+    "/api/v1/views/counters": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
+      "get": {
+        "operationId": "getCounterSeries",
+        "tags": [
+          "views"
+        ],
+        "summary": "Read bounded counter histories for Chart",
+        "description": "Read-only snapshot of counter configuration and saved daily totals, with card and project context. from/to are inclusive, with at most 400 calendar dates; only recorded dates in that range are returned, including explicit zero. Counters without values in the range remain discoverable. Completed and cancelled cards retain history. By default archived counters, cards and projects are excluded; include_archived includes them. Unverified sources are omitted with a warning and stale freshness. Cursors bind the project, dates, archive flag, limit and scoped projection revision; a changed scope returns PAGE_STALE. At most 100 series and 400 values per series fit within a 2 MiB serialized response bound. Omitted project_id uses only the current trusted profile's workspace.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReadAcceptEncoding"
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/UUID"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/LocalDate"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/LocalDate"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 100
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counter series from one bounded projection snapshot",
+            "headers": {
+              "Content-Encoding": {
+                "$ref": "#/components/headers/ReadContentEncoding"
+              },
+              "Vary": {
+                "$ref": "#/components/headers/ReadEncodingVary"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/PrivateReadCache"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterSeriesPage"
+                }
+              }
+            }
+          },
+          "406": {
+            "$ref": "#/components/responses/EncodingNotAcceptable"
+          },
+          "default": {
+            "description": "Controlled query or stale-page error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/views/folders": {
       "parameters": [
         {
@@ -5784,6 +5884,122 @@
         ],
         "additionalProperties": false
       },
+      "CounterSeries": {
+        "type": "object",
+        "description": "Read-only counter configuration and sparse saved totals observed with its card source version. Missing dates are absent; an explicitly saved zero remains present. The Chart view reads the current card before opening its editor.",
+        "properties": {
+          "project_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "project_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "project_archived": {
+            "type": "boolean"
+          },
+          "card_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "card_title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "card_archived": {
+            "type": "boolean"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "\\S"
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5,
+            "pattern": "\\S"
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "stale"
+            ]
+          },
+          "values": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/components/schemas/LocalDate"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CounterValue"
+            },
+            "maxProperties": 400
+          }
+        },
+        "required": [
+          "project_id",
+          "project_name",
+          "project_archived",
+          "card_id",
+          "card_title",
+          "card_archived",
+          "version",
+          "id",
+          "name",
+          "unit",
+          "step",
+          "archived",
+          "availability",
+          "values"
+        ],
+        "additionalProperties": false
+      },
+      "CounterSeriesPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CounterSeries"
+            },
+            "maxItems": 100
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMeta"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
       "CardSection": {
         "type": "string",
         "enum": [
@@ -6234,6 +6450,7 @@
               "board",
               "calendar",
               "gantt",
+              "chart",
               "list",
               "updates"
             ]

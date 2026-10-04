@@ -20,7 +20,14 @@ pub(super) fn eligible(method: &str, parts: &[&str]) -> bool {
                 "api",
                 "v1",
                 "views",
-                "list" | "board" | "gantt" | "calendar" | "folders" | "focus-cards" | "attention"
+                "list"
+                    | "board"
+                    | "gantt"
+                    | "calendar"
+                    | "counters"
+                    | "folders"
+                    | "focus-cards"
+                    | "attention"
             ] | ["api", "v1", "projects"]
                 | ["api", "v1", "workspace", "focus"]
                 | [
