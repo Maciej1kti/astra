@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [definition and consumer audit](2026-10-04-definition-usage-audit.md) finds
+two unimplemented OpenAPI operations, a reproduced CLI tag-rename confirmation
+mismatch and unused internal helpers, wrappers, component variants and CSS tokens.
+All 151 production frontend modules and 66 Svelte components are connected.
+Frontend checks, all-target Clippy and package/documentation checks pass;
+synthetic release-host probes verify both integration findings. No application
+code or product scope was changed, and the manual app was not restarted.
+
 The [Main project status board](2026-10-04-main-project-board.md) groups whole
 projects into Active, Paused and Archived, with local folder/title filters,
 conditional drag/menu status moves and a durable default-view choice. The final
