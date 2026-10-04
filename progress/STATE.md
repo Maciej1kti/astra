@@ -7,6 +7,17 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [UI component audit](2026-10-04-ui-component-audit.md) consolidates native
+menus, modal close/focus ownership and four vertical ordering adapters, with shared
+cancellation across Board/date/counter gestures. It fixes stale local drops,
+conditional Focus previews, transformed-dialog geometry, narrow controls and
+navigation rotation. The combined 598-test gate, all 35 existing/audit Chromium
+suites, eleven selected WebKit suites and broad HTTPS/planning workflows pass.
+The rebuilt existing manual app preserves 30 versions, two pins, both profiles'
+settings/roots/registrations, identity/epoch and certificate; all 42 served assets
+match. The audit also builds independently of the concurrent Main feature.
+Physical-device and complete release acceptance remain open.
+
 The [counter Chart dashboard](2026-10-04-counter-chart.md) adds selectable histories,
 unit-aware overlays, aggregation, statistics and browser-local rate valuation.
 The 528-test full gate, nine Chart scenarios in Chromium/WebKit and affected

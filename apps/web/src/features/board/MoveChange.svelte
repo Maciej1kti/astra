@@ -41,6 +41,9 @@
   let error = $state("");
   let conflict = $state(false);
   let accessLost = $state(false);
+  function close() {
+    if (!busy && !pending) onclose();
+  }
   onMount(() => {
     const lost = () => {
       accessLost = true;
@@ -111,17 +114,13 @@
 
 <dialog
   class="app-dialog dialog-small"
-  use:modal
+  use:modal={{ onclose: close }}
   out:layerExit|global
   aria-label="Move card"
-  oncancel={(event) => {
-    event.preventDefault();
-    if (!busy && !pending) onclose();
-  }}
 >
   <DialogHeader
     title="Move card"
-    {onclose}
+    onclose={close}
     disabled={busy || !!pending}
     closeLabel="Close move card"
   />
@@ -166,8 +165,7 @@
       </details>{/if}
   </div>
   <footer class="dialog-footer">
-    <button onclick={onclose} disabled={busy || !!pending}>Cancel</button
-    ><Button
+    <button onclick={close} disabled={busy || !!pending}>Cancel</button><Button
       variant="primary"
       onclick={save}
       disabled={busy ||

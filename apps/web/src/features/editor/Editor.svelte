@@ -880,7 +880,7 @@
 
 <svelte:window onbeforeunload={beforeUnload} />
 <dialog
-  use:modal
+  use:modal={{ onclose: close }}
   out:layerExit|global
   class="app-dialog editor"
   class:dialog-large={draft.type !== "project"}
@@ -892,10 +892,6 @@
     : resource
       ? "Edit resource"
       : "Create resource"}
-  oncancel={(e) => {
-    e.preventDefault();
-    close();
-  }}
 >
   <div class="editor-layout">
     {#snippet savedIndicator()}

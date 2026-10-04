@@ -99,6 +99,7 @@
   --dialog-large: 760px;
   --dialog-card: 800px;
   --dialog-max-height: 900px;
+  --dialog-feedback-height: 280px;
   --chart-height: 480px;
   --chart-mobile-height: 430px;
   --calendar-grid-height: clamp(600px, calc(100dvh - 260px), 820px);
@@ -130,6 +131,8 @@
   --layer-navigation: 10;
   --layer-floating: 20;
   --layer-dialog: 21;
+  --layer-drag-preview: 10000;
+  --layer-drag-indicator: 10001;
   --wash: var(--soft);
   /* Existing vendor adapters use this semantic alias. */
   --green: var(--primary);

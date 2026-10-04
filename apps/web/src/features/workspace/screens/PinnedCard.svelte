@@ -70,7 +70,7 @@
     aria-describedby={reorderable ? "focus-order-help" : undefined}
     aria-keyshortcuts={!pinned || item.availability === "unavailable"
       ? undefined
-      : "Alt+ArrowUp Alt+ArrowDown"}
+      : "Alt+ArrowUp Alt+ArrowDown Alt+Home Alt+End"}
   >
     <span class="focus-card-context"
       >{#if pinned}<Icon name="pin" small />{/if}<span>{projectName}</span>

@@ -110,6 +110,11 @@ All dialogs use the native `modal` action, a shared `DialogHeader`, and
 `dialog-body` / `dialog-footer` layout classes. The header and footer stay in
 place while long content scrolls. Dialog widths, padding, controls and responsive
 spacing are shared; individual features only own their content layout.
+Pass `use:modal={{ onclose }}` with the feature's guarded close callback. The
+action prevents native Escape dismissal and routes it through that same callback;
+do not install a second feature-level `cancel` listener. Its registered modal
+order and originating controls preserve focus through nested dialogs, deferred
+loading and replacement dialogs, including when the immediate trigger is removed.
 Dialog content scrolls vertically, with horizontal gestures contained and long
 text, code and table cells wrapping. Pinch zoom remains available. The document
 behind a modal is locked until it closes.
@@ -122,6 +127,11 @@ Escape continues through the existing close and unresolved-draft guards.
 `ActionMenu` is a small keyboard-accessible disclosure, with ordinary buttons and
 checkboxes. Card pinning stays in the header; archive and permanent deletion are
 inside its actions. Escape dismisses the disclosure and restores trigger focus.
+Every action/date/navigation menu uses the same native popover and
+`popover-position.ts` observer. It measures the trigger and visual viewport,
+honors start/end alignment, chooses space below/above/beside, bounds long content
+and follows scrolling, resizing and expanded content. Feature menus supply their
+content and size caps; they do not implement separate positioning or dismissal.
 The tag manager opens above settings so closing it returns to the initiating
 control. Pending operations retain their existing close restrictions.
 
@@ -129,6 +139,35 @@ Descriptions and tag suggestions defer pointer-driven layout changes until the
 click completes. Avoid inserting or removing help text between pointerdown and
 click in a centered dialog. Routine autosave does not insert a draft-export
 button into the document; recovery controls appear when the draft needs them.
+
+## Pointer previews and ordering
+
+`lib/ui/reorder-gesture.ts` owns the vertical ordering lifecycle for Focus pins,
+card sections, checklist items and Timeline rows. Feature adapters capture their
+current order and source context, measure their own rows and supply their existing
+commit action. Local section/checklist/Timeline ordering cancels when its captured
+order changes. Focus keeps its displayed preview frozen through canonical reads
+and submits its original full membership/version on release, preserving the normal
+conditional-write conflict path. Filter changes cancel that preview. A drop outside
+the valid surface only removes the preview. Whole-card
+touch surfaces wait for a hold so ordinary scrolling remains available; explicit
+grips start when moved. Keyboard order changes retain each surface's documented
+shortcuts and use the shared destination helper.
+
+`gesture-cancellation.ts` supplies the same cancellation policy to ordering,
+Board movement, Timeline dates and counter scrubbing: matching pointer cancel or
+capture loss, a second pointer, Escape, Tab, window blur, orientation and session
+loss. Escape cancels the preview before it can dismiss a containing layer; Tab
+continues normal focus navigation. Capture transfer from a touched child does
+not cancel its new owner. Preview elements are inert, hide from assistive
+technology and use shared drag-layer tokens. Shared overlay positioning accounts
+for the current origin and scale of transformed native dialogs/popovers, keeping
+the preview and insertion line aligned during their entrance.
+
+Board keeps its two-axis status/column targeting, counters keep horizontal intent
+and Timeline dates keep date-unit resizing. Native Calendar gestures remain
+owned by its widget and adapter. These geometries and source commands are distinct
+from vertical list ordering; shared cancellation does not combine their writes.
 
 ## Motion vocabulary
 

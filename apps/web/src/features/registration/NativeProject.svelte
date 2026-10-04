@@ -195,13 +195,9 @@
 
 <dialog
   class="app-dialog"
-  use:modal
+  use:modal={{ onclose: close }}
   out:layerExit|global
   aria-label="Add project"
-  oncancel={(e) => {
-    e.preventDefault();
-    close();
-  }}
 >
   <DialogHeader
     title="Add a project"

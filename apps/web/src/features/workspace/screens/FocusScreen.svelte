@@ -129,7 +129,7 @@
       cards: () => reorderableFocus,
       fullOrder: () => focusOrder,
       version: () => focusVersion,
-      scope: () => `${route.project}\n${route.search.trim()}`,
+      scope: () => `${route.project}\n${route.folder}\n${route.search.trim()}`,
       disabled: () =>
         !focusVersion ||
         focusBusy ||
@@ -163,8 +163,8 @@
     count={`${displayedFocus.length} visible ${displayedFocus.length === 1 ? "card" : "cards"}`}
   />
   {#if focusCount > 1}<p class="sr" id="focus-order-help">
-      Drag a card to reorder it, or focus it and press Alt+↑ / Alt+↓. Click a
-      card to open it.
+      Drag a card to reorder it, or focus it and press Alt+↑ / Alt+↓ / Alt+Home
+      / Alt+End. Escape cancels a drag. Click a card to open it.
     </p>{/if}
   <div class="focus-stack" use:focusOrderGesture={focusGestureOptions()}>
     {#each displayedFocus as item (item.project_id + ":" + item.id)}

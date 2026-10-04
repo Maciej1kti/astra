@@ -139,4 +139,9 @@
       max-width: 4rem;
     }
   }
+  @media (max-width: 360px) {
+    .current-user {
+      display: none;
+    }
+  }
 </style>

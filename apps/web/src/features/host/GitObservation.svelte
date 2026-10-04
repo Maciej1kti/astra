@@ -54,13 +54,9 @@
 
 <dialog
   class="app-dialog"
-  use:modal
+  use:modal={{ onclose }}
   out:layerExit|global
   aria-label="Git observation"
-  oncancel={(e) => {
-    e.preventDefault();
-    onclose();
-  }}
 >
   <DialogHeader
     title="Git observation"

@@ -1,3 +1,5 @@
+import { gestureCancellation } from "../../lib/ui/gesture-cancellation.ts";
+
 export type BoardDrop = {
   left: number;
   top: number;
@@ -72,7 +74,7 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
     Object.assign(ghost.style, {
       position: "fixed",
       pointerEvents: "none",
-      zIndex: "10000",
+      zIndex: "var(--layer-drag-preview)",
       margin: "0",
       width: `${rect.width}px`,
       boxSizing: "border-box",
@@ -89,7 +91,7 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
     Object.assign(indicator.style, {
       position: "fixed",
       pointerEvents: "none",
-      zIndex: "10001",
+      zIndex: "var(--layer-drag-indicator)",
       height: "var(--space-2)",
       borderRadius: "var(--radius-sm)",
       background: "var(--ink)",
@@ -100,6 +102,7 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
   function paint(time: number) {
     frame = 0;
     if (!active || !captured || !ghost || !indicator) return;
+    if (options.disabled()) return cancel();
     const step = Math.min(previousTime ? time - previousTime : 16, 32) * 0.45;
     previousTime = time;
     ghost.style.left = `${x - offsetX}px`;
@@ -178,7 +181,10 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
   function up(event: PointerEvent) {
     if (event.pointerId !== pointer) return;
     const intent = captured;
-    const target = active ? intent?.target(event.clientX, event.clientY) : null;
+    const target =
+      active && !options.disabled()
+        ? intent?.target(event.clientX, event.clientY)
+        : null;
     cancel();
     if (target) intent?.commit();
   }
@@ -188,12 +194,6 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
       event.stopImmediatePropagation();
       suppressClick = false;
     }
-  }
-  function second(event: PointerEvent) {
-    if (pointer !== null && event.pointerId !== pointer) cancel();
-  }
-  function key(event: KeyboardEvent) {
-    if (event.key === "Escape") cancel();
   }
   const touchmove = (event: TouchEvent) => {
     if (active && event.cancelable) event.preventDefault();
@@ -205,35 +205,29 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
   node.addEventListener("pointerdown", down);
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
-  node.addEventListener("pointercancel", cancel);
-  node.addEventListener("lostpointercapture", cancel);
   node.addEventListener("click", click, true);
   node.addEventListener("dragstart", dragstart);
   node.addEventListener("contextmenu", contextmenu);
   node.addEventListener("touchmove", touchmove, { passive: false });
-  window.addEventListener("pointerdown", second, true);
-  window.addEventListener("keydown", key);
-  for (const name of ["blur", "orientationchange", "session-ended"])
-    window.addEventListener(name, cancel);
+  const cancelGestures = gestureCancellation(node, {
+    pointer: () => pointer,
+    cancel,
+  });
   return {
     update(next: BoardGestureOptions) {
       options = next;
+      if (options.disabled()) cancel();
     },
     destroy() {
       cancel();
       node.removeEventListener("pointerdown", down);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      node.removeEventListener("pointercancel", cancel);
-      node.removeEventListener("lostpointercapture", cancel);
       node.removeEventListener("click", click, true);
       node.removeEventListener("dragstart", dragstart);
       node.removeEventListener("contextmenu", contextmenu);
       node.removeEventListener("touchmove", touchmove);
-      window.removeEventListener("pointerdown", second, true);
-      window.removeEventListener("keydown", key);
-      for (const name of ["blur", "orientationchange", "session-ended"])
-        window.removeEventListener(name, cancel);
+      cancelGestures();
     },
   };
 }

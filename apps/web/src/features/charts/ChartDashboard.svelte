@@ -610,7 +610,7 @@
     background: transparent;
     padding: var(--space-4) var(--space-6);
     font-size: var(--text-sm);
-    min-height: 36px;
+    min-height: var(--tap-target);
     color: var(--muted);
     white-space: nowrap;
   }

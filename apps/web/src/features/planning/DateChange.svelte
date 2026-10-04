@@ -53,6 +53,9 @@
   let busy = $derived(operation.busy);
   let conflict = $state<{ current: Resource | null } | null>(null);
   let accessLost = $state(false);
+  function close() {
+    if (!busy && !pending) onclose();
+  }
   onMount(() => {
     const lost = () => {
       accessLost = true;
@@ -139,17 +142,13 @@
 {#if !autoCommit || error}
   <dialog
     class="app-dialog dialog-small"
-    use:modal
+    use:modal={{ onclose: close }}
     out:layerExit|global
     aria-label={heading}
-    oncancel={(event) => {
-      event.preventDefault();
-      if (!busy && !pending) onclose();
-    }}
   >
     <DialogHeader
       title={heading}
-      {onclose}
+      onclose={close}
       disabled={busy || !!pending}
       closeLabel="Close planned dates"
     />
@@ -236,7 +235,7 @@
           </details>{/if}
       </div>
       <footer class="dialog-footer">
-        <button type="button" onclick={onclose} disabled={busy || !!pending}
+        <button type="button" onclick={close} disabled={busy || !!pending}
           >Cancel</button
         ><Button
           variant="primary"

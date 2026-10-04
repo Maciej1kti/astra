@@ -54,7 +54,7 @@
 </script>
 
 <div class="card-layout-menu">
-  <ActionMenu label="Customize card layout" icon="layout" {disabled} floating>
+  <ActionMenu label="Customize card layout" icon="layout" {disabled}>
     {#snippet children(close)}
       <div class="layout-panel-heading">
         <strong>Card layout</strong><Button

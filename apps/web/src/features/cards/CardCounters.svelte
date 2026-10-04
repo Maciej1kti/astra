@@ -176,7 +176,7 @@
         onclick={() => void configure()}>Add counter</Button
       >
     {:else}
-      <ActionMenu label="Counter actions" placement="auto">
+      <ActionMenu label="Counter actions">
         {#snippet children(close)}
           <Button
             type="button"

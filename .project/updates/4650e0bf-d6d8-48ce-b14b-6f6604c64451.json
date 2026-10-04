@@ -1,0 +1,18 @@
+{
+  "body": "Audited shared UI composition and corrected menu placement, modal focus/close ownership, vertical ordering and gesture cancellation. Fixed stale local drops, retained conditional Focus versions, corrected native-dialog previews and narrow controls, and restored active navigation visibility after rotation.\n\nThe combined 598-test gate, 35 existing/audit Chromium suites, eleven selected WebKit suites and HTTPS/planning workflows pass. The existing HTTPS app was rebuilt/restarted; all 42 assets match and 30 resource versions, two pins, both profiles' settings and the certificate are preserved. Evidence: progress/2026-10-04-ui-component-audit.md. Concurrent Main feature and owner card edits remain separate; physical-device and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Codex"
+    },
+    "id": "4650e0bf-d6d8-48ce-b14b-6f6604c64451",
+    "kind": "result",
+    "recorded_at": "2026-10-04T16:08:57.117Z",
+    "summary": "UI components and interaction consistency audited and unified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

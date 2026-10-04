@@ -38,8 +38,13 @@ await runBrowserSuite(
         }),
       );
     });
-    const snapshot = async (name) =>
-      page.screenshot({ path: join(evidence, `${name}.png`), fullPage: true });
+    const snapshot = async (name) => {
+      if (process.env.ASTRA_TEST_BROWSER !== "webkit")
+        await page.screenshot({
+          path: join(evidence, `${name}.png`),
+          fullPage: true,
+        });
+    };
     async function check(id, name, run) {
       const started = Date.now();
       try {

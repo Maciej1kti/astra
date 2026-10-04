@@ -155,9 +155,6 @@ dialog::backdrop {
   font-weight: var(--weight-medium);
 }
 .action-menu-panel {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  right: 0;
   width: var(--field-width);
   max-width: calc(100vw - var(--space-16));
   padding: var(--space-4);
@@ -259,14 +256,10 @@ dialog::backdrop {
   display: none;
 }
 .dialog-header-messages {
-  max-height: min(32dvh, 280px);
+  max-height: min(32dvh, var(--dialog-feedback-height));
   overflow-y: auto;
   overscroll-behavior: contain;
   border-top: var(--stroke) solid var(--line);
   padding-top: var(--space-4);
   font-size: var(--text-sm);
-}
-.action-menu.align-start .action-menu-panel {
-  left: 0;
-  right: auto;
 }

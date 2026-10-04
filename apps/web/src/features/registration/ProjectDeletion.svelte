@@ -134,14 +134,10 @@
 <svelte:window onbeforeunload={beforeUnload} />
 
 <dialog
-  use:modal
+  use:modal={{ onclose: close }}
   out:layerExit|global
   class="app-dialog project-deletion"
   aria-label="Delete project"
-  oncancel={(event) => {
-    event.preventDefault();
-    close();
-  }}
 >
   <DialogHeader
     title={`Delete “${project.title}”?`}

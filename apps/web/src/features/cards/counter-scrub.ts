@@ -1,4 +1,5 @@
 import { clampCounter } from "./focus-counter-controller.ts";
+import { gestureCancellation } from "../../lib/ui/gesture-cancellation.ts";
 
 type Options = {
   value: number;
@@ -77,12 +78,6 @@ export function counterScrub(node: HTMLElement, options: Options) {
     event.stopImmediatePropagation();
   };
   const key = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && gesture) {
-      cancel();
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
     if (
       document.activeElement !== node ||
       options.disabled ||
@@ -101,24 +96,15 @@ export function counterScrub(node: HTMLElement, options: Options) {
     event.stopPropagation();
     options.commit(clampCounter(options.value + direction * options.step));
   };
-  const secondPointer = (event: PointerEvent) => {
-    if (gesture && gesture.id !== event.pointerId) cancel();
-  };
-  const lostCapture = (event: PointerEvent) => {
-    // Touch starts with implicit capture on the tapped child. Its transfer to
-    // this button bubbles a lost event; only losing our own capture cancels.
-    if (event.target === node && gesture?.id === event.pointerId) cancel();
-  };
   node.addEventListener("pointerdown", down);
   node.addEventListener("click", click, true);
-  node.addEventListener("lostpointercapture", lostCapture);
-  window.addEventListener("pointerdown", secondPointer);
   window.addEventListener("pointermove", move, { passive: false });
   window.addEventListener("pointerup", up);
-  window.addEventListener("pointercancel", cancel);
   window.addEventListener("keydown", key);
-  window.addEventListener("blur", cancel);
-  window.addEventListener("session-ended", cancel);
+  const cancelGestures = gestureCancellation(node, {
+    pointer: () => gesture?.id ?? null,
+    cancel,
+  });
   return {
     update(next: Options) {
       options = next;
@@ -128,14 +114,10 @@ export function counterScrub(node: HTMLElement, options: Options) {
       cancel();
       node.removeEventListener("pointerdown", down);
       node.removeEventListener("click", click, true);
-      node.removeEventListener("lostpointercapture", lostCapture);
-      window.removeEventListener("pointerdown", secondPointer);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
       window.removeEventListener("keydown", key);
-      window.removeEventListener("blur", cancel);
-      window.removeEventListener("session-ended", cancel);
+      cancelGestures();
     },
   };
 }

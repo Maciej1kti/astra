@@ -54,6 +54,19 @@ planning, events and calendar-popup suites.
 
 ## Other interaction coverage
 
+The `menus` suite covers the shared native action/date/navigation popover,
+lower-edge clipping, viewport bounds, start alignment, panel growth, rotation,
+scroll anchoring, Tab/Escape focus and menus inside a narrow card dialog.
+The `dialog-components` suite covers held deferred loading, dialog replacement,
+nested tag focus, centralized Escape guards and the fixed card-project footer at
+desktop, phone and short landscape sizes. Run both against a release daemon in
+Chromium and WebKit:
+
+```sh
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs menus dialog-components
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs menus dialog-components
+```
+
 The `navigation` suite checks the compact Focus/Projects/More phone bar, off-bar
 view navigation and selection, browser-local order and visibility persistence,
 all-hidden recovery, keyboard focus/dismissal, touch targets, landscape scrolling,

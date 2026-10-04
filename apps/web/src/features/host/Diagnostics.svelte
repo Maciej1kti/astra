@@ -51,13 +51,9 @@
 
 <dialog
   class="app-dialog"
-  use:modal
+  use:modal={{ onclose }}
   out:layerExit|global
   aria-label="Host diagnostics"
-  oncancel={(event) => {
-    event.preventDefault();
-    onclose();
-  }}
 >
   <DialogHeader
     title="Host diagnostics"

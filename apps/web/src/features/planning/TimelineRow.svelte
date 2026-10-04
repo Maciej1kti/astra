@@ -14,8 +14,9 @@
       type="button"
       class="row-grip"
       aria-label={`Reorder: ${row.text}`}
-      aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
-      title="Drag to reorder · Alt+↑/↓"
+      aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+Home Alt+End"
+      aria-pressed="false"
+      title="Drag to reorder · Alt+↑/↓/Home/End"
       disabled={!actions.editable()}
       use:timelineRowGesture={{
         id: String(row.id),
@@ -23,17 +24,6 @@
         disabled: () => !actions.editable(),
         active: actions.gesture,
         commit: actions.reorder,
-      }}
-      onkeydown={(event) => {
-        if (event.altKey && ["ArrowUp", "ArrowDown"].includes(event.key)) {
-          event.preventDefault();
-          event.stopPropagation();
-          actions.reorder(
-            String(row.id),
-            actions.order().indexOf(String(row.id)) +
-              (event.key === "ArrowUp" ? -1 : 1),
-          );
-        }
       }}><Icon name="grip" small /></button
     >
     <span>{row.text}</span>

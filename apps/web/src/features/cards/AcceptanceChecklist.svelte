@@ -2,11 +2,15 @@
   import Icon from "../../lib/ui/Icon.svelte";
   import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import { onMount, tick } from "svelte";
+  import { gestureCancellation } from "../../lib/ui/gesture-cancellation";
+  import {
+    reorderKeyIndex,
+    sameReorderOrder,
+  } from "../../lib/ui/reorder-gesture";
+  import { checklistOrderGesture } from "./checklist-order-gesture";
   import {
     ACCEPTANCE_LIMIT,
     ACCEPTANCE_TEXT_LIMIT,
-    acceptanceDropIndex,
-    moveAcceptance,
     moveAcceptanceToIndex,
     reorderAcceptance,
     type AcceptanceItem,
@@ -30,16 +34,10 @@
   let list = $state<HTMLUListElement>();
   let announcement = $state("");
   let previewOrder = $state<string[] | null>(null);
-  let activeDrag = $state<{
-    id: string;
-    mode: "pointer" | "keyboard";
-    pointerId?: number;
-  } | null>(null);
-  let pointerHandle: HTMLElement | null = null;
+  let activeDrag = $state<{ id: string; mode: "pointer" | "keyboard" } | null>(
+    null,
+  );
   let dragMembership: string[] | null = null;
-  let scrollContainer: HTMLElement | null = null;
-  let autoScrollFrame = 0;
-  let latestPointerY = 0;
 
   const displayedItems = $derived(
     previewOrder ? reorderAcceptance(items, previewOrder) : items,
@@ -58,13 +56,15 @@
 
   $effect(() => {
     if (
-      activeDrag &&
+      activeDrag?.mode === "keyboard" &&
       (disabled ||
         !dragMembership ||
-        items.length !== dragMembership.length ||
-        items.some((item, index) => item.id !== dragMembership?.[index]))
+        !sameReorderOrder(
+          dragMembership,
+          items.map((item) => item.id),
+        ))
     )
-      cancelDrag();
+      finishKeyboardDrag(false);
   });
 
   function add() {
@@ -89,173 +89,38 @@
     input?.focus();
   }
 
-  function finishDrag(commit: boolean, restoreKeyboardFocus = commit) {
-    const drag = activeDrag;
-    const order = previewOrder;
-    const restoreFocus =
-      restoreKeyboardFocus && drag?.mode === "keyboard" ? drag.id : null;
-    stopAutoScroll();
-    activeDrag = null;
-    previewOrder = null;
-    dragMembership = null;
-    scrollContainer = null;
-    if (pointerHandle && drag?.pointerId !== undefined) {
-      if (
-        typeof pointerHandle.hasPointerCapture === "function" &&
-        pointerHandle.hasPointerCapture(drag.pointerId)
-      )
-        pointerHandle.releasePointerCapture(drag.pointerId);
-    }
-    pointerHandle = null;
-    if (restoreFocus) void tick().then(() => focusHandle(restoreFocus));
-    if (!commit || disabled || !drag || !order) return;
+  function commitOrder(order: string[], itemId: string) {
     const next = reorderAcceptance(items, order);
     if (next === items) return;
     items = next;
-    announcement = `Moved checklist item to position ${items.findIndex((item) => item.id === drag.id) + 1}.`;
-  }
-
-  function cancelDrag() {
-    finishDrag(false);
+    announcement = `Moved checklist item to position ${items.findIndex((item) => item.id === itemId) + 1}.`;
   }
 
   function focusHandle(itemId: string) {
     const row = [
       ...(list?.querySelectorAll<HTMLElement>("[data-checklist-item]") ?? []),
     ].find((value) => value.dataset.checklistItem === itemId);
-    row?.querySelector<HTMLButtonElement>(".handle")?.focus();
+    row
+      ?.querySelector<HTMLButtonElement>(".handle")
+      ?.focus({ preventScroll: true });
+    row?.scrollIntoView({ block: "nearest" });
   }
 
-  function findScrollableAncestor(node: HTMLElement | undefined) {
-    let current = node?.parentElement ?? null;
-    while (current) {
-      const style = getComputedStyle(current);
-      if (
-        style.overflowY === "auto" ||
-        style.overflowY === "scroll" ||
-        current.classList.contains("editor")
-      )
-        return current;
-      current = current.parentElement;
-    }
-    return null;
-  }
-
-  function scrollBounds() {
-    if (!scrollContainer) return null;
-    const rect = scrollContainer.getBoundingClientRect();
-    const header = scrollContainer.querySelector<HTMLElement>("header");
-    const footer = scrollContainer.querySelector<HTMLElement>("footer");
-    return {
-      top: Math.max(
-        rect.top,
-        header?.getBoundingClientRect().bottom ?? rect.top,
-      ),
-      bottom: Math.min(
-        rect.bottom,
-        footer?.getBoundingClientRect().top ?? rect.bottom,
-      ),
-    };
-  }
-
-  function stopAutoScroll() {
-    if (autoScrollFrame) cancelAnimationFrame(autoScrollFrame);
-    autoScrollFrame = 0;
-  }
-
-  function applyPointerDrop() {
+  function finishKeyboardDrag(commit: boolean, restoreFocus = commit) {
     const drag = activeDrag;
-    if (!drag || drag.mode !== "pointer") return;
-    const rows = [
-      ...(list?.querySelectorAll<HTMLElement>("[data-checklist-item]") ?? []),
-    ].map((row) => {
-      const rect = row.getBoundingClientRect();
-      return {
-        id: row.dataset.checklistItem ?? "",
-        top: rect.top,
-        bottom: rect.bottom,
-      };
-    });
-    const destination = acceptanceDropIndex(
-      displayedItems,
-      drag.id,
-      latestPointerY,
-      rows,
-    );
-    if (destination === null) return;
-    const next = moveAcceptanceToIndex(displayedItems, drag.id, destination);
-    if (next !== displayedItems) previewOrder = next.map((item) => item.id);
-  }
-
-  function scheduleAutoScroll() {
-    if (autoScrollFrame || !activeDrag || activeDrag.mode !== "pointer") return;
-    autoScrollFrame = requestAnimationFrame(() => {
-      autoScrollFrame = 0;
-      if (!activeDrag || activeDrag.mode !== "pointer") return;
-      const bounds = scrollBounds();
-      if (!bounds) return;
-      const edge = 48;
-      const delta =
-        latestPointerY < bounds.top + edge
-          ? -Math.min(12, bounds.top + edge - latestPointerY)
-          : latestPointerY > bounds.bottom - edge
-            ? Math.min(12, latestPointerY - (bounds.bottom - edge))
-            : 0;
-      if (!delta) return;
-      const before = scrollContainer?.scrollTop ?? 0;
-      if (scrollContainer) scrollContainer.scrollTop += delta;
-      applyPointerDrop();
-      if (scrollContainer?.scrollTop !== before) scheduleAutoScroll();
-    });
-  }
-
-  function beginPointerDrag(event: PointerEvent, itemId: string) {
-    if (disabled || activeDrag || !event.isPrimary || event.button !== 0)
-      return;
-    event.preventDefault();
-    // Capture on the stable list: moving a keyed row can release its capture.
-    pointerHandle = list ?? (event.currentTarget as HTMLButtonElement);
-    activeDrag = { id: itemId, mode: "pointer", pointerId: event.pointerId };
-    previewOrder = items.map((item) => item.id);
-    dragMembership = items.map((item) => item.id);
-    scrollContainer = findScrollableAncestor(list);
-    latestPointerY = event.clientY;
-    try {
-      pointerHandle.setPointerCapture(event.pointerId);
-    } catch {
-      // Pointer capture can be unavailable in a detached test node.
-    }
-    announcement = `Picked up checklist item ${items.findIndex((item) => item.id === itemId) + 1}.`;
-  }
-
-  function updatePointerDrag(event: PointerEvent) {
-    const drag = activeDrag;
-    if (!drag || drag.mode !== "pointer" || drag.pointerId !== event.pointerId)
-      return;
-    if (disabled) {
-      cancelDrag();
-      return;
-    }
-    event.preventDefault();
-    latestPointerY = event.clientY;
-    applyPointerDrop();
-    scheduleAutoScroll();
-  }
-
-  function finishPointerDrag(event: PointerEvent) {
-    const drag = activeDrag;
-    if (!drag || drag.mode !== "pointer" || drag.pointerId !== event.pointerId)
-      return;
-    updatePointerDrag(event);
-    finishDrag(true);
-  }
-
-  function beginKeyboardDrag(itemId: string) {
-    if (disabled || activeDrag) return;
-    activeDrag = { id: itemId, mode: "keyboard" };
-    previewOrder = items.map((item) => item.id);
-    dragMembership = items.map((item) => item.id);
-    announcement = `Picked up checklist item ${items.findIndex((item) => item.id === itemId) + 1}.`;
+    const order = previewOrder;
+    const valid =
+      dragMembership &&
+      sameReorderOrder(
+        dragMembership,
+        items.map((item) => item.id),
+      );
+    activeDrag = null;
+    previewOrder = null;
+    dragMembership = null;
+    if (restoreFocus && drag) void tick().then(() => focusHandle(drag.id));
+    if (!commit || disabled || !drag || !order || !valid) return;
+    commitOrder(order, drag.id);
   }
 
   function handleKeydown(event: KeyboardEvent, itemId: string) {
@@ -266,37 +131,28 @@
     if (!drag) {
       if (pickup) {
         event.preventDefault();
-        beginKeyboardDrag(itemId);
+        activeDrag = { id: itemId, mode: "keyboard" };
+        previewOrder = items.map((item) => item.id);
+        dragMembership = [...previewOrder];
+        announcement = `Picked up checklist item ${items.findIndex((item) => item.id === itemId) + 1}.`;
       }
       return;
     }
     if (drag.mode !== "keyboard" || drag.id !== itemId) return;
-    if (event.key === "Escape") {
-      event.preventDefault();
-      finishDrag(false, true);
-      announcement = "Checklist item order restored.";
-      return;
-    }
-    if (event.key === "Tab") {
-      cancelDrag();
-      announcement = "Checklist item order restored.";
-      return;
-    }
     if (pickup) {
       event.preventDefault();
-      finishDrag(true);
+      finishKeyboardDrag(true);
       return;
     }
-    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    const current = displayedItems.findIndex((item) => item.id === itemId);
+    const index = reorderKeyIndex(event.key, current, displayedItems.length);
+    if (index === null) return;
     event.preventDefault();
-    const next = moveAcceptance(
-      displayedItems,
-      itemId,
-      event.key === "ArrowUp" ? -1 : 1,
-    );
+    event.stopPropagation();
+    const next = moveAcceptanceToIndex(displayedItems, itemId, index);
     if (next !== displayedItems) {
       previewOrder = next.map((item) => item.id);
-      announcement = `Checklist item moved to position ${next.findIndex((item) => item.id === itemId) + 1}.`;
+      announcement = `Checklist item moved to position ${index + 1}.`;
       void tick().then(() => {
         if (activeDrag?.mode === "keyboard" && activeDrag.id === itemId)
           focusHandle(itemId);
@@ -305,47 +161,22 @@
   }
 
   onMount(() => {
-    const move = (event: PointerEvent) => updatePointerDrag(event);
-    const up = (event: PointerEvent) => finishPointerDrag(event);
-    const cancel = () => cancelDrag();
-    const lostCapture = (event: PointerEvent) => {
-      if (event.target === pointerHandle) cancelDrag();
-    };
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && activeDrag) {
-        event.preventDefault();
-        finishDrag(false, true);
+    if (!list) return;
+    const removeCancellation = gestureCancellation(list, {
+      pointer: () => null,
+      active: () => activeDrag?.mode === "keyboard",
+      cancel(event) {
+        finishKeyboardDrag(
+          false,
+          event?.type === "keydown" &&
+            (event as KeyboardEvent).key === "Escape",
+        );
         announcement = "Checklist item order restored.";
-      }
-    };
-    const pointerdown = (event: PointerEvent) => {
-      if (!activeDrag) return;
-      if (
-        activeDrag.mode === "pointer" &&
-        activeDrag.pointerId === event.pointerId
-      )
-        return;
-      cancelDrag();
-      announcement = "Checklist item order restored.";
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", cancel);
-    window.addEventListener("lostpointercapture", lostCapture);
-    window.addEventListener("pointerdown", pointerdown, true);
-    window.addEventListener("blur", cancel);
-    window.addEventListener("orientationchange", cancel);
-    window.addEventListener("keydown", keydown);
+      },
+    });
     return () => {
-      cancel();
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
-      window.removeEventListener("lostpointercapture", lostCapture);
-      window.removeEventListener("pointerdown", pointerdown, true);
-      window.removeEventListener("blur", cancel);
-      window.removeEventListener("orientationchange", cancel);
-      window.removeEventListener("keydown", keydown);
+      removeCancellation();
+      if (activeDrag?.mode === "keyboard") finishKeyboardDrag(false);
     };
   });
 </script>
@@ -358,7 +189,17 @@
     count={`${items.filter((item) => item.completed).length} / ${items.length}`}
     countLabel={`${items.filter((item) => item.completed).length} of ${items.length} checklist items completed`}
   />
-  <ul bind:this={list}>
+  <ul
+    bind:this={list}
+    use:checklistOrderGesture={{
+      items: () => items,
+      disabled: () => disabled || activeDrag?.mode === "keyboard",
+      pickedUp: (itemId) => (activeDrag = { id: itemId, mode: "pointer" }),
+      released: () => (activeDrag = null),
+      commit: commitOrder,
+      announce: (message) => (announcement = message),
+    }}
+  >
     {#each displayedItems as item, index (item.id)}
       <li
         data-checklist-item={item.id}
@@ -410,7 +251,9 @@
           {disabled}
           aria-label={`Move checklist item ${index + 1}`}
           aria-pressed={activeDrag?.id === item.id}
-          onpointerdown={(event) => beginPointerDrag(event, item.id)}
+          data-checklist-handle={item.id}
+          aria-keyshortcuts="Space Enter ArrowUp ArrowDown Home End"
+          aria-describedby={`${id}-reorder-help`}
           onkeydown={(event) => handleKeydown(event, item.id)}
           ><Icon name="grip" small /></button
         >
@@ -453,6 +296,10 @@
     >
       {error}
     </p>{/if}
+  <span class="sr-only" id={`${id}-reorder-help`}>
+    Drag to reorder. Press Space or Enter to pick up, use arrow keys, Home or
+    End to move, and press Space or Enter to drop. Escape cancels.
+  </span>
   <p role="status" aria-live="polite" aria-atomic="true" class="sr-only">
     {announcement}
   </p>

@@ -300,14 +300,10 @@
 
 <dialog
   class="app-dialog"
-  use:modal
+  use:modal={{ onclose: close }}
   out:layerExit|global
   aria-label="Workspace settings"
   onkeydown={keydown}
-  oncancel={(e) => {
-    e.preventDefault();
-    close();
-  }}
 >
   <DialogHeader
     title="Workspace settings"

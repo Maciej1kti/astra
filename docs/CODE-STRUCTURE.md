@@ -119,6 +119,14 @@ features supply their navigation keys and readiness without changing read lifeti
 `styles/tokens.css`; workspace and editor styles consume those tokens. See the
 [UI design system](DESIGN-SYSTEM.md) for component and layout ownership.
 
+`lib/ui/reorder-gesture.ts` owns the shared vertical pointer preview lifecycle;
+Focus, checklist, card-layout and Timeline adapters own snapshot identity,
+measured destination bounds and their existing commit actions.
+`gesture-cancellation.ts` also serves Board, date and counter gestures, while
+`popover-position.ts` measures every `ActionMenu` against its trigger and visual
+viewport. Native modal registration, Escape routing and return-focus lineage
+remain in `dialog.ts`. Shared UI modules never own feature writes.
+
 ### Commands and editor drafts
 
 Every command consumer uses the same

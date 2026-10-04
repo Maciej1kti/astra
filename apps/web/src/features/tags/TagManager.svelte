@@ -51,6 +51,9 @@
         job?.state === "needs_review" ||
         job?.state === "failed"),
   );
+  function close() {
+    if (canClose) onclose();
+  }
   const targetError = $derived(
     target === source
       ? "Choose a different tag name."
@@ -171,18 +174,14 @@
 
 <dialog
   class="app-dialog dialog-large"
-  use:modal
+  use:modal={{ onclose: close }}
   out:layerExit|global
   aria-label="Manage project tags"
-  oncancel={(event) => {
-    event.preventDefault();
-    if (canClose) onclose();
-  }}
 >
   <DialogHeader
     title="Project tags"
     description="Rename or merge tags used in a project."
-    {onclose}
+    onclose={close}
     disabled={!canClose}
     closeLabel="Close tag manager"
   >

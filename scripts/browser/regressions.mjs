@@ -10,6 +10,7 @@ import { artifactManifest } from "./artifacts.mjs";
 
 const suites = [
   "navigation",
+  "menus",
   "motion",
   "calendar-motion",
   "loading",
@@ -30,6 +31,7 @@ const suites = [
   "charts",
   "autosave",
   "dialogs",
+  "dialog-components",
   "responsive",
   "planning",
   "ui-corrections",

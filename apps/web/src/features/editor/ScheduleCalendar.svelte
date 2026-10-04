@@ -137,13 +137,9 @@
 <dialog
   bind:this={element}
   class="app-dialog schedule-calendar-dialog"
-  use:modal
+  use:modal={{ onclose }}
   out:layerExit|global
   aria-label="Choose card dates"
-  oncancel={(event) => {
-    event.preventDefault();
-    onclose();
-  }}
 >
   <DialogHeader
     title={single ? "Event date" : "Plan your card"}

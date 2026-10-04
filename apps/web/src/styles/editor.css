@@ -515,11 +515,7 @@
   padding-top: var(--space-6);
   padding-bottom: var(--space-2);
 }
-.card-layout-menu .action-menu {
-  position: static;
-}
 .card-layout-menu .action-menu-panel {
-  right: var(--card-padding);
   width: 336px;
   max-width: calc(100% - 2 * var(--card-padding));
   max-height: min(560px, calc(100dvh - var(--space-10)));
@@ -604,7 +600,7 @@
 .layout-drop-indicator {
   position: fixed;
   pointer-events: none;
-  z-index: 10;
+  z-index: var(--layer-drag-preview);
 }
 .layout-drag-preview {
   margin: 0;
@@ -613,6 +609,7 @@
   box-shadow: var(--shadow-floating);
 }
 .layout-drop-indicator {
+  z-index: var(--layer-drag-indicator);
   height: var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--accent-ink);

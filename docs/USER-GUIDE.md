@@ -227,6 +227,8 @@ paths or automatically shift other cards. Cards have no separate deadline/review
 dates, blocked-reason field or milestone link. Milestones remain independent
 resources with project/milestone report support; they are not a card type.
 Drag a Timeline row by its grip, or use Alt+Up/Down on the grip, to reorder it.
+Alt+Home/End moves the row to the first/last position. Escape or Tab cancels an
+unfinished pointer preview; a drop outside the ordering surface keeps the order.
 This per-project presentation order is saved in the current browser. The final
 empty row creates a card on the clicked date; the main Add card action remains.
 
@@ -235,7 +237,8 @@ empty row creates a card on the clicked date; the main Add card action remains.
 Focus presents these sections in order and avoids repeating a visible card:
 
 1. **In focus:** pinned cards, regardless of status or dates. Reorder directly or
-   use the keyboard controls; filtered ordering preserves hidden entries.
+   use Alt+Up/Down on a focused card; Alt+Home/End moves it to the first/last
+   visible position. Filtered ordering preserves hidden entries.
 2. **Needs my attention:** actionable signals such as overdue work, review cards,
    unresolved decisions and unread reports. Reading a decision is not resolving it.
 3. **In motion:** unfinished date-only plans whose inclusive range contains today

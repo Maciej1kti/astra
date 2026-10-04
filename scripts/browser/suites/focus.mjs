@@ -801,6 +801,31 @@ await runBrowserSuite(
           );
           await expect.poll(() => visibleFocusOrder(page)).toEqual(startOrder);
 
+          for (const reason of ["Tab", "orientationchange"]) {
+            await beginFocusDrag(
+              page,
+              orderLast.metadata.id,
+              orderFirst.metadata.id,
+            );
+            if (reason === "Tab") await page.keyboard.press("Tab");
+            else
+              await page.evaluate(() =>
+                window.dispatchEvent(new Event("orientationchange")),
+              );
+            await page.mouse.up();
+            await expect(page.locator("[data-focus-drag-preview]")).toHaveCount(
+              0,
+            );
+            await expect
+              .poll(() => visibleFocusOrder(page))
+              .toEqual(startOrder);
+            assert.equal(
+              focusWrites.length,
+              writesBefore,
+              `${reason} must cancel a held Focus reorder`,
+            );
+          }
+
           await focusCard(page, orderFirst.metadata.id).click();
           await expect(editor(page)).toBeVisible();
           await page.keyboard.press("Escape");

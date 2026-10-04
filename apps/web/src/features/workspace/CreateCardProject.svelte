@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Summary } from "../../lib/api/api";
+  import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
   let {
@@ -16,29 +17,36 @@
 
 <dialog
   class="app-dialog"
-  use:modal
+  use:modal={{ onclose }}
   out:layerExit|global
   aria-label="Choose project for card"
-  oncancel={(event) => {
-    event.preventDefault();
-    onclose();
-  }}
 >
-  <DialogHeader title="Add card" {onclose} />
+  <DialogHeader
+    title="Add card"
+    {onclose}
+    closeLabel="Close project selection"
+  />
   <form
-    class="dialog-body"
+    class="dialog-form"
     onsubmit={(event) => {
       event.preventDefault();
       if (project) onselect(project);
     }}
   >
-    <label
-      >Project<select aria-label="Project" bind:value={project} required
-        ><option value="" disabled>Choose a project</option
-        >{#each projects as item}<option value={item.id}>{item.title}</option
-          >{/each}</select
-      ></label
-    >
-    <button class="primary" disabled={!project}>Continue</button>
+    <div class="dialog-body">
+      <label
+        >Project<select aria-label="Project" bind:value={project} required
+          ><option value="" disabled>Choose a project</option
+          >{#each projects as item}<option value={item.id}>{item.title}</option
+            >{/each}</select
+        ></label
+      >
+    </div>
+    <footer class="dialog-footer">
+      <Button type="button" variant="quiet" onclick={onclose}>Cancel</Button>
+      <Button type="submit" variant="primary" disabled={!project}
+        >Continue</Button
+      >
+    </footer>
   </form>
 </dialog>

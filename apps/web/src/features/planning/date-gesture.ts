@@ -1,3 +1,5 @@
+import { gestureCancellation } from "../../lib/ui/gesture-cancellation.ts";
+
 type Options = {
   delta: (x: number, y: number, startX: number, startY: number) => number;
   commit: (days: number) => void;
@@ -7,6 +9,7 @@ type Options = {
 /** Gesture previews never write data. Only pointerup proposes a versioned edit. */
 export function dateGesture(node: HTMLElement, initial: Options) {
   let options = initial,
+    captured: Options | null = null,
     pointer: number | null = null,
     x = 0,
     startX = 0,
@@ -30,24 +33,26 @@ export function dateGesture(node: HTMLElement, initial: Options) {
   }
   function cancel() {
     if (pointer !== null) suppressClick = true;
-    const captured = pointer;
+    const pointerId = pointer;
+    const intent = captured;
     pointer = null;
+    captured = null;
     cancelAnimationFrame(frame);
     frame = 0;
     previewNode.style.transform = originalTransform;
     previewNode.style.width = originalWidth;
     node.removeAttribute("data-dragging");
-    if (captured !== null && node.hasPointerCapture(captured))
-      node.releasePointerCapture(captured);
-    if (captured !== null) options.active(false);
+    if (pointerId !== null && node.hasPointerCapture(pointerId))
+      node.releasePointerCapture(pointerId);
+    if (pointerId !== null) intent?.active(false);
   }
   function paint() {
     frame = 0;
     if (pointer === null) return;
     const dx = x - startX + travel();
-    if (options.operation === "end")
+    if (captured?.operation === "end")
       previewNode.style.width = `${Math.max(1, width + dx)}px`;
-    else if (options.operation === "start") {
+    else if (captured?.operation === "start") {
       previewNode.style.transform = `translateX(${Math.min(dx, width - 1)}px)`;
       previewNode.style.width = `${Math.max(1, width - dx)}px`;
     } else previewNode.style.transform = `translateX(${dx}px)`;
@@ -61,7 +66,14 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     }
   }
   function down(event: PointerEvent) {
-    if (pointer !== null || !event.isPrimary || event.button !== 0) return;
+    if (
+      pointer !== null ||
+      !event.isPrimary ||
+      event.button !== 0 ||
+      node.matches(":disabled")
+    )
+      return;
+    captured = options;
     suppressClick = false;
     previewNode = node.closest<HTMLElement>(".wx-bar") ?? node;
     originalTransform = previewNode.style.transform;
@@ -74,7 +86,7 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     startY = event.clientY;
     node.setPointerCapture(pointer);
     node.setAttribute("data-dragging", "true");
-    options.active(true);
+    captured.active(true);
     event.preventDefault();
   }
   function move(event: PointerEvent) {
@@ -84,7 +96,9 @@ export function dateGesture(node: HTMLElement, initial: Options) {
   }
   function up(event: PointerEvent) {
     if (event.pointerId !== pointer) return;
-    const delta = options.delta(
+    const intent = captured;
+    if (!intent || node.matches(":disabled")) return cancel();
+    const delta = intent.delta(
       event.clientX + travel(),
       event.clientY,
       startX,
@@ -92,26 +106,20 @@ export function dateGesture(node: HTMLElement, initial: Options) {
     );
     cancel();
     suppressClick = delta !== 0;
-    if (delta) options.commit(delta);
-  }
-  function second(event: PointerEvent) {
-    if (pointer !== null && event.pointerId !== pointer) cancel();
-  }
-  function key(event: KeyboardEvent) {
-    if (event.key === "Escape") cancel();
+    if (delta) intent.commit(delta);
   }
   node.addEventListener("click", click, true);
   node.addEventListener("pointerdown", down);
   node.addEventListener("pointermove", move);
   node.addEventListener("pointerup", up);
-  node.addEventListener("pointercancel", cancel);
-  node.addEventListener("lostpointercapture", cancel);
-  window.addEventListener("pointerdown", second, true);
-  window.addEventListener("keydown", key);
-  window.addEventListener("orientationchange", cancel);
+  const cancelGestures = gestureCancellation(node, {
+    pointer: () => pointer,
+    cancel,
+  });
   return {
     update(value: Options) {
       options = value;
+      if (node.matches(":disabled")) cancel();
     },
     destroy() {
       cancel();
@@ -119,11 +127,7 @@ export function dateGesture(node: HTMLElement, initial: Options) {
       node.removeEventListener("pointerdown", down);
       node.removeEventListener("pointermove", move);
       node.removeEventListener("pointerup", up);
-      node.removeEventListener("pointercancel", cancel);
-      node.removeEventListener("lostpointercapture", cancel);
-      window.removeEventListener("pointerdown", second, true);
-      window.removeEventListener("keydown", key);
-      window.removeEventListener("orientationchange", cancel);
+      cancelGestures();
     },
   };
 }

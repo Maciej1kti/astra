@@ -59,7 +59,10 @@ export async function runCardChecks({
     await expect(description()).toBeVisible();
   }
   const item = (index) =>
-    dialog().getByLabel(`Checklist item ${index}`, { exact: true });
+    dialog().getByRole("textbox", {
+      name: `Checklist item ${index}`,
+      exact: true,
+    });
   const checklist = () =>
     dialog().getByRole("region", { name: "Checklist", exact: true });
   const grip = (index) =>
@@ -144,6 +147,7 @@ export async function runCardChecks({
     await expect(dialog().getByTestId("autosave-status")).toHaveText("Saved");
   }
   async function screenshot(name) {
+    if (page.context().browser().browserType().name() !== "chromium") return;
     await page.screenshot({
       path: join(evidenceDir, `${name}.png`),
       fullPage: !(await dialog().isVisible()),
@@ -545,6 +549,34 @@ export async function runCardChecks({
         beforePointerWrites,
         "A held drag must not submit a PATCH.",
       );
+      await expect(
+        dialog().locator("[data-checklist-drag-preview]"),
+      ).toBeVisible();
+      await expect(item(1)).toHaveValue("First checklist item");
+      const heldSource = await dialog()
+        .locator("[data-checklist-item]")
+        .first()
+        .boundingBox();
+      const heldPreview = await dialog()
+        .locator("[data-checklist-drag-preview]")
+        .boundingBox();
+      const heldIndicator = await dialog()
+        .locator("[data-checklist-drop-indicator]")
+        .boundingBox();
+      assert(heldSource && heldPreview && heldIndicator);
+      assert(
+        Math.abs(heldPreview.x - heldSource.x) < 2,
+        "Preview stays aligned during the native dialog entrance",
+      );
+      assert(
+        Math.abs(heldIndicator.x - heldSource.x) < 2,
+        "Insertion line stays aligned with checklist rows",
+      );
+      assert(
+        Math.abs(heldIndicator.width - heldSource.width) < 2,
+        "Insertion line retains the measured row width",
+      );
+      await screenshot("C04-checklist-reorder-preview");
       await page.mouse.up();
       await expect(item(1)).toHaveValue("Completed checklist item");
       await expect(item(2)).toHaveValue("Last checklist item");
@@ -610,6 +642,78 @@ export async function runCardChecks({
         "Escape must cancel the keyboard reorder without a write.",
       );
       assert.equal(get(card.id).version, keyboardSaved.version);
+      for (const reason of ["outside", "Tab", "blur"]) {
+        const handle = await grip(1).boundingBox();
+        const target = await dialog()
+          .locator("[data-checklist-item]")
+          .nth(2)
+          .boundingBox();
+        assert(handle && target);
+        await page.mouse.move(
+          handle.x + handle.width / 2,
+          handle.y + handle.height / 2,
+        );
+        await page.mouse.down();
+        await page.mouse.move(
+          target.x + target.width / 2,
+          target.y + target.height - 2,
+          { steps: 6 },
+        );
+        await expect(
+          dialog().locator("[data-checklist-drag-preview]"),
+        ).toBeVisible();
+        if (reason === "outside") await page.mouse.move(8, 8, { steps: 4 });
+        else if (reason === "Tab") await page.keyboard.press("Tab");
+        else await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+        await page.mouse.up();
+        await expect(
+          dialog().locator("[data-checklist-drag-preview]"),
+        ).toHaveCount(0);
+        await expect(item(1)).toHaveValue("Last checklist item");
+        assert.equal(
+          cardWrites(card.id).length,
+          beforePointerWrites + 2,
+          `${reason} cancels without autosaving order`,
+        );
+        assert.equal(get(card.id).version, keyboardSaved.version);
+      }
+      if (page.context().browser().browserType().name() === "chromium") {
+        const touch = await page.context().newCDPSession(page);
+        try {
+          const handle = await grip(1).boundingBox();
+          const target = await dialog()
+            .locator("[data-checklist-item]")
+            .nth(2)
+            .boundingBox();
+          assert(handle && target);
+          const point = {
+            x: handle.x + handle.width / 2,
+            y: handle.y + handle.height / 2,
+          };
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchStart",
+            touchPoints: [point],
+          });
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchMove",
+            touchPoints: [{ ...point, y: target.y + target.height - 2 }],
+          });
+          await expect(
+            dialog().locator("[data-checklist-drag-preview]"),
+          ).toBeVisible();
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchCancel",
+            touchPoints: [],
+          });
+          await expect(
+            dialog().locator("[data-checklist-drag-preview]"),
+          ).toHaveCount(0);
+          await expect(item(1)).toHaveValue("Last checklist item");
+          assert.equal(cardWrites(card.id).length, beforePointerWrites + 2);
+        } finally {
+          await touch.detach();
+        }
+      }
       return {
         card: card.id,
         pointerWrites: 1,
@@ -804,6 +908,21 @@ export async function runCardChecks({
             `${control}: ${JSON.stringify(rowMetrics)}`,
           );
         await screenshot("C08-mobile-checklist");
+        if (page.context().browser().browserType().name() !== "chromium") {
+          await keyboardMove(1);
+          await expect(item(1)).toHaveValue(
+            "Every move and remove action is reachable from the keyboard and viewport.",
+          );
+          await waitForAutosaveACK();
+          return {
+            viewport: { width: 390, height: 844 },
+            checklistMetrics,
+            rowMetrics,
+            keyboardOrdering: true,
+            touchTested: false,
+            physicalPhone: false,
+          };
+        }
         const touchGrip = await grip(1).boundingBox();
         const touchTarget = await dialog()
           .locator("[data-checklist-item]")

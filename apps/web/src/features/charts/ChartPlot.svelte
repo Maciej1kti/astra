@@ -264,7 +264,7 @@
   .axis-text {
     fill: var(--muted);
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: var(--text-sm);
   }
   .inspection-line {
     stroke: var(--line-strong);

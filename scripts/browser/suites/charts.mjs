@@ -482,6 +482,15 @@ await runBrowserSuite(
       for (const width of [1440, 1024, 768, 390, 320]) {
         await page.setViewportSize({ width, height: 1000 });
         await expect(chart("EUR")).toBeVisible();
+        const compactTargets = await dashboard
+          .locator(".range-presets button, .display-mode button")
+          .evaluateAll((buttons) =>
+            buttons.map((button) => button.getBoundingClientRect().height),
+          );
+        assert.ok(
+          compactTargets.every((height) => height >= 44),
+          `Chart shortcuts retain shared touch targets at ${width}px`,
+        );
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,

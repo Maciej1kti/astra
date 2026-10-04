@@ -1,6 +1,7 @@
 <script lang="ts">
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
+  import Icon from "../../lib/ui/Icon.svelte";
 
   import type {
     Root,
@@ -40,6 +41,9 @@
   let directories = $state<DirectoryPage["items"]>([]);
   let registrationPending = $derived(operation.pending);
   let registrationJob = $state<string | null>(null);
+  function close() {
+    if (!busy) open = false;
+  }
   $effect(() => {
     onpendingchange?.(busy || !!registrationPending || !!registrationJob);
   });
@@ -177,18 +181,14 @@
 
 {#if open}
   <dialog
-    use:modal
+    use:modal={{ onclose: close }}
     out:layerExit|global
     class="app-dialog modal"
     aria-label="Add project"
-    oncancel={(e) => {
-      e.preventDefault();
-      if (!busy) open = false;
-    }}
   >
     <DialogHeader
       title="Add a project"
-      onclose={() => (open = false)}
+      onclose={close}
       disabled={busy}
       closeLabel="Close"
     />
@@ -212,19 +212,26 @@
         <p class="breadcrumb">
           {roots.find((r) => r.id === root)?.display_path}/{relative}
         </p>
-        <button
+        <Button
+          type="button"
           disabled={!relative || busy || !!registrationPending || browsing}
           onclick={() => browse(relative.split("/").slice(0, -1).join("/"))}
-          >↑ Parent directory</button
+          ><Icon name="chevronUp" small />Parent directory</Button
         >
         <div class="directories">
           {#if browsing}<p role="status">Loading folders…</p>{/if}
-          {#each directories as directory}<button
+          {#each directories as directory}<Button
+              type="button"
               disabled={busy || !!registrationPending || browsing}
               aria-label={`Open folder: ${directory.name}`}
               onclick={() => browse(directory.relative_path)}
-              >▱ {directory.name}{directory.registered ? " · registered" : ""}
-              <span>→</span></button
+              ><Icon name="projects" small />
+              <span class="directory-name"
+                >{directory.name}{directory.registered
+                  ? " · registered"
+                  : ""}</span
+              >
+              <Icon name="arrow" small /></Button
             >{:else}{#if directoryReady}<p>
                 No subfolders here. You can select this folder.
               </p>{/if}{/each}
@@ -299,6 +306,7 @@
     margin-top: var(--space-4);
   }
   .check {
+    min-height: var(--tap-target);
     display: flex;
     align-items: center;
     gap: var(--space-5);
@@ -310,10 +318,17 @@
   }
   .directories :global(button) {
     display: flex;
+    align-items: center;
+    gap: var(--space-4);
     width: 100%;
     text-align: left;
     justify-content: space-between;
     margin: var(--space-2) 0;
+  }
+  .directory-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .breadcrumb {
     font-size: var(--text-sm);

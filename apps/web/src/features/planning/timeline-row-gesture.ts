@@ -1,3 +1,13 @@
+import {
+  insideReorderBounds,
+  positionReorderOverlay,
+  reorderGesture,
+  reorderKeyIndex,
+  sameReorderOrder,
+  type ReorderGestureOptions,
+  type ReorderPointer,
+} from "../../lib/ui/reorder-gesture.ts";
+
 type Options = {
   id: string;
   order: () => string[];
@@ -5,161 +15,144 @@ type Options = {
   active: (value: boolean) => void;
   commit: (id: string, destination: number) => void;
 };
+type Snapshot = {
+  id: string;
+  index: number;
+  order: string[];
+  row: HTMLElement;
+};
 
-/** A row drag owns a temporary preview and commits only on an uncancelled drop. */
+/** Native Gantt row geometry stays here; cancellation and snapshots are shared. */
 export function timelineRowGesture(node: HTMLElement, initial: Options) {
   let options = initial;
-  let drag: {
-    pointer: number;
-    y: number;
-    index: number;
-    order: string[];
-  } | null = null;
   let preview: HTMLElement | null = null;
   let indicator: HTMLElement | null = null;
-  let destination = -1;
-  let suppressClick = false;
-  function release() {
-    const previous = drag;
-    drag = null;
-    preview?.remove();
-    indicator?.remove();
-    preview = indicator = null;
-    node.removeAttribute("data-dragging");
-    if (previous && node.hasPointerCapture(previous.pointer))
-      node.releasePointerCapture(previous.pointer);
-    if (previous) options.active(false);
-    return previous;
-  }
-  function down(event: PointerEvent) {
-    if (drag || event.button !== 0 || !event.isPrimary || options.disabled())
-      return;
-    const order = options.order();
-    const index = order.indexOf(options.id);
-    if (index < 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-    drag = {
-      pointer: event.pointerId,
-      y: event.clientY,
-      index,
-      order: [...order],
-    };
-    destination = index;
-    suppressClick = false;
-    node.setPointerCapture(event.pointerId);
-    options.active(true);
-  }
-  function move(event: PointerEvent) {
-    if (!drag || drag.pointer !== event.pointerId) return;
-    if (
-      options.disabled() ||
-      !drag.order.every((id, i) => options.order()[i] === id)
-    ) {
-      release();
-      return;
+
+  function destination(pointer: ReorderPointer<Snapshot>) {
+    const bounds = node.closest(".astra-gantt")?.getBoundingClientRect();
+    if (!bounds || !insideReorderBounds(pointer.x, pointer.y, bounds)) {
+      if (indicator) indicator.hidden = true;
+      return null;
     }
-    if (Math.abs(event.clientY - drag.y) < 5 && !preview) return;
-    event.preventDefault();
-    const source = node.closest<HTMLElement>(".wx-row") ?? node;
-    const bounds = source.getBoundingClientRect();
-    if (!preview) {
-      preview = document.createElement("div");
-      preview.textContent = source.textContent;
-      preview.setAttribute("aria-hidden", "true");
-      preview.inert = true;
-      Object.assign(preview.style, {
-        position: "fixed",
-        pointerEvents: "none",
-        zIndex: "10000",
-        padding: "var(--space-6)",
-        background: "var(--paper)",
-        border: "var(--stroke) solid var(--line)",
-        borderRadius: "var(--radius-control)",
-        boxShadow: "var(--shadow-floating)",
-        width: `${bounds.width}px`,
-        left: `${bounds.left}px`,
-      });
-      indicator = document.createElement("div");
-      indicator.setAttribute("aria-hidden", "true");
-      Object.assign(indicator.style, {
-        position: "fixed",
-        pointerEvents: "none",
-        zIndex: "10001",
-        height: "2px",
-        background: "var(--accent-ink)",
-        width: `${bounds.width}px`,
-        left: `${bounds.left}px`,
-      });
-      document.body.append(preview, indicator);
-      node.setAttribute("data-dragging", "true");
-      suppressClick = true;
-    }
-    destination = Math.max(
+    const rect = pointer.snapshot.row.getBoundingClientRect();
+    if (!rect.height) return null;
+    const index = Math.max(
       0,
       Math.min(
-        drag.order.length - 1,
-        drag.index + Math.round((event.clientY - drag.y) / bounds.height),
+        pointer.snapshot.order.length - 1,
+        pointer.snapshot.index +
+          Math.round((pointer.y - pointer.startY) / rect.height),
       ),
     );
-    preview.style.top = `${event.clientY - bounds.height / 2}px`;
-    indicator!.style.top = `${bounds.top + (destination - drag.index) * bounds.height + (destination > drag.index ? bounds.height : 0)}px`;
-  }
-  function up(event: PointerEvent) {
-    if (!drag || drag.pointer !== event.pointerId) return;
-    const bounds = node.closest(".astra-gantt")?.getBoundingClientRect();
-    const inside =
-      bounds &&
-      event.clientX >= bounds.left &&
-      event.clientX <= bounds.right &&
-      event.clientY >= bounds.top &&
-      event.clientY <= bounds.bottom;
-    const target = destination;
-    const moved = !!preview;
-    const previous = release();
-    if (inside && moved && previous && target !== previous.index)
-      options.commit(options.id, target);
-  }
-  function key(event: KeyboardEvent) {
-    if (event.key === "Escape") release();
-  }
-  function second(event: PointerEvent) {
-    if (drag && drag.pointer !== event.pointerId) release();
-  }
-  function click(event: MouseEvent) {
-    if (suppressClick) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      suppressClick = false;
+    if (indicator) {
+      indicator.hidden = false;
+      positionReorderOverlay(
+        indicator,
+        rect.left,
+        rect.top +
+          (index - pointer.snapshot.index) * rect.height +
+          (index > pointer.snapshot.index ? rect.height : 0),
+        rect.width,
+      );
     }
+    return index;
   }
-  node.addEventListener("pointerdown", down);
-  node.addEventListener("click", click, true);
-  node.addEventListener("lostpointercapture", release);
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up);
-  window.addEventListener("pointercancel", release);
-  window.addEventListener("pointerdown", second, true);
-  window.addEventListener("keydown", key);
-  window.addEventListener("blur", release);
-  window.addEventListener("session-ended", release);
+
+  function gestureOptions(): ReorderGestureOptions<Snapshot> {
+    return {
+      disabled: () => options.disabled(),
+      active: (value) => options.active(value),
+      capture(event) {
+        const order = options.order();
+        const index = order.indexOf(options.id);
+        if (index < 0) return null;
+        event.stopPropagation();
+        node.focus({ preventScroll: true });
+        return {
+          id: options.id,
+          index,
+          order: [...order],
+          row: node.closest<HTMLElement>(".wx-row") ?? node,
+        };
+      },
+      valid: (snapshot) =>
+        snapshot.id === options.id &&
+        sameReorderOrder(snapshot.order, options.order()),
+      start({ snapshot }) {
+        const bounds = snapshot.row.getBoundingClientRect();
+        preview = document.createElement("div");
+        preview.textContent = snapshot.row.textContent;
+        preview.setAttribute("aria-hidden", "true");
+        preview.inert = true;
+        Object.assign(preview.style, {
+          position: "fixed",
+          pointerEvents: "none",
+          zIndex: "var(--layer-drag-preview)",
+          padding: "var(--space-6)",
+          background: "var(--paper)",
+          border: "var(--stroke) solid var(--line)",
+          borderRadius: "var(--radius-control)",
+          boxShadow: "var(--shadow-floating)",
+          width: `${bounds.width}px`,
+          left: `${bounds.left}px`,
+        });
+        indicator = document.createElement("div");
+        indicator.setAttribute("aria-hidden", "true");
+        Object.assign(indicator.style, {
+          position: "fixed",
+          pointerEvents: "none",
+          zIndex: "var(--layer-drag-indicator)",
+          height: "var(--space-2)",
+          background: "var(--accent-ink)",
+          width: `${bounds.width}px`,
+          left: `${bounds.left}px`,
+        });
+        document.body.append(preview, indicator);
+        node.setAttribute("data-dragging", "true");
+        node.setAttribute("aria-pressed", "true");
+      },
+      paint(pointer) {
+        if (preview) {
+          const rect = pointer.snapshot.row.getBoundingClientRect();
+          positionReorderOverlay(
+            preview,
+            rect.left,
+            pointer.y - rect.height / 2,
+            rect.width,
+          );
+        }
+        destination(pointer);
+      },
+      drop(pointer) {
+        const index = destination(pointer);
+        if (index === null || index === pointer.snapshot.index) return;
+        return () => options.commit(pointer.snapshot.id, index);
+      },
+      release() {
+        preview?.remove();
+        indicator?.remove();
+        preview = indicator = null;
+        node.removeAttribute("data-dragging");
+        node.setAttribute("aria-pressed", "false");
+      },
+      keydown(event) {
+        if (!event.altKey || options.disabled()) return;
+        const order = options.order();
+        const current = order.indexOf(options.id);
+        const index = reorderKeyIndex(event.key, current, order.length);
+        if (index === null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (index !== current) options.commit(options.id, index);
+      },
+    };
+  }
+  const gesture = reorderGesture(node, gestureOptions());
   return {
     update(next: Options) {
-      if (next.id !== options.id) release();
       options = next;
+      gesture.update(gestureOptions());
     },
-    destroy() {
-      release();
-      node.removeEventListener("pointerdown", down);
-      node.removeEventListener("click", click, true);
-      node.removeEventListener("lostpointercapture", release);
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", release);
-      window.removeEventListener("pointerdown", second, true);
-      window.removeEventListener("keydown", key);
-      window.removeEventListener("blur", release);
-      window.removeEventListener("session-ended", release);
-    },
+    destroy: gesture.destroy,
   };
 }

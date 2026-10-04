@@ -76,6 +76,7 @@
   }
   $effect(() => {
     const selectedView = selected,
+      compact = mobile,
       navigation = navElement;
     if (!navigation) return;
     const sidebar = navigation.parentElement;
@@ -84,7 +85,7 @@
         `button[data-view="${selectedView}"]`,
       );
       if (!active) return;
-      if (navigation.scrollWidth > navigation.clientWidth) {
+      if (compact && navigation.scrollWidth > navigation.clientWidth) {
         const item = active.getBoundingClientRect();
         const bounds = navigation.getBoundingClientRect();
         navigation.scrollTo({
@@ -97,7 +98,11 @@
           ),
           behavior: "instant",
         });
-      } else if (sidebar && sidebar.scrollHeight > sidebar.clientHeight) {
+      } else if (
+        !compact &&
+        sidebar &&
+        sidebar.scrollHeight > sidebar.clientHeight
+      ) {
         const item = active.getBoundingClientRect();
         const bounds = sidebar.getBoundingClientRect();
         const style = getComputedStyle(sidebar);
@@ -145,8 +150,6 @@
       current={overflowActive}
       navigationKey="more"
       panelClass="navigation-menu-panel"
-      placement="auto"
-      floating
     >
       {#snippet children(close)}
         <div class="navigation-panel">
