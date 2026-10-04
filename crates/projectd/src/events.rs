@@ -17,32 +17,39 @@ pub(super) async fn serve(
     };
     let token = cookie(&input.headers, "__Host-project_session");
     let mut cursor = header(&input.headers, "last-event-id").to_owned();
-    if cursor.is_empty() {
-        for (key, value) in url::form_urlencoded::parse(input.query.as_bytes()) {
-            if key != "cursor" || !cursor.is_empty() {
+    let mut query_cursor = None;
+    let mut query_user = None;
+    for (key, value) in url::form_urlencoded::parse(input.query.as_bytes()) {
+        match key.as_ref() {
+            "cursor" if query_cursor.is_none() => query_cursor = Some(value.into_owned()),
+            "user_id" if query_user.is_none() => query_user = Some(value.into_owned()),
+            _ => {
                 return response(Reply::error(400, "INVALID_QUERY", ""));
             }
-            cursor = value.into_owned();
         }
+    }
+    if cursor.is_empty() {
+        cursor = query_cursor.unwrap_or_default();
     }
     if cursor.len() > 120 {
         return response(Reply::error(400, "INVALID_CURSOR", ""));
     }
     // Subscribe before authentication/snapshot reads so a concurrent change is replayed.
     let mut shutdown = service.shutdown.subscribe();
-    let mut auth_changes = service.engine.subscribe_auth_changes();
-    let mut notifications = service.engine.subscribe_changes();
+    let mut auth_changes = service.users.owner.subscribe_auth_changes();
     if *shutdown.borrow() {
         return response(Reply::error(503, "SERVICE_UNAVAILABLE", ""));
     }
-    let engine = service.engine.clone();
+    let engine = service.users.owner.clone();
     let credential = token.clone();
     let local = input.local;
+    let worker = service.clone();
     let initial = tokio::task::spawn_blocking(move || {
         let _admission = admission;
-        session_expiry(&engine, &credential, local)
+        let expiry = session_expiry(&engine, &credential, local)?;
+        Ok::<_, AppError>((expiry, worker.scoped(&input, query_user.as_deref())?))
     });
-    let mut expiry = tokio::select! {
+    let (mut expiry, service) = tokio::select! {
         _ = shutdown.changed() => return response(Reply::error(503, "SERVICE_UNAVAILABLE", "")),
         result = initial => match result {
             Ok(Ok(expiry)) => expiry,
@@ -50,6 +57,9 @@ pub(super) async fn serve(
             Err(_) => return failure(AppError::Unavailable("event stream worker")),
         },
     };
+    // Subscribe before the first snapshot read. Authentication and profile
+    // selection above do not consume any selected-engine source observations.
+    let mut notifications = service.engine.subscribe_changes();
     let stream = async_stream::stream! {
         let _permit = permit;
         yield Ok::<_, std::convert::Infallible>(Event::default().comment("connected"));
@@ -60,7 +70,7 @@ pub(super) async fn serve(
             if !local && (check_auth || auth_changes.has_changed().unwrap_or(true) || expiry.is_some_and(|time| time <= now_millis())) {
                 check_auth = false;
                 auth_changes.borrow_and_update();
-                let engine = service.engine.clone();
+                let engine = service.users.owner.clone();
                 let credential = token.clone();
                 let check = tokio::task::spawn_blocking(move || session_expiry(&engine, &credential, false));
                 expiry = tokio::select! {

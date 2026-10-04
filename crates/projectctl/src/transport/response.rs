@@ -115,6 +115,7 @@ fn resource_result(value: &Value) -> bool {
                 | "receipt"
                 | "normalization"
                 | "job"
+                | "user"
         )
     ) && value.get("id").is_none_or(|value| uuid(value, 4))
         && value.get("job_id").is_none_or(|value| uuid(value, 4))
@@ -124,14 +125,21 @@ fn resource_result(value: &Value) -> bool {
         } else {
             value.get("version").is_none_or(version)
                 && value.get("resource").is_none_or(|resource| {
-                    object(resource, &["type", "metadata", "body", "version"])
-                        && matches!(
-                            resource["type"].as_str(),
-                            Some("project" | "card" | "milestone" | "update")
-                        )
-                        && resource["metadata"].is_object()
-                        && resource["body"].is_string()
-                        && version(&resource["version"])
+                    if value["type"] == "user" {
+                        object(resource, &["id", "name", "is_default"])
+                            && uuid(&resource["id"], 4)
+                            && text(&resource["name"], 120)
+                            && resource["is_default"].is_boolean()
+                    } else {
+                        object(resource, &["type", "metadata", "body", "version"])
+                            && matches!(
+                                resource["type"].as_str(),
+                                Some("project" | "card" | "milestone" | "update")
+                            )
+                            && resource["metadata"].is_object()
+                            && resource["body"].is_string()
+                            && version(&resource["version"])
+                    }
                 })
         }
 }

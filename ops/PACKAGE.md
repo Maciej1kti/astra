@@ -63,8 +63,15 @@ projectctl pairings
 projectctl approve PAIRING_ID --challenge "CHALLENGE_FROM_BROWSER"
 ```
 
-Return to the browser and connect. Each device pairs separately. Register an exact
-existing project folder by reviewing a plan first:
+Return to the browser and connect. Each device pairs separately. Settings can add
+and select trusted profiles, each with separate project folders and preferences.
+The CLI selects one with `--user USER_ID` or `ASTRA_USER`; omission uses the default
+Owner. Pairing remains shared, and every paired device can select every profile.
+There are no profile passwords or roles. For private access isolation, run separate
+instances with separate state directories and HTTPS origins.
+
+Register an exact existing project folder in the selected profile by reviewing
+a plan first:
 
 ```sh
 projectctl registration-plan /absolute/project/path --name 'My project'
@@ -157,6 +164,10 @@ update the reviewed service file if its arguments changed, and restart with the
 same data, origin and certificates. `--after-restore` is a one-time recovery flag,
 not an ordinary upgrade option. Never let an older incompatible binary write a
 newer operational database or source format.
+
+Copy the entire `users/` subtree with root state when backing up profiles; the
+root registry and their SQLite/workspace files must come from the same stopped
+copy. Recovery rotates all profile epochs and revokes the shared sessions.
 
 To uninstall, stop/disable the service you enabled and remove its service file
 and installed binaries. Keep host state and project folders unless you separately

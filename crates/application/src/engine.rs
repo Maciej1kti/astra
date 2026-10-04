@@ -38,17 +38,37 @@ pub struct Engine {
 }
 impl Engine {
     pub fn open(data: &Path) -> Result<Self, AppError> {
-        Self::open_with_reconciliation(data, true)
+        Self::open_with_reconciliation(data, true, None)
     }
     /// Recover durable commands before admission; the service reconciles marked
     /// stale projections after listeners start, using its bounded background worker.
     pub fn open_for_service(data: &Path) -> Result<Self, AppError> {
-        Self::open_with_reconciliation(data, false)
+        Self::open_with_reconciliation(data, false, None)
+    }
+    pub(crate) fn open_user(data: &Path, id: &str) -> Result<Self, AppError> {
+        // Check identity before any journal recovery can alter this workspace.
+        let directory = project_store::filesystem::Directory::open(data)?;
+        if let Some(bytes) = directory.read("workspace.json")? {
+            let value = serde_json::from_slice::<Value>(&bytes)
+                .map_err(|error| AppError::stored("user workspace", error))?;
+            if value["instance_id"] != id {
+                return Err(AppError::Unavailable("user workspace identity"));
+            }
+        }
+        let engine = Self::open_with_reconciliation(data, false, Some(id))?;
+        if engine.workspace()?.value.instance_id != id {
+            return Err(AppError::Unavailable("user workspace identity"));
+        }
+        Ok(engine)
     }
     pub fn startup_projects(&self) -> Result<Vec<String>, AppError> {
         self.index.pending_projects()
     }
-    fn open_with_reconciliation(data: &Path, eager: bool) -> Result<Self, AppError> {
+    fn open_with_reconciliation(
+        data: &Path,
+        eager: bool,
+        user: Option<&str>,
+    ) -> Result<Self, AppError> {
         let journal = Journal::open(data)?;
         if journal
             .directory
@@ -63,7 +83,7 @@ impl Engine {
             if !initialized {
                 let value = json!({
                     "format_version": 1,
-                    "instance_id": Uuid::new_v4().to_string(),
+                    "instance_id": user.map(str::to_owned).unwrap_or_else(|| Uuid::new_v4().to_string()),
                     "timezone": "Europe/Warsaw",
                     "locale": "en",
                     "projects": [],

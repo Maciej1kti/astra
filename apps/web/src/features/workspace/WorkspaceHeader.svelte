@@ -19,6 +19,7 @@
     onsettings,
     onrefresh,
     logout,
+    userName = "Owner",
   }: {
     project: string;
     focus?: boolean;
@@ -33,6 +34,7 @@
     onsettings: () => void;
     onrefresh: () => void;
     logout: () => void;
+    userName?: string;
   } = $props();
   const folders = $derived(
     [...new Set(projects.flatMap((p) => (p.folder ? [p.folder] : [])))].sort(),
@@ -84,8 +86,14 @@
         onclick={ondiagnostics}><Icon name="info" /></Button
       >
     </div>
-    <Button variant="quiet" aria-label="Workspace settings" onclick={onsettings}
-      ><Icon name="settings" /></Button
+    <Button
+      variant="quiet"
+      aria-label="Workspace settings"
+      title={`User: ${userName}`}
+      onclick={onsettings}
+      ><span class="current-user">{userName}</span><Icon
+        name="settings"
+      /></Button
     ><Button variant="quiet" onclick={onrefresh} aria-label="Refresh"
       ><Icon name="refresh" /></Button
     >
@@ -118,3 +126,17 @@
     </div>
   </div>
 </header>
+
+<style>
+  .current-user {
+    max-width: 8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (max-width: 700px) {
+    .current-user {
+      max-width: 4rem;
+    }
+  }
+</style>

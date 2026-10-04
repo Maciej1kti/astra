@@ -24,7 +24,7 @@ collaboration; **the project license has not yet been selected**. See
 | Manage cards | Status, Normal/High priority, Markdown, labels, checklists, comments and daily counters |
 | Plan dates | Inclusive date ranges or timed events with a start time and duration; independent milestones |
 | Work across views | Focus, Projects, List, Board, Calendar, Timeline and Updates |
-| Record outcomes | Project/milestone reports, explicit corrections and decision resolutions, shared read receipts |
+| Record outcomes | Project/milestone reports, explicit corrections and decision resolutions, profile read receipts |
 | Automate | Local CLI with JSON output, bounded project context, conditional writes and command recovery |
 | Inspect and recover | Search, change history, conditional undo, diagnostics, Git observations and maintenance workflows |
 
@@ -57,8 +57,10 @@ The [user guide](docs/USER-GUIDE.md) explains the behavior and its boundaries.
 ```
 
 One host owns each registered project. Several paired devices can use that host;
-the application currently has one owner, without team accounts or per-user roles.
-Contributing to Astra as a team is separate from multi-user product functionality.
+the application has shared device pairing and separate trusted user profiles.
+Each profile selects its own project folders, settings and Focus order. Paired
+people can switch freely between profiles; passwords, roles and private access
+restrictions are not implemented. See [choosing a user](docs/USER-GUIDE.md#choose-a-user).
 See [architecture](docs/ARCHITECTURE.md) for storage, trust boundaries and code layout.
 
 ## Build and try it

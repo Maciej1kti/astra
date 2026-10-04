@@ -13,6 +13,7 @@ const suites = [
   "calendar-motion",
   "loading",
   "session",
+  "users",
   "card",
   "tags",
   "editor",

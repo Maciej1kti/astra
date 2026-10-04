@@ -5,6 +5,7 @@ mod project;
 mod queries;
 mod transport;
 mod typed;
+mod users;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde_json::{Value, json};
 use std::{path::PathBuf, time::Duration};
@@ -20,6 +21,9 @@ struct Arguments {
     /// Daemon socket. Overrides ASTRA_SOCKET; no instance is selected implicitly.
     #[arg(long, global = true)]
     socket: Option<PathBuf>,
+    /// Trusted user profile UUID. Overrides ASTRA_USER; omitted selects Owner.
+    #[arg(long, global = true)]
+    user: Option<String>,
     /// Exact registered project folder; never searches parent folders.
     #[arg(long, global = true)]
     project: Option<PathBuf>,
@@ -47,6 +51,13 @@ enum OutputFormat {
 }
 #[derive(Subcommand)]
 enum Action {
+    /// List trusted user profiles and the currently selected profile.
+    Users,
+    /// Create a trusted user profile with its own project folders and preferences.
+    User {
+        #[command(subcommand)]
+        action: users::Action,
+    },
     /// Read a bounded five-card Focus preview for a local desktop widget.
     FocusPreview,
     /// Read a project deletion plan or permanently remove its `.project` tree.
@@ -227,12 +238,25 @@ async fn run(args: Arguments) -> Result<transport::Outcome, Box<dyn std::error::
     if matches!(args.command, Action::FocusPreview) && !socket.is_absolute() {
         return Err("Focus preview requires an absolute socket path".into());
     }
+    let user = args.user.or_else(|| {
+        std::env::var("ASTRA_USER")
+            .ok()
+            .filter(|value| !value.is_empty())
+    });
+    let mut headers = reqwest::header::HeaderMap::new();
+    if let Some(user) = user.as_ref() {
+        uuid4(user)?;
+        headers.insert("x-astra-user", user.parse()?);
+    }
     let client = reqwest::Client::builder()
         .unix_socket(socket)
         .no_proxy()
         .timeout(Duration::from_secs(args.timeout))
+        .default_headers(headers)
         .build()?;
     let request = match args.command {
+        Action::Users => Request::read("/api/v1/users"),
+        Action::User { action } => action.prepare(&client).await?,
         Action::FocusPreview => {
             let data = focus_preview::read(&client, Duration::from_secs(args.timeout)).await?;
             return Ok(transport::Outcome {
@@ -327,7 +351,7 @@ async fn run(args: Arguments) -> Result<transport::Outcome, Box<dyn std::error::
                 .retry(request_id, epoch)
         }
     };
-    transport::execute(&client, request).await
+    transport::execute(&client, request.selected_user(user)).await
 }
 
 fn exit_code(status: u16, body: &Value) -> i32 {

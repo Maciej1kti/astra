@@ -352,3 +352,10 @@ Exact incremental agent-context JSON byte accounting is described in
 
 [ADR-059](ADR-059-FOCUS-SECTION-COUNTERS.md) extends the bounded counter
 preview to In motion and Events using the same conditional card observation.
+
+## ADR-060 — Trusted user profiles
+
+One daemon retains central browser pairing while selected profiles use separate
+durable workspaces and project registration. Existing data remains in Owner;
+profiles are freely selectable by trusted paired users. See
+[ADR-060](ADR-060-TRUSTED-USER-PROFILES.md).

@@ -117,3 +117,43 @@ test("malformed direct and status confirmations retain the original command", as
     globalThis.fetch = originalFetch;
   }
 });
+
+test("user creation confirms only the submitted profile and retains malformed outcomes", async () => {
+  const originalFetch = globalThis.fetch;
+  const user = {
+    id: "12345678-1234-4234-8234-123456789012",
+    name: "Alex",
+    is_default: false,
+  };
+  const creation = {
+    ...pending,
+    path: "/api/v1/users",
+    method: "POST",
+    payload: { id: user.id, name: user.name },
+  };
+  const reply = {
+    ...committed,
+    result: { type: "user", id: user.id, resource: user },
+  };
+  try {
+    for (const result of [
+      { type: "user" },
+      { ...reply.result, id: "12345678-1234-4234-8234-123456789013" },
+      { ...reply.result, resource: { ...user, name: "Different" } },
+      { ...reply.result, resource: { ...user, is_default: true } },
+    ]) {
+      globalThis.fetch = async () => Response.json({ ...reply, result });
+      const operation = new CommandController();
+      operation.prepare(creation);
+      await assert.rejects(operation.commit(), /Invalid command/);
+      assert.equal(operation.pending, creation);
+    }
+    globalThis.fetch = async () => Response.json(reply, { status: 201 });
+    const operation = new CommandController();
+    operation.prepare(creation);
+    await operation.commit();
+    assert.equal(operation.pending, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

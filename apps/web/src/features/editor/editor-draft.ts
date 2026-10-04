@@ -70,7 +70,10 @@ export type EditorDraft =
   | Draft<"milestone", MilestoneFields, EditableCommon>
   | Draft<"update", ReportFields, EditableCommon>;
 
-export function createEditorDraft(target: EditorTarget): EditorDraft {
+export function createEditorDraft(
+  target: EditorTarget,
+  author = "Owner",
+): EditorDraft {
   const common: Common = {
     title: "",
     body: target.resource?.body ?? "",
@@ -143,7 +146,7 @@ export function createEditorDraft(target: EditorTarget): EditorDraft {
         common: editableCommon(),
         fields: {
           kind: m?.kind ?? "note",
-          author: m?.author?.label ?? "Owner",
+          author: m?.author?.label ?? author,
           targetType: m?.target?.type ?? "project",
           targetId: m?.target?.id ?? project,
           resolves: (m?.resolves ?? []).join(", "),

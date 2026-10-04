@@ -155,7 +155,7 @@ WHERE state IN ('pending',
             OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
         )?;
         let schema: u32 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
-        if schema > 2 {
+        if schema > 3 {
             return Err(AppError::reject(503, "STATE_SCHEMA_TOO_NEW"));
         }
         connection.busy_timeout(Duration::from_secs(2))?;
@@ -208,6 +208,24 @@ WHERE state IN ('pending',
                  DROP TABLE history_old;
                  CREATE INDEX IF NOT EXISTS history_target ON history(project_id,target_kind,target_id,recorded_at);
                  PRAGMA user_version=2;
+                 COMMIT;",
+            )?;
+        }
+        if schema < 3 {
+            connection.execute_batch(
+                "BEGIN IMMEDIATE;
+                 CREATE TABLE IF NOT EXISTS user_profiles (
+                   id TEXT PRIMARY KEY,
+                   name TEXT NOT NULL
+                 ) STRICT;
+                 CREATE TABLE IF NOT EXISTS user_creation_intents (
+                   id TEXT PRIMARY KEY,
+                   name TEXT NOT NULL,
+                   epoch TEXT NOT NULL,
+                   request_id TEXT NOT NULL,
+                   FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id)
+                 ) STRICT;
+                 PRAGMA user_version=3;
                  COMMIT;",
             )?;
         }

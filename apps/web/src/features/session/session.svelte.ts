@@ -100,9 +100,9 @@ export function sessionState(hooks: SessionHooks) {
   }
   function connect() {
     if (source || !boot) return;
-    source = new EventSource(
-      `/api/v1/events?cursor=${encodeURIComponent(boot.snapshot_cursor)}`,
-    );
+    const query = new URLSearchParams({ cursor: boot.snapshot_cursor });
+    if (boot.user) query.set("user_id", boot.user.id);
+    source = new EventSource(`/api/v1/events?${query}`);
     source.onopen = () => {
       connected = true;
     };

@@ -31,11 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Require an explicit owner-only directory; do not chmod a user's existing tree.
     let directory = Directory::open(&args.data_dir)?;
     directory.require_private()?;
-    let mut engine = Engine::open_for_service(&args.data_dir)?;
-    if args.after_restore {
-        engine.rotate_after_restore(project_application::now_millis())?;
-    }
-    let service = Service::new(engine, &args.public_origin)?;
+    let engine = Engine::open_for_service(&args.data_dir)?;
+    let service = Service::with_restore(engine, &args.public_origin, args.after_restore)?;
     let socket = args.data_dir.join("projectd.sock");
     if let Ok(metadata) = std::fs::symlink_metadata(&socket) {
         if !metadata.file_type().is_socket() || metadata.uid() != rustix::process::getuid().as_raw()
@@ -56,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let unix = UnixListener::bind(&socket)?;
     std::fs::set_permissions(&socket, std::fs::Permissions::from_mode(0o600))?;
     let (shutdown, signal) = tokio::sync::watch::channel(false);
-    let watcher = tokio::spawn(watcher::run(service.engine.clone(), signal.clone()));
+    let watcher = tokio::spawn(watcher::run_users(service.clone(), signal.clone()));
     let mut stop = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
     let terminating_service = service.clone();
     let termination = tokio::spawn(async move {

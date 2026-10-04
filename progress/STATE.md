@@ -7,10 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
-The [multi-user folder review](2026-10-04-multi-user-folder-review.md) confirms
-that sessions, registered projects and approved roots currently share one owner.
-It records the proposed user/access model and the existing separate-instance
-option; no implementation, scope or acceptance decision was made.
+The [trusted user profiles implementation](2026-10-04-trusted-user-profiles.md)
+adds separate project folders and workspace state in one daemon, with profile
+creation/selection in Settings and CLI. Existing data stays in Owner; pairing is
+shared, and all paired users may select every profile. The 494-test full gate,
+affected Chromium/WebKit suites and navigation-adapted broad HTTPS smoke pass.
+The rebuilt existing application preserves 25 prior versions, one Focus pin,
+settings, instance/epoch and certificate; all 32 served assets match. The earlier
+[folder review](2026-10-04-multi-user-folder-review.md) remains historical evidence.
 
 The [deleted-project diagnostics correction](2026-10-03-deleted-project-diagnostics.md)
 prevents delayed filesystem notifications from recreating source warnings after

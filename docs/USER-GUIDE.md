@@ -9,7 +9,8 @@ and [the roadmap](../ROADMAP.md) separates those from planned release work.
 
 | Term | Meaning |
 | --- | --- |
-| Host / instance | One `projectd` process and its durable workspace; sessions and preferences belong to it |
+| Host / instance | One `projectd` process with shared browser pairing and one or more trusted user profiles |
+| User profile | A selected workspace with its own project folders, approved roots, Focus order, preferences and report read state |
 | Project | One explicitly selected directory with `.project/project.json` and its resource collections |
 | Folder category | Optional project metadata such as Work or Home; it does not move a directory |
 | Card | A work item with status, description and optional checklist, labels, plan/event, comments and counters |
@@ -20,6 +21,33 @@ and [the roadmap](../ROADMAP.md) separates those from planned release work.
 Reports and card comments serve different purposes. Reports record project or
 milestone outcomes and decisions; comments retain the conversation on one card.
 Neither a report nor a completed checklist automatically changes card status.
+
+## Choose a user
+
+Open **Workspace settings → User**. Enter a **New user name** and choose
+**Add user** to create an empty profile. To use it, select **Current user** and
+choose **Switch user**. The settings button shows the profile used by that tab.
+Finish or explicitly discard unsaved changes and resolve pending commands before
+switching; the switch is disabled while that work remains.
+
+The initial **Owner** profile keeps all existing projects and settings. Adding a
+profile does not move or copy project sources. Register that profile's exact
+folders through Projects or the [CLI](../CLI.md#trusted-user-profiles). A project
+folder can belong to only one profile in this instance; sharing a project between
+profiles is not implemented.
+
+A switch reloads the current tab. Reloading keeps that tab's profile, and already
+open tabs keep their own selection. New tabs use the last selected profile in
+that browser. Other devices select their profiles independently.
+
+If a remembered profile is unavailable, Astra reports the problem. **Use default
+user** explicitly returns that tab to Owner while keeping its paired session.
+
+Profiles organize work for trusted people. Any paired browser can select any
+profile; pairing and device approval are shared across the instance. There are
+no profile passwords, roles or private access restrictions between paired users.
+Use separate application instances if users must be unable to access each
+other's folders. See [limitations](LIMITATIONS.md#product-boundaries).
 
 ## Choose a view
 
@@ -97,9 +125,11 @@ A project's Folder category is a separate value used to group projects in Focus.
 
 ### Comments and daily counters
 
-Post a comment explicitly after writing it. Browser comments use the human/Owner
-attribution; CLI/API callers can label human or bot authors. Comments stay in the
-card's source history and cannot be rewritten by an ordinary card patch or undo.
+Post a comment explicitly after writing it. Browser comments use human attribution
+with the selected profile's name; new reports also start with that name. CLI/API
+callers can label human or bot authors. Existing attribution stays unchanged.
+Comments stay in the card's source history and cannot be rewritten by an ordinary
+card patch or undo.
 These labels are not separate authenticated accounts.
 
 Counters record one absolute total per day in the workspace timezone. Give a

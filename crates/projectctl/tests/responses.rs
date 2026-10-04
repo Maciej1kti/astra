@@ -202,6 +202,28 @@ fn deleted_card_confirmation_has_no_recreatable_resource_or_version() {
 }
 
 #[test]
+fn user_confirmation_checks_the_profile_shape_and_retains_uncertainty() {
+    let mut reply = committed();
+    reply["result"] = json!({"type":"user","id":RESOURCE,
+        "resource":{"id":RESOURCE,"name":"Ania","is_default":false}});
+    let (output, _) = run(&source_arguments(), 201, reply.clone());
+    assert_eq!(output.status.code(), Some(0));
+    for (field, value) in [
+        ("id", json!(REQUEST)),
+        ("name", json!("")),
+        ("is_default", json!("false")),
+        ("unknown", json!(true)),
+    ] {
+        let mut malformed = reply.clone();
+        malformed["result"]["resource"][field] = value;
+        uncertain(run(&source_arguments(), 201, malformed).0);
+    }
+    let mut wrong_kind = reply;
+    wrong_kind["result"]["type"] = json!("card");
+    uncertain(run(&source_arguments(), 201, wrong_kind).0);
+}
+
+#[test]
 fn incomplete_confirmation_fields_do_not_report_success() {
     let mut cases = Vec::new();
     for field in [

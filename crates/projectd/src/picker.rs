@@ -1,5 +1,5 @@
 //! Explicit host-native folder selection. Selection prepares a plan, never writes project files.
-use project_application::{AppError, engine::Engine, wire};
+use project_application::{AppError, users::Users, wire};
 use serde_json::{Value, json};
 use std::{
     collections::HashMap,
@@ -25,15 +25,17 @@ struct Job {
 impl Picker {
     pub fn start(
         self: &Arc<Self>,
-        engine: Arc<Engine>,
+        users: Arc<Users>,
+        user: &str,
         owner: &str,
         input: &Value,
     ) -> Result<Value, AppError> {
-        self.start_with(engine, owner, input, choose_folder)
+        self.start_with(users, user, owner, input, choose_folder)
     }
     fn start_with(
         self: &Arc<Self>,
-        engine: Arc<Engine>,
+        users: Arc<Users>,
+        user: &str,
         owner: &str,
         input: &Value,
         choose: impl FnOnce() -> Result<Option<String>, &'static str> + Send + 'static,
@@ -73,12 +75,14 @@ impl Picker {
         drop(jobs);
         let picker = self.clone();
         let input = input.clone();
+        let user = user.to_owned();
         let spawned = std::thread::Builder::new()
             .name("folder-picker".into())
             .spawn(move || {
                 let outcome = match choose() {
-                    Ok(Some(path)) => engine
+                    Ok(Some(path)) => users
                         .registration_plan(
+                            &user,
                             &path,
                             input["name"].as_str(),
                             input["git_mode"] != "tracked",
@@ -201,6 +205,7 @@ fn choose_folder() -> Result<Option<String>, &'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use project_application::engine::Engine;
     fn wait(picker: &Picker, id: &str) -> Value {
         let deadline = Instant::now() + Duration::from_secs(5);
         loop {
@@ -220,13 +225,17 @@ mod tests {
             .unwrap();
         let state = root.child("state", true).unwrap();
         let folder = root.child("Chosen repo", true).unwrap();
-        let engine = Arc::new(Engine::open(state.path()).unwrap());
+        let users = Arc::new(Users::open(Engine::open(state.path()).unwrap(), false).unwrap());
+        let (profile, engine) = users.select(None).unwrap();
+        let user = profile.id;
         let picker = Arc::new(Picker::default());
         let id = Uuid::new_v4().to_string();
         let input = json!({"selection_id":id,"git_mode":"private","name":"Chosen repo"});
         let path = folder.path().to_str().unwrap().to_owned();
         let pending = picker
-            .start_with(engine.clone(), "owner", &input, move || Ok(Some(path)))
+            .start_with(users.clone(), &user, "owner", &input, move || {
+                Ok(Some(path))
+            })
             .unwrap();
         wire::validate("NativeFolderSelection", &pending).unwrap();
         let selected = wait(&picker, &id);
@@ -235,7 +244,7 @@ mod tests {
         assert!(picker.get("other", &id).is_err());
         assert_eq!(
             picker
-                .start_with(engine.clone(), "owner", &input, || panic!(
+                .start_with(users.clone(), &user, "owner", &input, || panic!(
                     "replay cannot open another dialog"
                 ))
                 .unwrap(),
@@ -253,7 +262,8 @@ mod tests {
         let cancelled_id = Uuid::new_v4().to_string();
         picker
             .start_with(
-                engine.clone(),
+                users.clone(),
+                &user,
                 "owner",
                 &json!({"selection_id":cancelled_id,"git_mode":"private"}),
                 || Ok(None),
@@ -263,12 +273,75 @@ mod tests {
         let failed_id = Uuid::new_v4().to_string();
         picker
             .start_with(
-                engine,
+                users,
+                &user,
                 "owner",
                 &json!({"selection_id":failed_id,"git_mode":"private"}),
                 || Err("NATIVE_FOLDER_PICKER_UNAVAILABLE"),
             )
             .unwrap();
         assert_eq!(wait(&picker, &failed_id)["state"], "failed");
+    }
+    #[test]
+    fn native_selection_retains_profile_owner_and_rejects_another_users_folder() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = project_store::filesystem::Directory::open(&temp.path().canonicalize().unwrap())
+            .unwrap();
+        let state = root.child("state", true).unwrap();
+        let folder = root.child("Registered", true).unwrap();
+        let users = Arc::new(Users::open(Engine::open(state.path()).unwrap(), false).unwrap());
+        let first = users.select(None).unwrap().0.id;
+        let second = Uuid::new_v4().to_string();
+        users
+            .create(
+                &json!({"id":second,"name":"Second"}),
+                &Uuid::now_v7().to_string(),
+                users.owner.command_epoch(),
+            )
+            .unwrap();
+        let plan = users
+            .registration_plan(&first, folder.path().to_str().unwrap(), None, true)
+            .unwrap();
+        users
+            .commit_registration(
+                &first,
+                plan["plan_id"].as_str().unwrap(),
+                &Uuid::now_v7().to_string(),
+                users.owner.command_epoch(),
+            )
+            .unwrap();
+        let picker = Arc::new(Picker::default());
+        let id = Uuid::new_v4().to_string();
+        let owner = format!("{second}:same-session");
+        let path = folder.path().to_str().unwrap().to_owned();
+        let input = json!({"selection_id":id,"git_mode":"private"});
+        picker
+            .start_with(users.clone(), &second, &owner, &input, move || {
+                Ok(Some(path))
+            })
+            .unwrap();
+        assert!(picker.get(&format!("{first}:same-session"), &id).is_err());
+        assert!(
+            picker
+                .start_with(
+                    users,
+                    &first,
+                    &format!("{first}:same-session"),
+                    &input,
+                    || panic!("another profile cannot reuse this selection")
+                )
+                .is_err()
+        );
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            let value = picker.get(&owner, &id).unwrap();
+            if value["state"] != "pending" {
+                assert_eq!(value["state"], "failed");
+                assert_eq!(value["error"], "PROJECT_IN_USE");
+                break;
+            }
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(10));
+        }
     }
 }

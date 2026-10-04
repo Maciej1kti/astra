@@ -7,6 +7,7 @@
     PreferencesResource as Preferences,
     Session,
     Pairing,
+    UserList,
   } from "../../lib/contracts/api.generated";
   import { subscribeSession } from "../../lib/api/session-events";
   import { commandOperation } from "../../lib/api/command-operation.svelte";
@@ -23,8 +24,15 @@
     onclose,
     onsaved,
     ontags,
-  }: { onclose: () => void; onsaved: () => void; ontags: () => void } =
-    $props();
+    onuserchange,
+    canSwitchUser = true,
+  }: {
+    onclose: () => void;
+    onsaved: () => void;
+    ontags: () => void;
+    onuserchange: (id: string) => void;
+    canSwitchUser?: boolean;
+  } = $props();
   let baseline = $state<Preferences | null>(null);
   let timezone = $state("");
   let week = $state("monday");
@@ -37,17 +45,22 @@
   const busy = $derived(working || operation.busy);
   let sessions = $state<Session[]>([]);
   let pairings = $state<Pairing[]>([]);
+  let users = $state<UserList | null>(null);
+  let selectedUser = $state("");
+  let userName = $state("");
+  let commandKind = $state<"preferences" | "user">("preferences");
   let accessLost = $state(false);
   let confirmClose = $state(false);
   let generation = 0;
   let preferencesForm: HTMLFormElement;
   let closeTrigger: HTMLElement | null = null;
-  let dirty = $derived(
+  let preferencesDirty = $derived(
     !!baseline &&
       (timezone !== baseline.timezone ||
         week !== (baseline.preferences.week_start ?? "monday") ||
         view !== (baseline.preferences.default_view ?? "focus")),
   );
+  const dirty = $derived(preferencesDirty || !!userName);
   function close() {
     if (busy) return;
     if (dirty || pending) {
@@ -66,7 +79,7 @@
   function keydown(event: KeyboardEvent) {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
-      if (!confirmClose && dirty && !busy && !pending && !accessLost)
+      if (!confirmClose && preferencesDirty && !busy && !pending && !accessLost)
         preferencesForm?.requestSubmit();
     }
   }
@@ -80,6 +93,7 @@
             default_view: view,
             expected_version: baseline?.version,
             pending,
+            new_user_name: userName,
           },
           null,
           2,
@@ -97,6 +111,7 @@
       generation++;
       sessions = [];
       pairings = [];
+      users = null;
       loading = false;
       accessLost = true;
       error =
@@ -127,10 +142,11 @@
     loading = true;
     error = "";
     try {
-      const [p, s, a] = await Promise.all([
+      const [p, s, a, u] = await Promise.all([
         api<Preferences>("/api/v1/workspace/preferences"),
         api<{ items: Session[] }>("/api/v1/auth/sessions"),
         api<{ items: Pairing[] }>("/api/v1/auth/pairings"),
+        api<UserList>("/api/v1/users"),
       ]);
       if (generation !== current) return;
       baseline = p;
@@ -139,6 +155,8 @@
       view = p.preferences.default_view ?? "focus";
       sessions = s.items;
       pairings = a.items;
+      users = u;
+      selectedUser = u.current_user_id;
     } catch (e) {
       if (generation === current)
         error = e instanceof Error ? e.message : String(e);
@@ -147,7 +165,16 @@
     }
   }
   async function save() {
-    if (!baseline || !dirty || busy || accessLost || pending) return;
+    if (
+      !baseline ||
+      !preferencesDirty ||
+      userName ||
+      busy ||
+      accessLost ||
+      pending
+    )
+      return;
+    commandKind = "preferences";
     operation.prepare(
       command(
         "/api/v1/workspace/preferences",
@@ -167,8 +194,64 @@
     error = "";
     info = "";
     try {
+      const submitted = pending;
       await operation.commit();
-      onsaved();
+      if (commandKind === "user") {
+        userName = "";
+        info = "User added. Switch to their workspace when you are ready.";
+        users = await api<UserList>(
+          "/api/v1/users",
+          "GET",
+          undefined,
+          {},
+          { fresh: true },
+        );
+        selectedUser = (submitted.payload as { id: string }).id;
+      } else onsaved();
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : String(cause);
+    }
+  }
+  async function addUser() {
+    const owner = users?.items.find((user) => user.is_default);
+    if (
+      !users ||
+      !owner ||
+      !userName.trim() ||
+      preferencesDirty ||
+      busy ||
+      pending ||
+      accessLost
+    )
+      return;
+    commandKind = "user";
+    operation.prepare(
+      command(
+        "/api/v1/users",
+        "POST",
+        {
+          id: crypto.randomUUID(),
+          name: userName.trim(),
+        },
+        undefined,
+        { userId: owner.id, epoch: users.command_epoch },
+      ),
+    );
+    await transmit();
+  }
+  function switchUser() {
+    if (
+      !users ||
+      selectedUser === users.current_user_id ||
+      !canSwitchUser ||
+      dirty ||
+      busy ||
+      pending ||
+      accessLost
+    )
+      return;
+    try {
+      onuserchange(selectedUser);
     } catch (cause) {
       error = cause instanceof Error ? cause.message : String(cause);
     }
@@ -250,6 +333,81 @@
           <button onclick={onclose}>Discard settings draft</button>
         </div>
       </section>{/if}
+    <section class="user-section" aria-labelledby="user-settings-title">
+      <h3 id="user-settings-title">User</h3>
+      <p>
+        Each user has their own project folders and workspace. Paired browsers
+        can switch between trusted users.
+      </p>
+      <div class="row">
+        <label
+          >Current user<select
+            aria-label="Current user"
+            bind:value={selectedUser}
+            disabled={!users || busy || !!pending || dirty || accessLost}
+          >
+            {#each users?.items ?? [] as user}<option value={user.id}
+                >{user.name}{user.is_default ? " · default" : ""}</option
+              >{/each}
+          </select></label
+        >
+        <button
+          onclick={switchUser}
+          disabled={!users ||
+            selectedUser === users.current_user_id ||
+            !canSwitchUser ||
+            dirty ||
+            busy ||
+            !!pending ||
+            accessLost}>Switch user</button
+        >
+      </div>
+      {#if !canSwitchUser}<p>
+          Finish the open edit or pending project operation before switching
+          users.
+        </p>{/if}
+      <form
+        class="row"
+        onsubmit={(event) => {
+          event.preventDefault();
+          void addUser();
+        }}
+      >
+        <label
+          >New user name<input
+            bind:value={userName}
+            maxlength="120"
+            autocomplete="off"
+            disabled={!users ||
+              preferencesDirty ||
+              busy ||
+              !!pending ||
+              accessLost}
+          /></label
+        >
+        <button
+          type="submit"
+          disabled={!users ||
+            !userName.trim() ||
+            preferencesDirty ||
+            busy ||
+            !!pending ||
+            accessLost}>Add user</button
+        >
+      </form>
+      {#if pending && commandKind === "user"}<section
+          class="notice"
+          role="status"
+        >
+          <p>User creation is awaiting confirmation.</p>
+          <button type="button" onclick={transmit} disabled={busy || accessLost}
+            >Retry same command</button
+          >
+          <details>
+            <summary>Save details</summary><code>{pending.requestId}</code>
+          </details>
+        </section>{/if}
+    </section>
     <form
       id="workspace-preferences"
       bind:this={preferencesForm}
@@ -263,7 +421,7 @@
           bind:value={timezone}
           placeholder="Europe/Warsaw"
           required
-          disabled={!baseline || busy || !!pending || accessLost}
+          disabled={!baseline || busy || !!pending || !!userName || accessLost}
         /></label
       >
       <div class="row">
@@ -271,7 +429,11 @@
           >Week starts<select
             aria-label="Week starts"
             bind:value={week}
-            disabled={!baseline || busy || !!pending || accessLost}
+            disabled={!baseline ||
+              busy ||
+              !!pending ||
+              !!userName ||
+              accessLost}
             ><option value="monday">Monday</option><option value="sunday"
               >Sunday</option
             ></select
@@ -280,7 +442,11 @@
           >Default view<select
             aria-label="Default view"
             bind:value={view}
-            disabled={!baseline || busy || !!pending || accessLost}
+            disabled={!baseline ||
+              busy ||
+              !!pending ||
+              !!userName ||
+              accessLost}
             >{#each ["focus", "projects", "board", "calendar", "gantt", "list", "updates"] as name}<option
                 value={name}
                 >{name === "gantt"
@@ -294,7 +460,7 @@
         Dates follow this timezone. Changing it does not move any saved all-day
         dates.
       </p>
-      {#if pending}<section class="notice">
+      {#if pending && commandKind === "preferences"}<section class="notice">
           <p>
             Pending command: awaiting confirmation. Your submitted preferences
             are kept unchanged.
@@ -406,7 +572,9 @@
           : pending
             ? "Confirmation required"
             : dirty
-              ? "Unsaved preferences"
+              ? userName
+                ? "New user draft"
+                : "Unsaved preferences"
               : loading
                 ? "Loading preferences…"
                 : baseline
@@ -423,7 +591,8 @@
         form="workspace-preferences"
         aria-keyshortcuts="Control+Enter Meta+Enter"
         disabled={!baseline ||
-          !dirty ||
+          !preferencesDirty ||
+          !!userName ||
           busy ||
           !!pending ||
           accessLost ||
@@ -495,6 +664,11 @@
     border-top: var(--stroke) solid var(--line);
     padding-top: var(--space-8);
     margin-top: var(--space-9);
+  }
+  .user-section {
+    border-bottom: var(--stroke) solid var(--line);
+    padding-bottom: var(--space-8);
+    margin-bottom: var(--space-9);
   }
   .actions {
     display: flex;

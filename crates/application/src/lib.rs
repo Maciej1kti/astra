@@ -16,6 +16,7 @@ mod receipts;
 mod retention;
 mod roots;
 mod tags;
+pub mod users;
 mod views;
 mod workflow_kind;
 mod workspace;

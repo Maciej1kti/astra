@@ -53,6 +53,7 @@ pub struct Request {
     request_id: Option<String>,
     epoch: Option<String>,
     operation: Operation,
+    user: Option<String>,
 }
 
 impl Request {
@@ -69,6 +70,7 @@ impl Request {
             request_id: None,
             epoch: None,
             operation: Operation::Action,
+            user: None,
         }
     }
     pub fn read(path: impl Into<String>) -> Self {
@@ -140,6 +142,18 @@ impl Request {
     pub fn retry(mut self, request_id: Option<String>, epoch: Option<String>) -> Self {
         self.request_id = request_id;
         self.epoch = epoch;
+        self
+    }
+    /// A global profile command always uses the default profile's command journal.
+    pub fn user(mut self, user: String) -> Self {
+        self.user = Some(user);
+        self
+    }
+    /// Keep an explicit command-journal override when attaching the CLI selection.
+    pub fn selected_user(mut self, user: Option<String>) -> Self {
+        if self.user.is_none() {
+            self.user = user;
+        }
         self
     }
 }
@@ -282,11 +296,16 @@ async fn identity(
     client: &Client,
     request_id: Option<String>,
     epoch: Option<String>,
+    user: Option<&str>,
 ) -> Result<Identity, Error> {
     match (request_id, epoch) {
         (Some(request_id), Some(epoch)) => Ok(Identity { request_id, epoch }),
         (None, None) => {
-            let hello = checked(client.get("http://localhost/local/v1/hello")).await?;
+            let mut builder = client.get("http://localhost/local/v1/hello");
+            if let Some(user) = user {
+                builder = builder.header("x-astra-user", user);
+            }
+            let hello = checked(builder).await?;
             let millis = chrono::DateTime::parse_from_rfc3339(
                 hello["server_time"].as_str().ok_or("Invalid server time")?,
             )?
@@ -311,7 +330,15 @@ async fn identity(
 pub async fn execute(client: &Client, mut request: Request) -> Result<Outcome, Error> {
     let uncertain = request.operation.has_identity();
     let identity = if uncertain {
-        Some(identity(client, request.request_id, request.epoch).await?)
+        Some(
+            identity(
+                client,
+                request.request_id,
+                request.epoch,
+                request.user.as_deref(),
+            )
+            .await?,
+        )
     } else {
         None
     };
@@ -319,6 +346,9 @@ pub async fn execute(client: &Client, mut request: Request) -> Result<Outcome, E
         request.method.parse()?,
         format!("http://localhost{}", request.path),
     );
+    if let Some(user) = request.user.as_ref() {
+        builder = builder.header("x-astra-user", user);
+    }
     if request.operation == Operation::Maintenance {
         let identity = identity.as_ref().ok_or("Missing maintenance identity")?;
         let payload = request.payload.as_mut().ok_or("Missing maintenance plan")?;
@@ -329,7 +359,7 @@ pub async fn execute(client: &Client, mut request: Request) -> Result<Outcome, E
         let identity = identity.as_ref().ok_or("Missing command identity")?;
         eprintln!(
             "{}",
-            json!({"request_id":identity.request_id,"command_epoch":identity.epoch,"method":request.method,"path":request.path})
+            json!({"request_id":identity.request_id,"command_epoch":identity.epoch,"method":request.method,"path":request.path,"user_id":request.user})
         );
         builder = builder
             .header("x-request-id", &identity.request_id)

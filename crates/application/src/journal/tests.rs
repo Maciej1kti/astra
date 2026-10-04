@@ -565,7 +565,7 @@ fn state_v1_migration_keeps_pending_intents_history_and_epoch() {
             .unwrap()
             .pragma_query_value(None, "user_version", |row| row.get::<_, u32>(0))
             .unwrap(),
-        2
+        3
     );
     let pending = journal.pending(project).unwrap();
     assert_eq!(pending.len(), 1);

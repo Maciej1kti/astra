@@ -35,3 +35,9 @@ rows and an unavailable retained pin. It is a read-only client result; see
 
 [Daily Focus page](focus-daily-page.json) shows the bounded active counter
 preview in In motion or Events, observed with its card version and workspace date.
+
+[Trusted users](users.json) shows the global profile list and current selection.
+The [creation payload](requests/user-create.json) retains its chosen UUID on retry;
+the [HTTP examples](requests/users.http) show profile-scoped reads/events and
+creation/status calls using the default Owner's command journal. All paired
+devices may switch profiles; profile selection assumes trusted users.

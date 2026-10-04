@@ -15,6 +15,7 @@
     checkPairing,
     onrestart,
     ondiagnostics,
+    ondefaultuser,
   }: {
     pairing: Pairing | null;
     loading: boolean;
@@ -25,6 +26,7 @@
     checkPairing: () => void;
     onrestart: () => void;
     ondiagnostics: () => void;
+    ondefaultuser?: () => void;
   } = $props();
 </script>
 
@@ -60,6 +62,11 @@
         Approval is required on the host. This app does not grant access from a
         link alone.
       </p>{/if}{#if error}<p class="notice" role="alert">{error}</p>{/if}
+    {#if error && ondefaultuser}<Button
+        variant="quiet"
+        onclick={ondefaultuser}
+        disabled={loading || busy}>Use default user</Button
+      >{/if}
     <button onclick={ondiagnostics}>Host diagnostics</button>
   </section>
 </main>

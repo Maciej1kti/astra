@@ -49,7 +49,113 @@
         "security": []
       }
     },
+    "/api/v1/users": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
+      "get": {
+        "operationId": "listUsers",
+        "tags": [
+          "users"
+        ],
+        "summary": "List trusted user profiles",
+        "description": "Profiles share the paired-device trust boundary. The list includes the current selection and the default profile's command epoch for global profile creation.",
+        "responses": {
+          "200": {
+            "description": "Trusted profiles, including the default Owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createUser",
+        "tags": [
+          "users"
+        ],
+        "summary": "Create a trusted profile with an empty workspace",
+        "description": "Creates one of at most 32 profiles. Use the default profile ID in X-Astra-User and its command epoch. Retain profile ID, name, request ID, epoch and user selection on retries; inspect command status in that same default profile. This command does not change browser pairing or assign existing projects.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CSRF"
+          },
+          {
+            "$ref": "#/components/parameters/RequestID"
+          },
+          {
+            "$ref": "#/components/parameters/CommandEpoch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Profile is durably created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Outcome unresolved; inspect the default profile's command status with the original identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandStatus"
+                }
+              }
+            }
+          },
+          "408": {
+            "$ref": "#/components/responses/RequestTimeout"
+          },
+          "default": {
+            "description": "Controlled error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/bootstrap": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getBootstrap",
         "tags": [
@@ -82,6 +188,11 @@
       }
     },
     "/api/v1/diagnostics": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getDiagnostics",
         "tags": [
@@ -462,6 +573,11 @@
       }
     },
     "/api/v1/roots": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "listRegistrationRoots",
         "tags": [
@@ -494,6 +610,11 @@
       }
     },
     "/api/v1/roots/{root_id}/directories": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "listDirectories",
         "tags": [
@@ -543,6 +664,11 @@
       }
     },
     "/api/v1/registration-plans": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "post": {
         "operationId": "planRegistration",
         "tags": [
@@ -593,6 +719,11 @@
       }
     },
     "/api/v1/registrations": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "post": {
         "operationId": "commitRegistration",
         "tags": [
@@ -699,6 +830,11 @@
       }
     },
     "/api/v1/jobs/{job_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getJob",
         "tags": [
@@ -736,6 +872,11 @@
       }
     },
     "/api/v1/projects": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "listProjects",
         "tags": [
@@ -793,6 +934,11 @@
       }
     },
     "/api/v1/projects/{project_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getProject",
         "tags": [
@@ -1118,6 +1264,11 @@
       }
     },
     "/api/v1/projects/{project_id}/deletion-plan": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getProjectDeletionPlan",
         "tags": [
@@ -1155,6 +1306,11 @@
       }
     },
     "/api/v1/projects/{project_id}/context": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getAgentContext",
         "tags": [
@@ -1202,6 +1358,11 @@
       }
     },
     "/api/v1/projects/{project_id}/history": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getProjectHistory",
         "tags": [
@@ -1245,6 +1406,11 @@
       }
     },
     "/api/v1/registrations/{project_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getRegistration",
         "tags": [
@@ -1417,6 +1583,11 @@
       }
     },
     "/api/v1/projects/{project_id}/cards": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "listCards",
         "tags": [
@@ -1621,6 +1792,11 @@
       }
     },
     "/api/v1/projects/{project_id}/cards/{card_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getCard",
         "tags": [
@@ -1955,6 +2131,11 @@
       }
     },
     "/api/v1/projects/{project_id}/cards/{card_id}/history": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getCardHistory",
         "tags": [
@@ -2001,6 +2182,11 @@
       }
     },
     "/api/v1/projects/{project_id}/milestones": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "listMilestones",
         "tags": [
@@ -2168,6 +2354,11 @@
       }
     },
     "/api/v1/projects/{project_id}/milestones/{milestone_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getMilestone",
         "tags": [
@@ -2359,6 +2550,11 @@
       }
     },
     "/api/v1/projects/{project_id}/milestones/{milestone_id}/history": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getMilestoneHistory",
         "tags": [
@@ -2405,6 +2601,11 @@
       }
     },
     "/api/v1/projects/{project_id}/updates": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "listUpdates",
         "tags": [
@@ -2578,6 +2779,11 @@
       }
     },
     "/api/v1/projects/{project_id}/updates/{update_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getUpdate",
         "tags": [
@@ -2761,6 +2967,11 @@
       }
     },
     "/api/v1/workspace/focus": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getFocus",
         "tags": [
@@ -2949,6 +3160,11 @@
       }
     },
     "/api/v1/workspace/tags": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getTagCatalog",
         "tags": [
@@ -3116,6 +3332,11 @@
       }
     },
     "/api/v1/projects/{project_id}/tags": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getProjectTags",
         "tags": [
@@ -3152,6 +3373,11 @@
       }
     },
     "/api/v1/projects/{project_id}/tags/preview": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "post": {
         "operationId": "planProjectTagRename",
         "tags": [
@@ -3202,6 +3428,11 @@
       }
     },
     "/api/v1/projects/{project_id}/tags/rename": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "post": {
         "operationId": "applyProjectTagRename",
         "tags": [
@@ -3320,6 +3551,11 @@
       }
     },
     "/api/v1/workspace/tag-suggestions": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getTagSuggestions",
         "tags": [
@@ -3352,6 +3588,11 @@
       }
     },
     "/api/v1/workspace/tags/preview": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "post": {
         "operationId": "previewTagChange",
         "tags": [
@@ -3402,6 +3643,11 @@
       }
     },
     "/api/v1/workspace/preferences": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getPreferences",
         "tags": [
@@ -3579,6 +3825,11 @@
       }
     },
     "/api/v1/workspace/read-receipts": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "post": {
         "operationId": "setReadReceipts",
         "tags": [
@@ -3695,6 +3946,11 @@
       }
     },
     "/api/v1/views/board": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getBoard",
         "tags": [
@@ -3760,6 +4016,11 @@
       }
     },
     "/api/v1/views/gantt": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getGantt",
         "tags": [
@@ -3832,6 +4093,11 @@
       }
     },
     "/api/v1/views/calendar": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getCalendar",
         "tags": [
@@ -3919,6 +4185,11 @@
       }
     },
     "/api/v1/views/folders": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getFolders",
         "summary": "Read distinct project folders across the workspace",
@@ -3972,6 +4243,11 @@
       }
     },
     "/api/v1/views/focus-cards": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getFocusCards",
         "tags": [
@@ -4048,6 +4324,11 @@
       }
     },
     "/api/v1/views/attention": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getAttention",
         "tags": [
@@ -4127,6 +4408,11 @@
       }
     },
     "/api/v1/search": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "search",
         "tags": [
@@ -4184,6 +4470,11 @@
       }
     },
     "/api/v1/commands/{request_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getCommandStatus",
         "tags": [
@@ -4229,6 +4520,11 @@
       }
     },
     "/api/v1/events": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "events",
         "tags": [
@@ -4260,6 +4556,14 @@
         },
         "parameters": [
           {
+            "name": "user_id",
+            "in": "query",
+            "description": "Profile selector for EventSource, which cannot set X-Astra-User. Without either selector, Owner is selected; a supplied header and query must agree. The event stream and cursor belong to this profile.",
+            "schema": {
+              "$ref": "#/components/schemas/UUID"
+            }
+          },
+          {
             "name": "cursor",
             "in": "query",
             "schema": {
@@ -4281,6 +4585,11 @@
       }
     },
     "/api/v1/views/list": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getWorkspaceList",
         "tags": [
@@ -4418,6 +4727,11 @@
       }
     },
     "/api/v1/projects/{project_id}/validation": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "validateProjectSources",
         "summary": "Read and validate current source documents without rewriting them",
@@ -4451,6 +4765,11 @@
       }
     },
     "/api/v1/projects/{project_id}/git": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "observeProjectGit",
         "summary": "Bounded on-demand HEAD and index observation; working tree and untracked files are not checked",
@@ -4484,6 +4803,11 @@
       }
     },
     "/api/v1/native-folder-selections": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "post": {
         "operationId": "startNativeFolderSelection",
         "summary": "Open the host system folder dialog; repeat the same selection ID to resume",
@@ -4530,6 +4854,11 @@
       }
     },
     "/api/v1/native-folder-selections/{selection_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AstraUser"
+        }
+      ],
       "get": {
         "operationId": "getNativeFolderSelection",
         "summary": "Read a native folder selection belonging to the current session",
@@ -4633,6 +4962,15 @@
       }
     },
     "parameters": {
+      "AstraUser": {
+        "name": "X-Astra-User",
+        "in": "header",
+        "required": false,
+        "description": "Trusted profile selection; omitted selects the existing default Owner. Registered projects, allowed roots, workspace preferences, Focus, receipts, command journals and queries belong to this profile. Paired devices may select any profile; this is not a security boundary between users. Preserve the selection during command retries and status checks. Unknown profiles are rejected.",
+        "schema": {
+          "$ref": "#/components/schemas/UUID"
+        }
+      },
       "ReadAcceptEncoding": {
         "name": "Accept-Encoding",
         "in": "header",
@@ -6687,7 +7025,8 @@
               "registration",
               "receipt",
               "normalization",
-              "job"
+              "job",
+              "user"
             ]
           },
           "id": {
@@ -6709,6 +7048,9 @@
               },
               {
                 "$ref": "#/components/schemas/UpdateResource"
+              },
+              {
+                "$ref": "#/components/schemas/UserProfile"
               }
             ]
           },
@@ -7623,9 +7965,79 @@
         "additionalProperties": false,
         "minProperties": 1
       },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "is_default": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "is_default"
+        ],
+        "additionalProperties": false
+      },
+      "UserList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserProfile"
+            },
+            "minItems": 1,
+            "maxItems": 32
+          },
+          "current_user_id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "command_epoch": {
+            "$ref": "#/components/schemas/UUID",
+            "description": "Default profile command epoch for user creation."
+          }
+        },
+        "required": [
+          "items",
+          "current_user_id",
+          "command_epoch"
+        ],
+        "additionalProperties": false
+      },
+      "UserCreate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Trimmed display name without control characters. Names need not be unique."
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
       "Bootstrap": {
         "type": "object",
         "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserProfile"
+          },
           "api_version": {
             "const": "1"
           },
@@ -7681,6 +8093,7 @@
           }
         },
         "required": [
+          "user",
           "api_version",
           "build_id",
           "instance_id",

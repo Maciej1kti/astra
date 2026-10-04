@@ -157,7 +157,8 @@ export class FocusCounterController {
       const resource = reply.result.resource;
       this.draft = null;
       this.notice = `${draft.counter.name} saved · ${draft.value} ${draft.counter.unit}`;
-      if (resource?.type === "card") this.dependencies.saved(draft, resource);
+      if (resource && "type" in resource && resource.type === "card")
+        this.dependencies.saved(draft, resource);
     } catch (cause) {
       this.error = cause instanceof Error ? cause.message : String(cause);
       this.rejected = !this.command.pending;

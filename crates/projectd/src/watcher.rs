@@ -14,6 +14,34 @@ use std::{
 };
 use tokio::sync::{mpsc, watch};
 
+/// Profiles keep the existing watcher/reconciliation lifecycle, including users
+/// created while this daemon is running. The bound on profiles also bounds tasks.
+pub async fn run_users(service: projectd::Service, mut shutdown: watch::Receiver<bool>) {
+    let mut started = BTreeSet::new();
+    let mut tasks = tokio::task::JoinSet::new();
+    let mut membership = tokio::time::interval(Duration::from_secs(2));
+    membership.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    loop {
+        if *shutdown.borrow() {
+            break;
+        }
+        tokio::select! {
+            _ = shutdown.changed() => break,
+            _ = membership.tick() => {
+                let worker = service.clone();
+                match tokio::task::spawn_blocking(move || worker.user_engines()).await {
+                    Ok(Ok(engines)) => for (id, engine) in engines {
+                        if started.insert(id) { tasks.spawn(run(engine, shutdown.clone())); }
+                    },
+                    Ok(Err(error)) => project_application::record_failure("user_watcher_membership", &error, None, None),
+                    Err(error) => project_application::record_worker_failure("user_watcher_membership", &error, None),
+                }
+            }
+        }
+    }
+    tasks.abort_all();
+}
+
 pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
     let (sender, mut receiver) = mpsc::channel(1024);
     let overflow = Arc::new(AtomicBool::new(false));

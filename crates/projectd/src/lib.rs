@@ -6,6 +6,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::any,
 };
+use project_application::users::{UserProfile, Users};
 use project_application::{AppError, Reply, auth::csrf_matches, engine::Engine, now_millis};
 use std::{sync::Arc, time::Duration};
 use tokio::{
@@ -23,6 +24,8 @@ mod read_response;
 #[derive(Clone)]
 pub struct Service {
     pub engine: Arc<Engine>,
+    users: Arc<Users>,
+    user: UserProfile,
     picker: Arc<picker::Picker>,
     origin: String,
     host: String,
@@ -33,6 +36,13 @@ pub struct Service {
 }
 impl Service {
     pub fn new(engine: Engine, public_origin: &str) -> Result<Self, String> {
+        Self::with_restore(engine, public_origin, false)
+    }
+    pub fn with_restore(
+        engine: Engine,
+        public_origin: &str,
+        after_restore: bool,
+    ) -> Result<Self, String> {
         let url = Url::parse(public_origin).map_err(|_| "Invalid public origin")?;
         if url.scheme() != "https"
             || url.host_str().is_none()
@@ -48,8 +58,13 @@ impl Service {
             Some(port) => format!("{}:{port}", url.host_str().unwrap()),
             None => url.host_str().unwrap().into(),
         };
+        let users =
+            Arc::new(Users::open(engine, after_restore).map_err(|error| error.to_string())?);
+        let (user, engine) = users.select(None).map_err(|error| error.to_string())?;
         Ok(Self {
-            engine: Arc::new(engine),
+            engine,
+            users,
+            user,
             picker: Arc::new(picker::Picker::default()),
             origin: url.origin().ascii_serialization(),
             host,
@@ -70,6 +85,34 @@ impl Service {
     /// Stop long-lived responses before the listeners finish graceful shutdown.
     pub fn shutdown(&self) {
         self.shutdown.send_replace(true);
+    }
+    pub fn user_engines(&self) -> Result<Vec<(String, Arc<Engine>)>, AppError> {
+        self.users.engines()
+    }
+    fn scoped(&self, input: &Input, query_user: Option<&str>) -> Result<Self, AppError> {
+        if input.headers.get_all("x-astra-user").iter().count() > 1 {
+            return Err(AppError::reject(400, "INVALID_USER"));
+        }
+        let selected = input
+            .headers
+            .get("x-astra-user")
+            .map(|value| {
+                value
+                    .to_str()
+                    .map_err(|_| AppError::reject(400, "INVALID_USER"))
+            })
+            .transpose()?;
+        if selected
+            .zip(query_user)
+            .is_some_and(|(header, query)| header != query)
+        {
+            return Err(AppError::reject(400, "INVALID_USER"));
+        }
+        let (user, engine) = self.users.select(query_user.or(selected))?;
+        let mut scoped = self.clone();
+        scoped.user = user;
+        scoped.engine = engine;
+        Ok(scoped)
     }
 }
 #[derive(Clone)]
@@ -251,7 +294,7 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
     }
 }
 fn dispatch(service: &Service, input: Input) -> Result<Response, AppError> {
-    let auth = service.engine.auth();
+    let auth = service.users.owner.auth();
     let now = now_millis();
     if input.method == "GET" && input.path == "/healthz" {
         return Ok(axum::Json(serde_json::json!({"status":"ok"})).into_response());
@@ -317,7 +360,8 @@ fn dispatch(service: &Service, input: Input) -> Result<Response, AppError> {
     {
         return Err(AppError::reject(403, "CSRF_MISMATCH"));
     }
-    dispatch::run(service, input, session)
+    let service = service.scoped(&input, None)?;
+    dispatch::run(&service, input, session)
 }
 fn set_cookie(response: &mut Response, name: &str, token: &str, seconds: u32) {
     response.headers_mut().append(

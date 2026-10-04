@@ -129,5 +129,12 @@
     "Maintenance API is internal, not offered to unauthenticated loopback or remote browser.",
     "Schema variants must be implemented as strict tagged unions, not unrestricted maps.",
     "Built-in backup/restore archives and source-file migrations are deferred by the owner on 2026-09-05."
-  ]
+  ],
+  "profile_selection": {
+    "header": "X-Astra-User",
+    "value": "canonical UUIDv4; omitted selects the default Owner",
+    "environment": "projectctl --user overrides ASTRA_USER",
+    "scope": "Every common API and local workspace operation uses the selected profile, including hello epoch, project resolution, roots, registration and maintenance. Pairing remains global. Any trusted local caller may select any profile.",
+    "global_user_creation": "POST /api/v1/users uses the default profile header and command epoch. Command status and retries retain that default selection."
+  }
 }

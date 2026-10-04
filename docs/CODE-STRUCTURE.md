@@ -262,6 +262,23 @@ The [service facade](../crates/application/src/service.rs) exposes command statu
 authentication, job queries, subscriptions and maintenance operations. Journal,
 writer, workflow and index implementation modules are private to the crate.
 
+[Profile ownership](../crates/application/src/users.rs) retains the durable user
+registry and creation recovery in the root journal. The default Owner reuses the
+existing engine; additional engines live in `users/<uuid>/` below the same data
+directory. HTTP/Unix routing chooses an engine by `X-Astra-User`, and SSE uses
+`user_id`; pairing stays with the root engine. Each engine keeps its ordinary
+workspace, roots, command journal, receipts, history, index and writer leases.
+Missing ready state is rejected rather than initialized. The host watches all
+ready engines, and stopped-copy restore rotates all their epochs. See
+[ADR-060](ADR-060-TRUSTED-USER-PROFILES.md).
+
+Browser transport freezes the selected profile per tab and retains it in command
+identity, including uncertain status/retry paths. Profile creation overrides that
+scope with the root user and root epoch. Settings owns creation and explicit
+switching; the top-level component guards open drafts/operations and reloads only
+the switching tab. The header displays its current profile. Existing tabs retain
+their selection, while new tabs use the browser's last choice.
+
 [Source reads](../crates/application/src/source.rs) return validated documents
 with their original byte versions. Workspace reads return `Versioned<Workspace>`.
 Registration, workspace mutation and source-dependent ordering operate on

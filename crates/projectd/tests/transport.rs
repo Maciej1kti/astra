@@ -919,3 +919,6 @@ mod deletion;
 
 #[path = "transport/compression.rs"]
 mod compression;
+
+#[path = "transport/users.rs"]
+mod users;

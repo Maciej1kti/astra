@@ -45,13 +45,26 @@ pub(super) fn run(
     session: Option<Session>,
 ) -> Result<Response, AppError> {
     let engine = &service.engine;
-    let auth = engine.auth();
+    let auth = service.users.owner.auth();
     let now = now_millis();
     let parts: Vec<_> = input.path.trim_start_matches('/').split('/').collect();
     let request_id = header(&input.headers, "x-request-id");
     let epoch = header(&input.headers, "x-command-epoch");
     let current = session.as_ref().map(|s| s.id.as_str());
+    let picker_owner = format!("{}:{}", service.user.id, current.unwrap_or("local-uid"));
     let value = match (input.method.as_str(), parts.as_slice()) {
+        ("GET", ["api", "v1", "users"]) => {
+            parameters(&input, &[])?;
+            service.users.list(&service.user.id)?
+        }
+        ("POST", ["api", "v1", "users"]) => {
+            parameters(&input, &[])?;
+            return Ok(response(service.users.create(
+                &input.body,
+                request_id,
+                epoch,
+            )?));
+        }
         ("GET", ["api", "v1", "views", "list"]) => {
             let fields = parameters(
                 &input,
@@ -239,12 +252,13 @@ pub(super) fn run(
         }
 
         ("POST", ["api", "v1", "native-folder-selections"]) => service.picker.start(
-            service.engine.clone(),
-            current.unwrap_or("local-uid"),
+            service.users.clone(),
+            &service.user.id,
+            &picker_owner,
             &input.body,
         )?,
         ("GET", ["api", "v1", "native-folder-selections", id]) => {
-            service.picker.get(current.unwrap_or("local-uid"), id)?
+            service.picker.get(&picker_owner, id)?
         }
         ("GET", ["api", "v1", "roots"]) => engine.roots()?,
         ("POST", ["local", "v1", "roots"]) if input.local => engine.add_root(
@@ -264,18 +278,19 @@ pub(super) fn run(
             }
             engine.browse_root(id, &relative, cursor.as_deref())?
         }
-        ("POST", ["api", "v1", "registration-plans"]) => {
-            engine.browser_registration_plan(&input.body)?
-        }
+        ("POST", ["api", "v1", "registration-plans"]) => service
+            .users
+            .browser_registration_plan(&service.user.id, &input.body)?,
 
-        ("POST", ["local", "v1", "maintenance", "plans"]) if input.local => {
-            engine.maintenance_plan(&input.body)?
-        }
+        ("POST", ["local", "v1", "maintenance", "plans"]) if input.local => service
+            .users
+            .maintenance_plan(&service.user.id, &input.body)?,
         ("POST", ["local", "v1", "maintenance", "jobs"]) if input.local => {
             if input.body.as_object().is_none_or(|o| o.len() != 3) {
                 return Err(AppError::reject(422, "INVALID_INPUT"));
             }
-            return Ok(response(engine.commit_maintenance(
+            return Ok(response(service.users.commit_maintenance(
+                &service.user.id,
                 text(&input.body, "plan_id")?,
                 text(&input.body, "request_id")?,
                 text(&input.body, "command_epoch")?,
@@ -318,7 +333,8 @@ pub(super) fn run(
             {
                 return Err(AppError::reject(400, "INVALID_INPUT"));
             }
-            engine.registration_plan(
+            service.users.registration_plan(
+                &service.user.id,
                 text(&input.body, "absolute_path")?,
                 input.body["name"].as_str(),
                 input.body["git_mode"] != "tracked",
@@ -348,6 +364,7 @@ pub(super) fn run(
                 "server_time": instant(now),
                 "timezone": workspace.timezone,
                 "locale": workspace.locale,
+                "user": service.user,
                 "csrf_token": session.as_ref().map(|s|s.csrf.as_str()).unwrap_or("local-uid"),
                 "snapshot_cursor": engine.snapshot_cursor()?,
                 "capabilities": ["projects","cards","milestones","updates","registration","search"],
@@ -378,7 +395,8 @@ pub(super) fn run(
         }
         ("POST", ["api", "v1", "registrations"]) => {
             wire::validate("RegistrationCommit", &input.body)?;
-            return Ok(response(engine.commit_registration(
+            return Ok(response(service.users.commit_registration(
+                &service.user.id,
                 text(&input.body, "plan_id")?,
                 request_id,
                 epoch,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { revealScene } from "../../lib/ui/motion";
   import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
-  import { onMount, setContext, untrack, tick } from "svelte";
+  import { onMount, onDestroy, setContext, untrack, tick } from "svelte";
   import { on } from "svelte/events";
   import { readBoardView, writeBoardView } from "./board-view";
   import { cursorPage } from "../../lib/api/pagination";
@@ -27,11 +27,13 @@
     open,
     onpropose,
     oncreate,
+    ondraftchange,
   }: {
     project: string;
     revision: number;
     search: string;
     open: (item: Summary) => void;
+    ondraftchange?: (dirty: boolean) => void;
     onpropose: (proposal: MoveProposal) => void;
     oncreate: (
       type: "card",
@@ -54,6 +56,10 @@
   let quickStatus = $state<string | null>(null);
   let visibleStatus = $state<string>("planned");
   let quickTitles = $state<Record<string, string>>({});
+  $effect(() => {
+    ondraftchange?.(Object.values(quickTitles).some((title) => !!title));
+  });
+  onDestroy(() => ondraftchange?.(false));
   function focusTitle(node: HTMLInputElement) {
     node.focus();
   }

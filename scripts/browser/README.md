@@ -204,6 +204,13 @@ timezone changes with existing and new daily counter drafts. It also revokes
 the ordinary session while schedule/counter/comment drafts remain mounted,
 checking retained clock context, preserved drafts and disabled inputs.
 
+The `users` suite creates a trusted profile through Settings, registers separate
+projects and roots through the selected CLI workspace, and verifies direct
+foreign-resource reads return unavailable in that workspace. It checks draft
+protection, keyboard switching at 320 px, rendered profile settings/projects,
+reload persistence and independent selections in existing tabs. These are scope
+checks for trusted profiles, not a claim of access isolation between paired users.
+
 The `loading` suite holds bootstrap to verify concurrent preferences and selected
 planning-module preloads, holds List data to verify editor warming starts after
 the initial read, pauses

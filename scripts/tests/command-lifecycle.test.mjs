@@ -92,3 +92,59 @@ test("pending commands own an immutable payload and status always uses their ori
     globalThis.fetch = previous;
   }
 });
+
+test("commands retain their original user for retry and status after another bootstrap", async () => {
+  const previous = globalThis.fetch;
+  const calls = [];
+  const owner = "12345678-1234-4234-8234-123456789001";
+  const another = "12345678-1234-4234-8234-123456789002";
+  api.configure({
+    csrf_token: "session",
+    command_epoch: "owner-epoch",
+    server_time: new Date().toISOString(),
+    user: { id: owner, name: "Owner", is_default: true },
+  });
+  const pending = api.command("/api/v1/workspace/preferences", "PATCH", {
+    locale: "en",
+  });
+  api.configure({
+    csrf_token: "session",
+    command_epoch: "another-epoch",
+    server_time: new Date().toISOString(),
+    user: { id: another, name: "Another", is_default: false },
+  });
+  globalThis.fetch = async (path, init) => {
+    calls.push({ path, init });
+    return Response.json({
+      api_version: "1",
+      request_id: pending.requestId,
+      replayed: false,
+      status: "committed",
+      result: { type: "preferences" },
+      warnings: [],
+    });
+  };
+  try {
+    await api.send(pending);
+    await api.commandStatus(pending);
+    assert.equal(pending.userId, owner);
+    assert.equal(calls[0].init.headers["X-Astra-User"], owner);
+    assert.equal(calls[1].init.headers["X-Astra-User"], owner);
+    assert.equal(calls[0].init.headers["X-Command-Epoch"], "owner-epoch");
+    const create = api.command(
+      "/api/v1/users",
+      "POST",
+      { id: another, name: "Another" },
+      undefined,
+      {
+        userId: owner,
+        epoch: "owner-epoch",
+      },
+    );
+    assert.equal(create.userId, owner);
+    assert.equal(create.epoch, "owner-epoch");
+  } finally {
+    api.clearReads();
+    globalThis.fetch = previous;
+  }
+});

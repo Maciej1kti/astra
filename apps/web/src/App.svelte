@@ -59,6 +59,11 @@
     MoveProposal,
   } from "./features/planning/proposals";
   import { apiCode, type Resource, type Summary } from "./lib/api/api";
+  import {
+    rememberUser,
+    rememberDefaultUser,
+    selectedUserId,
+  } from "./lib/api/user-selection";
   import { getProject, replaceFocus } from "./lib/api/resources";
   import { loadEditorTarget } from "./features/editor/editor-opening";
   import type { FocusRef, FocusResource } from "./lib/contracts/api.generated";
@@ -252,6 +257,8 @@
 
   let diagnostics = $state(false);
   let settings = $state(false);
+  let registrationPending = $state(false);
+  let boardDraft = $state(false);
   const viewRevision = $derived(data.state.revision);
   let weekStart = $state("monday");
 
@@ -450,6 +457,7 @@
             items: focusProposal,
             expected_version: focusProposalVersion,
             request_id: pending.requestId,
+            user_id: pending.userId,
             epoch: pending.epoch,
           },
           null,
@@ -719,6 +727,37 @@
     const timer = setTimeout(() => void editorUI.load(), 150);
     return () => clearTimeout(timer);
   });
+  const canSwitchUser = $derived(
+    !(
+      editor ||
+      dateDraft ||
+      moveDraft ||
+      adding ||
+      nativeAdding ||
+      manageTags ||
+      projectDeletion ||
+      registrationPending ||
+      boardDraft ||
+      focusProposal ||
+      focusCommand.pending ||
+      counterEditing.snapshot.draft ||
+      counterEditing.snapshot.pending
+    ),
+  );
+  function switchUser(id: string) {
+    if (!canSwitchUser) return;
+    rememberUser(id);
+    location.assign(location.pathname);
+  }
+  function openDefaultUser() {
+    if (!canSwitchUser) return;
+    try {
+      rememberDefaultUser();
+      location.assign(location.pathname);
+    } catch (cause) {
+      message(cause);
+    }
+  }
   onMount(() => {
     const clockTimer = setInterval(() => {
       clockTime = Date.now();
@@ -766,6 +805,9 @@
     {checkPairing}
     onrestart={session.restartPairing}
     ondiagnostics={() => (diagnostics = true)}
+    ondefaultuser={selectedUserId() && canSwitchUser
+      ? openDefaultUser
+      : undefined}
   />
 {:else}
   <div class="app" class:counter-editing={!!counterEditing.snapshot.draft}>
@@ -777,6 +819,7 @@
     />
     <div class="workspace">
       <WorkspaceHeader
+        userName={boot.user?.name ?? "Owner"}
         project={routing.current.project}
         {projects}
         selectable={routing.current.view !== "projects"}
@@ -901,6 +944,7 @@
                     {open}
                     onpropose={(proposal) => (moveDraft = proposal)}
                     oncreate={create}
+                    ondraftchange={(value) => (boardDraft = value)}
                   />{/key}{:else if boardLoadError}<p role="alert">
                   {boardLoadError}
                   <button onclick={loadBoard}>Retry loading board</button>
@@ -1024,6 +1068,8 @@
       }}
     />{/if}{/if}
 {#if settings}{#if Settings}<Settings
+      {canSwitchUser}
+      onuserchange={switchUser}
       ontags={() => {
         manageTags = true;
       }}
@@ -1059,6 +1105,7 @@
     />{/if}{/if}
 {#if editor}{#if Editor}{#key editor}{@const editorTarget = editor}<Editor
         workspaceTimezone={session.timezone}
+        userName={boot?.user?.name ?? "Owner"}
         {weekStart}
         target={editor}
         bind:this={editorInstance}
@@ -1097,6 +1144,7 @@
 <!-- Keep the registration identity alive while its dialog is closed. -->
 {#if RegistrationBrowser}<RegistrationBrowser
     bind:open={adding}
+    onpendingchange={(value) => (registrationPending = value)}
     onregistered={async (id) => {
       routing.showProject(id);
       await refresh().catch(message);

@@ -111,3 +111,15 @@ CREATE TABLE IF NOT EXISTS workspace_intents (
   PRIMARY KEY(epoch,request_id),
   FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id)
 ) STRICT;
+-- Trusted user profiles have independent workspaces, journals and projections.
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL
+) STRICT;
+CREATE TABLE IF NOT EXISTS user_creation_intents (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  epoch TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  FOREIGN KEY(epoch,request_id) REFERENCES commands(epoch,request_id)
+) STRICT;

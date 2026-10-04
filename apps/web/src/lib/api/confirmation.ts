@@ -28,6 +28,7 @@ function identity(value: Record<string, unknown>, pending: Pending) {
   );
 }
 function expectedType(pending: Pending) {
+  if (pending.path === "/api/v1/users") return "user";
   if (/\/cards(?:\/[^/]+)?$/.test(pending.path)) return "card";
   if (/\/milestones(?:\/[^/]+)?$/.test(pending.path)) return "milestone";
   if (/\/updates(?:\/[^/]+)?$/.test(pending.path)) return "update";
@@ -51,10 +52,25 @@ function resource(value: unknown) {
     version(value.version)
   );
 }
+function userResource(value: unknown, id: unknown) {
+  return (
+    fields(value, ["id", "name", "is_default"]) &&
+    uuid(value.id, 4) &&
+    value.id === id &&
+    text(value.name, 120) &&
+    value.is_default === false
+  );
+}
 function result(value: unknown, pending: Pending) {
   return (
     fields(value, ["type", "id", "version", "resource", "job_id", "deleted"]) &&
     value.type === expectedType(pending) &&
+    (value.type !== "user" ||
+      (object(pending.payload) &&
+        value.id === pending.payload.id &&
+        userResource(value.resource, value.id) &&
+        (value.resource as Record<string, unknown>).name ===
+          pending.payload.name)) &&
     (value.id === undefined || uuid(value.id, 4)) &&
     (value.job_id === undefined || uuid(value.job_id, 4)) &&
     (value.deleted === undefined || value.deleted === true) &&
@@ -62,8 +78,10 @@ function result(value: unknown, pending: Pending) {
       ? value.version === undefined && value.resource === undefined
       : (value.version === undefined || version(value.version)) &&
         (value.resource === undefined ||
-          (resource(value.resource) &&
-            (value.resource as Record<string, unknown>).type === value.type)))
+          (value.type === "user"
+            ? userResource(value.resource, value.id)
+            : resource(value.resource) &&
+              (value.resource as Record<string, unknown>).type === value.type)))
   );
 }
 function warning(value: unknown) {

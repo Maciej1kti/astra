@@ -26,8 +26,12 @@ export function localClient(
   return (...args) => {
     let output;
     let code = 0;
+    const env = { ...process.env };
+    // A synthetic host must not inherit a profile ID from the owner's shell.
+    delete env.ASTRA_USER;
     try {
       output = execFileSync(binary, ["--socket", socket, ...args], {
+        env,
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
         timeout: 30000,

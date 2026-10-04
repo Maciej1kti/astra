@@ -5,6 +5,7 @@ import {
 } from "./confirmation.ts";
 import { publishSession } from "./session-events.ts";
 import { ReadRequests, ReadQueueFullError } from "./read-requests.ts";
+import { pinUserToTab, selectedUserId } from "./user-selection.ts";
 import type {
   Bootstrap,
   Summary,
@@ -30,11 +31,19 @@ export type Pending = Readonly<{
   version?: string;
   requestId: string;
   epoch: string;
+  userId?: string;
 }>;
 export type CommandState = CommandStatus["state"];
-export function commandStatus(pending: Pick<Pending, "requestId" | "epoch">) {
+export function commandStatus(
+  pending: Pick<Pending, "requestId" | "epoch" | "userId">,
+) {
   const query = new URLSearchParams({ epoch: pending.epoch });
-  return api<CommandStatus>(`/api/v1/commands/${pending.requestId}?${query}`);
+  return api<CommandStatus>(
+    `/api/v1/commands/${pending.requestId}?${query}`,
+    "GET",
+    undefined,
+    pending.userId ? { "X-Astra-User": pending.userId } : {},
+  );
 }
 export function isDefinitiveRejection(error: unknown): error is ApiError {
   return (
@@ -69,6 +78,9 @@ export class ApiError extends Error {
       WORKSPACE_RECOVERY_REQUIRED:
         "The workspace has an unresolved save. Check diagnostics before retrying.",
       SESSION_REQUIRED: "Your session ended. Connect this browser again.",
+      USER_NOT_FOUND:
+        "This user is unavailable. Open the default user to continue.",
+      USER_LIMIT_REACHED: "This host has reached its user limit.",
     };
     super(
       messages[code] ??
@@ -86,6 +98,7 @@ let clockOffset = 0;
 export function configure(value: Bootstrap) {
   bootstrap = value;
   clockOffset = Date.parse(value.server_time) - Date.now();
+  if (value.user) pinUserToTab(value.user.id);
 }
 const reads = new ReadRequests();
 export type ReadOptions = {
@@ -109,6 +122,10 @@ export async function api<T>(
   headers: Record<string, string> = {},
   options: ReadOptions = {},
 ): Promise<T> {
+  headers = {
+    ...(selectedUserId() ? { "X-Astra-User": selectedUserId() } : {}),
+    ...headers,
+  };
   if (method !== "GET") return request<T>(path, method, payload, headers);
   const key = JSON.stringify([
     path,
@@ -192,6 +209,7 @@ export function command(
   method: string,
   payload: unknown,
   version?: string,
+  scope?: { userId: string; epoch: string },
 ): Pending {
   // RFC 9562 UUIDv7: a millisecond timestamp followed by random bits.
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -216,7 +234,10 @@ export function command(
         : freezeJson(JSON.parse(JSON.stringify(payload))),
     version,
     requestId,
-    epoch: bootstrap.command_epoch,
+    epoch: scope?.epoch ?? bootstrap.command_epoch,
+    ...((scope?.userId ?? bootstrap.user?.id ?? selectedUserId())
+      ? { userId: scope?.userId ?? bootstrap.user?.id ?? selectedUserId() }
+      : {}),
   });
 }
 export type CommandReply =
@@ -267,6 +288,7 @@ export async function send(pending: Pending): Promise<CommandReply> {
     {
       "X-Request-ID": pending.requestId,
       "X-Command-Epoch": pending.epoch,
+      ...(pending.userId ? { "X-Astra-User": pending.userId } : {}),
       ...(pending.version ? { "If-Match": `"${pending.version}"` } : {}),
     },
     undefined,

@@ -18,9 +18,11 @@
   let {
     open = $bindable(false),
     onregistered,
+    onpendingchange,
   }: {
     open: boolean;
     onregistered: (project: string) => void | Promise<void>;
+    onpendingchange?: (pending: boolean) => void;
   } = $props();
   let busy = $state(false);
   let error = $state("");
@@ -38,6 +40,9 @@
   let directories = $state<DirectoryPage["items"]>([]);
   let registrationPending = $derived(operation.pending);
   let registrationJob = $state<string | null>(null);
+  $effect(() => {
+    onpendingchange?.(busy || !!registrationPending || !!registrationJob);
+  });
   function message(value: unknown) {
     error = value instanceof Error ? value.message : String(value);
   }

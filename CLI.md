@@ -20,6 +20,11 @@ instance are discovered automatically. `--project .` means exactly the current
 folder, which must be registered; parent folders are not searched. Socket paths
 must fit the host's Unix socket path limit. `--timeout` defaults to 30 seconds.
 
+`--user USER_ID` overrides `ASTRA_USER` and selects the trusted profile for
+project/content operations. Without either, commands use the default Owner
+profile. A project folder must be registered in the selected profile; selecting
+a folder does not discover or switch its profile.
+
 JSON remains the default: stdout contains one result envelope; diagnostics and
 the identity of a submitted command go to stderr. `--json` makes that default
 explicit. Use `--output text` for readable lists, resources and errors:
@@ -35,6 +40,36 @@ metadata. Unfamiliar structures remain visible as formatted JSON. It escapes
 terminal control characters from source content. The JSON envelope is the stable
 interface for scripts; text layout is intended for people. Do not combine
 `--json` with `--output`. Argument parsing errors still use JSON.
+
+## Trusted user profiles
+
+```sh
+projectctl users
+projectctl user create --id aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa --name 'Colleague'
+projectctl --user aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa projects
+projectctl --user aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa registration-plan /absolute/colleague-project --name 'Colleague project'
+projectctl --user aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa register PLAN_ID
+projectctl --user aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa --project /absolute/colleague-project context --json
+```
+
+Use a fresh UUIDv4 for each new profile and retain it when retrying that creation.
+The host supports at most 32 profiles; names contain at most 120 characters.
+`users` returns the registry, selected `current_user_id` and the root creation
+`command_epoch`. Creation runs against the root journal even when `ASTRA_USER`
+or `--user` selects another profile. Preserve its reported request ID, root epoch
+and unchanged input when the outcome is uncertain. Query its status with
+`--user DEFAULT_USER_ID command-status REQUEST_ID --epoch ORIGINAL_EPOCH`.
+
+Each profile has its own project registration, approved roots, preferences,
+Focus order, report read receipts, command journal and history. Use the same
+profile when reading versions, submitting changes, querying status and retrying
+ordinary content commands. Existing data stays in Owner. Registering the same
+exact project folder in another profile is rejected; project sharing is deferred.
+
+Pairing and device sessions remain central. Every paired browser and the local
+OS owner can select any profile; profile selection does not authenticate a
+different person or provide private access control. The browser selection does
+not change the CLI's selected user.
 
 ## Desktop Focus preview
 

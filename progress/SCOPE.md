@@ -256,3 +256,19 @@ row to create work on the clicked date. Review the apparently unused Milestone
 concept: it is currently an independent API/CLI resource with date projections
 and reports, rather than a card type. This review does not retire its source or
 report contracts.
+
+## Trusted user profiles — owner direction, 2026-10-04
+
+Allow two or more trusted people to use one application instance with separately
+selected project folders. Keep the current pairing mechanism and allow profile
+selection without passwords or roles. Each profile owns its workspace, approved
+roots, project registrations, preferences, Focus order, report read state and
+operational journal. Existing data stays with the default Owner, and existing
+sessions retain their shared instance authority.
+
+Profiles are an organizational boundary, without access restrictions between
+paired users. A project folder cannot be registered in two profiles; shared
+projects and hostile-user isolation remain outside this change. Switching a
+browser profile requires finishing or discarding drafts and resolving pending
+commands. It reloads only that tab, preserving selections in other open tabs.
+See [ADR-060](../docs/ADR-060-TRUSTED-USER-PROFILES.md).

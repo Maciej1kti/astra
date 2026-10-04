@@ -1,7 +1,7 @@
 # Limitations and verification coverage
 
 This page separates current product boundaries from work still needed for release.
-It describes the repository as of 2026-10-01. Follow [current status](../progress/STATE.md)
+It describes the repository as of 2026-10-04. Follow [current status](../progress/STATE.md)
 for revision-specific evidence and [owner decisions](../progress/SCOPE.md) for scope.
 An implemented feature and a passed release acceptance scenario are different claims.
 
@@ -9,7 +9,8 @@ An implemented feature and a passed release acceptance scenario are different cl
 
 | Area | Current behavior |
 | --- | --- |
-| Ownership | One owner per instance, with multiple paired devices; no team accounts, roles or per-user access control |
+| Ownership | One OS owner per instance with multiple paired devices and freely selectable trusted user profiles; no passwords, team roles or access restrictions between paired users |
+| Profile projects | Separate project registration, approved roots, preferences, Focus order and report read state; one profile per exact project folder, without project sharing between profiles |
 | Connectivity | Browser writes require the host; no offline mutation queue or disconnected editing/sync |
 | Hosting | User process on loopback behind an owner-managed private HTTPS proxy; no hosted service or automatic network setup |
 | Project selection | Exact explicit folders; no discovery through parents, Git remotes or worktrees |

@@ -7,7 +7,7 @@ format. [Owner decisions](../progress/SCOPE.md) supersede older requirements.
 ## Runtime topology
 
 Astra is one user-owned host process with two transports. Browser and CLI commands
-enter the same application engine and use the same domain and persistence rules.
+enter the selected profile's engine and use the same domain and persistence rules.
 The browser is a Svelte 5/TypeScript SPA built by Vite; Rust embeds its production
 assets in `projectd`. The server uses Axum/Tokio. `projectctl` is a local Unix-socket
 client, not a second writer.
@@ -37,7 +37,8 @@ client, not a second writer.
 The host listens on `127.0.0.1`, default port 47831. It does not provide TLS, manage
 a VPN or expose a public service. The Unix socket authenticates a local OS peer;
 browser access uses pairing, sessions, Host/Origin checks and CSRF protection.
-There is one application owner with multiple devices, without organization roles.
+There is one OS owner with multiple devices and trusted user profiles, without
+organization roles. Pairing is shared; every paired device can select any profile.
 
 ## Three kinds of state
 
@@ -48,28 +49,33 @@ There is one application owner with multiple devices, without organization roles
   `-- .project/                       |-- state.sqlite [+ WAL/SHM]
       |-- README.md                   |-- index.sqlite [+ WAL/SHM]
       |-- project.json                |-- projectd.sock    (0600)
-      |-- cards/<uuid>.json           `-- runtime lock files
-      |-- milestones/<uuid>.json
-      |-- updates/<uuid>.json
-      `-- .local/writer.lock
+      |-- cards/<uuid>.json           |-- runtime lock files
+      |-- milestones/<uuid>.json      `-- users/<uuid>/
+      |-- updates/<uuid>.json             |-- workspace.json
+      `-- .local/writer.lock              |-- roots.json
+                                         |-- state.sqlite [+ WAL/SHM]
+                                         `-- index.sqlite [+ WAL/SHM]
 ```
 
 Collection directories can be created lazily. Host state lives at the explicitly
 selected `--data-dir`; the diagram is not a set of automatically discovered paths.
+The default Owner uses existing files directly in that directory. Additional
+profiles use `users/<uuid>/`; the root operational database owns the registry,
+creation intentions and central pairing. Keep the complete directory tree together.
 
 | State | Owner and purpose | Rebuildable? |
 | --- | --- | --- |
 | `.project/` sources | Project identity, cards, milestones and reports | No; primary project data |
-| `workspace.json` | Registration paths, instance preferences, timezone and local Focus order | No |
-| `roots.json` | Host-approved directories for browser registration | No |
-| `state.sqlite` | Command journal/results, workflows, sessions, receipts and history | No |
+| `workspace.json` | Profile registration paths, preferences, timezone and Focus order | No |
+| `roots.json` | Profile's host-approved directories for browser registration | No |
+| `state.sqlite` | Profile command journal/results, workflows, receipts and history; root state also owns users and shared sessions | No |
 | `index.sqlite` | Search and view projections, including FTS5 | Yes, from authoritative sources |
 | `.project/.local/`, socket and locks | Local runtime coordination | Runtime only; exclude from Git/copies as documented |
 | Browser-local preferences | Presentation such as card section order | Local to that browser; not project content |
 
 Focus **membership** is the card's `pinned` source field. Workspace Focus data
-stores the instance's preferred order; it is not a second authority for membership.
-Report read receipts are shared operational state, separate from immutable report
+stores the profile's preferred order; it is not a second authority for membership.
+Report read receipts belong to the profile's operational state, separate from immutable report
 content. Index rebuilding is cache maintenance; deleting `state.sqlite` loses
 durable user state and requires recovery handling.
 
@@ -77,6 +83,23 @@ Persistent `.project/` sources may travel with their repository according to the
 chosen Git mode. This source repository tracks its own planning sources and excludes
 `.project/.local/`. Host paths, sessions and ordering do not become cross-host sync
 merely because source files are committed.
+
+### Profile routing and durability
+
+`X-Astra-User` chooses the HTTP/Unix content engine; omission chooses Owner.
+SSE selects it through `user_id`. Bootstrap returns the selected profile, while
+pairing/session administration always uses the central root engine. Browser tabs
+hold a fixed profile through every read, mutation and command recovery; an explicit
+switch checks drafts and pending commands before reloading that tab. The CLI
+selects a profile with `--user` or `ASTRA_USER` independently of browser selection.
+
+Profile creation is a durable command in the root journal. Operational schema
+version 3 stores the registry and creation intentions; startup completes interrupted
+creation before opening listeners. A ready profile with missing state fails
+visibly rather than silently creating an empty replacement. Restore rotates every
+profile's command epoch and revokes the shared sessions. Separate writer leases
+prevent registering the same project folder in two profiles. Project sharing is
+not implemented. See [ADR-060](ADR-060-TRUSTED-USER-PROFILES.md).
 
 ## Source format
 
@@ -263,8 +286,10 @@ document instructions, fetches remote preview resources or runs arbitrary shell
 commands. API access does not grant an arbitrary filesystem browser. Host-native
 selection and approved-root browsing are explicit registration authorities.
 
-Pairing authorizes a browser, while the local CLI acts as the OS owner. Author
-labels on comments/reports are attribution, not verified separate user identities.
+Pairing authorizes a browser for all trusted profiles, while the local CLI acts
+as the OS owner. Profile selection separates workspaces and is not an access
+control boundary between paired people. Author labels on comments/reports are
+attribution, not verified separate user identities.
 The server has no public shell endpoint, auto-commit, auto-fetch or multi-host merge.
 See [Security](../SECURITY.md), [limitations](LIMITATIONS.md) and
 [operations](../ops/README.md) before changing those boundaries.

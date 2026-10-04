@@ -150,6 +150,19 @@ in the browser. Pair each device separately. Settings and the CLI expose session
 inspection/revocation; see [CLI](CLI.md). Pending requests expire, so request a new
 pairing if approval is too late.
 
+### Select a trusted user profile
+
+Existing installations retain their data in **Owner**. In **Workspace settings →
+User**, add an empty profile and explicitly switch to it before registering its
+folders. The CLI selects the same workspace with `--user USER_ID` or `ASTRA_USER`;
+omitting both selects Owner. See [CLI profiles](CLI.md#trusted-user-profiles).
+
+Pairing remains shared across profiles, and every paired device can choose any
+profile. Profiles are intended for trusted people, without passwords or roles.
+For private access isolation, run separate instances with separate state
+directories and HTTPS origins. Do not register the same writable project folder
+in more than one instance.
+
 ### Register a project
 
 Choose the exact existing folder. First inspect the registration plan:

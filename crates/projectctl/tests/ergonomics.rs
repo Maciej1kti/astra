@@ -88,8 +88,180 @@ impl Host {
 
 fn cli() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_projectctl"));
-    command.env_remove("ASTRA_SOCKET").args(["--timeout", "2"]);
     command
+        .env_remove("ASTRA_SOCKET")
+        .env_remove("ASTRA_USER")
+        .args(["--timeout", "2"]);
+    command
+}
+
+#[test]
+fn profile_selection_covers_project_resolution_hello_and_mutation() {
+    for explicit in [false, true] {
+        let host = Host::new(vec![
+            (200, json!({"project_id":PROJECT})),
+            (
+                200,
+                json!({"command_epoch":EPOCH,"server_time":"2026-10-04T12:00:00Z"}),
+            ),
+            (
+                422,
+                json!({"api_version":"1","error":{"code":"VALIDATION_FAILED","message":"Synthetic rejection"}}),
+            ),
+        ]);
+        let mut command = host.scoped_command();
+        command.env("ASTRA_USER", if explicit { HISTORY } else { RESOURCE });
+        if explicit {
+            command.args(["--user", RESOURCE]);
+        }
+        command.args(["card", "create", "--title", "Scoped work"]);
+        let output = invoke(&mut command, None);
+        assert_eq!(output.status.code(), Some(2), "{:?}", parsed(&output));
+        let identity: Value = serde_json::from_slice(&output.stderr).unwrap();
+        assert_eq!(identity["user_id"], RESOURCE);
+        let requests = host.finish();
+        assert_eq!(requests.len(), 3);
+        assert_eq!(requests[0].path, "/local/v1/projects/resolve");
+        assert_eq!(requests[1].path, "/local/v1/hello");
+        assert_eq!(
+            requests[2].path,
+            format!("/api/v1/projects/{PROJECT}/cards")
+        );
+        for request in &requests {
+            assert_eq!(request.headers["x-astra-user"], RESOURCE);
+        }
+        assert_eq!(requests[2].headers["x-command-epoch"], EPOCH);
+    }
+}
+
+fn user_list() -> Value {
+    json!({"items":[
+        {"id":PROJECT,"name":"Owner","is_default":true},
+        {"id":HISTORY,"name":"Existing user","is_default":false}
+    ],"current_user_id":HISTORY,"command_epoch":EPOCH})
+}
+
+#[test]
+fn user_create_and_unchanged_retry_use_the_default_profile_journal() {
+    for retry in [false, true] {
+        let mut replies = vec![(200, user_list())];
+        if !retry {
+            replies.push((
+                200,
+                json!({"command_epoch":EPOCH,"server_time":"2026-10-04T12:00:00Z"}),
+            ));
+        }
+        if retry {
+            replies.push((
+                201,
+                json!({"api_version":"1","request_id":REQUEST,
+                "status":"committed","replayed":true,"warnings":[],
+                "result":{"type":"user","id":RESOURCE,
+                    "resource":{"id":RESOURCE,"name":"Ania","is_default":false}}}),
+            ));
+        } else {
+            replies.push((422, json!({"api_version":"1","error":{"code":"VALIDATION_FAILED","message":"Synthetic rejection"}})));
+        }
+        let host = Host::new(replies);
+        let mut command = host.command();
+        command.args([
+            "--user", HISTORY, "user", "create", "--id", RESOURCE, "--name", "Ania",
+        ]);
+        if retry {
+            command.args(["--request-id", REQUEST, "--epoch", EPOCH]);
+        }
+        let output = invoke(&mut command, None);
+        assert_eq!(
+            output.status.code(),
+            Some(if retry { 0 } else { 2 }),
+            "{:?}",
+            parsed(&output)
+        );
+        let requests = host.finish();
+        assert_eq!(requests[0].path, "/api/v1/users");
+        assert_eq!(requests[0].headers["x-astra-user"], HISTORY);
+        for request in &requests[1..] {
+            assert_eq!(request.headers["x-astra-user"], PROJECT);
+        }
+        let creation = requests.last().unwrap();
+        assert_eq!(creation.method, "POST");
+        assert_eq!(creation.path, "/api/v1/users");
+        assert_eq!(creation.body, json!({"id":RESOURCE,"name":"Ania"}));
+        assert_eq!(creation.headers["x-command-epoch"], EPOCH);
+        if retry {
+            assert_eq!(
+                requests.len(),
+                2,
+                "A retry must not replace its epoch with hello"
+            );
+            assert_eq!(creation.headers["x-request-id"], REQUEST);
+        } else {
+            assert_eq!(requests[1].path, "/local/v1/hello");
+        }
+        let identity: Value = serde_json::from_slice(&output.stderr).unwrap();
+        assert_eq!(identity["user_id"], PROJECT);
+    }
+}
+
+#[test]
+fn users_and_command_status_keep_explicit_profile_selection() {
+    for status in [false, true] {
+        let response = if status {
+            json!({"api_version":"1","request_id":REQUEST,"state":"prepared"})
+        } else {
+            user_list()
+        };
+        let host = Host::new(vec![(200, response)]);
+        let mut command = host.command();
+        command.args(["--user", HISTORY]);
+        if status {
+            command.args(["command-status", REQUEST, "--epoch", EPOCH]);
+        } else {
+            command.arg("users");
+        }
+        let output = invoke(&mut command, None);
+        assert_eq!(
+            output.status.code(),
+            Some(if status { 9 } else { 0 }),
+            "{:?}",
+            parsed(&output)
+        );
+        let requests = host.finish();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].headers["x-astra-user"], HISTORY);
+    }
+}
+
+#[test]
+fn invalid_profile_and_incomplete_creation_identity_fail_before_connecting() {
+    for args in [
+        vec!["--user", "not-a-uuid", "users"],
+        vec!["user", "create", "--id", REQUEST, "--name", "Ania"],
+        vec![
+            "user",
+            "create",
+            "--id",
+            RESOURCE,
+            "--name",
+            "Ania",
+            "--request-id",
+            REQUEST,
+        ],
+        vec!["user", "create", "--name", "Ania"],
+    ] {
+        let directory = tempfile::tempdir().unwrap();
+        let socket = directory.path().join("unused.sock");
+        let listener = UnixListener::bind(&socket).unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let mut command = cli();
+        command.arg("--socket").arg(&socket).args(args);
+        let output = invoke(&mut command, None);
+        assert_eq!(output.status.code(), Some(2), "{:?}", parsed(&output));
+        assert_eq!(
+            listener.accept().unwrap_err().kind(),
+            std::io::ErrorKind::WouldBlock
+        );
+    }
 }
 
 fn read_request(stream: &mut UnixStream) -> Request {

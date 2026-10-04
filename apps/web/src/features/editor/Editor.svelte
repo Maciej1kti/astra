@@ -67,6 +67,7 @@
     target,
     workspaceTimezone = "UTC",
     weekStart = "monday",
+    userName = "Owner",
     onclose,
     onsaved,
     onautosaved,
@@ -78,6 +79,7 @@
     target: EditorTarget;
     workspaceTimezone?: string;
     weekStart?: string;
+    userName?: string;
     onclose: () => void;
     onsaved: () => void;
     onautosaved?: (resource: Resource) => void;
@@ -92,7 +94,7 @@
   let currentResource = $state<Resource | null>(untrack(() => target.resource));
   const resource = $derived(currentResource);
   const autoCreate = $derived(target.autoCreate ?? false);
-  let draft = $state(createEditorDraft(untrack(() => target)));
+  let draft = $state(untrack(() => createEditorDraft(target, userName)));
   let acceptanceError = $state("");
   let tagError = $state("");
   let tagCatalogError = $state("");
@@ -393,7 +395,7 @@
               body: draft.fields.commentDraft,
               author: {
                 kind: "human",
-                label: "Owner",
+                label: userName,
               },
             },
           },
@@ -507,7 +509,7 @@
       ),
     resourceFromReply: (reply) => {
       const next = reply.result.resource;
-      if (!next)
+      if (!next || !("type" in next))
         throw new Error("Autosave reply did not include the resource.");
       return next;
     },
@@ -818,7 +820,12 @@
   ) {
     if (submitted.kind === "comment" || submitted.kind === "counter") {
       const next = reply.result.resource;
-      if (next?.type !== "card" || draft.type !== "card")
+      if (
+        !next ||
+        !("type" in next) ||
+        next.type !== "card" ||
+        draft.type !== "card"
+      )
         throw new Error("The saved card was not returned.");
       currentResource = next;
       draft.source = next;
@@ -837,7 +844,8 @@
     if (submitted.kind === "resource") {
       const next = reply.result.resource;
       if (autosaveResource) {
-        if (!next) throw new Error("The saved resource was not returned.");
+        if (!next || !("type" in next))
+          throw new Error("The saved resource was not returned.");
         currentResource = next;
         const previousFields = draft.type === "card" ? draft.fields : null;
         draft = draftForResource(next);

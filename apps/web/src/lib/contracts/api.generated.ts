@@ -332,6 +332,9 @@ export interface ApiContracts {
   TagPreview: TagPreview;
   PreferencesResource: PreferencesResource;
   PreferencesPatch: PreferencesPatch;
+  UserProfile: UserProfile;
+  UserList: UserList;
+  UserCreate: UserCreate;
   Bootstrap: Bootstrap;
   RegistrationPlanInput: RegistrationPlanInput;
   RegistrationPlan: RegistrationPlan;
@@ -637,12 +640,18 @@ export interface ResourceResult {
     | "registration"
     | "receipt"
     | "normalization"
-    | "job";
+    | "job"
+    | "user";
   id?: string;
   version?: string;
-  resource?: ProjectResource | CardResource | MilestoneResource | UpdateResource;
+  resource?: ProjectResource | CardResource | MilestoneResource | UpdateResource | UserProfile;
   job_id?: string;
   deleted?: true;
+}
+export interface UserProfile {
+  id: string;
+  name: string;
+  is_default: boolean;
 }
 export interface CommandResponse {
   api_version: "1";
@@ -900,7 +909,22 @@ export interface PreferencesPatch {
   locale?: "pl" | "en";
   preferences?: Preferences;
 }
+export interface UserList {
+  /**
+   * @minItems 1
+   * @maxItems 32
+   */
+  items: [UserProfile, ...UserProfile[]];
+  current_user_id: string;
+  command_epoch: string;
+  minItems?: 0;
+}
+export interface UserCreate {
+  id: string;
+  name: string;
+}
 export interface Bootstrap {
+  user: UserProfile;
   api_version: "1";
   build_id: string;
   instance_id: string;
