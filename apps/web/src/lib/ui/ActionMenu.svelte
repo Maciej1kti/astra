@@ -13,6 +13,9 @@
     align = "end",
     placement = "bottom",
     floating = false,
+    current = false,
+    navigationKey,
+    panelClass = "",
     children,
   }: {
     label?: string;
@@ -22,6 +25,9 @@
     align?: "start" | "end";
     placement?: "bottom" | "auto";
     floating?: boolean;
+    current?: boolean;
+    navigationKey?: string;
+    panelClass?: string;
     children: Snippet<[close: () => void]>;
   } = $props();
   let open = $state(false);
@@ -59,7 +65,12 @@
       );
       floatingTop = Math.max(
         edge,
-        Math.min(bounds.bottom + 8, window.innerHeight - rect.height - edge),
+        Math.min(
+          placement === "auto" && above
+            ? bounds.top - rect.height - 8
+            : bounds.bottom + 8,
+          window.innerHeight - rect.height - edge,
+        ),
       );
     };
     position();
@@ -87,6 +98,7 @@
       const after = Math.max(0, bottom - bounds.bottom - 8);
       const height = panel?.scrollHeight ?? 0;
       const beside =
+        !floating &&
         align === "end" &&
         Math.max(before, after) < height &&
         bounds.left - Math.max(0, surface?.left ?? 0) - 8 >=
@@ -154,6 +166,9 @@
     class="quiet"
     class:icon-button={!text}
     class:action-menu-labeled={!!text}
+    class:chosen={current}
+    aria-current={current ? "page" : undefined}
+    data-view={navigationKey}
     aria-label={label}
     title={label}
     aria-expanded={open}
@@ -167,7 +182,7 @@
       use:layerPresence
       use:revealLayers={menuLayers}
       out:layerExit
-      class="action-menu-panel"
+      class={`action-menu-panel ${panelClass}`}
       class:floating
       popover={floating ? "manual" : undefined}
       class:above={placement === "auto" && above}
@@ -180,7 +195,9 @@
           ? `${sideTop}px`
           : undefined}
       style:max-height={placement === "auto" && availableHeight !== undefined
-        ? `${availableHeight}px`
+        ? floating
+          ? `min(${availableHeight}px, calc(100dvh - 24px))`
+          : `${availableHeight}px`
         : undefined}
       {id}
     >
@@ -193,6 +210,9 @@
     position: fixed;
     inset: auto;
     margin: 0;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     animation-name: astra-surface-fade;
   }
   .action-menu-panel.above {

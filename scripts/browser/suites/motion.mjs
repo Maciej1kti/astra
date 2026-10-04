@@ -65,10 +65,19 @@ await runBrowserSuite(async (fixture) => {
       );
     });
   const select = async (view) => {
-    await nav.getByRole("button", { name: view, exact: true }).click();
-    await expect(
-      nav.getByRole("button", { name: view, exact: true }),
-    ).toHaveAttribute("aria-current", "page");
+    const direct = nav.getByRole("button", { name: view, exact: true });
+    const more = nav.getByRole("button", {
+      name: "More views",
+      exact: true,
+    });
+    const overflow = !(await direct.isVisible());
+    if (overflow) await more.click();
+    await direct.click();
+    await expect(overflow ? more : direct).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    if (overflow) await expect(more).toHaveAttribute("aria-expanded", "false");
   };
   const indicatorMatches = async () => {
     await settle();
@@ -389,7 +398,11 @@ await runBrowserSuite(async (fixture) => {
 
     for (const width of [1024, 768, 390, 320]) {
       await page.setViewportSize({ width, height: width < 700 ? 844 : 1000 });
+      await select("Projects");
+      await indicatorMatches();
       await select("Updates");
+      await indicatorMatches();
+      await select("Focus");
       await indicatorMatches();
       await select("List");
       await indicatorMatches();

@@ -37,11 +37,17 @@ card's status automatically.
 
 ## Layout rules
 
-Desktop has an inset sidebar and white workspace. Mobile has a fixed bottom navigation with a target for every view.
+Desktop has an inset sidebar and white workspace. Mobile has a compact, centered
+bottom bar with Focus, Projects and More by default. More opens the remaining
+views and browser-local order/visibility controls. The desktop sidebar retains
+every view in that order. More always remains reachable, including when all
+shortcuts are hidden, and receives the selection highlight for an off-bar view.
 The sidebar starts directly with Focus. On short viewports, including landscape
 phones, the whole sidebar scrolls vertically so all views and Sign out remain
 reachable. Rotation reveals the active view within the new navigation axis.
-The navigation can still scroll when larger browser text requires more space. Workspace content clears the navigation and floating action.
+The bar scrolls when extra shortcuts or larger browser text require more space.
+Its floating menu stays within the viewport and scrolls independently in short
+landscape layouts. Workspace content clears the navigation and floating action.
 
 Card metadata wraps without losing dates, priority, checklist totals or tags.
 Calendar, board and timeline overflow stays inside their own surfaces. Calendar

@@ -246,7 +246,12 @@ export function revealScene(node: HTMLElement, initial: Scene = {}) {
 }
 
 /** Move one shared selection surface across both sidebar and mobile dock. */
-export function navigationMotion(node: HTMLElement, selected: string) {
+type NavigationSelection = string | { selected: string; layout: string };
+export function navigationMotion(
+  node: HTMLElement,
+  value: NavigationSelection,
+) {
+  let selected = typeof value === "string" ? value : value.selected;
   const indicator = document.createElement("span");
   indicator.className = "navigation-indicator";
   indicator.setAttribute("aria-hidden", "true");
@@ -263,11 +268,13 @@ export function navigationMotion(node: HTMLElement, selected: string) {
         node.querySelectorAll<HTMLButtonElement>("button[data-view]"),
       ).find((item) => item.dataset.view === selected);
       if (!button) return;
+      const bounds = node.getBoundingClientRect();
+      const item = button.getBoundingClientRect();
       const next = {
-        left: button.offsetLeft,
-        top: button.offsetTop,
-        width: button.offsetWidth,
-        height: button.offsetHeight,
+        left: item.left - bounds.left + node.scrollLeft - node.clientLeft,
+        top: item.top - bounds.top + node.scrollTop - node.clientTop,
+        width: item.width,
+        height: item.height,
       };
       if (
         previous &&
@@ -312,8 +319,8 @@ export function navigationMotion(node: HTMLElement, selected: string) {
     observer.observe(button);
   position();
   return {
-    update(value: string) {
-      selected = value;
+    update(value: NavigationSelection) {
+      selected = typeof value === "string" ? value : value.selected;
       position();
     },
     destroy() {

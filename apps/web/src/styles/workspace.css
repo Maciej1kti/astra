@@ -25,7 +25,8 @@
   gap: var(--space-3);
   flex-shrink: 0;
 }
-.app > aside nav button {
+.app > aside nav > button,
+.app > aside nav > .action-menu > button {
   display: flex;
   align-items: center;
   text-align: left;
@@ -35,13 +36,75 @@
   padding: var(--space-6);
   color: var(--muted);
 }
-.app > aside nav button:hover {
+.app > aside nav > button:hover,
+.app > aside nav > .action-menu > button:hover {
   background: var(--hover);
 }
-.app > aside nav button.chosen {
+.app > aside nav > button.chosen,
+.app > aside nav > .action-menu > button.chosen {
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: var(--weight-semibold);
+}
+.app > aside nav > .action-menu > button {
+  width: 100%;
+}
+.action-menu-panel.navigation-menu-panel {
+  width: min(22rem, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+}
+.navigation-panel {
+  overflow-wrap: anywhere;
+}
+.navigation-panel > strong {
+  display: block;
+  padding: var(--space-4) var(--space-5);
+}
+.navigation-panel .navigation-menu-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  width: 100%;
+  text-align: left;
+}
+.navigation-panel .navigation-menu-link.chosen {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.navigation-customization {
+  margin-top: var(--space-4);
+  border-top: var(--stroke) solid var(--line);
+}
+.navigation-customization summary {
+  padding: var(--space-5);
+  min-height: var(--tap-target);
+  cursor: pointer;
+  font-weight: var(--weight-medium);
+}
+.navigation-customization ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.navigation-customization li {
+  display: flex;
+  align-items: center;
+}
+.navigation-item-name {
+  flex: 1;
+  min-width: 0;
+  padding-left: var(--space-5);
+}
+.navigation-customization .icon-button {
+  width: var(--tap-target);
+  min-width: var(--tap-target);
+  flex-shrink: 0;
+  padding: 0;
+}
+.navigation-hint {
+  margin: var(--space-4) var(--space-5);
+  font-size: var(--text-xs);
+  color: var(--muted);
 }
 .app .asidebottom {
   flex-shrink: 0;
@@ -611,8 +674,10 @@
   }
   .app > aside {
     position: fixed;
-    inset: auto var(--space-4) var(--space-4);
-    width: auto;
+    inset: auto auto var(--space-4) 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - var(--space-8));
     padding: var(--space-2);
     padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
     z-index: var(--layer-navigation);
@@ -628,12 +693,13 @@
   .app > aside nav {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-columns: minmax(4.5rem, 1fr);
     overflow: auto;
     gap: 0;
     scrollbar-width: none;
   }
-  .app > aside nav button {
+  .app > aside nav > button,
+  .app > aside nav > .action-menu > button {
     flex: 1 0 auto;
     flex-direction: column;
     justify-content: center;
@@ -819,13 +885,6 @@
   min-height: var(--tap-target);
   white-space: nowrap;
 }
-@media (max-width: 360px) {
-  .app > aside {
-    inset-inline: 0;
-    border-inline: 0;
-  }
-}
-
 @media (max-width: 360px) {
   .app > aside nav button {
     font-size: var(--text-compact);

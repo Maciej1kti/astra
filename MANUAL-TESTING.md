@@ -50,6 +50,14 @@ its folder through the normal registration flow.
 
 ## A useful first pass
 
+On a phone, check the compact **Focus → Projects → More** bar. Open More to reach
+Calendar, Timeline, List, Board and Updates. In **Customize navigation**, move
+views earlier/later and toggle their eyes, then reload to check this browser's
+layout. Hide every shortcut and recover through More or Reset navigation. Select
+an off-bar view and rotate the screen: More should indicate it on phones, while
+the desktop sidebar shows that view. Check Escape, keyboard focus and menu
+scrolling in landscape.
+
 1. Select **Try Local Projects**, open a card and change its title/description.
 2. Set start/end dates; move it on Board and Timeline.
 3. Create another card and a milestone. Change their statuses.

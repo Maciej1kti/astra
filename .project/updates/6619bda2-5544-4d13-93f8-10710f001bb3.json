@@ -1,0 +1,18 @@
+{
+  "body": "Phones now use Focus, Projects and More by default. More opens the remaining views and browser-local earlier/later order and shortcut visibility controls, with reset and all-hidden recovery. The combined 494-test full gate, release Chromium/WebKit navigation and motion, Chromium dialogs/card-layout and broad HTTPS smoke pass. Rebuilt/restarted the existing HTTPS app; all 32 assets, 25 prior resource versions, settings, certificate and instance/epoch are verified. The combined responsive suite retains a concurrent profile-header picker-width failure at 320px; dedicated navigation bounds pass. Evidence: progress/2026-10-04-compact-navigation.md. Physical-device and release acceptance remain open.",
+  "metadata": {
+    "author": {
+      "kind": "agent",
+      "label": "Codex"
+    },
+    "id": "6619bda2-5544-4d13-93f8-10710f001bb3",
+    "kind": "result",
+    "recorded_at": "2026-10-04T13:54:15.376Z",
+    "summary": "Compact navigation implemented and verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

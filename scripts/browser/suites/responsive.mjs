@@ -81,7 +81,7 @@ await runBrowserSuite(
             const box = await picker.boundingBox();
             assert.ok(
               box.width >= 130 && box.height >= 44,
-              "Header project picker must remain readable and tappable",
+              `Header project picker must remain readable and tappable: ${JSON.stringify({ view, width, bounds: box })}`,
             );
           }
           if (view === "focus" && width <= 700) {
@@ -260,8 +260,20 @@ await runBrowserSuite(
           name: "Updates",
           exact: true,
         });
+        const overflow = sidebar.getByRole("button", {
+          name: "More views",
+          exact: true,
+        });
+        await expect(active).toHaveCount(0);
+        await expect(overflow).toHaveAttribute("aria-current", "page");
+        await expect(overflow).toBeInViewport({ ratio: 1 });
+        await overflow.click();
+        await expect(active).toHaveAttribute("aria-current", "page");
         await expect(active).toBeInViewport({ ratio: 1 });
+        await page.keyboard.press("Escape");
+        await expect(overflow).toHaveAttribute("aria-expanded", "false");
         await page.setViewportSize({ width, height });
+        await expect(active).toHaveAttribute("aria-current", "page");
         await expect(active).toBeInViewport({ ratio: 1 });
         await page.reload();
         await expect(active).toHaveAttribute("aria-current", "page");

@@ -333,25 +333,52 @@ await runBrowserSuite(
 
       await check(
         "mobile-initial-nav",
-        "Updates stays visible after a direct mobile URL and reload",
+        "More represents Updates after a direct mobile URL and reload",
         async () => {
           await page.setViewportSize({ width: 390, height: 844 });
           await route("updates");
           await page.reload();
-          const selected = page
-            .getByRole("navigation", { name: "Workspace views" })
-            .getByRole("button", { name: "Updates", exact: true });
+          const navigation = page.getByRole("navigation", {
+            name: "Workspace views",
+          });
+          const selected = navigation.getByRole("button", {
+            name: "More views",
+            exact: true,
+          });
           await expect(selected).toHaveAttribute("aria-current", "page");
+          await expect(
+            navigation.getByRole("button", { name: "Updates", exact: true }),
+          ).toHaveCount(0);
           await expect(page.locator(".asidebottom")).toContainText(
             "Connected to host",
           );
           await expect(
             page.getByText("Loading resources…", { exact: true }),
           ).toBeHidden();
+          await expect(
+            page.getByRole("heading", { name: "Updates", exact: true }),
+          ).toBeVisible();
+          await page.evaluate(async () => {
+            await new Promise(requestAnimationFrame);
+            await Promise.allSettled(
+              document.getAnimations().map((animation) => animation.finished),
+            );
+          });
           await snapshot("mobile-direct-updates");
           // Chromium can report a fractional final pixel at the mobile viewport edge.
           await expect(selected).toBeInViewport({ ratio: 0.99 });
-          return selected.boundingBox();
+          const bounds = await selected.boundingBox();
+          await selected.click();
+          const updates = navigation.getByRole("button", {
+            name: "Updates",
+            exact: true,
+          });
+          await expect(updates).toHaveAttribute("aria-current", "page");
+          await expect(updates).toBeInViewport({ ratio: 1 });
+          await updates.click();
+          await expect(selected).toHaveAttribute("aria-expanded", "false");
+          await expect(selected).toHaveAttribute("aria-current", "page");
+          return bounds;
         },
       );
 

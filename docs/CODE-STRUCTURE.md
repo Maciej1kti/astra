@@ -26,6 +26,10 @@ UI actions use explicit props/callbacks.
 
 Workspace [screens](../apps/web/src/features/workspace/screens) own focus,
 project overview, resource lists, updates and the workspace board overview.
+`WorkspaceNavigation` owns the compact phone bar and its More disclosure;
+[navigation layout](../apps/web/src/features/workspace/navigation-layout.ts)
+normalizes browser-local view order and bar visibility without writing workspace
+preferences or changing routes. The desktop sidebar retains all views.
 Navigation exposes a read-only route and explicit actions; only navigation owns
 the generation and abort signal that cancel obsolete resource reads and history
 restoration. A successful source read transfers its loaded editor target; view

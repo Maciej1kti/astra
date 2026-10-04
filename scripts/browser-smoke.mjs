@@ -163,7 +163,9 @@ try {
   await page
     .getByRole("button", { name: "Open folder: Chosen project", exact: true })
     .click();
-  await page
+  const registration = page.locator("dialog:modal:not([inert])");
+  await expect(registration).toHaveCount(1);
+  await registration
     .getByLabel("Project name", { exact: true })
     .fill("Chosen in browser");
   await page
@@ -232,9 +234,22 @@ try {
     storageState: await context.storageState(),
   });
   const mobile = await second.newPage();
+  const selectMobileView = async (name) => {
+    const navigation = mobile.getByRole("navigation", {
+      name: "Workspace views",
+    });
+    const more = navigation.getByRole("button", {
+      name: "More views",
+      exact: true,
+    });
+    await more.click();
+    await navigation.getByRole("button", { name, exact: true }).click();
+    await expect(more).toHaveAttribute("aria-current", "page");
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+  };
   await mobile.goto(origin);
   await mobile.getByRole("heading", { name: "In focus" }).waitFor();
-  await mobile.getByRole("button", { name: "Board", exact: true }).click();
+  await selectMobileView("Board");
   await mobile.getByRole("heading", { name: "Ship the field guide" }).click();
   await page.getByRole("heading", { name: "Ship the field guide" }).click();
   await page
@@ -1003,7 +1018,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   // Touch starts with a hold; an immediate swipe must remain normal scrolling.
-  await mobile.getByRole("button", { name: "Board", exact: true }).click();
+  await selectMobileView("Board");
   await mobile
     .getByLabel("Project", { exact: true })
     .selectOption(plan.project_id);
@@ -1437,7 +1452,7 @@ try {
     .getByLabel("Title", { exact: true })
     .fill("Queued revocation autosave");
   await expect.poll(() => revocationAutosaveStarted).toBe(1);
-  await mobile.getByRole("button", { name: "Timeline", exact: true }).click();
+  await selectMobileView("Timeline");
   await mobile
     .getByLabel("Project", { exact: true })
     .selectOption(plan.project_id);

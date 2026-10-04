@@ -51,6 +51,14 @@ other's folders. See [limitations](LIMITATIONS.md#product-boundaries).
 
 ## Choose a view
 
+On phones, the bottom bar starts with **Focus**, **Projects** and **More** (three
+dots). More opens the other views. Open **More → Customize navigation** to move
+any view earlier or later and toggle its eye to show or hide it on the bar.
+Hidden views remain available in More; when one is selected, More is highlighted.
+**Reset navigation** restores Focus and Projects. Order and bar visibility are
+saved in this browser, across projects and profiles; other devices keep their own
+layout. The desktop sidebar keeps every view available in the chosen order.
+
 | View | Use it for | Key behavior |
 | --- | --- | --- |
 | Focus | Today's work and items needing attention | Ordered pins, attention, current plans and today's events; folder-category filtering |

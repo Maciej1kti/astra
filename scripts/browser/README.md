@@ -54,6 +54,12 @@ planning, events and calendar-popup suites.
 
 ## Other interaction coverage
 
+The `navigation` suite checks the compact Focus/Projects/More phone bar, off-bar
+view navigation and selection, browser-local order and visibility persistence,
+all-hidden recovery, keyboard focus/dismissal, touch targets, landscape scrolling,
+desktop rotation and reduced motion at 320–1024px. Chromium captures rendered
+surfaces; WebKit checks the same behavior without screenshot preparation.
+
 The HTTPS smoke exercises broad workflows, including keyboard Focus ordering and
 reload persistence, while the planning suite covers its widgets. The portable
 regression runner adds card checklists and handle reordering, project tags,

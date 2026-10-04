@@ -7,6 +7,15 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [compact navigation feature](2026-10-04-compact-navigation.md) gives phones a
+Focus/Projects/More bar, off-bar view access and browser-local order/visibility
+controls. The combined 494-test full gate, Chromium/WebKit navigation and motion,
+Chromium dialogs/card-layout and broad HTTPS smoke pass. The rebuilt existing app
+preserves all 25 prior resource versions, settings, certificate and instance/epoch;
+trusted HTTPS verifies all 32 assets. A combined responsive-suite attempt remains
+blocked by the concurrent profile header's 320px picker width; navigation bounds
+and selection pass independently. Physical-device acceptance remains open.
+
 The [trusted user profiles implementation](2026-10-04-trusted-user-profiles.md)
 adds separate project folders and workspace state in one daemon, with profile
 creation/selection in Settings and CLI. Existing data stays in Owner; pairing is

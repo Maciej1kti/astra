@@ -74,11 +74,13 @@
   position: relative;
   isolation: isolate;
 }
-.app > aside nav[data-motion-navigation] > button {
+.app > aside nav[data-motion-navigation] > button,
+.app > aside nav[data-motion-navigation] > .action-menu {
   position: relative;
   z-index: 1;
 }
-.app > aside nav[data-motion-navigation] > button.chosen {
+.app > aside nav[data-motion-navigation] > button.chosen,
+.app > aside nav[data-motion-navigation] > .action-menu > button.chosen {
   background: transparent;
 }
 .navigation-indicator {
