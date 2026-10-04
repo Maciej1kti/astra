@@ -4,17 +4,6 @@ import { eventEnd } from "../../lib/resources/timed-event.ts";
 import { shiftDate } from "./dates.ts";
 
 /** Calendar uses exclusive end dates; domain projections use inclusive dates. */
-export function calendarEvents(
-  items: CalendarItem[],
-  search: string,
-  editable: boolean,
-): Calendar.EventInput[] {
-  const needle = search.toLowerCase();
-  return items
-    .filter((item) => item.title.toLowerCase().includes(needle))
-    .map((item) => calendarEvent(item, editable));
-}
-
 function calendarEvent(
   item: CalendarItem,
   editable: boolean,

@@ -524,10 +524,6 @@ pub(super) fn run(
             } = engine.workspace()?;
             json!({"timezone":workspace.timezone,"locale":workspace.locale,"preferences":workspace.preferences,"version":version})
         }
-        ("GET", ["api", "v1", "workspace", "tag-suggestions"]) => {
-            parameters(&input, &[])?;
-            engine.tag_suggestions()?
-        }
         ("GET", ["api", "v1", "commands", id]) => {
             let fields = parameters(&input, &["epoch"])?;
             engine.command_status(id, parameter(&fields, "epoch")?)?

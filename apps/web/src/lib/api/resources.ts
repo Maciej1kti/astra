@@ -9,11 +9,9 @@ import {
 import type {
   CardPatch,
   FocusReplace,
-  FocusResource,
   HistoryPage,
   PreferencesResource,
   ReceiptsInput,
-  UpdateCreate,
   ProjectDeletionPlan,
 } from "../contracts/api.generated";
 
@@ -49,9 +47,6 @@ export function getProjectDeletionPlan(project: string) {
 }
 export function deleteProject(project: string, version: string) {
   return command(`/api/v1/projects/${project}`, "DELETE", {}, version);
-}
-export function getFocus() {
-  return api<FocusResource>("/api/v1/workspace/focus");
 }
 export function getPreferences(options: ReadOptions = {}) {
   return api<PreferencesResource>(
@@ -92,7 +87,4 @@ export function deleteCard(project: string, id: string, version: string) {
     {},
     version,
   );
-}
-export function createUpdate(project: string, payload: UpdateCreate) {
-  return command(`/api/v1/projects/${project}/updates`, "POST", payload);
 }

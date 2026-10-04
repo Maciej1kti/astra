@@ -2,6 +2,10 @@
 
 Status: accepted for the owner-authorized code health fixes, 2026-09-08.
 
+The unused workspace suggestion endpoint and browser cache described below were
+retired by [ADR-065](ADR-065-DEFINITION-SURFACE-CLEANUP.md). Scoped page identity,
+event invalidation hints and authoritative source checks remain in effect.
+
 Public `snapshot_cursor` values and SSE cursors retain their global ordering and
 stream epoch. Opaque page cursors for a selected project additionally use its
 local projection sequence and the workspace invalidation sequence. A write in

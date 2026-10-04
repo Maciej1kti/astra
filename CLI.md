@@ -337,6 +337,10 @@ Use `report`, `focus`, `tags`, `sessions`, `pairings`, `approve`, `deny`,
 reads names used on cards in the selected project. `tags preview --source OLD
 --target NEW` returns a reviewed plan, and `tags rename PLAN_ID` submits it as
 one recoverable project job. Check the returned job before reporting completion.
+An accepted rename returns HTTP 202 with its job ID; `projectctl job JOB_ID`
+reads its outcome. The typed and generic command forms retain the original
+request ID and epoch for an unchanged retry. A preview is a read and does not
+create a command identity.
 `focus set` changes only the host-local order of source-pinned cards.
 
 `add-root`/`remove-root` and `maintenance-plan`/`maintenance-apply` are local

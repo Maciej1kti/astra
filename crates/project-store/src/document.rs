@@ -45,12 +45,6 @@ pub struct ParsedDocument {
     pub normalization_required: bool,
 }
 impl ParsedDocument {
-    pub fn editable(&self) -> Result<Value, StoreError> {
-        if self.normalization_required {
-            return Err(StoreError::NormalizationRequired);
-        }
-        Ok(self.value())
-    }
     pub fn value(&self) -> Value {
         serde_json::to_value(self.document.get()).expect("wire document serializes")
     }

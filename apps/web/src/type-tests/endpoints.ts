@@ -1,5 +1,5 @@
 import { getCalendar, getGantt } from "../lib/api/planning";
-import { previewTagChange, replaceTags } from "../lib/api/tags";
+import { planProjectTagRename, applyProjectTagRename } from "../lib/api/tags";
 import type { CalendarPage, GanttPage } from "../lib/contracts/api.generated";
 
 // Compile-time examples only; this file is not imported by the application.
@@ -12,8 +12,8 @@ export function endpointContracts() {
   // @ts-expect-error Calendar responses are not timeline projections.
   const wrong: Promise<GanttPage> = calendar;
   // @ts-expect-error A rename requires its destination.
-  previewTagChange({ source: "old" });
-  // @ts-expect-error A catalog contains tag names, not card payloads.
-  replaceTags({ set: { title: "card" } }, "version");
+  planProjectTagRename("project", { source: "old" });
+  // @ts-expect-error Applying a reviewed rename requires its plan identifier.
+  applyProjectTagRename("project", { set: { title: "card" } });
   return { calendar, gantt, wrong };
 }

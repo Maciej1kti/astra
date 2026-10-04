@@ -5,7 +5,7 @@ export type Page<T> = ProjectionState & {
   page: { next_cursor: string | null; freshness?: string };
 };
 
-export function isStalePage(error: unknown) {
+function isStalePage(error: unknown) {
   return ["CURSOR_STALE", "PAGE_STALE"].includes(apiCode(error) ?? "");
 }
 

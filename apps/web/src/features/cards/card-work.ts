@@ -64,39 +64,3 @@ export function reorderAcceptance(items: AcceptanceItem[], order: string[]) {
   if (result.every((item, index) => item === items[index])) return items;
   return result;
 }
-
-export type AcceptanceRowRect = {
-  id: string;
-  top: number;
-  bottom: number;
-};
-
-/** Find the final position indicated by a pointer's vertical position. */
-export function acceptanceDropIndex(
-  items: AcceptanceItem[],
-  draggedId: string,
-  y: number,
-  rows: AcceptanceRowRect[],
-) {
-  if (!items.some((item) => item.id === draggedId)) return null;
-  const draggedIndex = items.findIndex((item) => item.id === draggedId);
-  for (const row of rows) {
-    if (row.id === draggedId) continue;
-    if (y < (row.top + row.bottom) / 2) {
-      const rowIndex = items.findIndex((item) => item.id === row.id);
-      if (rowIndex < 0) continue;
-      return rowIndex > draggedIndex ? rowIndex - 1 : rowIndex;
-    }
-  }
-  return items.length - 1;
-}
-
-export function moveAcceptance(
-  items: AcceptanceItem[],
-  id: string,
-  offset: -1 | 1,
-) {
-  const index = items.findIndex((item) => item.id === id);
-  const destination = index + offset;
-  return moveAcceptanceToIndex(items, id, destination);
-}

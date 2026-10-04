@@ -1,5 +1,5 @@
 export const TAG_LIMIT = 20;
-export const TAG_LENGTH_LIMIT = 48;
+const TAG_LENGTH_LIMIT = 48;
 
 export type TagResult = { labels: string[]; error: string };
 

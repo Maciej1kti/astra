@@ -936,3 +936,49 @@ mod users;
 
 #[path = "transport/projects.rs"]
 mod projects;
+
+#[tokio::test]
+async fn removed_registration_and_suggestion_routes_return_not_found() {
+    let app = Running::new().await;
+    let hello: Value = app
+        .local("GET", "/local/v1/hello")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let catalog: Value = app
+        .local("GET", "/api/v1/workspace/tags")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    for (method, path) in [
+        ("GET", format!("/api/v1/registrations/{}", Uuid::new_v4())),
+        (
+            "DELETE",
+            format!("/api/v1/registrations/{}", Uuid::new_v4()),
+        ),
+        ("GET", "/api/v1/workspace/tag-suggestions".into()),
+    ] {
+        let mut request = app.local(method, &path);
+        if method == "DELETE" {
+            request = request
+                .header("x-request-id", Uuid::now_v7().to_string())
+                .header("x-command-epoch", hello["command_epoch"].as_str().unwrap())
+                .header(
+                    "if-match",
+                    format!("\"{}\"", catalog["version"].as_str().unwrap()),
+                )
+                .json(&json!({}));
+        }
+        let response = request.send().await.unwrap();
+        assert_eq!(response.status(), 404, "{method} {path}");
+        let body: Value = response.json().await.unwrap();
+        assert_eq!(body["error"]["code"], "NOT_FOUND");
+        project_application::wire::validate("Error", &body).unwrap();
+    }
+}

@@ -110,10 +110,15 @@ impl Request {
         let route = path.split('?').next().unwrap_or(&path);
         let parts: Vec<_> = route.trim_start_matches('/').split('/').collect();
         match (method, parts.as_slice()) {
-            ("GET", _) | ("POST", ["api", "v1", "workspace", "tags", "preview"]) => {
+            ("GET", _)
+            | ("POST", ["api", "v1", "workspace", "tags", "preview"])
+            | ("POST", ["api", "v1", "projects", _, "tags", "preview"]) => {
                 Self::query(method, path, payload)
             }
-            ("POST", ["api", "v1", "registrations"]) => Self::workflow(method, path, payload),
+            ("POST", ["api", "v1", "registrations"])
+            | ("POST", ["api", "v1", "projects", _, "tags", "rename"]) => {
+                Self::workflow(method, path, payload)
+            }
             (_, ["api", "v1", "auth", ..])
             | (
                 "POST",

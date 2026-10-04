@@ -962,3 +962,43 @@ fn card_comments_translate_declared_authors_and_keep_version_preconditions() {
         );
     }
 }
+
+#[test]
+fn named_project_tag_rename_accepts_a_workflow_and_retains_retry_identity() {
+    let accepted =
+        json!({"api_version":"1", "request_id":REQUEST, "status":"running", "job_id":RESOURCE});
+    let host = Host::new(vec![
+        (200, json!({"project_id":PROJECT})),
+        (202, accepted.clone()),
+    ]);
+    let output = host
+        .scoped_command()
+        .args([
+            "tags",
+            "rename",
+            RESOURCE,
+            "--request-id",
+            REQUEST,
+            "--epoch",
+            EPOCH,
+        ])
+        .output()
+        .unwrap();
+    let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(output.status.code(), Some(9), "{value}");
+    assert_eq!(value["ok"], true);
+    assert_eq!(value["data"], accepted);
+    assert_eq!(value["request_id"], REQUEST);
+    assert_eq!(value["command_epoch"], EPOCH);
+    let requests = host.finish();
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[1].method, "POST");
+    assert_eq!(
+        requests[1].path,
+        format!("/api/v1/projects/{PROJECT}/tags/rename")
+    );
+    assert_eq!(requests[1].body, json!({"plan_id":RESOURCE}));
+    assert_eq!(requests[1].headers["x-request-id"], REQUEST);
+    assert_eq!(requests[1].headers["x-command-epoch"], EPOCH);
+    assert!(!requests[1].headers.contains_key("if-match"));
+}

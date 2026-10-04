@@ -53,20 +53,6 @@ export function counterRecord(
     }
   );
 }
-/** A draft retains its original date through midnight and ordinary card autosaves. */
-export function adjustCounter(
-  counter: CardCounter,
-  drafts: CounterDrafts,
-  today: string,
-  direction: 1 | -1,
-): CounterDrafts {
-  const record = counterRecord(counter, drafts, today);
-  const value = Math.max(
-    0,
-    Math.min(counterMaximum, record.value + direction * counter.step),
-  );
-  return setCounterValue(counter, drafts, record.date, value);
-}
 export function setCounterValue(
   counter: CardCounter,
   drafts: CounterDrafts,

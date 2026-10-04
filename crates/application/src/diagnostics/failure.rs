@@ -78,7 +78,6 @@ fn classification(error: &AppError) -> Value {
             return json!({"category":"io", "io_kind":"NotFound"});
         }
         AppError::Store(StoreError::Invalid(_)) => "invalid_store",
-        AppError::Store(StoreError::NormalizationRequired) => "normalization_required",
         AppError::Store(StoreError::Conflict) => "conflict",
         AppError::Store(StoreError::Domain(_)) | AppError::SourceValidation { .. } => {
             "source_validation"

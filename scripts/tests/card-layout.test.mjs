@@ -4,20 +4,7 @@ import {
   defaultCardLayout,
   readCardLayout,
   writeCardLayout,
-  moveCardSection,
-  moveCardSectionTo,
 } from "../../apps/web/src/features/editor/card-layout.ts";
-
-test("a drag can move any section directly while retaining every other section's order", () => {
-  const initial = defaultCardLayout();
-  const last = initial.at(-1);
-  const moved = moveCardSectionTo(initial, last, 0);
-  assert.deepEqual(moved, [last, ...initial.slice(0, -1)]);
-  assert.deepEqual(moveCardSectionTo(moved, last, 5), initial);
-  for (const index of [-1, 6, NaN, 1.5])
-    assert.deepEqual(moveCardSectionTo(initial, last, index), initial);
-  assert.deepEqual(initial, defaultCardLayout());
-});
 
 test("layout preferences retain only known unique sections and fill missing sections", () => {
   const result = readCardLayout({
@@ -82,27 +69,41 @@ test("grouped browser preferences upgrade in their existing reading order", () =
     "labels",
     "schedule",
   ]);
-  const mixed = moveCardSection(upgraded, "labels", -1);
+  const mixed = [
+    "labels",
+    ...upgraded.filter((section) => section !== "labels"),
+  ];
   assert.equal(writeCardLayout(mixed, storage), true);
   assert.deepEqual(readCardLayout(storage), mixed);
   assert.equal(entries.get("astra-card-layout:v1"), legacy);
   assert.deepEqual(JSON.parse(entries.get("astra-card-layout:v2")), mixed);
 });
 
-test("all sections can cross the former group boundary without mutating the input", () => {
+test("browser storage preserves an order that crosses the former group boundary", () => {
   const initial = defaultCardLayout();
-  let moved = initial;
-  for (let step = 0; step < 4; step++)
-    moved = moveCardSection(moved, "schedule", -1);
-  assert.deepEqual(moved, [
+  const submitted = [
     "schedule",
-    ...initial.filter((s) => s !== "schedule"),
-  ]);
-  moved = moveCardSection(moved, "comments", 1);
-  assert.deepEqual(moved.slice(-2), ["labels", "comments"]);
+    "description",
+    "checklist",
+    "counters",
+    "labels",
+    "comments",
+  ];
+  let stored;
+  assert.equal(
+    writeCardLayout(submitted, { setItem: (_key, value) => (stored = value) }),
+    true,
+  );
+  assert.deepEqual(readCardLayout({ getItem: () => stored }), submitted);
   assert.deepEqual(initial, defaultCardLayout());
-  assert.deepEqual(moveCardSection(initial, "description", -1), initial);
-  assert.deepEqual(moveCardSection(initial, "labels", 1), initial);
+  assert.deepEqual(submitted, [
+    "schedule",
+    "description",
+    "checklist",
+    "counters",
+    "labels",
+    "comments",
+  ]);
 });
 
 test("unavailable storage keeps the default usable and reports that persistence failed", () => {

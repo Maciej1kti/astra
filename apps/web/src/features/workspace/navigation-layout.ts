@@ -49,18 +49,3 @@ export function writeNavigationLayout(
 export function defaultNavigationLayout(): NavigationLayout {
   return normalize(null);
 }
-
-export function moveNavigationItem(
-  layout: NavigationLayout,
-  item: View,
-  direction: -1 | 1,
-): NavigationLayout {
-  const result = normalize(layout);
-  const index = result.order.indexOf(item);
-  const destination = index + direction;
-  if (index >= 0 && destination >= 0 && destination < result.order.length) {
-    result.order.splice(index, 1);
-    result.order.splice(destination, 0, item);
-  }
-  return normalize(result);
-}

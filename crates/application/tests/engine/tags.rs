@@ -153,8 +153,7 @@ fn tag_source_scans_keep_external_freshness_versions_and_partial_issues() {
     source["metadata"]["labels"] = json!(["Current"]);
     let bytes = crate::source::pretty(&source);
     fs::write(path(&ids[0]), &bytes).unwrap();
-    // No reconciliation: the suggestion index still holds the former labels.
-    assert_eq!(engine.tag_suggestions().unwrap()["names"], json!(["Old"]));
+    // No reconciliation: catalogs and preview must read current source bytes.
     let project_catalog = engine.project_tag_catalog(&project).unwrap();
     let global_catalog = engine.tag_catalog().unwrap();
     for catalog in [&project_catalog, &global_catalog] {

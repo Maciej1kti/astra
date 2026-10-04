@@ -14,7 +14,6 @@ axum.workspace = true
 url.workspace = true
 async-stream.workspace = true
 rustix.workspace = true
-rusqlite.workspace = true
 project-application = { path = "../application" }
 project-store = { path = "../project-store" }
 notify = "=8.2.0"
@@ -26,6 +25,7 @@ futures-util = "=0.3.34"
 
 [dev-dependencies]
 reqwest.workspace = true
+rusqlite.workspace = true
 tempfile.workspace = true
 
 [lints]

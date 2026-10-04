@@ -19,7 +19,6 @@ import {
   send,
 } from "../../apps/web/src/lib/api/api.ts";
 import { cursorPage } from "../../apps/web/src/lib/api/pagination.ts";
-import { TagSuggestions } from "../../apps/web/src/features/tags/tag-suggestions.ts";
 
 const query = {
   view: "list",
@@ -395,43 +394,6 @@ test("one active card-list load makes exactly one request and leaves unrelated a
     clearReads();
     globalThis.fetch = previous;
   }
-});
-
-test("tag suggestions deduplicate in-flight reads, expire, and reject late cache repopulation after session cleanup", async () => {
-  let time = 100,
-    calls = 0,
-    finish;
-  const catalog = { names: [], complete: true };
-  const suggestions = new TagSuggestions(
-    async () => {
-      calls++;
-      return catalog;
-    },
-    () => time,
-  );
-  assert.deepEqual(
-    await Promise.all([suggestions.load(), suggestions.load()]),
-    [catalog, catalog],
-  );
-  await suggestions.load();
-  assert.equal(calls, 1);
-  time += 30_001;
-  await suggestions.load();
-  assert.equal(calls, 2);
-  const late = new TagSuggestions(() => {
-    calls++;
-    return new Promise((resolve) => {
-      finish = resolve;
-    });
-  });
-  const old = late.load();
-  late.clear();
-  finish(catalog);
-  await old;
-  const fresh = late.load();
-  finish(catalog);
-  await fresh;
-  assert.equal(calls, 4);
 });
 
 test("mutations bypass GET sharing and retry retains original identity, epoch and payload", async () => {

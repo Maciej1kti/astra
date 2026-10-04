@@ -18,7 +18,7 @@ const initialState = (): ChartDataState => ({
   error: "",
   notice: "",
 });
-export const chartCatalogLimit = 500;
+const chartCatalogLimit = 500;
 
 /** Owns bounded series pages, obsolete reads and invalidations received during reads. */
 export class ChartData {

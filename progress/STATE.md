@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [definition and API cleanup](2026-10-04-definition-usage-cleanup.md) resolves
+all confirmed audit findings: unused contracts/endpoints, wrappers, helpers,
+component variants, styles and dependency surface are removed; named/generic CLI
+tag workflows use the correct confirmation boundary. The independent gate and
+integrated 617-test gate, all 36 isolated Chromium suites, broad HTTPS/planning
+smoke and six affected WebKit suites pass. The rebuilt existing HTTPS app preserves
+36 resource versions, two pins, both profiles/settings/roots, identity/epoch and
+certificate; all 61 served assets match. Normally paired desktop/320px read-only
+checks pass. Physical-device and complete release acceptance remain open.
+
 The [navigation selector correction](2026-10-04-navigation-section-selector.md)
 replaces separate navigation arrows with the card menu's shared grip/eye component
 and fixes popover movement during held visibility clicks. Its independent

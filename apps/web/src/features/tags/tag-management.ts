@@ -1,26 +1,3 @@
-import type { Pending } from "../../lib/api/api";
-
-export type {
-  TagIssue,
-  CatalogTag,
-  TagCatalog,
-  TagChange,
-  TagPreview,
-} from "../../lib/contracts/api.generated";
-import type {
-  TagChange,
-  TagCatalog,
-  TagPreview,
-} from "../../lib/contracts/api.generated";
-export type TagChangeResult = {
-  change: TagChange;
-  state: "ready" | "saved" | "conflict" | "failed" | "uncertain";
-  message: string;
-  pending?: Pending;
-};
-export function catalogNames(catalog: TagCatalog): string[] {
-  return catalog.tags.filter((tag) => tag.managed).map((tag) => tag.name);
-}
 export function catalogNameError(
   name: string,
   existing: readonly string[] = [],
@@ -32,21 +9,4 @@ export function catalogNameError(
   if (existing.includes(name))
     return "This exact name is already in the catalog.";
   return "";
-}
-export function destinationTag(value: string, catalog: TagCatalog): string {
-  return catalog.tags.some((tag) => tag.name === value) ? value : value.trim();
-}
-export function canFinishTagChange(
-  catalog: TagCatalog | null,
-  preview: TagPreview | null,
-  results: TagChangeResult[],
-): boolean {
-  return (
-    !!catalog &&
-    !!preview &&
-    catalog.complete &&
-    preview.complete &&
-    !results.some((row) => row.state !== "saved") &&
-    !catalog.tags.some((tag) => tag.name === preview.source && tag.usage > 0)
-  );
 }

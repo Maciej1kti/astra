@@ -569,7 +569,6 @@
   let queryReady = $derived(loadedQueryKey === queryKey);
   function sessionEnded() {
     editor?.opening?.cancel();
-    invalidateTagSuggestions(false);
     routing.reset();
 
     data.reset();

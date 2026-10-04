@@ -1,4 +1,4 @@
-export function abortError() {
+function abortError() {
   return new DOMException("The read was cancelled.", "AbortError");
 }
 export function isAbortError(error: unknown) {

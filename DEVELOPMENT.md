@@ -140,8 +140,9 @@ target/release/examples/benchmark 100 100 500
 
 The arguments are project count, cards per project and reports per project.
 Each profile has 20 warmups and 200 measured mutations (40 creates, 160 title
-patches), plus indexed reads. Tag catalog timings use one warmup and ten samples;
-that source-management operation differs from tag suggestions. Application timings
+patches), plus indexed reads and 200 `project_tags` samples from the selected
+project's current card sources. Workspace tag catalog timings use one warmup and
+ten samples. Application timings
 exclude HTTP, VPN and browser rendering. The 100/100/500 profile covers 100 projects,
 10,000 cards and 50,000 reports; it is not a capacity limit.
 

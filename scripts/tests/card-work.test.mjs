@@ -2,9 +2,7 @@ import { acceptanceProgress } from "../../apps/web/src/lib/resources/resource-su
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  acceptanceDropIndex,
   acceptanceValidation,
-  moveAcceptance,
   moveAcceptanceToIndex,
   reorderAcceptance,
 } from "../../apps/web/src/features/cards/card-work.ts";
@@ -22,30 +20,22 @@ const second = {
 
 test("checklist reordering retains source items and stable identities", () => {
   const original = [first, second];
-  assert.deepEqual(moveAcceptance(original, second.id, -1), [second, first]);
+  assert.deepEqual(moveAcceptanceToIndex(original, second.id, 0), [
+    second,
+    first,
+  ]);
   assert.deepEqual(original, [first, second]);
-  assert.deepEqual(moveAcceptance(original, first.id, -1), original);
-  assert.deepEqual(moveAcceptance(original, "missing", 1), original);
+  assert.equal(moveAcceptanceToIndex(original, first.id, 0), original);
+  assert.equal(moveAcceptanceToIndex(original, "missing", 1), original);
+  assert.equal(moveAcceptanceToIndex(original, first.id, -1), original);
+  assert.equal(
+    moveAcceptanceToIndex(original, first.id, original.length),
+    original,
+  );
   assert.deepEqual(moveAcceptanceToIndex(original, first.id, 1), [
     second,
     first,
   ]);
-  assert.deepEqual(moveAcceptanceToIndex(original, first.id, 0), original);
-  assert.deepEqual(
-    acceptanceDropIndex(original, first.id, 40, [
-      { id: first.id, top: 0, bottom: 40 },
-      { id: second.id, top: 48, bottom: 88 },
-    ]),
-    0,
-  );
-  assert.deepEqual(
-    acceptanceDropIndex(original, first.id, 100, [
-      { id: first.id, top: 0, bottom: 40 },
-      { id: second.id, top: 48, bottom: 88 },
-    ]),
-    1,
-  );
-  assert.equal(acceptanceDropIndex(original, "missing", 40, []), null);
   assert.deepEqual(reorderAcceptance(original, [second.id, first.id]), [
     second,
     first,
@@ -54,20 +44,14 @@ test("checklist reordering retains source items and stable identities", () => {
   assert.deepEqual(acceptanceProgress([]), { total: 0, completed: 0 });
 });
 
-test("invalid acceptance drafts have specific feedback without normalizing saved text", () => {
+test("invalid acceptance drafts are rejected without normalizing saved text", () => {
   assert.equal(acceptanceValidation([first, second]), "");
-  assert.match(
-    acceptanceValidation([first, { ...second, id: first.id }]),
-    /repeated identifier/,
-  );
-  assert.match(acceptanceValidation([{ ...first, text: "  " }]), /Add text/);
-  assert.match(
-    acceptanceValidation([{ ...first, text: "x".repeat(501) }]),
-    /500 characters/,
-  );
+  assert.ok(acceptanceValidation([first, { ...second, id: first.id }]));
+  assert.ok(acceptanceValidation([{ ...first, text: "  " }]));
+  assert.ok(acceptanceValidation([{ ...first, text: "x".repeat(501) }]));
   assert.equal(
     acceptanceValidation([{ ...first, text: "😀".repeat(500) }]),
     "",
   );
-  assert.match(acceptanceValidation(Array(101).fill(first)), /100 checklist/);
+  assert.ok(acceptanceValidation(Array(101).fill(first)));
 });

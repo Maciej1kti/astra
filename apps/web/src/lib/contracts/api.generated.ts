@@ -326,7 +326,6 @@ export interface ApiContracts {
   TagIssue: TagIssue;
   TagUsageProject: TagUsageProject;
   CatalogTag: CatalogTag;
-  TagSuggestions: TagSuggestions;
   TagCatalog: TagCatalog;
   TagPreviewRequest: TagPreviewRequest;
   ProjectTagRenamePlan: ProjectTagRenamePlan;
@@ -361,7 +360,6 @@ export interface ApiContracts {
   PairingPage: PairingPage;
   Sessions: Sessions;
   Roots: Roots;
-  RegistrationResource: RegistrationResource;
   ContextEntry: ContextEntry;
   EventTarget: EventTarget;
   SourceValidation: SourceValidation;
@@ -858,16 +856,6 @@ export interface CatalogTag {
   usage: number;
   projects: TagUsageProject[];
 }
-export interface TagSuggestions {
-  /**
-   * @maxItems 10000
-   */
-  names: string[];
-  complete: boolean;
-  freshness: "index_snapshot" | "stale";
-  snapshot_cursor: string;
-  warnings: Warning[];
-}
 export interface TagCatalog {
   version: string;
   tags: CatalogTag[];
@@ -1236,11 +1224,6 @@ export interface Roots {
    */
   items: Root[];
   minItems?: 0;
-}
-export interface RegistrationResource {
-  project_id: string;
-  display_path: string;
-  version: string;
 }
 export interface SourceValidation {
   scope: "source_documents";

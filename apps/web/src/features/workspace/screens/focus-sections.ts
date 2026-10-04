@@ -6,7 +6,7 @@ import { visibleCards } from "./screen-data.ts";
 export type FocusAttention = Attention & { reasons: string[] };
 export type FocusCard = Summary & { attentionReasons: string[] };
 
-export function resourceKey(
+function resourceKey(
   item: Pick<Summary, "project_id" | "type" | "id">,
 ): string {
   return `${item.project_id}:${item.type}:${item.id}`;
@@ -18,7 +18,7 @@ export function attentionKey(item: Attention): string {
 }
 
 /** Group one loaded attention page while retaining its first row's order. */
-export function groupedAttention(
+function groupedAttention(
   rows: Attention[],
   route: Readonly<WorkspaceRoute>,
   projects: Summary[] = [],

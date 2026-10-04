@@ -7,8 +7,6 @@ pub mod validation;
 pub enum StoreError {
     #[error("{0}")]
     Invalid(&'static str),
-    #[error("NORMALIZATION_REQUIRED")]
-    NormalizationRequired,
     #[error("COLLECTION_NOT_FOUND")]
     MissingCollection,
     #[error("VERSION_CONFLICT")]

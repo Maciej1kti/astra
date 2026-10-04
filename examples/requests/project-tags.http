@@ -1,0 +1,33 @@
+# Values below are illustrative. Obtain a current project, session and epoch;
+# use a fresh UUIDv7 for each new intention and preserve it on retries.
+
+### Read fresh names from the selected project's source cards.
+GET /api/v1/projects/11111111-1111-4111-8111-111111111111/tags HTTP/1.1
+Cookie: __Host-project_session=EXAMPLE
+
+### Prepare a project-wide rename without acquiring a command identity.
+POST /api/v1/projects/11111111-1111-4111-8111-111111111111/tags/preview HTTP/1.1
+Content-Type: application/json
+Cookie: __Host-project_session=EXAMPLE
+X-CSRF-Token: EXAMPLE
+
+{"source":"Discovery","target":"Research"}
+
+### Submit the reviewed plan as a durable workflow.
+# HTTP 202 identifies the accepted job. Read the job before reporting completion;
+# retries preserve this plan ID, request ID and command epoch unchanged.
+POST /api/v1/projects/11111111-1111-4111-8111-111111111111/tags/rename HTTP/1.1
+Content-Type: application/json
+Cookie: __Host-project_session=EXAMPLE
+X-CSRF-Token: EXAMPLE
+X-Request-ID: 019913e8-8000-7000-8000-000000000001
+X-Command-Epoch: 44444444-4444-4444-8444-444444444444
+
+{"plan_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}
+
+### Observe the job returned by the accepted response.
+GET /api/v1/jobs/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb HTTP/1.1
+Cookie: __Host-project_session=EXAMPLE
+
+# Unregistration uses local maintenance-plan/maintenance-apply with the observed
+# workspace version. No public GET/DELETE /registrations/{project_id} exists.

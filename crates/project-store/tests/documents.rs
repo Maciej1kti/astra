@@ -65,7 +65,7 @@ fn metadata_edits_preserve_body_and_milestone_extensions_byte_for_byte() {
     )
     .unwrap();
     assert!(!parsed.normalization_required);
-    let mut edited = parsed.editable().unwrap();
+    let mut edited = parsed.value();
     edited["metadata"]["status"] = json!("achieved");
     let encoded = document::serialize(&validate_document(edited).unwrap()).unwrap();
     let decoded = document::parse(Kind::Milestone, None, &encoded)
@@ -91,10 +91,8 @@ fn transport_encoding_requires_explicit_normalization() {
     ] {
         let parsed = document::parse(Kind::Card, None, input.as_bytes()).unwrap();
         assert!(parsed.normalization_required);
-        assert!(matches!(
-            parsed.editable(),
-            Err(StoreError::NormalizationRequired)
-        ));
+        assert_eq!(parsed.value(), card());
+        assert_eq!(parsed.version, document::version(input.as_bytes()));
     }
 }
 

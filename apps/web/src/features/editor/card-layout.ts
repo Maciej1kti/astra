@@ -74,32 +74,3 @@ export function writeCardLayout(
 export function defaultCardLayout(): CardLayout {
   return normalize(null);
 }
-
-export function moveCardSection(
-  layout: CardLayout,
-  section: CardSection,
-  direction: -1 | 1,
-): CardLayout {
-  const result = normalize(layout);
-  const index = result.indexOf(section);
-  return moveCardSectionTo(result, section, index + direction);
-}
-
-export function moveCardSectionTo(
-  layout: CardLayout,
-  section: CardSection,
-  destination: number,
-): CardLayout {
-  const result = normalize(layout);
-  const index = result.indexOf(section);
-  if (
-    index >= 0 &&
-    Number.isInteger(destination) &&
-    destination >= 0 &&
-    destination < result.length
-  ) {
-    result.splice(index, 1);
-    result.splice(destination, 0, section);
-  }
-  return result;
-}

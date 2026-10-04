@@ -374,13 +374,12 @@ impl Action {
                 action: Tags::Rename { plan_id, identity },
             } => {
                 super::uuid4(&plan_id)?;
-                write(
+                Request::workflow(
                     "POST",
                     format!("{root}/tags/rename"),
-                    json!({"plan_id":plan_id}),
-                    None,
-                    identity,
+                    Some(json!({"plan_id":plan_id})),
                 )
+                .retry(identity.request_id, identity.epoch)
             }
             Self::Cards { page: p } => read(page(format!("{root}/cards"), p)),
             Self::Reports { page: p } => read(page(format!("{root}/updates"), p)),

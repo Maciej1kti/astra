@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calendarEvents } from "../../apps/web/src/features/planning/calendar-events.ts";
+import { calendarEventProjection } from "../../apps/web/src/features/planning/calendar-events.ts";
 import { ganttTasks } from "../../apps/web/src/features/planning/gantt-tasks.ts";
 import { dateOnly } from "../../apps/web/src/features/planning/planning.ts";
 
@@ -14,13 +14,16 @@ test("calendar conversion keeps inclusive source dates and only allows ready sch
     end: "2026-09-01",
   };
   const due = { ...schedule, item_id: "due", kind: "milestone_due" };
-  const events = calendarEvents([schedule, due], "work", true);
+  const events = calendarEventProjection()([schedule, due], "work", true);
   assert.equal(events[0].end, "2026-09-02");
   assert.equal(schedule.end, "2026-09-01");
   assert.equal(events[0].editable, true);
   assert.equal(events[1].editable, false);
-  assert.equal(calendarEvents([schedule], "", false)[0].editable, false);
-  assert.deepEqual(calendarEvents([schedule], "missing", true), []);
+  assert.equal(
+    calendarEventProjection()([schedule], "", false)[0].editable,
+    false,
+  );
+  assert.deepEqual(calendarEventProjection()([schedule], "missing", true), []);
 });
 
 test("Gantt tasks use saved schedules and milestone due dates", () => {
@@ -58,7 +61,7 @@ test("timed events retain clock fields and occupy only intersected calendar days
     start: "2026-09-30",
     end: "2026-09-30",
   });
-  const [calendar] = calendarEvents(
+  const [calendar] = calendarEventProjection()(
     [
       {
         project_id: "p",

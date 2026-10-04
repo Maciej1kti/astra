@@ -81,8 +81,6 @@
   --control-height: 44px;
   --avatar-size: 44px;
   --sidebar-compact: 192px;
-  --description-min-height: 80px;
-  --calendar-cell-height: 112px;
   --agenda-min-height: 400px;
   --suggestions-height: 180px;
   --field-max-width: 330px;
@@ -105,7 +103,6 @@
   --calendar-grid-height: clamp(600px, calc(100dvh - 260px), 820px);
   --calendar-mobile-grid-height: 740px;
   --calendar-agenda-height: clamp(400px, calc(100dvh - 240px), 680px);
-  --calendar-min-height: 640px;
   --gantt-min-width: 720px;
   --board-min-height: 360px;
   --board-height: 68vh;
@@ -130,12 +127,9 @@
   --motion-lift: var(--space-1);
   --layer-navigation: 10;
   --layer-floating: 20;
-  --layer-dialog: 21;
   --layer-drag-preview: 10000;
   --layer-drag-indicator: 10001;
   --wash: var(--soft);
-  /* Existing vendor adapters use this semantic alias. */
-  --green: var(--primary);
 }
 
 :root[data-theme="dark"] {

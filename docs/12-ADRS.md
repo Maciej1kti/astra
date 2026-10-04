@@ -387,3 +387,11 @@ navigation and accepted only as a compatibility spelling for existing routes,
 browser-local order and workspace preferences. Source bytes and command identity
 remain unchanged on reads and retries. See
 [ADR-064](ADR-064-PROJECTS-STATUS-BOARD.md).
+
+## ADR-065 — Definition surface cleanup
+
+Remove unimplemented registration paths from the public contract and retire the
+unused workspace suggestion read. Local maintenance unregistration and legacy
+workspace tag vocabulary remain supported. CLI project tag rename uses workflow
+acceptance, while preview remains a read. See
+[ADR-065](ADR-065-DEFINITION-SURFACE-CLEANUP.md).

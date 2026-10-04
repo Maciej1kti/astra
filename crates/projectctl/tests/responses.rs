@@ -324,6 +324,7 @@ fn non_journaled_api_actions_do_not_invent_a_command_identity() {
         "/api/v1/registration-plans",
         "/api/v1/native-folder-selections",
         "/api/v1/workspace/tags/preview?example=1",
+        "/api/v1/projects/11111111-1111-4111-8111-111111111111/tags/preview?example=1",
     ] {
         let (output, request) = run(
             &["command", "POST", path, "--json-file", "$INPUT"],
@@ -487,4 +488,41 @@ fn ordinary_reads_and_non_journaled_actions_keep_server_failure_classification()
         assert!(value["request_id"].is_null());
         assert!(value["command_epoch"].is_null());
     }
+}
+
+#[test]
+fn generic_project_tag_rename_accepts_a_workflow_with_original_identity() {
+    let path = format!("/api/v1/projects/{RESOURCE}/tags/rename?example=1");
+    let arguments = [
+        "command",
+        "POST",
+        &path,
+        "--json-file",
+        "$INPUT",
+        "--request-id",
+        REQUEST,
+        "--epoch",
+        EPOCH,
+    ];
+    let (output, request) = run(&arguments, 202, accepted());
+    let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(output.status.code(), Some(9), "{value}");
+    assert_eq!(value["ok"], true);
+    assert_eq!(value["data"], accepted());
+    assert_eq!(value["request_id"], REQUEST);
+    assert_eq!(value["command_epoch"], EPOCH);
+    assert!(request.starts_with(&format!("POST {path} HTTP/1.1")));
+    assert!(
+        request
+            .to_lowercase()
+            .contains(&format!("x-request-id: {REQUEST}"))
+    );
+    assert!(
+        request
+            .to_lowercase()
+            .contains(&format!("x-command-epoch: {EPOCH}"))
+    );
+    let mut wrong_job = accepted();
+    wrong_job["job_id"] = json!("invalid-job");
+    uncertain(run(&arguments, 202, wrong_job).0);
 }

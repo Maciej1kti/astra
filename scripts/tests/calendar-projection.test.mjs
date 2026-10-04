@@ -1,9 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  calendarEventProjection,
-  calendarEvents,
-} from "../../apps/web/src/features/planning/calendar-events.ts";
+import { calendarEventProjection } from "../../apps/web/src/features/planning/calendar-events.ts";
 
 const plan = {
   project_id: "project",
@@ -20,7 +17,8 @@ const due = { ...plan, item_id: "milestone:due", kind: "milestone_due" };
 test("identical fresh reads and equivalent filters retain the displayed events", () => {
   const project = calendarEventProjection();
   const first = project([plan, due], "", true);
-  assert.deepEqual(first, calendarEvents([plan, due], "", true));
+  assert.equal(first[0].editable, true);
+  assert.equal(first[1].editable, false);
   assert.equal(project(structuredClone([plan, due]), "WORK", true), first);
   assert.equal(project(structuredClone([plan, due]), "work", true), first);
   assert.equal(first[0].extendedProps.astra.version, "observed-1");
@@ -93,6 +91,6 @@ test("gesture completion republishes canonical snapshots even when source data i
   const restored = project([plan], "", true, true);
   assert.notEqual(restored, first);
   assert.notEqual(restored[0], first[0]);
-  assert.deepEqual(restored, calendarEvents([plan], "", true));
+  assert.deepEqual(restored, first);
   assert.equal(project(structuredClone([plan]), "", true), restored);
 });

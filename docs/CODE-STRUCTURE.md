@@ -262,6 +262,10 @@ one durable rename workflow for that project. The workflow checks source bytes
 before each write and retains its command identity through retries. `TagPicker`
 suggests labels from the current project. The older workspace vocabulary API
 remains available for existing clients but is not used by the current UI.
+Suggestion invalidation only publishes the shared browser notification; there is
+no global suggestion cache. The unused workspace suggestion endpoint is retired;
+project catalogs remain the source for suggestions and rename previews. See
+[ADR-065](ADR-065-DEFINITION-SURFACE-CLEANUP.md).
 
 Project folders are optional project metadata, independent of card labels.
 The project editor uses `FolderPicker`; Focus scopes source pins by project

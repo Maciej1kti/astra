@@ -56,10 +56,6 @@ impl Inventory {
         let bytes = serde_json::to_vec(self).expect("tree inventory serializes");
         version(&bytes)
     }
-
-    pub fn root(&self) -> Option<&Entry> {
-        self.entries.iter().find(|entry| entry.path == [".project"])
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

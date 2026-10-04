@@ -102,27 +102,17 @@ fn preview_mutation(engine: &Engine, change: &Value) -> Mutation {
 }
 
 #[test]
-fn suggestions_use_indexed_names_while_management_still_reads_current_sources() {
+fn tag_management_reads_current_sources_without_requiring_index_refresh() {
     let env = Environment::new();
     let engine = env.engine();
-    let project = env.register(&engine, "suggestions");
-    env.card(
-        "suggestions",
-        "First",
-        json!(["Indexed", " Historical "]),
-        true,
-    );
+    let project = env.register(&engine, "Tags");
+    env.card("Tags", "First", json!(["Indexed", " Historical "]), true);
     engine.refresh_project(&project, None).unwrap();
-    let suggestions = engine.tag_suggestions().unwrap();
-    wire::validate("TagSuggestions", &suggestions).unwrap();
-    assert_eq!(suggestions["names"], json!([" Historical ", "Indexed"]));
-    env.card("suggestions", "External", json!(["Not indexed yet"]), false);
-    assert_eq!(
-        engine.tag_suggestions().unwrap()["names"],
-        suggestions["names"]
-    );
+    env.card("Tags", "External", json!(["Not indexed yet"]), false);
+    let catalog = engine.tag_catalog().unwrap();
+    wire::validate("TagCatalog", &catalog).unwrap();
     assert!(
-        engine.tag_catalog().unwrap()["tags"]
+        catalog["tags"]
             .as_array()
             .unwrap()
             .iter()
@@ -137,25 +127,6 @@ fn suggestions_use_indexed_names_while_management_still_reads_current_sources() 
             .len(),
         1
     );
-    engine.refresh_project(&project, None).unwrap();
-    assert!(
-        engine.tag_suggestions().unwrap()["names"]
-            .as_array()
-            .unwrap()
-            .contains(&json!("Not indexed yet"))
-    );
-    engine
-        .index
-        .mark_unavailable(
-            &project,
-            "PROJECT_UNAVAILABLE",
-            project_application::now_millis(),
-        )
-        .unwrap();
-    let stale = engine.tag_suggestions().unwrap();
-    wire::validate("TagSuggestions", &stale).unwrap();
-    assert_eq!(stale["complete"], false);
-    assert_eq!(stale["freshness"], "stale");
 }
 
 #[test]

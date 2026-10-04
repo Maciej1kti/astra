@@ -342,12 +342,6 @@
   flex: 1;
   min-width: 0;
 }
-.card-grip,
-.card-pin {
-  color: var(--muted);
-  padding-top: var(--space-1);
-  flex-shrink: 0;
-}
 .app .card footer {
   display: flex;
   gap: var(--space-5);
@@ -801,9 +795,6 @@
   [data-focus-drag-preview] {
     padding: var(--space-8);
   }
-  .card-grip {
-    display: none;
-  }
   .app .sectiontitle > span {
     max-width: 35%;
     text-align: right;
@@ -812,16 +803,6 @@
     padding: var(--space-8);
     gap: var(--space-6);
   }
-}
-
-.resource-card .attention-reasons {
-  max-width: none;
-  justify-content: flex-start;
-  margin-top: var(--space-4);
-}
-.resource-card .attention-reasons .badge {
-  color: var(--notice-ink);
-  background: var(--notice-bg);
 }
 
 .app .filter-check {

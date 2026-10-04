@@ -180,7 +180,7 @@ fn main() {
             attention.push(start.elapsed().as_secs_f64() * 1000.0);
         }
         let start = Instant::now();
-        engine.tag_suggestions().unwrap();
+        engine.project_tag_catalog(project).unwrap();
         if n >= 20 {
             tags.push(start.elapsed().as_secs_f64() * 1000.0);
         }
@@ -242,7 +242,7 @@ fn main() {
         "durable_mutation": statistics(writes),
         "card_create": statistics(creates),
         "card_patch_title": statistics(patches),
-        "tag_suggestions": statistics(tags),
+        "project_tags": statistics(tags),
         "tag_catalog": statistics(catalog),
         "limitations": "Application-level timings exclude HTTP/VPN and browser rendering. Fixture generation is included in external process peak RSS.",
     })).unwrap());

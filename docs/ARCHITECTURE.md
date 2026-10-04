@@ -187,9 +187,11 @@ Larger tag scans use bounded scoped readers and capacity-one result channels
 under the common source-read capacity guard. The caller retains the project lock
 and consumes results in sorted order; projects and source authority stay unchanged.
 Invalid or unavailable cards produce partial-result issues while readable neighbors
-remain visible. Global indexed tag suggestions provide names with projection
-freshness; the editor's project picker and tag manager use the current project
-catalog. A catalog's version does not authorize overwriting a card.
+remain visible. The editor's project picker and tag manager use the current
+project catalog, with shared notifications invalidating mounted readers.
+The unused global indexed suggestion endpoint/cache is retired by
+[ADR-065](ADR-065-DEFINITION-SURFACE-CLEANUP.md). A catalog's version does not
+authorize overwriting a card.
 
 Server-sent events invalidate client reads. Scoped cursors and snapshot generations
 prevent combining incompatible pages. The browser cancels obsolete reads while

@@ -23,7 +23,6 @@ export type {
 } from "../contracts/api.generated";
 export type Resource =
   ProjectResource | CardResource | MilestoneResource | UpdateResource;
-export type Metadata = Resource["metadata"];
 export type Pending = Readonly<{
   path: string;
   method: string;
@@ -33,7 +32,6 @@ export type Pending = Readonly<{
   epoch: string;
   userId?: string;
 }>;
-export type CommandState = CommandStatus["state"];
 export function commandStatus(
   pending: Pick<Pending, "requestId" | "epoch" | "userId">,
 ) {
