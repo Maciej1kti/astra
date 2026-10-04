@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The [navigation selector correction](2026-10-04-navigation-section-selector.md)
+replaces separate navigation arrows with the card menu's shared grip/eye component
+and fixes popover movement during held visibility clicks. Its independent
+612-test gate and navigation/card/menu Chromium and WebKit checks pass. Final
+integration and restart verification are pending while concurrent UI changes
+are preserved. Physical-device and complete release acceptance remain open.
+
 The [definition and consumer audit](2026-10-04-definition-usage-audit.md) finds
 two unimplemented OpenAPI operations, a reproduced CLI tag-rename confirmation
 mismatch and unused internal helpers, wrappers, component variants and CSS tokens.

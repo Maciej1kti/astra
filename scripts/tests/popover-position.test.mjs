@@ -209,7 +209,7 @@ test("short screens place a disclosure beside its trigger when that preserves it
 });
 
 test("resize, content and scroll notifications coalesce and clean up on removal", (t) => {
-  const { action, frames, observers, flush } = fixture(t);
+  const { action, panel, frames, observers, flush } = fixture(t);
   for (let i = 0; i < 8; i++) {
     window.dispatchEvent(new Event("scroll"));
     observers[0].callback();
@@ -224,6 +224,9 @@ test("resize, content and scroll notifications coalesce and clean up on removal"
   assert.ok(observers.every((observer) => !observer.active));
   window.dispatchEvent(new Event("scroll"));
   document.dispatchEvent(new Event("animationend"));
+  window.dispatchEvent(pointer("pointerdown", panel));
+  window.dispatchEvent(pointer("pointerup", panel));
+  window.dispatchEvent(new Event("blur"));
   assert.equal(frames.size, 0);
 });
 
@@ -256,3 +259,90 @@ test("scrolling within a disclosure does not schedule another height measurement
   window.dispatchEvent(new Event("scroll"));
   assert.equal(frames.size, 1);
 });
+
+function pointer(type, target, extra = {}) {
+  const event = Object.assign(new Event(type), {
+    pointerId: 7,
+    isPrimary: true,
+    button: 0,
+    ...extra,
+  });
+  Object.defineProperty(event, "target", { value: target });
+  return event;
+}
+
+test("an internal press keeps its click target stationary until the release frame", (t) => {
+  const { anchor, panel, observers, flush, bounds } = fixture(t, {
+    width: 1000,
+    height: 800,
+  });
+  const before = bounds();
+  const control = Object.assign(new Node(), { parent: panel });
+  window.dispatchEvent(pointer("pointerdown", control));
+  anchor.bounds = { left: 400, right: 444, top: 100, bottom: 144 };
+  panel.scrollTop = 40;
+  observers[0].callback();
+  flush();
+  assert.deepEqual(bounds(), before);
+  assert.equal(panel.scrollTop, 40);
+  window.dispatchEvent(pointer("pointerup", panel, { pointerId: 8 }));
+  flush();
+  assert.deepEqual(
+    bounds(),
+    before,
+    "another pointer cannot release the press",
+  );
+  window.dispatchEvent(pointer("pointerup", panel));
+  assert.deepEqual(
+    bounds(),
+    before,
+    "the click dispatch precedes repositioning",
+  );
+  flush();
+  assert.notDeepEqual(bounds(), before);
+  assert.equal(panel.scrollTop, 40);
+});
+
+test("outside, secondary and non-primary presses keep ordinary anchoring active", (t) => {
+  const { anchor, panel, observers, flush, bounds } = fixture(t, {
+    width: 1000,
+    height: 800,
+  });
+  for (const [target, extra] of [
+    [new Node(), {}],
+    [panel, { button: 2 }],
+    [panel, { isPrimary: false }],
+  ]) {
+    const before = bounds();
+    window.dispatchEvent(pointer("pointerdown", target, extra));
+    anchor.bounds = {
+      left: anchor.bounds.left + 20,
+      right: anchor.bounds.right + 20,
+      top: anchor.bounds.top - 40,
+      bottom: anchor.bounds.bottom - 40,
+    };
+    observers[0].callback();
+    flush();
+    assert.notDeepEqual(bounds(), before);
+  }
+});
+
+for (const signal of ["pointercancel", "blur", "orientationchange"]) {
+  test(`${signal} releases an internal press without freezing future placement`, (t) => {
+    const { anchor, panel, observers, flush, bounds } = fixture(t, {
+      width: 1000,
+      height: 800,
+    });
+    const before = bounds();
+    window.dispatchEvent(pointer("pointerdown", panel));
+    anchor.bounds = { left: 400, right: 444, top: 100, bottom: 144 };
+    observers[0].callback();
+    flush();
+    assert.deepEqual(bounds(), before);
+    window.dispatchEvent(
+      signal === "pointercancel" ? pointer(signal, panel) : new Event(signal),
+    );
+    flush();
+    assert.notDeepEqual(bounds(), before);
+  });
+}

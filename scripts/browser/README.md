@@ -78,7 +78,9 @@ The `navigation` suite checks the compact Focus/Projects/More phone bar, off-bar
 view navigation and selection, browser-local order and visibility persistence,
 upgrades that append Main to existing saved order, all-hidden recovery, keyboard
 focus/dismissal, touch targets, landscape scrolling, desktop rotation and reduced
-motion at 320–1024px. Chromium captures rendered
+motion at 320–1024px. Its shared grip/eye selector covers mouse and touch ordering,
+Escape/Tab/outside cancellation, inert aligned previews, ArrowUp/Down/Home/End
+and retained handle focus. Chromium captures rendered
 surfaces; WebKit checks the same behavior without screenshot preparation.
 
 The HTTPS smoke exercises broad workflows, including keyboard Focus ordering and

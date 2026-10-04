@@ -23,10 +23,9 @@ await runBrowserSuite(
       updates: "Updates",
       chart: "Chart",
     };
-    const defaults = Object.keys(labels);
-    const defaultHidden = defaults.filter(
-      (view) => !["focus", "projects"].includes(view),
-    );
+    let defaults, defaultHidden;
+    const availableOrder = (values) =>
+      values.filter((view) => Object.hasOwn(labels, view));
     const key = "astra-navigation-layout:v1";
     const originalPreferences = cli("get", "/api/v1/workspace/preferences");
     page.on("pageerror", (error) => errors.push(error.message));
@@ -39,9 +38,9 @@ await runBrowserSuite(
     const nav = page.getByRole("navigation", { name: "Workspace views" });
     const more = nav.getByRole("button", { name: "More views", exact: true });
     const order = page.getByRole("list", { name: "Navigation order" });
-    const move = (view, direction) =>
+    const grip = (view) =>
       order.getByRole("button", {
-        name: `Move ${labels[view]} ${direction}`,
+        name: `Reorder ${labels[view]}`,
         exact: true,
       });
     const visibility = (view) =>
@@ -142,6 +141,73 @@ await runBrowserSuite(
       );
       return panel;
     };
+    const settleOrder = () =>
+      order.evaluate(async (element) => {
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        );
+        await Promise.all(
+          element
+            .getAnimations({ subtree: true })
+            .map((animation) => animation.finished.catch(() => {})),
+        );
+      });
+    const beginDrag = async (item, target, { after = true } = {}) => {
+      await settleOrder();
+      await order.evaluate((element) => {
+        const surface = element.closest(".action-menu-panel");
+        surface.scrollTop +=
+          element.getBoundingClientRect().top -
+          surface.getBoundingClientRect().top -
+          24;
+      });
+      const from = await grip(item).boundingBox();
+      const destination = await order
+        .locator(`[data-navigation-item="${target}"]`)
+        .boundingBox();
+      assert.ok(from && destination, "Reorder source and target are rendered");
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        from.x + from.width / 2,
+        destination.y + (after ? destination.height - 3 : 3),
+        { steps: 8 },
+      );
+      const preview = page.locator(".layout-drag-preview");
+      await expect(preview).toBeVisible();
+      await expect(grip(item)).toHaveAttribute("aria-pressed", "true");
+      await expect(
+        order.locator(`[data-navigation-item="${item}"]`),
+      ).toHaveAttribute("data-dragging", "true");
+      assert.equal(await preview.evaluate((element) => element.inert), true);
+      await expect(preview).toHaveAttribute("aria-hidden", "true");
+      assert.equal(
+        await preview
+          .locator("[data-navigation-item], [data-order-item]")
+          .count(),
+        0,
+        "The inert preview cannot become an additional ordering source",
+      );
+      const surface = await order
+        .locator("xpath=ancestor::*[contains(@class, 'action-menu-panel')]")
+        .boundingBox();
+      const bounds = await preview.boundingBox();
+      assert.ok(
+        Math.abs(bounds.x - destination.x) < 2 &&
+          Math.abs(bounds.width - destination.width) < 2 &&
+          bounds.y >= surface.y - 1 &&
+          bounds.y + bounds.height <= surface.y + surface.height + 1,
+        `Drag preview tracks the rendered menu: ${JSON.stringify({ bounds, surface, destination })}`,
+      );
+      return surface;
+    };
+    const finishDrag = async () => {
+      await page.mouse.up();
+      await expect(page.locator(".layout-drag-preview")).toHaveCount(0);
+      await expect(page.locator(".layout-drop-indicator")).toHaveCount(0);
+      await expect(more).toHaveAttribute("aria-expanded", "true");
+      await settleOrder();
+    };
     const closeMore = async () => {
       await page.keyboard.press("Escape");
       await expect(more).toHaveAttribute("aria-expanded", "false");
@@ -204,6 +270,17 @@ await runBrowserSuite(
         .toBeLessThan(1.5);
     };
     try {
+      // Main's concurrent merge into Projects must not change ordering coverage.
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await route("focus");
+      if (
+        !(await nav.getByRole("button", { name: "Main", exact: true }).count())
+      )
+        delete labels.main;
+      defaults = Object.keys(labels);
+      defaultHidden = defaults.filter(
+        (view) => !["focus", "projects"].includes(view),
+      );
       await page.setViewportSize({ width: 390, height: 844 });
       await route("focus");
       await expect.poll(readBar).toEqual(["Focus", "Projects"]);
@@ -259,26 +336,95 @@ await runBrowserSuite(
 
       await customize();
       await expect.poll(readOrder).toEqual(defaults);
-      await expect(move("focus", "earlier")).toBeDisabled();
-      await expect(move("chart", "later")).toBeDisabled();
-      await move("calendar", "earlier").focus();
-      await move("calendar", "earlier").press("Enter");
-      await expect(move("calendar", "earlier")).toBeFocused();
+      await expect(order).toHaveClass(/layout-order/);
+      for (const view of defaults) {
+        await expect(
+          order.locator(`[data-navigation-item="${view}"]`).getByRole("button"),
+        ).toHaveCount(2);
+        await expect(grip(view)).toHaveAttribute(
+          "aria-keyshortcuts",
+          "ArrowUp ArrowDown Home End",
+        );
+        await expect(grip(view).locator("svg")).toBeVisible();
+      }
+      const beforeDrag = await savedLayout();
+      await beginDrag("focus", "projects");
+      await expect.poll(readOrder).toEqual(defaults);
+      assert.deepEqual(await savedLayout(), beforeDrag);
+      await screenshot("navigation-grip-drag-390");
+      await finishDrag();
       await expect
         .poll(readOrder)
         .toEqual([
+          ...defaults.slice(1, defaults.indexOf("projects") + 1),
           "focus",
-          "main",
-          "projects",
-          "calendar",
-          "board",
-          "gantt",
-          "list",
-          "updates",
-          "chart",
+          ...defaults.slice(defaults.indexOf("projects") + 1),
         ]);
-      await move("calendar", "earlier").click();
-      await move("calendar", "earlier").click();
+      await expect(grip("focus")).toBeFocused();
+      await grip("focus").press("Home");
+      await expect.poll(readOrder).toEqual(defaults);
+      for (const cancellation of ["Escape", "Tab", "outside"]) {
+        const saved = await savedLayout();
+        const surface = await beginDrag("focus", "projects");
+        if (cancellation === "outside")
+          await page.mouse.move(Math.max(0, surface.x - 12), 4, { steps: 4 });
+        else await page.keyboard.press(cancellation);
+        await finishDrag();
+        await expect.poll(readOrder).toEqual(defaults);
+        assert.deepEqual(await savedLayout(), saved);
+        if (cancellation === "Escape")
+          await expect(grip("focus")).toBeFocused();
+        await visibility("focus").click();
+        await expect(visibility("focus")).toHaveAttribute(
+          "aria-pressed",
+          "false",
+        );
+        await visibility("focus").click();
+        await expect(visibility("focus")).toHaveAttribute(
+          "aria-pressed",
+          "true",
+        );
+      }
+      checks.push(
+        "shared grip/eye rows, inert aligned drag preview, mouse ordering, Escape/Tab/outside cancellation and immediate eye interactions",
+      );
+      await expect(
+        order.getByRole("button", { name: /^Reorder / }),
+      ).toHaveCount(defaults.length);
+      await expect(
+        order.getByRole("button", { name: /^Move .+ (earlier|later)$/ }),
+      ).toHaveCount(0);
+      await grip("focus").press("ArrowUp");
+      await expect.poll(readOrder).toEqual(defaults);
+      await expect(grip("focus")).toBeFocused();
+      await grip("chart").press("ArrowDown");
+      await expect.poll(readOrder).toEqual(defaults);
+      await expect(grip("chart")).toBeFocused();
+      await grip("chart").press("Home");
+      await expect.poll(readOrder).toEqual(["chart", ...defaults.slice(0, -1)]);
+      await expect(grip("chart")).toBeFocused();
+      await grip("chart").press("End");
+      await expect.poll(readOrder).toEqual(defaults);
+      await expect(grip("chart")).toBeFocused();
+      await grip("calendar").press("ArrowUp");
+      await expect(grip("calendar")).toBeFocused();
+      await expect
+        .poll(readOrder)
+        .toEqual(
+          availableOrder([
+            "focus",
+            "main",
+            "projects",
+            "calendar",
+            "board",
+            "gantt",
+            "list",
+            "updates",
+            "chart",
+          ]),
+        );
+      await grip("calendar").press("ArrowUp");
+      if (labels.main) await grip("calendar").press("ArrowUp");
       await visibility("calendar").click();
       await expect(visibility("calendar")).toHaveAttribute(
         "aria-pressed",
@@ -289,8 +435,8 @@ await runBrowserSuite(
         "aria-pressed",
         "false",
       );
-      await move("focus", "later").click();
-      const changedOrder = [
+      await grip("focus").press("ArrowDown");
+      const changedOrder = availableOrder([
         "calendar",
         "focus",
         "main",
@@ -300,7 +446,7 @@ await runBrowserSuite(
         "list",
         "updates",
         "chart",
-      ];
+      ]);
       await expect.poll(readOrder).toEqual(changedOrder);
       await closeMore();
       await expect.poll(readBar).toEqual(["Calendar", "Focus"]);
@@ -326,7 +472,7 @@ await runBrowserSuite(
       );
       await screenshot("navigation-customized-390");
       checks.push(
-        "earlier/later and visibility controls preserve order, focus and browser reload preference",
+        "shared grip keyboard ordering, Home/End, boundaries and visibility preserve focus and browser reload preference",
       );
 
       await visibility("calendar").click();
@@ -407,8 +553,8 @@ await runBrowserSuite(
             height,
             "Navigation panel stays in the viewport",
           );
-          await move("focus", "later").scrollIntoViewIfNeeded();
-          await checkTapTarget(move("focus", "later"), "Reorder touch target");
+          await grip("focus").scrollIntoViewIfNeeded();
+          await checkTapTarget(grip("focus"), "Reorder touch target");
           await checkTapTarget(visibility("focus"), "Visibility touch target");
           await screenshot(`navigation-panel-${width}x${height}`);
           await closeMore();
@@ -436,20 +582,77 @@ await runBrowserSuite(
       await expect(more).toHaveAttribute("aria-current", "page");
       await customize({ touch: true });
       await visibility("list").tap();
-      await move("list", "earlier").tap();
+      if (browser.browserType().name() === "chromium") {
+        const touch = await context.newCDPSession(page);
+        try {
+          await order.evaluate((element) => {
+            const surface = element.closest(".action-menu-panel");
+            surface.scrollTop +=
+              element.getBoundingClientRect().top -
+              surface.getBoundingClientRect().top -
+              24;
+          });
+          const from = await grip("list").boundingBox();
+          const destination = await order
+            .locator('[data-navigation-item="gantt"]')
+            .boundingBox();
+          const point = {
+            x: from.x + from.width / 2,
+            y: from.y + from.height / 2,
+          };
+          const moved = { ...point, y: destination.y + 3 };
+          const saved = await savedLayout();
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchStart",
+            touchPoints: [point],
+          });
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchMove",
+            touchPoints: [moved],
+          });
+          await expect(page.locator(".layout-drag-preview")).toBeVisible();
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchCancel",
+            touchPoints: [],
+          });
+          await expect(page.locator(".layout-drag-preview")).toHaveCount(0);
+          await expect.poll(readOrder).toEqual(defaults);
+          assert.deepEqual(await savedLayout(), saved);
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchStart",
+            touchPoints: [point],
+          });
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchMove",
+            touchPoints: [moved],
+          });
+          await expect(page.locator(".layout-drag-preview")).toBeVisible();
+          await touch.send("Input.dispatchTouchEvent", {
+            type: "touchEnd",
+            touchPoints: [],
+          });
+          await expect(page.locator(".layout-drag-preview")).toHaveCount(0);
+        } finally {
+          await touch.detach();
+        }
+      } else {
+        await grip("list").press("ArrowUp");
+      }
       await expect
         .poll(readOrder)
-        .toEqual([
-          "focus",
-          "main",
-          "projects",
-          "board",
-          "calendar",
-          "list",
-          "gantt",
-          "updates",
-          "chart",
-        ]);
+        .toEqual(
+          availableOrder([
+            "focus",
+            "main",
+            "projects",
+            "board",
+            "calendar",
+            "list",
+            "gantt",
+            "updates",
+            "chart",
+          ]),
+        );
       await closeMore();
       await expect.poll(readBar).toEqual(["Focus", "Projects", "List"]);
       await expect(
@@ -463,7 +666,7 @@ await runBrowserSuite(
       );
       await screenshot("navigation-touch-reduced-motion-390");
       checks.push(
-        "touch navigation, visibility and reorder controls under reduced motion",
+        "touch navigation, visibility and shared grip touch ordering/cancellation under reduced motion (Chromium; keyboard fallback in WebKit)",
       );
 
       await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -472,7 +675,7 @@ await runBrowserSuite(
         if ((await visibility(view).getAttribute("aria-pressed")) !== "true")
           await visibility(view).click();
       await closeMore();
-      const fullOrder = [
+      const fullOrder = availableOrder([
         "focus",
         "main",
         "projects",
@@ -482,7 +685,7 @@ await runBrowserSuite(
         "gantt",
         "updates",
         "chart",
-      ];
+      ]);
       await expect.poll(readBar).toEqual(fullOrder.map((view) => labels[view]));
       assert.equal(
         await nav.evaluate(
@@ -505,21 +708,23 @@ await runBrowserSuite(
           exact: true,
         }),
       ).toBeVisible();
-      await move("list", "earlier").click();
-      await move("list", "earlier").click();
+      await grip("list").press("ArrowUp");
+      await grip("list").press("ArrowUp");
       await expect
         .poll(readOrder)
-        .toEqual([
-          "focus",
-          "main",
-          "projects",
-          "list",
-          "board",
-          "calendar",
-          "gantt",
-          "updates",
-          "chart",
-        ]);
+        .toEqual(
+          availableOrder([
+            "focus",
+            "main",
+            "projects",
+            "list",
+            "board",
+            "calendar",
+            "gantt",
+            "updates",
+            "chart",
+          ]),
+        );
       await closeMore();
       const activeList = nav.getByRole("button", { name: "List", exact: true });
       await expect(activeList).toHaveAttribute(
@@ -560,7 +765,7 @@ await runBrowserSuite(
       await page.reload();
       await expect.poll(readBar).toEqual(["Focus", "Projects"]);
       await customize();
-      const normalizedOrder = [
+      const normalizedOrder = availableOrder([
         "calendar",
         "focus",
         "main",
@@ -570,7 +775,7 @@ await runBrowserSuite(
         "list",
         "updates",
         "chart",
-      ];
+      ]);
       await expect.poll(readOrder).toEqual(normalizedOrder);
       for (const view of defaults)
         await expect(visibility(view)).toHaveAttribute(
@@ -589,42 +794,47 @@ await runBrowserSuite(
         "malformed storage restores defaults and duplicate/unknown routes normalize to unique valid shortcuts on reload",
       );
 
-      const previousOrder = [
-        "chart",
-        "projects",
-        "focus",
-        "calendar",
-        "board",
-        "gantt",
-        "list",
-        "updates",
-      ];
-      await page.evaluate(
-        ({ storageKey, order }) =>
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify({ order, visible: ["projects", "focus"] }),
-          ),
-        { storageKey: key, order: previousOrder },
-      );
-      await page.reload();
-      await expect.poll(readBar).toEqual(["Projects", "Focus"]);
-      await customize();
-      const upgradedOrder = [...previousOrder, "main"];
-      await expect.poll(readOrder).toEqual(upgradedOrder);
-      await expect(visibility("main")).toHaveAttribute("aria-pressed", "false");
-      assert.deepEqual((await savedLayout()).order, previousOrder);
-      await visibility("main").click();
-      const upgraded = await savedLayout();
-      assert.deepEqual(upgraded.order, upgradedOrder);
-      assert.deepEqual(upgraded.visible, ["projects", "focus", "main"]);
-      await closeMore();
-      await expect.poll(readBar).toEqual(["Projects", "Focus", "Main"]);
-      await page.reload();
-      await expect.poll(readBar).toEqual(["Projects", "Focus", "Main"]);
-      checks.push(
-        "existing saved order stays intact and appends Main; its visibility remains opt-in and persists on reload",
-      );
+      if (labels.main) {
+        const previousOrder = [
+          "chart",
+          "projects",
+          "focus",
+          "calendar",
+          "board",
+          "gantt",
+          "list",
+          "updates",
+        ];
+        await page.evaluate(
+          ({ storageKey, order }) =>
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify({ order, visible: ["projects", "focus"] }),
+            ),
+          { storageKey: key, order: previousOrder },
+        );
+        await page.reload();
+        await expect.poll(readBar).toEqual(["Projects", "Focus"]);
+        await customize();
+        const upgradedOrder = [...previousOrder, "main"];
+        await expect.poll(readOrder).toEqual(upgradedOrder);
+        await expect(visibility("main")).toHaveAttribute(
+          "aria-pressed",
+          "false",
+        );
+        assert.deepEqual((await savedLayout()).order, previousOrder);
+        await visibility("main").click();
+        const upgraded = await savedLayout();
+        assert.deepEqual(upgraded.order, upgradedOrder);
+        assert.deepEqual(upgraded.visible, ["projects", "focus", "main"]);
+        await closeMore();
+        await expect.poll(readBar).toEqual(["Projects", "Focus", "Main"]);
+        await page.reload();
+        await expect.poll(readBar).toEqual(["Projects", "Focus", "Main"]);
+        checks.push(
+          "existing saved order stays intact and appends Main; its visibility remains opt-in and persists on reload",
+        );
+      }
 
       assert.equal(
         cli("get", "/api/v1/workspace/preferences").version,

@@ -9,43 +9,54 @@ import {
   sameReorderOrder,
   type ReorderGestureOptions,
   type ReorderPointer,
-} from "../../lib/ui/reorder-gesture.ts";
-import {
-  cardSections,
-  moveCardSectionTo,
-  type CardLayout,
-  type CardSection,
-} from "./card-layout.ts";
+} from "./reorder-gesture.ts";
 
-type Options = {
-  order: () => CardLayout;
+type Options<Key extends string> = {
+  order: () => Key[];
+  label: (key: Key) => string;
   disabled: () => boolean;
-  commit: (order: CardLayout, section: CardSection) => void;
+  commit: (order: Key[], key: Key) => void;
   announce: (message: string) => void;
+  cancellationMessage: string;
+  rowAttribute?: string;
+  handleAttribute?: string;
 };
-type Snapshot = {
-  section: CardSection;
-  order: CardLayout;
+type Snapshot<Key extends string> = {
+  key: Key;
+  order: Key[];
   handle: HTMLButtonElement;
   row: HTMLElement;
   offsetY: number;
 };
 
-/** Section identity and browser preferences stay with the editor adapter. */
-export function cardLayoutGesture(list: HTMLElement, initial: Options) {
+function moveKey<Key extends string>(order: Key[], key: Key, index: number) {
+  const next = [...order];
+  next.splice(next.indexOf(key), 1);
+  next.splice(index, 0, key);
+  return next;
+}
+
+/** Reorder identified rows; the caller retains persistence and visibility rules. */
+export function orderListGesture<Key extends string>(
+  list: HTMLElement,
+  initial: Options<Key>,
+) {
   let options = initial;
   let preview: HTMLElement | null = null;
   let indicator: HTMLElement | null = null;
-  const panel = list.closest<HTMLElement>(".action-menu-panel")!;
+  const panel =
+    list.closest<HTMLElement>(".action-menu-panel") ??
+    list.closest<HTMLElement>("dialog") ??
+    list;
 
-  function destination(pointer: ReorderPointer<Snapshot>) {
+  function destination(pointer: ReorderPointer<Snapshot<Key>>) {
     const bounds = panel.getBoundingClientRect();
     if (!insideReorderBounds(pointer.x, pointer.y, bounds)) {
       if (indicator) indicator.hidden = true;
       return null;
     }
     const rows = [
-      ...list.querySelectorAll<HTMLElement>("[data-layout-section]"),
+      ...list.querySelectorAll<HTMLElement>("[data-order-item]"),
     ].filter((row) => row !== pointer.snapshot.row);
     const rects = rows.map((row) => row.getBoundingClientRect());
     const index = reorderInsertionIndex(pointer.y, rects);
@@ -70,20 +81,20 @@ export function cardLayoutGesture(list: HTMLElement, initial: Options) {
     return index;
   }
 
-  function gestureOptions(): ReorderGestureOptions<Snapshot> {
+  function gestureOptions(): ReorderGestureOptions<Snapshot<Key>> {
     return {
       disabled: () => options.disabled(),
       capture(event) {
         const handle = (event.target as Element).closest<HTMLButtonElement>(
-          "[data-layout-handle]",
+          "[data-order-handle]",
         );
-        const row = handle?.closest<HTMLElement>("[data-layout-section]");
-        const section = row?.dataset.layoutSection as CardSection | undefined;
-        if (!handle || !row || !section || !options.order().includes(section))
+        const row = handle?.closest<HTMLElement>("[data-order-item]");
+        const key = row?.dataset.orderItem as Key | undefined;
+        if (!handle || !row || !key || !options.order().includes(key))
           return null;
         handle.focus({ preventScroll: true });
         return {
-          section,
+          key,
           order: [...options.order()],
           handle,
           row,
@@ -96,11 +107,14 @@ export function cardLayoutGesture(list: HTMLElement, initial: Options) {
         snapshot.row.setAttribute("data-dragging", "true");
         snapshot.handle.setAttribute("aria-pressed", "true");
         preview = document.createElement("ol");
-        preview.className = "layout-order layout-drag-preview";
+        // Preserve the component's scoped row styles in the inert clone.
+        preview.className = `${list.className} layout-drag-preview`;
         preview.append(
           cloneReorderPreview(snapshot.row, [
-            "data-layout-section",
-            "data-layout-handle",
+            "data-order-item",
+            "data-order-handle",
+            ...(options.rowAttribute ? [options.rowAttribute] : []),
+            ...(options.handleAttribute ? [options.handleAttribute] : []),
           ]),
         );
         preview.inert = true;
@@ -115,7 +129,7 @@ export function cardLayoutGesture(list: HTMLElement, initial: Options) {
           ? panel
           : (list.closest("dialog") ?? panel)
         ).append(preview, indicator);
-        options.announce(`${cardSections[snapshot.section]} picked up.`);
+        options.announce(`${options.label(snapshot.key)} picked up.`);
       },
       paint(pointer) {
         if (!preview) return;
@@ -139,10 +153,10 @@ export function cardLayoutGesture(list: HTMLElement, initial: Options) {
       },
       drop(pointer) {
         const index = destination(pointer);
-        const { order, section } = pointer.snapshot;
-        if (index === null || index === order.indexOf(section)) return;
-        const next = moveCardSectionTo(order, section, index);
-        return () => options.commit(next, section);
+        const { order, key } = pointer.snapshot;
+        if (index === null || index === order.indexOf(key)) return;
+        const next = moveKey(order, key, index);
+        return () => options.commit(next, key);
       },
       release({ snapshot }) {
         preview?.remove();
@@ -153,29 +167,28 @@ export function cardLayoutGesture(list: HTMLElement, initial: Options) {
       },
       cancelled({ snapshot, dragging }) {
         snapshot.handle.focus({ preventScroll: true });
-        if (dragging) options.announce("Section order unchanged.");
+        if (dragging) options.announce(options.cancellationMessage);
       },
       keydown(event) {
         const handle = (event.target as Element).closest<HTMLButtonElement>(
-          "[data-layout-handle]",
+          "[data-order-handle]",
         );
         if (!handle || options.disabled()) return;
-        const section = handle.dataset.layoutHandle as CardSection;
+        const key = handle.dataset.orderHandle as Key;
         const order = options.order();
-        const current = order.indexOf(section);
+        const current = order.indexOf(key);
         const index = reorderKeyIndex(event.key, current, order.length);
         if (index === null) return;
         event.preventDefault();
         event.stopPropagation();
-        if (index !== current)
-          options.commit(moveCardSectionTo(order, section, index), section);
+        if (index !== current) options.commit(moveKey(order, key, index), key);
       },
     };
   }
 
   const gesture = reorderGesture(list, gestureOptions());
   return {
-    update(next: Options) {
+    update(next: Options<Key>) {
       options = next;
       gesture.update(gestureOptions());
     },

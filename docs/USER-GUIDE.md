@@ -62,7 +62,10 @@ other's folders. See [limitations](LIMITATIONS.md#product-boundaries).
 
 On phones, the bottom bar starts with **Focus**, **Projects** and **More** (three
 dots). More opens the other views. Open **More → Customize navigation** to move
-any view earlier or later and toggle its eye to show or hide it on the bar.
+any view by its six-dot handle and toggle its eye to show or hide it on the bar.
+A focused handle also accepts ArrowUp/Down or Home/End, just like the card section
+selector. Escape or Tab cancels an unfinished drag; a drop outside the menu keeps
+the previous order.
 Hidden views remain available in More; when one is selected, More is highlighted.
 **Reset navigation** restores Focus and Projects. Order and bar visibility are
 saved in this browser, across projects and profiles; other devices keep their own

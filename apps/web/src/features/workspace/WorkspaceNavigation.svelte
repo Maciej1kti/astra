@@ -3,12 +3,11 @@
   import Icon from "../../lib/ui/Icon.svelte";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
+  import { deferredComponent } from "../../lib/ui/deferred-component.svelte";
 
   import { onMount, tick } from "svelte";
   import { viewLabel, type View } from "./navigation";
   import {
-    defaultNavigationLayout,
-    moveNavigationItem,
     readNavigationLayout,
     writeNavigationLayout,
     type NavigationLayout,
@@ -29,8 +28,9 @@
   let layout = $state(readNavigationLayout());
   let mobile = $state(false);
   let stored = $state(true);
-  let announcement = $state("");
-  let orderList: HTMLOListElement | undefined;
+  const customization = deferredComponent(
+    () => import("./NavigationCustomization.svelte"),
+  );
   const overflow = $derived(
     layout.order.filter((item) => !layout.visible.includes(item)),
   );
@@ -47,32 +47,6 @@
   function save(next: NavigationLayout) {
     layout = next;
     stored = writeNavigationLayout(next);
-  }
-  async function move(item: View, direction: -1 | 1) {
-    save(moveNavigationItem(layout, item, direction));
-    announcement = `${viewLabel(item)} moved to position ${layout.order.indexOf(item) + 1} of ${layout.order.length}.`;
-    await tick();
-    // A boundary move disables its arrow; keep keyboard focus on the same row.
-    const row = orderList?.querySelector<HTMLElement>(
-      `[data-navigation-item="${item}"]`,
-    );
-    const arrow = row?.querySelector<HTMLButtonElement>(
-      `[data-direction="${direction}"]`,
-    );
-    (arrow && !arrow.disabled
-      ? arrow
-      : row?.querySelector<HTMLButtonElement>("[aria-pressed]")
-    )?.focus({ preventScroll: true });
-  }
-  function toggle(item: View) {
-    const showing = !layout.visible.includes(item);
-    save({
-      order: layout.order,
-      visible: layout.order.filter((value) =>
-        value === item ? showing : layout.visible.includes(value),
-      ),
-    });
-    announcement = `${viewLabel(item)} ${showing ? "shown on" : "removed from"} the navigation bar.`;
   }
   $effect(() => {
     const selectedView = selected,
@@ -150,6 +124,7 @@
       current={overflowActive}
       navigationKey="more"
       panelClass="navigation-menu-panel"
+      onopen={() => void customization.load()}
     >
       {#snippet children(close)}
         <div class="navigation-panel">
@@ -170,64 +145,22 @@
           {#if !overflow.length}<p class="navigation-hint">
               All views are on the navigation bar.
             </p>{/if}
-          <details class="navigation-customization">
-            <summary>Customize navigation</summary>
-            <p class="navigation-hint">Choose shortcuts for the bottom bar.</p>
-            <ol aria-label="Navigation order" bind:this={orderList}>
-              {#each layout.order as item, index (item)}
-                <li data-navigation-item={item}>
-                  <span class="navigation-item-name">{viewLabel(item)}</span>
-                  <Button
-                    type="button"
-                    variant="quiet"
-                    class="icon-button"
-                    data-direction="-1"
-                    aria-label={`Move ${viewLabel(item)} earlier`}
-                    disabled={index === 0}
-                    onclick={() => void move(item, -1)}
-                    ><Icon name="chevronUp" /></Button
-                  >
-                  <Button
-                    type="button"
-                    variant="quiet"
-                    class="icon-button"
-                    data-direction="1"
-                    aria-label={`Move ${viewLabel(item)} later`}
-                    disabled={index === layout.order.length - 1}
-                    onclick={() => void move(item, 1)}
-                    ><Icon name="chevronDown" /></Button
-                  >
-                  <Button
-                    type="button"
-                    variant="quiet"
-                    class="icon-button"
-                    aria-label={`Show ${viewLabel(item)} on navigation bar`}
-                    title={`${layout.visible.includes(item) ? "Hide" : "Show"} ${viewLabel(item)} on navigation bar`}
-                    aria-pressed={layout.visible.includes(item)}
-                    onclick={() => toggle(item)}
-                    ><Icon
-                      name={layout.visible.includes(item) ? "eye" : "eyeOff"}
-                    /></Button
-                  >
-                </li>
-              {/each}
-            </ol>
-            <p class="navigation-hint">
-              {stored
-                ? "Saved in this browser."
-                : "Browser storage is unavailable. These settings last until reload."}
-            </p>
+          {#if customization.component}
+            {@const Customization = customization.component}
+            <Customization {layout} {stored} onsave={save} />
+          {:else if customization.error}
+            <p class="navigation-hint" role="alert">{customization.error}</p>
             <Button
               type="button"
               variant="quiet"
-              onclick={() => {
-                save(defaultNavigationLayout());
-                announcement =
-                  "Default navigation restored: Focus and Projects.";
-              }}>Reset navigation</Button
+              onclick={() => void customization.load()}
+              >Retry loading navigation options</Button
             >
-          </details>
-          <span class="sr" role="status">{announcement}</span>
+          {:else}
+            <p class="navigation-hint" role="status">
+              Loading navigation options…
+            </p>
+          {/if}
         </div>
       {/snippet}
     </ActionMenu>

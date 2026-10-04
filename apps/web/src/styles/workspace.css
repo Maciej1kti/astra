@@ -81,26 +81,6 @@
   cursor: pointer;
   font-weight: var(--weight-medium);
 }
-.navigation-customization ol {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.navigation-customization li {
-  display: flex;
-  align-items: center;
-}
-.navigation-item-name {
-  flex: 1;
-  min-width: 0;
-  padding-left: var(--space-5);
-}
-.navigation-customization .icon-button {
-  width: var(--tap-target);
-  min-width: var(--tap-target);
-  flex-shrink: 0;
-  padding: 0;
-}
 .navigation-hint {
   margin: var(--space-4) var(--space-5);
   font-size: var(--text-xs);

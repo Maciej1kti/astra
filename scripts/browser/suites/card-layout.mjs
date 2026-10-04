@@ -260,10 +260,31 @@ await runBrowserSuite(
       } finally {
         await secondContext.close();
       }
-      for (const name of ["Comments", "Counters", "Labels"])
-        await panel
-          .getByRole("button", { name: `Show ${name}`, exact: true })
-          .click();
+      for (const name of ["Comments", "Counters", "Labels"]) {
+        const eye = panel.getByRole("button", {
+          name: `Show ${name}`,
+          exact: true,
+        });
+        if (name === "Labels") {
+          // Previous visibility changes resize the centered dialog. A held
+          // press must keep its eye target while the owner continues resizing.
+          const bounds = await eye.boundingBox();
+          await page.mouse.move(
+            bounds.x + bounds.width / 2,
+            bounds.y + bounds.height / 2,
+          );
+          await page.mouse.down();
+          const before = await panel.boundingBox();
+          await page.waitForTimeout(120);
+          const held = await panel.boundingBox();
+          assert.ok(
+            Math.abs(held.y - before.y) < 1,
+            `A held visibility control must not move: ${JSON.stringify({ before, held })}`,
+          );
+          await page.mouse.up();
+        } else await eye.click();
+        await expect(eye).toHaveAttribute("aria-pressed", "true");
+      }
       await expect
         .poll(() => cli("get", path).metadata.hidden_sections)
         .toBeUndefined();
@@ -605,6 +626,7 @@ await runBrowserSuite(
               "no presentation writes",
               "per-card visibility persists across browser contexts",
               "hidden drafts remain mounted and recover intact",
+              "visibility clicks remain stable while their modal owner resizes",
               "all-hidden state remains recoverable from the layout menu",
               "legacy preference upgrade to one six-section order",
               "cross-group moves retain mounted drafts and disclosure state",

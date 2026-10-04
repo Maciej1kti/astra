@@ -15,6 +15,7 @@
     placement = "auto",
     current = false,
     navigationKey,
+    onopen,
     panelClass = "",
     children,
   }: {
@@ -26,6 +27,7 @@
     placement?: "bottom" | "auto";
     current?: boolean;
     navigationKey?: string;
+    onopen?: () => void;
     panelClass?: string;
     children: Snippet<[close: () => void]>;
   } = $props();
@@ -43,6 +45,7 @@
     if (open) close();
     else {
       trigger?.focus({ preventScroll: true });
+      onopen?.();
       open = true;
     }
   }

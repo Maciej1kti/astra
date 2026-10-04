@@ -8,8 +8,11 @@ type Options = {
 export function popoverPosition(panel: HTMLElement, initial: Options) {
   let options = initial;
   let frame = 0;
+  let pressed: number | null = null;
   const position = () => {
     frame = 0;
+    // Resizing a centered owner must not move an eye/control under a held press.
+    if (pressed !== null) return;
     const { anchor, align, placement } = options;
     if (!anchor.isConnected || !panel.isConnected) return;
     const tokens = getComputedStyle(anchor);
@@ -65,15 +68,26 @@ export function popoverPosition(panel: HTMLElement, initial: Options) {
     panel.classList.toggle("beside", beside);
   };
   const schedule = () => {
-    if (!frame) frame = requestAnimationFrame(position);
+    if (pressed === null && !frame) frame = requestAnimationFrame(position);
   };
+  const inside = (target: EventTarget | null) =>
+    target === panel || (target instanceof Node && panel.contains(target));
   const scroll = (event: Event) => {
-    if (
-      event.target === panel ||
-      (event.target instanceof Node && panel.contains(event.target))
-    )
-      return;
+    if (inside(event.target)) return;
     schedule();
+  };
+  const down = (event: PointerEvent) => {
+    if (event.isPrimary && event.button === 0 && inside(event.target))
+      pressed = event.pointerId;
+  };
+  const resume = () => {
+    if (pressed === null) return;
+    pressed = null;
+    // The next frame follows click dispatch; catch up to the latest anchor then.
+    schedule();
+  };
+  const up = (event: PointerEvent) => {
+    if (event.pointerId === pressed) resume();
   };
   panel.showPopover();
   position();
@@ -89,6 +103,11 @@ export function popoverPosition(panel: HTMLElement, initial: Options) {
   });
   window.addEventListener("resize", schedule);
   window.addEventListener("scroll", scroll, true);
+  window.addEventListener("pointerdown", down, true);
+  window.addEventListener("pointerup", up);
+  window.addEventListener("pointercancel", up);
+  window.addEventListener("blur", resume);
+  window.addEventListener("orientationchange", resume);
   window.visualViewport?.addEventListener("resize", schedule);
   window.visualViewport?.addEventListener("scroll", schedule);
   document.addEventListener("animationend", schedule);
@@ -108,6 +127,11 @@ export function popoverPosition(panel: HTMLElement, initial: Options) {
       content.disconnect();
       window.removeEventListener("resize", schedule);
       window.removeEventListener("scroll", scroll, true);
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      window.removeEventListener("blur", resume);
+      window.removeEventListener("orientationchange", resume);
       window.visualViewport?.removeEventListener("resize", schedule);
       window.visualViewport?.removeEventListener("scroll", schedule);
       document.removeEventListener("animationend", schedule);

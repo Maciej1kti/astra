@@ -36,7 +36,10 @@ Main's archive-inclusive project cache from ordinary views' project context.
 `WorkspaceNavigation` owns the compact phone bar and its More disclosure;
 [navigation layout](../apps/web/src/features/workspace/navigation-layout.ts)
 normalizes browser-local view order and bar visibility without writing workspace
-preferences or changing routes. The desktop sidebar retains all views.
+preferences or changing routes. More loads `NavigationCustomization` on demand;
+its disclosure mounts the shared `OrderVisibilityList` and supplies navigation labels,
+order and browser visibility without owning a second row/gesture implementation.
+The desktop sidebar retains all views.
 Navigation exposes a read-only route and explicit actions; only navigation owns
 the generation and abort signal that cancel obsolete resource reads and history
 restoration. A successful source read transfers its loaded editor target; view
@@ -166,8 +169,10 @@ conflict and close ownership. Draft snapshot classification lives with the draft
 model, so picker/checklist changes bypass only the typing debounce.
 
 `card-layout.ts` owns sanitized browser-only section ordering; `CardLayoutMenu`
-edits that order without entering autosave. `card-layout-gesture.ts` owns handle
-drag previews, cancellation, panel scrolling and keyboard moves. The editor keeps
+edits that order without entering autosave. The shared `OrderVisibilityList` and
+`order-list-gesture.ts` own handle/eye rows, drag previews, cancellation, panel
+scrolling and keyboard moves for both card sections and navigation shortcuts.
+The editor keeps
 all six sections in one keyed list so reorders and visibility changes retain
 mounted controls and explicit drafts. The preference reader upgrades the former
 grouped order into that single list. Visibility is the source-owned card field

@@ -142,6 +142,9 @@ and follows scrolling, resizing and expanded content. Feature menus supply their
 content and size caps; they do not implement separate positioning or dismissal.
 External repositioning preserves internal scroll offsets; scrolling within the
 panel does not reposition it or start another measurement frame.
+An internal primary pointer press holds the panel in place until click dispatch
+finishes, so an owner resize cannot move a visibility control under the pointer.
+Cancellation, focus loss and orientation changes release that placement hold.
 The tag manager opens above settings so closing it returns to the initiating
 control. Pending operations retain their existing close restrictions.
 
@@ -152,8 +155,18 @@ button into the document; recovery controls appear when the draft needs them.
 
 ## Pointer previews and ordering
 
+`OrderVisibilityList` is the common ordering and visibility selector for card
+sections and navigation shortcuts. It owns the same six-dot grip, eye control,
+muted hidden row, 44px targets, keyed animation, reorder help and live status.
+`order-list-gesture.ts` supplies shared panel bounds, top-layer previews,
+auto-scroll and ArrowUp/Down/Home/End behavior. Feature wrappers retain their
+storage and visibility rules: card visibility is source-owned, while navigation
+choices stay in browser preferences. Navigation loads customization from More
+and mounts the selector when Customize is expanded; collapsing that disclosure
+removes the list and cancels its gesture.
+
 `lib/ui/reorder-gesture.ts` owns the vertical ordering lifecycle for Focus pins,
-card sections, checklist items and Timeline rows. Feature adapters capture their
+card sections, navigation shortcuts, checklist items and Timeline rows. Feature adapters capture their
 current order and source context, measure their own rows and supply their existing
 commit action. Local section/checklist/Timeline ordering cancels when its captured
 order changes. Focus keeps its displayed preview frozen through canonical reads
