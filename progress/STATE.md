@@ -1,11 +1,16 @@
 # Current implementation state
 
-Updated 2026-10-03. The application is implemented and under verification;
+Updated 2026-10-04. The application is implemented and under verification;
 full release acceptance remains open. [Scope decisions](SCOPE.md) supersede the
 historical handoff. Use the [release checklist](../delivery/RELEASE-CHECKLIST.md)
 for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ownership.
 
 ## Current work
+
+The [multi-user folder review](2026-10-04-multi-user-folder-review.md) confirms
+that sessions, registered projects and approved roots currently share one owner.
+It records the proposed user/access model and the existing separate-instance
+option; no implementation, scope or acceptance decision was made.
 
 The [deleted-project diagnostics correction](2026-10-03-deleted-project-diagnostics.md)
 prevents delayed filesystem notifications from recreating source warnings after
