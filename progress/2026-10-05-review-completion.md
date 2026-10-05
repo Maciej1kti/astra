@@ -72,7 +72,7 @@ The first pass's push was red on both systems in the browser step. The cause on
 Ubuntu was not isolated: the run after the refused-upload fix passed there, and
 every later Ubuntu run that was assigned a runner has passed, through `6782543`.
 
-The slower macOS runner then failed five consecutive runs, each on a different
+The slower macOS runner then failed four runs, each on a different
 timing assumption in a test rather than in the application, each located from
 its annotation and fixed:
 
@@ -83,9 +83,10 @@ its annotation and fixed:
 | `12f26c0` | — (passed) | Ubuntu's job was cancelled by the service: no runner was assigned |
 | `f9a06bf` | `editor` suite | A just-added chip measured while its entrance still scaled it |
 | `6782543` | Gate, Rust tests | An admission test treated free permits as proof that every request had started |
+| `250dc97` | — (passed) | Both systems green |
 
-macOS therefore passed the whole workflow once, at `12f26c0`. The result for the
-revision that adds this table is not known when it is written. The dependency
+`250dc97`, which fixes the last of these, passed the whole workflow on both
+systems. Changes after it are documentation only. The dependency
 advisory scan, red before the first pass, is green. Eleven other suites assert a
 44px target immediately after a layout change and may meet the same condition.
 

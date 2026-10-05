@@ -17,8 +17,7 @@ types. The 16-step gate passes 846 tests; Chromium passes all 40 suites and the
 broad HTTPS/planning chain. The rebuilt existing HTTPS app preserves
 identity/epoch, both profiles, 44 resource versions, three pins, settings, roots
 and certificate; all 65 served assets match and a paired read-only visit of all
-eight views is clean. Remote CI is green on macOS and on Ubuntu at the revisions
-recorded there. Open items, including the WebKit `responsive` failure, are listed
+eight views is clean. Remote CI is green on both systems at `250dc97`. Open items, including the WebKit `responsive` failure, are listed
 in the record; physical-device and full release acceptance remain open.
 
 ## Dated evidence
