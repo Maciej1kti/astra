@@ -6,7 +6,6 @@ target/
 dist/
 __pycache__/
 *.log
-!examples/demo-repo/!examples/demo-repo/.project/**
 .env
 .env.*
 !.env.example
@@ -16,3 +15,6 @@ __pycache__/
 
 # Reproducible browser output is uploaded by CI; keep concise progress evidence in Git.
 test-results/
+
+# Agent worktrees created by local tooling
+.claude/worktrees/

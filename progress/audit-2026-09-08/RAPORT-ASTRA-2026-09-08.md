@@ -1,8 +1,8 @@
 # Astra — audyt działania i plan dopracowania UI
 
 > Historical report for its dated revision, retained in its original language.
-> Use the [current documentation](docs/README.md), [roadmap](ROADMAP.md) and
-> [implementation evidence](progress/STATE.md) for present-day guidance.
+> Use the [current documentation](../../docs/README.md), [roadmap](../../ROADMAP.md) and
+> [implementation evidence](../STATE.md) for present-day guidance.
 
 **Data:** 8 września 2026. **Wersja:** `c3b912f`, świeży build produkcyjny frontendu i serwera.
 
@@ -48,7 +48,7 @@ Przejście regresji nie oznacza braku błędów. Dotychczasowe testy przypinają
 | A11 | P2 | Załaduj Board. W konsoli pojawia się blokada stylu inline przez CSP, również w obu motywach i szerokościach. | Naprawa zgodności komponentu ze style-src; nie wyłączanie CSP. Nie przypisuję temu ostrzeżeniu konkretnego błędu przeciągania bez dowodu. |
 | A12 | P2 | Ustaw strefę przeglądarki Pacific/Honolulu. Workspace pokazuje 08.09, a Calendar Today wybiera 07.09. | Wszystkie operacje „Dzisiaj” powinny używać daty workspace. |
 
-Dowody i pełne wyniki znajdują się w [raporcie technicznym](progress/audit-2026-09-08/README.md) oraz [opisie interpretacji testów](progress/audit-2026-09-08/checks/RESULTS.md). Błędu utraty szkicu nie należy utożsamiać z uszkodzeniem wcześniej zapisanej treści; w A01 znikają niezapisane zmiany. A02 dotyczy już niezamierzonej zmiany zapisanych tagów.
+Dowody i pełne wyniki znajdują się w [raporcie technicznym](README.md) oraz [opisie interpretacji testów](checks/RESULTS.md). Błędu utraty szkicu nie należy utożsamiać z uszkodzeniem wcześniej zapisanej treści; w A01 znikają niezapisane zmiany. A02 dotyczy już niezamierzonej zmiany zapisanych tagów.
 
 ## Co faktycznie działa
 
@@ -83,7 +83,7 @@ Nie było nieprzechwyconych wyjątków JavaScript w opisanych przebiegach. Ostrz
 
 **Motyw ciemny jest funkcjonalny, ale nie w pełni dopracowany.** Część granic kart na Board słabo oddziela się od kolumn, a niektóre ikony tracą czytelność. Statusy i priorytety mają zbyt podobny wygląd, również w jasnym motywie. Potrzebne są wspólne semantyczne kolory, ikony i pomiary kontrastu, nie arbitralne kolorowanie każdej sekcji.
 
-Pełny [przegląd wizualny](progress/audit-2026-09-08/visual-review.md) zawiera odnośniki do wszystkich istotnych zrzutów. Rozstrzygające są pliki `verified-*`, zrobione po zakończeniu ładowania; wcześniejsze puste kadry podczas ładowania nie są dowodem braku danych.
+Pełny [przegląd wizualny](visual-review.md) zawiera odnośniki do wszystkich istotnych zrzutów. Rozstrzygające są pliki `verified-*`, zrobione po zakończeniu ładowania; wcześniejsze puste kadry podczas ładowania nie są dowodem braku danych.
 
 ## Brak pełnego modelu karty
 
@@ -153,9 +153,9 @@ Nie wykonano fizycznych testów iPhone/Safari, Firefox/WebKit, czytnika ekranu, 
 
 Najważniejszy następny krok to naprawa wykazanych przypadków i realizacja wspólnego modelu karty/tagów, a następnie ponowny odbiór na tym samym zatłoczonym zestawie danych. Na tym etapie wykonano audyt i plan; wskazane błędy nie zostały jeszcze naprawione w aplikacji.
 
-- [Pełny raport techniczny i odtworzenia](progress/audit-2026-09-08/README.md)
-- [Przegląd wizualny z dowodami](progress/audit-2026-09-08/visual-review.md)
-- [Szczegółowy plan komponentów i interakcji](progress/audit-2026-09-08/ui-inventory-and-plan.md)
-- [Wymagania modelu karty i tagów](progress/audit-2026-09-08/card-model-and-tags.md)
-- [Pełne porównanie z konkurencją](progress/audit-2026-09-08/competitive-analysis.md)
-- [Wyniki regresji](progress/audit-2026-09-08/regression/SUMMARY.md) i [rzeczywisty zakres testów](progress/audit-2026-09-08/checks/regression-coverage.md)
+- [Pełny raport techniczny i odtworzenia](README.md)
+- [Przegląd wizualny z dowodami](visual-review.md)
+- [Szczegółowy plan komponentów i interakcji](ui-inventory-and-plan.md)
+- [Wymagania modelu karty i tagów](card-model-and-tags.md)
+- [Pełne porównanie z konkurencją](competitive-analysis.md)
+- [Wyniki regresji](regression/SUMMARY.md) i [rzeczywisty zakres testów](checks/regression-coverage.md)

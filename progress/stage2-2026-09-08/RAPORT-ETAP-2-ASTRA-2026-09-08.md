@@ -1,8 +1,8 @@
 # Astra — raport etapu 2, 8 września 2026
 
 > Historical report for its dated revision, retained in its original language.
-> Use the [current documentation](docs/README.md), [roadmap](ROADMAP.md) and
-> [implementation evidence](progress/STATE.md) for present-day guidance.
+> Use the [current documentation](../../docs/README.md), [roadmap](../../ROADMAP.md) and
+> [implementation evidence](../STATE.md) for present-day guidance.
 
 Wdrożono kolejny pakiet po naprawach interfejsu: rozbudowany model karty i centralne zarządzanie tagami. Zmiany obejmują dane, walidację, API, CLI, wyszukiwanie i interfejs. Testy wykonano na prawdziwym serwerze aplikacji z izolowanymi danymi syntetycznymi.
 
@@ -73,4 +73,4 @@ HTTPS pozostał wymagany. Wyjątek dla samopodpisanego certyfikatu istniał tylk
 4. Szybkie dodawanie sprostowania lub rozwiązania konkretnego raportu bezpośrednio z karty; obecnie dostępne przez istniejący edytor Updates.
 5. Odbiór na fizycznym iPhonie/Safari, test pakietu po aktualizacji i szersze pomiary na dużych obszarach roboczych.
 
-Pełne dowody i anglojęzyczny raport wersjonowany: [progress/stage2-2026-09-08/README.md](progress/stage2-2026-09-08/README.md). Ten etap zamyka konkretny zakres modelu karty i zarządzania tagami, ale nie oznacza realizacji każdej funkcji z porównania konkurencyjnych narzędzi.
+Pełne dowody i anglojęzyczny raport wersjonowany: [progress/stage2-2026-09-08/README.md](README.md). Ten etap zamyka konkretny zakres modelu karty i zarządzania tagami, ale nie oznacza realizacji każdej funkcji z porównania konkurencyjnych narzędzi.

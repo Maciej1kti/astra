@@ -1,8 +1,8 @@
 # Astra — raport zbiorczych napraw po audycie
 
 > Historical report for its dated revision, retained in its original language.
-> Use the [current documentation](docs/README.md), [roadmap](ROADMAP.md) and
-> [implementation evidence](progress/STATE.md) for present-day guidance.
+> Use the [current documentation](../../docs/README.md), [roadmap](../../ROADMAP.md) and
+> [implementation evidence](../STATE.md) for present-day guidance.
 
 Pakiet napraw jest zaimplementowany i sprawdzony na wersji release, z prawdziwym serwerem aplikacji, plikami projektów oraz danymi syntetycznymi. Najpierw powstały zmiany w całej aplikacji, następnie wykonano testy integracyjne i przegląd wizualny.
 
@@ -53,6 +53,6 @@ To jest rozbudowany pakiet napraw i uspójnień istniejącej aplikacji. Nadal po
 
 Testy wykonano w Chromium, także z emulacją telefonu. Nie zastępuje to odbioru na fizycznym iPhonie ani w Safari. Wyjątek dla certyfikatu samopodpisanego dotyczył wyłącznie odizolowanych przeglądarek testowych; wymagania SSL aplikacji nie zostały wyłączone.
 
-Pełna dokumentacja techniczna, wyniki JSON, scenariusze i **52 zrzuty** znajdują się w [raporcie w repozytorium](progress/fixes-2026-09-08/README.md).
+Pełna dokumentacja techniczna, wyniki JSON, scenariusze i **52 zrzuty** znajdują się w [raporcie w repozytorium](README.md).
 
 Commit: `52c40f4` — wysłany do `origin/main`. Repozytorium po zapisie i wysłaniu jest czyste.

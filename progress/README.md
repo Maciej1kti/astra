@@ -16,6 +16,11 @@ retains the original evidence. Source Markdown links point to those immutable
 artifacts. Compact benchmark/metric summaries and directly referenced delivery
 proof remain local. No acceptance result was changed.
 
+The three owner-facing Polish reports of 2026-09-08 live beside their evidence:
+the [audit report](audit-2026-09-08/RAPORT-ASTRA-2026-09-08.md), the
+[stage 2 report](stage2-2026-09-08/RAPORT-ETAP-2-ASTRA-2026-09-08.md) and the
+[fix report](fixes-2026-09-08/RAPORT-NAPRAW-ASTRA-2026-09-08.md).
+
 New routine output belongs in ignored `test-results/` or CI artifacts. Keep a
 short record of the command, revision, result and limitations here. Preserve
 release-critical evidence durably before a CI artifact expires. Do not add
