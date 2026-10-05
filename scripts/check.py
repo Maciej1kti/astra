@@ -4,8 +4,12 @@
 Run .venv-check/bin/python scripts/check.py. This does not claim E2E/device coverage.
 """
 from pathlib import Path
+import collections
+import os
 import subprocess
 import sys
+
+from check_annotations import failure_annotation
 
 ROOT = Path(__file__).resolve().parents[1]
 STEPS = [
@@ -26,9 +30,25 @@ STEPS = [
     ["scripts/cargo-local", "build", "--workspace", "--release", "--locked"],
 ]
 
+def run(command):
+    """Stream a step's output; in a workflow, also name its failure."""
+    if not os.environ.get("GITHUB_ACTIONS"):
+        return subprocess.run(command, cwd=ROOT).returncode
+    lines = collections.deque(maxlen=4000)
+    with subprocess.Popen(
+        command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace"
+    ) as process:
+        for line in process.stdout:
+            sys.stdout.write(line)
+            lines.append(line.rstrip("\n"))
+    if process.returncode:
+        print(failure_annotation(command, list(lines)), flush=True)
+    return process.returncode
+
+
 for command in STEPS:
     print("\nRUN " + " ".join(command), flush=True)
-    result = subprocess.run(command, cwd=ROOT)
-    if result.returncode:
-        raise SystemExit(result.returncode)
+    code = run(command)
+    if code:
+        raise SystemExit(code)
 print("\nPASS local automated checks. See progress evidence for coverage and platform limitations.")
