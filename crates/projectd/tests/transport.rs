@@ -1172,3 +1172,68 @@ async fn local_routes_need_the_local_socket_and_an_exact_path() {
     let exact = app.local("GET", "/local/v1/doctor").send().await.unwrap();
     assert_eq!(exact.status(), 200);
 }
+
+/// Reads one HTTP/1.1 response with a Content-Length body from a raw stream.
+fn raw_response(stream: &mut std::net::TcpStream) -> Result<u16, String> {
+    use std::io::Read;
+    let mut received = Vec::new();
+    let mut chunk = [0_u8; 4096];
+    loop {
+        if let Some(head_end) = received.windows(4).position(|w| w == b"\r\n\r\n") {
+            let head = String::from_utf8_lossy(&received[..head_end]).to_lowercase();
+            let status = head[9..12].parse::<u16>().map_err(|e| e.to_string())?;
+            let length = head
+                .lines()
+                .find_map(|line| line.strip_prefix("content-length:"))
+                .map_or(Ok(0), |value| value.trim().parse::<usize>())
+                .map_err(|e| e.to_string())?;
+            if received.len() >= head_end + 4 + length {
+                return Ok(status);
+            }
+        }
+        let read = stream
+            .read(&mut chunk)
+            .map_err(|error| format!("no complete response: {error}"))?;
+        if read == 0 {
+            return Err("connection closed before a complete response".into());
+        }
+        received.extend_from_slice(&chunk[..read]);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_refused_upload_is_answered_on_a_connection_that_stays_usable() {
+    let app = Running::new().await;
+    let address = app.tcp.trim_start_matches("http://").to_owned();
+    // A proxy keeps sending the body it already started while the host decides.
+    tokio::task::spawn_blocking(move || {
+        use std::io::Write;
+        for size in [64 * 1024, 900 * 1024] {
+            let mut stream = std::net::TcpStream::connect(&address).unwrap();
+            stream
+                .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                .unwrap();
+            let head = format!(
+                "POST /api/v1/projects/any/cards HTTP/1.1\r\nHost: projects.test\r\nOrigin: https://projects.test\r\nContent-Type: application/json\r\nContent-Length: {size}\r\n\r\n"
+            );
+            stream.write_all(head.as_bytes()).unwrap();
+            let body = vec![b'x'; size];
+            let (first, rest) = body.split_at(8 * 1024);
+            stream.write_all(first).unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            stream.write_all(rest).unwrap_or_else(|error| {
+                panic!("{size}: the host stopped reading the upload: {error}")
+            });
+            let status = raw_response(&mut stream).unwrap_or_else(|error| panic!("{size}: {error}"));
+            assert_eq!(status, 401, "{size}");
+
+            let reused = stream
+                .write_all(b"GET /healthz HTTP/1.1\r\nHost: projects.test\r\n\r\n")
+                .map_err(|error| error.to_string())
+                .and_then(|()| raw_response(&mut stream));
+            assert_eq!(reused, Ok(200), "{size}: the connection was not reusable");
+        }
+    })
+    .await
+    .unwrap();
+}

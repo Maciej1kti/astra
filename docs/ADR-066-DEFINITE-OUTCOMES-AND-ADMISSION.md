@@ -73,9 +73,18 @@ request body is collected only when:
 
 Static assets, `/healthz` and `GET /api/v1/auth/pairings/current` never read a
 request body. An unauthenticated request for any other route receives its
-existing `401` without waiting for its body. Host, Origin, cross-site and
-content-type checks still run first; limits, timeouts and error codes are
-unchanged.
+existing `401`. Host, Origin, cross-site and content-type checks still run
+first; limits, timeouts and error codes are unchanged.
+
+A refused request releases its admission first and then has its body read and
+dropped, unbuffered, within the ordinary size and time bounds before the reply
+is sent. Replying while a proxy is still uploading made the connection close
+under it: a probe through the test proxy turned 79% of 64 KiB and 90% of
+900 KiB unauthenticated writes into an empty `503` or a reset, and reset
+unrelated requests sharing the proxy's connections. After the change all 360
+such writes received `401` and no other request was disturbed. The same applies
+to `SERVER_BUSY`. An unfinished upload therefore occupies a connection for at
+most the body timeout, but never an admission permit.
 
 ## Not changed
 

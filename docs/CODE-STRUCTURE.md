@@ -333,6 +333,8 @@ Admission is separate for the local socket and the network listener. Before a
 network body is collected, `handle` classifies the request: static assets, health
 and pairing status read no body; the two pairing writes use a small dedicated
 collector budget; every other route needs a passively verified session first.
+A refusal drops its permit, discards the unread body without buffering and only
+then replies, which keeps a proxy's reused connection in step.
 Dispatch still performs full authentication and CSRF checks. Collection routes
 reject a malformed resource ID as `RESOURCE_NOT_FOUND` before it can reach the
 store. See [ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).

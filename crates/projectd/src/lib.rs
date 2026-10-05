@@ -242,6 +242,27 @@ impl Entry {
         }
     }
 }
+/// Read and drop what a refused caller is still sending. No admission is held,
+/// nothing is buffered, and the wait is bounded: a proxy that already started
+/// its upload then receives the reply instead of a reset, and the connection
+/// stays in step for its next request.
+async fn discard(body: axum::body::Body, limit: Duration) {
+    use axum::body::HttpBody;
+    let mut body = std::pin::pin!(body);
+    let mut remaining = 1_100_000_usize;
+    let _ = tokio::time::timeout(limit, async {
+        while remaining > 0
+            && let Some(Ok(frame)) = std::future::poll_fn(|cx| body.as_mut().poll_frame(cx)).await
+        {
+            remaining = remaining.saturating_sub(frame.data_ref().map_or(0, |data| data.len()));
+        }
+    })
+    .await;
+}
+async fn refuse(service: &Service, body: axum::body::Body, reply: Reply) -> Response {
+    discard(body, service.body_timeout).await;
+    response(reply)
+}
 async fn handle(service: Service, request: Request, local: bool) -> Response {
     let (parts, body) = request.into_parts();
     let path = parts.uri.path().to_string();
@@ -281,7 +302,7 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
     };
     let permit = match slots.clone().try_acquire_owned() {
         Ok(permit) => permit,
-        Err(_) => return response(Reply::error(503, "SERVER_BUSY", "")),
+        Err(_) => return refuse(&service, body, Reply::error(503, "SERVER_BUSY", "")).await,
     };
     let mut shutdown = service.shutdown.subscribe();
     if *shutdown.borrow() {
@@ -297,7 +318,10 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
     let guest = match entry {
         Entry::Pairing => match service.guest_bodies.clone().try_acquire_owned() {
             Ok(permit) => Some(permit),
-            Err(_) => return response(Reply::error(503, "SERVER_BUSY", "")),
+            Err(_) => {
+                drop(permit);
+                return refuse(&service, body, Reply::error(503, "SERVER_BUSY", "")).await;
+            }
         },
         _ => None,
     };
@@ -311,10 +335,15 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
                 .authenticate_passive(&token, now_millis())
                 .map(drop)
         });
-        match checked.await {
-            Ok(Ok(())) => {}
-            Ok(Err(error)) => return failure(error),
-            Err(_) => return failure(AppError::Unavailable("application worker")),
+        let refused = match checked.await {
+            Ok(Ok(())) => None,
+            Ok(Err(error)) => Some(error),
+            Err(_) => Some(AppError::Unavailable("application worker")),
+        };
+        if let Some(error) = refused {
+            drop(permit);
+            discard(body, service.body_timeout).await;
+            return failure(error);
         }
     }
     let bytes = if entry == Entry::Bodiless {
@@ -577,23 +606,59 @@ mod tests {
         .await
         .status()
     }
+    async fn settled(
+        requests: &[tokio::task::JoinHandle<Response>],
+        permits: &Semaphore,
+        free: usize,
+    ) {
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while permits.available_permits() != free {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("admission was not released");
+        // The unfinished uploads are still being discarded, with nothing held.
+        assert!(requests.iter().all(|request| !request.is_finished()));
+    }
     #[tokio::test]
-    async fn unauthenticated_bodies_are_refused_before_they_are_collected() {
+    async fn unauthenticated_uploads_hold_no_admission_while_they_are_discarded() {
         let (_temp, mut service) = service();
-        // Collecting the unfinished body would hold admission until this expires.
+        // Each unfinished body is read for this long before its 401 is sent.
         service.body_timeout = Duration::from_secs(60);
+        let mut requests = Vec::new();
         for (method, path) in [
             ("POST", "/api/v1/projects/any/cards"),
             ("GET", "/api/v1/bootstrap"),
             ("PATCH", "/api/v1/workspace/preferences"),
         ] {
-            let refused = tokio::time::timeout(
-                Duration::from_secs(5),
-                handle(service.clone(), browser_request(method, path, true), false),
+            for _ in 0..6 {
+                requests.push(tokio::spawn(handle(
+                    service.clone(),
+                    browser_request(method, path, true),
+                    false,
+                )));
+            }
+        }
+        settled(&requests, &service.browser_slots, 8).await;
+        assert_eq!(local_health(&service).await, 200);
+        let asset = handle(service.clone(), browser_request("GET", "/", false), false).await;
+        assert_ne!(asset.status(), 503);
+        for request in requests {
+            request.abort();
+            let _ = request.await;
+        }
+
+        // Once the upload ends or its bounded wait passes, the caller is told why.
+        service.body_timeout = Duration::from_millis(20);
+        for pending_body in [true, false] {
+            let refused = handle(
+                service.clone(),
+                browser_request("POST", "/api/v1/projects/any/cards", pending_body),
+                false,
             )
-            .await
-            .unwrap_or_else(|_| panic!("{method} {path} waited for an unauthenticated body"));
-            assert_eq!(refused.status(), 401, "{method} {path}");
+            .await;
+            assert_eq!(refused.status(), 401);
             assert_eq!(code(refused).await, "SESSION_REQUIRED");
         }
         assert_eq!(service.browser_slots.available_permits(), 8);
@@ -611,18 +676,9 @@ mod tests {
                 false,
             )));
         }
-        tokio::time::timeout(Duration::from_secs(5), async {
-            while requests
-                .iter()
-                .filter(|request| request.is_finished())
-                .count()
-                < 14
-            {
-                tokio::task::yield_now().await;
-            }
-        })
-        .await
-        .expect("only the bounded pairing collectors may wait");
+        // Two collectors hold admission; the other fourteen hold nothing.
+        settled(&requests, &service.browser_slots, 6).await;
+        assert_eq!(service.guest_bodies.available_permits(), 0);
         assert_eq!(local_health(&service).await, 200);
         // Static assets never read a request body, so they are still served.
         let asset = tokio::time::timeout(
@@ -632,19 +688,19 @@ mod tests {
         .await
         .expect("an asset request waited for its body");
         assert_ne!(asset.status(), 503);
-        let mut busy = 0;
+        // A further pairing with a complete body learns that collectors are busy.
+        let busy = handle(
+            service.clone(),
+            browser_request("POST", "/api/v1/auth/pairings", false),
+            false,
+        )
+        .await;
+        assert_eq!(busy.status(), 503);
+        assert_eq!(code(busy).await, "SERVER_BUSY");
         for request in requests {
-            if request.is_finished() {
-                let response = request.await.unwrap();
-                assert_eq!(response.status(), 503);
-                assert_eq!(code(response).await, "SERVER_BUSY");
-                busy += 1;
-            } else {
-                request.abort();
-                let _ = request.await;
-            }
+            request.abort();
+            let _ = request.await;
         }
-        assert_eq!(busy, 14);
         assert_eq!(service.browser_slots.available_permits(), 8);
         assert_eq!(service.guest_bodies.available_permits(), 2);
     }
