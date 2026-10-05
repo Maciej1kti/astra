@@ -4,6 +4,7 @@ import {
   ApiError,
   configure,
   clearReads,
+  closeSession,
   type Bootstrap,
 } from "../../lib/api/api";
 import type {
@@ -16,6 +17,7 @@ import {
 } from "../../lib/api/invalidations";
 import { publishSession, subscribeSession } from "../../lib/api/session-events";
 import { getPreferences } from "../../lib/api/resources";
+import { InvalidResponseError } from "../../lib/api/transport-errors";
 
 type SessionHooks = {
   error: (cause: unknown) => void;
@@ -26,7 +28,10 @@ type SessionHooks = {
 };
 
 function sessionRequired(cause: unknown) {
-  return cause instanceof ApiError && cause.status === 401;
+  return (
+    (cause instanceof ApiError || cause instanceof InvalidResponseError) &&
+    cause.status === 401
+  );
 }
 
 /** One mounted application's bootstrap, pairing and event-stream lifetime. */
@@ -94,6 +99,7 @@ export function sessionState(hooks: SessionHooks) {
     source?.close();
     source = undefined;
     clearReads();
+    closeSession();
     boot = null;
     connected = false;
     hooks.ended();

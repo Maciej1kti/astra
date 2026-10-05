@@ -423,7 +423,10 @@ test("mutations bypass GET sharing and retry retains original identity, epoch an
     });
   };
   try {
-    await assert.rejects(send(pending), /Response lost/);
+    await assert.rejects(send(pending), {
+      name: "TransportError",
+      cause: new TypeError("Response lost"),
+    });
     assert.equal(calls.length, 1);
     configure({
       csrf_token: "new csrf",

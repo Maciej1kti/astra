@@ -45,11 +45,10 @@ export function serverMessage(code = "", status?: number): string {
 }
 
 export function errorMessage(cause: unknown): string {
+  // Transport and reply failures carry their own text; this is local JSON input.
   if (cause instanceof SyntaxError)
     return "Nieprawidłowe dane JSON. Sprawdź ich składnię.";
-  if (cause instanceof TypeError)
-    return "Nie udało się połączyć z serwerem. Sprawdź połączenie i wynik oczekującego zapisu.";
-  if (cause instanceof Error) {
+  if (cause instanceof Error && !(cause instanceof TypeError)) {
     if (cause.name === "AbortError")
       return "Operacja została przerwana. Sprawdź wynik oczekującego zapisu.";
     if (cause.name === "TimeoutError")

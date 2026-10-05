@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { errorMessage } from "../../lib/api/messages.ts";
   import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { revealScene } from "../../lib/ui/motion";
@@ -229,7 +230,7 @@
       if (restore) await restoreView(current);
       if (current === generation) initialView = false;
     } catch (e) {
-      if (current === generation && !isAbortError(e)) error = String(e);
+      if (current === generation && !isAbortError(e)) error = errorMessage(e);
     } finally {
       if (current === generation) {
         busy = false;

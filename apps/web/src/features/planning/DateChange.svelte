@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { TimedEvent } from "../../lib/contracts/domain.generated";
+  import { errorMessage } from "../../lib/api/messages.ts";
   import { eventEnd } from "../../lib/resources/timed-event.ts";
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
@@ -118,7 +119,7 @@
     try {
       if (event) eventEnd(proposal().event!);
     } catch (cause) {
-      error = String(cause);
+      error = errorMessage(cause);
       return;
     }
     operation.prepare(

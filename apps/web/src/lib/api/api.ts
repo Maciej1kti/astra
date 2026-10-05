@@ -5,6 +5,7 @@ import {
   invalidConfirmation,
 } from "./confirmation.ts";
 import { publishSession } from "./session-events.ts";
+import { InvalidResponseError, TransportError } from "./transport-errors.ts";
 import { ReadRequests, ReadQueueFullError } from "./read-requests.ts";
 import { pinUserToTab, selectedUserId } from "./user-selection.ts";
 import type {
@@ -70,10 +71,17 @@ export class ApiError extends Error {
 }
 let bootstrap: Bootstrap;
 let clockOffset = 0;
+// Only an accepted bootstrap creates a session whose loss can be reported.
+let authenticated = false;
 export function configure(value: Bootstrap) {
   bootstrap = value;
+  authenticated = true;
   clockOffset = Date.parse(value.server_time) - Date.now();
   if (value.user) pinUserToTab(value.user.id);
+}
+/** A deliberate sign-out or reported loss: later 401s are not a new loss. */
+export function closeSession() {
+  authenticated = false;
 }
 const reads = new ReadRequests();
 export type ReadOptions = {
@@ -123,6 +131,33 @@ export async function api<T>(
     throw error;
   }
 }
+/** One HTTP exchange. Neither failure below proves a mutation was rejected. */
+async function exchange(path: string, init: RequestInit) {
+  const failed = (cause: unknown) =>
+    cause instanceof TypeError ? new TransportError({ cause }) : cause;
+  let response: Response;
+  try {
+    response = await fetch(path, init);
+  } catch (cause) {
+    throw failed(cause);
+  }
+  // The status alone ends an existing session, whatever body accompanies it.
+  if (response.status === 401 && authenticated) {
+    authenticated = false;
+    publishSession("ended");
+  }
+  let value;
+  try {
+    value = response.status === 204 ? null : await response.json();
+  } catch (cause) {
+    throw cause instanceof SyntaxError
+      ? new InvalidResponseError(response.status, { cause })
+      : failed(cause);
+  }
+  if (!response.ok && (value === null || typeof value !== "object"))
+    throw new InvalidResponseError(response.status);
+  return { response, value };
+}
 async function request<T>(
   path: string,
   method: string,
@@ -140,7 +175,7 @@ async function request<T>(
     const signal = readSignal ?? controller.signal;
     try {
       signal.throwIfAborted();
-      const response = await fetch(path, {
+      const { response, value } = await exchange(path, {
         method,
         credentials: "same-origin",
         signal,
@@ -153,8 +188,6 @@ async function request<T>(
         },
         ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
       });
-      const value = response.status === 204 ? null : await response.json();
-      if (response.status === 401) publishSession("ended");
       if (pending) {
         if (response.ok) validateCommandReply(value, pending, response.status);
         else if (!validCommandError(value, pending)) invalidConfirmation();

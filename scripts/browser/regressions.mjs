@@ -17,6 +17,8 @@ const suites = [
   "calendar-motion",
   "loading",
   "session",
+  "session-recovery",
+  "command-recovery",
   "users",
   "shared-users",
   "card",

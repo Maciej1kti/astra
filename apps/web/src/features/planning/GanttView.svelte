@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { errorMessage } from "../../lib/api/messages.ts";
   import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { revealScene } from "../../lib/ui/motion";
@@ -183,7 +184,7 @@
           schedule: shiftedSchedule(row.schedule, days, operation),
         });
       } catch (e) {
-        error = String(e);
+        error = errorMessage(e);
       }
     },
   });
@@ -226,7 +227,7 @@
         freshness = result.value ? projectionNotice(result.value) : "";
       },
       failed: (cause) => {
-        error = String(cause);
+        error = errorMessage(cause);
       },
     });
   }

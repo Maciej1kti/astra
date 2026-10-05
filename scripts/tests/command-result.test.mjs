@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { TransportError } from "../../apps/web/src/lib/api/transport-errors.ts";
 import { ApiError } from "../../apps/web/src/lib/api/api.ts";
 import { CommandController } from "../../apps/web/src/lib/api/command-controller.ts";
 import {
@@ -136,7 +137,7 @@ test("error presentation retains the useful reason and exact code without duplic
     "Ta przypięta karta jest zarchiwizowana. Sprawdź aktualny Focus. (FOCUS_TARGET_ARCHIVED)",
   );
   assert.equal(
-    commandErrorMessage(new TypeError("Response lost")),
+    commandErrorMessage(new TransportError()),
     "Nie udało się połączyć z serwerem. Sprawdź połączenie i wynik oczekującego zapisu.",
   );
 });

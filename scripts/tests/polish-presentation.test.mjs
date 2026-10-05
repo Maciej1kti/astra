@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { TransportError } from "../../apps/web/src/lib/api/transport-errors.ts";
 import { counted, uiLocale } from "../../apps/web/src/lib/ui/locale.ts";
 import {
   serverMessage,
@@ -68,10 +69,7 @@ test("server and browser failures have Polish presentation while protocol detail
     /English/,
   );
   assert.match(serverMessage("FUTURE_ERROR"), /FUTURE_ERROR/);
-  assert.match(
-    errorMessage(new TypeError("Failed to fetch")),
-    /połączyć z serwerem/,
-  );
+  assert.match(errorMessage(new TransportError()), /połączyć z serwerem/);
   assert.match(
     errorMessage(new SyntaxError("Unexpected token")),
     /Nieprawidłowe dane JSON/,

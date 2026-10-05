@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { errorMessage } from "../../lib/api/messages.ts";
   import { revealLayers } from "../../lib/ui/motion-layers";
   import { calendarLayers } from "./calendar-motion";
   import type { CardCreate } from "../../lib/contracts/api.generated";
@@ -240,7 +241,7 @@
           : "";
       },
       failed: (cause) => {
-        error = String(cause);
+        error = errorMessage(cause);
       },
     });
   }
@@ -288,7 +289,7 @@
         });
     } catch (e) {
       info.revert();
-      error = String(e);
+      error = errorMessage(e);
     }
   }
   function navigate(delta: number) {
@@ -296,7 +297,7 @@
     try {
       onCalendarNavigate(navigateCalendar(date, mode, delta), mode);
     } catch (e) {
-      error = String(e);
+      error = errorMessage(e);
     }
   }
   function today() {
