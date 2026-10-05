@@ -58,7 +58,8 @@ Collection sources are named by canonical UUIDv4. A request under
 `/api/v1/projects/{project}/{cards|milestones|updates}/{id}` whose ID has any
 other form receives `404 RESOURCE_NOT_FOUND` before admission. No command row is
 created; the response is definite. Store-level `INVALID_ID` for a stray file
-inside a collection keeps its existing handling.
+inside a collection kept its handling here and was later made definite by
+[ADR-068](ADR-068-HOST-BOUNDS-AND-BACKGROUND-RECOVERY.md).
 
 ## Admission
 
@@ -91,6 +92,6 @@ most the body timeout, but never an admission permit.
 A measured probe rejected removing the second flush in `sync_file`: on the
 development host `sync_all` already issues `F_FULLFSYNC`, and the following
 explicit call costs about 0.1–0.3 ms because nothing is dirty. The durable
-sequence is unchanged. `needs_review` still has no operator resolution; that
-requires a separate decision. Schemas, OpenAPI operations and source formats are
+sequence is unchanged. `needs_review` had no operator resolution at this
+decision; [ADR-067](ADR-067-REVIEWED-INTENT-RESOLUTION.md) adds one. Schemas, OpenAPI operations and source formats are
 unchanged, so no contract regeneration is required.

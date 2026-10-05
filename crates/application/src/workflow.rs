@@ -400,20 +400,25 @@ ORDER BY j.rowid",
             })
             .collect()
     }
+    /// Status is polled while a job runs. Read the two plan fields it reports in
+    /// SQL rather than materializing every step's before and after bytes.
     pub fn job(&self, id: &str) -> Result<Value, AppError> {
-        let (plan_id, state, completed): (String, String, i64) = self
+        let (state, completed, kind, total): (String, i64, String, i64) = self
             .journal
             .db()?
             .query_row(
-                "SELECT plan_id,state,next_step FROM workflow_jobs WHERE id=?1",
+                "SELECT j.state, j.next_step,
+                        json_extract(p.plan_json, '$.kind'),
+                        json_array_length(p.plan_json, '$.steps')
+                 FROM workflow_jobs j JOIN workflow_plans p ON p.id=j.plan_id
+                 WHERE j.id=?1",
                 [id],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
             )
             .optional()?
             .ok_or_else(|| AppError::reject(404, "JOB_NOT_FOUND"))?;
-        let plan = self.plan(&plan_id)?;
         Ok(
-            json!({"id":id,"kind":plan.kind,"state":state,"completed_steps":completed,"total_steps":plan.steps.len()}),
+            json!({"id":id,"kind":kind,"state":state,"completed_steps":completed,"total_steps":total}),
         )
     }
 }

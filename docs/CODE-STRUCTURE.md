@@ -329,6 +329,13 @@ Encoding starts after engine query locks are released, has a 4 MiB input cap and
 retains private caching, identity source ETags and credential/SSE exclusions.
 See [ADR-052](ADR-052-BOUNDED-SUMMARY-COMPRESSION.md).
 
+[`serve.rs`](../crates/projectd/src/serve.rs) accepts connections for both
+listeners: one permit per open connection and a request-head deadline that also
+bounds idle keep-alive. `watcher.rs` supervises each profile's background task,
+restarts one that ends, runs retention shortly after start and calls
+`Engine::recover_pending` so interrupted intents are retried without a write.
+See [ADR-068](ADR-068-HOST-BOUNDS-AND-BACKGROUND-RECOVERY.md).
+
 Admission is separate for the local socket and the network listener. Before a
 network body is collected, `handle` classifies the request: static assets, health
 and pairing status read no body; the two pairing writes use a small dedicated
@@ -523,7 +530,8 @@ includes exactly the qualifying ended events used for cursor invalidation.
 ### Locks and errors
 
 Lock order is the workspace gate, store registry, project store, journal, then
-index. The registry lock is released before the project store is locked. Release
+index. Take the gate and a store through `Engine::shared_gate`,
+`exclusive_gate` and `engine::lock_store`. The registry lock is released before the project store is locked. Release
 journal transactions before publishing index notifications. Code holding the
 workspace gate must not enter another method that acquires it again.
 

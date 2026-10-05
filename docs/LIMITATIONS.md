@@ -133,6 +133,7 @@ The server enforces bounds rather than accepting unlimited input:
 | Card checklist | Up to 100 items; each text up to 500 characters |
 | Source Focus membership | Up to 100 pins across registered projects |
 | Calendar displayed page | Up to 200 agenda items or 1,000 grid/time items, with paging |
+| Open connections | 96 on the network listener and 32 on the local socket; a request head must arrive within 150 s / 30 s |
 
 Individual fields can fit their limit while the combined metadata exceeds its
 bound. [Source schemas](../contracts/domain.schema.json), server validation and

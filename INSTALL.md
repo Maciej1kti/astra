@@ -119,6 +119,8 @@ Your private HTTPS reverse proxy must:
 1. Forward to that loopback port and preserve the browser's external `Host` header.
 2. Serve the exact configured HTTPS origin with a certificate trusted by clients.
 3. Support streaming responses for server-sent events without buffering them.
+4. Close idle upstream connections within about two minutes. The host closes a
+   connection that sends no request for 150 seconds and keeps at most 96 open.
 
 Configure this layer separately using your existing host setup. A private network
 does not replace browser pairing. A CLI-only workflow can use the Unix socket

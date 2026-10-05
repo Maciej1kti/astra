@@ -417,3 +417,11 @@ A host-local command lists unresolved source intents and settles one
 `needs_review` intent by keeping the current source and rejecting the command.
 It never writes a source file. See
 [ADR-067](ADR-067-REVIEWED-INTENT-RESOLUTION.md).
+
+## ADR-068 — Connection bounds and background recovery
+
+Both listeners cap open connections and time out an unfinished request head;
+an unacceptable source is a definite refusal before an intent exists; receipts
+are removed with their report or project; watchers are supervised and each
+profile retries its interrupted intents periodically. See
+[ADR-068](ADR-068-HOST-BOUNDS-AND-BACKGROUND-RECOVERY.md).
