@@ -21,6 +21,8 @@
   import BoardOverview from "./features/workspace/screens/BoardOverview.svelte";
 
   import "./styles/workspace.css";
+  // Kept directly after the workspace rules so their cascade order is unchanged.
+  import "./styles/focus.css";
   import {
     createTarget,
     resolutionTarget,
