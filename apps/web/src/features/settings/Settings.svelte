@@ -10,15 +10,34 @@
     Pairing,
     UserList,
   } from "../../lib/contracts/api.generated";
-  import { subscribeSession } from "../../lib/api/session-events";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
+  import {
+    commandOperation,
+    sessionAccess,
+    unloadGuard,
+  } from "../../lib/api/command-operation.svelte";
+  import { rebaseSettingsDraft, settingsDraft } from "./settings-draft";
   import { onMount, tick } from "svelte";
   import { applyTheme, readTheme, type Theme } from "./appearance";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command } from "../../lib/api/api";
   import { workspaceViews, viewLabel } from "../workspace/navigation";
 
-  const operation = commandOperation(() => !accessLost);
+  const access = sessionAccess({
+    ended: () => {
+      generation++;
+      sessions = [];
+      pairings = [];
+      users = null;
+      loading = false;
+      // Without a draft nothing is retained; pairing needs no dialog below it.
+      if (!dirty && !pending) onclose();
+    },
+    restored: () => void load(),
+  });
+  const accessLost = $derived(access.lost);
+  const operation = commandOperation(() => !access.lost);
+  unloadGuard(() => dirty || !!pending);
 
   let theme = $state<Theme>(readTheme());
 
@@ -51,7 +70,15 @@
   let selectedUser = $state("");
   let userName = $state("");
   let commandKind = $state<"preferences" | "user">("preferences");
-  let accessLost = $state(false);
+  // A rejected conflict keeps the draft visible but never resubmits it as is.
+  const conflict = $derived(
+    operation.conflict && commandKind === "preferences",
+  );
+  const labels = {
+    timezone: "strefa czasowa",
+    week: "początek tygodnia",
+    view: "widok domyślny",
+  };
   let confirmClose = $state(false);
   let generation = 0;
   let preferencesForm: HTMLFormElement;
@@ -109,52 +136,28 @@
   }
   onMount(() => {
     void load();
-    const ended = () => {
-      generation++;
-      sessions = [];
-      pairings = [];
-      users = null;
-      loading = false;
-      accessLost = true;
-      error =
-        "Sesja wygasła. Wersja robocza ustawień została zachowana; skopiuj ją przed zamknięciem, a następnie połącz się ponownie.";
-    };
-    const restored = () => {
-      accessLost = false;
-    };
-    const leaving = (e: BeforeUnloadEvent) => {
-      if (dirty || pending) e.preventDefault();
-    };
-    const unsubscribeSession = subscribeSession({
-      ended: ended,
-      restored: restored,
-    });
-
-    window.addEventListener("beforeunload", leaving);
     return () => {
       generation++;
-      unsubscribeSession();
-
-      window.removeEventListener("beforeunload", leaving);
     };
   });
   async function load() {
-    if (dirty || pending) return;
+    // A retained draft keeps its baseline; only the access lists are read again.
+    const retained = dirty || !!pending || conflict;
     const current = ++generation;
     loading = true;
     error = "";
     try {
       const [p, s, a, u] = await Promise.all([
-        api<Preferences>("/api/v1/workspace/preferences"),
+        retained ? null : api<Preferences>("/api/v1/workspace/preferences"),
         api<{ items: Session[] }>("/api/v1/auth/sessions"),
         api<{ items: Pairing[] }>("/api/v1/auth/pairings"),
         api<UserList>("/api/v1/users"),
       ]);
       if (generation !== current) return;
-      baseline = p;
-      timezone = p.timezone;
-      week = p.preferences.week_start ?? "monday";
-      view = p.preferences.default_view ?? "focus";
+      if (p) {
+        baseline = p;
+        ({ timezone, week, view } = settingsDraft(p));
+      }
       sessions = s.items;
       pairings = a.items;
       users = u;
@@ -172,7 +175,8 @@
       userName ||
       busy ||
       accessLost ||
-      pending
+      pending ||
+      conflict
     )
       return;
     commandKind = "preferences";
@@ -212,6 +216,38 @@
       } else onsaved();
     } catch (cause) {
       error = errorMessage(cause);
+    }
+  }
+  /** The explicit way out of a conflict; it reads but never writes. */
+  async function loadCurrent() {
+    if (!baseline || !conflict || busy || accessLost) return;
+    working = true;
+    error = "";
+    info = "";
+    try {
+      const current = await api<Preferences>(
+        "/api/v1/workspace/preferences",
+        "GET",
+        undefined,
+        {},
+        { fresh: true },
+      );
+      const rebased = rebaseSettingsDraft(
+        settingsDraft(baseline),
+        settingsDraft(current),
+        { timezone, week, view },
+      );
+      baseline = current;
+      ({ timezone, week, view } = rebased.draft);
+      operation.acknowledge();
+      info = rebased.kept.length
+        ? `Wczytano aktualne ustawienia. Twoje zmiany (${rebased.kept.map((field) => labels[field]).join(", ")}) pozostały w formularzu; zapisz je ponownie, jeśli nadal są potrzebne.`
+        : "Wczytano aktualne ustawienia.";
+    } catch (cause) {
+      // The conflict stays recorded, so the stale draft remains locked.
+      error = errorMessage(cause);
+    } finally {
+      working = false;
     }
   }
   async function addUser() {
@@ -318,7 +354,23 @@
     {#if loading}<p role="status">
         Ładowanie ustawień przestrzeni roboczej…
       </p>{/if}
+    <SessionNotice
+      lost={accessLost}
+      message="Sesja wygasła. Wersja robocza ustawień została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
+    />
     {#if error}<div class="notice" role="alert">{error}</div>{/if}
+    {#if conflict}<section class="notice" role="alert">
+        <p>
+          Ustawienia zmieniły się w innym miejscu, więc tej wersji roboczej nie
+          można już zapisać. Wczytaj aktualne ustawienia: zmienione przez Ciebie
+          pola pozostaną w formularzu do ponownego, świadomego zapisu.
+        </p>
+        <button
+          type="button"
+          onclick={loadCurrent}
+          disabled={busy || accessLost}>Wczytaj aktualne ustawienia</button
+        >
+      </section>{/if}
     {#if !loading && !baseline && !accessLost}<button onclick={load}
         >Wczytaj ustawienia ponownie</button
       >{/if}
@@ -424,7 +476,12 @@
           bind:value={timezone}
           placeholder="Europe/Warsaw"
           required
-          disabled={!baseline || busy || !!pending || !!userName || accessLost}
+          disabled={!baseline ||
+            busy ||
+            !!pending ||
+            !!userName ||
+            accessLost ||
+            conflict}
         /></label
       >
       <div class="row">
@@ -436,7 +493,8 @@
               busy ||
               !!pending ||
               !!userName ||
-              accessLost}
+              accessLost ||
+              conflict}
             ><option value="monday">Poniedziałek</option><option value="sunday"
               >Niedziela</option
             ></select
@@ -449,7 +507,8 @@
               busy ||
               !!pending ||
               !!userName ||
-              accessLost}
+              accessLost ||
+              conflict}
             >{#each workspaceViews as name}<option value={name}
                 >{viewLabel(name)}</option
               >{/each}</select
@@ -601,6 +660,7 @@
           busy ||
           !!pending ||
           accessLost ||
+          conflict ||
           confirmClose}>Zapisz ustawienia</Button
       >
     </div>
