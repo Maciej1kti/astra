@@ -271,8 +271,12 @@
     />
     {#if error}<p role="alert">{error}</p>{/if}
     {#if info}<p role="status">{info}</p>{/if}
-    {#if confirmClose}<section class="notice" role="alert">
-        <p>
+    {#if confirmClose}<section
+        class="notice"
+        role="group"
+        aria-labelledby="registration-close-warning"
+      >
+        <p id="registration-close-warning" role="alert">
           Zamknięcie nie anuluje rejestracji o nieznanym wyniku. Najpierw
           skopiuj szczegóły żądania.
         </p>

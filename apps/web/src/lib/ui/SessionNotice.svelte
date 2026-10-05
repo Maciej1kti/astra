@@ -5,8 +5,8 @@
   let { lost, message }: { lost: boolean; message: string } = $props();
 </script>
 
-{#if lost}<div class="notice session-notice" role="alert">
-    <p>{message}</p>
+{#if lost}<div class="notice session-notice">
+    <p role="alert">{message}</p>
     <button type="button" onclick={() => publishSession("reconnect")}
       >Połącz ponownie</button
     >

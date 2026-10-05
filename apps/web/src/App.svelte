@@ -557,7 +557,8 @@
   const busy = $derived(session.busy);
   let editorInstance = $state<{ requestClose: () => boolean }>();
 
-  let editor = $state<EditorTarget | null>(null);
+  // A target is replaced, never edited; the editor owns the reactive draft.
+  let editor = $state.raw<EditorTarget | null>(null);
   function setEditor(next: EditorTarget | null) {
     editor?.opening?.cancel();
     editor = next;
@@ -828,11 +829,12 @@
     }, 60_000);
     window.addEventListener("popstate", historyNavigation);
     window.addEventListener("command-warning", commandWarning);
+    // The Focus-order command guards itself through `commandOperation`; the
+    // counter controller is framework-independent and has no guard of its own.
     const leaving = (event: BeforeUnloadEvent) => {
       if (
         focusProposal ||
         projectMove ||
-        focusCommand.pending ||
         counterEditing.snapshot.draft ||
         counterEditing.snapshot.pending
       ) {
@@ -925,8 +927,8 @@
             >
           </PageHeading>
         {/if}
-        {#if error}<div class="notice" role="alert">
-            {error}<Button
+        {#if error}<div class="notice">
+            <span role="alert">{error}</span><Button
               variant="quiet"
               onclick={() => (error = "")}
               aria-label="Zamknij komunikat błędu">✕</Button
@@ -1016,8 +1018,8 @@
                     if (!projectMove) projectMove = { item, state };
                   }}
                 />
-              {:else if projectsUI.error}<p role="alert">
-                  {projectsUI.error}<Button
+              {:else if projectsUI.error}<p>
+                  <span role="alert">{projectsUI.error}</span><Button
                     variant="quiet"
                     onclick={() => void projectsUI.load()}
                     >Ponów ładowanie projektów</Button
@@ -1032,8 +1034,8 @@
                     onpropose={(proposal) => (moveDraft = proposal)}
                     oncreate={create}
                     ondraftchange={(value) => (boardDraft = value)}
-                  />{/key}{:else if boardLoadError}<p role="alert">
-                  {boardLoadError}
+                  />{/key}{:else if boardLoadError}<p>
+                  <span role="alert">{boardLoadError}</span>
                   <button onclick={loadBoard}>Ponów ładowanie tablicy</button>
                 </p>{:else}<p role="status">Ładowanie tablicy…</p>{/if}
             {:else if routing.current.view === "board"}
@@ -1070,8 +1072,8 @@
                   preferenceKey={`${boot.instance_id}:${boot.user?.id ?? "default"}`}
                   {open}
                 />
-              {:else if chartUI.error}<p role="alert">
-                  {chartUI.error}<Button
+              {:else if chartUI.error}<p>
+                  <span role="alert">{chartUI.error}</span><Button
                     variant="quiet"
                     onclick={() => void chartUI.load()}
                     >Ponów ładowanie wykresu</Button
@@ -1084,8 +1086,9 @@
                   {projects}
                   {updates}
                   {open}
-                />{:else if updatesUI.error}<p role="alert">
-                  {updatesUI.error}<Button onclick={() => void updatesUI.load()}
+                />{:else if updatesUI.error}<p>
+                  <span role="alert">{updatesUI.error}</span><Button
+                    onclick={() => void updatesUI.load()}
                     >Spróbuj ponownie</Button
                   >
                 </p>
@@ -1096,9 +1099,9 @@
                   {projects}
                   {cards}
                   {open}
-                />{:else if listUI.error}<p role="alert">
-                  {listUI.error}<Button onclick={() => void listUI.load()}
-                    >Spróbuj ponownie</Button
+                />{:else if listUI.error}<p>
+                  <span role="alert">{listUI.error}</span><Button
+                    onclick={() => void listUI.load()}>Spróbuj ponownie</Button
                   >
                 </p>
               {:else}<p role="status">Ładowanie listy…</p>{/if}

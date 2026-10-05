@@ -476,8 +476,8 @@
   />
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
   {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
-  {#if error}<p role="alert">
-      {error}
+  {#if error}<p>
+      <span role="alert">{error}</span>
       <button onclick={() => load(false)}>Wczytaj kalendarz ponownie</button>
     </p>{/if}
   <div

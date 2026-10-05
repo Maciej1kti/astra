@@ -189,9 +189,10 @@
     </form>
   </div>
   {#if rangeError}<p class="notice" role="alert">{rangeError}</p>{/if}
-  {#if error}<div class="notice" role="alert">
-      <span>{error}</span><button onclick={onretry} disabled={loading}
-        >Spróbuj ponownie</button
+  {#if error}<div class="notice">
+      <span role="alert">{error}</span><button
+        onclick={onretry}
+        disabled={loading}>Spróbuj ponownie</button
       >
     </div>{/if}
   {#if notice}<p class="notice">{notice}</p>{/if}

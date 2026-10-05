@@ -51,7 +51,7 @@
     onpropose: (p: DateProposal) => void;
     oncreate: (s: { start: string; end: string }) => void;
   } = $props();
-  let data = $state<GanttPage | null>(null);
+  let data = $state.raw<GanttPage | null>(null);
   let loading = $state(false);
   let error = $state("");
   let pageNotice = $state("");
@@ -330,8 +330,8 @@
     >
   </div>
   {#if orderNotice}<p role="status">{orderNotice}</p>{/if}
-  {#if error}<p role="alert">
-      {error}
+  {#if error}<p>
+      <span role="alert">{error}</span>
       <button
         onclick={() => {
           history = [null];

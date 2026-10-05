@@ -37,6 +37,7 @@ const suites = [
   "autosave",
   "dialogs",
   "dialog-components",
+  "accessibility",
   "responsive",
   "planning",
   "ui-corrections",

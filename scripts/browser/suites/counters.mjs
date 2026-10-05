@@ -165,10 +165,12 @@ await runBrowserSuite(
         .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(
-        dialog.getByRole("alert").getByRole("button", {
-          name: "Odrzuć wersję roboczą",
-          exact: true,
-        }),
+        dialog
+          .getByRole("group", { name: "Odrzucić niezapisaną wersję roboczą?" })
+          .getByRole("button", {
+            name: "Odrzuć wersję roboczą",
+            exact: true,
+          }),
       ).toBeVisible();
       await dialog
         .getByRole("button", { name: "Kontynuuj edycję", exact: true })
@@ -217,10 +219,12 @@ await runBrowserSuite(
         .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(
-        dialog.getByRole("alert").getByRole("button", {
-          name: "Odrzuć wersję roboczą",
-          exact: true,
-        }),
+        dialog
+          .getByRole("group", { name: "Odrzucić niezapisaną wersję roboczą?" })
+          .getByRole("button", {
+            name: "Odrzuć wersję roboczą",
+            exact: true,
+          }),
       ).toBeVisible();
       await dialog
         .getByRole("button", { name: "Kontynuuj edycję", exact: true })
@@ -364,16 +368,20 @@ await runBrowserSuite(
         "2026-01-01": 30,
         [today]: 35,
       });
+      // The editor's shared clock must be created under the controllable one;
+      // bootstrap still observes real time for command admission.
+      await page.clock.install();
       await page.reload();
       await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "35");
       // Use workspace midnight, independent of the emulated browser timezone.
-      await page.clock.install({ time: new Date(`${today}T12:00:00Z`) });
+      await page.clock.setSystemTime(new Date(`${today}T12:00:00Z`));
       await value("Squats").click();
       await total("Squats").fill("5");
       await page.clock.setSystemTime(
         new Date(Date.parse(`${today}T12:00:00Z`) + 24 * 60 * 60 * 1000),
       );
-      await page.clock.fastForward(1000);
+      // Every reader shares one half-minute clock; no per-second timer runs.
+      await page.clock.fastForward(30000);
       await expect(value("Push-ups")).toHaveAttribute("aria-valuenow", "0");
       await expect(total("Squats")).toHaveValue("5");
       await expect(row("Squats")).toContainText(

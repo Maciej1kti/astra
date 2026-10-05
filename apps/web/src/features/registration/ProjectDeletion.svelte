@@ -151,14 +151,14 @@
           {countedFiles(plan.file_count)} · {bytes(plan.total_bytes)}
         </p>
       </section>{/if}
-    {#if conflict}<section class="notice" role="alert">
-        <p>Podgląd usunięcia jest już nieaktualny.</p>
+    {#if conflict}<section class="notice">
+        <p role="alert">Podgląd usunięcia jest już nieaktualny.</p>
         <button onclick={() => void loadPlan()} disabled={busy || !!pending}
           >Wczytaj nowy podgląd usunięcia</button
         >
       </section>{/if}
-    {#if pending}<section class="notice" role="alert">
-        <p>
+    {#if pending}<section class="notice">
+        <p role="alert">
           Usunięcie oczekuje na potwierdzenie. Zachowaj identyfikator żądania
           podczas sprawdzania wyniku.
         </p>

@@ -46,7 +46,8 @@
   } = $props();
   type Column =
     import("../../lib/contracts/api.generated").BoardView["columns"][number];
-  let columns = $state<Column[]>([]);
+  // Pages are replaced as a whole and never edited in place.
+  let columns = $state.raw<Column[]>([]);
   const readScope = $derived(`${project}:${revision}`);
   let error = $state("");
   let busy = $state(false);
@@ -502,8 +503,8 @@
 
 {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
 {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
-{#if error}<p role="alert">
-    {error}
+{#if error}<p>
+    <span role="alert">{error}</span>
     <button disabled={busy || gestureActive} onclick={() => load()}
       >Wczytaj tablicę ponownie</button
     >

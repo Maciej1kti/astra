@@ -237,9 +237,10 @@ await runBrowserSuite(
           await editor(page)
             .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
-          const confirmation = page
-            .getByRole("alert")
-            .filter({ hasText: "Trwale usunąć kartę?" });
+          const confirmation = page.getByRole("alertdialog", {
+            name: "Trwale usunąć kartę?",
+            exact: true,
+          });
           await expect(confirmation).toContainText(card.title);
           await expect(confirmation).toContainText("nie można tego cofnąć");
           await confirmation
@@ -305,9 +306,10 @@ await runBrowserSuite(
               name: "Usuń kartę",
               exact: true,
             });
-            const final = page
-              .getByRole("alert")
-              .filter({ hasText: "Trwale usunąć kartę?" });
+            const final = page.getByRole("alertdialog", {
+              name: "Trwale usunąć kartę?",
+              exact: true,
+            });
             await deleteButton.click();
             await expect.poll(() => deletes.length).toBe(0);
             const autosaveStatus = dialog.getByTestId("autosave-status");
@@ -375,16 +377,20 @@ await runBrowserSuite(
           await dialog
             .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
-          const draftWarning = page
-            .getByRole("alert")
-            .filter({ hasText: "Odrzucić wersje robocze przed usunięciem?" });
+          const draftWarning = page.getByRole("alertdialog", {
+            name: "Odrzucić wersje robocze przed usunięciem?",
+            exact: true,
+          });
           await expect(draftWarning).toContainText("Autosaved delete title");
           await expect(
             dialog.getByLabel("Tytuł", { exact: true }),
           ).toBeDisabled();
           await expect(
-            dialog.locator(".resource-description-rendered"),
-          ).toHaveAttribute("aria-disabled", "true");
+            dialog.getByRole("button", {
+              name: "Edytuj opis: Karta",
+              exact: true,
+            }),
+          ).toBeDisabled();
           await expect(newItem).toBeDisabled();
           await draftWarning
             .getByRole("button", { name: "Kontynuuj edycję", exact: true })
@@ -399,16 +405,19 @@ await runBrowserSuite(
             .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
-            .getByRole("alert")
-            .filter({ hasText: "Odrzucić wersje robocze przed usunięciem?" })
+            .getByRole("alertdialog", {
+              name: "Odrzucić wersje robocze przed usunięciem?",
+              exact: true,
+            })
             .getByRole("button", {
               name: "Odrzuć wersje robocze i kontynuuj",
               exact: true,
             })
             .click();
-          const final = page
-            .getByRole("alert")
-            .filter({ hasText: "Trwale usunąć kartę?" });
+          const final = page.getByRole("alertdialog", {
+            name: "Trwale usunąć kartę?",
+            exact: true,
+          });
           await expect(final).toContainText("Autosaved delete title");
           await final
             .getByRole("button", {
@@ -460,8 +469,10 @@ await runBrowserSuite(
             .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
-            .getByRole("alert")
-            .filter({ hasText: "Trwale usunąć kartę?" })
+            .getByRole("alertdialog", {
+              name: "Trwale usunąć kartę?",
+              exact: true,
+            })
             .getByRole("button", {
               name: "Trwale usuń kartę",
               exact: true,
@@ -512,8 +523,10 @@ await runBrowserSuite(
             .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
-            .getByRole("alert")
-            .filter({ hasText: "Trwale usunąć kartę?" })
+            .getByRole("alertdialog", {
+              name: "Trwale usunąć kartę?",
+              exact: true,
+            })
             .getByRole("button", {
               name: "Trwale usuń kartę",
               exact: true,
@@ -582,8 +595,10 @@ await runBrowserSuite(
             .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
-            .getByRole("alert")
-            .filter({ hasText: "Trwale usunąć kartę?" })
+            .getByRole("alertdialog", {
+              name: "Trwale usunąć kartę?",
+              exact: true,
+            })
             .getByRole("button", {
               name: "Trwale usuń kartę",
               exact: true,
@@ -663,8 +678,10 @@ await runBrowserSuite(
             .getByRole("button", { name: "Usuń kartę", exact: true })
             .click();
           await page
-            .getByRole("alert")
-            .filter({ hasText: "Trwale usunąć kartę?" })
+            .getByRole("alertdialog", {
+              name: "Trwale usunąć kartę?",
+              exact: true,
+            })
             .getByRole("button", {
               name: "Trwale usuń kartę",
               exact: true,

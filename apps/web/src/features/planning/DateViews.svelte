@@ -65,8 +65,8 @@
   });
 </script>
 
-{#if error}<p role="alert">
-    {error}
+{#if error}<p>
+    <span role="alert">{error}</span>
     <button onclick={loadView}>Ponów ładowanie widoku planowania</button>
     <button onclick={reloadAfterPreloadFailure}>Odśwież aplikację</button>
   </p>{/if}
