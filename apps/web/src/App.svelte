@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { serverMessage } from "./lib/api/messages.ts";
-  import { errorMessage } from "./lib/api/messages.ts";
+  import { errorMessage, serverMessage } from "./lib/api/messages.ts";
   import { motionEnvironment, revealScene } from "./lib/ui/motion";
   import PageHeading from "./lib/ui/PageHeading.svelte";
-  import { viewLabel } from "./features/workspace/navigation";
   import Button from "./lib/ui/Button.svelte";
   import DeferredDialog from "./lib/ui/DeferredDialog.svelte";
+  import DeferredHost from "./lib/ui/DeferredHost.svelte";
+  import DeferredView from "./lib/ui/DeferredView.svelte";
   import { deferredComponent } from "./lib/ui/deferred-component.svelte";
   import { observePreloadFailures } from "./lib/ui/preload-recovery";
   import { calendarToday } from "./lib/ui/calendar-dates";
@@ -45,7 +45,11 @@
 
   import { isAbortError } from "./lib/api/read-requests";
   import { invalidateTagSuggestions } from "./features/tags/tag-suggestions";
-  import { readRoute, primaryResource } from "./features/workspace/navigation";
+  import {
+    readRoute,
+    primaryResource,
+    viewLabel,
+  } from "./features/workspace/navigation";
 
   import { applyTheme, readTheme } from "./features/settings/appearance";
   import DateViews from "./features/planning/DateViews.svelte";
@@ -57,34 +61,28 @@
     DateProposal,
     MoveProposal,
   } from "./features/planning/proposals";
-  import { apiCode, type Resource, type Summary } from "./lib/api/api";
+  import type { Resource, Summary } from "./lib/api/api";
   import {
     rememberUser,
     rememberDefaultUser,
     selectedUserId,
   } from "./lib/api/user-selection";
-  import { getProject, replaceFocus } from "./lib/api/resources";
+  import { getProject } from "./lib/api/resources";
   import { loadEditorTarget } from "./features/editor/editor-opening";
-  import type { FocusRef, FocusResource } from "./lib/contracts/api.generated";
-  import { commandOperation } from "./lib/api/command-operation.svelte";
+  import {
+    focusOrderState,
+    focusReferenceKey,
+  } from "./features/workspace/focus-order-state.svelte";
 
   const moveUI = deferredComponent(
     () => import("./features/board/MoveChange.svelte"),
   );
-  const MoveChange = $derived(moveUI.component);
   const dateUI = deferredComponent(
     () => import("./features/planning/DateChange.svelte"),
   );
-  const DateChange = $derived(dateUI.component);
   const cardProjectUI = deferredComponent(
     () => import("./features/workspace/CreateCardProject.svelte"),
   );
-  const CreateCardProject = $derived(cardProjectUI.component);
-  $effect(() => {
-    if (choosingCardProject) void cardProjectUI.load();
-    if (dateDraft) void dateUI.load();
-    if (moveDraft) void moveUI.load();
-  });
 
   const registrationUI = deferredComponent(
     () => import("./features/registration/RegistrationBrowser.svelte"),
@@ -93,51 +91,39 @@
   const editorUI = deferredComponent(
     () => import("./features/editor/Editor.svelte"),
   );
-  const Editor = $derived(editorUI.component);
   const settingsUI = deferredComponent(
     () => import("./features/settings/Settings.svelte"),
   );
-  const Settings = $derived(settingsUI.component);
   const tagsUI = deferredComponent(
     () => import("./features/tags/TagManager.svelte"),
   );
-  const TagManager = $derived(tagsUI.component);
   const nativeUI = deferredComponent(
     () => import("./features/registration/NativeProject.svelte"),
   );
-  const NativeProject = $derived(nativeUI.component);
   const deletionUI = deferredComponent(
     () => import("./features/registration/ProjectDeletion.svelte"),
   );
-  const ProjectDeletion = $derived(deletionUI.component);
   const gitUI = deferredComponent(
     () => import("./features/host/GitObservation.svelte"),
   );
-  const GitObservation = $derived(gitUI.component);
   const diagnosticsUI = deferredComponent(
     () => import("./features/host/Diagnostics.svelte"),
   );
-  const Diagnostics = $derived(diagnosticsUI.component);
   const updatesUI = deferredComponent(
     () => import("./features/workspace/screens/UpdatesScreen.svelte"),
   );
-  const UpdatesScreen = $derived(updatesUI.component);
   const listUI = deferredComponent(
     () => import("./features/workspace/screens/ResourceListScreen.svelte"),
   );
-  const ResourceListScreen = $derived(listUI.component);
   const chartUI = deferredComponent(
     () => import("./features/charts/ChartView.svelte"),
   );
-  const ChartView = $derived(chartUI.component);
   const projectsUI = deferredComponent(
     () => import("./features/workspace/screens/ProjectsScreen.svelte"),
   );
-  const ProjectsScreen = $derived(projectsUI.component);
   const projectMoveUI = deferredComponent(
     () => import("./features/workspace/ProjectStateChange.svelte"),
   );
-  const ProjectStateChange = $derived(projectMoveUI.component);
 
   const routing = navigationState(
     readRoute(
@@ -295,9 +281,6 @@
     if (view === "list") void listUI.load();
     if (view === "projects") void projectsUI.load();
   });
-  $effect(() => {
-    if (projectMove) void projectMoveUI.load();
-  });
 
   let dateDraft = $state<DateProposal | null>(null);
   let moveDraft = $state<MoveProposal | null>(null);
@@ -339,6 +322,10 @@
   const loadingMore = $derived(data.state.loadingMore);
   const focusCards = $derived(data.state.focusCards);
   const boot = $derived(session.boot);
+  // Browser-local chart choices belong to one instance and profile.
+  const preferenceKey = $derived(
+    boot ? `${boot.instance_id}:${boot.user?.id ?? "default"}` : "",
+  );
   const pairing = $derived(session.pairing);
 
   const projects = $derived(data.state.projects);
@@ -370,23 +357,15 @@
       void refresh().catch(message);
     }
   }
-  const focusCommand = commandOperation(() => !!boot);
-  let focusProposal = $state<FocusRef[] | null>(null);
-  let focusProposalVersion = $state("");
-  let focusAcknowledged = $state<Pick<
-    FocusResource,
-    "items" | "version"
-  > | null>(null);
-  let focusAcknowledgedRevision = 0;
-  let focusError = $state("");
-  let focusCopyMessage = $state("");
-  let focusConflict = $state(false);
-  let focusReloading = $state(false);
-  const focusPending = $derived(focusCommand.pending);
-  const focusBusy = $derived(focusCommand.busy);
-  const focusOrder = $derived(
-    focusProposal ?? focusAcknowledged?.items ?? focus,
-  );
+  const focusOrder = focusOrderState({
+    allowed: () => !!boot,
+    items: () => focus,
+    version: () => data.state.focusVersion,
+    revision: () => data.state.focusRevision,
+    invalidate: () => data.invalidate(),
+    refresh: (sections) => refresh(sections),
+    failed: message,
+  });
   const orderedFocusCards = $derived.by(() => {
     const summaries = new Map(
       focusCards.map((item) => [
@@ -394,7 +373,7 @@
         counterEditing.present(item, today),
       ]),
     );
-    return focusOrder.map((item): Summary => {
+    return focusOrder.items.map((item): Summary => {
       return (
         summaries.get(focusReferenceKey(item)) ?? {
           type: "card",
@@ -407,150 +386,6 @@
       );
     });
   });
-  const focusVersion = $derived(
-    focusProposal
-      ? focusProposalVersion
-      : (focusAcknowledged?.version ?? data.state.focusVersion),
-  );
-  const focusCanRetry = $derived(
-    !!focusProposal &&
-      focusCommand.phase === "rejected" &&
-      !focusConflict &&
-      !focusReloading,
-  );
-  const focusCanReload = $derived(
-    focusConflict ||
-      (!!focusAcknowledged && !focusAcknowledged.version) ||
-      (!!focusProposal && focusCommand.phase === "rejected"),
-  );
-
-  $effect(() => {
-    const acknowledged = focusAcknowledged;
-    if (acknowledged && data.state.focusRevision > focusAcknowledgedRevision)
-      focusAcknowledged = null;
-  });
-
-  function focusReferenceKey(item: Pick<FocusRef, "project_id" | "card_id">) {
-    return `${item.project_id}:${item.card_id}`;
-  }
-
-  function reorderFocus(
-    visible: Summary[],
-    fullOrder: FocusRef[],
-    expectedVersion: string,
-  ) {
-    if (
-      !expectedVersion ||
-      focusProposal ||
-      focusCommand.pending ||
-      focusCommand.busy ||
-      focusConflict ||
-      focusReloading
-    )
-      return;
-    const reorderedVisible = visible.map(({ project_id, id }) => ({
-      project_id,
-      card_id: id,
-    }));
-    const slots = new Set(reorderedVisible.map(focusReferenceKey));
-    let next = 0;
-    const proposed = fullOrder.map((item) =>
-      slots.has(focusReferenceKey(item)) ? reorderedVisible[next++] : item,
-    );
-    if (
-      JSON.stringify(proposed) === JSON.stringify(fullOrder) ||
-      next !== reorderedVisible.length
-    )
-      return;
-
-    focusError = "";
-    focusConflict = false;
-    focusCopyMessage = "";
-    focusProposal = proposed;
-    focusProposalVersion = expectedVersion;
-    data.invalidate();
-    focusCommand.prepare(replaceFocus({ items: proposed }, expectedVersion));
-    void transmitFocus();
-  }
-
-  async function transmitFocus() {
-    if (!focusProposal || focusCommand.busy || !focusCommand.pending) return;
-    focusError = "";
-    try {
-      const reply = await focusCommand.commit();
-      const committed: Pick<FocusResource, "items" | "version"> = {
-        items: focusProposal.map((item) => ({ ...item })),
-        version: reply.result.version ?? "",
-      };
-      data.invalidate();
-      focusAcknowledged = committed;
-      focusAcknowledgedRevision = data.state.focusRevision;
-      focusProposal = null;
-      focusProposalVersion = "";
-      focusConflict = false;
-      void refresh().catch(message);
-    } catch (cause) {
-      focusError = errorMessage(cause);
-      focusConflict =
-        focusCommand.phase === "rejected" &&
-        apiCode(cause) === "VERSION_CONFLICT";
-    }
-  }
-
-  function retryFocus() {
-    void transmitFocus();
-  }
-
-  async function copyFocusCommand() {
-    const pending = focusCommand.pending;
-    if (!pending || !focusProposal) return;
-    try {
-      await navigator.clipboard.writeText(
-        JSON.stringify(
-          {
-            items: focusProposal,
-            expected_version: focusProposalVersion,
-            request_id: pending.requestId,
-            user_id: pending.userId,
-            epoch: pending.epoch,
-          },
-          null,
-          2,
-        ),
-      );
-      focusCopyMessage = "Skopiowano oczekujące polecenie Focus.";
-    } catch {
-      focusCopyMessage =
-        "Schowek jest niedostępny. Identyfikator żądania i kolejność są widoczne poniżej.";
-    }
-  }
-
-  function retryRejectedFocus() {
-    if (!focusProposal || !focusCanRetry) return;
-    focusError = "";
-    focusCommand.prepare(
-      replaceFocus({ items: focusProposal }, focusProposalVersion),
-    );
-    void transmitFocus();
-  }
-
-  async function reloadFocus() {
-    if (!focusCanReload || focusCommand.pending || focusReloading) return;
-    focusReloading = true;
-    focusError = "";
-    data.invalidate();
-    try {
-      await refresh(["focus"]);
-      focusProposal = null;
-      focusProposalVersion = "";
-      focusAcknowledged = null;
-      focusConflict = false;
-    } catch (cause) {
-      focusError = `Nie udało się ponownie wczytać kolejności Focus: ${errorMessage(cause)}`;
-    } finally {
-      focusReloading = false;
-    }
-  }
 
   let error = $state("");
   const loading = $derived(session.loading);
@@ -749,27 +584,6 @@
   $effect(() => {
     if (adding) void registrationUI.load();
   });
-  $effect(() => {
-    if (editor) void editorUI.load();
-  });
-  $effect(() => {
-    if (settings) void settingsUI.load();
-  });
-  $effect(() => {
-    if (manageTags) void tagsUI.load();
-  });
-  $effect(() => {
-    if (nativeAdding) void nativeUI.load();
-  });
-  $effect(() => {
-    if (projectDeletion) void deletionUI.load();
-  });
-  $effect(() => {
-    if (gitProject) void gitUI.load();
-  });
-  $effect(() => {
-    if (diagnostics) void diagnosticsUI.load();
-  });
   // Warm the most common action after the first view has rendered. Opening a
   // resource also starts this import alongside its read, without waiting here.
   $effect(() => {
@@ -789,8 +603,7 @@
       projectDeletion ||
       registrationPending ||
       boardDraft ||
-      focusProposal ||
-      focusCommand.pending ||
+      focusOrder.unresolved ||
       counterEditing.snapshot.draft ||
       counterEditing.snapshot.pending
     ),
@@ -821,11 +634,10 @@
     }, 60_000);
     window.addEventListener("popstate", historyNavigation);
     window.addEventListener("command-warning", commandWarning);
-    // The Focus-order command guards itself through `commandOperation`; the
-    // counter controller is framework-independent and has no guard of its own.
+    // The Focus order guards itself; the counter controller is framework-
+    // independent and has no guard of its own.
     const leaving = (event: BeforeUnloadEvent) => {
       if (
-        focusProposal ||
         projectMove ||
         counterEditing.snapshot.draft ||
         counterEditing.snapshot.pending
@@ -971,18 +783,7 @@
                 eventPaged={(pageHistory.event?.length ?? 0) > 1}
                 moreEvents={(back = false) => more("event", back)}
                 focusCards={orderedFocusCards}
-                focusCount={focusOrder.length}
-                {focusOrder}
-                {focusVersion}
-                focusPending={!!focusPending}
-                {focusBusy}
-                {focusConflict}
-                focusRefreshing={focusReloading}
-                {focusError}
-                {focusCopyMessage}
-                {focusCanRetry}
-                {focusCanReload}
-                focusRequestId={focusPending?.requestId ?? ""}
+                order={focusOrder}
                 {attentionRows}
                 {attentionCursor}
                 {attentionPaged}
@@ -990,34 +791,28 @@
                 activeCardPaged={(pageHistory.card?.length ?? 0) > 1}
                 {loadingMore}
                 {open}
-                onreorder={reorderFocus}
-                onretry={retryFocus}
-                onretrynew={retryRejectedFocus}
-                onreload={reloadFocus}
-                oncopycommand={copyFocusCommand}
                 {moreAttention}
                 moreActiveCards={(back = false) => more("card", back)}
               />
             {:else if routing.current.view === "projects"}
-              {#if ProjectsScreen}<ProjectsScreen
-                  route={routing.current}
-                  {projects}
-                  {open}
-                  {addProject}
-                  onremove={deleteProject}
-                  disabled={!!projectMove || !!editor || !connected}
-                  onmove={(item, state) => {
-                    if (!projectMove) projectMove = { item, state };
-                  }}
-                />
-              {:else if projectsUI.error}<p>
-                  <span role="alert">{projectsUI.error}</span><Button
-                    variant="quiet"
-                    onclick={() => void projectsUI.load()}
-                    >Ponów ładowanie projektów</Button
-                  >
-                </p>
-              {:else}<p role="status">Ładowanie projektów…</p>{/if}
+              <DeferredView
+                source={projectsUI}
+                loading="Ładowanie projektów…"
+                retry="Ponów ładowanie projektów"
+                quiet
+              >
+                {#snippet children(ProjectsScreen)}<ProjectsScreen
+                    route={routing.current}
+                    {projects}
+                    {open}
+                    {addProject}
+                    onremove={deleteProject}
+                    disabled={!!projectMove || !!editor || !connected}
+                    onmove={(item, state) => {
+                      if (!projectMove) projectMove = { item, state };
+                    }}
+                  />{/snippet}
+              </DeferredView>
             {:else if routing.current.view === "board" && routing.current.project}{#if Board}{#key routing.current.project}<Board
                     project={routing.current.project}
                     search={routing.current.search}
@@ -1057,46 +852,41 @@
                 oncreate={(initial) => create("card", initial)}
               />
             {:else if routing.current.view === "chart"}
-              {#if ChartView}<ChartView
-                  project={routing.current.project}
-                  {today}
-                  revision={viewRevision}
-                  preferenceKey={`${boot.instance_id}:${boot.user?.id ?? "default"}`}
-                  {open}
-                />
-              {:else if chartUI.error}<p>
-                  <span role="alert">{chartUI.error}</span><Button
-                    variant="quiet"
-                    onclick={() => void chartUI.load()}
-                    >Ponów ładowanie wykresu</Button
-                  >
-                </p>
-              {:else}<p role="status">Ładowanie wykresu…</p>{/if}
+              <DeferredView
+                source={chartUI}
+                loading="Ładowanie wykresu…"
+                retry="Ponów ładowanie wykresu"
+                quiet
+              >
+                {#snippet children(ChartView)}<ChartView
+                    project={routing.current.project}
+                    {today}
+                    revision={viewRevision}
+                    {preferenceKey}
+                    {open}
+                  />{/snippet}
+              </DeferredView>
             {:else if routing.current.view === "updates"}
-              {#if UpdatesScreen}<UpdatesScreen
-                  route={routing.current}
-                  {projects}
-                  {updates}
-                  {open}
-                />{:else if updatesUI.error}<p>
-                  <span role="alert">{updatesUI.error}</span><Button
-                    onclick={() => void updatesUI.load()}
-                    >Spróbuj ponownie</Button
-                  >
-                </p>
-              {:else}<p role="status">Ładowanie aktualizacji…</p>{/if}
+              <DeferredView
+                source={updatesUI}
+                loading="Ładowanie aktualizacji…"
+              >
+                {#snippet children(UpdatesScreen)}<UpdatesScreen
+                    route={routing.current}
+                    {projects}
+                    {updates}
+                    {open}
+                  />{/snippet}
+              </DeferredView>
             {:else}
-              {#if ResourceListScreen}<ResourceListScreen
-                  route={routing.current}
-                  {projects}
-                  {cards}
-                  {open}
-                />{:else if listUI.error}<p>
-                  <span role="alert">{listUI.error}</span><Button
-                    onclick={() => void listUI.load()}>Spróbuj ponownie</Button
-                  >
-                </p>
-              {:else}<p role="status">Ładowanie listy…</p>{/if}
+              <DeferredView source={listUI} loading="Ładowanie listy…">
+                {#snippet children(ResourceListScreen)}<ResourceListScreen
+                    route={routing.current}
+                    {projects}
+                    {cards}
+                    {open}
+                  />{/snippet}
+              </DeferredView>
             {/if}
           </div>{/key}
         {#if routing.current.view === "focus"}
@@ -1129,162 +919,157 @@
     </div>
   </div>
 {/if}
-{#if choosingCardProject}{#if CreateCardProject}<CreateCardProject
-      projects={choosingCardProject}
-      onclose={() => (choosingCardProject = null)}
-      onselect={(project) => {
-        choosingCardProject = null;
-        routing.startDraft();
-        setEditor(createTarget(project, "card"));
-      }}
-    />{:else}<DeferredDialog
-      title="Dodaj kartę"
-      error={cardProjectUI.error}
-      retry={cardProjectUI.load}
-      onclose={() => (choosingCardProject = null)}
-    />{/if}{/if}
-{#if dateDraft}{#if DateChange}{#key dateDraft}<DateChange
-        {...dateDraft}
-        onclose={() => (dateDraft = null)}
-        onsaved={() => {
-          dateDraft = null;
-          void refresh().catch(message);
-        }}
-      />{/key}{:else}<DeferredDialog
-      title="Zmień daty"
-      error={dateUI.error}
-      retry={dateUI.load}
-      onclose={() => (dateDraft = null)}
-    />{/if}{/if}
-{#if moveDraft}{#if MoveChange}{#key moveDraft}<MoveChange
-        {...moveDraft}
-        onclose={() => (moveDraft = null)}
-        onsaved={() => {
-          moveDraft = null;
-          void refresh().catch(message);
-        }}
-      />{/key}{:else}<DeferredDialog
-      title="Przenieś kartę"
-      error={moveUI.error}
-      retry={moveUI.load}
-      onclose={() => (moveDraft = null)}
-    />{/if}{/if}
-{#if projectMove}{@const proposal =
-    projectMove}{#if ProjectStateChange}{#key proposal}<ProjectStateChange
-        {...proposal}
-        onclose={() => {
-          if (projectMove === proposal) projectMove = null;
-        }}
-        onsaved={() => {
-          if (projectMove !== proposal) return;
-          projectMove = null;
-          void refresh(["projects"]).catch(message);
-        }}
-      />{/key}{:else}<DeferredDialog
-      title="Przenieś projekt"
-      error={projectMoveUI.error}
-      retry={projectMoveUI.load}
-      onclose={() => {
-        if (projectMove === proposal) projectMove = null;
-      }}
-    />{/if}{/if}
-{#if gitProject}{#if GitObservation}<GitObservation
-      project={gitProject}
-      onclose={() => (gitProject = "")}
-    />{:else}<DeferredDialog
-      title="Stan Git"
-      error={gitUI.error}
-      retry={gitUI.load}
-      onclose={() => {
-        gitProject = "";
-      }}
-    />{/if}{/if}
-{#if diagnostics}{#if Diagnostics}<Diagnostics
-      foreground={!boot}
-      onclose={() => (diagnostics = false)}
-    />{:else}<DeferredDialog
-      foreground={!boot}
-      title="Diagnostyka"
-      error={diagnosticsUI.error}
-      retry={diagnosticsUI.load}
-      onclose={() => {
-        diagnostics = false;
-      }}
-    />{/if}{/if}
-{#if settings}{#if Settings}<Settings
-      {canSwitchUser}
-      onuserchange={switchUser}
-      ontags={() => {
-        manageTags = true;
-      }}
-      onclose={() => (settings = false)}
-      onsaved={() => {
-        settings = false;
-        void initialize();
-      }}
-    />{:else}<DeferredDialog
-      title="Ustawienia przestrzeni roboczej"
-      error={settingsUI.error}
-      retry={settingsUI.load}
-      onclose={() => {
-        settings = false;
-      }}
-    />{/if}{/if}
-{#if manageTags}{#if TagManager}<TagManager
-      initialProject={routing.current.project ??
-        routing.current.resource?.project ??
-        ""}
-      projectNames={Object.fromEntries(
-        projects.map((item) => [item.id, item.title]),
-      )}
-      onclose={() => (manageTags = false)}
-      onchanged={() => void refresh().catch(message)}
-    />{:else}<DeferredDialog
-      title="Tagi projektu"
-      error={tagsUI.error}
-      retry={tagsUI.load}
-      onclose={() => {
-        manageTags = false;
-      }}
-    />{/if}{/if}
-{#if editor}{#if Editor}{#key editor}{@const editorTarget = editor}<Editor
-        workspaceTimezone={session.timezone}
-        userName={boot?.user?.name ?? "Właściciel"}
-        {weekStart}
-        target={editor}
-        bind:this={editorInstance}
-        onclose={closeEditor}
-        onkeepediting={() => {
-          if (routing.pending) keepEditing();
-        }}
-        onchanged={() => refresh().catch(message)}
-        onresolve={(decision) => {
+{#if choosingCardProject}{@const candidates = choosingCardProject}<DeferredHost
+    source={cardProjectUI}
+    title="Dodaj kartę"
+    onclose={() => (choosingCardProject = null)}
+  >
+    {#snippet children(CreateCardProject)}<CreateCardProject
+        projects={candidates}
+        onclose={() => (choosingCardProject = null)}
+        onselect={(project) => {
+          choosingCardProject = null;
           routing.startDraft();
-          setEditor(resolutionTarget(editorTarget.project, decision));
+          setEditor(createTarget(project, "card"));
         }}
-        onsaved={() => void saved()}
-        onautosaved={(resource) => autosaved(editorTarget, resource)}
-        ondeleted={() => void deleted()}
-      />{/key}{:else}<DeferredDialog
-      title="Edytuj element"
-      error={editorUI.error}
-      retry={editorUI.load}
-      onclose={() => {
-        closeEditor();
-      }}
-    />{/if}{/if}
-{#if projectDeletion}{#if ProjectDeletion}<ProjectDeletion
-      project={projectDeletion}
-      onclose={() => (projectDeletion = null)}
-      ondeleted={projectDeleted}
-    />{:else}<DeferredDialog
-      title="Usuń projekt"
-      error={deletionUI.error}
-      retry={deletionUI.load}
-      onclose={() => {
-        projectDeletion = null;
-      }}
-    />{/if}{/if}
+      />{/snippet}
+  </DeferredHost>{/if}
+{#if dateDraft}{@const proposal = dateDraft}<DeferredHost
+    source={dateUI}
+    title="Zmień daty"
+    onclose={() => (dateDraft = null)}
+  >
+    {#snippet children(DateChange)}{#key proposal}<DateChange
+          {...proposal}
+          onclose={() => (dateDraft = null)}
+          onsaved={() => {
+            dateDraft = null;
+            void refresh().catch(message);
+          }}
+        />{/key}{/snippet}
+  </DeferredHost>{/if}
+{#if moveDraft}{@const proposal = moveDraft}<DeferredHost
+    source={moveUI}
+    title="Przenieś kartę"
+    onclose={() => (moveDraft = null)}
+  >
+    {#snippet children(MoveChange)}{#key proposal}<MoveChange
+          {...proposal}
+          onclose={() => (moveDraft = null)}
+          onsaved={() => {
+            moveDraft = null;
+            void refresh().catch(message);
+          }}
+        />{/key}{/snippet}
+  </DeferredHost>{/if}
+{#if projectMove}{@const proposal = projectMove}<DeferredHost
+    source={projectMoveUI}
+    title="Przenieś projekt"
+    onclose={() => {
+      if (projectMove === proposal) projectMove = null;
+    }}
+  >
+    {#snippet children(ProjectStateChange)}{#key proposal}<ProjectStateChange
+          {...proposal}
+          onclose={() => {
+            if (projectMove === proposal) projectMove = null;
+          }}
+          onsaved={() => {
+            if (projectMove !== proposal) return;
+            projectMove = null;
+            void refresh(["projects"]).catch(message);
+          }}
+        />{/key}{/snippet}
+  </DeferredHost>{/if}
+{#if gitProject}<DeferredHost
+    source={gitUI}
+    title="Stan Git"
+    onclose={() => (gitProject = "")}
+  >
+    {#snippet children(GitObservation)}<GitObservation
+        project={gitProject}
+        onclose={() => (gitProject = "")}
+      />{/snippet}
+  </DeferredHost>{/if}
+{#if diagnostics}<DeferredHost
+    source={diagnosticsUI}
+    foreground={!boot}
+    title="Diagnostyka"
+    onclose={() => (diagnostics = false)}
+  >
+    {#snippet children(Diagnostics)}<Diagnostics
+        foreground={!boot}
+        onclose={() => (diagnostics = false)}
+      />{/snippet}
+  </DeferredHost>{/if}
+{#if settings}<DeferredHost
+    source={settingsUI}
+    title="Ustawienia przestrzeni roboczej"
+    onclose={() => (settings = false)}
+  >
+    {#snippet children(Settings)}<Settings
+        {canSwitchUser}
+        onuserchange={switchUser}
+        ontags={() => {
+          manageTags = true;
+        }}
+        onclose={() => (settings = false)}
+        onsaved={() => {
+          settings = false;
+          void initialize();
+        }}
+      />{/snippet}
+  </DeferredHost>{/if}
+{#if manageTags}<DeferredHost
+    source={tagsUI}
+    title="Tagi projektu"
+    onclose={() => (manageTags = false)}
+  >
+    {#snippet children(TagManager)}<TagManager
+        initialProject={routing.current.project}
+        projectNames={Object.fromEntries(
+          projects.map((item) => [item.id, item.title]),
+        )}
+        onclose={() => (manageTags = false)}
+        onchanged={() => void refresh().catch(message)}
+      />{/snippet}
+  </DeferredHost>{/if}
+{#if editor}{@const editorTarget = editor}<DeferredHost
+    source={editorUI}
+    title="Edytuj element"
+    onclose={closeEditor}
+  >
+    {#snippet children(Editor)}{#key editorTarget}<Editor
+          workspaceTimezone={session.timezone}
+          userName={boot?.user?.name ?? "Właściciel"}
+          {weekStart}
+          target={editorTarget}
+          bind:this={editorInstance}
+          onclose={closeEditor}
+          onkeepediting={() => {
+            if (routing.pending) keepEditing();
+          }}
+          onchanged={() => refresh().catch(message)}
+          onresolve={(decision) => {
+            routing.startDraft();
+            setEditor(resolutionTarget(editorTarget.project, decision));
+          }}
+          onsaved={() => void saved()}
+          onautosaved={(resource) => autosaved(editorTarget, resource)}
+          ondeleted={() => void deleted()}
+        />{/key}{/snippet}
+  </DeferredHost>{/if}
+{#if projectDeletion}{@const project = projectDeletion}<DeferredHost
+    source={deletionUI}
+    title="Usuń projekt"
+    onclose={() => (projectDeletion = null)}
+  >
+    {#snippet children(ProjectDeletion)}<ProjectDeletion
+        {project}
+        onclose={() => (projectDeletion = null)}
+        ondeleted={projectDeleted}
+      />{/snippet}
+  </DeferredHost>{/if}
 <!-- Keep the registration identity alive while its dialog is closed. -->
 {#if RegistrationBrowser}<RegistrationBrowser
     bind:open={adding}
@@ -1302,25 +1087,24 @@
     }}
   />{/if}
 
-{#if nativeAdding}{#if NativeProject}<NativeProject
-      onclose={() => (nativeAdding = false)}
-      onbrowse={() => {
-        nativeAdding = false;
-        adding = true;
-      }}
-      onadded={(id) => {
-        nativeAdding = false;
-        routing.showProject(id);
-        void refresh().catch(message);
-      }}
-    />{:else}<DeferredDialog
-      title="Dodaj projekt"
-      error={nativeUI.error}
-      retry={nativeUI.load}
-      onclose={() => {
-        nativeAdding = false;
-      }}
-    />{/if}{/if}
+{#if nativeAdding}<DeferredHost
+    source={nativeUI}
+    title="Dodaj projekt"
+    onclose={() => (nativeAdding = false)}
+  >
+    {#snippet children(NativeProject)}<NativeProject
+        onclose={() => (nativeAdding = false)}
+        onbrowse={() => {
+          nativeAdding = false;
+          adding = true;
+        }}
+        onadded={(id) => {
+          nativeAdding = false;
+          routing.showProject(id);
+          void refresh().catch(message);
+        }}
+      />{/snippet}
+  </DeferredHost>{/if}
 
 <FocusCounterBar
   bind:this={counterBar}

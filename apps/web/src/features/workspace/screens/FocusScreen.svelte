@@ -8,7 +8,7 @@
   import Icon from "../../../lib/ui/Icon.svelte";
 
   import type { Summary } from "../../../lib/api/api";
-  import type { FocusRef } from "../../../lib/contracts/api.generated";
+  import type { FocusOrderState } from "../focus-order-state.svelte";
   import type { WorkspaceRoute } from "../navigation";
   import { projectLabel, type OpenResource } from "./screen-data";
   import { resourceLabel } from "../../../lib/resources/resource-presentation";
@@ -33,18 +33,7 @@
     cards,
     events,
     focusCards,
-    focusCount,
-    focusOrder,
-    focusVersion,
-    focusPending,
-    focusBusy,
-    focusConflict,
-    focusRefreshing,
-    focusError,
-    focusCopyMessage,
-    focusCanRetry,
-    focusCanReload,
-    focusRequestId,
+    order,
     attentionRows,
     attentionCursor,
     attentionPaged,
@@ -54,11 +43,6 @@
     eventPaged,
     loadingMore,
     open,
-    onreorder,
-    onretry,
-    onretrynew,
-    onreload,
-    oncopycommand,
     moreAttention,
     moreActiveCards,
     moreEvents,
@@ -78,18 +62,8 @@
     cards: Summary[];
     events: Summary[];
     focusCards: Summary[];
-    focusCount: number;
-    focusOrder: FocusRef[];
-    focusVersion: string;
-    focusPending: boolean;
-    focusBusy: boolean;
-    focusConflict: boolean;
-    focusRefreshing: boolean;
-    focusError: string;
-    focusCopyMessage: string;
-    focusCanRetry: boolean;
-    focusCanReload: boolean;
-    focusRequestId: string;
+    /** The route-independent order command with its proposal and recovery. */
+    order: FocusOrderState;
     attentionRows: Attention[];
     attentionCursor: string | null;
     attentionPaged: boolean;
@@ -99,15 +73,6 @@
     eventPaged: boolean;
     loadingMore: boolean;
     open: OpenResource;
-    onreorder: (
-      visible: Summary[],
-      fullOrder: FocusRef[],
-      version: string,
-    ) => void;
-    onretry: () => void;
-    onretrynew: () => void;
-    onreload: () => void;
-    oncopycommand: () => void;
     moreAttention: (first?: boolean) => Promise<void>;
     moreActiveCards: (back?: boolean) => Promise<void>;
     moreEvents: (back?: boolean) => Promise<void>;
@@ -128,19 +93,19 @@
   function focusGestureOptions() {
     return {
       cards: () => reorderableFocus,
-      fullOrder: () => focusOrder,
-      version: () => focusVersion,
+      fullOrder: () => order.items,
+      version: () => order.version,
       scope: () => `${route.project}\n${route.folder}\n${route.search.trim()}`,
       disabled: () =>
-        !focusVersion ||
-        focusBusy ||
-        focusPending ||
-        focusCanReload ||
-        focusRefreshing,
+        !order.version ||
+        order.busy ||
+        order.pending ||
+        order.canReload ||
+        order.reloading,
       active: (active: boolean) => {
         gestureFocus = active ? [...visibleFocus] : null;
       },
-      commit: onreorder,
+      commit: order.reorder,
     };
   }
 
@@ -163,7 +128,7 @@
     title="W Focus"
     count={`Widoczne karty: ${displayedFocus.length}`}
   />
-  {#if focusCount > 1}<p class="sr" id="focus-order-help">
+  {#if order.items.length > 1}<p class="sr" id="focus-order-help">
       Przeciągnij kartę, aby zmienić kolejność, lub zaznacz ją i naciśnij Alt+↑
       / Alt+↓ / Alt+Home / Alt+End. Escape anuluje przeciąganie. Kliknij kartę,
       aby ją otworzyć.
@@ -178,7 +143,7 @@
         {counterState}
         {oncounter}
         projectName={projectLabel(projects, item.project_id)}
-        reorderable={focusCount > 1}
+        reorderable={order.items.length > 1}
         open={() => open(item)}
       />{:else}<EmptyState>
         {route.project || route.search
@@ -186,47 +151,48 @@
           : "Brak przypiętych kart. Otwórz kartę i przypnij ją, aby zachować ją tutaj."}
       </EmptyState>{/each}
   </div>
-  {#if focusBusy}<p role="status" class="focus-order-status">
+  {#if order.busy}<p role="status" class="focus-order-status">
       Zapisywanie kolejności Focus…
     </p>{/if}
-  {#if focusPending && !focusBusy}<p role="alert" class="focus-order-status">
-      {focusError ||
+  {#if order.pending && !order.busy}<p role="alert" class="focus-order-status">
+      {order.error ||
         "Kolejność Focus oczekuje na potwierdzenie. To samo polecenie zostało zachowane."}
     </p>
-    <button onclick={onretry} disabled={focusRefreshing}
+    <button onclick={order.retry} disabled={order.reloading}
       >Ponów to samo polecenie</button
     >
     <details class="focus-save-details">
       <summary>Szczegóły zapisu</summary>
-      <code>{focusRequestId}</code>
-      <button onclick={oncopycommand}>Kopiuj oczekujące polecenie</button>
-      {#if focusCopyMessage}<p role="status">{focusCopyMessage}</p>{/if}
+      <code>{order.requestId}</code>
+      <button onclick={order.copyCommand}>Kopiuj oczekujące polecenie</button>
+      {#if order.copyMessage}<p role="status">{order.copyMessage}</p>{/if}
     </details>{/if}
-  {#if focusConflict}<p role="alert" class="focus-order-status">
-      {focusError ||
+  {#if order.conflict}<p role="alert" class="focus-order-status">
+      {order.error ||
         "Kolejność Focus zmieniła się gdzie indziej. Wczytaj ponownie, aby odrzucić tę propozycję."}
     </p>
-    <button onclick={onreload} disabled={focusRefreshing}>
-      {focusRefreshing
+    <button onclick={order.reload} disabled={order.reloading}>
+      {order.reloading
         ? "Wczytywanie kolejności Focus…"
         : "Wczytaj kolejność Focus ponownie"}
     </button>{/if}
-  {#if focusError && !focusPending && !focusConflict}<p
+  {#if order.error && !order.pending && !order.conflict}<p
       role="alert"
       class="focus-order-status"
     >
-      {focusError}
+      {order.error}
     </p>
-    {#if focusCanRetry}<button onclick={onretrynew}>Ponów tę kolejność</button
-      >{/if}{#if focusCanReload}<button
-        onclick={onreload}
-        disabled={focusRefreshing}
+    {#if order.canRetry}<button onclick={order.retryRejected}
+        >Ponów tę kolejność</button
+      >{/if}{#if order.canReload}<button
+        onclick={order.reload}
+        disabled={order.reloading}
       >
-        {focusRefreshing
+        {order.reloading
           ? "Wczytywanie kolejności Focus…"
           : "Wczytaj kolejność Focus ponownie"}
       </button>{/if}{/if}
-  {#if focusRefreshing && !focusConflict}<p
+  {#if order.reloading && !order.conflict}<p
       role="status"
       class="focus-order-status"
     >
