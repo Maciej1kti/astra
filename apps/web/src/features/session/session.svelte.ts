@@ -18,6 +18,7 @@ import {
 import { publishSession, subscribeSession } from "../../lib/api/session-events";
 import { getPreferences } from "../../lib/api/resources";
 import { InvalidResponseError } from "../../lib/api/transport-errors";
+import { streamRecovery } from "./event-stream";
 
 type SessionHooks = {
   error: (cause: unknown) => void;
@@ -93,9 +94,15 @@ export function sessionState(hooks: SessionHooks) {
     })();
   });
 
+  const recovery = streamRecovery({
+    probe: () => api("/api/v1/bootstrap"),
+    ended: sessionRequired,
+    reconnect: connect,
+  });
   function ended() {
     generation++;
     changes.cancel();
+    recovery.cancel();
     source?.close();
     source = undefined;
     clearReads();
@@ -108,14 +115,20 @@ export function sessionState(hooks: SessionHooks) {
     if (source || !boot) return;
     const query = new URLSearchParams({ cursor: boot.snapshot_cursor });
     if (boot.user) query.set("user_id", boot.user.id);
-    source = new EventSource(`/api/v1/events?${query}`);
-    source.onopen = () => {
+    const stream = new EventSource(`/api/v1/events?${query}`);
+    source = stream;
+    stream.onopen = () => {
       connected = true;
+      recovery.opened();
     };
-    source.onerror = () => {
+    stream.onerror = () => {
       connected = false;
-      // A 401 publishes session loss; a network timeout must preserve drafts.
-      void api("/api/v1/bootstrap").catch(() => {});
+      // The browser retries a dropped stream itself; a refused one is closed
+      // for good and must be replaced. Either way a 401 publishes session
+      // loss, while a network timeout must preserve drafts.
+      const closed = stream.readyState === EventSource.CLOSED;
+      if (closed && source === stream) source = undefined;
+      recovery.failed(closed);
     };
     for (const kind of [
       "changed",
@@ -123,7 +136,7 @@ export function sessionState(hooks: SessionHooks) {
       "resync_required",
       "workspace_changed",
     ]) {
-      source.addEventListener(kind, (event) => {
+      stream.addEventListener(kind, (event) => {
         try {
           changes.push({ ...JSON.parse((event as MessageEvent).data), kind });
         } catch {
@@ -237,6 +250,7 @@ export function sessionState(hooks: SessionHooks) {
       window.removeEventListener("online", foreground);
       document.removeEventListener("visibilitychange", foreground);
       generation++;
+      recovery.cancel();
       source?.close();
       source = undefined;
       changes.cancel();
