@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import {
   shiftDate,
   shiftedSchedule,
-  dayDistance,
 } from "../../apps/web/src/features/planning/dates.ts";
+import { dayDistance } from "../../apps/web/src/lib/ui/calendar-dates.ts";
 test("date-only moves preserve duration across leap days, month/year changes and DST", () => {
   for (const [from, delta, to] of [
     ["2024-02-28", 1, "2024-02-29"],

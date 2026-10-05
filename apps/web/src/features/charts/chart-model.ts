@@ -1,5 +1,6 @@
 import {
   calendarShift,
+  dayDistance,
   validCalendarDate,
 } from "../../lib/ui/calendar-dates.ts";
 
@@ -59,12 +60,7 @@ export function chartSeriesKey(series: ChartSeries): string {
 /** API and UI use inclusive civil-date ranges, independent of browser timezone. */
 export function chartRangeDays(from: string, to: string): number {
   if (!validCalendarDate(from) || !validCalendarDate(to) || to < from) return 0;
-  return (
-    Math.round(
-      (Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) /
-        86400000,
-    ) + 1
-  );
+  return dayDistance(from, to) + 1;
 }
 
 export function chartPeriods(

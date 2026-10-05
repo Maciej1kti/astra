@@ -19,9 +19,3 @@ export function shiftedSchedule(
     return operation === "start" ? { start: end, end } : { start, end: start };
   return { start, end };
 }
-export function dayDistance(from: string, to: string) {
-  return Math.round(
-    (Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) /
-      86400000,
-  );
-}

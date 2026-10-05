@@ -8,6 +8,7 @@
   import DeferredDialog from "./lib/ui/DeferredDialog.svelte";
   import { deferredComponent } from "./lib/ui/deferred-component.svelte";
   import { observePreloadFailures } from "./lib/ui/preload-recovery";
+  import { calendarToday } from "./lib/ui/calendar-dates";
 
   import WorkspaceNavigation from "./features/workspace/WorkspaceNavigation.svelte";
   import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
@@ -577,16 +578,7 @@
   let adding = $state(false);
   let projectDeletion = $state<Summary | null>(null);
 
-  let today = $derived(
-    boot
-      ? new Intl.DateTimeFormat("en-CA", {
-          timeZone: boot.timezone,
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        }).format(clockTime)
-      : "",
-  );
+  let today = $derived(boot ? calendarToday(boot.timezone, clockTime) : "");
   function currentQuery(): ViewQuery {
     return {
       view: routing.current.view,

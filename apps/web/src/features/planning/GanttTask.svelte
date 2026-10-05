@@ -6,7 +6,8 @@
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
   import { dateGesture } from "./date-gesture";
   import { dateOnly } from "./planning";
-  import { dayDistance, shiftDate } from "./dates";
+  import { shiftDate } from "./dates";
+  import { dayDistance } from "../../lib/ui/calendar-dates";
 
   let { data }: { data: ITask } = $props();
   let creationDate = $state("");

@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   counterRecord,
-  counterDay,
   emptyCounterDrafts,
   countersDirty,
   validCounterConfiguration,
@@ -10,6 +9,7 @@ import {
   setCounterInput,
   setCounterValue,
 } from "../../apps/web/src/features/cards/card-counters.ts";
+import { calendarToday } from "../../apps/web/src/lib/ui/calendar-dates.ts";
 
 const counter = {
   id: "counter",
@@ -67,8 +67,8 @@ test("numeric drafts preserve incomplete input, bounds and their original day", 
 });
 test("workspace midnight resets the view without deleting history or moving an unsaved result", () => {
   const instant = Date.parse("2026-09-26T22:30:00Z");
-  assert.equal(counterDay("Europe/Warsaw", instant), "2026-09-27");
-  assert.equal(counterDay("America/Los_Angeles", instant), "2026-09-26");
+  assert.equal(calendarToday("Europe/Warsaw", instant), "2026-09-27");
+  assert.equal(calendarToday("America/Los_Angeles", instant), "2026-09-26");
   let draft = setCounterValue(counter, emptyCounterDrafts(), "2026-09-26", 15);
   assert.equal(counterRecord(counter, draft, "2026-09-27").date, "2026-09-26");
   draft = setCounterValue(counter, draft, "2026-09-27", 20);

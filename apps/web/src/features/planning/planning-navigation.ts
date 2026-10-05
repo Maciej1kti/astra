@@ -1,10 +1,12 @@
+import { isCivilDate } from "../../lib/ui/calendar-dates.ts";
 import { shiftDate } from "./dates.ts";
 import { dateOnly, widgetDate } from "./planning.ts";
 
 export type CalendarLayout = "day" | "week" | "month" | "agenda";
 
+/** A civil date that this browser's local calendar can also represent for the widgets. */
 export function isCalendarDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  if (!isCivilDate(value)) return false;
   try {
     return dateOnly(widgetDate(value)) === value;
   } catch {

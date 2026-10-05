@@ -2,7 +2,7 @@
   import { untrack } from "svelte";
   import { coarseClock } from "../../lib/ui/coarse-clock.svelte";
   import ScheduleCalendar from "./ScheduleCalendar.svelte";
-  import { counterDay } from "../cards/card-counters";
+  import { calendarToday } from "../../lib/ui/calendar-dates";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
   import { cardScheduleSummary } from "./card-schedule";
@@ -139,7 +139,7 @@
     single={!!fields.time}
     {locked}
     {weekStart}
-    today={counterDay(timezone, now)}
+    today={calendarToday(timezone, now)}
     onclose={() => {
       calendarOpen = false;
     }}

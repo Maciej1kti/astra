@@ -1,6 +1,9 @@
 import type { CardFields } from "./editor-draft";
-import { counterDay } from "../cards/card-counters.ts";
-import { dayDistance } from "../planning/dates.ts";
+import {
+  calendarToday,
+  dayDistance,
+  isCivilDate,
+} from "../../lib/ui/calendar-dates.ts";
 import { eventEnd } from "../../lib/resources/timed-event.ts";
 import { countedDays as days } from "../../lib/ui/locale.ts";
 
@@ -14,10 +17,6 @@ type Summary = {
   overdue?: boolean;
   valid: boolean;
 };
-const dateValid = (value: string) =>
-  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-  Number.isFinite(Date.parse(`${value}T12:00:00Z`)) &&
-  new Date(`${value}T12:00:00Z`).toISOString().slice(0, 10) === value;
 const interval = (minutes: number) =>
   minutes < 60
     ? `${Math.ceil(minutes)} min`
@@ -36,7 +35,7 @@ export function cardScheduleSummary(
   if (!start && !end && !time)
     return { text: "Brak harmonogramu", valid: true };
   const invalid = { text: "Sprawdź harmonogram", valid: false };
-  if (!dateValid(start)) return invalid;
+  if (!isCivilDate(start)) return invalid;
   if (time) {
     let finish: string;
     try {
@@ -57,7 +56,7 @@ export function cardScheduleSummary(
     }).formatToParts(now);
     const part = (type: string) => parts.find((p) => p.type === type)!.value;
     const current = Date.parse(
-      `${counterDay(timezone, now)}T${part("hour")}:${part("minute")}:00Z`,
+      `${calendarToday(timezone, now)}T${part("hour")}:${part("minute")}:00Z`,
     );
     const until = (Date.parse(`${start}T${time}:00Z`) - current) / 60000;
     const left = (Date.parse(`${finish}:00Z`) - current) / 60000;
@@ -81,10 +80,10 @@ export function cardScheduleSummary(
       valid: true,
     };
   }
-  if (!dateValid(end) || end < start) return invalid;
+  if (!isCivilDate(end) || end < start) return invalid;
   const total = dayDistance(start, end) + 1;
   if (finished) return { text: `${total}-dniowy plan`, valid: true };
-  const today = counterDay(timezone, now);
+  const today = calendarToday(timezone, now);
   const until = dayDistance(today, start);
   const left = dayDistance(today, end);
   if (until > 0)

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { coarseClock } from "../../lib/ui/coarse-clock.svelte";
+  import { calendarToday } from "../../lib/ui/calendar-dates";
   import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
@@ -11,7 +12,6 @@
     CardPatch,
   } from "../../lib/contracts/api.generated";
   import {
-    counterDay,
     counterMaximum,
     validCounterConfiguration,
     type CounterDrafts,
@@ -33,7 +33,7 @@
     onsubmit: (patch: CardPatch, counterId?: string) => void;
   } = $props();
   const clock = coarseClock();
-  const today = $derived(counterDay(timezone, clock.now));
+  const today = $derived(calendarToday(timezone, clock.now));
   let showArchived = $state(false);
   let configurationName = $state<HTMLInputElement>();
   const visible = $derived(counters.filter((c) => showArchived || !c.archived));
