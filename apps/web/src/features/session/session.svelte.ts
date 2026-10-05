@@ -19,6 +19,7 @@ import { publishSession, subscribeSession } from "../../lib/api/session-events";
 import { getPreferences } from "../../lib/api/resources";
 import { InvalidResponseError } from "../../lib/api/transport-errors";
 import { streamRecovery } from "./event-stream";
+import { preferenceReads } from "./preference-reads";
 
 type SessionHooks = {
   error: (cause: unknown) => void;
@@ -46,35 +47,23 @@ export function sessionState(hooks: SessionHooks) {
   let connected = $state(false);
   let source: EventSource | undefined;
   let generation = 0;
-  let preferencesGeneration = 0;
   function acceptBootstrap(value: Bootstrap) {
     boot = value;
     // Retained locked drafts still need the last authenticated clock context.
     timezone = value.timezone;
   }
-  function startPreferencesRead() {
-    return {
-      generation,
-      request: ++preferencesGeneration,
-      // Consume either outcome even if bootstrap fails first. Both GETs are
-      // authenticated by the existing session and can travel concurrently.
-      response: getPreferences({ fresh: true }).then(
-        (value) => ({ value }),
-        (error: unknown) => ({ error }),
-      ),
-    };
-  }
-  async function preferences(read = startPreferencesRead()) {
-    const result = await read.response;
-    if (!boot || read.generation !== generation) return;
-    if ("error" in result) throw result.error;
-    const value = result.value;
-    if (read.request === preferencesGeneration) {
+  const preferenceRead = preferenceReads<PreferencesResource>({
+    generation: () => generation,
+    active: () => !!boot,
+    read: () => getPreferences({ fresh: true }),
+    apply: (value) => {
+      if (!boot) return;
       acceptBootstrap({ ...boot, timezone: value.timezone });
       hooks.preferences(value);
-    }
-    return value;
-  }
+    },
+  });
+  const startPreferencesRead = preferenceRead.start;
+  const preferences = preferenceRead.settle;
   const changes = invalidationBatch((events) => {
     const current = generation;
     void (async () => {
