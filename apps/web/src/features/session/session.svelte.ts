@@ -108,6 +108,8 @@ export function sessionState(hooks: SessionHooks) {
     clearReads();
     closeSession();
     boot = null;
+    // The request that created this session is spent; the next one starts anew.
+    pairing = null;
     connected = false;
     hooks.ended();
   }
@@ -239,7 +241,6 @@ export function sessionState(hooks: SessionHooks) {
   async function logout() {
     await api("/api/v1/auth/logout", "POST", {});
     ended();
-    pairing = null;
   }
   onMount(() => {
     const unsubscribe = subscribeSession({ ended });

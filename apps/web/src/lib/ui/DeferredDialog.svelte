@@ -11,15 +11,21 @@
     error,
     retry,
     onclose,
+    foreground = false,
   }: {
     title: string;
     error: string;
     retry: () => void;
     onclose: () => void;
+    foreground?: boolean;
   } = $props();
 </script>
 
-<dialog class="app-dialog" use:modal={{ onclose }} aria-label={title}>
+<dialog
+  class="app-dialog"
+  use:modal={{ onclose, foreground }}
+  aria-label={title}
+>
   <DialogHeader {title} {onclose} />
   <div class="dialog-body">
     {#if error}

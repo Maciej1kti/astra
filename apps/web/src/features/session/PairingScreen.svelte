@@ -5,6 +5,9 @@
   import Button from "../../lib/ui/Button.svelte";
 
   import type { Pairing } from "../../lib/contracts/api.generated";
+  import { onMount } from "svelte";
+  import { subscribeSession } from "../../lib/api/session-events";
+  import { modal, observeModals, retainedModals } from "../../lib/ui/dialog";
 
   let {
     pairing,
@@ -29,16 +32,41 @@
     ondiagnostics: () => void;
     ondefaultuser?: () => void;
   } = $props();
+
+  // Dialogs that outlive the session keep their drafts and commands. They are
+  // modal, so pairing has to be offered in a layer above them.
+  let retained = $state(retainedModals() > 0);
+  let inspecting = $state(false);
+  onMount(() => {
+    const stop = observeModals(() => {
+      retained = retainedModals() > 0;
+      if (!retained) inspecting = false;
+    });
+    const unsubscribe = subscribeSession({
+      reconnect: () => {
+        inspecting = false;
+      },
+    });
+    return () => {
+      stop();
+      unsubscribe();
+    };
+  });
+  function primaryFocus(layer: HTMLDialogElement) {
+    // Start on the action, not on a text field that would raise a keyboard.
+    layer
+      .querySelector<HTMLButtonElement>(".primary:not(:disabled)")
+      ?.focus({ preventScroll: true });
+    // A second Escape may close a modal natively; keep the state truthful.
+    const closed = () => {
+      if (!layer.open) inspecting = true;
+    };
+    layer.addEventListener("close", closed);
+    return { destroy: () => layer.removeEventListener("close", closed) };
+  }
 </script>
 
-<main class="welcome">
-  <Brand />
-  <p class="eyebrow">Twoja praca na Twoim komputerze</p>
-  <h1>Jaśniejszy obraz<br />kolejnych kroków.</h1>
-  <p class="lead">
-    Projekty, decyzje i postępy.<br />Połączone z folderami, których już
-    używasz.
-  </p>
+{#snippet pairbox()}
   <section class="pairbox">
     <h2>{pairing ? "Zatwierdź tę przeglądarkę" : "Połącz przeglądarkę"}</h2>
     {#if loading}<p>Sprawdzanie połączenia…</p>{:else if pairing}<p>
@@ -69,8 +97,38 @@
         disabled={loading || busy}>Użyj domyślnego użytkownika</Button
       >{/if}
     <button onclick={ondiagnostics}>Diagnostyka serwera</button>
+    {#if retained}
+      <p class="small">
+        Otwarta praca została zachowana i wróci po połączeniu przeglądarki.
+      </p>
+      <Button variant="quiet" onclick={() => (inspecting = true)}
+        >Pokaż zachowaną pracę</Button
+      >
+    {/if}
   </section>
-</main>
+{/snippet}
+
+{#if !retained}
+  <main class="welcome">
+    <Brand />
+    <p class="eyebrow">Twoja praca na Twoim komputerze</p>
+    <h1>Jaśniejszy obraz<br />kolejnych kroków.</h1>
+    <p class="lead">
+      Projekty, decyzje i postępy.<br />Połączone z folderami, których już
+      używasz.
+    </p>
+    {@render pairbox()}
+  </main>
+{:else if !inspecting}
+  <dialog
+    class="app-dialog dialog-small pairing-layer"
+    aria-label="Połącz przeglądarkę ponownie"
+    use:modal={{ onclose: () => {}, foreground: true }}
+    use:primaryFocus
+  >
+    <div class="dialog-body">{@render pairbox()}</div>
+  </dialog>
+{/if}
 
 <style>
   .welcome {
@@ -130,6 +188,14 @@
     display: block;
     font-size: var(--text-xs);
     overflow-wrap: anywhere;
+  }
+  .pairing-layer .pairbox {
+    max-width: none;
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
   }
   @media (max-width: 700px) {
     .welcome {

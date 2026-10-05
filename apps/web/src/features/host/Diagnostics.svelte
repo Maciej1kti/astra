@@ -8,7 +8,14 @@
   import { api } from "../../lib/api/api";
   import { modal, layerExit } from "../../lib/ui/dialog";
 
-  let { onclose }: { onclose: () => void } = $props();
+  let {
+    onclose,
+    foreground = false,
+  }: {
+    onclose: () => void;
+    /** Opened from the pairing layer, which may cover retained dialogs. */
+    foreground?: boolean;
+  } = $props();
   type Diagnostics = {
     instance_id: string | null;
     state: string;
@@ -54,7 +61,7 @@
 
 <dialog
   class="app-dialog"
-  use:modal={{ onclose }}
+  use:modal={{ onclose, foreground }}
   out:layerExit|global
   aria-label="Diagnostyka serwera"
 >

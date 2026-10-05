@@ -90,38 +90,59 @@ await runBrowserSuite(
     }
     async function snapshot(page, name) {
       // WebKit's screenshot preparation injects a stylesheet the app CSP blocks.
-      if (!webkit) await page.screenshot({ path: join(evidence, name) });
+      if (webkit) return;
+      await page.evaluate(async () => {
+        await new Promise(requestAnimationFrame);
+        await Promise.allSettled(
+          document.getAnimations().map((animation) => animation.finished),
+        );
+      });
+      await page.screenshot({ path: join(evidence, name) });
     }
     // Each scenario inherits the session its predecessor paired again in place.
     let session = join(runtime, "browser-state.json");
-    async function check(id, name, run, { paired = true } = {}) {
-      const context = await newContext({
-        storageState: paired && session ? session : undefined,
-      });
-      const page = await context.newPage();
+    // A page that already paired again has its pairing screen loaded, so the
+    // next loss mounts that layer in the same pass as the dialogs it must cover.
+    let kept = null;
+    async function check(
+      id,
+      name,
+      run,
+      { paired = true, keepPage = false, samePage = false } = {},
+    ) {
+      const reused = samePage ? kept : null;
+      if (!reused) await kept?.context.close();
+      kept = null;
+      const context =
+        reused?.context ??
+        (await newContext({
+          storageState: paired && session ? session : undefined,
+        }));
+      const page = reused?.page ?? (await context.newPage());
       page.setDefaultTimeout(10000);
-      page.on("pageerror", (error) =>
-        errors.push({ id, message: error.message }),
-      );
+      const fault = (error) => errors.push({ id, message: error.message });
+      page.on("pageerror", fault);
       const started = Date.now();
       try {
         if (paired && !session) {
           await pairingSlot();
           await pair(page, { requireRequest: true });
         }
-        const detail = await run(page, context);
+        const detail = await run(page, context, !!reused);
         results.push({ id, name, status: "pass", detail });
         if (paired) {
           session = join(runtime, `session-recovery-${id}.json`);
           await context.storageState({ path: session });
         }
+        if (keepPage) kept = { context, page };
       } catch (error) {
         if (paired) session = null;
         results.push({ id, name, status: "fail", error: String(error) });
         await snapshot(page, `${id}-failure.png`).catch(() => {});
       } finally {
+        page.off("pageerror", fault);
         results.at(-1).ms = Date.now() - started;
-        await context.close();
+        if (!kept) await context.close();
         console.log(JSON.stringify(results.at(-1)));
         await writeFile(
           join(evidence, "results.json"),
@@ -261,12 +282,13 @@ await runBrowserSuite(
         assert.notEqual(cli("get", path).version, card.version);
         return { layout, requestId: attempts[0].requestId };
       },
+      { keepPage: true },
     );
 
     await check(
       "R04",
-      "A dialog that opens after session loss stays below pairing at 320px",
-      async (page) => {
+      "Dialogs opening under the pairing layer stay below it at 320px",
+      async (page, _context, continued) => {
         const candidate = config.projects[1];
         const path = `/api/v1/projects/${candidate.id}`;
         const before = cli("get", path);
@@ -291,7 +313,14 @@ await runBrowserSuite(
           assert.equal(reply.status(), 401);
           await route.fulfill({ response: reply });
         });
-        await page.goto(`${config.origin}/?view=projects`);
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        // A reload would discard the pairing screen this page already loaded.
+        if (continued)
+          await page
+            .getByRole("navigation", { name: "Widoki przestrzeni roboczej" })
+            .getByRole("button", { name: "Projekty", exact: true })
+            .click();
+        else await page.goto(`${config.origin}/?view=projects`);
         const tile = page.locator(
           `[data-project-board-item="${candidate.id}"]`,
         );
@@ -305,15 +334,47 @@ await runBrowserSuite(
           .getByRole("button", { name: "Przenieś do Wstrzymane", exact: true })
           .press("Enter");
         await expect.poll(() => attempts.length).toBe(1);
+        await page
+          .getByRole("button", {
+            name: "Ustawienia przestrzeni roboczej",
+            exact: true,
+          })
+          .click();
+        const settings = page.getByRole("dialog", {
+          name: "Ustawienia przestrzeni roboczej",
+          exact: true,
+        });
+        const timezone = settings.getByLabel("Strefa czasowa", { exact: true });
+        await expect(timezone).toBeEnabled();
+        const draft =
+          (await timezone.inputValue()) === "UTC" ? "Europe/Warsaw" : "UTC";
+        await timezone.fill(draft);
+        await page.evaluate(() => {
+          window.openedModals = [];
+          const open = HTMLDialogElement.prototype.showModal;
+          HTMLDialogElement.prototype.showModal = function () {
+            window.openedModals.push(this.getAttribute("aria-label"));
+            return open.call(this);
+          };
+        });
         await page.setViewportSize({ width: 320, height: 700 });
         revokeAll();
-        await expect(pairingHeading(page)).toBeVisible();
-        release();
+        await sessionLost(page);
         const dialog = page.getByRole("dialog", {
           name: "Przenieś projekt",
           exact: true,
         });
         await expect(dialog).toBeVisible();
+        const opened = await page.evaluate(() => window.openedModals);
+        const layer = "Połącz przeglądarkę ponownie";
+        assert.equal(opened.at(-1), layer, JSON.stringify(opened));
+        // With its screen loaded, pairing opens first and is raised again.
+        if (continued) {
+          assert.deepEqual(opened, [layer, "Przenieś projekt", layer]);
+          await expect(requestAccess(page)).toBeFocused();
+        }
+        release();
+        await expect(dialog).toContainText("Żądanie");
         const layout = await pairingFits(page);
         await snapshot(page, "late-dialog-session-lost-320.png");
         await reconnect(page);
@@ -324,13 +385,26 @@ await runBrowserSuite(
         });
         await expect(retry).toBeEnabled();
         await retry.click();
+        await expect.poll(() => cli("get", path).metadata.state).toBe("paused");
         await expect(dialog).toHaveCount(0);
         assert.equal(attempts.length, 2);
         assert.deepEqual(attempts[1], attempts[0]);
         assert.equal(attempts[0].version, `"${before.version}"`);
-        assert.equal(cli("get", path).metadata.state, "paused");
-        return { layout, identicalRetry: true };
+        await expect(timezone).toHaveValue(draft);
+        await expect(timezone).toBeEnabled();
+        await settings
+          .getByRole("button", { name: "Zamknij ustawienia", exact: true })
+          .click();
+        await settings
+          .getByRole("button", {
+            name: "Odrzuć wersję roboczą ustawień",
+            exact: true,
+          })
+          .click();
+        await expect(settings).toHaveCount(0);
+        return { layout, opened, identicalRetry: true };
       },
+      { samePage: true },
     );
 
     await check(
@@ -360,10 +434,13 @@ await runBrowserSuite(
         await editor
           .getByRole("button", { name: "Kopiuj wersję roboczą", exact: true })
           .click();
-        await expect(editor.getByRole("status")).toContainText(
-          /Skopiowano wersję roboczą|Schowek jest niedostępny/,
-        );
+        await expect(
+          editor
+            .getByText(/Skopiowano wersję roboczą|Schowek jest niedostępny/)
+            .first(),
+        ).toBeVisible();
         await expect(comment).toHaveValue("Copied before pairing");
+        await expect(comment).toBeDisabled();
         await editor
           .getByRole("button", { name: "Połącz ponownie", exact: true })
           .click();

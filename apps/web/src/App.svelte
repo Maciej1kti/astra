@@ -609,6 +609,10 @@
 
     adding = false;
     choosingCardProject = null;
+    // Read-only dialogs hold no work. Owners of drafts and unresolved commands
+    // stay mounted and are covered by the pairing layer until access returns.
+    diagnostics = false;
+    gitProject = "";
     error = "Sesja wygasła. Połącz tę przeglądarkę ponownie, aby kontynuować.";
   }
   function commandWarning(event: Event) {
@@ -1201,8 +1205,10 @@
       }}
     />{/if}{/if}
 {#if diagnostics}{#if Diagnostics}<Diagnostics
+      foreground={!boot}
       onclose={() => (diagnostics = false)}
     />{:else}<DeferredDialog
+      foreground={!boot}
       title="Diagnostyka"
       error={diagnosticsUI.error}
       retry={diagnosticsUI.load}
