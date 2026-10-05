@@ -232,8 +232,8 @@ export function command(
     bytes[i] = Number(time & 255n);
     time >>= 8n;
   }
-  bytes[6] = (bytes[6] & 15) | 112;
-  bytes[8] = (bytes[8] & 63) | 128;
+  bytes[6] = ((bytes[6] ?? 0) & 15) | 112;
+  bytes[8] = ((bytes[8] ?? 0) & 63) | 128;
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(
     "",
   );

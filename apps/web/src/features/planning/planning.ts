@@ -7,7 +7,8 @@ export type {
 import type { CalendarItem } from "../../lib/contracts/api.generated";
 /** Widget Date objects carry local calendar fields, never canonical timestamps. */
 export function widgetDate(day: string): Date {
-  const [y, m, d] = day.split("-").map(Number);
+  // A malformed day yields an invalid Date, which `dateOnly` refuses.
+  const [y = NaN, m = NaN, d = NaN] = day.split("-").map(Number);
   const date = new Date(0);
   date.setFullYear(y, m - 1, d);
   date.setHours(0, 0, 0, 0);

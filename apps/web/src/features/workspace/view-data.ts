@@ -233,9 +233,9 @@ export class ViewData {
     this.publish();
     try {
       const history = state.pageHistory[kind] ?? [null];
-      const target = back
-        ? history[history.length - 2]
-        : state.pageCursors[kind];
+      // The guards above established both values; an absent one is the first page.
+      const target =
+        (back ? history[history.length - 2] : state.pageCursors[kind]) ?? null;
       const result = await cursorPage(
         (cursor) => resourcePage(query, kind, cursor),
         target,

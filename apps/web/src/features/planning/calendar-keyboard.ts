@@ -39,9 +39,12 @@ export function calendarShortcuts(
       event.preventDefault();
       actions.today();
     }
-    if (["1", "2", "3", "4"].includes(event.key)) {
+    const layout = ["1", "2", "3", "4"].includes(event.key)
+      ? layouts[Number(event.key) - 1]
+      : undefined;
+    if (layout) {
       event.preventDefault();
-      actions.layout(layouts[Number(event.key) - 1]);
+      actions.layout(layout);
     }
   };
   node.addEventListener("keydown", shortcuts);

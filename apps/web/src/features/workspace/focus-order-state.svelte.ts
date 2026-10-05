@@ -144,9 +144,15 @@ export function focusOrderState(source: Source) {
       }));
       const slots = new Set(reorderedVisible.map(focusReferenceKey));
       let next = 0;
-      const proposed = fullOrder.map((item) =>
-        slots.has(focusReferenceKey(item)) ? reorderedVisible[next++] : item,
-      );
+      const proposed: FocusRef[] = [];
+      for (const item of fullOrder) {
+        const placed = slots.has(focusReferenceKey(item))
+          ? reorderedVisible[next++]
+          : item;
+        // More slots than reordered cards: the visible set is not this order's.
+        if (!placed) return;
+        proposed.push(placed);
+      }
       if (
         JSON.stringify(proposed) === JSON.stringify(fullOrder) ||
         next !== reorderedVisible.length

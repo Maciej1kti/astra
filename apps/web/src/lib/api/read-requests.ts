@@ -163,13 +163,13 @@ export async function mapReads<T, R>(
   signal?: AbortSignal,
 ): Promise<R[]> {
   const results: R[] = new Array(items.length);
-  let index = 0;
+  // The workers share one iterator, so each item is read exactly once.
+  const remaining = items.entries();
   await Promise.all(
     Array.from({ length: Math.min(3, items.length) }, async () => {
-      while (index < items.length) {
+      for (const [index, item] of remaining) {
         signal?.throwIfAborted();
-        const current = index++;
-        results[current] = await read(items[current]);
+        results[index] = await read(item);
       }
     }),
   );

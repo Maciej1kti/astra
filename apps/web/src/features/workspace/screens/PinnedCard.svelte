@@ -37,6 +37,8 @@
     open: () => void;
   } = $props();
   const id = $props.id();
+  // All previews of one card show the same observed workspace day.
+  const counterDate = $derived(item.daily_counters?.[0]?.date);
   const schedule = $derived(
     cardScheduleSummary(
       {
@@ -146,9 +148,7 @@
       data-focus-interactive
     >
       <span class="focus-counter-day"
-        >{item.daily_counters[0].date === today
-          ? "Dzisiaj"
-          : item.daily_counters[0].date}</span
+        >{counterDate === today ? "Dzisiaj" : counterDate}</span
       >
       {#each item.daily_counters as counter (counter.id)}
         <FocusCounterChip

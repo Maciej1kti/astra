@@ -582,6 +582,7 @@
       return () => clearTimeout(timer);
     }
     untrack(() => void refresh().catch(message));
+    return undefined;
   });
   $effect(() => {
     if (adding) void registrationUI.load();

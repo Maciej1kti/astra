@@ -16,8 +16,9 @@ parser.renderer.rules.link_open = (
   _environment,
   renderer,
 ) => {
-  tokens[index].attrSet("rel", "noopener noreferrer");
-  tokens[index].attrSet("target", "_blank");
+  const link = tokens[index];
+  link?.attrSet("rel", "noopener noreferrer");
+  link?.attrSet("target", "_blank");
   return renderer.renderToken(tokens, index, options);
 };
 export function renderMarkdown(source: string): string {

@@ -130,7 +130,7 @@
           ...baseTasks
             .map((t) => t.plannedStart ?? t.astra.due?.date)
             .filter((value): value is string => !!value),
-        ].sort()[0],
+        ].reduce((earliest, day) => (day < earliest ? day : earliest)),
         -2,
       ),
     ),
@@ -144,9 +144,7 @@
           ...baseTasks
             .map((t) => t.plannedEnd ?? t.astra.due?.date)
             .filter((value): value is string => !!value),
-        ]
-          .sort()
-          .at(-1)!,
+        ].reduce((latest, day) => (day > latest ? day : latest)),
         7,
       ),
     ),

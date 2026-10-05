@@ -197,6 +197,7 @@ export function focusOrderGesture(node: HTMLElement, initial: Options) {
         if (index === current) return;
         const reordered = [...cards];
         const [card] = reordered.splice(current, 1);
+        if (!card) return;
         reordered.splice(index, 0, card);
         options.commit(reordered, options.fullOrder(), options.version());
       },

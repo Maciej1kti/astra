@@ -9,8 +9,7 @@ export function acceptanceValidation(items: AcceptanceItem[]) {
   if (items.length > ACCEPTANCE_LIMIT)
     return `Użyj maksymalnie ${ACCEPTANCE_LIMIT} pozycji listy kontrolnej.`;
   const ids = new Set<string>();
-  for (let index = 0; index < items.length; index++) {
-    const item = items[index];
+  for (const [index, item] of items.entries()) {
     if (!isUuidAnyCase(item.id) || ids.has(item.id))
       return `Pozycja listy kontrolnej ${index + 1} ma nieprawidłowy lub powtórzony identyfikator. Skopiuj wersję roboczą przed ponownym otwarciem karty.`;
     ids.add(item.id);
@@ -29,14 +28,14 @@ export function moveAcceptanceToIndex(
   destination: number,
 ) {
   const index = items.findIndex((item) => item.id === id);
+  const item = items[index];
   if (
-    index < 0 ||
+    !item ||
     destination < 0 ||
     destination >= items.length ||
     destination === index
   )
     return items;
-  const item = items[index];
   const result = items.filter((value) => value.id !== id);
   result.splice(destination, 0, item);
   return result;

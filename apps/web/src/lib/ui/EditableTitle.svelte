@@ -27,7 +27,7 @@
     let width: number | undefined;
     let frame = 0;
     const observer = new ResizeObserver(([entry]) => {
-      if (entry.contentRect.width === width) return;
+      if (!entry || entry.contentRect.width === width) return;
       width = entry.contentRect.width;
       // Reflow on width changes without writing height during observer delivery.
       cancelAnimationFrame(frame);

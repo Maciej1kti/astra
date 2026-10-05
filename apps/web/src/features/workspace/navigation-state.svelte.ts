@@ -168,7 +168,7 @@ export function navigationState<Loaded = Resource>(
       invalidateResourceRead();
     },
     changeMonth(delta: number) {
-      const [year, month] = current.month.split("-").map(Number);
+      const [year = NaN, month = NaN] = current.month.split("-").map(Number);
       changeFilters({
         month: new Date(Date.UTC(year, month - 1 + delta, 1))
           .toISOString()

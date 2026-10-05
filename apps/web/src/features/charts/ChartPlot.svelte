@@ -129,18 +129,19 @@
         </g>
       {/each}
       {#each labels as i}
-        <text
-          x={chartX(i, count, width)}
-          y="279"
-          text-anchor={count === 1
-            ? "middle"
-            : i === 0
-              ? "start"
-              : i === count - 1
-                ? "end"
-                : "middle"}
-          class="axis-text">{chartDate(panel.series[0].points[i].from)}</text
-        >
+        {@const start = panel.series[0]?.points[i]?.from}
+        {#if start}<text
+            x={chartX(i, count, width)}
+            y="279"
+            text-anchor={count === 1
+              ? "middle"
+              : i === 0
+                ? "start"
+                : i === count - 1
+                  ? "end"
+                  : "middle"}
+            class="axis-text">{chartDate(start)}</text
+          >{/if}
       {/each}
     </svg>
   </div>
@@ -169,18 +170,20 @@
       <div class="inspection-values">
         {#each panel.series as row (chartSeriesKey(row.source))}
           {@const point = row.points[index]}
-          <span class={`inspection-value series-color-${row.color % 8}`}>
-            <span class="series-swatch" aria-hidden="true"></span>
-            <span>{row.source.name}</span>
-            <strong
-              >{point.value === null
-                ? "Brak zapisu"
-                : `${chartValue(point.value)} ${panel.unit}`}</strong
+          {#if point}<span
+              class={`inspection-value series-color-${row.color % 8}`}
             >
-            {#if point.days > 1 && point.recorded > 0}<small
-                >{point.recorded}/{point.days} dni z zapisami</small
-              >{/if}
-          </span>
+              <span class="series-swatch" aria-hidden="true"></span>
+              <span>{row.source.name}</span>
+              <strong
+                >{point.value === null
+                  ? "Brak zapisu"
+                  : `${chartValue(point.value)} ${panel.unit}`}</strong
+              >
+              {#if point.days > 1 && point.recorded > 0}<small
+                  >{point.recorded}/{point.days} dni z zapisami</small
+                >{/if}
+            </span>{/if}
         {/each}
       </div>
     </div>
@@ -214,10 +217,12 @@
                   ? ` – ${chartDate(point.to, true)}`
                   : ""}</th
               >
-              {#each panel.series as row}<td
-                  >{chartValue(row.points[i].value)}<small
-                    >{row.points[i].recorded}/{point.days} dni z zapisami</small
-                  ></td
+              {#each panel.series as row}
+                {@const cell = row.points[i]}
+                <td
+                  >{#if cell}{chartValue(cell.value)}<small
+                      >{cell.recorded}/{point.days} dni z zapisami</small
+                    >{/if}</td
                 >{/each}
             </tr>
           {/each}
