@@ -669,16 +669,21 @@ export async function runAutosaveChecks({
       await waitForWrite(projectPath, "PATCH", 2);
       await waitForSaved(projectPath, (value) => value.body === nextSource);
       await page.off("request", onRemoteImageRequest);
-      await expect(renderedBox).toHaveAttribute("tabindex", "0");
-      await renderedBox.focus();
-      await renderedBox.press("Enter");
+      // The rendered text is content; its labelled button is the keyboard control.
+      const editDescription = dialog().getByRole("button", {
+        name: "Edytuj opis: Projekt",
+        exact: true,
+      });
+      await expect(editDescription).toBeEnabled();
+      await editDescription.focus();
+      await editDescription.press("Enter");
       await expect(sourceEditor).toBeVisible();
       await expect(sourceEditor).toHaveValue(nextSource);
       await sourceEditor.press("Tab");
       await expect(renderedBox).toBeVisible();
       assert.equal(projectWrites(), 2);
-      await renderedBox.focus();
-      await renderedBox.press("Space");
+      await editDescription.focus();
+      await editDescription.press("Space");
       await expect(sourceEditor).toBeVisible();
       await sourceEditor.press("Tab");
       await expect(renderedBox).toBeVisible();
