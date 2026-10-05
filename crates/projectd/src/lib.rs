@@ -642,13 +642,19 @@ mod tests {
         .await
         .status()
     }
+    /// Wait until every request has passed admission: `draining` of them are
+    /// discarding their upload and exactly `free` admission permits are left.
+    /// Free permits alone would also be true before any request had started.
     async fn settled(
         requests: &[tokio::task::JoinHandle<Response>],
-        permits: &Semaphore,
+        service: &Service,
         free: usize,
+        draining: usize,
     ) {
-        tokio::time::timeout(Duration::from_secs(5), async {
-            while permits.available_permits() != free {
+        tokio::time::timeout(Duration::from_secs(30), async {
+            while service.browser_slots.available_permits() != free
+                || service.refusal_drains.available_permits() != 16 - draining
+            {
                 tokio::task::yield_now().await;
             }
         })
@@ -677,7 +683,7 @@ mod tests {
                 )));
             }
         }
-        settled(&requests, &service.browser_slots, 8).await;
+        settled(&requests, &service, 8, 15).await;
         assert_eq!(local_health(&service).await, 200);
         let asset = handle(service.clone(), browser_request("GET", "/", false), false).await;
         assert_ne!(asset.status(), 503);
@@ -766,6 +772,7 @@ mod tests {
     async fn network_bodies_cannot_exhaust_local_or_asset_admission() {
         let (_temp, mut service) = service();
         service.body_timeout = Duration::from_secs(60);
+        service.refusal_drain = Duration::from_secs(60);
         let mut requests = Vec::new();
         // Pairing must accept a body before any session exists.
         for _ in 0..16 {
@@ -776,7 +783,7 @@ mod tests {
             )));
         }
         // Two collectors hold admission; the other fourteen hold nothing.
-        settled(&requests, &service.browser_slots, 6).await;
+        settled(&requests, &service, 6, 14).await;
         assert_eq!(service.guest_bodies.available_permits(), 0);
         assert_eq!(local_health(&service).await, 200);
         // Static assets never read a request body, so they are still served.

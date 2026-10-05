@@ -70,13 +70,24 @@ gains the two recovery routes.
 
 The first pass's push was red on both systems in the browser step. The cause on
 Ubuntu was not isolated: the run after the refused-upload fix passed there, and
-has passed since. macOS then failed twice for different reasons, both fixed: a
-Focus touch-target assertion measured immediately after a viewport change, and
-a lease regression that bounded fifty short sleeps by wall-clock time.
-With those fixes macOS passed the whole workflow at `12f26c0` and Ubuntu at
-`e13ac8c`; Ubuntu's job at `12f26c0` was cancelled by the service because no
-runner was assigned. The dependency advisory scan, red before the first pass, is
-green.
+every later Ubuntu run that was assigned a runner has passed, through `6782543`.
+
+The slower macOS runner then failed five consecutive runs, each on a different
+timing assumption in a test rather than in the application, each located from
+its annotation and fixed:
+
+| Revision | Failed on macOS | Cause |
+| --- | --- | --- |
+| `728ceb5` | `focus` suite | A touch target measured right after a viewport change |
+| `e13ac8c` | Gate, Rust tests | A lease regression bounded fifty short sleeps by wall-clock time |
+| `12f26c0` | — (passed) | Ubuntu's job was cancelled by the service: no runner was assigned |
+| `f9a06bf` | `editor` suite | A just-added chip measured while its entrance still scaled it |
+| `6782543` | Gate, Rust tests | An admission test treated free permits as proof that every request had started |
+
+macOS therefore passed the whole workflow once, at `12f26c0`. The result for the
+revision that adds this table is not known when it is written. The dependency
+advisory scan, red before the first pass, is green. Eleven other suites assert a
+44px target immediately after a layout change and may meet the same condition.
 
 ## Measured and not changed
 
