@@ -5,6 +5,8 @@
     children,
     variant = "secondary",
     class: className,
+    // A button inside a form submits it unless told otherwise.
+    type = "button",
     ...attributes
   }: HTMLButtonAttributes & {
     children?: Snippet;
@@ -12,6 +14,6 @@
   } = $props();
 </script>
 
-<button {...attributes} class={["ui-button", variant, className]}
+<button {...attributes} {type} class={["ui-button", variant, className]}
   >{@render children?.()}</button
 >
