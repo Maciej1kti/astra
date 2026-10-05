@@ -280,3 +280,31 @@ test("counter drafts are exported and excluded from ordinary autosave", async ()
   );
   assert.equal("counters" in editorPayload(draft).set, false);
 });
+
+test("a rebuilt card draft keeps every entry that was typed but not submitted", async () => {
+  const { carryUnsubmittedEntries, autosaveSnapshot } =
+    await import("../../apps/web/src/features/editor/editor-draft.ts");
+  const previous = createEditorDraft(
+    editTarget("p", card({ labels: ["old"], pinned: false })),
+  );
+  previous.fields.tagDraft = "half a tag";
+  previous.fields.acceptanceDraft = "half a checklist item";
+  previous.fields.commentDraft = "Unsent reply";
+  previous.fields.counterDrafts.inputs.c = {
+    date: "2026-09-26",
+    text: "12",
+    base: 10,
+  };
+  const acknowledged = card({ labels: ["new"], pinned: true });
+  const rebuilt = createEditorDraft(editTarget("p", acknowledged));
+  const saved = autosaveSnapshot(rebuilt);
+  carryUnsubmittedEntries(rebuilt, previous);
+  assert.equal(rebuilt.fields.tagDraft, "half a tag");
+  assert.equal(rebuilt.fields.acceptanceDraft, "half a checklist item");
+  assert.equal(rebuilt.fields.commentDraft, "Unsent reply");
+  assert.equal(rebuilt.fields.counterDrafts.inputs.c.text, "12");
+  // Only unsubmitted input is carried; saved fields follow the new source.
+  assert.deepEqual(rebuilt.fields.labels, ["new"]);
+  assert.equal(rebuilt.source, acknowledged);
+  assert.equal(autosaveSnapshot(rebuilt), saved);
+});

@@ -10,8 +10,11 @@
     NativeFolderSelection as Selection,
     NativeFolderInput,
   } from "../../lib/contracts/api.generated";
-  import { subscribeSession } from "../../lib/api/session-events";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
+  import {
+    commandOperation,
+    sessionAccess,
+  } from "../../lib/api/command-operation.svelte";
   import { onMount } from "svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import {
@@ -21,7 +24,16 @@
     ApiError,
   } from "../../lib/api/api";
 
-  const operation = commandOperation(() => !accessLost);
+  const access = sessionAccess({
+    ended: () => {
+      choosing = false;
+      clearTimeout(timer);
+      // Only an unresolved registration is retained below the pairing layer.
+      if (!operation.pending && !job) onclose();
+    },
+  });
+  const accessLost = $derived(access.lost);
+  const operation = commandOperation(() => !access.lost);
 
   let {
     onclose,
@@ -35,10 +47,10 @@
   let name = $state("");
   let tracked = $state(false);
   let error = $state("");
+  let info = $state("");
   let plan = $state<Plan | null>(null);
   let choosing = $state(false);
   let busy = $state(false);
-  let accessLost = $state(false);
   let pending = $derived(operation.pending);
   let job = $state<string | null>(null);
   let selection = $state<NativeFolderInput | null>(null);
@@ -126,6 +138,7 @@
     if (!plan || accessLost) return;
     busy = true;
     error = "";
+    info = "";
     try {
       if (!job) {
         if (!operation.pending)
@@ -161,37 +174,20 @@
     }
   }
   async function copy() {
+    info = "";
     try {
       await navigator.clipboard.writeText(
         JSON.stringify({ selection, plan, pending, job }, null, 2),
       );
-      error = "Skopiowano szczegóły rejestracji.";
+      info = "Skopiowano szczegóły rejestracji.";
     } catch {
       error =
         "Schowek jest niedostępny. Skopiuj widoczny identyfikator żądania przed zamknięciem.";
     }
   }
-  onMount(() => {
-    const ended = () => {
-      accessLost = true;
-      choosing = false;
-      clearTimeout(timer);
-      error =
-        "Sesja wygasła. Szczegóły rejestracji zostały zachowane; połącz się ponownie przed kontynuowaniem.";
-    };
-    const restored = () => {
-      accessLost = false;
-    };
-    const unsubscribeSession = subscribeSession({
-      ended: ended,
-      restored: restored,
-    });
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      unsubscribeSession();
-    };
+  onMount(() => () => {
+    active = false;
+    clearTimeout(timer);
   });
 </script>
 
@@ -269,7 +265,12 @@
       </section>{/if}
     {#if pending}<p>Żądanie: {pending.requestId}</p>
       <button onclick={copy}>Kopiuj szczegóły rejestracji</button>{/if}
+    <SessionNotice
+      lost={accessLost}
+      message="Sesja wygasła. Szczegóły rejestracji zostały zachowane; połącz przeglądarkę ponownie przed kontynuowaniem."
+    />
     {#if error}<p role="alert">{error}</p>{/if}
+    {#if info}<p role="status">{info}</p>{/if}
     {#if confirmClose}<section class="notice" role="alert">
         <p>
           Zamknięcie nie anuluje rejestracji o nieznanym wyniku. Najpierw

@@ -1,5 +1,6 @@
 import { resourceLabel } from "../resources/resource-presentation.ts";
 import { validateCommandStatus } from "./confirmation.ts";
+import { isRejectedConflict } from "./command-result.ts";
 import {
   ApiError,
   commandStatus,
@@ -12,7 +13,9 @@ import {
 } from "./api.ts";
 
 export type CommandSnapshot =
-  | { phase: "idle" | "committed" | "rejected"; pending: null }
+  | { phase: "idle" | "committed"; pending: null }
+  // A rejected conflict stays recorded until a new proposal or acknowledgement.
+  | { phase: "rejected"; pending: null; conflict: boolean }
   | {
       phase: "ready" | "submitting" | "checking" | "uncertain" | "accepted";
       pending: Pending;
@@ -43,6 +46,9 @@ export class CommandController {
       this.snapshot.phase === "submitting" || this.snapshot.phase === "checking"
     );
   }
+  get conflict() {
+    return this.snapshot.phase === "rejected" && this.snapshot.conflict;
+  }
   private update(state: CommandSnapshot) {
     this.snapshot = state;
     this.dependencies.changed?.(state);
@@ -53,6 +59,14 @@ export class CommandController {
         "Rozstrzygnij oczekujące polecenie przed rozpoczęciem kolejnego.",
       );
     this.update({ phase: "ready", pending });
+  }
+  /** The owner has reviewed a finished outcome; nothing is refetched here. */
+  acknowledge() {
+    if (this.pending)
+      throw new Error(
+        "Rozstrzygnij oczekujące polecenie przed jego zamknięciem.",
+      );
+    this.update({ phase: "idle", pending: null });
   }
   finishJob() {
     if (this.snapshot.phase !== "accepted")
@@ -129,7 +143,11 @@ export class CommandController {
         rejected || (phase === "submitting" && isDefinitiveRejection(error));
       this.update(
         definitive
-          ? { phase: "rejected", pending: null }
+          ? {
+              phase: "rejected",
+              pending: null,
+              conflict: isRejectedConflict("rejected", error),
+            }
           : { phase: "uncertain", pending },
       );
       throw error;

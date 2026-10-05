@@ -2,18 +2,21 @@
   import { resourceLabel } from "../../lib/resources/resource-presentation.ts";
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
-  import { subscribeSession } from "../../lib/api/session-events";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import CommandRecovery from "../../lib/ui/CommandRecovery.svelte";
+  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
   import {
-    commandErrorMessage,
-    isRejectedConflict,
-  } from "../../lib/api/command-result";
+    commandOperation,
+    sessionAccess,
+  } from "../../lib/api/command-operation.svelte";
+  import { commandErrorMessage } from "../../lib/api/command-result";
   import { onMount } from "svelte";
   import { untrack } from "svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { command, resourcePath, type Summary } from "../../lib/api/api";
 
-  const operation = commandOperation(() => !accessLost);
+  const access = sessionAccess();
+  const accessLost = $derived(access.lost);
+  const operation = commandOperation(() => !access.lost);
 
   let {
     item,
@@ -40,36 +43,21 @@
   let pending = $derived(operation.pending);
   let busy = $derived(operation.busy);
   let error = $state("");
-  let conflict = $state(false);
-  let accessLost = $state(false);
+  let info = $state("");
+  const conflict = $derived(operation.conflict);
   function close() {
     if (!busy && !pending) onclose();
   }
   onMount(() => {
-    const lost = () => {
-      accessLost = true;
-      error =
-        "Sesja wygasła. Skopiuj tę propozycję przed zamknięciem i ponownym połączeniem.";
-    };
-    const restored = () => {
-      accessLost = false;
-    };
-    const unsubscribeSession = subscribeSession({
-      ended: lost,
-      restored: restored,
-    });
-
     if (autoCommit) void save();
-    return () => {
-      unsubscribeSession();
-    };
   });
   async function copyDraft() {
+    info = "";
     try {
       await navigator.clipboard.writeText(
         JSON.stringify({ item, status, before, pending }, null, 2),
       );
-      error = "Skopiowano propozycję.";
+      info = "Skopiowano propozycję.";
     } catch {
       error =
         "Schowek jest niedostępny. Zaznacz i skopiuj propozycję oraz identyfikator żądania.";
@@ -84,13 +72,13 @@
   async function runCommand(action: "submit" | "status") {
     if (!pending || accessLost || busy) return;
     error = "";
+    info = "";
     try {
       if (action === "status") await operation.confirm();
       else await operation.commit();
       onsaved();
     } catch (cause) {
       error = commandErrorMessage(cause);
-      conflict = isRejectedConflict(operation.phase, cause);
     }
   }
   async function save() {
@@ -143,15 +131,22 @@
         {/each}
       </select></label
     >
-    {#if error}<p role="alert">{error}</p>{/if}{#if conflict}<p>
+    <SessionNotice
+      lost={accessLost}
+      message="Sesja wygasła. Ta propozycja została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
+    />
+    {#if error}<p role="alert">{error}</p>{/if}
+    {#if info}<p role="status">{info}</p>{/if}{#if conflict}<p>
         Karta lub jej sąsiedzi się zmienili. Zamknij tę propozycję i sprawdź
         aktualną tablicę.
       </p>{/if}
-    {#if pending}<p>Żądanie: {pending.requestId}</p>
-      <button onclick={check} disabled={busy}>Sprawdź stan</button><button
-        onclick={transmit}
-        disabled={busy}>Ponów to samo polecenie</button
-      >{/if}
+    <CommandRecovery
+      {pending}
+      {busy}
+      {accessLost}
+      oncheck={check}
+      onretry={transmit}
+    />
     {#if error || pending || accessLost}<button
         type="button"
         onclick={copyDraft}>Kopiuj wersję roboczą</button

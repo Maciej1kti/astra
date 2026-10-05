@@ -156,3 +156,64 @@ test("status confirmation completes only with a committed result; malformed repl
     { kind: "accepted", jobId: "job" },
   );
 });
+
+test("a definitive conflict is recorded until its owner acknowledges it", async () => {
+  const conflict = new ApiError(412, { error: { code: "VERSION_CONFLICT" } });
+  const direct = new CommandController({
+    send: async () => {
+      throw conflict;
+    },
+  });
+  assert.equal(direct.conflict, false);
+  direct.prepare(pending);
+  await assert.rejects(direct.retry(), { status: 412 });
+  assert.equal(direct.state.phase, "rejected");
+  assert.equal(direct.conflict, true);
+  direct.acknowledge();
+  assert.deepEqual(direct.state, { phase: "idle", pending: null });
+  assert.equal(direct.conflict, false);
+
+  const checked = new CommandController({
+    status: async () => ({
+      api_version: "1",
+      request_id: pending.requestId,
+      state: "rejected",
+      error: {
+        api_version: "1",
+        error: { code: "VERSION_CONFLICT", message: "Conflict" },
+      },
+    }),
+  });
+  checked.prepare(pending);
+  await assert.rejects(checked.check(), { status: 412 });
+  assert.equal(checked.conflict, true);
+  // A deliberate new proposal replaces the recorded conflict.
+  checked.prepare(pending);
+  assert.equal(checked.conflict, false);
+});
+
+test("uncertain outcomes and ordinary rejections never record a conflict", async () => {
+  const validation = new CommandController({
+    send: async () => {
+      throw new ApiError(422, { error: { code: "INVALID_TIMEZONE" } });
+    },
+  });
+  validation.prepare(pending);
+  await assert.rejects(validation.retry(), { status: 422 });
+  assert.equal(validation.state.phase, "rejected");
+  assert.equal(validation.conflict, false);
+
+  // A failed lookup of a conflicting command proves nothing about it.
+  const lookup = new CommandController({
+    status: async () => {
+      throw new ApiError(412, { error: { code: "VERSION_CONFLICT" } });
+    },
+  });
+  lookup.prepare(pending);
+  await assert.rejects(lookup.check(), { status: 412 });
+  assert.equal(lookup.state.phase, "uncertain");
+  assert.equal(lookup.conflict, false);
+  assert.equal(lookup.pending, pending);
+  assert.throws(() => lookup.acknowledge(), /oczekujące/);
+  assert.equal(lookup.pending, pending);
+});

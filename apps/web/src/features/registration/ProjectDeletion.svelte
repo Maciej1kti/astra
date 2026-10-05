@@ -3,16 +3,18 @@
   import Button from "../../lib/ui/Button.svelte";
 
   import { onMount } from "svelte";
-  import { subscribeSession } from "../../lib/api/session-events";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import CommandRecovery from "../../lib/ui/CommandRecovery.svelte";
+  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
+  import { counted, countedFiles } from "../../lib/ui/locale";
+  import {
+    commandOperation,
+    sessionAccess,
+  } from "../../lib/api/command-operation.svelte";
   import {
     deleteProject,
     getProjectDeletionPlan,
   } from "../../lib/api/resources";
-  import {
-    commandErrorMessage,
-    isRejectedConflict,
-  } from "../../lib/api/command-result";
+  import { commandErrorMessage } from "../../lib/api/command-result";
   import type { Summary } from "../../lib/api/api";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { errorMessage } from "../../lib/api/messages";
@@ -27,19 +29,26 @@
     ondeleted: (id: string) => void;
   } = $props();
 
-  let accessLost = $state(false);
+  const access = sessionAccess({
+    // Nothing is retained without a command; pairing needs no dialog below it.
+    ended: () => {
+      if (!operation.pending) onclose();
+    },
+  });
+  const accessLost = $derived(access.lost);
   let loading = $state(true);
   let plan = $state<Awaited<ReturnType<typeof getProjectDeletionPlan>> | null>(
     null,
   );
   let error = $state("");
-  let conflict = $state(false);
-  const operation = commandOperation(() => !accessLost);
+  let info = $state("");
+  const operation = commandOperation(() => !access.lost);
+  const conflict = $derived(operation.conflict);
   let pending = $derived(operation.pending);
   let busy = $derived(operation.busy);
 
   function bytes(value: number) {
-    if (value < 1024) return `${value} bajtów`;
+    if (value < 1024) return counted(value, "bajt", "bajty", "bajtów");
     if (value < 1024 * 1024)
       return `${(value / 1024).toLocaleString("pl-PL", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KiB`;
     return `${(value / (1024 * 1024)).toLocaleString("pl-PL", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MiB`;
@@ -48,7 +57,9 @@
     if (busy || pending) return;
     loading = true;
     error = "";
-    conflict = false;
+    info = "";
+    // Loading a new preview is the deliberate step that leaves the conflict.
+    if (conflict) operation.acknowledge();
     plan = null;
     try {
       plan = await getProjectDeletionPlan(project.id);
@@ -82,52 +93,34 @@
   async function runDelete(action: "submit" | "status") {
     if (!pending || busy || accessLost) return;
     error = "";
+    info = "";
     try {
       if (action === "status") await operation.confirm();
       else await operation.commit();
       ondeleted(project.id);
     } catch (cause) {
       error = commandErrorMessage(cause);
-      if (isRejectedConflict(operation.phase, cause)) {
-        conflict = true;
+      if (operation.conflict)
         error = `${error} Wczytaj nowy podgląd usunięcia przed kolejną próbą.`;
-      }
     }
   }
   async function copyDetails() {
+    info = "";
     try {
       await navigator.clipboard.writeText(
         JSON.stringify({ project_id: project.id, plan, pending }, null, 2),
       );
-      error = "Skopiowano szczegóły usunięcia.";
+      info = "Skopiowano szczegóły usunięcia.";
     } catch {
       error =
         "Schowek jest niedostępny. Pozostaw to okno otwarte do rozstrzygnięcia polecenia usunięcia.";
     }
   }
-  function beforeUnload(event: BeforeUnloadEvent) {
-    if (busy || pending) {
-      event.preventDefault();
-      event.returnValue = "";
-    }
-  }
 
   onMount(() => {
     void loadPlan();
-    const ended = () => {
-      accessLost = true;
-      error =
-        "Sesja wygasła. Polecenie usunięcia zostało zachowane; połącz się ponownie przed kontynuowaniem.";
-    };
-    const restored = () => {
-      accessLost = false;
-    };
-    const unsubscribe = subscribeSession({ ended, restored });
-    return unsubscribe;
   });
 </script>
-
-<svelte:window onbeforeunload={beforeUnload} />
 
 <dialog
   use:modal={{ onclose: close }}
@@ -154,7 +147,9 @@
       >
         <strong>Podgląd usunięcia</strong>
         <p class="breadcrumb">{plan.display_path}</p>
-        <p>{plan.file_count} plików · {bytes(plan.total_bytes)}</p>
+        <p>
+          {countedFiles(plan.file_count)} · {bytes(plan.total_bytes)}
+        </p>
       </section>{/if}
     {#if conflict}<section class="notice" role="alert">
         <p>Podgląd usunięcia jest już nieaktualny.</p>
@@ -167,17 +162,25 @@
           Usunięcie oczekuje na potwierdzenie. Zachowaj identyfikator żądania
           podczas sprawdzania wyniku.
         </p>
-        <p>Żądanie: <code>{pending.requestId}</code></p>
         <button onclick={() => void copyDetails()} disabled={busy}
           >Kopiuj szczegóły usunięcia</button
         >
-        <button onclick={() => void check()} disabled={busy || accessLost}
-          >Sprawdź stan usunięcia</button
-        ><button onclick={() => void retry()} disabled={busy || accessLost}
-          >Ponów to samo usunięcie</button
-        >
+        <CommandRecovery
+          {pending}
+          {busy}
+          {accessLost}
+          checkLabel="Sprawdź stan usunięcia"
+          retryLabel="Ponów to samo usunięcie"
+          oncheck={() => void check()}
+          onretry={() => void retry()}
+        />
       </section>{/if}
+    <SessionNotice
+      lost={accessLost}
+      message="Sesja wygasła. Polecenie usunięcia zostało zachowane; połącz przeglądarkę ponownie przed kontynuowaniem."
+    />
     {#if error}<p class="notice" role="alert">{error}</p>{/if}
+    {#if info}<p class="notice" role="status">{info}</p>{/if}
   </div>
   <footer class="dialog-footer">
     <button onclick={close} disabled={busy || !!pending}

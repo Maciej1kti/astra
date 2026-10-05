@@ -2,12 +2,13 @@
   import { onMount } from "svelte";
   import type { Summary } from "../../lib/api/api";
   import { command, resourcePath } from "../../lib/api/api";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
   import {
-    commandErrorMessage,
-    isRejectedConflict,
-  } from "../../lib/api/command-result";
-  import { subscribeSession } from "../../lib/api/session-events";
+    commandOperation,
+    sessionAccess,
+  } from "../../lib/api/command-operation.svelte";
+  import { commandErrorMessage } from "../../lib/api/command-result";
+  import CommandRecovery from "../../lib/ui/CommandRecovery.svelte";
+  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
@@ -25,10 +26,12 @@
     onclose: () => void;
     onsaved: () => void;
   } = $props();
-  let accessLost = $state(false);
+  const access = sessionAccess();
+  const accessLost = $derived(access.lost);
   let error = $state("");
-  let conflict = $state(false);
-  const operation = commandOperation(() => !accessLost);
+  let info = $state("");
+  const operation = commandOperation(() => !access.lost);
+  const conflict = $derived(operation.conflict);
   const pending = $derived(operation.pending);
   const busy = $derived(operation.busy);
   function closeWhenResolved() {
@@ -36,16 +39,6 @@
   }
 
   onMount(() => {
-    const unsubscribe = subscribeSession({
-      ended: () => {
-        accessLost = true;
-        error =
-          "Sesja wygasła. Skopiuj tę propozycję przed ponownym połączeniem.";
-      },
-      restored: () => {
-        accessLost = false;
-      },
-    });
     operation.prepare(
       command(
         resourcePath(item),
@@ -55,26 +48,27 @@
       ),
     );
     void transmit();
-    return unsubscribe;
   });
 
   async function transmit(action: "submit" | "status" = "submit") {
     if (!pending || busy || accessLost) return;
     error = "";
+    info = "";
     try {
       if (action === "status") await operation.confirm();
       else await operation.commit();
       onsaved();
     } catch (cause) {
       error = commandErrorMessage(cause);
-      conflict = isRejectedConflict(operation.phase, cause);
     }
   }
   async function copyDraft() {
+    info = "";
     try {
       await navigator.clipboard.writeText(
         JSON.stringify({ item, state: nextState, pending }, null, 2),
       );
+      info = "Skopiowano propozycję.";
     } catch {
       error =
         "Schowek jest niedostępny. Skopiuj propozycję i identyfikator żądania.";
@@ -82,10 +76,10 @@
   }
 </script>
 
-{#if !error}<p class="project-save-status" role="status">
+{#if !error && !accessLost}<p class="project-save-status" role="status">
     Zapisywanie statusu projektu…
   </p>{/if}
-{#if error}
+{#if error || accessLost}
   <dialog
     class="app-dialog dialog-small"
     aria-label="Przenieś projekt"
@@ -100,21 +94,23 @@
     />
     <div class="dialog-body">
       <p><strong>{item.title}</strong> → {resourceLabel(nextState)}</p>
-      <p role="alert">{error}</p>
+      <SessionNotice
+        lost={accessLost}
+        message="Sesja wygasła. Ta propozycja została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
+      />
+      {#if error}<p role="alert">{error}</p>{/if}
+      {#if info}<p role="status">{info}</p>{/if}
       {#if conflict}<p>
           Projekt się zmienił. Zamknij tę propozycję i sprawdź aktualny projekt
           przed ponownym przeniesieniem.
         </p>{/if}
-      {#if pending}<p>Żądanie: {pending.requestId}</p>
-        <button
-          type="button"
-          onclick={() => transmit("status")}
-          disabled={busy || accessLost}>Sprawdź stan</button
-        ><button
-          type="button"
-          onclick={() => transmit()}
-          disabled={busy || accessLost}>Ponów to samo polecenie</button
-        >{/if}
+      <CommandRecovery
+        {pending}
+        {busy}
+        {accessLost}
+        oncheck={() => transmit("status")}
+        onretry={() => transmit()}
+      />
       <button type="button" onclick={copyDraft}>Kopiuj wersję roboczą</button>
       {#if accessLost && pending}<details>
           <summary>Zamknij bez rozstrzygnięcia</summary>

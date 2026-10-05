@@ -31,8 +31,12 @@
   import { countersDirty } from "../cards/card-counters";
   import CardComments from "../cards/CardComments.svelte";
   import "../../styles/editor.css";
-  import { subscribeSession } from "../../lib/api/session-events";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import CommandRecovery from "../../lib/ui/CommandRecovery.svelte";
+  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
+  import {
+    commandOperation,
+    sessionAccess,
+  } from "../../lib/api/command-operation.svelte";
   import {
     commandErrorMessage,
     isRejectedConflict,
@@ -52,6 +56,7 @@
     autosaveSnapshot,
     discreteAutosaveChange,
     detachedEditorDraft,
+    carryUnsubmittedEntries,
   } from "./editor-draft";
   import { EditorAutosave, type AutosaveState } from "./editor-autosave.ts";
   import { editTarget, type EditorTarget } from "./editor-target";
@@ -61,8 +66,21 @@
   import { api, command, type Resource, type Pending } from "../../lib/api/api";
   import { deleteCard } from "../../lib/api/resources";
 
-  const operation = commandOperation(() => !accessLost);
-  const deleteOperation = commandOperation(() => !accessLost);
+  const access = sessionAccess({
+    ended: () => {
+      opening?.cancel();
+      // Without unsaved work nothing is retained below the pairing layer.
+      if (!dirty && !pending && !deletePending && !autosave.hasWork) {
+        onclose();
+        return;
+      }
+      history = [];
+      conflict = null;
+    },
+  });
+  const accessLost = $derived(access.lost);
+  const operation = commandOperation(() => !access.lost);
+  const deleteOperation = commandOperation(() => !access.lost);
 
   let {
     target,
@@ -124,6 +142,7 @@
 
   let projectName = $state("");
   let statusMessage = $state("");
+  let copyMessage = $state("");
   let read = $state(
     untrack(() =>
       resource?.type === "update" ? (resource.read ?? false) : false,
@@ -207,7 +226,6 @@
             !!draft.fields.acceptanceDraft.trim()),
   );
   let dirty = $derived(persistedDirty || unfinishedEntry);
-  let accessLost = $state(false);
   let locked = $derived(
     busy ||
       !!pending ||
@@ -221,6 +239,7 @@
   );
 
   async function copyDraft() {
+    copyMessage = "";
     try {
       await navigator.clipboard.writeText(
         JSON.stringify(
@@ -234,39 +253,16 @@
           2,
         ),
       );
-      error = "Skopiowano wersję roboczą.";
+      copyMessage = "Skopiowano wersję roboczą.";
     } catch {
       error =
         "Schowek jest niedostępny. Zaznacz i skopiuj pola wersji roboczej.";
     }
   }
-  onMount(() => {
-    const ended = () => {
-      opening?.cancel();
-      if (!dirty && !pending && !deletePending && !autosave.hasWork) {
-        onclose();
-        return;
-      }
-      accessLost = true;
-      history = [];
-      conflict = null;
-      error =
-        "Sesja wygasła. Wersja robocza została zachowana; skopiuj ją przed zamknięciem, a następnie połącz się ponownie.";
-    };
-    const restored = () => {
-      accessLost = false;
-    };
-    const unsubscribeSession = subscribeSession({
-      ended: ended,
-      restored: restored,
-    });
-
-    return () => {
-      disposed = true;
-      opening?.cancel();
-      clearAutosaveTimer();
-      unsubscribeSession();
-    };
+  onMount(() => () => {
+    disposed = true;
+    opening?.cancel();
+    clearAutosaveTimer();
   });
   function close() {
     if (closing || busy || deleteBusy || commentFlushing) return;
@@ -798,6 +794,7 @@
     if (!pending || accessLost || busy) return;
     const submitted = intent;
     error = "";
+    copyMessage = "";
     try {
       const reply =
         action === "status"
@@ -854,12 +851,9 @@
         if (!next || !("type" in next))
           throw new Error("Nie zwrócono zapisanego elementu.");
         currentResource = next;
-        const previousFields = draft.type === "card" ? draft.fields : null;
-        draft = draftForResource(next);
-        if (draft.type === "card" && previousFields) {
-          draft.fields.commentDraft = previousFields.commentDraft;
-          draft.fields.counterDrafts = previousFields.counterDrafts;
-        }
+        const rebuilt = draftForResource(next);
+        carryUnsubmittedEntries(rebuilt, draft);
+        draft = rebuilt;
         baseline = autosaveSnapshot(draft);
         watchedAutosaveSnapshot = baseline;
         autosave.reset(next);
@@ -998,6 +992,10 @@
             </p>{/each}
         </div>
       {/if}
+      <SessionNotice
+        lost={accessLost}
+        message="Sesja wygasła. Wersja robocza została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
+      />
       {#if error}<div bind:this={notice} class="notice" role="alert">
           {error}
         </div>{/if}
@@ -1029,47 +1027,43 @@
           Zamknij i otwórz ponownie, aby edytować aktualną wersję. Najpierw
           skopiuj zmiany, które chcesz zachować.
         </p>{/if}
-      {#if pending}<p>Żądanie <code>{pending.requestId}</code></p>
-        <div class="row">
-          <button type="button" onclick={resolve} disabled={busy || accessLost}
-            >Sprawdź stan</button
-          ><button
-            type="button"
-            onclick={transmit}
-            disabled={busy || accessLost}>Ponów to samo polecenie</button
-          >
-        </div>{/if}
+      <CommandRecovery
+        {pending}
+        {busy}
+        {accessLost}
+        oncheck={resolve}
+        onretry={transmit}
+      />
       {#if (dirty || pending || deletePending || autosaveState.pending) && (!autosaveResource || discard || accessLost || !!error || !!autosaveError || !!conflict || !!pending || !!deletePending)}<button
           type="button"
           onclick={copyDraft}>Kopiuj wersję roboczą</button
         >{/if}
-      {#if autosaveResource && autosaveState.pending && (autosaveState.phase === "uncertain" || autosaveState.phase === "conflict")}<p
-        >
-          Żądanie automatycznego zapisu <code
-            >{autosaveState.pending.requestId}</code
-          >
-        </p>
-        {#if autosaveState.phase === "uncertain"}<div class="row">
-            <button type="button" onclick={autosaveCheck} disabled={accessLost}
-              >Sprawdź stan</button
-            ><button type="button" onclick={autosaveRetry} disabled={accessLost}
-              >Ponów to samo polecenie</button
-            >
-          </div>{/if}{/if}
-      {#if deletePending}<p>
-          Żądanie usunięcia <code>{deletePending.requestId}</code>
-        </p>
-        <div class="row">
-          <button
-            type="button"
-            onclick={() => void checkDelete()}
-            disabled={deleteBusy || accessLost}>Sprawdź stan usunięcia</button
-          ><button
-            type="button"
-            onclick={() => void retryDelete()}
-            disabled={deleteBusy || accessLost}>Ponów to samo usunięcie</button
-          >
-        </div>{/if}
+      {#if copyMessage}<p class="action-status" role="status">
+          {copyMessage}
+        </p>{/if}
+      {#if autosaveResource && (autosaveState.phase === "uncertain" || autosaveState.phase === "conflict")}
+        <CommandRecovery
+          pending={autosaveState.pending}
+          {accessLost}
+          label="Żądanie automatycznego zapisu"
+          oncheck={autosaveState.phase === "uncertain"
+            ? autosaveCheck
+            : undefined}
+          onretry={autosaveState.phase === "uncertain"
+            ? autosaveRetry
+            : undefined}
+        />
+      {/if}
+      <CommandRecovery
+        pending={deletePending}
+        busy={deleteBusy}
+        {accessLost}
+        label="Żądanie usunięcia"
+        checkLabel="Sprawdź stan usunięcia"
+        retryLabel="Ponów to samo usunięcie"
+        oncheck={() => void checkDelete()}
+        onretry={() => void retryDelete()}
+      />
       {#if discard}<div role="alert" class="notice">
           <p>
             {pending || deletePending || autosaveWork

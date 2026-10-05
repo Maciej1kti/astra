@@ -171,6 +171,20 @@ export function autosaveSnapshot(draft: EditorDraft): string {
   delete value.counterDrafts;
   return JSON.stringify(value);
 }
+/**
+ * A card draft rebuilt from an acknowledged source keeps what was typed but
+ * never submitted. These entries belong to the editor, not to the source.
+ */
+export function carryUnsubmittedEntries(
+  next: EditorDraft,
+  previous: EditorDraft,
+) {
+  if (next.type !== "card" || previous.type !== "card") return;
+  next.fields.tagDraft = previous.fields.tagDraft;
+  next.fields.acceptanceDraft = previous.fields.acceptanceDraft;
+  next.fields.commentDraft = previous.fields.commentDraft;
+  next.fields.counterDrafts = previous.fields.counterDrafts;
+}
 /** Picker and checklist structure changes save without the typing debounce. */
 export function discreteAutosaveChange(previous: string, next: string) {
   try {

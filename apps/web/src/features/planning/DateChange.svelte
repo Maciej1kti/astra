@@ -4,8 +4,12 @@
   import { eventEnd } from "../../lib/resources/timed-event.ts";
   import Button from "../../lib/ui/Button.svelte";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
-  import { subscribeSession } from "../../lib/api/session-events";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import CommandRecovery from "../../lib/ui/CommandRecovery.svelte";
+  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
+  import {
+    commandOperation,
+    sessionAccess,
+  } from "../../lib/api/command-operation.svelte";
   import {
     commandErrorMessage,
     isRejectedConflict,
@@ -15,7 +19,9 @@
   import { api, command, type Resource } from "../../lib/api/api";
   import { untrack } from "svelte";
 
-  const operation = commandOperation(() => !accessLost);
+  const access = sessionAccess();
+  const accessLost = $derived(access.lost);
+  const operation = commandOperation(() => !access.lost);
 
   let {
     path,
@@ -51,38 +57,22 @@
       : { schedule: { start, end } };
   let pending = $derived(operation.pending);
   let error = $state("");
+  let info = $state("");
   let busy = $derived(operation.busy);
   let conflict = $state<{ current: Resource | null } | null>(null);
-  let accessLost = $state(false);
   function close() {
     if (!busy && !pending) onclose();
   }
   onMount(() => {
-    const lost = () => {
-      accessLost = true;
-      error =
-        "Sesja wygasła. Skopiuj tę propozycję przed zamknięciem i ponownym połączeniem.";
-    };
-    const restored = () => {
-      accessLost = false;
-    };
-    const unsubscribeSession = subscribeSession({
-      ended: lost,
-      restored: restored,
-    });
-
     if (autoCommit) void save();
-
-    return () => {
-      unsubscribeSession();
-    };
   });
   async function copyDraft() {
+    info = "";
     try {
       await navigator.clipboard.writeText(
         JSON.stringify({ path, version, ...proposal(), pending }, null, 2),
       );
-      error = "Skopiowano propozycję.";
+      info = "Skopiowano propozycję.";
     } catch {
       error =
         "Schowek jest niedostępny. Zaznacz i skopiuj propozycję oraz identyfikator żądania.";
@@ -97,6 +87,7 @@
   async function runCommand(action: "submit" | "status") {
     if (!pending || accessLost || busy) return;
     error = "";
+    info = "";
     try {
       if (action === "status") await operation.confirm();
       else await operation.commit();
@@ -136,11 +127,14 @@
   }
 </script>
 
-{#if autoCommit && !error}<p role="status" class="planning-save-status">
+{#if autoCommit && !error && !accessLost}<p
+    role="status"
+    class="planning-save-status"
+  >
     Zapisywanie zaplanowanych dat…
   </p>{/if}
 
-{#if !autoCommit || error}
+{#if !autoCommit || error || accessLost}
   <dialog
     class="app-dialog dialog-small"
     use:modal={{ onclose: close }}
@@ -203,7 +197,12 @@
             >
           {/if}
         </div>
+        <SessionNotice
+          lost={accessLost}
+          message="Sesja wygasła. Ta propozycja została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
+        />
         {#if error}<p role="alert">{error}</p>{/if}
+        {#if info}<p role="status">{info}</p>{/if}
         {#if conflict?.current}<p>
             Aktualny zapisany harmonogram: {JSON.stringify(
               conflict.current.type === "card"
@@ -214,12 +213,13 @@
             )}. Proponowane daty pozostają powyżej. Otwórz kartę ponownie, aby
             rozpocząć nową edycję.
           </p>{/if}
-        {#if pending}<p>Żądanie: {pending.requestId}</p>
-          <button type="button" onclick={status} disabled={busy}
-            >Sprawdź stan</button
-          ><button type="button" onclick={transmit} disabled={busy}
-            >Ponów to samo polecenie</button
-          >{/if}
+        <CommandRecovery
+          {pending}
+          {busy}
+          {accessLost}
+          oncheck={status}
+          onretry={transmit}
+        />
         {#if error || pending || accessLost}<button
             type="button"
             onclick={copyDraft}>Kopiuj wersję roboczą</button

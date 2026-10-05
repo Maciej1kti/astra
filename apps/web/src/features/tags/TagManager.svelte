@@ -9,8 +9,11 @@
   import { onMount, untrack } from "svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api } from "../../lib/api/api";
-  import { commandOperation } from "../../lib/api/command-operation.svelte";
-  import { subscribeSession } from "../../lib/api/session-events";
+  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
+  import {
+    commandOperation,
+    sessionAccess,
+  } from "../../lib/api/command-operation.svelte";
   import type {
     Job,
     ProjectTagRenamePlan,
@@ -44,9 +47,15 @@
   let job = $state<Job | null>(null);
   let busy = $state(false);
   let error = $state("");
-  let accessLost = $state(false);
   let active = true;
-  const operation = commandOperation(() => !accessLost);
+  const access = sessionAccess({
+    // Only an unresolved rename is retained below the pairing layer.
+    ended: () => {
+      if (!operation.pending && !job) onclose();
+    },
+  });
+  const accessLost = $derived(access.lost);
+  const operation = commandOperation(() => !access.lost);
   const pending = $derived(operation.pending);
   const canClose = $derived(
     !busy &&
@@ -109,9 +118,14 @@
         if (operation.phase === "accepted") operation.finishJob();
         plan = null;
         job = null;
-        catalog = await getProjectTags(project);
+        // The rename is durable. Other views must learn of it even when this
+        // dialog cannot read its own catalog again.
         onchanged();
         window.dispatchEvent(new Event("tag-suggestions-changed"));
+        source = "";
+        target = "";
+        catalog = null;
+        catalog = await getProjectTags(project);
       } else if (next.state === "running") {
         setTimeout(() => {
           if (active) void poll(id);
@@ -159,19 +173,8 @@
   }
   onMount(() => {
     void load();
-    const unsubscribe = subscribeSession({
-      ended: () => {
-        accessLost = true;
-        error =
-          "Sesja wygasła. Połącz się ponownie, aby sprawdzić to polecenie.";
-      },
-      restored: () => {
-        accessLost = false;
-      },
-    });
     return () => {
       active = false;
-      unsubscribe();
     };
   });
 </script>
@@ -200,6 +203,10 @@
     {/snippet}
   </DialogHeader>
   <div class="dialog-body">
+    <SessionNotice
+      lost={accessLost}
+      message="Sesja wygasła. To polecenie zostało zachowane; połącz przeglądarkę ponownie, aby je sprawdzić."
+    />
     {#if error}<p class="notice" role="alert">{error}</p>{/if}
     <label for="tag-manager-project">Projekt</label>
     <select
