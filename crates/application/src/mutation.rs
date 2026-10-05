@@ -91,8 +91,8 @@ impl Engine {
         if let Some(reply) = self.journal.admit(&command, now_millis())? {
             return Ok(reply);
         }
-        let reject = |mut reply: Reply| -> Result<Reply, AppError> {
-            reply.body["error"]["request_id"] = json!(request_id);
+        let reject = |reply: Reply| -> Result<Reply, AppError> {
+            let reply = reply.for_request(&request_id);
             Ok(self
                 .journal
                 .record(&command, &reply, None, now_millis(), true)?

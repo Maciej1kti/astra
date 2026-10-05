@@ -261,8 +261,10 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
             body,
         ),
     };
-    let Value::Object(mut metadata) = metadata else {
-        unreachable!("validated metadata is an object");
+    // A metadata model is a struct, so it serializes to an object.
+    let mut metadata = match metadata {
+        Value::Object(metadata) => metadata,
+        _ => serde_json::Map::new(),
     };
     let version = &source.version;
     let mut end = max.min(body.len());
@@ -271,7 +273,7 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
     }
     let mut out = json!({
         "type": kind,
-        "id": metadata["id"],
+        "id": metadata.get("id"),
         "title": metadata.get("title").or_else(||metadata.get("name")).or_else(||metadata.get("summary")).unwrap_or(&json!("")),
         "version": version,
         "excerpt": &body[..end],

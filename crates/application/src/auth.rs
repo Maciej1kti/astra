@@ -93,7 +93,10 @@ AND expires_at>?1",
         let pending_token = secret()?;
         let csrf = secret()?;
         let random = secret()?;
-        let challenge = format!("{} {} {}", &random[..4], &random[4..8], &random[8..12]);
+        let challenge = match (random.get(..4), random.get(4..8), random.get(8..12)) {
+            (Some(first), Some(second), Some(third)) => format!("{first} {second} {third}"),
+            _ => return Err(AppError::invariant("pairing challenge")),
+        };
         let expires = instant(now + 300_000);
         tx.execute(
             "INSERT INTO pairings(id,

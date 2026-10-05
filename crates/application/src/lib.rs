@@ -1,4 +1,14 @@
-#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
+#![cfg_attr(
+    not(test),
+    warn(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::unreachable,
+        clippy::panic,
+        clippy::todo,
+        clippy::unimplemented
+    )
+)]
 pub mod auth;
 mod command_state;
 mod context;

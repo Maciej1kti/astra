@@ -115,8 +115,8 @@ impl Journal {
         now: i64,
     ) -> Result<Reply, AppError> {
         match error {
-            AppError::Rejected(mut reply) => {
-                reply.body["error"]["request_id"] = json!(command.request_id);
+            AppError::Rejected(reply) => {
+                let reply = reply.for_request(&command.request_id);
                 Ok(self
                     .record(command, &reply, None, now, true)?
                     .unwrap_or(reply))

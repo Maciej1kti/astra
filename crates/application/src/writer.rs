@@ -447,11 +447,7 @@ impl Writer<'_> {
             AppError::Store(StoreError::Conflict) => {
                 Some(Reply::error(412, "VERSION_CONFLICT", request_id))
             }
-            AppError::Rejected(reply) => {
-                let mut reply = reply.clone();
-                reply.body["error"]["request_id"] = json!(request_id);
-                Some(reply)
-            }
+            AppError::Rejected(reply) => Some(reply.clone().for_request(request_id)),
             // POSIX leaves the target unspecified only when the rename or
             // unlink itself reports an I/O error.
             AppError::Store(StoreError::Io(io))
