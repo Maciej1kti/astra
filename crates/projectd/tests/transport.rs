@@ -1,6 +1,6 @@
 use project_application::engine::Engine;
 use project_store::filesystem::Directory;
-use projectd::{LocalPeer, Service};
+use projectd::{Limits, Service};
 use serde_json::{Value, json};
 use tokio::net::{TcpListener, UnixListener};
 use uuid::Uuid;
@@ -10,6 +10,8 @@ struct Running {
     browser: reqwest::Client,
     local: reqwest::Client,
     tasks: Vec<tokio::task::JoinHandle<()>>,
+    /// Serving ends when this sender is dropped.
+    _shutdown: tokio::sync::watch::Sender<bool>,
     project: String,
 }
 
@@ -131,20 +133,12 @@ impl Running {
         let address = format!("http://{}", tcp.local_addr().unwrap());
         let socket = state.path().join("test.sock");
         let unix = UnixListener::bind(&socket).unwrap();
-        let browser = service.browser_router();
-        let local = service.local_router();
+        let (shutdown, signal) = tokio::sync::watch::channel(false);
+        let (browser, local) = (service.clone(), service);
+        let local_signal = signal.clone();
         let tasks = vec![
-            tokio::spawn(async move {
-                axum::serve(tcp, browser).await.unwrap();
-            }),
-            tokio::spawn(async move {
-                axum::serve(
-                    unix,
-                    local.into_make_service_with_connect_info::<LocalPeer>(),
-                )
-                .await
-                .unwrap();
-            }),
+            tokio::spawn(async move { browser.serve_browser(tcp, Limits::NETWORK, signal).await }),
+            tokio::spawn(async move { local.serve_local(unix, Limits::LOCAL, local_signal).await }),
         ];
         Self {
             _temp: temp,
@@ -156,6 +150,7 @@ impl Running {
                 .build()
                 .unwrap(),
             tasks,
+            _shutdown: shutdown,
             project,
         }
     }

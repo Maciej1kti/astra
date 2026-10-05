@@ -3,7 +3,7 @@ mod watcher;
 use clap::Parser;
 use project_application::engine::Engine;
 use project_store::filesystem::Directory;
-use projectd::{LocalPeer, Service};
+use projectd::{Limits, Service};
 use std::{
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
     path::PathBuf,
@@ -62,29 +62,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         terminating_service.shutdown();
         let _ = shutdown.send(true);
     });
-    let mut browser_signal = signal.clone();
-    let mut local_signal = signal;
     eprintln!(
         "Local Projects listening on 127.0.0.1:{}; Unix socket {}",
         args.port,
         socket.display()
     );
-    let browser = axum::serve(tcp, service.browser_router()).with_graceful_shutdown(async move {
-        let _ = browser_signal.changed().await;
-    });
-    let local = axum::serve(
-        unix,
-        service
-            .local_router()
-            .into_make_service_with_connect_info::<LocalPeer>(),
-    )
-    .with_graceful_shutdown(async move {
-        let _ = local_signal.changed().await;
-    });
-    let result = tokio::try_join!(browser, local);
+    tokio::join!(
+        service.serve_browser(tcp, Limits::NETWORK, signal.clone()),
+        service.serve_local(unix, Limits::LOCAL, signal),
+    );
     watcher.abort();
     termination.abort();
     std::fs::remove_file(socket)?;
-    result?;
     Ok(())
 }

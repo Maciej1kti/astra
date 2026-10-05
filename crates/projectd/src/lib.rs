@@ -2,7 +2,7 @@
 use axum::{
     Router,
     body::to_bytes,
-    extract::{ConnectInfo, Request, State, connect_info::Connected},
+    extract::{ConnectInfo, Request, State},
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::any,
@@ -21,6 +21,8 @@ mod encoding;
 mod events;
 mod picker;
 mod read_response;
+mod serve;
+pub use serve::Limits;
 
 #[derive(Clone)]
 pub struct Service {
@@ -83,13 +85,31 @@ impl Service {
             body_timeout: Duration::from_secs(10),
         })
     }
-    pub fn browser_router(&self) -> Router {
-        Router::new()
+    /// Serve the network listener until `shutdown` reports true or its sender
+    /// is dropped, then let open connections finish their current exchange.
+    pub async fn serve_browser(
+        &self,
+        listener: tokio::net::TcpListener,
+        limits: Limits,
+        shutdown: watch::Receiver<bool>,
+    ) {
+        let router = Router::new()
             .fallback(any(browser))
-            .with_state(self.clone())
+            .with_state(self.clone());
+        serve::serve(listener, router, limits, |_| None::<()>, shutdown).await;
     }
-    pub fn local_router(&self) -> Router {
-        Router::new().fallback(any(local)).with_state(self.clone())
+    /// Serve the local socket; every request carries its connection's peer UID.
+    pub async fn serve_local(
+        &self,
+        listener: UnixListener,
+        limits: Limits,
+        shutdown: watch::Receiver<bool>,
+    ) {
+        let router = Router::new().fallback(any(local)).with_state(self.clone());
+        let peer = |io: &tokio::net::UnixStream| {
+            Some(LocalPeer(io.peer_cred().ok().map(|peer| peer.uid())))
+        };
+        serve::serve(listener, router, limits, peer, shutdown).await;
     }
     /// Stop long-lived responses before the listeners finish graceful shutdown.
     pub fn shutdown(&self) {
@@ -124,13 +144,9 @@ impl Service {
         Ok(scoped)
     }
 }
+/// The UID of the process at the other end of a local socket connection.
 #[derive(Clone)]
-pub struct LocalPeer(pub Option<u32>);
-impl Connected<axum::serve::IncomingStream<'_, UnixListener>> for LocalPeer {
-    fn connect_info(stream: axum::serve::IncomingStream<'_, UnixListener>) -> Self {
-        Self(stream.io().peer_cred().ok().map(|c| c.uid()))
-    }
-}
+struct LocalPeer(Option<u32>);
 struct Input {
     method: String,
     path: String,
