@@ -1,6 +1,6 @@
 use crate::{
     AppError,
-    engine::Engine,
+    engine::{Engine, lock_store},
     journal::{Command, Journal},
     source::read,
 };
@@ -20,14 +20,9 @@ impl Engine {
         if limit == 0 || limit > 200 {
             return Err(AppError::reject(400, "INVALID_LIMIT"));
         }
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let handle = self.store(project)?;
-        let store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let store = lock_store(&handle)?;
         let current = match read(&store, kind, id) {
             Ok(source) => Some(source.version),
             Err(AppError::Rejected(reply))

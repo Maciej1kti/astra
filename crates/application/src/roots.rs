@@ -20,10 +20,7 @@ impl Engine {
         Ok(json!({"items":items.iter().map(root_view).collect::<Vec<_>>()}))
     }
     pub fn add_root(&self, path: &str, label: &str) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         let directory = Directory::open(Path::new(path))?;
         let identity = directory.identity()?;
         let (mut items, expected) = self.root_records()?;
@@ -48,10 +45,7 @@ impl Engine {
         Ok(root_view(&value))
     }
     pub fn remove_root(&self, id: &str) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         let (mut items, expected) = self.root_records()?;
         let old = items.len();
         items.retain(|item| item["id"] != id);

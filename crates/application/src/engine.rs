@@ -17,7 +17,7 @@ use serde_json::{Value, json};
 use std::{
     collections::HashMap,
     path::Path,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 use uuid::Uuid;
 
@@ -25,6 +25,13 @@ mod projection_repairs;
 use projection_repairs::ProjectionRepairs;
 
 pub(crate) type StoreHandle = Arc<Mutex<ProjectStore>>;
+
+/// Lock one project's store. A panic under this lock poisons it until restart.
+pub(crate) fn lock_store(handle: &StoreHandle) -> Result<MutexGuard<'_, ProjectStore>, AppError> {
+    handle
+        .lock()
+        .map_err(|_| AppError::LockPoisoned("project store"))
+}
 /// Lock order: workspace gate, store registry, project store, journal, index.
 /// Release journal transactions before publishing index notifications. Never
 /// acquire the workspace gate again from a method that already holds it.
@@ -38,6 +45,19 @@ pub struct Engine {
     projection_repairs: Mutex<ProjectionRepairs>,
 }
 impl Engine {
+    /// Enter the workspace operation gate with other readers and ordinary
+    /// writes. The gate comes first in the lock order and is never re-entered.
+    pub(crate) fn shared_gate(&self) -> Result<RwLockReadGuard<'_, ()>, AppError> {
+        self.gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))
+    }
+    /// Enter the gate alone, for changes to membership across projects.
+    pub(crate) fn exclusive_gate(&self) -> Result<RwLockWriteGuard<'_, ()>, AppError> {
+        self.gate
+            .write()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))
+    }
     pub fn open(data: &Path) -> Result<Self, AppError> {
         Self::open_with_reconciliation(data, true, None, Arc::default())
     }
@@ -164,9 +184,7 @@ SET value=excluded.value",
             let path = plan.location.destination.as_str();
             match engine.store_path(path, true) {
                 Ok(handle) => {
-                    let store = handle
-                        .lock()
-                        .map_err(|_| AppError::LockPoisoned("project store"))?;
+                    let store = lock_store(&handle)?;
                     if let Err(error) = (Workflows {
                         journal: &engine.journal,
                     })
@@ -211,9 +229,7 @@ SET value=excluded.value",
             let path = &registration.path;
             let result = match engine.store_path(path, false) {
                 Ok(handle) => {
-                    let mut store = handle
-                        .lock()
-                        .map_err(|_| AppError::LockPoisoned("project store"))?;
+                    let mut store = lock_store(&handle)?;
                     if let Err(error) = (Writer {
                         journal: &engine.journal,
                     })
@@ -259,14 +275,9 @@ SET value=excluded.value",
         Ok(engine)
     }
     pub fn validate_sources(&self, project: &str) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let handle = self.store(project)?;
-        let store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let store = lock_store(&handle)?;
         Ok(project_store::validation::report(&store.directory)?)
     }
     pub fn workspace(&self) -> Result<Versioned<Workspace>, AppError> {
@@ -353,14 +364,9 @@ SET value=excluded.value",
         if kind == Kind::Project {
             self.reconcile_if_due(project_id)?;
         }
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let handle = self.store(project_id)?;
-        let store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let store = lock_store(&handle)?;
         let source = read(&store, kind, id)?;
         let mut value = source.value();
         let version = source.version;
@@ -414,10 +420,7 @@ SET value=excluded.value",
         id: &str,
         targets: Option<&[(Kind, String)]>,
     ) -> Result<(), AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         // Notifications may outlive the watcher's registration snapshot. The read
         // gate keeps this membership decision ordered with deletion/unregistration.
         let workspace = self.workspace()?.value;
@@ -431,9 +434,7 @@ SET value=excluded.value",
         };
         let result = (|| {
             let handle = self.store_path(&registration.path, false)?;
-            let store = handle
-                .lock()
-                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            let store = lock_store(&handle)?;
             if let Some(targets) = targets {
                 self.index
                     .refresh_targets(&store, id, targets, now_millis())
@@ -454,10 +455,7 @@ SET value=excluded.value",
     }
 
     pub fn refresh_all(&self) -> Result<(), AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let crate::Versioned {
             value: workspace,
             version: _,
@@ -466,9 +464,7 @@ SET value=excluded.value",
             let id = &item.project_id;
             let result = match self.store(id) {
                 Ok(handle) => {
-                    let store = handle
-                        .lock()
-                        .map_err(|_| AppError::LockPoisoned("project store"))?;
+                    let store = lock_store(&handle)?;
                     self.index.refresh(&store, id, now_millis())
                 }
                 Err(error) => Err(error),

@@ -2,7 +2,7 @@
 //! retained for older clients but does not govern project labels.
 use crate::{
     AppError, Reply,
-    engine::Engine,
+    engine::{Engine, lock_store},
     instant, now_millis,
     source::{collection, read, read_collection, visit_ordered},
     wire,
@@ -69,10 +69,7 @@ struct SourceCard<'a> {
 impl Engine {
     /// Project labels are the catalog. No second vocabulary is written.
     pub fn project_tag_catalog(&self, project_id: &str) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let mut workspace = self.workspace()?.value;
         workspace
             .projects
@@ -81,9 +78,7 @@ impl Engine {
             return Err(AppError::reject(404, "PROJECT_NOT_REGISTERED"));
         }
         let handle = self.store(project_id)?;
-        let store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let store = lock_store(&handle)?;
         let project = read(&store, Kind::Project, project_id)?;
         drop(store);
         let mut tags = BTreeMap::<String, TagUsage>::new();
@@ -137,10 +132,7 @@ impl Engine {
         if target.contains('\0') {
             return Err(AppError::reject(422, "TAG_NAME_INVALID"));
         }
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let workspace = self.workspace()?.value;
         let registration = workspace
             .projects
@@ -148,9 +140,7 @@ impl Engine {
             .find(|entry| entry.project_id == project_id)
             .ok_or_else(|| AppError::reject(404, "PROJECT_NOT_REGISTERED"))?;
         let handle = self.store(project_id)?;
-        let store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let store = lock_store(&handle)?;
         let project = read(&store, Kind::Project, project_id)?;
         if project.document.get().status() == Some("archived") {
             return Err(AppError::reject(409, "PROJECT_ARCHIVED"));
@@ -268,10 +258,7 @@ impl Engine {
     /// Counts validated source cards, including archived cards and projects.
     /// The version belongs to workspace.json, not to the observed usage counts.
     pub fn tag_catalog(&self) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let crate::Versioned {
             value: workspace,
             version,
@@ -327,10 +314,7 @@ impl Engine {
         if target.contains('\0') {
             return Err(AppError::reject(422, "TAG_NAME_INVALID"));
         }
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let crate::Versioned {
             value: workspace,
             version,
@@ -418,9 +402,7 @@ impl Engine {
                     continue;
                 }
             };
-            let store = handle
-                .lock()
-                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            let store = lock_store(&handle)?;
             let project = match read(&store, Kind::Project, project_id) {
                 Ok(project) => project,
                 Err(_) => {

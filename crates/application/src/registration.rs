@@ -2,7 +2,7 @@
 use crate::workflow_kind::WorkflowKind;
 use crate::{
     AppError, Reply,
-    engine::Engine,
+    engine::{Engine, lock_store},
     instant, now_millis,
     source::pretty,
     wire,
@@ -25,10 +25,7 @@ impl Engine {
         name: Option<&str>,
         private: bool,
     ) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let root = Directory::open(Path::new(path))?;
         let now = now_millis();
         let crate::Versioned {
@@ -191,10 +188,7 @@ impl Engine {
         request_id: &str,
         epoch: &str,
     ) -> Result<Reply, AppError> {
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         let workflows = Workflows {
             journal: &self.journal,
         };
@@ -239,9 +233,7 @@ impl Engine {
         let destination = plan.location.destination.as_str();
         let handle = self.store_path(destination, true)?;
         let reply = {
-            let store = handle
-                .lock()
-                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            let store = lock_store(&handle)?;
             let reply = workflows.commit(plan_id, request_id, epoch, now_millis())?;
             if let Some(job) = reply.body["job_id"].as_str()
                 && workflows.job(job)?["state"] == "done"

@@ -2,7 +2,7 @@
 use crate::workflow_kind::WorkflowKind;
 use crate::{
     AppError, Reply,
-    engine::Engine,
+    engine::{Engine, lock_store},
     instant, now_millis,
     source::{collection, pretty},
     workflow::{Plan, PlanLocation, Step, Workflows},
@@ -47,10 +47,7 @@ impl Engine {
     pub fn maintenance_plan(&self, input: &Value) -> Result<Value, AppError> {
         let request: Maintenance = serde_json::from_value(input.clone())
             .map_err(|_| AppError::reject(422, "INVALID_MAINTENANCE_INPUT"))?;
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         self.ensure_no_project_deletion()?;
         let crate::Versioned {
             value: mut workspace,
@@ -84,9 +81,7 @@ impl Engine {
                 ..
             } => {
                 let handle = self.store(&project)?;
-                let store = handle
-                    .lock()
-                    .map_err(|_| AppError::LockPoisoned("project store"))?;
+                let store = lock_store(&handle)?;
                 let (directory, name) = store.location(kind, &id, false)?;
                 let before = directory
                     .read(&name)?
@@ -119,9 +114,7 @@ impl Engine {
                     return Err(AppError::reject(409, "PAGE_STALE"));
                 }
                 let handle = self.store(&project)?;
-                let store = handle
-                    .lock()
-                    .map_err(|_| AppError::LockPoisoned("project store"))?;
+                let store = lock_store(&handle)?;
                 let directory = store.directory.child(
                     kind.directory()
                         .ok_or(AppError::invariant("rebalanced collection kind"))?,
@@ -278,10 +271,7 @@ impl Engine {
         request: &str,
         epoch: &str,
     ) -> Result<Reply, AppError> {
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         let workflows = Workflows {
             journal: &self.journal,
         };
@@ -326,14 +316,7 @@ impl Engine {
         } else {
             Some(self.store_path(destination, false)?)
         };
-        let store = handle
-            .as_ref()
-            .map(|handle| {
-                handle
-                    .lock()
-                    .map_err(|_| AppError::LockPoisoned("project store"))
-            })
-            .transpose()?;
+        let store = handle.as_ref().map(lock_store).transpose()?;
         let reply = workflows.commit_with_completion(
             plan_id,
             request,

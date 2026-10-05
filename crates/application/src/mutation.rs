@@ -1,6 +1,6 @@
 use crate::{
     AppError, Reply,
-    engine::Engine,
+    engine::{Engine, lock_store},
     instant,
     journal::{Command, Reference, Target},
     now_millis,
@@ -34,23 +34,9 @@ impl Engine {
                     .is_some_and(|keys| keys.iter().any(|key| key == "pinned")));
         // Serialize membership across projects while ordinary writes keep their shared gate.
         let (_exclusive, _shared) = if membership {
-            (
-                Some(
-                    self.gate
-                        .write()
-                        .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?,
-                ),
-                None,
-            )
+            (Some(self.exclusive_gate()?), None)
         } else {
-            (
-                None,
-                Some(
-                    self.gate
-                        .read()
-                        .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?,
-                ),
-            )
+            (None, Some(self.shared_gate()?))
         };
         let Mutation {
             project_id,
@@ -110,9 +96,7 @@ impl Engine {
             Ok(handle) => handle,
             Err(error) => return self.journal.reject_error(&command, error, now_millis()),
         };
-        let mut store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let mut store = lock_store(&handle)?;
         let now = now_millis();
         // No intent exists yet, so an unacceptable source is a definite outcome.
         let prepared = match prepare(&self.journal, &store, &command, create, now)
@@ -130,9 +114,7 @@ impl Engine {
                     .journal
                     .reject_error(&command, unacceptable_form(error), now);
             }
-            store = handle
-                .lock()
-                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            store = lock_store(&handle)?;
         }
         let mut reply = Writer {
             journal: &self.journal,

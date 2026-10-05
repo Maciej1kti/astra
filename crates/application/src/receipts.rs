@@ -1,7 +1,7 @@
 use crate::{
     AppError, Reply,
     command_state::CommandState,
-    engine::Engine,
+    engine::{Engine, lock_store},
     instant,
     journal::{Command, CommandRecord, Journal, Target},
     now_millis,
@@ -14,10 +14,7 @@ use serde_json::{Value, json};
 use std::collections::BTreeSet;
 impl Engine {
     pub fn receipts(&self, payload: &Value, request: &str, epoch: &str) -> Result<Reply, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let command = Command {
             request_id: request.into(),
             epoch: epoch.into(),
@@ -57,9 +54,7 @@ impl Engine {
                 Ok(handle) => handle,
                 Err(error) => return self.journal.reject_error(&command, error, now),
             };
-            let store = handle
-                .lock()
-                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            let store = lock_store(&handle)?;
             if let Err(error) = read(&store, Kind::Update, id) {
                 return self.journal.reject_error(&command, error, now);
             }
@@ -124,10 +119,7 @@ VALUES (?1,
     /// before receipts were removed with it. The shared gate orders the
     /// membership snapshot with registration, unregistration and deletion.
     pub(crate) fn prune_receipts(&self) -> Result<usize, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let workspace = self.workspace()?.value;
         let registered: Vec<_> = workspace
             .projects

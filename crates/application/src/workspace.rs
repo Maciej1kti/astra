@@ -1,7 +1,7 @@
 use crate::{
     AppError, Reply,
     command_state::CommandState,
-    engine::Engine,
+    engine::{Engine, lock_store},
     journal::{Command, CommandRecord, Journal, Target},
     now_millis,
     source::{pretty, read},
@@ -36,10 +36,7 @@ impl Engine {
         expected: Option<&str>,
         mut checkpoint: impl FnMut(CommitPoint) -> Result<(), AppError>,
     ) -> Result<Reply, AppError> {
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         let definition = match section {
             "focus" => "FocusReplace",
             "preferences" => "PreferencesPatch",
@@ -148,9 +145,7 @@ impl Engine {
                         Ok(handle) => handle,
                         Err(error) => return self.journal.reject_error(&command, error, now),
                     };
-                    let store = handle
-                        .lock()
-                        .map_err(|_| AppError::invariant("project store lock"))?;
+                    let store = lock_store(&handle)?;
                     let card = match read(&store, Kind::Card, id) {
                         Ok(card) => card,
                         Err(error) => return self.journal.reject_error(&command, error, now),
@@ -344,9 +339,7 @@ ORDER BY c.received_at",
                             .as_str()
                             .ok_or(AppError::invariant("workspace reference project ID"))?,
                     )?;
-                    let store = handle
-                        .lock()
-                        .map_err(|_| AppError::LockPoisoned("project store"))?;
+                    let store = lock_store(&handle)?;
                     if reference["path"].as_str() != store.directory.path().to_str() {
                         return Err(AppError::reject(409, "FOCUS_REFERENCE_CHANGED"));
                     }

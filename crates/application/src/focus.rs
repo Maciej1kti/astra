@@ -1,7 +1,7 @@
 //! Pin membership belongs to card source; workspace focus is only a local order.
 use crate::{
     AppError,
-    engine::Engine,
+    engine::{Engine, lock_store},
     index::{Indexed, ProjectionStatus},
     source::visit_collection,
 };
@@ -16,10 +16,7 @@ const MAX_SCANNED_CARDS: usize = 50_000;
 
 impl Engine {
     pub fn focus_resource(&self) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let workspace = self.workspace()?;
         let zone = workspace
             .value
@@ -137,9 +134,7 @@ impl Engine {
             } else {
                 self.store(&registration.project_id)?
             };
-            let store = handle
-                .lock()
-                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            let store = lock_store(&handle)?;
             let mut local_pins = Vec::new();
             visit_collection(&store, Kind::Card, |card| {
                 scanned += 1;

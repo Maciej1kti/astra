@@ -1,7 +1,7 @@
 //! Budgeted project data for a caller. No source text is promoted to instructions.
 use crate::{
     AppError,
-    engine::Engine,
+    engine::{Engine, lock_store},
     instant, now_millis,
     source::{read, read_collection},
 };
@@ -14,10 +14,7 @@ impl Engine {
         if !(4096..=131072).contains(&max_bytes) {
             return Err(AppError::reject(400, "INVALID_CONTEXT_BUDGET"));
         }
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let workspace = self.workspace()?.value;
         let focus = self
             .source_focus_in(&workspace, Some(project))?
@@ -25,9 +22,7 @@ impl Engine {
             .filter(|r| r.project_id == project)
             .collect::<Vec<_>>();
         let handle = self.store(project)?;
-        let store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let store = lock_store(&handle)?;
         let document = read(&store, Kind::Project, project)?;
         let (counts, candidates) = self.index.with_snapshot(|db, _| {
             let mut counts = serde_json::Map::new();

@@ -3,7 +3,12 @@
 //! A writer completes its own journal's intents before it refuses a write, but
 //! a project shared by several profiles is also refused while another profile's
 //! journal holds one. The host therefore runs this pass for every ready engine.
-use crate::{AppError, engine::Engine, now_millis, writer::Writer};
+use crate::{
+    AppError,
+    engine::{Engine, lock_store},
+    now_millis,
+    writer::Writer,
+};
 use std::collections::BTreeSet;
 
 impl Engine {
@@ -22,10 +27,7 @@ impl Engine {
         // Lock order: workspace gate, store registry, project store, journal,
         // index. A write in flight holds its project store, so this pass waits
         // for it and then finds its intent resolved.
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let workspace = self.workspace()?.value;
         let mut recovered = 0;
         for registration in &workspace.projects {
@@ -36,9 +38,7 @@ impl Engine {
             let result = self
                 .store_path(&registration.path, false)
                 .and_then(|handle| {
-                    let mut store = handle
-                        .lock()
-                        .map_err(|_| AppError::LockPoisoned("project store"))?;
+                    let mut store = lock_store(&handle)?;
                     let now = now_millis();
                     let count = Writer {
                         journal: &self.journal,

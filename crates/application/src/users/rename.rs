@@ -36,11 +36,7 @@ impl Users {
             .engines
             .write()
             .map_err(|_| AppError::LockPoisoned("user engines"))?;
-        let _gate = self
-            .owner
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.owner.exclusive_gate()?;
         let command = Command {
             request_id: request.into(),
             epoch: epoch.into(),

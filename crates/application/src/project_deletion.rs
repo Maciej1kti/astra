@@ -266,10 +266,7 @@ impl Engine {
     /// Read a bounded snapshot without opening `ProjectStore` (which would
     /// create operational state in `.local`).
     pub fn project_deletion_plan(&self, project_id: &str) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         self.ensure_no_project_deletion()?;
         let (_, workspace, workspace_version) = workspace_bytes(self)?;
         let registration = registration(&workspace, project_id)?;
@@ -309,10 +306,7 @@ impl Engine {
         expected: Option<String>,
         mut checkpoint: impl FnMut(ProjectDeletePoint) -> Result<(), AppError>,
     ) -> Result<Reply, AppError> {
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         let command = Command {
             request_id: request_id.into(),
             epoch: epoch.into(),
@@ -483,10 +477,7 @@ impl Engine {
 
     /// Resume project deletion intents before startup opens project stores.
     pub(crate) fn recover_project_deletions(&self) -> Result<(), AppError> {
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         let rows = {
             let db = self.journal.db()?;
             let mut statement = db.prepare(

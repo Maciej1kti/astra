@@ -6,7 +6,7 @@
 
 use crate::{
     AppError, Reply,
-    engine::Engine,
+    engine::{Engine, lock_store},
     journal::{Command, Intent, Reference, Target},
     now_millis,
     source::{read, unacceptable_form},
@@ -72,10 +72,7 @@ impl Engine {
         expected: Option<String>,
     ) -> Result<Reply, AppError> {
         // Membership changes serialize with source writes and reference creation.
-        let _gate = self
-            .gate
-            .write()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.exclusive_gate()?;
         let command = Command {
             request_id: request_id.into(),
             epoch: epoch.into(),
@@ -108,9 +105,7 @@ impl Engine {
             Ok(handle) => handle,
             Err(error) => return self.journal.reject_error(&command, error, now),
         };
-        let mut store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let mut store = lock_store(&handle)?;
         // No intent exists yet, so an unacceptable source is a definite outcome.
         let reject_error = |error| {
             self.journal

@@ -1,6 +1,6 @@
 //! Disposable projections may be repaired after a maintenance job is durable.
 //! Restart uses the existing full registry reconciliation instead of persisting this queue.
-use super::Engine;
+use super::{Engine, lock_store};
 use crate::{AppError, diagnostics::record_failure, now_millis};
 use std::{
     collections::BTreeMap,
@@ -61,10 +61,7 @@ impl Engine {
     }
 
     pub(crate) fn retry_projection_repairs_at(&self, now: Instant) -> Result<(), AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let due = self
             .projection_repairs
             .lock()
@@ -116,9 +113,7 @@ impl Engine {
         let workspace = self.workspace()?.value;
         if let Some(registration) = workspace.projects.iter().find(|p| p.project_id == project) {
             let handle = self.store_path(&registration.path, false)?;
-            let store = handle
-                .lock()
-                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            let store = lock_store(&handle)?;
             self.index.refresh(&store, project, now_millis())?;
             self.index.invalidate_workspace(now_millis())?;
             self.reconciled
