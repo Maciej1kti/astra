@@ -1,4 +1,5 @@
 /** Maintained suites receive an explicit synthetic runtime from regressions.mjs. */
+import { withoutCancelledReads } from "./page-errors.mjs";
 import { chromium, webkit } from "@playwright/test";
 import { mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -53,15 +54,18 @@ export async function withBrowser(
   } = {},
 ) {
   const browser = await launch();
+  const webkitEngine = browser.browserType().name() === "webkit";
   try {
     return await run({
       browser,
-      newContext: (options = {}) =>
-        browser.newContext({
+      newContext: async (options = {}) => {
+        const context = await browser.newContext({
           ignoreHTTPSErrors: true,
           viewport: { width: 1440, height: 1000 },
           ...options,
-        }),
+        });
+        return webkitEngine ? withoutCancelledReads(context) : context;
+      },
     });
   } finally {
     // This also closes contexts/pages when setup, a scenario or reporting throws.

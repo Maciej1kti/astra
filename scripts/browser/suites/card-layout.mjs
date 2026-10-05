@@ -284,11 +284,21 @@ await runBrowserSuite(
         if (name === "Etykiety") {
           // Previous visibility changes resize the centered dialog. A held
           // press must keep its eye target while the owner continues resizing.
-          const bounds = await eye.boundingBox();
-          await page.mouse.move(
-            bounds.x + bounds.width / 2,
-            bounds.y + bounds.height / 2,
-          );
+          // Aim where the eye is now, not where it was measured: the dialog
+          // may jump between the measurement and the press.
+          await expect
+            .poll(async () => {
+              const bounds = await eye.boundingBox();
+              const x = bounds.x + bounds.width / 2;
+              const y = bounds.y + bounds.height / 2;
+              await page.mouse.move(x, y);
+              return eye.evaluate(
+                (element, point) =>
+                  element.contains(document.elementFromPoint(point.x, point.y)),
+                { x, y },
+              );
+            })
+            .toBe(true);
           await page.mouse.down();
           const before = await panel.boundingBox();
           await page.waitForTimeout(120);
