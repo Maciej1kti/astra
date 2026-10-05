@@ -1,3 +1,4 @@
+import { isUuidAnyCase } from "../../lib/api/uuid.ts";
 import type { AcceptanceItem } from "../../lib/contracts/domain.generated";
 export type { AcceptanceItem } from "../../lib/contracts/domain.generated";
 
@@ -10,12 +11,7 @@ export function acceptanceValidation(items: AcceptanceItem[]) {
   const ids = new Set<string>();
   for (let index = 0; index < items.length; index++) {
     const item = items[index];
-    if (
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        item.id,
-      ) ||
-      ids.has(item.id)
-    )
+    if (!isUuidAnyCase(item.id) || ids.has(item.id))
       return `Pozycja listy kontrolnej ${index + 1} ma nieprawidłowy lub powtórzony identyfikator. Skopiuj wersję roboczą przed ponownym otwarciem karty.`;
     ids.add(item.id);
     if (!item.text.trim())

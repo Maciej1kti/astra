@@ -1,3 +1,4 @@
+import { isUuid } from "../../lib/api/uuid.ts";
 import {
   isCalendarDate,
   type CalendarLayout,
@@ -46,11 +47,7 @@ export type WorkspaceRoute = {
   calendarLayout: CalendarLayout;
   resource?: { project: string; type: string; id: string };
 };
-const validId = (value: string | null): value is string =>
-  !!value &&
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
-    value,
-  );
+const validId = (value: string | null): value is string => isUuid(value, 4);
 
 export function readRoute(
   params: URLSearchParams,

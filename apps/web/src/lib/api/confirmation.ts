@@ -1,10 +1,6 @@
 import type { Pending } from "./api";
+import { isUuid } from "./uuid.ts";
 
-const uuid = (value: unknown, version: 4 | 7) =>
-  typeof value === "string" &&
-  new RegExp(
-    `^[0-9a-f]{8}-[0-9a-f]{4}-${version}[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`,
-  ).test(value);
 const text = (value: unknown, max: number) =>
   typeof value === "string" && value.length > 0 && [...value].length <= max;
 const version = (value: unknown) =>
@@ -23,7 +19,7 @@ function fields(
 function identity(value: Record<string, unknown>, pending: Pending) {
   return (
     value.api_version === "1" &&
-    uuid(value.request_id, 7) &&
+    isUuid(value.request_id, 7) &&
     value.request_id === pending.requestId
   );
 }
@@ -55,7 +51,7 @@ function resource(value: unknown) {
 function userResource(value: unknown, id: unknown) {
   return (
     fields(value, ["id", "name", "is_default"]) &&
-    uuid(value.id, 4) &&
+    isUuid(value.id, 4) &&
     value.id === id &&
     text(value.name, 120) &&
     typeof value.is_default === "boolean"
@@ -77,8 +73,8 @@ function result(value: unknown, pending: Pending) {
     fields(value, ["type", "id", "version", "resource", "job_id", "deleted"]) &&
     value.type === expectedType(pending) &&
     (value.type !== "user" || userResult(value, pending)) &&
-    (value.id === undefined || uuid(value.id, 4)) &&
-    (value.job_id === undefined || uuid(value.job_id, 4)) &&
+    (value.id === undefined || isUuid(value.id, 4)) &&
+    (value.job_id === undefined || isUuid(value.job_id, 4)) &&
     (value.deleted === undefined || value.deleted === true) &&
     (value.deleted === true
       ? value.version === undefined && value.resource === undefined
@@ -125,7 +121,7 @@ export function validCommandError(value: unknown, pending: Pending) {
     text(value.error.code, 80) &&
     text(value.error.message, 2000) &&
     (value.error.request_id === undefined ||
-      (uuid(value.error.request_id, 7) &&
+      (isUuid(value.error.request_id, 7) &&
         value.error.request_id === pending.requestId)) &&
     (value.error.details === undefined || object(value.error.details))
   );
@@ -166,7 +162,7 @@ export function validateCommandReply(
     identity(value, pending) &&
     workflow(pending) &&
     value.status === "running" &&
-    uuid(value.job_id, 4)
+    isUuid(value.job_id, 4)
   )
     return;
   if (

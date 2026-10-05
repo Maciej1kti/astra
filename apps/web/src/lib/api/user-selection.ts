@@ -1,9 +1,7 @@
+import { isUuid } from "./uuid.ts";
+
 const key = "astra-user";
-const validId = (value: string | null): value is string =>
-  !!value &&
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
-    value,
-  );
+const validId = (value: string | null): value is string => isUuid(value, 4);
 
 function storedUser(): string {
   try {
