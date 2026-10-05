@@ -57,7 +57,8 @@ test("a saved card is presented with labels, dates and state names", () => {
   assert.equal(value("Komentarze"), "1 komentarz");
   assert.equal(value("Liczniki"), "0 liczników");
   assert.equal(value("Ukryte sekcje"), "Komentarze, Etykiety");
-  assert.equal(value("Zmieniono"), "2 wrz 2026, 10:30 UTC");
+  // The joiner between date and time depends on the runtime's locale data.
+  assert.match(value("Zmieniono"), /^2 wrz 2026(?:,| o) 10:30 UTC$/);
   assert.equal(value("Opis"), "Saved body");
   // Every field is listed once, with the description last.
   assert.equal(fields.at(-1).label, "Opis");

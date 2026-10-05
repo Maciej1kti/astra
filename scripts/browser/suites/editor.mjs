@@ -1004,7 +1004,8 @@ export async function runEditorChecks({
       const recorded = row.locator("time");
       await expect(recorded).toHaveAttribute("datetime", edit.recorded_at);
       const shown = (await recorded.innerText()).trim();
-      assert.match(shown, /^\d{1,2} \p{L}{3,} \d{4}, \d{2}:\d{2} UTC$/u);
+      // Engines join the date and time differently: "," in Chromium, " o " in WebKit.
+      assert.match(shown, /^\d{1,2} \p{L}{3,} \d{4}(?:,| o) \d{2}:\d{2} UTC$/u);
       for (const entry of await rows.allInnerTexts()) {
         assert.doesNotMatch(entry, /\d{4}-\d{2}-\d{2}T/);
         assert.doesNotMatch(entry, /\b(title|status|due|created_at)\b/);
