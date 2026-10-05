@@ -8,7 +8,6 @@
   import { on } from "svelte/events";
   import { readBoardView, writeBoardView } from "./board-view";
   import { cursorPage } from "../../lib/api/pagination";
-  import { isAbortError } from "../../lib/api/read-requests";
   import {
     projectionNotice,
     type ProjectionState,
@@ -22,6 +21,7 @@
   import BoardCard from "./BoardCard.svelte";
   import { BOARD_CONTEXT, type BoardContext } from "./board-context";
   import type { MoveProposal } from "../planning/proposals";
+  import { PlanningRead } from "../planning/planning-read";
 
   let {
     project,
@@ -127,29 +127,29 @@
     );
     if (current === generation) restoring = false;
   }
-  let readController: AbortController | undefined;
   let columnCursors: Record<string, string | null> = {};
   let freshness = $state("");
   let pageNotice = $state("");
+  // Identifies the read whose scroll restoration may still be applied.
   let generation = 0;
-  let deferredRefresh = false;
   let gestureActive = $state(false);
+  const reads = new PlanningRead((value) => {
+    busy = value;
+  });
   onMount(() => {
     const started = () => {
       gestureActive = true;
+      reads.pause(true);
     };
     const released = () => {
       gestureActive = false;
-      if (deferredRefresh) {
-        deferredRefresh = false;
-        void load();
-      }
+      reads.pause(false);
     };
     window.addEventListener("planning-gesture-started", started);
     window.addEventListener("planning-gesture-ended", released);
     return () => {
       generation++;
-      readController?.abort();
+      reads.dispose();
       window.removeEventListener("planning-gesture-started", started);
       window.removeEventListener("planning-gesture-ended", released);
     };
@@ -159,88 +159,82 @@
     untrack(() => void load());
   });
   async function load(status?: string, cursor?: string | null) {
-    if (busy && !status) {
-      deferredRefresh = true;
-      return;
-    }
-    if (gestureActive) {
-      deferredRefresh = true;
-      return;
-    }
-    const current = ++generation;
-    readController?.abort();
-    readController = new AbortController();
-    const signal = readController.signal;
-    busy = true;
-    error = "";
-    try {
-      const requests = status
-        ? [{ status, cursor: cursor ?? null }]
-        : columns.length
-          ? columns.map((column) => ({
-              status: column.status,
-              cursor: columnCursors[column.status] ?? null,
-            }))
-          : [{ status: undefined, cursor: null }];
-      const pages = await Promise.all(
-        requests.map(async (request) => ({
-          ...request,
-          ...(await cursorPage(
-            (page) =>
-              api<{ columns: Column[] } & ProjectionState>(
-                `/api/v1/views/board?project_id=${project}&limit=50${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
-                "GET",
-                undefined,
-                {},
-                { signal },
-              ),
-            request.cursor,
-          )),
-        })),
-      );
-      if (current !== generation) return;
-      if (gestureActive || document.querySelector("[data-dragging]")) {
-        deferredRefresh = true;
-        return;
-      }
-      const restore = initialView || !!status;
-      restoring = restore;
-      const resolved = new Map<string, Column>();
-      for (const page of pages) {
-        for (const column of page.value.columns) {
-          if (page.status && page.status !== column.status) continue;
-          resolved.set(column.status, column);
-          columnCursors[column.status] = page.reset ? null : page.cursor;
-          pageStarts[column.status] = !columnCursors[column.status];
-        }
-      }
-      freshness = [
-        ...new Set(
-          pages.map((page) => projectionNotice(page.value)).filter(Boolean),
-        ),
-      ].join(" ");
-      pageNotice = pages.some((page) => page.reset)
-        ? "Tablica się zmieniła. Wyświetlono pierwszą stronę aktualnych kolumn."
-        : "";
-      if (status) {
-        viewState.vertical[status] = 0;
-        columns = columns.map(
-          (column) => resolved.get(column.status) ?? column,
+    // One column page is a single request. Its controls are disabled during
+    // reads and gestures, so whatever is deferred or repeated is a refresh.
+    let requested =
+      status && !gestureActive ? { status, cursor: cursor ?? null } : undefined;
+    let current = 0;
+    await reads.run({
+      key: "board",
+      read: async (signal) => {
+        current = ++generation;
+        error = "";
+        const selected = requested;
+        requested = undefined;
+        const requests = selected
+          ? [selected]
+          : columns.length
+            ? columns.map((column) => ({
+                status: column.status,
+                cursor: columnCursors[column.status] ?? null,
+              }))
+            : [{ status: undefined, cursor: null }];
+        const pages = await Promise.all(
+          requests.map(async (request) => ({
+            ...request,
+            ...(await cursorPage(
+              (page) =>
+                api<{ columns: Column[] } & ProjectionState>(
+                  `/api/v1/views/board?project_id=${project}&limit=50${page ? `&cursor=${encodeURIComponent(page)}` : ""}`,
+                  "GET",
+                  undefined,
+                  {},
+                  { signal },
+                ),
+              request.cursor,
+            )),
+          })),
         );
-      } else columns = [...resolved.values()];
-      if (restore) await restoreView(current);
-      if (current === generation) initialView = false;
-    } catch (e) {
-      if (current === generation && !isAbortError(e)) error = errorMessage(e);
-    } finally {
-      if (current === generation) {
-        busy = false;
-        if (deferredRefresh && !gestureActive) {
-          deferredRefresh = false;
+        return { status: selected?.status, pages };
+      },
+      apply: async ({ status, pages }) => {
+        // A drag that has not announced itself yet still holds its baseline.
+        if (document.querySelector("[data-dragging]")) {
           void load();
+          return;
         }
-      }
-    }
+        const restore = initialView || !!status;
+        restoring = restore;
+        const resolved = new Map<string, Column>();
+        for (const page of pages) {
+          for (const column of page.value.columns) {
+            if (page.status && page.status !== column.status) continue;
+            resolved.set(column.status, column);
+            columnCursors[column.status] = page.reset ? null : page.cursor;
+            pageStarts[column.status] = !columnCursors[column.status];
+          }
+        }
+        freshness = [
+          ...new Set(
+            pages.map((page) => projectionNotice(page.value)).filter(Boolean),
+          ),
+        ].join(" ");
+        pageNotice = pages.some((page) => page.reset)
+          ? "Tablica się zmieniła. Wyświetlono pierwszą stronę aktualnych kolumn."
+          : "";
+        if (status) {
+          viewState.vertical[status] = 0;
+          columns = columns.map(
+            (column) => resolved.get(column.status) ?? column,
+          );
+        } else columns = [...resolved.values()];
+        if (restore) await restoreView(current);
+        if (current === generation) initialView = false;
+      },
+      failed: (cause) => {
+        error = errorMessage(cause);
+      },
+    });
   }
   function propose(
     item: Summary,

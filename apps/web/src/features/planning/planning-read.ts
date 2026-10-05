@@ -3,7 +3,8 @@ import { isAbortError } from "../../lib/api/read-requests.ts";
 type Request<T> = {
   key: string;
   read: (signal: AbortSignal) => Promise<T>;
-  apply: (value: T) => void;
+  /** A returned promise keeps the read busy until publication has settled. */
+  apply: (value: T) => void | Promise<void>;
   failed: (cause: unknown) => void;
 };
 
@@ -51,7 +52,11 @@ export class PlanningRead {
       const value = await request.read(this.controller.signal);
       if (current !== this.generation || this.disposed) return;
       if (this.paused) this.deferred ??= () => this.run(request);
-      else request.apply(value);
+      else {
+        // Synchronous publication keeps its timing; only a promise is awaited.
+        const published = request.apply(value);
+        if (published) await published;
+      }
     } catch (cause) {
       if (current === this.generation && !this.disposed && !isAbortError(cause))
         request.failed(cause);

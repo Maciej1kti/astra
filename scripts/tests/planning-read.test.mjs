@@ -129,3 +129,45 @@ test("unmount cancels reads and suppresses late failures and queued refreshes", 
   await owner.run(request);
   assert.equal(reads, 1);
 });
+
+test("a read stays busy until its asynchronous publication settles, and refreshes wait for it", async () => {
+  const loading = [];
+  const owner = new PlanningRead((value) => loading.push(value));
+  const published = deferred();
+  const shown = [];
+  let reads = 0;
+  const request = {
+    key: "board",
+    read: async () => ++reads,
+    apply: async (value) => {
+      await published.promise;
+      shown.push(value);
+    },
+    failed: assert.fail,
+  };
+  const running = owner.run(request);
+  await settle();
+  // Publication has started but not finished: still one read, still loading.
+  assert.deepEqual(loading, [true]);
+  await owner.run(request);
+  assert.equal(reads, 1);
+  published.resolve();
+  await running;
+  await settle();
+  assert.deepEqual(shown, [1, 2]);
+  assert.deepEqual(loading, [true, false, true, false]);
+});
+
+test("a failure while publishing is reported like a failed read", async () => {
+  const owner = new PlanningRead(() => {});
+  const failures = [];
+  await owner.run({
+    key: "board",
+    read: async () => "page",
+    apply: async () => {
+      throw new Error("layout failed");
+    },
+    failed: (cause) => failures.push(cause.message),
+  });
+  assert.deepEqual(failures, ["layout failed"]);
+});
