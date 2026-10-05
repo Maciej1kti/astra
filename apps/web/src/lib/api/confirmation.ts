@@ -137,8 +137,10 @@ export function validateCommandStatus(value: unknown, pending: Pending) {
     ["prepared", "committed", "rejected", "needs_review", "blocked"].includes(
       String(value.state),
     ) &&
+    // A workflow's command row keeps its acceptance, so its finished status
+    // carries no result; every other committed command must return one.
     (value.result === undefined
-      ? value.state !== "committed"
+      ? value.state !== "committed" || workflow(pending)
       : committed(value.result, pending)) &&
     (value.error === undefined
       ? value.state !== "rejected"

@@ -10,6 +10,7 @@
     Pairing,
     UserList,
   } from "../../lib/contracts/api.generated";
+  import CommandRecovery from "../../lib/ui/CommandRecovery.svelte";
   import SessionNotice from "../../lib/ui/SessionNotice.svelte";
   import {
     commandOperation,
@@ -195,12 +196,20 @@
     await transmit();
   }
   async function transmit() {
+    await runCommand("submit");
+  }
+  async function check() {
+    await runCommand("status");
+  }
+  /** Both continuations keep the original request ID, epoch and payload. */
+  async function runCommand(action: "submit" | "status") {
     if (!pending || busy || accessLost) return;
     error = "";
     info = "";
     try {
       const submitted = pending;
-      await operation.commit();
+      if (action === "status") await operation.confirm();
+      else await operation.commit();
       if (commandKind === "user") {
         userName = "";
         info =
@@ -359,8 +368,8 @@
       message="Sesja wygasła. Wersja robocza ustawień została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
     />
     {#if error}<div class="notice" role="alert">{error}</div>{/if}
-    {#if conflict}<section class="notice" role="alert">
-        <p>
+    {#if conflict}<section class="notice">
+        <p role="alert">
           Ustawienia zmieniły się w innym miejscu, więc tej wersji roboczej nie
           można już zapisać. Wczytaj aktualne ustawienia: zmienione przez Ciebie
           pola pozostaną w formularzu do ponownego, świadomego zapisu.
@@ -374,8 +383,12 @@
     {#if !loading && !baseline && !accessLost}<button onclick={load}
         >Wczytaj ustawienia ponownie</button
       >{/if}
-    {#if confirmClose}<section class="notice discard" role="alert">
-        <p>
+    {#if confirmClose}<div
+        class="notice discard"
+        role="alertdialog"
+        aria-labelledby="settings-discard-question"
+      >
+        <p id="settings-discard-question">
           {pending
             ? "Wynik polecenia może nadal być nieznany. Odrzucenie wersji roboczej nie anuluje zapisu na serwerze."
             : "Odrzucić niezapisane ustawienia?"}
@@ -386,7 +399,7 @@
           >
           <button onclick={onclose}>Odrzuć wersję roboczą ustawień</button>
         </div>
-      </section>{/if}
+      </div>{/if}
     <section class="user-section" aria-labelledby="user-settings-title">
       <h3 id="user-settings-title">Użytkownik</h3>
       <p>
@@ -455,12 +468,13 @@
           role="status"
         >
           <p>Utworzenie użytkownika oczekuje na potwierdzenie.</p>
-          <button type="button" onclick={transmit} disabled={busy || accessLost}
-            >Ponów to samo polecenie</button
-          >
-          <details>
-            <summary>Szczegóły zapisu</summary><code>{pending.requestId}</code>
-          </details>
+          <CommandRecovery
+            {pending}
+            {busy}
+            {accessLost}
+            oncheck={check}
+            onretry={transmit}
+          />
         </section>{/if}
     </section>
     <form
@@ -524,12 +538,13 @@
             Oczekujące polecenie: czeka na potwierdzenie. Przesłane ustawienia
             pozostają niezmienione.
           </p>
-          <button type="button" onclick={transmit} disabled={busy || accessLost}
-            >Ponów to samo polecenie</button
-          >
-          <details>
-            <summary>Szczegóły zapisu</summary><code>{pending.requestId}</code>
-          </details>
+          <CommandRecovery
+            {pending}
+            {busy}
+            {accessLost}
+            oncheck={check}
+            onretry={transmit}
+          />
         </section>{/if}
     </form>
     <section class="appearance">

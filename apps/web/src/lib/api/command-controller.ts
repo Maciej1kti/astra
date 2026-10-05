@@ -1,5 +1,5 @@
 import { resourceLabel } from "../resources/resource-presentation.ts";
-import { validateCommandStatus } from "./confirmation.ts";
+import { invalidConfirmation, validateCommandStatus } from "./confirmation.ts";
 import { isRejectedConflict } from "./command-result.ts";
 import {
   ApiError,
@@ -20,6 +20,12 @@ export type CommandSnapshot =
       phase: "ready" | "submitting" | "checking" | "uncertain" | "accepted";
       pending: Pending;
     };
+/**
+ * A definitive outcome. `finished` is a workflow whose job has ended: its
+ * status records that, with no reply or job reference to return.
+ */
+export type SettledReply =
+  Exclude<CommandReply, { kind: "unresolved" }> | { kind: "finished" };
 type Dependencies = {
   send?: (pending: Pending) => Promise<CommandReply>;
   status?: (pending: Pending) => Promise<CommandStatus>;
@@ -73,8 +79,11 @@ export class CommandController {
       throw new Error("Brak przyjętego zadania do zakończenia.");
     this.update({ phase: "committed", pending: null });
   }
-  retry() {
-    return this.run("submitting");
+  async retry(): Promise<Exclude<SettledReply, { kind: "finished" }>> {
+    const reply = await this.run("submitting");
+    // Only a status lookup can report a finished workflow.
+    if (reply.kind === "finished") invalidConfirmation();
+    return reply;
   }
   check() {
     return this.run("checking");
@@ -85,19 +94,17 @@ export class CommandController {
   async confirm() {
     return this.requireCommitted(await this.check());
   }
-  private requireCommitted(
-    reply: Exclude<CommandReply, { kind: "unresolved" }>,
-  ) {
-    if (reply.kind !== "committed")
+  private requireCommitted(reply: SettledReply) {
+    if (reply.kind === "accepted")
       throw new Error(
         `Polecenie przyjęto jako zadanie ${reply.jobId}. Sprawdź zadanie przed kontynuowaniem.`,
       );
+    // Only workflow owners, which poll their job, can continue without a reply.
+    if (reply.kind === "finished") invalidConfirmation();
     return reply.reply;
   }
 
-  private async run(
-    phase: "submitting" | "checking",
-  ): Promise<Exclude<CommandReply, { kind: "unresolved" }>> {
+  private async run(phase: "submitting" | "checking"): Promise<SettledReply> {
     if (this.busy)
       throw new Error("To polecenie jest już sprawdzane lub przesyłane.");
     const pending = this.pending;
@@ -109,7 +116,7 @@ export class CommandController {
     this.update({ phase, pending });
     let rejected = false;
     try {
-      let reply: CommandReply;
+      let reply: CommandReply | { kind: "finished" };
       if (phase === "checking") {
         const result = await (this.dependencies.status ?? commandStatus)(
           pending,
@@ -122,10 +129,13 @@ export class CommandController {
             ...(result.error ?? { error: { code: "COMMAND_REJECTED" } }),
           });
         }
-        reply = normalizeCommandReply(
-          result.state === "committed" ? result.result : result,
-          pending,
-        );
+        reply =
+          result.state === "committed" && result.result === undefined
+            ? { kind: "finished" }
+            : normalizeCommandReply(
+                result.state === "committed" ? result.result : result,
+                pending,
+              );
       } else reply = await (this.dependencies.send ?? send)(pending);
       if (reply.kind === "unresolved")
         throw new Error(

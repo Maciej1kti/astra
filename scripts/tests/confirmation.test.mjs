@@ -570,3 +570,28 @@ test("a user confirmation carries a UUIDv4 profile matching the submitted comman
     refuses(user({ id }, { id }), { ...rename, path: `/api/v1/users/${id}` });
   }
 });
+
+test("a finished workflow's status needs no result; every other command's does", () => {
+  for (const workflow of workflows) {
+    assert.doesNotThrow(() =>
+      validateCommandStatus(status("committed"), workflow),
+    );
+    for (const value of [
+      status("committed", { error: failure() }),
+      status("committed", { result: null }),
+      status("committed", { job_id: v4 }),
+    ])
+      assert.throws(
+        () => validateCommandStatus(value, workflow),
+        { message: invalidMessage },
+        JSON.stringify(value),
+      );
+    // It is evidence from a lookup, never a direct reply to the command.
+    for (const http of [undefined, 200, 202])
+      refuses(status("committed"), workflow, http);
+  }
+  for (const expected of [pending, cardCommand])
+    assert.throws(() => validateCommandStatus(status("committed"), expected), {
+      message: invalidMessage,
+    });
+});

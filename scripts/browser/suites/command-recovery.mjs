@@ -584,10 +584,17 @@ await runBrowserSuite(
           }),
         );
         await visit(page, { view: "board", project });
-        const boardAlert = page
-          .getByRole("alert")
-          .filter({ hasText: "Wczytaj tablicę ponownie" });
+        // The alert is the message alone; its retry stays an ordinary button.
+        const besideRetry = (name) =>
+          page
+            .locator("p")
+            .filter({ has: page.getByRole("button", { name, exact: true }) })
+            .getByRole("alert");
+        const boardAlert = besideRetry("Wczytaj tablicę ponownie");
         await expect(boardAlert).toBeVisible();
+        await expect(page.getByRole("alert").getByRole("button")).toHaveCount(
+          0,
+        );
         const boardText = await boardAlert.innerText();
         assert.doesNotMatch(boardText, /Error|JSON|Unexpected|token/);
         assert.match(boardText, /nieprawidłową odpowiedź/);
@@ -604,14 +611,179 @@ await runBrowserSuite(
           }),
         );
         await visit(page, { view: "calendar", project, month: "2026-09" });
-        const calendarAlert = page
-          .getByRole("alert")
-          .filter({ hasText: "Wczytaj kalendarz ponownie" });
+        const calendarAlert = besideRetry("Wczytaj kalendarz ponownie");
         await expect(calendarAlert).toBeVisible();
         const calendarText = await calendarAlert.innerText();
         assert.doesNotMatch(calendarText, /Error:|English/);
         assert.match(calendarText, /Serwer zgłosił problem/);
         return { boardText, calendarText };
+      },
+    );
+
+    /** The host commits; only its acknowledgement and the first lookup are lost. */
+    async function loseReply(page, pattern, method) {
+      const exchange = { writes: [], lookups: [], failLookup: true };
+      await page.route(pattern, async (route) => {
+        const request = route.request();
+        if (request.method() !== method) return route.continue();
+        exchange.writes.push({
+          requestId: request.headers()["x-request-id"],
+          epoch: request.headers()["x-command-epoch"],
+        });
+        const response = await route.fetch();
+        assert(response.ok(), `The host answered ${response.status()}`);
+        await route.abort("failed");
+      });
+      await page.route(`${config.origin}/api/v1/commands/**`, (route) => {
+        const url = new URL(route.request().url());
+        exchange.lookups.push({
+          requestId: url.pathname.split("/").at(-1),
+          epoch: url.searchParams.get("epoch"),
+        });
+        return exchange.failLookup
+          ? route.fulfill({
+              status: 503,
+              json: {
+                api_version: "1",
+                error: { code: "RESOURCE_UNAVAILABLE", message: "Synthetic" },
+              },
+            })
+          : route.continue();
+      });
+      return exchange;
+    }
+    /** Both continuations stay available until a lookup or reply is definitive. */
+    async function checkUncertain(page, scope, exchange) {
+      const status = scope.getByRole("button", {
+        name: "Sprawdź stan",
+        exact: true,
+      });
+      const retry = scope.getByRole("button", {
+        name: "Ponów to samo polecenie",
+        exact: true,
+      });
+      await expect(status).toBeEnabled();
+      await expect(retry).toBeEnabled();
+      await expect(scope).toContainText(exchange.writes[0].requestId);
+      // A failed lookup is not a rejection: the same command stays pending.
+      await status.click();
+      await expect.poll(() => exchange.lookups.length).toBe(1);
+      await expect(scope.getByRole("alert")).toBeVisible();
+      await expect(status).toBeEnabled();
+      await expect(retry).toBeEnabled();
+      await expect(scope).toContainText(exchange.writes[0].requestId);
+      assert.equal(await unloadGuarded(page), true);
+      return status;
+    }
+
+    await check(
+      "C11",
+      "A settings write with a lost reply is settled by checking its status",
+      async (page) => {
+        const preferencesPath = "/api/v1/workspace/preferences";
+        const original = cli("get", preferencesPath);
+        const mine = original.timezone === "UTC" ? "Europe/Warsaw" : "UTC";
+        const exchange = await loseReply(
+          page,
+          `${config.origin}${preferencesPath}`,
+          "PATCH",
+        );
+        await visit(page, { view: "list", project });
+        await page
+          .getByRole("button", {
+            name: "Ustawienia przestrzeni roboczej",
+            exact: true,
+          })
+          .click();
+        const dialog = page.getByRole("dialog", {
+          name: "Ustawienia przestrzeni roboczej",
+          exact: true,
+        });
+        const timezone = dialog.getByLabel("Strefa czasowa", { exact: true });
+        await expect(timezone).toBeEnabled();
+        await timezone.fill(mine);
+        await dialog
+          .getByRole("button", { name: "Zapisz ustawienia", exact: true })
+          .click();
+        await expect(dialog).toContainText("Oczekujące polecenie:");
+        const status = await checkUncertain(page, dialog, exchange);
+        await expect(timezone).toBeDisabled();
+        await expect(timezone).toHaveValue(mine);
+        exchange.failLookup = false;
+        await status.click();
+        await expect(dialog).toHaveCount(0);
+        assert.equal(exchange.writes.length, 1, "A check must not resend");
+        assert.equal(exchange.lookups.length, 2);
+        for (const lookup of exchange.lookups)
+          assert.deepEqual(lookup, exchange.writes[0]);
+        const stored = cli("get", preferencesPath);
+        assert.equal(stored.timezone, mine);
+        await mutate(
+          "PATCH",
+          preferencesPath,
+          { timezone: original.timezone },
+          stored.version,
+        );
+        return exchange;
+      },
+    );
+
+    await check(
+      "C12",
+      "A tag rename with a lost reply is settled by checking its status",
+      async (page) => {
+        const source = `Status ${Date.now().toString(36)}`;
+        const target = `${source} renamed`;
+        const card = await create("Recovery tag status", { labels: [source] });
+        const exchange = await loseReply(
+          page,
+          `${config.origin}${base}/tags/rename`,
+          "POST",
+        );
+        await visit(page, { view: "list", project });
+        await page
+          .getByRole("button", { name: "Ustawienia przestrzeni roboczej" })
+          .click();
+        await page.getByRole("button", { name: "Zarządzaj tagami" }).click();
+        const manager = page.getByRole("dialog", {
+          name: "Zarządzaj tagami projektu",
+        });
+        await manager
+          .getByRole("listitem")
+          .filter({ hasText: source })
+          .getByRole("button", { name: "Zmień nazwę / połącz" })
+          .click();
+        await manager.getByLabel("Tag docelowy").fill(target);
+        await manager.getByRole("button", { name: "Podgląd zmian" }).click();
+        await manager
+          .getByRole("button", { name: "Zmień nazwę w tym projekcie" })
+          .click();
+        await expect.poll(() => exchange.writes.length).toBe(1);
+        const status = await checkUncertain(page, manager, exchange);
+        const close = manager.getByRole("button", {
+          name: "Zamknij zarządzanie tagami",
+        });
+        await expect(close).toBeDisabled();
+        // The accepted job finishes on the host whether or not it was observed.
+        await expect
+          .poll(
+            () =>
+              cli("get", `${base}/cards/${card.metadata.id}`).metadata.labels,
+          )
+          .toEqual([target]);
+        exchange.failLookup = false;
+        await status.click();
+        await expect(close).toBeEnabled();
+        await expect(status).toHaveCount(0);
+        await expect(
+          manager.getByRole("listitem").filter({ hasText: target }),
+        ).toHaveCount(1);
+        assert.equal(exchange.writes.length, 1, "A check must not resend");
+        assert.equal(exchange.lookups.length, 2);
+        for (const lookup of exchange.lookups)
+          assert.deepEqual(lookup, exchange.writes[0]);
+        assert.equal(await unloadGuarded(page), false);
+        return exchange;
       },
     );
 

@@ -9,6 +9,7 @@
   import { onMount, untrack } from "svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api } from "../../lib/api/api";
+  import CommandRecovery from "../../lib/ui/CommandRecovery.svelte";
   import SessionNotice from "../../lib/ui/SessionNotice.svelte";
   import {
     commandOperation,
@@ -103,6 +104,18 @@
       busy = false;
     }
   }
+  async function renamed() {
+    plan = null;
+    job = null;
+    // The rename is durable. Other views must learn of it even when this
+    // dialog cannot read its own catalog again.
+    onchanged();
+    window.dispatchEvent(new Event("tag-suggestions-changed"));
+    source = "";
+    target = "";
+    catalog = null;
+    catalog = await getProjectTags(project);
+  }
   async function poll(id: string) {
     try {
       const next = await api<Job>(
@@ -116,16 +129,7 @@
       job = next;
       if (next.state === "done") {
         if (operation.phase === "accepted") operation.finishJob();
-        plan = null;
-        job = null;
-        // The rename is durable. Other views must learn of it even when this
-        // dialog cannot read its own catalog again.
-        onchanged();
-        window.dispatchEvent(new Event("tag-suggestions-changed"));
-        source = "";
-        target = "";
-        catalog = null;
-        catalog = await getProjectTags(project);
+        await renamed();
       } else if (next.state === "running") {
         setTimeout(() => {
           if (active) void poll(id);
@@ -144,11 +148,24 @@
     await retry();
   }
   async function retry() {
+    await runCommand("submit");
+  }
+  async function check() {
+    await runCommand("status");
+  }
+  /** Both continuations keep the original request ID, epoch and payload. */
+  async function runCommand(action: "submit" | "status") {
     if (!pending || busy || accessLost) return;
     busy = true;
     error = "";
     try {
-      const result = await operation.retry();
+      const result =
+        action === "status" ? await operation.check() : await operation.retry();
+      // A status lookup of a finished job reports the outcome without the job.
+      if (result.kind === "finished") {
+        await renamed();
+        return;
+      }
       const id =
         result.kind === "accepted" ? result.jobId : result.reply.result.job_id;
       if (!id)
@@ -298,12 +315,14 @@
       {#if job}<p role="status">
           Zmiana nazwy: {stateLabel(job.state)} ({job.completed_steps}/{job.total_steps})
         </p>{/if}
-      {#if pending}<p role="status">
-          Identyfikator polecenia: {pending.requestId}
-        </p>
-        <button disabled={busy || accessLost} onclick={() => void retry()}
-          >Ponów to samo polecenie</button
-        >{/if}
+      <CommandRecovery
+        {pending}
+        {busy}
+        {accessLost}
+        label="Identyfikator polecenia"
+        oncheck={() => void check()}
+        onretry={() => void retry()}
+      />
     {:else if busy}<p role="status">Ładowanie tagów…</p>{/if}
   </div>
   {#if pending || job || error}<footer class="dialog-footer">

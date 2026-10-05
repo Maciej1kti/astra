@@ -217,3 +217,34 @@ test("uncertain outcomes and ordinary rejections never record a conflict", async
   assert.throws(() => lookup.acknowledge(), /oczekujące/);
   assert.equal(lookup.pending, pending);
 });
+
+test("a finished workflow is settled by its status alone; other commands still need their result", async () => {
+  const finished = async (value) => ({
+    api_version: "1",
+    request_id: value.requestId,
+    state: "committed",
+  });
+  for (const path of [
+    "/api/v1/registrations",
+    "/api/v1/projects/test/tags/rename",
+  ]) {
+    const workflow = Object.freeze({ ...pending, path, method: "POST" });
+    const phases = [];
+    const operation = new CommandController({
+      status: finished,
+      changed: (state) => phases.push(state.phase),
+    });
+    operation.prepare(workflow);
+    assert.deepEqual(await operation.check(), { kind: "finished" });
+    assert.deepEqual(phases, ["ready", "checking", "committed"]);
+    assert.equal(operation.pending, null);
+    // An owner that needs the returned resource cannot continue from it.
+    operation.prepare(workflow);
+    await assert.rejects(operation.confirm(), /Nieprawidłowa odpowiedź/);
+  }
+  const operation = new CommandController({ status: finished });
+  operation.prepare(pending);
+  await assert.rejects(operation.check(), /Nieprawidłowa odpowiedź/);
+  assert.equal(operation.state.phase, "uncertain");
+  assert.equal(operation.pending, pending);
+});
