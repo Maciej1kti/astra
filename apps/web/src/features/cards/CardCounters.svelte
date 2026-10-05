@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
+  import { tick } from "svelte";
+  import { coarseClock } from "../../lib/ui/coarse-clock.svelte";
   import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
@@ -31,8 +32,8 @@
     saved: boolean;
     onsubmit: (patch: CardPatch, counterId?: string) => void;
   } = $props();
-  let now = $state(Date.now());
-  const today = $derived(counterDay(timezone, now));
+  const clock = coarseClock();
+  const today = $derived(counterDay(timezone, clock.now));
   let showArchived = $state(false);
   let configurationName = $state<HTMLInputElement>();
   const visible = $derived(counters.filter((c) => showArchived || !c.archived));
@@ -46,17 +47,6 @@
           c.id === draft.configuration?.id && Object.keys(c.values).length > 0,
       ),
   );
-  onMount(() => {
-    const refresh = () => {
-      now = Date.now();
-    };
-    const timer = setInterval(refresh, 1000);
-    document.addEventListener("visibilitychange", refresh);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", refresh);
-    };
-  });
   async function configure(counter?: CardCounter) {
     draft.configuration = counter
       ? {

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount, untrack } from "svelte";
+  import { untrack } from "svelte";
+  import { coarseClock } from "../../lib/ui/coarse-clock.svelte";
   import ScheduleCalendar from "./ScheduleCalendar.svelte";
   import { counterDay } from "../cards/card-counters";
   import Button from "../../lib/ui/Button.svelte";
@@ -23,20 +24,10 @@
   const id = $props.id();
   let calendarOpen = $state(false);
   let expanded = $state(untrack(() => initiallyExpanded));
-  let now = $state(Date.now());
+  const clock = coarseClock();
+  const now = $derived(clock.now);
   const summary = $derived(cardScheduleSummary(fields, timezone, now));
   const cannotCollapse = $derived(expanded && !summary.valid);
-  onMount(() => {
-    const refresh = () => {
-      now = Date.now();
-    };
-    const timer = setInterval(refresh, 30000);
-    document.addEventListener("visibilitychange", refresh);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", refresh);
-    };
-  });
 </script>
 
 <section class="card-schedule" aria-label="Harmonogram">
