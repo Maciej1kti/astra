@@ -54,7 +54,7 @@ export async function withBrowser(
   } = {},
 ) {
   const browser = await launch();
-  const webkitEngine = browser.browserType().name() === "webkit";
+  const webkitEngine = process.env.ASTRA_TEST_BROWSER === "webkit";
   try {
     return await run({
       browser,
