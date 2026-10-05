@@ -4,6 +4,7 @@ mod command_state;
 mod context;
 mod diagnostics;
 mod focus;
+mod pending_recovery;
 mod project_deletion;
 mod source_deletion;
 pub use diagnostics::{record_failure, record_worker_failure};

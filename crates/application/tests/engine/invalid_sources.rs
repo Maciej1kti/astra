@@ -43,7 +43,8 @@ fn stray_collection_files_reject_create_and_reorder_definitely() {
     let first_id = first.body["result"]["id"].as_str().unwrap();
     let second_id = second.body["result"]["id"].as_str().unwrap();
     let valid = Uuid::new_v4();
-    let strays: [(&str, PathBuf, Box<dyn Fn(&PathBuf)>); 3] = [
+    type Place<'a> = Box<dyn Fn(&PathBuf) + 'a>;
+    let strays: [(&str, PathBuf, Place<'_>); 3] = [
         (
             "a name that is not a canonical UUIDv4",
             cards.join(format!("{}.json", Uuid::now_v7())),

@@ -362,3 +362,108 @@ fn unresolved_child_recovery_keeps_shared_source_blocked_after_restart() {
     );
     assert_eq!(users.owner.get(&project, Kind::Card, id).unwrap(), current);
 }
+
+#[test]
+fn periodic_recovery_completes_a_peer_profiles_intent_without_a_write_or_restart() {
+    for child_writer in [false, true] {
+        for (point, state) in [
+            (CommitPoint::Prepared, "prepared"),
+            (CommitPoint::Renamed, "prepared"),
+            (CommitPoint::DirectorySynced, "blocked"),
+        ] {
+            let (_temporary, users, second, project, _) = shared_setup();
+            let (_, other) = users.select(Some(&second)).unwrap();
+            let created = card(&users.owner, &project, false);
+            let writer = if child_writer { &other } else { &users.owner };
+            let peer = if child_writer { &users.owner } else { &other };
+            let command = interrupted_write(writer, &project, &created, point);
+            writer
+                .journal
+                .db()
+                .unwrap()
+                .execute(
+                    "UPDATE commands SET state=?1 WHERE request_id=?2",
+                    params![state, command.request_id],
+                )
+                .unwrap();
+            let id = created["metadata"]["id"].as_str().unwrap();
+            let current = peer.get(&project, Kind::Card, id).unwrap();
+            let refused = |title: &str| {
+                patch(peer, &project, &current, json!({"set":{"title":title}})).body["error"]
+                    ["code"]
+                    .clone()
+            };
+            assert_eq!(refused("Peer overwrite"), "PROJECT_RECOVERY_REQUIRED");
+            // A profile's pass resolves only the intents its own journal owns.
+            assert_eq!(peer.recover_pending().unwrap(), 0);
+            assert_eq!(refused("Still refused"), "PROJECT_RECOVERY_REQUIRED");
+
+            assert_eq!(writer.recover_pending().unwrap(), 1);
+            assert_eq!(
+                writer
+                    .command_status(&command.request_id, &command.epoch)
+                    .unwrap()["state"],
+                "committed"
+            );
+            assert_eq!(writer.recover_pending().unwrap(), 0);
+            let current = peer.get(&project, Kind::Card, id).unwrap();
+            assert_eq!(current["metadata"]["title"], "Recovered title");
+            let written = patch(
+                peer,
+                &project,
+                &current,
+                json!({"set":{"title":"After recovery"}}),
+            );
+            assert_eq!(written.http_status, 200, "{written:?}");
+        }
+    }
+}
+
+#[test]
+fn periodic_recovery_leaves_reviews_alone_and_never_overwrites_an_external_edit() {
+    let (_temporary, users, second, project, path) = shared_setup();
+    let (_, other) = users.select(Some(&second)).unwrap();
+    let reviewed = card(&users.owner, &project, false);
+    let command = interrupted_write(&other, &project, &reviewed, CommitPoint::Prepared);
+    other
+        .journal
+        .db()
+        .unwrap()
+        .execute(
+            "UPDATE commands SET state='needs_review' WHERE request_id=?1",
+            params![command.request_id],
+        )
+        .unwrap();
+    let id = reviewed["metadata"]["id"].as_str().unwrap();
+    let file = path.join(format!(".project/cards/{id}.json"));
+    let before = std::fs::read(&file).unwrap();
+    assert_eq!(other.recover_pending().unwrap(), 0);
+    assert_eq!(users.owner.recover_pending().unwrap(), 0);
+    assert_eq!(
+        other
+            .command_status(&command.request_id, &command.epoch)
+            .unwrap()["state"],
+        "needs_review"
+    );
+    assert_eq!(std::fs::read(&file).unwrap(), before);
+
+    // A conflicting external edit becomes a review, exactly as at startup.
+    let (_temporary, users, second, project, path) = shared_setup();
+    let (_, other) = users.select(Some(&second)).unwrap();
+    let created = card(&users.owner, &project, false);
+    let command = interrupted_write(&other, &project, &created, CommitPoint::Prepared);
+    let id = created["metadata"]["id"].as_str().unwrap();
+    let file = path.join(format!(".project/cards/{id}.json"));
+    let mut external: Value = serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap();
+    external["metadata"]["title"] = json!("Keep external edit");
+    let external = serde_json::to_vec(&external).unwrap();
+    std::fs::write(&file, &external).unwrap();
+    assert_eq!(other.recover_pending().unwrap(), 0);
+    assert_eq!(
+        other
+            .command_status(&command.request_id, &command.epoch)
+            .unwrap()["state"],
+        "needs_review"
+    );
+    assert_eq!(std::fs::read(&file).unwrap(), external);
+}
