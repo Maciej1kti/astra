@@ -20,14 +20,20 @@
     "pair:try": "node scripts/try-pair.mjs",
     "format": "prettier --write apps/web/src apps/web/build apps/web/vite.config.ts apps/web/tsconfig.json \"scripts/**/*.mjs\"",
     "format:check": "prettier --check apps/web/src apps/web/build apps/web/vite.config.ts apps/web/tsconfig.json \"scripts/**/*.mjs\"",
+    "lint": "eslint --max-warnings 0 apps/web/src apps/web/build apps/web/vite.config.ts \"scripts/**/*.mjs\" eslint.config.js",
     "check:bundle": "node scripts/check-bundle.mjs",
     "test:unit": "node --test scripts/tests/*.test.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
+    "eslint": "10.12.0",
+    "eslint-plugin-svelte": "3.23.0",
+    "globals": "17.13.0",
     "json-schema-to-typescript": "16.0.0",
     "prettier": "3.9.6",
     "prettier-plugin-svelte": "4.1.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.0"
   }
 }

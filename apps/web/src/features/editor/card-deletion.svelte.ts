@@ -70,7 +70,7 @@ export function cardDeletion(editor: Editor) {
     get confirmation() {
       return confirmation;
     },
-    async request() {
+    request: async () => {
       if (
         !editor.card() ||
         editor.locked() ||
@@ -95,17 +95,17 @@ export function cardDeletion(editor: Editor) {
       conflict = false;
       confirmation = editor.dirty() ? "drafts" : "final";
     },
-    cancel() {
+    cancel: () => {
       if (operation.busy) return;
       confirmation = null;
       error = "";
     },
     /** Past the unfinished-entries warning, on to the final confirmation. */
-    proceed() {
+    proceed: () => {
       if (operation.busy || !editor.card()) return;
       confirmation = "final";
     },
-    async confirm() {
+    confirm: async () => {
       const card = editor.card();
       if (
         confirmation !== "final" ||

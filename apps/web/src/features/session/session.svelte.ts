@@ -90,6 +90,7 @@ export function sessionState(hooks: SessionHooks) {
           hooks.error(cause);
         }
       }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the session can end while preferences are awaited
       if (boot && current === generation) hooks.changes(events);
     })();
   });
@@ -138,9 +139,11 @@ export function sessionState(hooks: SessionHooks) {
       "resync_required",
       "workspace_changed",
     ]) {
-      stream.addEventListener(kind, (event) => {
+      stream.addEventListener(kind, (event: MessageEvent<string>) => {
         try {
-          changes.push({ ...JSON.parse((event as MessageEvent).data), kind });
+          // A transport boundary: the payload is asserted, and only identity is kept.
+          const detail = JSON.parse(event.data) as Invalidation;
+          changes.push({ ...detail, kind });
         } catch {
           changes.push({ kind: "resync_required" });
         }
@@ -193,11 +196,13 @@ export function sessionState(hooks: SessionHooks) {
     const currentPreferences = startPreferencesRead();
     try {
       const value = await api<Bootstrap>("/api/v1/bootstrap");
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the session can end while bootstrap is awaited
       if (!boot || current !== generation) return;
       acceptBootstrap(value);
       configure(value);
       connect();
       await preferences(currentPreferences);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the session can end while preferences are awaited
       if (boot && current === generation) await hooks.foreground();
     } catch (cause) {
       hooks.error(cause);
@@ -244,12 +249,13 @@ export function sessionState(hooks: SessionHooks) {
   }
   onMount(() => {
     const unsubscribe = subscribeSession({ ended });
-    window.addEventListener("online", foreground);
-    document.addEventListener("visibilitychange", foreground);
+    const resumed = () => void foreground();
+    window.addEventListener("online", resumed);
+    document.addEventListener("visibilitychange", resumed);
     return () => {
       unsubscribe();
-      window.removeEventListener("online", foreground);
-      document.removeEventListener("visibilitychange", foreground);
+      window.removeEventListener("online", resumed);
+      document.removeEventListener("visibilitychange", resumed);
       generation++;
       recovery.cancel();
       source?.close();
@@ -282,7 +288,7 @@ export function sessionState(hooks: SessionHooks) {
     set device(value: string) {
       device = value;
     },
-    restartPairing() {
+    restartPairing: () => {
       pairing = null;
     },
     initialize,

@@ -22,6 +22,7 @@ STEPS = [
     ["npm", "run", "check"],
     ["node", "scripts/check-boundaries.mjs"],
     ["npm", "run", "format:check"],
+    ["npm", "run", "lint"],
     ["npm", "run", "build"],
     ["npm", "run", "check:bundle"],
     ["scripts/cargo-local", "fmt", "--all", "--", "--check"],

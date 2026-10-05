@@ -409,7 +409,7 @@
   } | null>(null);
   const editorResource = $derived(
     editorAcknowledgement?.target === editor
-      ? editorAcknowledgement?.resource
+      ? editorAcknowledgement.resource
       : editor?.resource,
   );
   let adding = $state(false);

@@ -135,7 +135,7 @@
     {#if item.attentionReasons?.some((reason) => reason !== "overdue")}<span
         class="attention-reasons"
         aria-label="Powody wymagające uwagi"
-        >{#each item.attentionReasons?.filter((reason) => reason !== "overdue") ?? [] as reason}<Badge
+        >{#each item.attentionReasons.filter((reason) => reason !== "overdue") as reason}<Badge
             >{resourceLabel(reason)}</Badge
           >{/each}</span
       >{/if}

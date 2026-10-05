@@ -51,7 +51,7 @@
   const readScope = $derived(`${project}:${revision}`);
   let error = $state("");
   let busy = $state(false);
-  let pageStarts = $state<Record<string, boolean>>({});
+  const pageStarts = $state<Record<string, boolean>>({});
   const viewState = untrack(() => readBoardView(project));
   let boardRoot: HTMLElement | undefined;
   let initialView = true;
@@ -59,7 +59,7 @@
   let saveTimer = 0;
   let quickStatus = $state<string | null>(null);
   let visibleStatus = $state<string>("planned");
-  let quickTitles = $state<Record<string, string>>({});
+  const quickTitles = $state<Record<string, string>>({});
   $effect(() => {
     ondraftchange?.(Object.values(quickTitles).some((title) => !!title));
   });
@@ -83,6 +83,7 @@
       requestAnimationFrame(() => resolve()),
     );
     {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the board can unmount during the frame awaited above
       if (!boardRoot || current !== generation) return;
       const scroll = boardRoot.querySelector<HTMLElement>(".date-scroll");
       if (scroll) {
@@ -127,7 +128,7 @@
     );
     if (current === generation) restoring = false;
   }
-  let columnCursors: Record<string, string | null> = {};
+  const columnCursors: Record<string, string | null> = {};
   let freshness = $state("");
   let pageNotice = $state("");
   // Identifies the read whose scroll restoration may still be applied.

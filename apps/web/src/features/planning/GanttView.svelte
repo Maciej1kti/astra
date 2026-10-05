@@ -249,8 +249,9 @@
     selection = id;
     const task = tasks.find((item) => item.id === id);
     if (!task || !widgetApi) return;
-    widgetApi.exec("select-task", { id });
-    widgetApi.exec("scroll-chart", {
+    void widgetApi.exec("select-task", { id });
+    void widgetApi.exec("scroll-chart", {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the widget returns nothing for a task it has not laid out, whatever its types say
       left: Math.max(0, Number(widgetApi.getTask(id)?.$x ?? 0) - metrics.day),
       top: tasks.indexOf(task) * metrics.row,
     });
@@ -273,9 +274,10 @@
       )
       .then(() => {
         if (widget === widgetApi && key === lastNavigation)
-          widget.exec("scroll-chart", {
+          void widget.exec("scroll-chart", {
             left: Math.max(
               0,
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the widget returns nothing for a task it has not laid out, whatever its types say
               Number(widget.getTask(task.id!)?.$x ?? 0) - metrics.day,
             ),
           });
@@ -357,7 +359,6 @@
     >
     {#if selected?.schedule}<button
         onclick={() =>
-          selected &&
           onpropose({
             path: resourcePath(selected),
             version: selected.version,

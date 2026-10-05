@@ -31,7 +31,7 @@ export function detailSummary(
     result.title = m.summary;
     result.kind = m.kind;
     result.target = m.target;
-    if (m.recorded_at !== undefined) result.recorded_at = m.recorded_at;
+    result.recorded_at = m.recorded_at;
     if (resource.type === "update" && resource.read !== undefined)
       result.read = resource.read;
   } else {
@@ -42,7 +42,7 @@ export function detailSummary(
       const milestone = m as MilestoneMetadata;
       if (milestone.due !== undefined) result.due = milestone.due;
     }
-    if (m.position !== undefined) result.position = m.position;
+    result.position = m.position;
     if (type === "card") {
       const card = m as CardMetadata;
       result.priority = card.priority;
@@ -51,7 +51,7 @@ export function detailSummary(
         card.counters?.filter((counter) => !counter.archived).length ?? 0;
       if (card.event !== undefined) result.event = card.event;
       if (card.schedule !== undefined) result.schedule = card.schedule;
-      if (card.archived !== undefined) result.archived = card.archived;
+      result.archived = card.archived;
       if (card.labels !== undefined) result.labels = [...card.labels];
       if (card.acceptance !== undefined)
         result.acceptance_progress = acceptanceProgress(card.acceptance);

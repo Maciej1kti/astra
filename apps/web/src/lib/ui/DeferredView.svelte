@@ -1,5 +1,6 @@
 <script lang="ts" generics="T">
   import type { Snippet } from "svelte";
+  import type { DeferredSource } from "./deferred-component.svelte";
   import Button from "./Button.svelte";
 
   /** An on-demand view in the page flow, with its loading and retry states. */
@@ -10,7 +11,7 @@
     quiet = false,
     children,
   }: {
-    source: { component: T | null; error: string; load: () => Promise<void> };
+    source: DeferredSource<T>;
     loading: string;
     retry?: string;
     quiet?: boolean;

@@ -51,7 +51,7 @@ export function focusCounterState(allowed: () => boolean, saved: () => void) {
     },
   });
   const snapshot = $derived.by(() => {
-    revision;
+    void revision;
     return controller.snapshot;
   });
   return {

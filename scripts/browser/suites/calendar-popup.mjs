@@ -388,7 +388,7 @@ await runBrowserSuite(
           await page
             .getByRole("button", { name: "Siatka miesiąca", exact: true })
             .click();
-        const target = await open("2026-09-07");
+        await open("2026-09-07");
         const geometry = await popup.evaluate((element) => {
           const popup = element.getBoundingClientRect();
           const events = [...element.querySelectorAll(".ec-event")].map(

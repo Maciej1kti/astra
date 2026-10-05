@@ -11,7 +11,6 @@ import {
   loadView,
 } from "../../apps/web/src/features/workspace/view-queries.ts";
 import {
-  api,
   ApiError,
   configure,
   clearReads,

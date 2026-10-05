@@ -193,7 +193,7 @@
       // Keep the live draft object so a text caret and unfinished picker/checklist
       // entries survive the ACK. The acknowledged source/version is still the
       // base used to build the next patch.
-      (draft as EditorDraft & { source: Resource | null }).source = next;
+      draft.source = next;
       onautosaved?.(next);
       if (autoCreate && !autosaveCreated) {
         autosaveCreated = true;
@@ -437,6 +437,7 @@
     commentFlushing = true;
     try {
       await autosave.flush();
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a conflict can be recorded while the flush above is awaited
       if (autosave.hasWork || persistedDirty || conflict || accessLost) return;
       prepare(
         { kind: "comment" },
@@ -467,6 +468,7 @@
     commentFlushing = true;
     try {
       await autosave.flush();
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a conflict can be recorded while the flush above is awaited
       if (autosave.hasWork || persistedDirty || conflict || accessLost) return;
       prepare(
         { kind: "counter", counterId },
@@ -596,7 +598,7 @@
         action === "status"
           ? await operation.confirm()
           : await operation.commit();
-      await completeCommand(submitted, reply);
+      completeCommand(submitted, reply);
     } catch (cause) {
       const reason = commandErrorMessage(cause);
       error = reason;
@@ -612,10 +614,7 @@
       }
     }
   }
-  async function completeCommand(
-    submitted: EditorIntent,
-    reply: CommandResponse,
-  ) {
+  function completeCommand(submitted: EditorIntent, reply: CommandResponse) {
     if (submitted.kind === "comment" || submitted.kind === "counter") {
       const next = reply.result.resource;
       if (
@@ -907,9 +906,7 @@
             ? "Nazwa projektu"
             : draft.type === "update"
               ? "Napisz podsumowanie…"
-              : draft.type === "milestone"
-                ? "Tytuł kamienia milowego"
-                : "Tytuł karty"}
+              : "Tytuł kamienia milowego"}
           maxlength={draft.type === "project"
             ? 120
             : draft.type === "update"

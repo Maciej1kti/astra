@@ -1,5 +1,6 @@
 <script lang="ts" generics="T">
   import type { Snippet } from "svelte";
+  import type { DeferredSource } from "./deferred-component.svelte";
   import DeferredDialog from "./DeferredDialog.svelte";
 
   /**
@@ -13,7 +14,7 @@
     foreground = false,
     children,
   }: {
-    source: { component: T | null; error: string; load: () => Promise<void> };
+    source: DeferredSource<T>;
     title: string;
     onclose: () => void;
     foreground?: boolean;

@@ -25,7 +25,7 @@ export function monthChunkSamples<C extends MonthChunk>(chunks: C[]) {
   const sample = new Map<C, C>();
   for (const chunk of chunks) {
     const { event } = chunk;
-    const item = event.extendedProps?.astra;
+    const item = event.extendedProps.astra;
     if (
       !item ||
       !["card_schedule", "card_event", "milestone_due"].includes(item.kind) ||

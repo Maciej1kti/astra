@@ -188,7 +188,7 @@ export function focusOrderGesture(node: HTMLElement, initial: Options) {
         const current = cards.findIndex(
           (item) =>
             item.id === target?.dataset.focusCard &&
-            item.project_id === target?.dataset.focusProject,
+            item.project_id === target.dataset.focusProject,
         );
         const index = reorderKeyIndex(event.key, current, cards.length);
         if (index === null) return;

@@ -158,7 +158,7 @@ export function navigationState<Loaded = Resource>(
     get restoring() {
       return restoring;
     },
-    selectView(view: View) {
+    selectView: (view: View) => {
       if (view !== current.view) assign({ ...current, view });
     },
     showProject(project: string) {
@@ -167,7 +167,7 @@ export function navigationState<Loaded = Resource>(
     startDraft() {
       invalidateResourceRead();
     },
-    changeMonth(delta: number) {
+    changeMonth: (delta: number) => {
       const [year = NaN, month = NaN] = current.month.split("-").map(Number);
       changeFilters({
         month: new Date(Date.UTC(year, month - 1 + delta, 1))
@@ -175,10 +175,10 @@ export function navigationState<Loaded = Resource>(
           .slice(0, 7),
       });
     },
-    navigateCalendar(
+    navigateCalendar: (
       calendarDate: string,
       calendarLayout: WorkspaceRoute["calendarLayout"],
-    ) {
+    ) => {
       current = { ...current, calendarDate, calendarLayout };
     },
     reset() {

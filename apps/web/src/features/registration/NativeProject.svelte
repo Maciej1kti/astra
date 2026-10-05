@@ -22,6 +22,7 @@
     command,
     isDefinitiveRejection,
     ApiError,
+    apiCode,
   } from "../../lib/api/api";
 
   const access = sessionAccess({
@@ -129,7 +130,7 @@
       choosing = false;
       error = errorMessage(e);
       if (isDefinitiveRejection(e)) {
-        error = explain((e.data.error as { code?: string })?.code ?? error);
+        error = explain(apiCode(e) ?? error);
         selection = null;
       }
     }

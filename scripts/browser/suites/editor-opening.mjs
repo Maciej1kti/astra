@@ -308,7 +308,7 @@ await runBrowserSuite(
         ),
       );
       await expect(dialog).toHaveCount(0);
-      tagged = await mutate(
+      await mutate(
         "PATCH",
         `${base}/cards/${tagged.metadata.id}`,
         {

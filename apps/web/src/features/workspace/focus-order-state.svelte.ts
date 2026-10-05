@@ -124,11 +124,11 @@ export function focusOrderState(source: Source) {
     get unresolved() {
       return !!proposal || !!command.pending;
     },
-    reorder(
+    reorder: (
       visible: Summary[],
       fullOrder: FocusRef[],
       expectedVersion: string,
-    ) {
+    ) => {
       if (
         !expectedVersion ||
         proposal ||
@@ -168,16 +168,16 @@ export function focusOrderState(source: Source) {
       command.prepare(replaceFocus({ items: proposed }, expectedVersion));
       void transmit();
     },
-    retry() {
+    retry: () => {
       void transmit();
     },
-    retryRejected() {
+    retryRejected: () => {
       if (!proposal || !canRetry) return;
       error = "";
       command.prepare(replaceFocus({ items: proposal }, proposalVersion));
       void transmit();
     },
-    async reload() {
+    reload: async () => {
       if (!canReload || command.pending || reloading) return;
       reloading = true;
       error = "";
@@ -194,7 +194,7 @@ export function focusOrderState(source: Source) {
         reloading = false;
       }
     },
-    async copyCommand() {
+    copyCommand: async () => {
       const pending = command.pending;
       if (!pending || !proposal) return;
       try {

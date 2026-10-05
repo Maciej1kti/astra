@@ -40,6 +40,7 @@
   $effect(() => {
     if (!editing || !input) return;
     queueMicrotask(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- editing can end before this microtask runs
       if (!editing || !input) return;
       input.focus();
       input.setSelectionRange(input.value.length, input.value.length);

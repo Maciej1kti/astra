@@ -162,7 +162,7 @@ export async function mapReads<T, R>(
   read: (item: T) => Promise<R>,
   signal?: AbortSignal,
 ): Promise<R[]> {
-  const results: R[] = new Array(items.length);
+  const results = new Array<R>(items.length);
   // The workers share one iterator, so each item is read exactly once.
   const remaining = items.entries();
   await Promise.all(

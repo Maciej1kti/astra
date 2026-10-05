@@ -9,7 +9,7 @@ import { InvalidResponseError, TransportError } from "./transport-errors.ts";
 import { ReadRequests, ReadQueueFullError } from "./read-requests.ts";
 import { pinUserToTab, selectedUserId } from "./user-selection.ts";
 import type {
-  Bootstrap,
+  Bootstrap as ServerBootstrap,
   Summary,
   CommandStatus,
   CommandResponse,
@@ -18,11 +18,14 @@ import type {
   MilestoneResource,
   UpdateResource,
 } from "../contracts/api.generated";
-export type {
-  Bootstrap,
-  Summary,
-  CommandStatus,
-} from "../contracts/api.generated";
+export type { Summary, CommandStatus } from "../contracts/api.generated";
+/**
+ * The session as the browser holds it. A host that predates profiles sends no
+ * user; its commands then carry no user header.
+ */
+export type Bootstrap = Omit<ServerBootstrap, "user"> & {
+  user?: ServerBootstrap["user"];
+};
 export type Resource =
   ProjectResource | CardResource | MilestoneResource | UpdateResource;
 export type Pending = Readonly<{
@@ -63,13 +66,14 @@ export class ApiError extends Error {
   status: number;
   data: Record<string, unknown>;
   constructor(status: number, data: Record<string, unknown>) {
-    const code = (data.error as { code?: string })?.code ?? "";
+    const code = (data.error as { code?: string } | undefined)?.code ?? "";
     super(serverMessage(code, status));
     this.status = status;
     this.data = data;
   }
 }
-let bootstrap: Bootstrap;
+// Absent until the first accepted bootstrap; reads may precede it.
+let bootstrap: Bootstrap | undefined;
 let clockOffset = 0;
 // Only an accepted bootstrap creates a session whose loss can be reported.
 let authenticated = false;
@@ -95,7 +99,7 @@ export function clearReads() {
 }
 export function apiCode(error: unknown) {
   return error instanceof ApiError
-    ? (error.data.error as { code?: string })?.code
+    ? (error.data.error as { code?: string } | undefined)?.code
     : undefined;
 }
 export async function api<T>(
@@ -131,6 +135,8 @@ export async function api<T>(
     throw error;
   }
 }
+const record = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object";
 /** One HTTP exchange. Neither failure below proves a mutation was rejected. */
 async function exchange(path: string, init: RequestInit) {
   // A cancelled or timed-out request keeps its own reason.
@@ -151,14 +157,14 @@ async function exchange(path: string, init: RequestInit) {
     authenticated = false;
     publishSession("ended");
   }
-  let value;
+  let value: unknown;
   try {
     value = response.status === 204 ? null : await response.json();
   } catch (cause) {
     // Engines disagree on the error an unparsable body raises.
     throw failed(cause, new InvalidResponseError(response.status, { cause }));
   }
-  if (!response.ok && (value === null || typeof value !== "object"))
+  if (!response.ok && !record(value))
     throw new InvalidResponseError(response.status);
   return { response, value };
 }
@@ -196,9 +202,10 @@ async function request<T>(
         if (response.ok) validateCommandReply(value, pending, response.status);
         else if (!validCommandError(value, pending)) invalidConfirmation();
       }
-      if (!response.ok || value?.warnings?.length || value?.error)
-        await loadMessages();
-      if (!response.ok) throw new ApiError(response.status, value);
+      const body = record(value) ? value : {};
+      const warned = Array.isArray(body.warnings) && body.warnings.length > 0;
+      if (!response.ok || warned || body.error) await loadMessages();
+      if (!response.ok) throw new ApiError(response.status, body);
       return value as T;
     } catch (error) {
       // Only explicit SERVER_BUSY read rejections are safe to retry automatically.
@@ -218,6 +225,15 @@ async function request<T>(
     );
   }
 }
+/** The identity a command is issued under unless its owner supplies another. */
+function sessionScope() {
+  if (!bootstrap)
+    throw new Error("Połącz tę przeglądarkę przed wysłaniem polecenia.");
+  return {
+    epoch: bootstrap.command_epoch,
+    userId: bootstrap.user?.id ?? selectedUserId(),
+  };
+}
 export function command(
   path: string,
   method: string,
@@ -225,6 +241,7 @@ export function command(
   version?: string,
   scope?: { userId: string; epoch: string },
 ): Pending {
+  const origin = scope ?? sessionScope();
   // RFC 9562 UUIDv7: a millisecond timestamp followed by random bits.
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   let time = BigInt(Math.trunc(Date.now() + clockOffset));
@@ -248,10 +265,8 @@ export function command(
         : freezeJson(JSON.parse(JSON.stringify(payload))),
     version,
     requestId,
-    epoch: scope?.epoch ?? bootstrap.command_epoch,
-    ...((scope?.userId ?? bootstrap.user?.id ?? selectedUserId())
-      ? { userId: scope?.userId ?? bootstrap.user?.id ?? selectedUserId() }
-      : {}),
+    epoch: origin.epoch,
+    ...(origin.userId ? { userId: origin.userId } : {}),
   });
 }
 export type CommandReply =

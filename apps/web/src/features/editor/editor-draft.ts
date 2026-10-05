@@ -204,7 +204,10 @@ export function discreteAutosaveChange(previous: string, next: string) {
     }
     const structure = (value: unknown) =>
       Array.isArray(value)
-        ? value.map((item) => ({ id: item.id, completed: item.completed }))
+        ? value.map((item: { id?: unknown; completed?: unknown }) => ({
+            id: item.id,
+            completed: item.completed,
+          }))
         : [];
     return (
       JSON.stringify(structure(before.acceptance)) !==

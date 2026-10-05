@@ -25,6 +25,7 @@
   let from = $state(untrack(() => defaultFrom(today)));
   let to = $state(untrack(() => today));
   let includeArchived = $state(false);
+  // eslint-disable-next-line no-useless-assignment -- the reader below needs this binding before the owner that supplies its first value exists
   let viewState = $state.raw<ChartDataState>();
   const owner = new ChartData((value) => (viewState = value));
   viewState = owner.state;

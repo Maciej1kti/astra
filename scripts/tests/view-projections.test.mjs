@@ -9,6 +9,7 @@ test("Focus detail fallback has the same source-derived badges as an indexed car
       title: "Outcome",
       status: "active",
       priority: "high",
+      position: "a0",
       labels: ["Review, exact"],
       archived: false,
       acceptance: [
@@ -39,6 +40,7 @@ test("Focus detail fallback has the same source-derived badges as an indexed car
     availability: "ready",
     status: "active",
     priority: "high",
+    position: "a0",
     labels: ["Review, exact"],
     archived: false,
     acceptance_progress: { total: 2, completed: 1 },

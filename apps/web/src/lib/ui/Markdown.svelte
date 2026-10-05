@@ -5,6 +5,7 @@
   let rendered = $derived(renderMarkdown(source));
 </script>
 
+<!-- eslint-disable-next-line svelte/no-at-html-tags -- the renderer allows no raw HTML, images or non-HTTP links -->
 <div class="markdown">{@html rendered}</div>
 
 <style>

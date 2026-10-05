@@ -192,10 +192,10 @@ export function editorAutosaveState(editor: Editor) {
     discreteChange() {
       discrete = true;
     },
-    retry() {
+    retry: () => {
       void queue.retry().catch(report);
     },
-    check() {
+    check: () => {
       void queue.check().catch(report);
     },
     async flush() {

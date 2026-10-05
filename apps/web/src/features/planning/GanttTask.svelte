@@ -12,7 +12,8 @@
   let { data }: { data: ITask } = $props();
   let creationDate = $state("");
   const actions = getContext<GanttContext>(GANTT_CONTEXT);
-  const row = $derived(data.astra as Summary);
+  // The creation row carries no saved item.
+  const row = $derived(data.astra as Summary | undefined);
   const unit = $derived(
     row?.schedule
       ? Number(data.$w) /
@@ -27,6 +28,7 @@
   }
   function keyboard(event: KeyboardEvent, operation: "move" | "start" | "end") {
     if (
+      row &&
       event.altKey &&
       ["ArrowLeft", "ArrowRight"].includes(event.key) &&
       actions.editable()
@@ -79,21 +81,21 @@
         actions.create(shiftDate(dateOnly(data.start!), offset));
       }}>+</button
     >
-  {:else if row.type === "milestone"}
+  {:else if row?.type === "milestone"}
     <button
       class="milestone"
       onclick={() => actions.open(row)}
       aria-label={`Termin kamienia milowego: ${row.title}`}
       >◆ {row.title}</button
     >
-  {:else if row.event}
+  {:else if row?.event}
     <button
       class="move"
       onclick={() => actions.open(row)}
       aria-label={`Wydarzenie: ${row.title}`}
       >Wydarzenie {row.event.start.slice(11)} · {row.title}</button
     >
-  {:else if row.schedule}
+  {:else if row?.schedule}
     <button
       class="handle edge"
       disabled={!actions.editable()}

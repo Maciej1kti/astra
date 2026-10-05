@@ -84,7 +84,7 @@ export function projectStatusGesture(node: HTMLElement, initial: Options) {
       column && projectState({ status: column.dataset.projectState });
     if (!state || state === current.project.status) return null;
     target = column;
-    target?.setAttribute("data-project-board-drop-target", "true");
+    column.setAttribute("data-project-board-drop-target", "true");
     return state;
   }
 
@@ -210,6 +210,7 @@ export function projectStatusGesture(node: HTMLElement, initial: Options) {
       Math.hypot(pointer.x - pointer.startX, pointer.y - pointer.startY) >= 5
     )
       start(pointer);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- starting may have cancelled the gesture
     if (pointer?.dragging) event.preventDefault();
   }
 

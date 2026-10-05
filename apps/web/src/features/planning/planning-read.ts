@@ -48,6 +48,7 @@ export class PlanningRead {
     this.deferred = undefined;
     this.busy = true;
     this.changed(true);
+    /* eslint-disable @typescript-eslint/no-unnecessary-condition -- disposal, a pause and a newer read all happen while this one is awaited */
     try {
       const value = await request.read(this.controller.signal);
       if (current !== this.generation || this.disposed) return;
@@ -67,6 +68,7 @@ export class PlanningRead {
         this.flush();
       }
     }
+    /* eslint-enable @typescript-eslint/no-unnecessary-condition */
   }
 
   private flush() {

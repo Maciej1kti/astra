@@ -155,7 +155,7 @@ export function chartPoints(
 export function chartRate(raw: string | undefined): number | null {
   if (!raw?.trim() || !/^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(raw.trim()))
     return null;
-  const value = Number(raw?.trim().replace(",", "."));
+  const value = Number(raw.trim().replace(",", "."));
   return Number.isFinite(value) && value >= 0 && value <= 1_000_000_000
     ? value
     : null;

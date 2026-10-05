@@ -12,7 +12,7 @@ export function endpointContracts() {
   // @ts-expect-error Calendar responses are not timeline projections.
   const wrong: Promise<GanttPage> = calendar;
   // @ts-expect-error A rename requires its destination.
-  planProjectTagRename("project", { source: "old" });
+  void planProjectTagRename("project", { source: "old" });
   // @ts-expect-error Applying a reviewed rename requires its plan identifier.
   applyProjectTagRename("project", { set: { title: "card" } });
   return { calendar, gantt, wrong };

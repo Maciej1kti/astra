@@ -636,7 +636,7 @@ try {
       })
       .click();
   } catch (error) {
-    console.error(await page.locator("body").innerText(), errors, daemonLog);
+    console.error(await page.locator("body").innerText(), errors);
     throw error;
   }
   await page

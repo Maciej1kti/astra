@@ -21,6 +21,7 @@ export async function loadEditorTarget(
   signal.throwIfAborted();
   const controller = new AbortController();
   const tagsController = new AbortController();
+  // eslint-disable-next-line prefer-const -- set once the opening exists; the abort listener below may run before that
   let cleanup: (() => void) | undefined;
   const cancelled = () => {
     controller.abort(signal.reason);

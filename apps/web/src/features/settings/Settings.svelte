@@ -110,7 +110,7 @@
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       if (!confirmClose && preferencesDirty && !busy && !pending && !accessLost)
-        preferencesForm?.requestSubmit();
+        preferencesForm.requestSubmit();
     }
   }
   async function copyDraft() {

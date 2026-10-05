@@ -104,7 +104,7 @@
       ?.focus();
   }
   function key(event: KeyboardEvent, day: string) {
-    let next: string | null = null;
+    let next: string | null;
     const offset = (
       { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 } as Record<
         string,

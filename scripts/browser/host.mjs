@@ -182,6 +182,7 @@ export async function createHost() {
         ) {
           throw new Error(
             `Synthetic host failed to start: ${startError ?? (daemonLog || error)}`,
+            { cause: error },
           );
         }
         await new Promise((done) => setTimeout(done, 100));

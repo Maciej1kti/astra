@@ -108,40 +108,6 @@ await runBrowserSuite(
       if (await discard.isVisible()) await discard.click();
       await expect(dialog).toBeHidden();
     }
-    async function clickAtVisiblePoint(page, locator, label) {
-      const box = await locator.boundingBox();
-      assert(box, `${label} must be rendered before pointer input`);
-      const viewport = await page.evaluate(() => ({
-        width: innerWidth,
-        height: innerHeight,
-      }));
-      assert(
-        box.x >= 0 &&
-          box.y >= 0 &&
-          box.x + box.width <= viewport.width &&
-          box.y + box.height <= viewport.height,
-        `${label} must be fully visible before pointer input: ${JSON.stringify({ box, viewport })}`,
-      );
-      const point = {
-        x: box.x + box.width / 2,
-        y: box.y + box.height / 2,
-      };
-      const hit = await locator.evaluate((element, value) => {
-        const hit = document.elementFromPoint(value.x, value.y);
-        return {
-          inside: !!hit && (hit === element || element.contains(hit)),
-          tag: hit?.tagName,
-          text: hit?.textContent?.trim().slice(0, 80),
-          aria: hit?.getAttribute("aria-label"),
-        };
-      }, point);
-      assert.equal(
-        hit.inside,
-        true,
-        `${label} must receive the pointer at its visible center; hit ${JSON.stringify(hit)}`,
-      );
-      await page.mouse.click(point.x, point.y);
-    }
     async function check(id, name, run) {
       const started = Date.now();
       try {

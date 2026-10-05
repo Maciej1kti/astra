@@ -54,10 +54,6 @@ export async function runCardChecks({
   const descriptionRendered = () =>
     dialog().locator(".resource-description-rendered");
   const description = () => dialog().getByLabel("Opis", { exact: true });
-  async function editDescription() {
-    await descriptionRendered().click();
-    await expect(description()).toBeVisible();
-  }
   const item = (index) =>
     dialog().getByRole("textbox", {
       name: `Pozycja listy kontrolnej ${index}`,
@@ -134,14 +130,6 @@ export async function runCardChecks({
         name: /^(Przypnij do Focus|Usuń z Focus)$/,
       }),
     ).toBeEnabled();
-  }
-  async function openFromList(card) {
-    await route("list", { q: card.title });
-    await page.locator("main").getByText(card.title, { exact: true }).click();
-    await title().waitFor();
-    await expect(page).toHaveURL(
-      (url) => url.searchParams.get("resource") === card.id,
-    );
   }
   async function waitForAutosaveACK() {
     await expect(dialog().getByTestId("autosave-status")).toHaveText(

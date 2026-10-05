@@ -80,8 +80,10 @@
   $effect(() => {
     if (!deletion.error || !deleteNotice) return;
     queueMicrotask(() => {
+      /* eslint-disable @typescript-eslint/no-unnecessary-condition -- the notice can be removed before this microtask runs */
       deleteNotice?.scrollIntoView({ block: "center", inline: "nearest" });
       deleteNotice?.focus({ preventScroll: true });
+      /* eslint-enable @typescript-eslint/no-unnecessary-condition */
     });
   });
   function focusDeleteAction(node: HTMLButtonElement) {

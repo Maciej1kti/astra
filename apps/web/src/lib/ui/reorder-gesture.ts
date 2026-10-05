@@ -121,6 +121,7 @@ export function reorderGesture<Snapshot>(
       if (pointer.pointerType === "touch" && options.touchHold) return cancel();
       start();
     }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- starting may have cancelled the gesture
     if (pointer?.dragging) event.preventDefault();
   }
 
@@ -160,7 +161,7 @@ export function reorderGesture<Snapshot>(
       options = next;
       if (pointer && !valid()) cancel();
     },
-    destroy() {
+    destroy: () => {
       release();
       node.removeEventListener("pointerdown", down);
       node.removeEventListener("click", click, true);

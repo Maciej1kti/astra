@@ -30,7 +30,7 @@
   let invalid = $state(false);
   let copied = $state("");
   $effect(() => {
-    snapshot.draft;
+    void snapshot.draft;
     invalid = false;
     copied = "";
   });

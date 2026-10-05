@@ -23,11 +23,15 @@ const legacyKey = "astra-card-layout:v1";
 type StorageReader = Pick<Storage, "getItem">;
 type StorageWriter = Pick<Storage, "setItem">;
 
+const among =
+  (sections: CardLayout) =>
+  (value: unknown): value is CardSection =>
+    sections.some((section) => section === value);
+const stored = (value: unknown): unknown[] =>
+  Array.isArray(value) ? value : [];
+
 function normalize(value: unknown): CardLayout {
-  const saved = Array.isArray(value) ? value : [];
-  return [...new Set([...saved, ...defaults])].filter((section) =>
-    defaults.includes(section),
-  );
+  return [...new Set([...stored(value), ...defaults])].filter(among(defaults));
 }
 
 function readLegacy(value: unknown): CardLayout {
@@ -36,9 +40,7 @@ function readLegacy(value: unknown): CardLayout {
       ? (value as { content?: unknown; properties?: unknown })
       : {};
   const order = (saved: unknown, sections: CardLayout) =>
-    [...new Set([...(Array.isArray(saved) ? saved : []), ...sections])].filter(
-      (section) => sections.includes(section),
-    );
+    [...new Set([...stored(saved), ...sections])].filter(among(sections));
   // Preserve the previous reading order when upgrading the browser preference.
   return [
     ...order(raw.content, defaults.slice(0, 4)),

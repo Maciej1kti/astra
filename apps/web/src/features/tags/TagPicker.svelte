@@ -64,6 +64,7 @@
               complete: result.complete,
             }),
           );
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the session can end while the catalog above is awaited
       if (current !== generation || accessLost) return;
       projectOptions = catalog.names;
       catalogLoaded = true;
@@ -212,9 +213,7 @@
 
 <section class="tags" aria-label={folder ? "Folder projektu" : "Tagi karty"}>
   {#if folder}<div class="heading">
-      <label for={`${id}-input`}>{folder ? "Folder" : "Etykiety"}</label><span
-        >{labels.length}/{folder ? 1 : TAG_LIMIT}</span
-      >
+      <label for={`${id}-input`}>Folder</label><span>{labels.length}/1</span>
     </div>{:else}
     <SectionHeading
       title="Etykiety"
