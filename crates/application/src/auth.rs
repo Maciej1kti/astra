@@ -43,27 +43,53 @@ pub fn csrf_matches(expected: &str, actual: &str) -> bool {
         .fold(0u8, |difference, (a, b)| difference | (a ^ b))
         == 0
 }
-type PairingRow = (
-    String,
-    String,
-    String,
-    String,
-    String,
-    Vec<u8>,
-    Option<String>,
-    Option<String>,
-);
+/// One pairing as stored. Its pending secret is kept only as a hash.
+struct PairingRow {
+    id: String,
+    device_label: String,
+    challenge: String,
+    state: String,
+    expires_at: String,
+    pending_csrf: Vec<u8>,
+    claim_grace_until: Option<String>,
+    last_session: Option<String>,
+}
+impl PairingRow {
+    /// Every pairing query selects these columns, in the order `read` expects.
+    const SELECT: &'static str = "SELECT id,
+    device_label,
+    challenge,
+    state,
+    expires_at,
+    pending_csrf_secret,
+    claim_grace_until,
+    last_issued_session_id
+FROM pairings
+";
+    fn read(row: &rusqlite::Row<'_>) -> rusqlite::Result<Self> {
+        Ok(Self {
+            id: row.get(0)?,
+            device_label: row.get(1)?,
+            challenge: row.get(2)?,
+            state: row.get(3)?,
+            expires_at: row.get(4)?,
+            pending_csrf: row.get(5)?,
+            claim_grace_until: row.get(6)?,
+            last_session: row.get(7)?,
+        })
+    }
+}
 fn pairing_view(row: &PairingRow, now: i64, include_csrf: bool) -> Value {
-    let expired = instant(now) >= row.4 && row.3 != "claimed";
+    let expired = instant(now) >= row.expires_at && row.state != "claimed";
     let mut view = json!({
-        "id": row.0,
-        "device_label": row.1,
-        "challenge": row.2,
-        "state": if expired{"expired"}else{&row.3},
-        "expires_at": row.4,
+        "id": row.id,
+        "device_label": row.device_label,
+        "challenge": row.challenge,
+        "state": if expired{"expired"}else{&row.state},
+        "expires_at": row.expires_at,
     });
     if include_csrf {
-        view["pending_csrf_token"] = json!(String::from_utf8_lossy(&row.5));
+        view["pending_csrf_token"] = json!(String::from_utf8_lossy(&row.pending_csrf));
     }
     view
 }
@@ -142,29 +168,9 @@ VALUES (?1,
             return Err(AppError::reject(401, "PAIRING_COOKIE_REQUIRED"));
         }
         db.query_row(
-            "SELECT id,
-    device_label,
-    challenge,
-    state,
-    expires_at,
-    pending_csrf_secret,
-    claim_grace_until,
-    last_issued_session_id
-FROM pairings
-WHERE pending_secret_hash=?1",
+            &format!("{}WHERE pending_secret_hash=?1", PairingRow::SELECT),
             [hash(token)],
-            |r| {
-                Ok((
-                    r.get(0)?,
-                    r.get(1)?,
-                    r.get(2)?,
-                    r.get(3)?,
-                    r.get(4)?,
-                    r.get(5)?,
-                    r.get(6)?,
-                    r.get(7)?,
-                ))
-            },
+            PairingRow::read,
         )
         .optional()?
         .ok_or_else(|| AppError::reject(401, "PAIRING_COOKIE_REQUIRED"))
@@ -184,38 +190,18 @@ WHERE pending_secret_hash=?1",
         now: i64,
     ) -> Result<Value, AppError> {
         let db = self.journal.db()?;
-        let row: PairingRow = db
+        let row = db
             .query_row(
-                "SELECT id,
-    device_label,
-    challenge,
-    state,
-    expires_at,
-    pending_csrf_secret,
-    claim_grace_until,
-    last_issued_session_id
-FROM pairings
-WHERE id=?1",
+                &format!("{}WHERE id=?1", PairingRow::SELECT),
                 [id],
-                |r| {
-                    Ok((
-                        r.get(0)?,
-                        r.get(1)?,
-                        r.get(2)?,
-                        r.get(3)?,
-                        r.get(4)?,
-                        r.get(5)?,
-                        r.get(6)?,
-                        r.get(7)?,
-                    ))
-                },
+                PairingRow::read,
             )
             .optional()?
             .ok_or_else(|| AppError::reject(404, "PAIRING_NOT_FOUND"))?;
-        if row.4 <= instant(now) || !matches!(row.3.as_str(), "pending" | "approved") {
+        if row.expires_at <= instant(now) || !matches!(row.state.as_str(), "pending" | "approved") {
             return Err(AppError::reject(409, "PAIRING_NOT_PENDING"));
         }
-        if approve && !csrf_matches(&row.2, challenge) {
+        if approve && !csrf_matches(&row.challenge, challenge) {
             return Err(AppError::reject(409, "CHALLENGE_MISMATCH"));
         }
         let state = if approve { "approved" } else { "denied" };
@@ -232,17 +218,21 @@ WHERE id=?1",
         let tx = db.transaction()?;
         let row = Self::by_secret(&tx, token)?;
         if !csrf_matches(
-            std::str::from_utf8(&row.5)
+            std::str::from_utf8(&row.pending_csrf)
                 .map_err(|source| AppError::stored("pairing CSRF token", source))?,
             csrf,
         ) {
             return Err(AppError::reject(403, "CSRF_MISMATCH"));
         }
-        let retry = row.3 == "claimed" && row.6.as_ref().is_some_and(|until| until > &instant(now));
-        if !retry && (row.3 != "approved" || row.4 <= instant(now)) {
+        let retry = row.state == "claimed"
+            && row
+                .claim_grace_until
+                .as_ref()
+                .is_some_and(|until| until > &instant(now));
+        if !retry && (row.state != "approved" || row.expires_at <= instant(now)) {
             return Err(AppError::reject(409, "PAIRING_NOT_APPROVED"));
         }
-        if let Some(old) = &row.7 {
+        if let Some(old) = &row.last_session {
             tx.execute(
                 "UPDATE sessions SET revoked_at=?2 WHERE id=?1",
                 params![old, instant(now)],
@@ -280,12 +270,12 @@ VALUES (?1,
                 id,
                 hash(&session_token),
                 session_csrf.as_bytes(),
-                row.1,
+                row.device_label,
                 created,
                 expires
             ],
         )?;
-        let grace = match row.6 {
+        let grace = match row.claim_grace_until {
             Some(until) if retry => until,
             _ => instant(now + 60_000),
         };
@@ -295,15 +285,15 @@ SET state='claimed',
     claim_grace_until=?2,
     last_issued_session_id=?3
 WHERE id=?1",
-            params![row.0, grace, id],
+            params![row.id, grace, id],
         )?;
         tx.commit()?;
-        if row.7.is_some() {
+        if row.last_session.is_some() {
             self.journal.notify_auth_change();
         }
         Ok(Claimed {
             session_token,
-            view: json!({"id":id,"device_label":row.1,"created_at":created,"last_seen_at":created,"expires_at":expires,"current":true}),
+            view: json!({"id":id,"device_label":row.device_label,"created_at":created,"last_seen_at":created,"expires_at":expires,"current":true}),
         })
     }
     pub fn authenticate(&self, token: &str, now: i64) -> Result<Session, AppError> {
@@ -375,35 +365,16 @@ AND expires_at>?2",
     }
     pub fn pairings(&self, now: i64) -> Result<Value, AppError> {
         let db = self.journal.db()?;
-        let mut statement = db.prepare(
-            "SELECT id,
-    device_label,
-    challenge,
-    state,
-    expires_at,
-    pending_csrf_secret,
-    claim_grace_until,
-    last_issued_session_id
-FROM pairings
-WHERE state IN ('pending',
+        let mut statement = db.prepare(&format!(
+            "{}WHERE state IN ('pending',
     'approved')
 AND expires_at>?1
 ORDER BY expires_at DESC
 LIMIT 10",
-        )?;
+            PairingRow::SELECT
+        ))?;
         let items = statement
-            .query_map([instant(now)], |r| {
-                Ok((
-                    r.get(0)?,
-                    r.get(1)?,
-                    r.get(2)?,
-                    r.get(3)?,
-                    r.get(4)?,
-                    r.get(5)?,
-                    r.get(6)?,
-                    r.get(7)?,
-                ))
-            })?
+            .query_map([instant(now)], PairingRow::read)?
             .map(|row| row.map(|row| pairing_view(&row, now, false)))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(json!({"items":items}))
