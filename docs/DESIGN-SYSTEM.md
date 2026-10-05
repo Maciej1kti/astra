@@ -9,7 +9,8 @@ additional UI framework, styling runtime or component dependency is required.
   shadows, control sizes and surface dimensions for light and dark appearance.
 - `lib/ui/` owns `Button`, `Badge`, `Icon`, `Brand`, `PageHeading`,
   `SectionHeading`, `EmptyState`, `ResourceCard`, `ResourceMetadata`,
-  `DialogHeader`, `EditableTitle` and `ActionMenu`.
+  `DialogHeader`, `EditableTitle`, `ActionMenu`, `CommandRecovery` and
+  `SessionNotice`.
   `SectionHeading` supports compact level-three headings, counts and section
   actions; `ActionMenu` can show a text label beside its status icon.
 - `styles/base.css` also styles native inputs, selects, textareas and buttons.
@@ -126,6 +127,14 @@ loading and replacement dialogs, including when the immediate trigger is removed
 Dialog content scrolls vertically, with horizontal gestures contained and long
 text, code and table cells wrapping. Pinch zoom remains available. The document
 behind a modal is locked until it closes.
+
+A dialog that submits a command renders `CommandRecovery` for the request ID,
+status check and identical retry, and `SessionNotice` for session loss. Errors
+use `role="alert"`; confirmations such as a copied draft use `role="status"`.
+Pairing is the one foreground layer: `use:modal={{ onclose, foreground: true }}`
+keeps it above workspace dialogs retained through session loss. It is a small
+dialog showing the same pairing controls as the full page and focuses its
+primary action. Do not add other foreground layers.
 
 `EditableTitle` is the single title field and visible heading. It wraps long
 text, preserves a single-line stored value, accepts keyboard input and finishes

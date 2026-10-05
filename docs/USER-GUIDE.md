@@ -321,9 +321,27 @@ copy. [CLI deletion](../CLI.md#permanent-deletion) describes the conditional com
 | Invalid input | Correct it while retaining the draft |
 | Another edit changed the resource | Compare the current resource and your intent, then deliberately prepare a new edit |
 | Response lost / command pending | Check status or retry the same command; retain its request ID, epoch, payload and original version |
-| Session expired/revoked | Preserve the draft, pair again and follow the command's recovery state |
+| Session expired/revoked | Pair again in the panel shown above your open work, then follow the command's recovery state |
+| Settings changed elsewhere | Load the current settings, review your retained changes and save them again deliberately |
 | Host offline | Restore the host connection; writes do not fall back to local files |
 | Source/recovery diagnostic | Inspect the host diagnostics before changing data |
+
+When a session ends while a dialog holds a draft or an unresolved command, that
+dialog stays open underneath a pairing panel. Request access and approve the
+browser as usual; the dialog returns with the same draft and request ID, and
+**Sprawdź stan** or **Ponów to samo polecenie** continue the original command.
+**Pokaż zachowaną pracę** steps the panel aside so the draft can be copied, and
+**Połącz ponownie** in the dialog brings it back. Dialogs with nothing to lose
+close. The browser asks before leaving a page that still has an unresolved
+command, because a reload discards its request ID.
+
+Astra reconnects its change notifications by itself, including after the host
+refused the connection. **Ponowne łączenie…** in the sidebar means changes made
+elsewhere may not have arrived yet.
+
+A settings save rejected because the settings changed elsewhere is not sent
+again. **Wczytaj aktualne ustawienia** reads the saved state without writing:
+fields you edited keep your values, the others show what is saved now.
 
 Keep drafts before an explicit reload. Browser-local appearance preferences are
 not a durable offline draft queue. The CLI's [safe retry rules](../CLI.md#uncertain-results-and-safe-retries)

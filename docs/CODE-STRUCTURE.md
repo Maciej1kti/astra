@@ -13,7 +13,10 @@ and connects their callbacks. Long-lived state has three owners:
 
 - [session](../apps/web/src/features/session/session.svelte.ts) owns pairing,
   bootstrap, the last authenticated timezone for retained locked drafts and
-  the event-stream lifetime;
+  the event-stream lifetime. A browser retries a dropped stream by itself but
+  never a refused one, so [event-stream](../apps/web/src/features/session/event-stream.ts)
+  decides when a closed source is replaced: after bootstrap confirms the
+  session, with bounded backoff, and never after a 401;
 - [navigation](../apps/web/src/features/workspace/navigation-state.svelte.ts)
   owns the route, browser history and guarded navigation;
 - [view data](../apps/web/src/features/workspace/view-data.ts) owns loaded rows,
@@ -49,8 +52,14 @@ Shared `lib/ui/locale.ts` owns the fixed Polish locale and count forms.
 `WidgetLocale` supplies native Board/Timeline translations without changing
 resource identifiers. `lib/resources/state-presentation.ts` owns operational
 labels used by deferred administrative screens. `lib/api/messages.ts` translates
-server codes and browser transport/JSON failures at presentation boundaries; its
+server codes and local JSON input mistakes at presentation boundaries; its
 detailed `message-catalog.ts` loads only for responses with errors or warnings.
+The transport raises its own failures from `lib/api/transport-errors.ts`: a
+`TransportError` when no HTTP exchange completed and an `InvalidResponseError`
+for a reply outside the JSON contract, such as a proxy's error page. Neither is
+a definitive rejection, so an interrupted mutation stays uncertain. Views show
+failures through `errorMessage`, never `String(error)`. A 401 is published as
+session loss only for a session that an accepted bootstrap created.
 Server/CLI protocol messages and write recovery remain unchanged.
 
 The charts feature owns Chart's bounded counter-series reads, selection,
@@ -145,22 +154,52 @@ measured destination bounds and their existing commit actions.
 `gesture-cancellation.ts` also serves Board, date and counter gestures, while
 `popover-position.ts` measures every `ActionMenu` against its trigger and visual
 viewport. Native modal registration, Escape routing and return-focus lineage
-remain in `dialog.ts`. Shared UI modules never own feature writes.
+remain in `dialog.ts`. It also keeps the session layer in front: a modal opened
+with `foreground` is reopened above any workspace modal that opens after it,
+because the top layer orders modals by opening time. Shared UI modules never own
+feature writes.
+
+Dialogs that hold a draft or an unresolved command stay mounted when the session
+ends. Read-only dialogs and owners with nothing to lose close instead.
+`PairingScreen` observes the retained modals through `dialog.ts` and presents
+its controls as a foreground modal above them, or as the ordinary page when none
+remain. It can step aside so retained work can be copied; `SessionNotice` in
+each retained dialog asks for it again through the `reconnect` session event.
+Pairing in place restores access without a reload, so request IDs survive.
 
 ### Commands and editor drafts
 
 Every command consumer uses the same
 [controller](../apps/web/src/lib/api/command-controller.ts), with a small Svelte
-adapter. A controller owns one command from preparation to a definitive result.
+[adapter](../apps/web/src/lib/api/command-operation.svelte.ts). A controller owns
+one command from preparation to a definitive result.
 It retains the original payload, request ID, epoch and expected version during
 uncertainty. A failed status lookup does not prove that the write failed.
 Registration features additionally own their accepted job's polling lifecycle.
+
+The adapter also owns what every command dialog needs, so features cannot drift
+apart: `commandOperation` guards unload while its command is unresolved,
+`sessionAccess` tracks session loss and restoration for one mounted owner, and
+`unloadGuard` covers drafts that are not commands. A definitively rejected
+conflict is recorded on the controller until a new proposal or an explicit
+`acknowledge`; nothing is refetched or resubmitted on the owner's behalf.
+`lib/ui/CommandRecovery.svelte` renders the request ID with its status check and
+identical retry, and `lib/ui/SessionNotice.svelte` the session-loss notice.
+Success feedback such as a copied draft uses a status region, never the alert
+slot that carries errors.
+
+Settings records a rejected preferences conflict and locks its form. Loading
+the current settings is an explicit read: `settings-draft.ts` keeps the fields
+the user edited and lets untouched fields follow the saved state, so a second
+save cannot revert another change.
 
 [Editor targets](../apps/web/src/features/editor/editor-target.ts) bind the
 resource kind to its source shape. Each kind has its own fields and initial
 values in [editor drafts](../apps/web/src/features/editor/editor-draft.ts).
 Dirty checks and draft export use that single state. Focus/read actions retain
 an explicit UI intent alongside the command; completion does not inspect URLs.
+A draft rebuilt from an acknowledged source keeps entries that were typed but
+not submitted (tag, checklist, comment and counter input).
 Resource conflicts keep the original draft and require a deliberate new edit.
 Submission and status lookup use the same feature outcome handler. Conflict state
 is recorded before fetching optional current details, so an unavailable read
@@ -528,6 +567,8 @@ need fixture accessors. Engine scenarios are grouped under `tests/engine/` and
 share the parent fixture. Subprocess durability tests still terminate at every
 write boundary and verify recovery using the original command identity.
 
+The `session-recovery` and `command-recovery` suites exercise pairing above
+retained dialogs, stream replacement, unload guards and settings conflicts.
 Browser regressions share [host](../scripts/browser/host.mjs) and
 [runtime](../scripts/browser/runtime.mjs) helpers for explicit fixture selection,
 CLI outcomes, real pairing and cleanup. Each selected suite receives a fresh

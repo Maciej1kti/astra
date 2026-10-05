@@ -259,6 +259,24 @@ timezone changes with existing and new daily counter drafts. It also revokes
 the ordinary session while schedule/counter/comment drafts remain mounted,
 checking retained clock context, preserved drafts and disabled inputs.
 
+The `session-recovery` suite revokes real sessions while an editor draft, an
+uncertain board move and an in-flight project move with a settings draft are
+open. It pairs again in place at 1440, 390 and 320px, checks that pairing stays
+in front of a dialog that opens after it, steps it aside to copy retained work,
+and continues the original command by status check or identical retry. It also
+refuses the event stream once and requires later CLI changes to arrive, and
+checks that a never-paired browser sees no expiry notice. Scenarios hand their
+re-paired session to the next one because the host accepts five pairing
+requests per minute. The `command-recovery` suite checks the unload guard of
+every command dialog, the settings conflict path, retained unsubmitted editor
+entries, the tag refresh without a stream, status feedback for copied drafts and
+Polish read-failure messages. Run both in each engine:
+
+```sh
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs session-recovery command-recovery
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs session-recovery command-recovery
+```
+
 The `users` suite creates a trusted profile through Settings, registers separate
 projects and roots through the selected CLI workspace, and verifies direct
 foreign-resource reads return unavailable in that workspace. It checks draft
