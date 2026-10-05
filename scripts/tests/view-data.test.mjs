@@ -281,3 +281,40 @@ test("late inclusive reads cannot replace ordinary projects after leaving Projec
   await first;
   assert.deepEqual(owner.state.projects, [{ id: "active" }]);
 });
+
+test("a refresh that supersedes paging publishes the released paging state", async () => {
+  const previous = globalThis.fetch;
+  const nextPage = deferred();
+  const published = [];
+  let fail = false;
+  const owner = new ViewData({
+    query: () => query,
+    active: () => true,
+    error: () => {},
+    // A view only sees values that were current when a snapshot was published.
+    changed: (state) => published.push(state.loadingMore),
+    load: async () => {
+      if (fail) throw new Error("Refresh failed");
+      return page("first");
+    },
+  });
+  globalThis.fetch = () => nextPage.promise;
+  try {
+    await owner.refresh();
+    const paging = owner.more("card");
+    assert.equal(published.at(-1), true);
+    fail = true;
+    await assert.rejects(owner.refresh(), /Refresh failed/);
+    assert.equal(published.at(-1), false);
+    nextPage.resolve({
+      status: 200,
+      ok: true,
+      json: async () => ({ items: [], page: { next_cursor: null } }),
+    });
+    await paging;
+    assert.equal(published.at(-1), false);
+    assert.deepEqual(owner.state.cards, [{ id: "first" }]);
+  } finally {
+    globalThis.fetch = previous;
+  }
+});

@@ -113,7 +113,11 @@ export class ViewData {
     const controller = new AbortController();
     this.controller = controller;
     const generation = ++this.generation;
-    this.snapshot.loadingMore = false;
+    // The superseded page read will not publish; release its state here.
+    if (this.snapshot.loadingMore) {
+      this.snapshot.loadingMore = false;
+      this.publish();
+    }
     const selected = [...new Set([...requested, ...this.queued])].filter(
       (section) =>
         needed.includes(section) &&
