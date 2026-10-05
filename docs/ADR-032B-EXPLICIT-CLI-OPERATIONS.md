@@ -1,4 +1,8 @@
-# ADR-032 — Explicit CLI operations and compatible terminal ergonomics
+# ADR-032B — Explicit CLI operations and compatible terminal ergonomics
+
+Published as ADR-032 on 2026-09-08, the same day as the scoped-page decision
+that keeps that number. Renumbered on 2026-10-05 so each decision has one
+identifier; the content is unchanged.
 
 Status: accepted for the owner-authorized CLI improvements, 2026-09-08.
 

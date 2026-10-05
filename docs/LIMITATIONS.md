@@ -139,6 +139,21 @@ bound. [Source schemas](../contracts/domain.schema.json), server validation and
 [OpenAPI](../contracts/openapi.yaml) are the detailed references. Do not raise
 bounds without abuse tests and measurements.
 
+Pairing accepts at most ten active requests and five new requests per minute
+for the whole instance. The host sees every network caller through its proxy as
+one source, so the limit cannot be per client: someone who can reach the HTTPS
+address without a session can keep new devices from pairing while they keep
+sending requests, and their labels appear in the approval list. Paired browsers
+and the local CLI are unaffected, and a request still grants nothing until the
+owner approves its challenge. Removing this needs either a trusted client
+address from the proxy or pairing started by the operator; neither is designed.
+
+Adding a card to Focus validates every registered project's cards under the
+workspace's exclusive gate, because pins live in sources and the limit of 100
+is checked against them rather than against the disposable index
+([ADR-041](ADR-041-SOURCE-BACKED-FOCUS-AND-TAGS.md)). Other requests wait while
+that scan runs.
+
 ## Before a supported public release
 
 The owner still needs to select Astra's license, approve the supported release,

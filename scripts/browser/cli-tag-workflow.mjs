@@ -1,4 +1,5 @@
 /** Real daemon regression for named/generic tag workflows and retained administration. */
+import { annotateFailure } from "./annotations.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
@@ -176,7 +177,12 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  await cliTagWorkflow();
+  try {
+    await cliTagWorkflow();
+  } catch (error) {
+    annotateFailure("cli-tag-workflow", String(error?.stack ?? error));
+    throw error;
+  }
   console.log(
     "PASS real daemon CLI tag workflows, retries and local unregistration",
   );

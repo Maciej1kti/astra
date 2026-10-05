@@ -38,9 +38,10 @@ removed or changed by this consolidation.
 
 These specific results remain unresolved in addition to the obligations below.
 
-- Durable card creation is still above its 150 ms target with 1,000 cards
-  ([source reads](2026-09-30-parallel-source.md), [paths](2026-09-30-source-paths.md));
-  an earlier run's 1,266 ms maximum remains recorded and the target is not claimed.
+- Durable card creation with 1,000 cards measured 116–117 ms median and
+  119–135 ms p95 after the [bounded source reads](2026-09-30-parallel-source.md),
+  inside its 150 ms target, but an earlier run's 1,266 ms maximum remains
+  recorded and the target is not claimed unconditionally.
 - An all-read 50k-receipt Focus history, note-only receipt tails and further
   history distributions keep outliers
   ([receipts](2026-09-30-focus-rust-receipts.md), [prefix](2026-09-30-focus-attention-prefix.md)).

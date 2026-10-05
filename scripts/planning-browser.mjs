@@ -1,4 +1,5 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
+import { annotateFailure } from "./browser/annotations.mjs";
 import { setCalendarDate } from "./browser/calendar-controls.mjs";
 import { chromium, expect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -429,6 +430,7 @@ try {
     "PASS: real HTTPS Gantt rendering and narrow viewport, recorded schedules, identical uncertain date retry, absence of dependency controls, calendar day/week/month/agenda, native drag, both resize boundaries, stable gestures during a held background read, blank-range draft creation and Escape cancellation. No page errors, external assets or CSP violations. Screenshots are Chromium, not physical iPhone evidence.",
   );
 } catch (error) {
+  annotateFailure("planning-browser", String(error?.stack ?? error));
   const activePage = browser?.contexts()[0]?.pages()[0];
   if (activePage) {
     await activePage.screenshot({

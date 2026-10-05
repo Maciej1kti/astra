@@ -43,7 +43,7 @@ Arguments, input/project resolution, named queries, transport confirmation and
 presentation have distinct modules under `crates/projectctl/src`. There are no new
 dependencies, server endpoints, storage formats or migrations. Domain validation
 and write durability remain server-owned. See [the CLI guide](../../CLI.md),
-[ADR-032](../../docs/ADR-032-EXPLICIT-CLI-OPERATIONS.md) and the
+[ADR-032](../../docs/ADR-032B-EXPLICIT-CLI-OPERATIONS.md) and the
 [uncertain-result example](../../examples/cli-uncertain-output.json).
 
 Compatibility is intentional: existing named invocations, generic API access and

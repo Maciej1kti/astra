@@ -341,7 +341,7 @@ The CLI owns argument translation, bounded input/project resolution, named view
 queries, operation-aware transport and optional terminal presentation in separate
 modules under `crates/projectctl/src`. `transport/response.rs` checks command
 confirmation envelopes and identity; source validation remains server-owned.
-See the [CLI guide](../CLI.md) and [ADR-032](ADR-032-EXPLICIT-CLI-OPERATIONS.md).
+See the [CLI guide](../CLI.md) and [ADR-032B](ADR-032B-EXPLICIT-CLI-OPERATIONS.md).
 `focus_preview.rs` maps the bounded membership snapshot into the optional Omarchy
 widget's first five rows. It uses the CLI's checked Unix transport with a smaller
 response/time budget; only reference-only hosts read card details. Unverified rows

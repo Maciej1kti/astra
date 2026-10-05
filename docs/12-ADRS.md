@@ -311,9 +311,12 @@ Indexed tag names serve bounded suggestions; rename previews still read current
 sources. Optional event metadata avoids unnecessary suggestion invalidations.
 See [ADR-032](ADR-032-SCOPED-PAGES-AND-TAG-SUGGESTIONS.md).
 
-Explicit CLI operations were recorded under the same number as a separate file.
-Both documents keep their published names; cite them by file:
-[explicit CLI operations](ADR-032-EXPLICIT-CLI-OPERATIONS.md).
+## ADR-032B — Explicit CLI operations
+
+Named CLI operations wrap the shared server engine with explicit arguments,
+operation-aware confirmation and compatible terminal output. It was published
+under the number 032 alongside the scoped-page decision and renumbered to remove
+the collision. See [ADR-032B](ADR-032B-EXPLICIT-CLI-OPERATIONS.md).
 
 ## ADR-040 — Simplify card priorities
 

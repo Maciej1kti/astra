@@ -1,4 +1,5 @@
 /** Portable browser regressions: every suite owns a fresh normally paired host. */
+import { annotateFailure } from "./annotations.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
@@ -116,9 +117,11 @@ export async function runSuites(selected = suites) {
           clearTimeout(timeout);
         }
         await writeFile(join(output, "run.log"), log);
+        if (code !== 0) annotateFailure(suite, log);
         results.push({ suite, code, milliseconds: Date.now() - start });
       });
     } catch (error) {
+      annotateFailure(suite, String(error?.stack ?? error));
       results.push({
         suite,
         code: 1,

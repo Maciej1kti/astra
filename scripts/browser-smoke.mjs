@@ -1,4 +1,5 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
+import { annotateFailure } from "./browser/annotations.mjs";
 import {
   setCalendarDate,
   expectCalendarDate,
@@ -1607,6 +1608,7 @@ try {
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",
   );
 } catch (error) {
+  annotateFailure("browser-smoke", String(error?.stack ?? error));
   if (browser) {
     for (const [index, context] of browser.contexts().entries()) {
       const failurePage = context.pages()[0];

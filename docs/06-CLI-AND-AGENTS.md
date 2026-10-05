@@ -8,7 +8,7 @@
 For implemented commands and runnable examples, use the maintained
 [CLI guide](../CLI.md). The catalogue below retains projected aliases and
 outstanding requirements; scope deferrals still apply. See
-[ADR-032](ADR-032-EXPLICIT-CLI-OPERATIONS.md) for explicit operation semantics and
+[ADR-032B](ADR-032B-EXPLICIT-CLI-OPERATIONS.md) for explicit operation semantics and
 backward-compatible CLI ergonomics.
 
 ## Cel i transport
