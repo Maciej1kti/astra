@@ -51,12 +51,9 @@
     editorPayload,
     createEditorDraft,
     draftSnapshot,
-    autosaveSnapshot,
-    discreteAutosaveChange,
-    detachedEditorDraft,
     carryUnsubmittedEntries,
   } from "./editor-draft";
-  import { EditorAutosave, type AutosaveState } from "./editor-autosave.ts";
+  import { editorAutosaveState } from "./editor-autosave-state.svelte";
   import { editTarget, type EditorTarget } from "./editor-target";
 
   import { resourceLabel } from "../../lib/resources/resource-presentation";
@@ -89,9 +86,9 @@
     conflict: () => !!conflict,
     dirty: () => dirty,
     unsaved: () => autosaveResource && (autosave.hasWork || persistedDirty),
-    flush: () => flushAutosave(),
+    flush: () => autosave.flush(),
     flushFailed: (cause) => {
-      autosaveError = errorMessage(cause);
+      autosave.report(cause);
     },
     deleted: () => ondeleted(),
   });
@@ -166,13 +163,66 @@
   let busy = $derived(operation.busy);
   let pending = $derived(operation.pending);
   let conflict = $state<{ current: Resource | null } | null>(null);
-  let autosaveState = $state<AutosaveState>({
-    phase: "idle",
-    pending: null,
-    queued: false,
-    error: null,
+  let autosaveCreated = false;
+  let disposed = false;
+  const autosave = editorAutosaveState({
+    draft: () => draft,
+    resource: () => resource,
+    path: (source) => {
+      const root = `/api/v1/projects/${project}`;
+      if (draft.type === "project") return root;
+      return `${root}/cards${source ? `/${source.metadata.id}` : ""}`;
+    },
+    allowed: () =>
+      !accessLost &&
+      !deletion.busy &&
+      !deletion.pending &&
+      !deletion.confirmation &&
+      !pending,
+    conflicted: () => !!conflict,
+    deleting: () => deletion.busy || !!deletion.pending,
+    validate: (draft) => {
+      if (draft.type !== "card") return;
+      acceptanceError = acceptanceValidation(draft.fields.acceptance);
+      if (acceptanceError) throw new Error(acceptanceError);
+      tagError = tagValidation(draft.fields.labels);
+      if (tagError) throw new Error(tagError);
+    },
+    committed: (next) => {
+      currentResource = next;
+      // Keep the live draft object so a text caret and unfinished picker/checklist
+      // entries survive the ACK. The acknowledged source/version is still the
+      // base used to build the next patch.
+      (draft as EditorDraft & { source: Resource | null }).source = next;
+      onautosaved?.(next);
+      if (autoCreate && !autosaveCreated) {
+        autosaveCreated = true;
+        onsaved();
+      }
+    },
+    failed: (state) => {
+      if (
+        state.phase === "conflict" &&
+        isRejectedConflict("rejected", state.error) &&
+        !conflict
+      ) {
+        conflict = { current: null };
+        void api<Resource>(path()).then(
+          (current) => {
+            if (!disposed) conflict = { current };
+          },
+          () => {},
+        );
+      }
+    },
   });
-  let autosaveError = $state("");
+  const autosaveState = $derived(autosave.state);
+  const autosaveError = $derived(autosave.error);
+  const autosaveResource = $derived(autosave.enabled);
+  const explicitBaseline = untrack(snapshot);
+  const persistedDirty = $derived(
+    autosaveResource ? autosave.dirty : snapshot() !== explicitBaseline,
+  );
   const fieldMessages = $derived(
     draft.type === "card"
       ? [
@@ -189,9 +239,6 @@
       : [],
   );
 
-  let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
-  let autosaveCreated = false;
-  let disposed = false;
   const autosaveWork = $derived(
     !!autosaveState.pending || autosaveState.queued,
   );
@@ -213,19 +260,6 @@
     operation.prepare(command);
     intent = Object.freeze(next);
   }
-  // One serialization per draft change serves dirty checks, scheduling and
-  // queueing; reading it outside an effect still yields the current draft.
-  const persistedSnapshot = $derived(autosaveSnapshot(draft));
-  let baseline = $state(untrack(() => persistedSnapshot));
-  const explicitBaseline = untrack(snapshot);
-  const autosaveResource = $derived(
-    draft.type === "card" || draft.type === "project",
-  );
-  const persistedDirty = $derived(
-    autosaveResource
-      ? persistedSnapshot !== baseline
-      : snapshot() !== explicitBaseline,
-  );
   const unfinishedEntry = $derived(
     draft.type === "project"
       ? !!draft.fields.folderDraft.trim()
@@ -287,13 +321,13 @@
   onMount(() => () => {
     disposed = true;
     opening?.cancel();
-    clearAutosaveTimer();
   });
   function close() {
     if (closing || busy || deletion.busy || commentFlushing) return;
     if (autosaveResource && (autosave.hasWork || persistedDirty)) {
       closing = true;
-      void flushAutosave()
+      void autosave
+        .flush()
         .then(() => {
           if (autosave.hasWork || dirty) discard = true;
           else onclose();
@@ -322,8 +356,8 @@
   }
   function finishTextEdit() {
     if (autosaveResource && persistedDirty && !closing)
-      void flushAutosave().catch((cause) => {
-        autosaveError = errorMessage(cause);
+      void autosave.flush().catch((cause) => {
+        autosave.report(cause);
       });
   }
   function beforeUnload(event: BeforeUnloadEvent) {
@@ -345,7 +379,7 @@
       !resource &&
       draft.common.title.trim()
     )
-      queueAutosave();
+      autosave.schedule(true);
   });
   $effect.pre(() => {
     if (target.type === "project") return;
@@ -402,7 +436,7 @@
     if (!draft.fields.commentDraft.trim()) return;
     commentFlushing = true;
     try {
-      await flushAutosave();
+      await autosave.flush();
       if (autosave.hasWork || persistedDirty || conflict || accessLost) return;
       prepare(
         { kind: "comment" },
@@ -432,7 +466,7 @@
     if (draft.type !== "card" || locked || conflict || !resource) return;
     commentFlushing = true;
     try {
-      await flushAutosave();
+      await autosave.flush();
       if (autosave.hasWork || persistedDirty || conflict || accessLost) return;
       prepare(
         { kind: "counter", counterId },
@@ -491,82 +525,9 @@
       ? root
       : `${root}/${draft.type === "card" ? "cards" : draft.type === "milestone" ? "milestones" : "updates"}${resource ? `/${resource.metadata.id}` : ""}`;
   }
-  function autosavePath(source: Resource | null) {
-    const root = `/api/v1/projects/${project}`;
-    if (draft.type === "project") return root;
-    return `${root}/cards${source ? `/${source.metadata.id}` : ""}`;
-  }
   function draftForResource(next: Resource): EditorDraft {
     return createEditorDraft(editTarget(project, next));
   }
-  const autosave = new EditorAutosave<EditorDraft, Resource>({
-    source: untrack(() => target.resource),
-    buildPayload: (source, detached) => {
-      const next = {
-        ...detached,
-        source,
-      } as EditorDraft;
-      return editorPayload(next);
-    },
-    createPending: (source, payload) =>
-      command(
-        autosavePath(source),
-        source ? "PATCH" : "POST",
-        payload,
-        source?.version,
-      ),
-    resourceFromReply: (reply) => {
-      const next = reply.result.resource;
-      if (!next || !("type" in next))
-        throw new Error(
-          "Odpowiedź automatycznego zapisu nie zawierała elementu.",
-        );
-      return next;
-    },
-    allowed: () =>
-      !disposed &&
-      !accessLost &&
-      !deletion.busy &&
-      !deletion.pending &&
-      !deletion.confirmation &&
-      !pending,
-    oncommitted: (next, submittedSnapshot) => {
-      if (disposed) return;
-      currentResource = next;
-      // Keep the live draft object so a text caret and unfinished picker/checklist
-      // entries survive the ACK. The acknowledged source/version is still the
-      // base used to build the next patch.
-      (draft as EditorDraft & { source: Resource | null }).source = next;
-      baseline = submittedSnapshot;
-      autosaveError = "";
-      onautosaved?.(next);
-      if (autoCreate && !autosaveCreated) {
-        autosaveCreated = true;
-        onsaved();
-      }
-    },
-    onchange: (state) => {
-      if (disposed) return;
-      autosaveState = state;
-      if (state.phase === "saved") autosaveError = "";
-      else if (state.error) {
-        autosaveError = commandErrorMessage(state.error);
-        if (
-          state.phase === "conflict" &&
-          isRejectedConflict("rejected", state.error) &&
-          !conflict
-        ) {
-          conflict = { current: null };
-          void api<Resource>(path()).then(
-            (current) => {
-              if (!disposed) conflict = { current };
-            },
-            () => {},
-          );
-        }
-      }
-    },
-  });
   const autosaveStatus = $derived(
     autosaveResource
       ? accessLost ||
@@ -584,110 +545,18 @@
             : ""
       : "",
   );
-  function clearAutosaveTimer() {
-    if (autosaveTimer !== null) {
-      clearTimeout(autosaveTimer);
-      autosaveTimer = null;
-    }
-  }
-  function validateAutosave() {
-    if (!autosaveResource) return false;
-    try {
-      const title = draft.common.title.trim();
-      const maxTitle = draft.type === "project" ? 120 : 240;
-      if (!title) throw new Error("Wpisz tytuł przed zapisaniem.");
-      if ([...title].length > maxTitle)
-        throw new Error(`Użyj ${maxTitle} znaków lub mniej w tytule.`);
-      if (draft.type === "card") {
-        acceptanceError = acceptanceValidation(draft.fields.acceptance);
-        if (acceptanceError) throw new Error(acceptanceError);
-        tagError = tagValidation(draft.fields.labels);
-        if (tagError) throw new Error(tagError);
-      }
-      const detached = detachedEditorDraft(draft);
-      editorPayload({
-        ...detached,
-        source: resource,
-      } as EditorDraft);
-      autosaveError = "";
-      return true;
-    } catch (cause) {
-      autosaveError = errorMessage(cause);
-      return false;
-    }
-  }
-  function queueAutosave() {
-    autosaveTimer = null;
-    if (!autosaveResource || conflict || deletion.busy || deletion.pending)
-      return;
-    const snapshotValue = persistedSnapshot;
-    if (resource && snapshotValue === baseline && !autosave.hasWork) {
-      // Reverting a local validation error requires no write or command reset.
-      if (autosaveState.phase === "idle" || autosaveState.phase === "saved")
-        validateAutosave();
-      return;
-    }
-    if (!validateAutosave()) return;
-    const detached = detachedEditorDraft(draft);
-    void autosave.enqueue(detached, snapshotValue).catch((cause) => {
-      autosaveError = errorMessage(cause);
-    });
-  }
-  function scheduleAutosave(immediate = false) {
-    if (!autosaveResource || conflict) return;
-    clearAutosaveTimer();
-    if (immediate) queueAutosave();
-    else autosaveTimer = setTimeout(queueAutosave, 400);
-  }
-  function autosaveRetry() {
-    void autosave.retry().catch((cause) => {
-      autosaveError = errorMessage(cause);
-    });
-  }
-  function autosaveCheck() {
-    void autosave.check().catch((cause) => {
-      autosaveError = errorMessage(cause);
-    });
-  }
-  async function flushAutosave() {
-    clearAutosaveTimer();
-    if (!autosaveResource) return;
-    if (autosave.hasWork || persistedDirty) {
-      if (!validateAutosave())
-        throw new Error(
-          autosaveError || "Wersja robocza nie jest jeszcze prawidłowa.",
-        );
-      await autosave.enqueue(detachedEditorDraft(draft), persistedSnapshot);
-    }
-    await autosave.flush();
-  }
-  // Plain bookkeeping: the effect below must depend on the draft alone, so it
-  // runs once per change instead of again for its own writes.
-  let watchedAutosaveSnapshot = untrack(() => persistedSnapshot);
-  let immediateAutosave = false;
-  $effect(() => {
-    if (!autosaveResource) return;
-    const current = persistedSnapshot;
-    if (current === watchedAutosaveSnapshot) return;
-    const previous = watchedAutosaveSnapshot;
-    watchedAutosaveSnapshot = current;
-    const immediate =
-      immediateAutosave || discreteAutosaveChange(previous, current);
-    immediateAutosave = false;
-    untrack(() => scheduleAutosave(immediate));
-  });
   function handleChange(event: Event) {
     const target = event.target;
     const immediate =
       target instanceof HTMLSelectElement ||
       (target instanceof HTMLInputElement &&
         ["checkbox", "date", "radio"].includes(target.type));
-    if (immediate) immediateAutosave = true;
+    if (immediate) autosave.discreteChange();
   }
   async function save() {
     if (autosaveResource) {
-      await flushAutosave().catch((cause) => {
-        autosaveError = errorMessage(cause);
+      await autosave.flush().catch((cause) => {
+        autosave.report(cause);
       });
       return;
     }
@@ -781,9 +650,7 @@
         const rebuilt = draftForResource(next);
         carryUnsubmittedEntries(rebuilt, draft);
         draft = rebuilt;
-        baseline = persistedSnapshot;
-        watchedAutosaveSnapshot = baseline;
-        autosave.reset(next);
+        autosave.rebase(next);
         onautosaved?.(next);
         statusMessage = "Zapisano";
         onchanged?.();
@@ -918,8 +785,8 @@
         {deletion}
         oncheck={resolve}
         onretry={transmit}
-        onautosavecheck={autosaveCheck}
-        onautosaveretry={autosaveRetry}
+        onautosavecheck={autosave.check}
+        onautosaveretry={autosave.retry}
         oncopy={copyDraft}
         oncopycurrent={copyCurrent}
         ondiscard={onclose}
