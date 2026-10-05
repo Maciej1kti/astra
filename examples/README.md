@@ -57,3 +57,7 @@ continuation; see [ADR-062](../docs/ADR-062-COUNTER-CHART-DASHBOARD.md).
 board as the profile's workspace default. Its [HTTP example](requests/projects-status-board.http)
 also shows the existing conditional project state patch used to change columns;
 see [ADR-064](../docs/ADR-064-PROJECTS-STATUS-BOARD.md).
+
+[Recovery review](requests/local-recovery-review.http) lists unresolved source
+writes and abandons one reviewed intent over the local socket; see
+[ADR-067](../docs/ADR-067-REVIEWED-INTENT-RESOLUTION.md).

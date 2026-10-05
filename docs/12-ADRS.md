@@ -407,3 +407,10 @@ definite or retryable outcome instead of blocking the project; the next write
 completes interrupted intents; malformed resource IDs are not found; network
 bodies require a session. See
 [ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).
+
+## ADR-067 — Operator resolution of a reviewed intent
+
+A host-local command lists unresolved source intents and settles one
+`needs_review` intent by keeping the current source and rejecting the command.
+It never writes a source file. See
+[ADR-067](ADR-067-REVIEWED-INTENT-RESOLUTION.md).

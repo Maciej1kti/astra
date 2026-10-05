@@ -97,6 +97,32 @@
         "project_id": "UUID"
       },
       "read_only": true
+    },
+    {
+      "method": "GET",
+      "path": "/local/v1/recovery/intents",
+      "input": {
+        "project_id": "optional UUID query parameter"
+      },
+      "output": {
+        "api_version": "1",
+        "items": "array of {request_id, command_epoch, state, project_id, target: {type, id}, operation: create|replace|delete, before_version, after_version, current_version}; versions are null when absent"
+      },
+      "read_only": true
+    },
+    {
+      "method": "POST",
+      "path": "/local/v1/recovery/intents/{request_id}/abandon",
+      "input": {
+        "project_id": "UUID",
+        "current_version": "Version of the reviewed current source, or null for an absent source"
+      },
+      "output": {
+        "api_version": "1",
+        "request_id": "UUIDv7",
+        "state": "rejected",
+        "recovery_pending": "boolean"
+      }
     }
   ],
   "maintenance_parameters": {
@@ -128,7 +154,8 @@
     "Plan is no destructive action. Commit rechecks preconditions.",
     "Maintenance API is internal, not offered to unauthenticated loopback or remote browser.",
     "Schema variants must be implemented as strict tagged unions, not unrestricted maps.",
-    "Built-in backup/restore archives and source-file migrations are deferred by the owner on 2026-09-05."
+    "Built-in backup/restore archives and source-file migrations are deferred by the owner on 2026-09-05.",
+    "Recovery review keeps the current source and rejects one needs_review command as RECOVERY_ABANDONED; it never writes a source file. See ADR-067."
   ],
   "profile_selection": {
     "header": "X-Astra-User",

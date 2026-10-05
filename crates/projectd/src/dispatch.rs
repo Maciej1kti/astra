@@ -348,6 +348,27 @@ pub(super) fn run(
                 text(&input.body, "command_epoch")?,
             )?));
         }
+        ("GET", ["local", "v1", "recovery", "intents"]) if input.local => {
+            let fields = parameters(&input, &["project_id"])?;
+            engine.recovery_intents(fields.get("project_id").map(String::as_str))?
+        }
+        ("POST", ["local", "v1", "recovery", "intents", request, "abandon"]) if input.local => {
+            // The operator states the source version they reviewed; `null` is
+            // an absent source and must be said, not implied by omission.
+            let body = input
+                .body
+                .as_object()
+                .filter(|body| body.len() == 2)
+                .ok_or_else(|| AppError::reject(422, "INVALID_INPUT"))?;
+            let (Some(project), Some(current)) = (
+                body.get("project_id").and_then(Value::as_str),
+                body.get("current_version")
+                    .filter(|version| version.is_null() || version.is_string()),
+            ) else {
+                return Err(AppError::reject(422, "INVALID_INPUT"));
+            };
+            engine.abandon_reviewed_intent(project, request, current.as_str())?
+        }
         ("POST", ["local", "v1", "projects", "resolve"]) if input.local => {
             if !input
                 .body

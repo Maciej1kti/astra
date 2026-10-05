@@ -8,7 +8,8 @@ Before copying:
 1. Stop external edits to registered `.project` folders.
 2. Run `projectctl --socket SOCKET users`, then run
    `projectctl --socket SOCKET --user USER_ID doctor` for each listed profile.
-   Resolve pending operations and jobs.
+   Resolve pending operations and jobs; settle a `needs_review` write with
+   `projectctl recovery list` and `recovery abandon` ([CLI](../CLI.md#interrupted-writes-that-need-review)).
 3. Stop `projectd` cleanly and verify that the process has exited.
 4. Copy each registered `.project` directory, excluding `.local`, plus the entire
    server data directory. Keep `workspace.json`, `roots.json`, `state.sqlite` and

@@ -1002,3 +1002,110 @@ fn named_project_tag_rename_accepts_a_workflow_and_retains_retry_identity() {
     assert_eq!(requests[1].headers["x-command-epoch"], EPOCH);
     assert!(!requests[1].headers.contains_key("if-match"));
 }
+
+#[test]
+fn recovery_list_reads_every_project_or_the_exact_selected_folder() {
+    let listing = json!({"api_version":"1","items":[]});
+    let host = Host::new(vec![(200, listing.clone())]);
+    let mut command = host.command();
+    command.args(["recovery", "list"]);
+    let output = invoke(&mut command, None);
+    assert_eq!(output.status.code(), Some(0), "{:?}", parsed(&output));
+    assert_eq!(parsed(&output)["data"], listing);
+    let requests = host.finish();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].method, "GET");
+    assert_eq!(requests[0].path, "/local/v1/recovery/intents");
+
+    let host = Host::new(vec![(200, json!({"project_id":PROJECT})), (200, listing)]);
+    let mut command = host.scoped_command();
+    command.args(["recovery", "list"]);
+    let output = invoke(&mut command, None);
+    assert_eq!(output.status.code(), Some(0), "{:?}", parsed(&output));
+    let requests = host.finish();
+    assert_eq!(requests[0].path, "/local/v1/projects/resolve");
+    assert_eq!(
+        requests[1].path,
+        format!("/local/v1/recovery/intents?project_id={PROJECT}")
+    );
+}
+
+#[test]
+fn recovery_abandon_states_the_reviewed_source_version_explicitly() {
+    for (reviewed, current) in [
+        (vec!["--if-version", VERSION], json!(VERSION)),
+        (vec!["--if-absent"], Value::Null),
+    ] {
+        let host = Host::new(vec![
+            (200, json!({"project_id":PROJECT})),
+            (
+                200,
+                json!({"api_version":"1","request_id":REQUEST,"state":"rejected","recovery_pending":false}),
+            ),
+        ]);
+        let mut command = host.scoped_command();
+        command
+            .args(["recovery", "abandon", REQUEST])
+            .args(&reviewed);
+        let output = invoke(&mut command, None);
+        assert_eq!(output.status.code(), Some(0), "{:?}", parsed(&output));
+        assert_eq!(parsed(&output)["data"]["state"], "rejected");
+        let requests = host.finish();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[1].method, "POST");
+        assert_eq!(
+            requests[1].path,
+            format!("/local/v1/recovery/intents/{REQUEST}/abandon")
+        );
+        assert_eq!(
+            requests[1].body,
+            json!({"project_id":PROJECT,"current_version":current})
+        );
+        // Settling a review is not a new durable command.
+        assert!(!requests[1].headers.contains_key("x-request-id"));
+    }
+}
+
+#[test]
+fn recovery_abandon_refuses_ambiguous_review_before_connecting() {
+    let directory = tempfile::tempdir().unwrap();
+    let socket = directory.path().join("must-not-connect.sock");
+    let listener = UnixListener::bind(&socket).unwrap();
+    listener.set_nonblocking(true).unwrap();
+    for arguments in [
+        vec!["recovery", "abandon", REQUEST],
+        vec![
+            "recovery",
+            "abandon",
+            REQUEST,
+            "--if-version",
+            VERSION,
+            "--if-absent",
+        ],
+        vec!["recovery", "abandon", "not-a-request", "--if-absent"],
+        vec!["recovery", "abandon"],
+    ] {
+        let mut command = cli();
+        command
+            .arg("--socket")
+            .arg(&socket)
+            .arg("--project")
+            .arg(directory.path())
+            .args(&arguments);
+        let output = invoke(&mut command, None);
+        assert_ne!(output.status.code(), Some(0), "{arguments:?}");
+        assert!(
+            matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock),
+            "{arguments:?} contacted the daemon"
+        );
+    }
+    // Without an exact folder there is no project to settle the review in.
+    let mut command = cli();
+    command
+        .arg("--socket")
+        .arg(&socket)
+        .args(["recovery", "abandon", REQUEST, "--if-absent"]);
+    let output = invoke(&mut command, None);
+    assert_ne!(output.status.code(), Some(0));
+    assert!(listener.accept().is_err());
+}

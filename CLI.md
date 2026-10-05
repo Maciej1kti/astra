@@ -266,6 +266,32 @@ A valid command-status query can succeed while describing a rejected command:
 inspect `data.state` and `data.error`. Pending status can include a planned
 result; it does not mean the command committed. Job and command IDs are different.
 
+## Interrupted writes that need review
+
+An interrupted write is normally completed at startup or by the next write. When
+another tool changed the same source in the meantime, Astra will not choose
+between the two contents: the command becomes `needs_review`, further writes to
+that project return `PROJECT_RECOVERY_REQUIRED` (exit 7) and `doctor` reports
+`RECOVERY_PENDING`.
+
+```sh
+projectctl recovery list
+projectctl --project /absolute/project recovery list
+projectctl --project /absolute/project recovery abandon REQUEST_ID --if-version CURRENT_VERSION
+projectctl --project /absolute/project recovery abandon REQUEST_ID --if-absent
+```
+
+`recovery list` shows each unresolved write with its `before_version`,
+`after_version` and `current_version`. Inspect the source file, then abandon the
+write with the `current_version` you reviewed, or `--if-absent` when the file is
+gone and should stay gone. Abandoning keeps the current source exactly as it is,
+records the original command as rejected with `RECOVERY_ABANDONED` and lets the
+project accept writes again. It never writes a source file and cannot apply the
+interrupted change; make that edit again as a new command if you still want it.
+Only `needs_review` can be abandoned; other pending states resolve by themselves.
+Select another profile's journal with `--user`. See
+[ADR-067](docs/ADR-067-REVIEWED-INTENT-RESOLUTION.md).
+
 ## Uncertain results and safe retries
 
 Before sending a durable command, the CLI prints its request ID and epoch to

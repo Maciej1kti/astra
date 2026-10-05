@@ -14,6 +14,7 @@ mod history;
 mod maintenance;
 mod mutation;
 mod receipts;
+mod recovery_review;
 mod retention;
 mod roots;
 mod shared;

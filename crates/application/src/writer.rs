@@ -448,7 +448,10 @@ impl Writer<'_> {
             // Journal, lock and invariant failures keep the intent for recovery.
             _ => return Err(error),
         };
-        if let Err(journal) = self.journal.abandon(intent, rejection.as_ref()) {
+        if let Err(journal) =
+            self.journal
+                .abandon(intent, rejection.as_ref(), CommandState::Prepared)
+        {
             crate::diagnostics::record_failure(
                 "source_withdraw",
                 &journal,

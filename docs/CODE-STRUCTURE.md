@@ -470,6 +470,13 @@ rules to its own journal's intents under the held project lock; `needs_review`
 and intents owned by other journals still refuse. See
 [ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).
 
+[Recovery review](../crates/application/src/recovery_review.rs) lists unresolved
+source intents with their saved and current versions and abandons one reviewed
+intent under the project lock. It checks the operator's observed source version
+and changes only the journal; project deletion manifests are excluded. Its two
+routes exist on the local socket only. See
+[ADR-067](ADR-067-REVIEWED-INTENT-RESOLUTION.md).
+
 [Source deletion](../crates/application/src/source_deletion.rs) coordinates card
 and report removal through the shared durable writer. Card pins and report
 references are checked against source files before unlink and during recovery;

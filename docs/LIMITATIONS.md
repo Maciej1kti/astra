@@ -66,11 +66,12 @@ testing, upgrade compatibility, login-start and complete client/server performan
 acceptance. None is established solely by a successful local build.
 
 An interrupted write whose source was then changed by another tool becomes
-`needs_review` and blocks further writes to that project. Astra never overwrites
-or restores the source in that state, and there is currently no command to
-settle the review: it needs an operator decision that has not been designed.
-Interrupted writes without such a conflict are completed at startup or by the
-next write; see [ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).
+`needs_review` and blocks further writes to that project until an operator
+settles it. Astra never overwrites or restores the source in that state. The
+only resolution is host-local and keeps the current source:
+`projectctl recovery list`, then `recovery abandon`; see
+[ADR-067](ADR-067-REVIEWED-INTENT-RESOLUTION.md). The browser offers no control
+for it, and reviewed project deletions and workflows are not covered.
 
 Recent release measurements cover the 100-project / 10,000-card / 50,000-report
 fixture and concentrated 1,000-card collections. They show improvements, with

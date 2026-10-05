@@ -68,6 +68,10 @@ the only recovery point. See [ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.m
 | Inne bajty, błędny plik, nowy symlink lub nieoczekiwany brak | NEEDS_REVIEW; nie nadpisuj i nie przywracaj automatycznie |
 | Niedostępny katalog/dysk | BLOCKED; zachowaj journal do powrotu zasobu |
 
+`NEEDS_REVIEW` is settled only by an operator on the host: the reviewed intent
+is abandoned, the current source stays untouched and the command is recorded as
+rejected. See [ADR-067](ADR-067-REVIEWED-INTENT-RESOLUTION.md).
+
 Do not remove unresolved intentions through ordinary retention. Recovery runs before write access, in project order. Resuming an intention does not ignore an external target change just because the target has an old hash.
 
 ## Zewnętrzny edytor i granice gwarancji

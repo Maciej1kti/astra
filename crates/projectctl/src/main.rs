@@ -4,6 +4,7 @@ mod input;
 mod output;
 mod project;
 mod queries;
+mod recovery;
 mod transport;
 mod typed;
 mod users;
@@ -65,6 +66,11 @@ enum Action {
     Project {
         #[command(subcommand)]
         action: project::Action,
+    },
+    /// Review interrupted source writes that recovery could not settle.
+    Recovery {
+        #[command(subcommand)]
+        action: recovery::Action,
     },
     /// Prepare a local maintenance operation from a strict JSON input file.
     MaintenancePlan {
@@ -266,6 +272,7 @@ async fn run(args: Arguments) -> Result<transport::Outcome, Box<dyn std::error::
             });
         }
         Action::Project { action } => action.prepare()?,
+        Action::Recovery { action } => action.prepare(&client, args.project.as_deref()).await?,
         Action::MaintenancePlan { json_file } => Request::local(
             "POST",
             "/local/v1/maintenance/plans",

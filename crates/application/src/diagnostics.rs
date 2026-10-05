@@ -44,7 +44,7 @@ WHERE state IN ('prepared',
         if pending > 0 {
             warnings.push(json!({
                 "code": "RECOVERY_PENDING",
-                "message": "Inspect the pending command/job before issuing a new intent. Restart resumes safe interrupted operations; needs_review requires checking the source conflict.",
+                "message": "Inspect the pending command/job before issuing a new intent. Safe interrupted operations resume at the next write or restart; for needs_review, compare the source with `projectctl recovery list` and settle it with `recovery abandon`.",
             }));
         }
         let floor: Option<String> = db

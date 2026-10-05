@@ -1050,3 +1050,102 @@ async fn malformed_resource_ids_are_definite_not_found_responses() {
         }
     }
 }
+
+#[tokio::test]
+async fn recovery_review_is_a_strict_local_only_operation() {
+    let app = Running::new().await;
+    let hello: Value = app
+        .local("GET", "/local/v1/hello")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let plan: Value = app
+        .local("POST", "/local/v1/registration-plans")
+        .json(&json!({"absolute_path":app.project,"git_mode":"private"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let registration = app
+        .local("POST", "/api/v1/registrations")
+        .header("x-request-id", Uuid::now_v7().to_string())
+        .header("x-command-epoch", hello["command_epoch"].as_str().unwrap())
+        .json(&json!({"plan_id":plan["plan_id"]}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(registration.status(), 202);
+    let project = plan["project_id"].as_str().unwrap();
+
+    for path in [
+        "/local/v1/recovery/intents".to_owned(),
+        format!("/local/v1/recovery/intents?project_id={project}"),
+    ] {
+        let listed = app.local("GET", &path).send().await.unwrap();
+        assert_eq!(listed.status(), 200, "{path}");
+        let body: Value = listed.json().await.unwrap();
+        assert_eq!(body, json!({"api_version":"1","items":[]}));
+    }
+    for (path, status, code) in [
+        (
+            format!("/local/v1/recovery/intents?project_id={}", Uuid::new_v4()),
+            404,
+            "PROJECT_NOT_REGISTERED",
+        ),
+        (
+            "/local/v1/recovery/intents?state=blocked".to_owned(),
+            400,
+            "INVALID_QUERY",
+        ),
+    ] {
+        let response = app.local("GET", &path).send().await.unwrap();
+        assert_eq!(response.status(), status, "{path}");
+        let body: Value = response.json().await.unwrap();
+        assert_eq!(body["error"]["code"], code, "{path}");
+    }
+
+    let request = Uuid::now_v7();
+    let abandon = format!("/local/v1/recovery/intents/{request}/abandon");
+    for (body, status, code) in [
+        (
+            json!({"project_id":project,"current_version":null}),
+            404,
+            "RECOVERY_INTENT_NOT_FOUND",
+        ),
+        (json!({"project_id":project}), 422, "INVALID_INPUT"),
+        (
+            json!({"project_id":project,"current_version":7}),
+            422,
+            "INVALID_INPUT",
+        ),
+        (
+            json!({"project_id":project,"current_version":null,"force":true}),
+            422,
+            "INVALID_INPUT",
+        ),
+    ] {
+        let response = app
+            .local("POST", &abandon)
+            .json(&body)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status, "{body}");
+        let reply: Value = response.json().await.unwrap();
+        assert_eq!(reply["error"]["code"], code, "{body}");
+        project_application::wire::validate("Error", &reply).unwrap();
+    }
+
+    // The network listener never exposes operator recovery.
+    let remote = app
+        .browser("GET", "/local/v1/recovery/intents")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(remote.status(), 404);
+}

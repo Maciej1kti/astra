@@ -140,6 +140,8 @@ fn summaries_drop_retired_card_fields_and_keep_milestone_due() {
 #[path = "engine/projections.rs"]
 mod projections;
 
+#[path = "engine/recovery_review.rs"]
+mod recovery_review;
 #[path = "engine/writes.rs"]
 mod writes;
 

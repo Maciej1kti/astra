@@ -651,10 +651,17 @@ VALUES (?1,
         tx.commit()?;
         Ok(())
     }
-    /// Withdraw an intent whose source target was provably never changed.
-    /// A definite rejection replaces the planned result. Without one the
-    /// command is forgotten, so the unchanged request can be admitted again.
-    pub fn abandon(&self, intent: &Intent, rejection: Option<&Reply>) -> Result<(), AppError> {
+    /// Withdraw an intent that will never be applied: its target was provably
+    /// not changed, or an operator settled its review. A definite rejection
+    /// replaces the planned result. Without one the command is forgotten, so
+    /// the unchanged request can be admitted again. `from` is the state the
+    /// caller observed; a concurrent transition fails the withdrawal.
+    pub fn abandon(
+        &self,
+        intent: &Intent,
+        rejection: Option<&Reply>,
+        from: CommandState,
+    ) -> Result<(), AppError> {
         let mut db = self.db()?;
         let tx = db.transaction()?;
         let command = &intent.command;
@@ -668,22 +675,23 @@ VALUES (?1,
         let changed = match rejection {
             Some(reply) => tx.execute(
                 "UPDATE commands SET state='rejected', result_json=NULL, error_json=?3
-                 WHERE epoch=?1 AND request_id=?2 AND state='prepared'",
+                 WHERE epoch=?1 AND request_id=?2 AND state=?4",
                 params![
                     command.epoch,
                     command.request_id,
                     serde_json::to_string(reply).map_err(|source| {
                         AppError::stored("command reply serialization", source)
-                    })?
+                    })?,
+                    from.as_str()
                 ],
             )?,
             None => tx.execute(
-                "DELETE FROM commands WHERE epoch=?1 AND request_id=?2 AND state='prepared'",
-                identity,
+                "DELETE FROM commands WHERE epoch=?1 AND request_id=?2 AND state=?3",
+                params![command.epoch, command.request_id, from.as_str()],
             )?,
         };
         if changed != 1 {
-            return Err(AppError::invariant("abandoned intent is prepared"));
+            return Err(AppError::invariant("abandoned intent state"));
         }
         tx.commit()?;
         Ok(())
