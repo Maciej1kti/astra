@@ -61,7 +61,7 @@ impl Users {
         if expected.is_none() {
             return reject(428, "PRECONDITION_REQUIRED");
         }
-        if !valid_id(id) {
+        if !canonical_uuid_v4(id) {
             return reject(400, "INVALID_USER");
         }
         if payload.as_object().is_none_or(|fields| fields.len() != 1)

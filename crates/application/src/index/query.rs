@@ -27,11 +27,7 @@ impl Index {
             (Some(target_type), Some(target_id))
                 if kind == Some("update")
                     && matches!(target_type.as_str(), "project" | "milestone")
-                    && Uuid::parse_str(target_id).is_ok_and(|id| {
-                        id.get_version_num() == 4
-                            && id.get_variant() == uuid::Variant::RFC4122
-                            && id.to_string() == *target_id
-                    }) => {}
+                    && crate::canonical_uuid_v4(target_id) => {}
             _ => return Err(AppError::reject(422, "INVALID_TARGET_FILTER")),
         }
         let limit = query.limit.unwrap_or(50);

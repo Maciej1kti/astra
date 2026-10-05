@@ -447,13 +447,7 @@ impl Engine {
             let readable: Vec<_> = ids
                 .iter()
                 .copied()
-                .filter(|card_id| {
-                    Uuid::parse_str(card_id).is_ok_and(|id| {
-                        id.get_version_num() == 4
-                            && id.get_variant() == uuid::Variant::RFC4122
-                            && id.to_string() == *card_id
-                    })
-                })
+                .filter(|card_id| crate::canonical_uuid_v4(card_id))
                 .collect();
             let mut ordered = ids.into_iter();
             let invalid_id =

@@ -122,12 +122,25 @@ impl Reply {
     }
 }
 
-pub fn valid_request_id(text: &str) -> bool {
+/// A lower-case hyphenated RFC 4122 UUID of exactly this version.
+fn canonical_uuid(text: &str, version: usize) -> bool {
     uuid::Uuid::parse_str(text).is_ok_and(|id| {
-        id.get_version_num() == 7
+        id.get_version_num() == version
             && id.get_variant() == uuid::Variant::RFC4122
             && id.to_string() == text
     })
+}
+
+/// Request IDs are UUIDv7: their timestamp bounds the retry window.
+pub fn valid_request_id(text: &str) -> bool {
+    canonical_uuid(text, 7)
+}
+
+/// Identifiers received from clients: profiles, epochs and filter targets are
+/// RFC 4122 UUIDv4. The store names sources with its own rule,
+/// `project_store::filesystem::is_resource_id`, which does not check the variant.
+pub(crate) fn canonical_uuid_v4(text: &str) -> bool {
+    canonical_uuid(text, 4)
 }
 
 #[expect(

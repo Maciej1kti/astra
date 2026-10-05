@@ -19,13 +19,7 @@ impl Engine {
         if last < first || (last - first).num_days() >= 400 {
             return Err(AppError::reject(400, "INVALID_DATE_RANGE"));
         }
-        if project.is_some_and(|id| {
-            !uuid::Uuid::parse_str(id).is_ok_and(|uuid| {
-                uuid.get_version_num() == 4
-                    && uuid.get_variant() == uuid::Variant::RFC4122
-                    && uuid.to_string() == id
-            })
-        }) {
+        if project.is_some_and(|id| !crate::canonical_uuid_v4(id)) {
             return Err(AppError::reject(400, "INVALID_PROJECT_ID"));
         }
         self.index.with_snapshot(|db, revision| {

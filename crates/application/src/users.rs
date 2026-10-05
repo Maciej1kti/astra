@@ -1,6 +1,6 @@
 //! Trusted profiles reuse the complete application boundary for separate workspaces.
 use crate::{
-    AppError, Reply,
+    AppError, Reply, canonical_uuid_v4,
     command_state::CommandState,
     engine::Engine,
     journal::{Command, CommandRecord, Journal, Target},
@@ -32,13 +32,6 @@ pub struct Users {
     registrations: Mutex<()>,
 }
 
-fn valid_id(id: &str) -> bool {
-    uuid::Uuid::parse_str(id).is_ok_and(|id_value| {
-        id_value.get_version_num() == 4
-            && id_value.get_variant() == uuid::Variant::RFC4122
-            && id_value.to_string() == id
-    })
-}
 fn valid_name(name: &str) -> bool {
     !name.is_empty()
         && name == name.trim()
@@ -46,7 +39,7 @@ fn valid_name(name: &str) -> bool {
         && !name.chars().any(char::is_control)
 }
 fn profile(id: String, name: String) -> Result<UserProfile, AppError> {
-    if !valid_id(&id) || !valid_name(&name) {
+    if !canonical_uuid_v4(&id) || !valid_name(&name) {
         return Err(AppError::invariant("stored user profile"));
     }
     Ok(UserProfile {
@@ -94,7 +87,7 @@ impl Users {
             [],
             |row| row.get(0),
         )?;
-        if !valid_id(&id) {
+        if !canonical_uuid_v4(&id) {
             return Err(AppError::invariant("default user identity"));
         }
         use rusqlite::OptionalExtension;
@@ -316,7 +309,7 @@ impl Users {
     }
     pub fn select(&self, id: Option<&str>) -> Result<(UserProfile, Arc<Engine>), AppError> {
         let id = id.unwrap_or(&self.default.id);
-        if !valid_id(id) {
+        if !canonical_uuid_v4(id) {
             return Err(AppError::reject(400, "INVALID_USER"));
         }
         self.engines
@@ -423,7 +416,7 @@ impl Users {
                 .reject_error(&command, AppError::reject(status, code), now)
         };
         if payload.as_object().is_none_or(|fields| fields.len() != 2)
-            || !payload["id"].as_str().is_some_and(valid_id)
+            || !payload["id"].as_str().is_some_and(canonical_uuid_v4)
             || !payload["name"].as_str().is_some_and(valid_name)
         {
             return reject(422, "VALIDATION_FAILED");

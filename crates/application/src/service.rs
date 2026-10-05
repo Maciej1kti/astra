@@ -45,11 +45,7 @@ impl Engine {
         if !crate::valid_request_id(id) {
             return Err(AppError::reject(400, "INVALID_REQUEST_ID"));
         }
-        if !uuid::Uuid::parse_str(original_epoch).is_ok_and(|value| {
-            value.get_version_num() == 4
-                && value.get_variant() == uuid::Variant::RFC4122
-                && value.to_string() == original_epoch
-        }) {
+        if !crate::canonical_uuid_v4(original_epoch) {
             return Err(AppError::reject(400, "INVALID_EPOCH"));
         }
         if original_epoch != self.journal.epoch {

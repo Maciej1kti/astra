@@ -50,21 +50,13 @@ fn event(stage: &str, failure: Value, project_id: Option<&str>, request_id: Opti
         "unspecified"
     };
     let mut event = json!({"event":"operation_failed", "stage":stage, "failure":failure});
-    if let Some(id) = project_id.filter(|id| canonical_uuid(id, 4)) {
+    if let Some(id) = project_id.filter(|id| crate::canonical_uuid_v4(id)) {
         event["project_id"] = json!(id);
     }
     if let Some(id) = request_id.filter(|id| crate::valid_request_id(id)) {
         event["request_id"] = json!(id);
     }
     event
-}
-
-fn canonical_uuid(value: &str, version: usize) -> bool {
-    uuid::Uuid::parse_str(value).is_ok_and(|id| {
-        id.get_version_num() == version
-            && id.get_variant() == uuid::Variant::RFC4122
-            && id.to_string() == value
-    })
 }
 
 fn classification(error: &AppError) -> Value {
