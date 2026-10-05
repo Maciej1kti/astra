@@ -133,8 +133,13 @@ export async function api<T>(
 }
 /** One HTTP exchange. Neither failure below proves a mutation was rejected. */
 async function exchange(path: string, init: RequestInit) {
-  const failed = (cause: unknown) =>
-    cause instanceof TypeError ? new TransportError({ cause }) : cause;
+  // A cancelled or timed-out request keeps its own reason.
+  const failed = (cause: unknown, fallback?: Error) =>
+    init.signal?.aborted
+      ? cause
+      : cause instanceof TypeError
+        ? new TransportError({ cause })
+        : (fallback ?? cause);
   let response: Response;
   try {
     response = await fetch(path, init);
@@ -150,9 +155,8 @@ async function exchange(path: string, init: RequestInit) {
   try {
     value = response.status === 204 ? null : await response.json();
   } catch (cause) {
-    throw cause instanceof SyntaxError
-      ? new InvalidResponseError(response.status, { cause })
-      : failed(cause);
+    // Engines disagree on the error an unparsable body raises.
+    throw failed(cause, new InvalidResponseError(response.status, { cause }));
   }
   if (!response.ok && (value === null || typeof value !== "object"))
     throw new InvalidResponseError(response.status);

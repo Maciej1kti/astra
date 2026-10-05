@@ -411,9 +411,8 @@ await runBrowserSuite(
       "R05",
       "Retained work can be inspected and copied before pairing again",
       async (page, context) => {
-        await context
-          .grantPermissions(["clipboard-read", "clipboard-write"])
-          .catch(() => {});
+        if (!webkit)
+          await context.grantPermissions(["clipboard-read", "clipboard-write"]);
         const card = await create("Recovery inspect draft");
         await page.goto(
           `${config.origin}/?${new URLSearchParams({ view: "list", project, type: "card", resource: card.metadata.id })}`,

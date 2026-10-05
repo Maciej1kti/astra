@@ -76,9 +76,9 @@ await runBrowserSuite(
     }
     async function check(id, name, run) {
       const context = await newContext();
-      await context
-        .grantPermissions(["clipboard-read", "clipboard-write"])
-        .catch(() => {});
+      // Only Chromium knows these permissions; WebKit rejects the whole context.
+      if (!webkit)
+        await context.grantPermissions(["clipboard-read", "clipboard-write"]);
       const page = await context.newPage();
       page.setDefaultTimeout(10000);
       page.on("pageerror", (error) =>
@@ -586,8 +586,7 @@ await runBrowserSuite(
         await visit(page, { view: "board", project });
         const boardAlert = page
           .getByRole("alert")
-          .filter({ hasText: /odpowied|Serwer|JSON|Error/ })
-          .first();
+          .filter({ hasText: "Wczytaj tablicę ponownie" });
         await expect(boardAlert).toBeVisible();
         const boardText = await boardAlert.innerText();
         assert.doesNotMatch(boardText, /Error|JSON|Unexpected|token/);
@@ -607,8 +606,7 @@ await runBrowserSuite(
         await visit(page, { view: "calendar", project, month: "2026-09" });
         const calendarAlert = page
           .getByRole("alert")
-          .filter({ hasText: /Serwer|Error/ })
-          .first();
+          .filter({ hasText: "Wczytaj kalendarz ponownie" });
         await expect(calendarAlert).toBeVisible();
         const calendarText = await calendarAlert.innerText();
         assert.doesNotMatch(calendarText, /Error:|English/);

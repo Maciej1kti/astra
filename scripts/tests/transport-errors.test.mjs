@@ -28,13 +28,20 @@ async function withFetch(reply, run) {
     globalThis.fetch = previous;
   }
 }
-const html = (status) => async () => ({
-  status,
-  ok: status >= 200 && status < 300,
-  json: async () => {
-    throw new SyntaxError("Unexpected token '<'");
-  },
-});
+const html =
+  (status, failure = new SyntaxError("Unexpected token '<'")) =>
+  async () => ({
+    status,
+    ok: status >= 200 && status < 300,
+    json: async () => {
+      throw failure;
+    },
+  });
+// WebKit reports unparsable JSON as a DOMException, not as a SyntaxError.
+const webkitParseFailure = new DOMException(
+  "The string did not match the expected pattern.",
+  "SyntaxError",
+);
 
 test("a 401 ends only a session that existed, and only once", async () => {
   const unauthorized = async () => ({
@@ -95,6 +102,12 @@ test("a gateway page is an invalid response and leaves the command uncertain", a
     await assert.rejects(operation.retry(), InvalidResponseError);
   });
   assert.equal(operation.pending, pending);
+  await withFetch(html(502, webkitParseFailure), async () => {
+    const failure = await operation.retry().then(assert.fail, (cause) => cause);
+    assert(failure instanceof InvalidResponseError);
+    assert.doesNotMatch(errorMessage(failure), /expected pattern/);
+  });
+  assert.equal(operation.pending, pending);
   await withFetch(
     async () => ({ status: 500, ok: false, json: async () => null }),
     async () => {
@@ -134,13 +147,32 @@ test("a failed exchange is a transport error at any point of the reply", async (
       assert.equal(operation.state.phase, "uncertain");
       assert.equal(operation.pending, pending);
     });
-  const abort = new DOMException("Aborted", "AbortError");
+});
+
+test("a timed-out mutation is reported as interrupted, not as a bad reply", async (t) => {
+  bootstrap();
+  const pending = api.command("/api/v1/projects/p/cards", "POST", {
+    title: "Draft",
+  });
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  // The reply headers arrived; its body is still streaming at the deadline.
   await withFetch(
+    async (_path, { signal }) => ({
+      status: 200,
+      ok: true,
+      json: () =>
+        new Promise((_, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason)),
+        ),
+    }),
     async () => {
-      throw abort;
-    },
-    async () => {
-      await assert.rejects(operation.retry(), (cause) => cause === abort);
+      const outcome = api.send(pending).then(assert.fail, (cause) => cause);
+      await new Promise((done) => setImmediate(done));
+      t.mock.timers.tick(15_000);
+      const failure = await outcome;
+      assert.equal(failure.name, "AbortError");
+      assert.match(errorMessage(failure), /Operacja została przerwana/);
+      assert.equal(api.isDefinitiveRejection(failure), false);
     },
   );
 });
