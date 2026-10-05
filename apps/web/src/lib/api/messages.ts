@@ -1,4 +1,8 @@
-const commonMessages: Record<string, string> = {
+/**
+ * The few messages needed before the detailed catalog can load. They repeat
+ * its entries to stay out of the deferred chunk; a unit test keeps them equal.
+ */
+export const commonMessages: Record<string, string> = {
   CARD_IN_FOCUS:
     "Ta karta jest przypięta do Focus. Usuń ją z Focus przed usunięciem.",
   VERSION_CONFLICT:
