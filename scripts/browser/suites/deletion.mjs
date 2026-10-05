@@ -175,9 +175,11 @@ await runBrowserSuite(
     }
 
     const context = await newContext();
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-      origin: config.origin,
-    });
+    // Only Chromium knows these permissions; WebKit rejects the whole context.
+    if (process.env.ASTRA_TEST_BROWSER !== "webkit")
+      await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+        origin: config.origin,
+      });
     const page = await context.newPage();
     page.setDefaultTimeout(12000);
     page.on("pageerror", (error) => errors.push(error.message));
