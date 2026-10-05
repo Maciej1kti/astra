@@ -1,4 +1,5 @@
 //! Shared domain boundary, without HTTP, filesystem access or command execution.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub mod models;
 pub mod ordering;
 
@@ -10,6 +11,10 @@ use std::{collections::HashSet, sync::LazyLock};
 
 pub const MAX_BODY_BYTES: usize = 960 * 1024;
 const SCHEMA: &str = include_str!("../../../contracts/domain.schema.json");
+#[expect(
+    clippy::expect_used,
+    reason = "the schema is embedded at build time and covered by every test"
+)]
 static VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     jsonschema::draft202012::options()
         .should_validate_formats(true)
@@ -38,6 +43,8 @@ impl<T> Validated<T> {
     }
 }
 
+const WIRE_MODEL: DomainError = DomainError::Invalid("unexpected document kind or wire model");
+
 pub fn validate_document(value: Value) -> Result<Validated<Document>, DomainError> {
     decode(value)
 }
@@ -65,15 +72,15 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
         if let Some(counters) = m.get("counters").and_then(Value::as_array) {
             let mut ids = HashSet::new();
             for counter in counters {
-                if !ids.insert(counter["id"].as_str().unwrap()) {
+                if !ids.insert(text(&counter["id"])?) {
                     return Err(DomainError::Invalid("duplicate counter ID"));
                 }
-                if counter["name"].as_str().unwrap().trim().is_empty()
-                    || counter["unit"].as_str().unwrap().trim().is_empty()
+                if text(&counter["name"])?.trim().is_empty()
+                    || text(&counter["unit"])?.trim().is_empty()
                 {
                     return Err(DomainError::Invalid("blank counter name or unit"));
                 }
-                for date in counter["values"].as_object().unwrap().keys() {
+                for date in counter["values"].as_object().ok_or(WIRE_MODEL)?.keys() {
                     local_date(date)?;
                 }
             }
@@ -81,15 +88,11 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
         if let Some(comments) = m.get("comments").and_then(Value::as_array) {
             let mut ids = HashSet::new();
             for comment in comments {
-                if !ids.insert(comment["id"].as_str().unwrap()) {
+                if !ids.insert(text(&comment["id"])?) {
                     return Err(DomainError::Invalid("duplicate comment ID"));
                 }
-                if comment["body"].as_str().unwrap().trim().is_empty()
-                    || comment["author"]["label"]
-                        .as_str()
-                        .unwrap()
-                        .trim()
-                        .is_empty()
+                if text(&comment["body"])?.trim().is_empty()
+                    || text(&comment["author"]["label"])?.trim().is_empty()
                 {
                     return Err(DomainError::Invalid("blank comment or author"));
                 }
@@ -98,10 +101,10 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
         if let Some(items) = m.get("acceptance").and_then(Value::as_array) {
             let mut ids = HashSet::new();
             for item in items {
-                if !ids.insert(item["id"].as_str().unwrap()) {
+                if !ids.insert(text(&item["id"])?) {
                     return Err(DomainError::Invalid("duplicate acceptance item ID"));
                 }
-                if item["text"].as_str().unwrap().trim().is_empty() {
+                if text(&item["text"])?.trim().is_empty() {
                     return Err(DomainError::Invalid("blank acceptance item"));
                 }
             }
@@ -112,15 +115,15 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
             event_end(&event)?;
         }
         if let Some(schedule) = m.get("schedule") {
-            let start = local_date(schedule["start"].as_str().unwrap())?;
-            let end = local_date(schedule["end"].as_str().unwrap())?;
+            let start = local_date(text(&schedule["start"])?)?;
+            let end = local_date(text(&schedule["end"])?)?;
             if start > end {
                 return Err(DomainError::Invalid("schedule.start > schedule.end"));
             }
         }
         if let (Some(created), Some(updated)) = (m.get("created_at"), m.get("updated_at")) {
             let instant = |v: &Value| {
-                DateTime::parse_from_rfc3339(v.as_str().unwrap())
+                DateTime::parse_from_rfc3339(text(v)?)
                     .map_err(|_| DomainError::Invalid("invalid instant"))
             };
             if instant(created)? > instant(updated)? {
@@ -141,7 +144,12 @@ fn decode<T: DeserializeOwned>(value: Value) -> Result<Validated<T>, DomainError
     }
     serde_json::from_value(value)
         .map(Validated)
-        .map_err(|_| DomainError::Invalid("unexpected document kind or wire model"))
+        .map_err(|_| WIRE_MODEL)
+}
+
+/// The schema fixes these shapes; a mismatch fails like any other wire-model error.
+fn text(value: &Value) -> Result<&str, DomainError> {
+    value.as_str().ok_or(WIRE_MODEL)
 }
 
 fn check_tree(value: &Value, depth: usize, nodes: &mut usize) -> Result<(), DomainError> {

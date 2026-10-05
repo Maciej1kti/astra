@@ -802,3 +802,484 @@ fn json_source_noop_keeps_external_whitespace_and_observed_version() {
     assert_eq!(fs::read(&path).unwrap(), external.as_bytes());
     assert!(!path.with_extension("md").exists());
 }
+
+/// Rewrites a card source the way an external editor or checkout would,
+/// returning its new bytes.
+fn external_card_edit(env: &Environment, id: &str, title: &str) -> Vec<u8> {
+    let path = env.root.join(format!("project/.project/cards/{id}.json"));
+    let mut source: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    source["metadata"]["title"] = json!(title);
+    let bytes = serde_json::to_vec_pretty(&source).unwrap();
+    fs::write(&path, &bytes).unwrap();
+    bytes
+}
+
+fn card_command(
+    engine: &Engine,
+    project: &str,
+    card: &Reply,
+    method: &str,
+) -> crate::journal::Command {
+    crate::journal::Command {
+        request_id: Uuid::now_v7().to_string(),
+        epoch: engine.journal.epoch.clone(),
+        method: method.into(),
+        target: crate::journal::Target {
+            project_id: project.into(),
+            kind: Kind::Card,
+            id: card.body["result"]["id"].as_str().unwrap().into(),
+        },
+        expected: Some(card.body["result"]["version"].as_str().unwrap().into()),
+        payload: json!({}),
+    }
+}
+
+fn retitle(old: Option<&Value>) -> Result<Value, Reply> {
+    let mut next = old.unwrap().clone();
+    next["metadata"]["title"] = json!("Retitled by Astra");
+    Ok(next)
+}
+
+#[test]
+fn external_edit_after_prepare_rejects_the_write_and_keeps_the_project_writable() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Edited elsewhere");
+    let other = create(&engine, &project, "Unrelated");
+    let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+    let command = card_command(&engine, &project, &card, "PATCH");
+    let handle = engine.store(&project).unwrap();
+    let mut external = Vec::new();
+    let reply = {
+        let mut store = handle.lock().unwrap();
+        crate::writer::Writer {
+            journal: &engine.journal,
+        }
+        .execute_with(
+            &mut store,
+            &command,
+            vec![],
+            now_millis(),
+            retitle,
+            |point| {
+                if point == crate::writer::CommitPoint::Prepared {
+                    external = external_card_edit(&env, &id, "Edited by another tool");
+                }
+                Ok(())
+            },
+        )
+        .unwrap()
+    };
+
+    // Nothing was renamed, so the outcome is definite rather than pending.
+    assert_eq!(reply.http_status, 412, "{reply:?}");
+    assert_eq!(reply.body["error"]["code"], "VERSION_CONFLICT");
+    assert_eq!(
+        engine.journal.state(&command).unwrap(),
+        crate::command_state::CommandState::Rejected
+    );
+    assert!(!engine.journal.has_pending(&project).unwrap());
+    assert_eq!(
+        fs::read(env.root.join(format!("project/.project/cards/{id}.json"))).unwrap(),
+        external
+    );
+    // The original request keeps its definite answer, and other writes proceed.
+    let replay = {
+        let mut store = handle.lock().unwrap();
+        crate::writer::Writer {
+            journal: &engine.journal,
+        }
+        .execute(&mut store, &command, vec![], now_millis(), retitle)
+        .unwrap()
+    };
+    assert_eq!(replay.http_status, 412);
+    assert_eq!(replay.body["error"]["code"], "VERSION_CONFLICT");
+    let unrelated = patch(
+        &engine,
+        &project,
+        other.body["result"]["id"].as_str().unwrap(),
+        other.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"title":"Still writable"}}),
+    );
+    assert_eq!(unrelated.http_status, 200, "{unrelated:?}");
+}
+
+#[cfg(unix)]
+#[test]
+fn storage_failure_before_rename_is_forgotten_and_the_same_request_can_retry() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Temporary storage failure");
+    let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+    let cards = env.root.join("project/.project/cards");
+    let source = cards.join(format!("{id}.json"));
+    let before = fs::read(&source).unwrap();
+    let command = card_command(&engine, &project, &card, "PATCH");
+    let handle = engine.store(&project).unwrap();
+    let failed = {
+        let mut store = handle.lock().unwrap();
+        crate::writer::Writer {
+            journal: &engine.journal,
+        }
+        .execute_with(
+            &mut store,
+            &command,
+            vec![],
+            now_millis(),
+            retitle,
+            |point| {
+                if point == crate::writer::CommitPoint::Prepared {
+                    // The temporary file can no longer be created beside the target.
+                    fs::set_permissions(&cards, fs::Permissions::from_mode(0o500)).unwrap();
+                }
+                Ok(())
+            },
+        )
+    };
+    fs::set_permissions(&cards, fs::Permissions::from_mode(0o700)).unwrap();
+
+    assert!(
+        matches!(failed, Err(crate::AppError::Store(_))),
+        "{failed:?}"
+    );
+    assert_eq!(fs::read(&source).unwrap(), before);
+    assert!(!engine.journal.has_pending(&project).unwrap());
+    assert!(
+        engine
+            .journal
+            .command_status(&command.epoch, &command.request_id)
+            .unwrap()
+            .is_none()
+    );
+    // A transient failure must not turn into a replayed rejection.
+    let retried = {
+        let mut store = handle.lock().unwrap();
+        crate::writer::Writer {
+            journal: &engine.journal,
+        }
+        .execute(&mut store, &command, vec![], now_millis(), retitle)
+        .unwrap()
+    };
+    assert_eq!(retried.http_status, 200, "{retried:?}");
+    assert_eq!(retried.body["status"], "committed");
+    assert_eq!(
+        engine.journal.state(&command).unwrap(),
+        crate::command_state::CommandState::Committed
+    );
+}
+
+#[test]
+fn external_edit_after_prepare_rejects_a_delete_and_keeps_the_source() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Delete target");
+    let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+    let command = card_command(&engine, &project, &card, "DELETE");
+    let handle = engine.store(&project).unwrap();
+    let mut external = Vec::new();
+    let reply = {
+        let mut store = handle.lock().unwrap();
+        crate::writer::Writer {
+            journal: &engine.journal,
+        }
+        .execute_delete(
+            &mut store,
+            &command,
+            vec![],
+            now_millis(),
+            |_| Ok(()),
+            |point| {
+                if point == crate::writer::CommitPoint::Prepared {
+                    external = external_card_edit(&env, &id, "Edited before unlink");
+                }
+                Ok(())
+            },
+        )
+        .unwrap()
+    };
+
+    assert_eq!(reply.http_status, 412, "{reply:?}");
+    assert_eq!(reply.body["error"]["code"], "VERSION_CONFLICT");
+    assert_eq!(
+        engine.journal.state(&command).unwrap(),
+        crate::command_state::CommandState::Rejected
+    );
+    assert!(!engine.journal.has_pending(&project).unwrap());
+    assert_eq!(
+        fs::read(env.root.join(format!("project/.project/cards/{id}.json"))).unwrap(),
+        external
+    );
+}
+
+#[test]
+fn delete_guard_rejection_after_prepare_is_recorded_as_definite() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Guarded delete");
+    let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+    let command = card_command(&engine, &project, &card, "DELETE");
+    let handle = engine.store(&project).unwrap();
+    let calls = std::cell::Cell::new(0);
+    let reply = {
+        let mut store = handle.lock().unwrap();
+        crate::writer::Writer {
+            journal: &engine.journal,
+        }
+        .execute_delete(
+            &mut store,
+            &command,
+            vec![],
+            now_millis(),
+            |_| {
+                calls.set(calls.get() + 1);
+                // The dependency appears between admission and the unlink.
+                if calls.get() > 1 {
+                    Err(crate::AppError::reject(409, "RESOURCE_IN_USE"))
+                } else {
+                    Ok(())
+                }
+            },
+            |_| Ok(()),
+        )
+        .unwrap()
+    };
+
+    assert_eq!(reply.http_status, 409, "{reply:?}");
+    assert_eq!(reply.body["error"]["code"], "RESOURCE_IN_USE");
+    assert_eq!(reply.body["error"]["request_id"], command.request_id);
+    assert_eq!(
+        engine.journal.state(&command).unwrap(),
+        crate::command_state::CommandState::Rejected
+    );
+    assert!(!engine.journal.has_pending(&project).unwrap());
+    assert!(
+        env.root
+            .join(format!("project/.project/cards/{id}.json"))
+            .exists()
+    );
+}
+
+#[test]
+fn delete_refused_during_recovery_is_not_recorded_as_a_terminal_rejection() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let interrupted = create(&engine, &project, "Interrupted");
+    let target = create(&engine, &project, "Delete after recovery");
+    let pending = card_command(&engine, &project, &interrupted, "PATCH");
+    let delete = card_command(&engine, &project, &target, "DELETE");
+    let handle = engine.store(&project).unwrap();
+    let mut store = handle.lock().unwrap();
+    let writer = crate::writer::Writer {
+        journal: &engine.journal,
+    };
+    let prepared = writer
+        .execute_with(
+            &mut store,
+            &pending,
+            vec![],
+            now_millis(),
+            retitle,
+            |point| {
+                if point == crate::writer::CommitPoint::Prepared {
+                    Err(project_store::StoreError::Invalid("TEST_INTERRUPTION"))
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+    assert_eq!(prepared.http_status, 202);
+    // A conflict under review cannot be completed by the next write.
+    engine
+        .journal
+        .mark(&pending, crate::command_state::CommandState::NeedsReview)
+        .unwrap();
+
+    let refused = writer
+        .execute_delete(
+            &mut store,
+            &delete,
+            vec![],
+            now_millis(),
+            |_| Ok(()),
+            |_| Ok(()),
+        )
+        .unwrap();
+    assert_eq!(refused.body["error"]["code"], "PROJECT_RECOVERY_REQUIRED");
+    assert!(
+        engine
+            .journal
+            .command_status(&delete.epoch, &delete.request_id)
+            .unwrap()
+            .is_none()
+    );
+
+    // Once recovery finishes, the unchanged request runs instead of replaying 409.
+    engine
+        .journal
+        .mark(&pending, crate::command_state::CommandState::Prepared)
+        .unwrap();
+    assert_eq!(
+        writer.recover(&mut store, &project, now_millis()).unwrap(),
+        1
+    );
+    let retried = writer
+        .execute_delete(
+            &mut store,
+            &delete,
+            vec![],
+            now_millis(),
+            |_| Ok(()),
+            |_| Ok(()),
+        )
+        .unwrap();
+    assert_eq!(retried.http_status, 200, "{retried:?}");
+}
+
+#[cfg(unix)]
+#[test]
+fn unreadable_source_is_retryable_rather_than_a_recorded_invalid_document() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Briefly unreadable");
+    let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+    let source = env.root.join(format!("project/.project/cards/{id}.json"));
+    let command = card_command(&engine, &project, &card, "PATCH");
+    let handle = engine.store(&project).unwrap();
+    let mut store = handle.lock().unwrap();
+    let writer = crate::writer::Writer {
+        journal: &engine.journal,
+    };
+    fs::set_permissions(&source, fs::Permissions::from_mode(0o000)).unwrap();
+    let failed = writer.execute(&mut store, &command, vec![], now_millis(), retitle);
+    fs::set_permissions(&source, fs::Permissions::from_mode(0o600)).unwrap();
+
+    assert!(
+        matches!(failed, Err(crate::AppError::Store(_))),
+        "{failed:?}"
+    );
+    let retried = writer
+        .execute(&mut store, &command, vec![], now_millis(), retitle)
+        .unwrap();
+    assert_eq!(retried.http_status, 200, "{retried:?}");
+}
+
+#[test]
+fn interrupted_write_is_completed_by_the_next_write_without_a_restart() {
+    for interruption in [
+        crate::writer::CommitPoint::Prepared,
+        crate::writer::CommitPoint::Renamed,
+        crate::writer::CommitPoint::DirectorySynced,
+    ] {
+        let env = Environment::new();
+        let engine = env.engine();
+        let project = register(&engine, &env.path());
+        let card = create(&engine, &project, "Interrupted");
+        let other = create(&engine, &project, "Next write");
+        let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+        let command = card_command(&engine, &project, &card, "PATCH");
+        {
+            let handle = engine.store(&project).unwrap();
+            let mut store = handle.lock().unwrap();
+            let pending = crate::writer::Writer {
+                journal: &engine.journal,
+            }
+            .execute_with(
+                &mut store,
+                &command,
+                vec![],
+                now_millis(),
+                retitle,
+                |point| {
+                    if point == interruption {
+                        Err(project_store::StoreError::Invalid("TEST_INTERRUPTION"))
+                    } else {
+                        Ok(())
+                    }
+                },
+            )
+            .unwrap();
+            assert_eq!(pending.http_status, 202, "{interruption:?}");
+        }
+
+        let next = patch(
+            &engine,
+            &project,
+            other.body["result"]["id"].as_str().unwrap(),
+            other.body["result"]["version"].as_str().unwrap(),
+            json!({"set":{"title":"Written after recovery"}}),
+        );
+        assert_eq!(next.http_status, 200, "{interruption:?} {next:?}");
+        assert_eq!(
+            engine.journal.state(&command).unwrap(),
+            crate::command_state::CommandState::Committed,
+            "{interruption:?}"
+        );
+        assert_eq!(
+            engine.get(&project, Kind::Card, &id).unwrap()["metadata"]["title"],
+            "Retitled by Astra",
+            "{interruption:?}"
+        );
+    }
+}
+
+#[test]
+fn write_time_recovery_never_overwrites_a_conflicting_external_edit() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let card = create(&engine, &project, "Interrupted");
+    let other = create(&engine, &project, "Next write");
+    let id = card.body["result"]["id"].as_str().unwrap().to_owned();
+    let command = card_command(&engine, &project, &card, "PATCH");
+    {
+        let handle = engine.store(&project).unwrap();
+        let mut store = handle.lock().unwrap();
+        crate::writer::Writer {
+            journal: &engine.journal,
+        }
+        .execute_with(
+            &mut store,
+            &command,
+            vec![],
+            now_millis(),
+            retitle,
+            |point| {
+                if point == crate::writer::CommitPoint::Prepared {
+                    Err(project_store::StoreError::Invalid("TEST_INTERRUPTION"))
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap();
+    }
+    let external = external_card_edit(&env, &id, "Edited while pending");
+
+    let next = patch(
+        &engine,
+        &project,
+        other.body["result"]["id"].as_str().unwrap(),
+        other.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"title":"Must wait for review"}}),
+    );
+    assert_eq!(next.body["error"]["code"], "PROJECT_RECOVERY_REQUIRED");
+    assert_eq!(
+        engine.journal.state(&command).unwrap(),
+        crate::command_state::CommandState::NeedsReview
+    );
+    assert_eq!(
+        fs::read(env.root.join(format!("project/.project/cards/{id}.json"))).unwrap(),
+        external
+    );
+}

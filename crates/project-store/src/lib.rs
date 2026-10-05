@@ -1,3 +1,4 @@
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub mod document;
 pub mod filesystem;
 pub mod tree_removal;

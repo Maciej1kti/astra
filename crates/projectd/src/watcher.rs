@@ -217,9 +217,7 @@ fn classify(root: &Path, path: &Path, project: &str) -> Option<Option<(Kind, Str
             let Some(id) = filename.strip_suffix(".json") else {
                 return Some(None);
             };
-            if uuid::Uuid::parse_str(id)
-                .is_ok_and(|uuid| uuid.get_version_num() == 4 && uuid.to_string() == id)
-            {
+            if project_store::filesystem::is_resource_id(id) {
                 Some(Some((kind, id.into())))
             } else {
                 Some(None)

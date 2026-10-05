@@ -18,6 +18,10 @@ pub struct Versioned<T> {
     pub version: String,
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "callers pass wire models and JSON values, which have string keys only"
+)]
 pub fn pretty(value: &impl serde::Serialize) -> Vec<u8> {
     // A JSON value preserves canonical key ordering across typed and wire inputs.
     let value = serde_json::to_value(value).expect("serializable source value");

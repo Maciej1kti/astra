@@ -226,8 +226,12 @@ impl Users {
         let engine = self.select(Some(user))?.1;
         crate::wire::validate("RegistrationPlanInput", payload)?;
         let directory = engine.allowed_directory(
-            payload["root_id"].as_str().unwrap(),
-            payload["relative_path"].as_str().unwrap(),
+            payload["root_id"]
+                .as_str()
+                .ok_or(AppError::invariant("validated registration root ID"))?,
+            payload["relative_path"]
+                .as_str()
+                .ok_or(AppError::invariant("validated registration relative path"))?,
         )?;
         self.ensure_registration_available(
             user,
@@ -425,8 +429,14 @@ impl Users {
             return reject(422, "VALIDATION_FAILED");
         }
         let user = profile(
-            payload["id"].as_str().unwrap().into(),
-            payload["name"].as_str().unwrap().into(),
+            payload["id"]
+                .as_str()
+                .ok_or(AppError::invariant("validated user ID"))?
+                .into(),
+            payload["name"]
+                .as_str()
+                .ok_or(AppError::invariant("validated user name"))?
+                .into(),
         )?;
         let existing: bool = self.owner.journal.db()?.query_row(
             "SELECT EXISTS(SELECT 1 FROM user_creation_intents WHERE id=?1)",

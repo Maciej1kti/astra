@@ -5,6 +5,10 @@ use std::{
     sync::{Arc, LazyLock, Mutex},
 };
 
+#[expect(
+    clippy::expect_used,
+    reason = "the OpenAPI document is embedded at build time and parsed by every test"
+)]
 static SCHEMA: LazyLock<Value> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../../../contracts/openapi.generated.json"))
         .expect("compiled OpenAPI JSON")
@@ -17,10 +21,10 @@ pub fn validate(definition: &'static str, value: &Value) -> Result<(), AppError>
         let mut cache = VALIDATORS
             .lock()
             .map_err(|_| AppError::LockPoisoned("API validator cache"))?;
-        cache
-            .entry(definition)
-            .or_insert_with(|| {
-                Arc::new(
+        match cache.get(definition) {
+            Some(validator) => validator.clone(),
+            None => {
+                let validator = Arc::new(
                     jsonschema::draft202012::options()
                         .should_validate_formats(true)
                         .build(&json!({
@@ -28,10 +32,12 @@ pub fn validate(definition: &'static str, value: &Value) -> Result<(), AppError>
                             "$ref": format!("#/components/schemas/{definition}"),
                             "components": SCHEMA["components"],
                         }))
-                        .expect("compiled API schema"),
-                )
-            })
-            .clone()
+                        .map_err(|_| AppError::invariant("compiled API schema"))?,
+                );
+                cache.insert(definition, validator.clone());
+                validator
+            }
+        }
     };
     if validator.is_valid(value) {
         Ok(())

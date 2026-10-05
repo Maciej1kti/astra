@@ -140,8 +140,12 @@ impl Engine {
     pub fn browser_registration_plan(&self, input: &Value) -> Result<Value, AppError> {
         wire::validate("RegistrationPlanInput", input)?;
         let directory = self.allowed_directory(
-            input["root_id"].as_str().unwrap(),
-            input["relative_path"].as_str().unwrap(),
+            input["root_id"]
+                .as_str()
+                .ok_or(AppError::invariant("validated registration root ID"))?,
+            input["relative_path"]
+                .as_str()
+                .ok_or(AppError::invariant("validated registration relative path"))?,
         )?;
         let view = self.registration_plan(
             directory

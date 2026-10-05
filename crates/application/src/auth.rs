@@ -115,7 +115,9 @@ VALUES (?1,
                 hash(&pending_token),
                 csrf.as_bytes(),
                 challenge,
-                input["device_label"].as_str().unwrap(),
+                input["device_label"]
+                    .as_str()
+                    .ok_or(AppError::invariant("validated pairing device label"))?,
                 expires
             ],
         )?;
@@ -280,10 +282,9 @@ VALUES (?1,
                 expires
             ],
         )?;
-        let grace = if retry {
-            row.6.unwrap()
-        } else {
-            instant(now + 60_000)
+        let grace = match row.6 {
+            Some(until) if retry => until,
+            _ => instant(now + 60_000),
         };
         tx.execute(
             "UPDATE pairings

@@ -45,6 +45,10 @@ pub struct ParsedDocument {
     pub normalization_required: bool,
 }
 impl ParsedDocument {
+    #[expect(
+        clippy::expect_used,
+        reason = "a validated wire document has only string keys and plain JSON values"
+    )]
     pub fn value(&self) -> Value {
         serde_json::to_value(self.document.get()).expect("wire document serializes")
     }
@@ -103,7 +107,7 @@ pub fn parse(
 fn check_metadata(value: &Value) -> Result<(), StoreError> {
     // Count the same canonical bytes without retaining a metadata output buffer.
     let mut length = JsonLength(0);
-    serde_json::to_writer_pretty(&mut length, &value["metadata"]).expect("JSON value");
+    serde_json::to_writer_pretty(&mut length, &value["metadata"]).map_err(io::Error::from)?;
     if length.0 > MAX_METADATA {
         return Err(StoreError::Invalid("METADATA_LIMIT"));
     }
@@ -193,9 +197,9 @@ impl<'de> Visitor<'de> for BoundedValue<'_> {
 /// Canonical source JSON uses sorted keys, two-space indentation and a final LF.
 /// Markdown remains a string value, preserved exactly through unrelated edits.
 pub fn serialize(document: &Validated<Document>) -> Result<Vec<u8>, StoreError> {
-    let value = serde_json::to_value(document.get()).expect("wire document serializes");
+    let value = serde_json::to_value(document.get()).map_err(io::Error::from)?;
     check_metadata(&value)?;
-    let mut bytes = serde_json::to_vec_pretty(&value).expect("JSON serialization");
+    let mut bytes = serde_json::to_vec_pretty(&value).map_err(io::Error::from)?;
     bytes.push(b'\n');
     if bytes.len() > MAX_DOCUMENT {
         return Err(StoreError::Invalid("DOCUMENT_LIMIT"));

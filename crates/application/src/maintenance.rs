@@ -227,7 +227,7 @@ impl Engine {
                     .projects
                     .iter_mut()
                     .find(|p| p.project_id == project)
-                    .unwrap()
+                    .ok_or(AppError::invariant("relocated project registration"))?
                     .path = new_absolute_path.clone();
                 steps.push(Step::plan(
                     &self.journal.directory,

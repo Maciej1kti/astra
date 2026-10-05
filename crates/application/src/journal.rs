@@ -36,6 +36,10 @@ pub struct Command {
     pub payload: Value,
 }
 impl Command {
+    #[expect(
+        clippy::unwrap_used,
+        reason = "a command holds only strings, a kind tag and a JSON payload"
+    )]
     pub fn digest(&self) -> String {
         document::version(
             &serde_json::to_vec(&json!([
@@ -581,8 +585,12 @@ VALUES (?1,
                 params![
                     command.epoch,
                     command.request_id,
-                    serde_json::to_string(command).unwrap(),
-                    serde_json::to_string(&intent.references).unwrap()
+                    serde_json::to_string(command).map_err(|source| {
+                        AppError::stored("journal intent command serialization", source)
+                    })?,
+                    serde_json::to_string(&intent.references).map_err(|source| {
+                        AppError::stored("journal intent references serialization", source)
+                    })?
                 ],
             )?;
         }
@@ -640,6 +648,43 @@ VALUES (?1,
                 instant(now)
             ],
         )?;
+        tx.commit()?;
+        Ok(())
+    }
+    /// Withdraw an intent whose source target was provably never changed.
+    /// A definite rejection replaces the planned result. Without one the
+    /// command is forgotten, so the unchanged request can be admitted again.
+    pub fn abandon(&self, intent: &Intent, rejection: Option<&Reply>) -> Result<(), AppError> {
+        let mut db = self.db()?;
+        let tx = db.transaction()?;
+        let command = &intent.command;
+        let identity = params![command.epoch, command.request_id];
+        for table in ["write_intents", "intent_context"] {
+            tx.execute(
+                &format!("DELETE FROM {table} WHERE epoch=?1 AND request_id=?2"),
+                identity,
+            )?;
+        }
+        let changed = match rejection {
+            Some(reply) => tx.execute(
+                "UPDATE commands SET state='rejected', result_json=NULL, error_json=?3
+                 WHERE epoch=?1 AND request_id=?2 AND state='prepared'",
+                params![
+                    command.epoch,
+                    command.request_id,
+                    serde_json::to_string(reply).map_err(|source| {
+                        AppError::stored("command reply serialization", source)
+                    })?
+                ],
+            )?,
+            None => tx.execute(
+                "DELETE FROM commands WHERE epoch=?1 AND request_id=?2 AND state='prepared'",
+                identity,
+            )?,
+        };
+        if changed != 1 {
+            return Err(AppError::invariant("abandoned intent is prepared"));
+        }
         tx.commit()?;
         Ok(())
     }

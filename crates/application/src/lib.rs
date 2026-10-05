@@ -1,3 +1,4 @@
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub mod auth;
 mod command_state;
 mod context;
@@ -87,11 +88,10 @@ impl Reply {
             http_status: status,
             body: json!({"api_version": "1", "error": {"code": code, "message": code, "request_id": request_id}}),
         };
-        if !valid_request_id(request_id) {
-            reply.body["error"]
-                .as_object_mut()
-                .unwrap()
-                .remove("request_id");
+        if !valid_request_id(request_id)
+            && let Some(error) = reply.body["error"].as_object_mut()
+        {
+            error.remove("request_id");
         }
         reply
     }
@@ -111,12 +111,20 @@ pub fn valid_request_id(text: &str) -> bool {
     })
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "the daemon does not run with a system clock before 1970"
+)]
 pub fn now_millis() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock before Unix epoch")
         .as_millis() as i64
 }
+#[expect(
+    clippy::expect_used,
+    reason = "callers pass clock-derived milliseconds, far inside the chrono range"
+)]
 pub fn instant(millis: i64) -> String {
     chrono::DateTime::from_timestamp_millis(millis)
         .expect("bounded timestamp")

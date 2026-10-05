@@ -6,11 +6,11 @@ use uuid::Uuid;
 pub(crate) fn patch(next: &mut Value, payload: &Value) -> Result<(), AppError> {
     let counters = next["metadata"]
         .as_object_mut()
-        .unwrap()
+        .ok_or(AppError::invariant("validated document metadata"))?
         .entry("counters")
         .or_insert_with(|| json!([]))
         .as_array_mut()
-        .unwrap();
+        .ok_or(AppError::invariant("validated card counters"))?;
     if let Some(config) = payload.get("configure_counter") {
         if let Some(id) = config.get("id") {
             let counter = counters
@@ -18,7 +18,10 @@ pub(crate) fn patch(next: &mut Value, payload: &Value) -> Result<(), AppError> {
                 .find(|c| c["id"] == *id)
                 .ok_or_else(|| AppError::reject(422, "COUNTER_NOT_FOUND"))?;
             if counter["unit"] != config["unit"]
-                && !counter["values"].as_object().unwrap().is_empty()
+                && !counter["values"]
+                    .as_object()
+                    .ok_or(AppError::invariant("validated counter values"))?
+                    .is_empty()
             {
                 return Err(AppError::reject(422, "COUNTER_UNIT_HAS_HISTORY"));
             }
@@ -40,7 +43,9 @@ pub(crate) fn patch(next: &mut Value, payload: &Value) -> Result<(), AppError> {
         if counter["archived"] == true {
             return Err(AppError::reject(422, "COUNTER_ARCHIVED"));
         }
-        let date = record["date"].as_str().unwrap();
+        let date = record["date"]
+            .as_str()
+            .ok_or(AppError::invariant("validated counter date"))?;
         project_domain::local_date(date)
             .map_err(|_| AppError::reject(422, "INVALID_COUNTER_DATE"))?;
         counter["values"][date] = record["value"].clone();

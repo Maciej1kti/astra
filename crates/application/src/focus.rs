@@ -33,8 +33,10 @@ impl Engine {
             .to_string();
         self.index.with_snapshot(|db, revision| {
             let projection = ProjectionStatus::read(db, None)?;
-            let projects = serde_json::to_string(&workspace.value.projects).unwrap();
-            let ordering = serde_json::to_string(&workspace.value.focus).unwrap();
+            let projects = serde_json::to_string(&workspace.value.projects)
+                .map_err(|source| AppError::stored("focus projects serialization", source))?;
+            let ordering = serde_json::to_string(&workspace.value.focus)
+                .map_err(|source| AppError::stored("focus ordering serialization", source))?;
             let mut statement = db.prepare(include_str!("focus-membership.sql"))?;
             let mut rows = statement
                 .query_map(params![projects, ordering, (MAX_FOCUS + 1) as i64], |row| {

@@ -53,7 +53,9 @@ pub fn report(directory: &Directory) -> Result<Value, StoreError> {
         "project.json".into(),
     );
     for kind in [Kind::Card, Kind::Milestone, Kind::Update] {
-        let name = kind.directory().unwrap();
+        let Some(name) = kind.directory() else {
+            continue;
+        };
         let collection = match directory.child(name, false) {
             Ok(value) => value,
             Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => continue,

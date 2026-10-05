@@ -76,7 +76,7 @@ RETURNING CAST(value AS INTEGER)",
         let first = events
             .iter()
             .find(|(time, _)| *time >= now - 600_000)
-            .and_then(|(_, e)| sequence(e["cursor"].as_str().unwrap()))
+            .and_then(|(_, e)| e["cursor"].as_str().and_then(&sequence))
             .unwrap_or(current_sequence + 1);
         if since > current_sequence || since < first - 1 {
             return Ok(vec![
@@ -87,7 +87,10 @@ RETURNING CAST(value AS INTEGER)",
             .iter()
             .filter(|(time, e)| {
                 *time >= now - 600_000
-                    && sequence(e["cursor"].as_str().unwrap()).is_some_and(|seq| seq > since)
+                    && e["cursor"]
+                        .as_str()
+                        .and_then(&sequence)
+                        .is_some_and(|seq| seq > since)
             })
             .map(|(_, e)| e.clone())
             .collect())

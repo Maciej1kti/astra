@@ -64,7 +64,9 @@ LIMIT 200",
                         params![
                             project,
                             kind.as_str(),
-                            serde_json::to_string(&focus).unwrap()
+                            serde_json::to_string(&focus).map_err(|source| {
+                                AppError::stored("context focus serialization", source)
+                            })?
                         ],
                         |r| r.get::<_, String>(0),
                     )?
@@ -160,19 +162,20 @@ LIMIT 200",
                 break;
             }
         }
+        let omitted = out["omitted"]
+            .as_object()
+            .ok_or(AppError::invariant("context omitted counts"))?
+            .values()
+            .any(|v| v.as_u64().unwrap_or(0) > 0);
         out["truncated"] = json!(
-            out["omitted"]
-                .as_object()
-                .unwrap()
-                .values()
-                .any(|v| v.as_u64().unwrap_or(0) > 0)
+            omitted
                 || out["project"]["truncated"] == true
                 || ["cards", "milestones", "updates"]
                     .iter()
                     .any(|field| out[field]
                         .as_array()
-                        .unwrap()
-                        .iter()
+                        .into_iter()
+                        .flatten()
                         .any(|entry| entry["truncated"] == true))
         );
         if encoded_len(&out) > max_bytes {
@@ -181,6 +184,10 @@ LIMIT 200",
         Ok(out)
     }
 }
+#[expect(
+    clippy::expect_used,
+    reason = "a JSON value always serializes into memory"
+)]
 fn encoded_len(value: &Value) -> usize {
     serde_json::to_vec(value)
         .expect("JSON value serialization")
@@ -193,7 +200,9 @@ fn append(
     budget: usize,
     encoded_bytes: &mut usize,
 ) -> bool {
-    let array = out[field].as_array_mut().unwrap();
+    let Some(array) = out[field].as_array_mut() else {
+        return false;
+    };
     if array.len() >= if field == "warnings" { 100 } else { 200 } {
         return false;
     }
@@ -206,14 +215,17 @@ fn append(
     true
 }
 fn increment(out: &mut Value, field: &str, encoded_bytes: &mut usize) {
-    for (counter, next) in [
-        ("included", out["included"][field].as_u64().unwrap() + 1),
-        (
-            "omitted",
-            out["omitted"][field].as_u64().unwrap().saturating_sub(1),
-        ),
+    // Both counts come from the reply skeleton; without them nothing is adjusted.
+    let (Some(included), Some(omitted)) = (
+        out["included"][field].as_u64(),
+        out["omitted"][field].as_u64(),
+    ) else {
+        return;
+    };
+    for (counter, previous, next) in [
+        ("included", included, included + 1),
+        ("omitted", omitted, omitted.saturating_sub(1)),
     ] {
-        let previous = out[counter][field].as_u64().unwrap();
         *encoded_bytes += decimal_len(next);
         *encoded_bytes -= decimal_len(previous);
         out[counter][field] = json!(next);
@@ -223,6 +235,10 @@ fn decimal_len(value: u64) -> usize {
     value.checked_ilog10().unwrap_or(0) as usize + 1
 }
 fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value {
+    #[expect(
+        clippy::expect_used,
+        reason = "validated metadata models hold only string keys and plain JSON values"
+    )]
     let (kind, metadata, body) = match source.document.get() {
         Document::Project { metadata, body } => (
             "project",
@@ -281,8 +297,10 @@ fn entry(source: &project_store::document::ParsedDocument, max: usize) -> Value 
             out[key] = value;
         }
     }
-    if kind == "project" {
-        out["status"] = metadata.remove("state").unwrap();
+    if kind == "project"
+        && let Some(state) = metadata.remove("state")
+    {
+        out["status"] = state;
     }
     out
 }

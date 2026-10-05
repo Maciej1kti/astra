@@ -142,7 +142,9 @@ impl Engine {
                 .refresh_targets(&store, &project_id, &[(kind, id.clone())], now)
                 .is_err()
         {
-            reply.body["warnings"].as_array_mut().unwrap().push(json!({"code":"PROJECTION_DEGRADED","message":"Source committed; the search index needs rebuilding."}));
+            if let Some(warnings) = reply.body["warnings"].as_array_mut() {
+                warnings.push(json!({"code":"PROJECTION_DEGRADED","message":"Source committed; the search index needs rebuilding."}));
+            }
             let _ = self
                 .index
                 .mark_unavailable(&project_id, "PROJECTION_DEGRADED", now);
@@ -195,7 +197,7 @@ fn prepare(
         Some(source)
     };
     let mut next = match &previous {
-        None => create_document(command, now),
+        None => create_document(command, now)?,
         Some(previous) => patch_document(journal, command, previous, now)?,
     };
     let reorders = matches!(kind, Kind::Card | Kind::Milestone)
@@ -228,42 +230,27 @@ fn prepare(
         references,
     })
 }
-fn create_document(command: &Command, now: i64) -> Value {
+fn create_document(command: &Command, now: i64) -> Result<Value, AppError> {
     let kind = command.target.kind;
     let id = &command.target.id;
-    let payload = &command.payload;
 
-    let mut metadata = payload.clone();
-    let body = metadata
-        .as_object_mut()
-        .unwrap()
-        .remove("body")
-        .unwrap_or(json!(""));
-    metadata["id"] = json!(id);
+    let Value::Object(mut metadata) = command.payload.clone() else {
+        return Err(AppError::invariant("validated create payload"));
+    };
+    let body = metadata.remove("body").unwrap_or(json!(""));
+    metadata.insert("id".into(), json!(id));
     if kind == Kind::Update {
-        metadata["recorded_at"] = json!(instant(now));
+        metadata.insert("recorded_at".into(), json!(instant(now)));
     } else {
-        metadata["created_at"] = json!(instant(now));
-        metadata["updated_at"] = json!(instant(now));
-        metadata
-            .as_object_mut()
-            .unwrap()
-            .entry("status")
-            .or_insert(json!("planned"));
-        metadata
-            .as_object_mut()
-            .unwrap()
-            .entry("archived")
-            .or_insert(json!(false));
+        metadata.insert("created_at".into(), json!(instant(now)));
+        metadata.insert("updated_at".into(), json!(instant(now)));
+        metadata.entry("status").or_insert(json!("planned"));
+        metadata.entry("archived").or_insert(json!(false));
         if kind == Kind::Card {
-            metadata
-                .as_object_mut()
-                .unwrap()
-                .entry("priority")
-                .or_insert(json!("normal"));
+            metadata.entry("priority").or_insert(json!("normal"));
         }
     }
-    json!({"type":kind.as_str(),"metadata":metadata,"body":body})
+    Ok(json!({"type":kind.as_str(),"metadata":metadata,"body":body}))
 }
 
 fn patch_document(
@@ -302,11 +289,11 @@ fn patch_document(
     if let Some(comment) = payload.get("append_comment") {
         let comments = next["metadata"]
             .as_object_mut()
-            .unwrap()
+            .ok_or(AppError::invariant("validated document metadata"))?
             .entry("comments")
             .or_insert_with(|| json!([]))
             .as_array_mut()
-            .unwrap();
+            .ok_or(AppError::invariant("validated card comments"))?;
         comments.push(json!({
             "id": Uuid::new_v4().to_string(),
             "author": comment["author"],
@@ -325,11 +312,16 @@ fn patch_document(
     }
     if let Some(clear) = payload["clear"].as_array() {
         for key in clear {
-            let key = key.as_str().unwrap();
+            let key = key
+                .as_str()
+                .ok_or(AppError::invariant("validated clear key"))?;
             if payload["set"].get(key).is_some() {
                 return Err(AppError::reject(422, "SET_CLEAR_OVERLAP"));
             }
-            next["metadata"].as_object_mut().unwrap().remove(key);
+            next["metadata"]
+                .as_object_mut()
+                .ok_or(AppError::invariant("validated document metadata"))?
+                .remove(key);
         }
     }
     Ok(next)
@@ -341,7 +333,9 @@ fn report_references(store: &ProjectStore, next: &Value) -> Result<Vec<Reference
     let target = &next["metadata"]["target"];
     let target_kind: Kind = serde_json::from_value(target["type"].clone())
         .map_err(|_| AppError::reject(422, "INVALID_TARGET"))?;
-    let target_id = target["id"].as_str().unwrap();
+    let target_id = target["id"]
+        .as_str()
+        .ok_or(AppError::invariant("validated report target ID"))?;
     let version = read(store, target_kind, target_id)?.version;
     references.push(Reference {
         kind: target_kind,
@@ -356,7 +350,9 @@ fn report_references(store: &ProjectStore, next: &Value) -> Result<Vec<Reference
         updates.push(id.clone());
     }
     for update in updates {
-        let id = update.as_str().unwrap();
+        let id = update
+            .as_str()
+            .ok_or(AppError::invariant("validated report reference ID"))?;
         let version = read(store, Kind::Update, id)?.version;
         references.push(Reference {
             kind: Kind::Update,

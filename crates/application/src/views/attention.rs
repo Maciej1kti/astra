@@ -116,7 +116,12 @@ FROM documents
 WHERE project_id=?1
 AND entity_id=?2
 AND entity_type='update'",
-                            params![item["project_id"].as_str().unwrap(), id],
+                            params![
+                                item["project_id"]
+                                    .as_str()
+                                    .ok_or(AppError::invariant("attention item project ID"))?,
+                                id
+                            ],
                             |row| row.get(0),
                         )?;
                         item["target"] = serde_json::from_str(&text)

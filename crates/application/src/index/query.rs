@@ -46,7 +46,10 @@ impl Index {
         }
         let mut identity = query.clone();
         identity.cursor = None;
-        let query_hash = document::version(&serde_json::to_vec(&json!([kind, identity])).unwrap());
+        let query_hash = document::version(
+            &serde_json::to_vec(&json!([kind, identity]))
+                .map_err(|source| AppError::stored("query identity serialization", source))?,
+        );
         let db = self
             .connection
             .lock()
@@ -161,12 +164,14 @@ LIMIT ? OFFSET ?",
             .collect::<Result<Vec<_>, _>>()?;
         let more = rows.len() > limit as usize;
         rows.truncate(limit as usize);
-        let next = more.then(|| {
-            serde_json::to_string(
-                &json!({"revision":cursor_revision,"query":query_hash,"offset":offset+limit as i64}),
-            )
-            .unwrap()
-        });
+        let next = more
+            .then(|| {
+                serde_json::to_string(
+                    &json!({"revision":cursor_revision,"query":query_hash,"offset":offset+limit as i64}),
+                )
+            })
+            .transpose()
+            .map_err(|source| AppError::stored("page cursor serialization", source))?;
         let projection = ProjectionStatus::read(&db, query.project.as_deref())?;
         projection.mark_rows(&mut rows);
         let stale = projection.freshness == "stale" || rows.iter().any(|r| r.validity != "valid");

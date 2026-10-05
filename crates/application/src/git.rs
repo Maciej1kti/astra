@@ -241,8 +241,13 @@ impl Engine {
         match observed {
             Ok(value) => result
                 .as_object_mut()
-                .unwrap()
-                .extend(value.as_object().unwrap().clone()),
+                .ok_or(AppError::invariant("git observation result"))?
+                .extend(
+                    value
+                        .as_object()
+                        .ok_or(AppError::invariant("git observation fields"))?
+                        .clone(),
+                ),
             Err(code) => {
                 result["stale"] = json!(true);
                 result["error"] = json!(code);

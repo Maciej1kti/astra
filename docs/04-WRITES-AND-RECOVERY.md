@@ -47,6 +47,17 @@ SQLite state: WAL, foreign_keys=ON, bounded busy_timeout i `synchronous=FULL`; n
 
 Jeżeli journal nie przyjmuje zapisu, nie modyfikuj źródła. Jeśli rename już nastąpił, a kolejne utrwalenie zawiedzie, odetnij nowe mutacje tego targetu i zachowaj stan niepewny. Szeregowanie komend tego samego projektu nie może omijać nierozstrzygniętego zamiaru.
 
+## Failures before the target changes — implementation clarification
+
+A write or delete that fails before its rename or unlink is attempted has not
+changed the target. Its intent is withdrawn in one journal transaction: a changed
+target is recorded as `412 VERSION_CONFLICT`, and any other storage failure
+forgets the command so the unchanged request can be retried. Commit-point
+interruptions, failures after the rename, `EIO` and journal failures keep the
+intent pending under the matrix below. A writer that finds pending intents applies
+the same matrix before refusing with `PROJECT_RECOVERY_REQUIRED`; startup is not
+the only recovery point. See [ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).
+
 ## Macierz recovery po PREPARED
 
 | Stan targetu | Wynik |

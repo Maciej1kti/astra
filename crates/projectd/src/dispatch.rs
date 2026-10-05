@@ -52,6 +52,21 @@ pub(super) fn run(
     let epoch = header(&input.headers, "x-command-epoch");
     let current = session.as_ref().map(|s| s.id.as_str());
     let picker_owner = format!("{}:{}", service.user.id, current.unwrap_or("local-uid"));
+    // A malformed ID cannot name a source. Answer definitely here, before a
+    // store error for it would read as an unavailable service.
+    if let [
+        "api",
+        "v1",
+        "projects",
+        _,
+        "cards" | "milestones" | "updates",
+        id,
+        ..,
+    ] = parts.as_slice()
+        && !project_store::filesystem::is_resource_id(id)
+    {
+        return Err(AppError::reject(404, "RESOURCE_NOT_FOUND"));
+    }
     let value = match (input.method.as_str(), parts.as_slice()) {
         ("PATCH", ["api", "v1", "users", id]) => {
             parameters(&input, &[])?;
@@ -427,7 +442,7 @@ pub(super) fn run(
             let id = current.ok_or_else(|| AppError::reject(400, "BROWSER_SESSION_REQUIRED"))?;
             auth.revoke(id, current, now)?;
             let mut reply = axum::http::StatusCode::NO_CONTENT.into_response();
-            set_cookie(&mut reply, "__Host-project_session", "", 0);
+            set_cookie(&mut reply, "__Host-project_session", "", 0)?;
             return Ok(reply);
         }
         ("POST", ["api", "v1", "registrations"]) => {

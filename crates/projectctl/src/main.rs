@@ -1,3 +1,4 @@
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 mod focus_preview;
 mod input;
 mod output;
@@ -200,7 +201,7 @@ fn print_output(value: &Value, format: OutputFormat) {
     match format {
         OutputFormat::Json => println!(
             "{}",
-            serde_json::to_string_pretty(value).expect("JSON value")
+            serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
         ),
         OutputFormat::Text => println!("{}", output::render(value)),
     }

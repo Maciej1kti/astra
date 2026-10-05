@@ -50,6 +50,15 @@ verifies open directory identities. Resource IDs are never interpreted as paths.
 
 Zmiana AGENTS i info/exclude jest wyjątkiem inicjalizacji, pokazanym w planie. Serwer nie wykonuje kodu z repo. Obserwator Git ma timeout, ograniczony output, wyłączone fsmonitor/hook mechanism właściwe użytym poleceniom, bez fetch i bez terminala. Nie dodajemy ogólnego execute endpointu.
 
+## Request admission
+
+The local socket and the network listener have separate admission pools. A
+network request body is collected only for a valid session or the two pairing
+routes, which have their own small collector budget; static assets, health and
+pairing status never read a body. An unauthenticated caller therefore cannot
+hold admission for the body timeout or refuse the local CLI. See
+[ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).
+
 ## Zależności i logi
 
 Optional summary-response gzip runs only after normal authentication, within the

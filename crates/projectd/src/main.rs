@@ -1,3 +1,4 @@
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 mod watcher;
 use clap::Parser;
 use project_application::engine::Engine;

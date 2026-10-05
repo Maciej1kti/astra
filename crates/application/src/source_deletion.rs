@@ -146,13 +146,12 @@ impl Engine {
                 .refresh_targets(&store, project_id, &[(kind, id.into())], now)
                 .is_err();
         if repair_projection {
-            reply.body["warnings"]
-                .as_array_mut()
-                .expect("delete warnings array")
-                .push(json!({
+            if let Some(warnings) = reply.body["warnings"].as_array_mut() {
+                warnings.push(json!({
                     "code": "PROJECTION_DEGRADED",
                     "message": "Source committed; the search index needs rebuilding."
                 }));
+            }
             let _ = self
                 .index
                 .mark_unavailable(project_id, "PROJECTION_DEGRADED", now);
@@ -258,6 +257,12 @@ pub(crate) fn recovery_guard(
     store: &ProjectStore,
     intent: &Intent,
 ) -> Result<bool, AppError> {
+    recoverable(store, intent)
+}
+
+/// The same recheck for a writer completing an interrupted intent under the
+/// project lock it already holds.
+pub(crate) fn recoverable(store: &ProjectStore, intent: &Intent) -> Result<bool, AppError> {
     if intent.after.is_some() {
         return Ok(true);
     }

@@ -108,9 +108,9 @@ impl Engine {
         if section == "tags"
             && payload["tags"]
                 .as_array()
-                .unwrap()
+                .ok_or(AppError::invariant("validated workspace tags"))?
                 .iter()
-                .any(|name| name.as_str().unwrap().contains('\0'))
+                .any(|name| name.as_str().is_some_and(|name| name.contains('\0')))
         {
             return reject(422, "TAG_NAME_INVALID");
         }
@@ -242,8 +242,12 @@ VALUES (?1,
                     request,
                     before,
                     after,
-                    serde_json::to_string(&references).unwrap(),
-                    serde_json::to_string(&reply).unwrap()
+                    serde_json::to_string(&references).map_err(|source| {
+                        AppError::stored("workspace intent references serialization", source)
+                    })?,
+                    serde_json::to_string(&reply).map_err(|source| {
+                        AppError::stored("command reply serialization", source)
+                    })?
                 ],
             )?;
             tx.commit()?;

@@ -19,7 +19,10 @@ impl Index {
         );
         let mut issues = Vec::new();
         for kind in [Kind::Card, Kind::Milestone, Kind::Update] {
-            let directory = match store.directory.child(kind.directory().unwrap(), false) {
+            let Some(collection) = kind.directory() else {
+                continue;
+            };
+            let directory = match store.directory.child(collection, false) {
                 Ok(directory) => directory,
                 Err(StoreError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
                     continue;
@@ -31,10 +34,7 @@ impl Index {
                     continue;
                 };
                 if Uuid::parse_str(id).is_err() {
-                    issues.push((
-                        format!("{}/{filename}", kind.directory().unwrap()),
-                        "INVALID_FILENAME",
-                    ));
+                    issues.push((format!("{collection}/{filename}"), "INVALID_FILENAME"));
                     continue;
                 }
                 let parsed = directory
@@ -48,10 +48,7 @@ impl Index {
                     }
                     Err(_) => {
                         documents.insert(key, None);
-                        issues.push((
-                            format!("{}/{filename}", kind.directory().unwrap()),
-                            "DOCUMENT_INVALID",
-                        ));
+                        issues.push((format!("{collection}/{filename}"), "DOCUMENT_INVALID"));
                     }
                 }
             }
@@ -231,7 +228,9 @@ AND entity_id=?2",
                 .and_then(Value::as_str)
                 .ok_or(AppError::invariant("projected document title"))?;
             let relative = relative_path(kind, id);
-            let body = value["body"].as_str().unwrap();
+            let body = value["body"]
+                .as_str()
+                .ok_or(AppError::invariant("projected document body"))?;
             tx.execute(
                 "INSERT INTO documents(project_id,
     entity_id,
@@ -274,7 +273,9 @@ SET source_hash=excluded.source_hash,
                     title,
                     body,
                     search_text(body, metadata),
-                    serde_json::to_string(metadata).unwrap(),
+                    serde_json::to_string(metadata).map_err(|source| {
+                        AppError::stored("projected metadata serialization", source)
+                    })?,
                     instant(now)
                 ],
             )?;

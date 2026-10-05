@@ -982,3 +982,71 @@ async fn removed_registration_and_suggestion_routes_return_not_found() {
         project_application::wire::validate("Error", &body).unwrap();
     }
 }
+
+#[tokio::test]
+async fn malformed_resource_ids_are_definite_not_found_responses() {
+    let app = Running::new().await;
+    let hello: Value = app
+        .local("GET", "/local/v1/hello")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let epoch = hello["command_epoch"].as_str().unwrap();
+    let plan: Value = app
+        .local("POST", "/local/v1/registration-plans")
+        .json(&json!({"absolute_path":app.project,"git_mode":"private"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let registration = app
+        .local("POST", "/api/v1/registrations")
+        .header("x-request-id", Uuid::now_v7().to_string())
+        .header("x-command-epoch", epoch)
+        .json(&json!({"plan_id":plan["plan_id"]}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(registration.status(), 202);
+    let project = plan["project_id"].as_str().unwrap();
+    // Neither value can name a source file: sources are canonical UUIDv4 names.
+    for id in ["abc".to_owned(), Uuid::now_v7().to_string()] {
+        for (method, path) in [
+            ("GET", format!("/api/v1/projects/{project}/cards/{id}")),
+            ("GET", format!("/api/v1/projects/{project}/updates/{id}")),
+            (
+                "GET",
+                format!("/api/v1/projects/{project}/cards/{id}/history"),
+            ),
+            ("PATCH", format!("/api/v1/projects/{project}/cards/{id}")),
+            (
+                "PATCH",
+                format!("/api/v1/projects/{project}/milestones/{id}"),
+            ),
+            ("DELETE", format!("/api/v1/projects/{project}/cards/{id}")),
+            ("DELETE", format!("/api/v1/projects/{project}/updates/{id}")),
+        ] {
+            let mut request = app.local(method, &path);
+            if method != "GET" {
+                request = request
+                    .header("x-request-id", Uuid::now_v7().to_string())
+                    .header("x-command-epoch", epoch)
+                    .header("if-match", "\"sha256:0\"")
+                    .json(&json!({"set":{"title":"Unreachable"}}));
+            }
+            let response = request.send().await.unwrap();
+            assert_eq!(response.status(), 404, "{method} {path}");
+            let body: Value = response.json().await.unwrap();
+            assert_eq!(
+                body["error"]["code"], "RESOURCE_NOT_FOUND",
+                "{method} {path}"
+            );
+            project_application::wire::validate("Error", &body).unwrap();
+        }
+    }
+}

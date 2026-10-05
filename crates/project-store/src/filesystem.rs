@@ -98,16 +98,20 @@ impl Directory {
     pub fn names_bounded(&self, limit: usize) -> Result<Vec<String>, StoreError> {
         self.verify()?;
         let mut names = Vec::new();
-        for entry in std::fs::read_dir(&self.path)? {
+        // List the held descriptor, not whatever the path names at this moment.
+        for entry in fs::Dir::read_from(&self.file)? {
+            let entry = entry?;
+            let name = entry
+                .file_name()
+                .to_str()
+                .map_err(|_| StoreError::Invalid("NON_UTF8_PATH"))?;
+            if matches!(name, "." | "..") {
+                continue;
+            }
             if names.len() >= limit {
                 return Err(StoreError::Invalid("DIRECTORY_ENTRY_LIMIT"));
             }
-            names.push(
-                entry?
-                    .file_name()
-                    .into_string()
-                    .map_err(|_| StoreError::Invalid("NON_UTF8_PATH"))?,
-            );
+            names.push(name.to_owned());
         }
         self.verify()?;
         names.sort();
@@ -266,6 +270,8 @@ impl Directory {
             checkpoint(WritePoint::TempSynced)?;
             self.precondition(name, expected)?;
             self.verify()?;
+            // Writers treat a failure before `Renamed` as leaving the target
+            // untouched; nothing above this line may modify it.
             if expected.is_some() {
                 fs::renameat(&self.file, &temp, &self.file, name)?;
             } else {
@@ -295,6 +301,7 @@ impl Directory {
         component(name)?;
         self.precondition(name, Some(expected))?;
         self.verify()?;
+        // As in `replace_with`: the target is untouched until this unlink.
         fs::unlinkat(&self.file, name, AtFlags::empty())?;
         checkpoint(DeletePoint::Unlinked)?;
         self.file.sync_all()?;
@@ -402,9 +409,12 @@ impl CollectionReader<'_> {
             .read_with_ancestor(&format!("{id}.json"), Some(self.project))
     }
 }
+/// Collection sources are named by canonical UUIDv4; no other ID can exist.
+pub fn is_resource_id(id: &str) -> bool {
+    Uuid::parse_str(id).is_ok_and(|uuid| uuid.get_version_num() == 4 && uuid.to_string() == id)
+}
 fn resource_id(id: &str) -> Result<(), StoreError> {
-    let uuid = Uuid::parse_str(id).map_err(|_| StoreError::Invalid("INVALID_ID"))?;
-    if uuid.get_version_num() != 4 || uuid.to_string() != id {
+    if !is_resource_id(id) {
         return Err(StoreError::Invalid("INVALID_ID"));
     }
     Ok(())

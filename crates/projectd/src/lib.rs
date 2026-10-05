@@ -1,3 +1,4 @@
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 use axum::{
     Router,
     body::to_bytes,
@@ -29,7 +30,12 @@ pub struct Service {
     picker: Arc<picker::Picker>,
     origin: String,
     host: String,
+    /// Admission for the peer-verified local socket.
     slots: Arc<Semaphore>,
+    /// Admission for the network listener, so its callers cannot starve the CLI.
+    browser_slots: Arc<Semaphore>,
+    /// Bodies collected before any session exists: only pairing needs one.
+    guest_bodies: Arc<Semaphore>,
     streams: Arc<Semaphore>,
     shutdown: watch::Sender<bool>,
     body_timeout: Duration,
@@ -54,9 +60,10 @@ impl Service {
         {
             return Err("Public origin must be an HTTPS origin without credentials, path, query or fragment".into());
         }
+        let host = url.host_str().ok_or("Invalid public origin")?;
         let host = match url.port() {
-            Some(port) => format!("{}:{port}", url.host_str().unwrap()),
-            None => url.host_str().unwrap().into(),
+            Some(port) => format!("{host}:{port}"),
+            None => host.into(),
         };
         let users =
             Arc::new(Users::open(engine, after_restore).map_err(|error| error.to_string())?);
@@ -69,6 +76,8 @@ impl Service {
             origin: url.origin().ascii_serialization(),
             host,
             slots: Arc::new(Semaphore::new(8)),
+            browser_slots: Arc::new(Semaphore::new(8)),
+            guest_bodies: Arc::new(Semaphore::new(2)),
             streams: Arc::new(Semaphore::new(64)),
             shutdown: watch::channel(false).0,
             body_timeout: Duration::from_secs(10),
@@ -211,6 +220,28 @@ async fn local(
     }
     secured(handle(service, request, true).await)
 }
+/// Whether a request may occupy a body collector, decided before reading it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Entry {
+    /// The peer-verified local socket.
+    Trusted,
+    /// Static assets, health and pairing status never read a request body.
+    Bodiless,
+    /// Pairing sends a small body before any session exists.
+    Pairing,
+    /// Everything else requires a session before its body is collected.
+    Session,
+}
+impl Entry {
+    fn of(method: &str, path: &str) -> Self {
+        match (method, path) {
+            ("GET" | "HEAD", path) if !path.starts_with("/api/") => Self::Bodiless,
+            ("GET", "/api/v1/auth/pairings/current") => Self::Bodiless,
+            ("POST", "/api/v1/auth/pairings" | "/api/v1/auth/pairings/claim") => Self::Pairing,
+            _ => Self::Session,
+        }
+    }
+}
 async fn handle(service: Service, request: Request, local: bool) -> Response {
     let (parts, body) = request.into_parts();
     let path = parts.uri.path().to_string();
@@ -243,7 +274,12 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
         return response(Reply::error(415, "JSON_REQUIRED", ""));
     }
     // Admission bounds body collectors as well as the blocking worker queue.
-    let permit = match service.slots.clone().try_acquire_owned() {
+    let slots = if local {
+        &service.slots
+    } else {
+        &service.browser_slots
+    };
+    let permit = match slots.clone().try_acquire_owned() {
         Ok(permit) => permit,
         Err(_) => return response(Reply::error(503, "SERVER_BUSY", "")),
     };
@@ -251,14 +287,49 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
     if *shutdown.borrow() {
         return response(Reply::error(503, "SERVICE_UNAVAILABLE", ""));
     }
-    let bytes = tokio::select! {
-        _ = shutdown.changed() => return response(Reply::error(503, "SERVICE_UNAVAILABLE", "")),
-        result = tokio::time::timeout(service.body_timeout, to_bytes(body, 1_100_000)) => match result {
-            Ok(Ok(bytes)) => bytes,
-            Ok(Err(_)) => return response(Reply::error(413, "BODY_TOO_LARGE", "")),
-            Err(_) => return response(Reply::error(408, "REQUEST_TIMEOUT", "")),
-        },
+    // A slow body holds its permit for the whole timeout, so a network caller
+    // must hold a session, or one of the few pairing collectors, to send one.
+    let entry = if local {
+        Entry::Trusted
+    } else {
+        Entry::of(parts.method.as_str(), &path)
     };
+    let guest = match entry {
+        Entry::Pairing => match service.guest_bodies.clone().try_acquire_owned() {
+            Ok(permit) => Some(permit),
+            Err(_) => return response(Reply::error(503, "SERVER_BUSY", "")),
+        },
+        _ => None,
+    };
+    if entry == Entry::Session {
+        let owner = service.users.owner.clone();
+        let token = cookie(&parts.headers, "__Host-project_session");
+        // Passive: dispatch still performs the full check that records activity.
+        let checked = tokio::task::spawn_blocking(move || {
+            owner
+                .auth()
+                .authenticate_passive(&token, now_millis())
+                .map(drop)
+        });
+        match checked.await {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => return failure(error),
+            Err(_) => return failure(AppError::Unavailable("application worker")),
+        }
+    }
+    let bytes = if entry == Entry::Bodiless {
+        axum::body::Bytes::new()
+    } else {
+        tokio::select! {
+            _ = shutdown.changed() => return response(Reply::error(503, "SERVICE_UNAVAILABLE", "")),
+            result = tokio::time::timeout(service.body_timeout, to_bytes(body, 1_100_000)) => match result {
+                Ok(Ok(bytes)) => bytes,
+                Ok(Err(_)) => return response(Reply::error(413, "BODY_TOO_LARGE", "")),
+                Err(_) => return response(Reply::error(408, "REQUEST_TIMEOUT", "")),
+            },
+        }
+    };
+    drop(guest);
     let mut input = Input {
         method: parts.method.to_string(),
         path,
@@ -319,7 +390,7 @@ fn dispatch(service: &Service, input: Input) -> Result<Response, AppError> {
                     "__Host-project_pending",
                     &started.pending_token,
                     300,
-                );
+                )?;
                 return Ok(reply);
             }
             ("GET", "/api/v1/auth/pairings/current") => {
@@ -343,7 +414,7 @@ fn dispatch(service: &Service, input: Input) -> Result<Response, AppError> {
                     "__Host-project_session",
                     &claimed.session_token,
                     90 * 86400,
-                );
+                )?;
                 return Ok(reply);
             }
             _ => {}
@@ -363,14 +434,20 @@ fn dispatch(service: &Service, input: Input) -> Result<Response, AppError> {
     let service = service.scoped(&input, None)?;
     dispatch::run(&service, input, session)
 }
-fn set_cookie(response: &mut Response, name: &str, token: &str, seconds: u32) {
+fn set_cookie(
+    response: &mut Response,
+    name: &str,
+    token: &str,
+    seconds: u32,
+) -> Result<(), AppError> {
     response.headers_mut().append(
         "set-cookie",
         HeaderValue::from_str(&format!(
             "{name}={token}; Path=/; Max-Age={seconds}; Secure; HttpOnly; SameSite=Strict"
         ))
-        .expect("generated cookie"),
+        .map_err(|_| AppError::invariant("generated cookie"))?,
     );
+    Ok(())
 }
 
 #[cfg(test)]
@@ -469,6 +546,107 @@ mod tests {
         )
         .await;
         assert_eq!(healthy.status(), 200);
+    }
+    fn browser_request(method: &str, path: &str, pending_body: bool) -> Request {
+        let body = if pending_body {
+            Body::from_stream(async_stream::stream! {
+                let chunk = std::future::pending::<Result<&'static str, Infallible>>().await;
+                yield chunk;
+            })
+        } else {
+            Body::empty()
+        };
+        Request::builder()
+            .method(method)
+            .uri(path)
+            .header("host", "projects.test")
+            .header("origin", "https://projects.test")
+            .header("content-type", "application/json")
+            .body(body)
+            .unwrap()
+    }
+    async fn local_health(service: &Service) -> StatusCode {
+        handle(
+            service.clone(),
+            Request::builder()
+                .uri("/healthz")
+                .body(Body::empty())
+                .unwrap(),
+            true,
+        )
+        .await
+        .status()
+    }
+    #[tokio::test]
+    async fn unauthenticated_bodies_are_refused_before_they_are_collected() {
+        let (_temp, mut service) = service();
+        // Collecting the unfinished body would hold admission until this expires.
+        service.body_timeout = Duration::from_secs(60);
+        for (method, path) in [
+            ("POST", "/api/v1/projects/any/cards"),
+            ("GET", "/api/v1/bootstrap"),
+            ("PATCH", "/api/v1/workspace/preferences"),
+        ] {
+            let refused = tokio::time::timeout(
+                Duration::from_secs(5),
+                handle(service.clone(), browser_request(method, path, true), false),
+            )
+            .await
+            .unwrap_or_else(|_| panic!("{method} {path} waited for an unauthenticated body"));
+            assert_eq!(refused.status(), 401, "{method} {path}");
+            assert_eq!(code(refused).await, "SESSION_REQUIRED");
+        }
+        assert_eq!(service.browser_slots.available_permits(), 8);
+    }
+    #[tokio::test]
+    async fn network_bodies_cannot_exhaust_local_or_asset_admission() {
+        let (_temp, mut service) = service();
+        service.body_timeout = Duration::from_secs(60);
+        let mut requests = Vec::new();
+        // Pairing must accept a body before any session exists.
+        for _ in 0..16 {
+            requests.push(tokio::spawn(handle(
+                service.clone(),
+                browser_request("POST", "/api/v1/auth/pairings", true),
+                false,
+            )));
+        }
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while requests
+                .iter()
+                .filter(|request| request.is_finished())
+                .count()
+                < 14
+            {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("only the bounded pairing collectors may wait");
+        assert_eq!(local_health(&service).await, 200);
+        // Static assets never read a request body, so they are still served.
+        let asset = tokio::time::timeout(
+            Duration::from_secs(5),
+            handle(service.clone(), browser_request("GET", "/", true), false),
+        )
+        .await
+        .expect("an asset request waited for its body");
+        assert_ne!(asset.status(), 503);
+        let mut busy = 0;
+        for request in requests {
+            if request.is_finished() {
+                let response = request.await.unwrap();
+                assert_eq!(response.status(), 503);
+                assert_eq!(code(response).await, "SERVER_BUSY");
+                busy += 1;
+            } else {
+                request.abort();
+                let _ = request.await;
+            }
+        }
+        assert_eq!(busy, 14);
+        assert_eq!(service.browser_slots.available_permits(), 8);
+        assert_eq!(service.guest_bodies.available_permits(), 2);
     }
     #[tokio::test]
     async fn body_timeout_and_invalid_inputs_release_admission() {

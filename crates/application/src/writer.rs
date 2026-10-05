@@ -12,7 +12,7 @@ use project_store::{
     filesystem::{CollectionReader, DeletePoint, ProjectStore, WritePoint},
 };
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
+use std::{cell::Cell, collections::BTreeMap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommitPoint {
@@ -26,6 +26,27 @@ pub enum CommitPoint {
 }
 pub struct Writer<'a> {
     pub journal: &'a Journal,
+}
+/// What one write attempt reached, observed through its commit points.
+#[derive(Default)]
+struct Progress {
+    /// A commit point failed: the caller's fault hook stands in for a crash.
+    interrupted: Cell<bool>,
+    /// The rename or unlink happened, so the target no longer holds `before`.
+    target_changed: Cell<bool>,
+}
+impl Progress {
+    fn observe<'a>(
+        &'a self,
+        checkpoint: &'a mut impl FnMut(CommitPoint) -> Result<(), StoreError>,
+    ) -> impl FnMut(CommitPoint) -> Result<(), StoreError> + 'a {
+        move |point| {
+            if matches!(point, CommitPoint::Renamed | CommitPoint::Unlinked) {
+                self.target_changed.set(true);
+            }
+            checkpoint(point).inspect_err(|_| self.interrupted.set(true))
+        }
+    }
 }
 impl Writer<'_> {
     /// Execute a physical source deletion through the same journal and durable
@@ -44,19 +65,15 @@ impl Writer<'_> {
         if let Some(reply) = self.journal.admit(command, now)? {
             return Ok(reply);
         }
+        if let Some(reply) = self.recovery_required(store, command, now)? {
+            return Ok(reply);
+        }
         let reject = |reply: Reply| -> Result<Reply, AppError> {
             Ok(self
                 .journal
                 .record(command, &reply, None, now, true)?
                 .unwrap_or(reply))
         };
-        if self.journal.has_pending(&command.target.project_id)? {
-            return reject(Reply::error(
-                409,
-                "PROJECT_RECOVERY_REQUIRED",
-                &command.request_id,
-            ));
-        }
         if command.expected.is_none() {
             return reject(Reply::error(
                 428,
@@ -116,7 +133,12 @@ impl Writer<'_> {
             before: Some(before),
             after: None,
             references,
-            source_root: store.directory.path().to_str().unwrap().to_owned(),
+            source_root: store
+                .directory
+                .path()
+                .to_str()
+                .ok_or(AppError::invariant("source root UTF-8 path"))?
+                .to_owned(),
         };
         if let Some(existing) = self
             .journal
@@ -124,6 +146,8 @@ impl Writer<'_> {
         {
             return Ok(existing);
         }
+        let progress = Progress::default();
+        let mut checkpoint = progress.observe(&mut checkpoint);
         let write = (|| -> Result<(), AppError> {
             checkpoint(CommitPoint::Prepared)?;
             guard(store)?;
@@ -151,10 +175,10 @@ impl Writer<'_> {
                 Some(&command.target.project_id),
                 Some(&command.request_id),
             );
-            return Ok(Reply {
-                http_status: 202,
-                body: json!({"api_version":"1","request_id":command.request_id,"state":"prepared"}),
-            });
+            if let Ok(outcome) = self.withdraw(&intent, error, &progress) {
+                return outcome;
+            }
+            return Ok(prepared(command));
         }
         Ok(reply)
     }
@@ -181,12 +205,8 @@ impl Writer<'_> {
         if let Some(reply) = self.journal.admit(command, now)? {
             return Ok(reply);
         }
-        if self.journal.has_pending(&command.target.project_id)? {
-            return Ok(Reply::error(
-                409,
-                "PROJECT_RECOVERY_REQUIRED",
-                &command.request_id,
-            ));
+        if let Some(reply) = self.recovery_required(store, command, now)? {
+            return Ok(reply);
         }
         let reject = |reply: Reply| -> Result<Reply, AppError> {
             Ok(self
@@ -198,7 +218,11 @@ impl Writer<'_> {
             store.location(command.target.kind, &command.target.id, true)?;
         let before = match directory.read(&filename) {
             Ok(before) => before,
-            Err(_) => return reject(Reply::error(409, "DOCUMENT_INVALID", &command.request_id)),
+            // Only a source that exists in an unacceptable form is definite.
+            Err(StoreError::Invalid(_)) => {
+                return reject(Reply::error(409, "DOCUMENT_INVALID", &command.request_id));
+            }
+            Err(error) => return Err(error.into()),
         };
         let before_version = before.as_ref().map(|bytes| document::version(bytes));
         if command.method != "POST" && command.expected.is_none() {
@@ -273,7 +297,9 @@ impl Writer<'_> {
             Err(_) => return reject(Reply::error(422, "VALIDATION_FAILED", &command.request_id)),
         };
         let after = if noop {
-            before.clone().unwrap()
+            before
+                .clone()
+                .ok_or(AppError::invariant("noop source bytes"))?
         } else {
             match document::serialize(&validated) {
                 Ok(bytes) => bytes,
@@ -312,7 +338,12 @@ impl Writer<'_> {
             before,
             after: Some(after),
             references,
-            source_root: store.directory.path().to_str().unwrap().to_owned(),
+            source_root: store
+                .directory
+                .path()
+                .to_str()
+                .ok_or(AppError::invariant("source root UTF-8 path"))?
+                .to_owned(),
         };
         if let Some(existing) = self
             .journal
@@ -320,8 +351,10 @@ impl Writer<'_> {
         {
             return Ok(existing);
         }
-        // Anything failing after PREPARED is uncertain. Never report a rejection
-        // or roll back source bytes that may already be durable.
+        // A failure once the rename may have happened is uncertain. Never report
+        // a rejection or roll back source bytes that may already be durable.
+        let progress = Progress::default();
+        let mut checkpoint = progress.observe(&mut checkpoint);
         let write = (|| -> Result<(), AppError> {
             checkpoint(CommitPoint::Prepared)?;
             directory.replace_with(
@@ -351,12 +384,83 @@ impl Writer<'_> {
                 Some(&command.target.project_id),
                 Some(&command.request_id),
             );
-            return Ok(Reply {
-                http_status: 202,
-                body: json!({"api_version":"1","request_id":command.request_id,"state":"prepared"}),
-            });
+            if let Ok(outcome) = self.withdraw(&intent, error, &progress) {
+                return outcome;
+            }
+            return Ok(prepared(command));
         }
         Ok(reply)
+    }
+
+    /// Unresolved intents serialize the project. Before refusing, finish this
+    /// journal's interrupted intents with the startup rules, so a resource that
+    /// came back does not wait for a restart. The refusal is transient and is
+    /// not journaled: the unchanged request runs once recovery has finished.
+    fn recovery_required(
+        &self,
+        store: &mut ProjectStore,
+        command: &Command,
+        now: i64,
+    ) -> Result<Option<Reply>, AppError> {
+        let project_id = &command.target.project_id;
+        if !self.journal.has_pending(project_id)? {
+            return Ok(None);
+        }
+        self.recover_with_guard(store, project_id, now, crate::source_deletion::recoverable)?;
+        Ok(self
+            .journal
+            .has_pending(project_id)?
+            .then(|| Reply::error(409, "PROJECT_RECOVERY_REQUIRED", &command.request_id)))
+    }
+
+    /// Resolve a prepared intent whose write failed before its rename or unlink
+    /// was attempted: the target still holds exactly what it held before, so the
+    /// outcome is definite. `Err` returns the failure when the intent must stay
+    /// prepared for recovery instead.
+    fn withdraw(
+        &self,
+        intent: &Intent,
+        error: AppError,
+        progress: &Progress,
+    ) -> Result<Result<Reply, AppError>, AppError> {
+        if progress.interrupted.get() || progress.target_changed.get() {
+            return Err(error);
+        }
+        let request_id = &intent.command.request_id;
+        let rejection = match &error {
+            // Another writer changed the target after the intent was journaled.
+            AppError::Store(StoreError::Conflict) => {
+                Some(Reply::error(412, "VERSION_CONFLICT", request_id))
+            }
+            AppError::Rejected(reply) => {
+                let mut reply = reply.clone();
+                reply.body["error"]["request_id"] = json!(request_id);
+                Some(reply)
+            }
+            // POSIX leaves the target unspecified only when the rename or
+            // unlink itself reports an I/O error.
+            AppError::Store(StoreError::Io(io))
+                if io.raw_os_error() == Some(rustix::io::Errno::IO.raw_os_error()) =>
+            {
+                return Err(error);
+            }
+            AppError::Store(_) => None,
+            // Journal, lock and invariant failures keep the intent for recovery.
+            _ => return Err(error),
+        };
+        if let Err(journal) = self.journal.abandon(intent, rejection.as_ref()) {
+            crate::diagnostics::record_failure(
+                "source_withdraw",
+                &journal,
+                Some(&intent.command.target.project_id),
+                Some(request_id),
+            );
+            return Err(error);
+        }
+        Ok(match rejection {
+            Some(reply) => Ok(reply),
+            None => Err(error),
+        })
     }
 
     #[cfg(test)]
@@ -466,6 +570,14 @@ impl Writer<'_> {
     }
 }
 
+/// The intent is journaled but its outcome is unknown until recovery.
+fn prepared(command: &Command) -> Reply {
+    Reply {
+        http_status: 202,
+        body: json!({"api_version":"1","request_id":command.request_id,"state":"prepared"}),
+    }
+}
+
 /// Different versions of the same reference indicate conflicting observations,
 /// not a duplicate to discard. Preserve that rejection before creating an intent.
 fn distinct_references(references: Vec<Reference>) -> Option<Vec<Reference>> {
@@ -494,7 +606,11 @@ pub fn references_match(store: &ProjectStore, references: &[Reference]) -> Resul
             {
                 collection = Some((reference.kind, store.collection_reader(reference.kind)?));
             }
-            collection.as_ref().unwrap().1.read(&reference.id)?
+            collection
+                .as_ref()
+                .ok_or(AppError::invariant("reference collection reader"))?
+                .1
+                .read(&reference.id)?
         } else {
             let (directory, name) = store.location(reference.kind, &reference.id, false)?;
             directory.read(&name)?

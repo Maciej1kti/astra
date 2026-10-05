@@ -79,10 +79,15 @@ impl Users {
         if expected != Some(Self::registry_version(&engines).as_str()) {
             return reject(412, "VERSION_CONFLICT");
         }
-        let name = payload["name"].as_str().unwrap();
+        let name = payload["name"]
+            .as_str()
+            .ok_or(AppError::invariant("validated user name"))?;
         let changed = current.name != name;
         let mut renamed = engines.clone();
-        let profile = &mut renamed.get_mut(id).unwrap().0;
+        let profile = &mut renamed
+            .get_mut(id)
+            .ok_or(AppError::invariant("renamed user profile"))?
+            .0;
         profile.name = name.into();
         let profile = profile.clone();
         let registry_version = Self::registry_version(&renamed);

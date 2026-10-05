@@ -377,10 +377,16 @@ SET value=excluded.value",
             .ok_or(AppError::invariant("summary page items"))?
         {
             if item["type"] == "update" {
-                item["read"] = json!(self.receipt(
-                    item["project_id"].as_str().unwrap(),
-                    item["id"].as_str().unwrap()
-                )?);
+                item["read"] = json!(
+                    self.receipt(
+                        item["project_id"]
+                            .as_str()
+                            .ok_or(AppError::invariant("summary item project ID"))?,
+                        item["id"]
+                            .as_str()
+                            .ok_or(AppError::invariant("summary item ID"))?
+                    )?
+                );
             }
         }
         Ok(page)

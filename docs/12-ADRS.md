@@ -311,6 +311,10 @@ Indexed tag names serve bounded suggestions; rename previews still read current
 sources. Optional event metadata avoids unnecessary suggestion invalidations.
 See [ADR-032](ADR-032-SCOPED-PAGES-AND-TAG-SUGGESTIONS.md).
 
+Explicit CLI operations were recorded under the same number as a separate file.
+Both documents keep their published names; cite them by file:
+[explicit CLI operations](ADR-032-EXPLICIT-CLI-OPERATIONS.md).
+
 ## ADR-040 — Simplify card priorities
 
 Cards and priority filters accept only `normal | high`. The removed values map
@@ -395,3 +399,11 @@ unused workspace suggestion read. Local maintenance unregistration and legacy
 workspace tag vocabulary remain supported. CLI project tag rename uses workflow
 acceptance, while preview remains a read. See
 [ADR-065](ADR-065-DEFINITION-SURFACE-CLEANUP.md).
+
+## ADR-066 — Definite outcomes and session-gated admission
+
+A write that fails before its rename or unlink withdraws its intent with a
+definite or retryable outcome instead of blocking the project; the next write
+completes interrupted intents; malformed resource IDs are not found; network
+bodies require a session. See
+[ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).

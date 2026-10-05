@@ -290,6 +290,14 @@ Encoding starts after engine query locks are released, has a 4 MiB input cap and
 retains private caching, identity source ETags and credential/SSE exclusions.
 See [ADR-052](ADR-052-BOUNDED-SUMMARY-COMPRESSION.md).
 
+Admission is separate for the local socket and the network listener. Before a
+network body is collected, `handle` classifies the request: static assets, health
+and pairing status read no body; the two pairing writes use a small dedicated
+collector budget; every other route needs a passively verified session first.
+Dispatch still performs full authentication and CSRF checks. Collection routes
+reject a malformed resource ID as `RESOURCE_NOT_FOUND` before it can reach the
+store. See [ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).
+
 The CLI owns argument translation, bounded input/project resolution, named view
 queries, operation-aware transport and optional terminal presentation in separate
 modules under `crates/projectctl/src`. `transport/response.rs` checks command
@@ -413,6 +421,16 @@ existing durable prepare/write/commit sequence. Original command JSON stays in
 the journal. Source serialization retains canonical key ordering; no-op writes
 retain the original bytes. The JSON source format is described in [ADR-046](ADR-046-JSON-SOURCES.md).
 
+A write that fails before its rename or unlink is attempted has not changed the
+target, so `Writer` withdraws the intent instead of leaving it pending: a changed
+target becomes the recorded `VERSION_CONFLICT`, and other storage failures forget
+the command so the unchanged request can retry. Commit-point interruptions, any
+failure after the rename, `EIO` and journal failures stay `prepared`. Before a
+writer refuses with `PROJECT_RECOVERY_REQUIRED` it applies the startup recovery
+rules to its own journal's intents under the held project lock; `needs_review`
+and intents owned by other journals still refuse. See
+[ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).
+
 [Source deletion](../crates/application/src/source_deletion.rs) coordinates card
 and report removal through the shared durable writer. Card pins and report
 references are checked against source files before unlink and during recovery;
@@ -497,7 +515,10 @@ See [ADR-033](ADR-033-AUDIT-OWNERSHIP-AND-RECOVERY.md) for these boundaries.
 Run `.venv-check/bin/python scripts/check.py`, then
 `ASTRA_TEST_PROFILE=release npm run test:browser`. TypeScript rejects unused locals
 and parameters. Prettier covers the frontend and all maintained JavaScript
-scripts/tests; Rust uses rustfmt and Clippy with warnings rejected. `scripts/check-boundaries.mjs`
+scripts/tests; Rust uses rustfmt and Clippy with warnings rejected. Non-test Rust code
+also rejects `unwrap` and `expect`: a request path returns an error, because a
+panic under a held lock poisons it until restart. A case that cannot fail keeps
+the call under `#[expect(..., reason = "…")]`. `scripts/check-boundaries.mjs`
 rejects shared frontend imports of feature implementations. Compile-time endpoint
 examples live in `apps/web/src/type-tests`; behavioral unit tests run with
 `npm run test:unit`.

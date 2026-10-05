@@ -44,10 +44,12 @@ impl Engine {
         if wire::validate("ReceiptsInput", payload).is_err() {
             return reject("VALIDATION_FAILED");
         }
+        let items = payload["items"]
+            .as_array()
+            .ok_or(AppError::invariant("validated receipt items"))?;
         let mut unique = BTreeSet::new();
-        for item in payload["items"].as_array().unwrap() {
-            let project = item["project_id"].as_str().unwrap();
-            let id = item["update_id"].as_str().unwrap();
+        for item in items {
+            let (project, id) = receipt_key(item)?;
             if !unique.insert((project, id)) {
                 return reject("DUPLICATE_RECEIPT");
             }
@@ -68,9 +70,8 @@ impl Engine {
         }
         let tx = db.transaction()?;
         let mut changed = 0;
-        for item in payload["items"].as_array().unwrap() {
-            let project = item["project_id"].as_str().unwrap();
-            let id = item["update_id"].as_str().unwrap();
+        for item in items {
+            let (project, id) = receipt_key(item)?;
             changed += if item["read"] == true {
                 tx.execute(
                     "INSERT
@@ -126,4 +127,14 @@ VALUES (?1,
             |r| r.get(0),
         )?)
     }
+}
+fn receipt_key(item: &Value) -> Result<(&str, &str), AppError> {
+    Ok((
+        item["project_id"]
+            .as_str()
+            .ok_or(AppError::invariant("validated receipt project ID"))?,
+        item["update_id"]
+            .as_str()
+            .ok_or(AppError::invariant("validated receipt update ID"))?,
+    ))
 }

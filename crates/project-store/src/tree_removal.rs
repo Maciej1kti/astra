@@ -52,9 +52,9 @@ pub struct Inventory {
 impl Inventory {
     /// The deletion plan validator.  It binds the complete tree inventory,
     /// identities and ordering to the exact version presented to the caller.
-    pub fn version(&self) -> String {
-        let bytes = serde_json::to_vec(self).expect("tree inventory serializes");
-        version(&bytes)
+    pub fn version(&self) -> Result<String, StoreError> {
+        let bytes = serde_json::to_vec(self).map_err(std::io::Error::from)?;
+        Ok(version(&bytes))
     }
 }
 
