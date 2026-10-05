@@ -15,7 +15,8 @@
   } from "@svar-ui/svelte-gantt";
   import { resourcePath, type Summary } from "../../lib/api/api";
   import { shiftedSchedule, shiftDate } from "./dates";
-  import { widgetDate, type GanttPage } from "./planning";
+  import type { GanttPage } from "./planning";
+  import { widgetDate } from "./widget-dates";
   import type { DateProposal } from "./proposals";
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
   import TimelineRow from "./TimelineRow.svelte";

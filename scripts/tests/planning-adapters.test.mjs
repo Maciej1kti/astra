@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { calendarEventProjection } from "../../apps/web/src/features/planning/calendar-events.ts";
 import { ganttTasks } from "../../apps/web/src/features/planning/gantt-tasks.ts";
-import { dateOnly } from "../../apps/web/src/features/planning/planning.ts";
+import { dateOnly } from "../../apps/web/src/features/planning/widget-dates.ts";
 
 test("calendar conversion keeps inclusive source dates and only allows ready schedule edits", () => {
   const schedule = {

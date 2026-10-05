@@ -30,10 +30,10 @@
   import {
     calendarTarget,
     calendarLabel,
-    dateOnly,
     inclusiveSchedule,
     type CalendarItem,
   } from "./planning";
+  import { dateOnly, isCalendarDate } from "./widget-dates";
   import type { DateProposal } from "./proposals";
   import {
     calendarEventAccess,
@@ -42,7 +42,6 @@
   } from "./calendar-keyboard";
   import {
     calendarWidgetView,
-    isCalendarDate,
     navigateCalendar,
     type CalendarLayout,
   } from "./planning-navigation";

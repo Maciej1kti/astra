@@ -1,7 +1,8 @@
 import type { ITask } from "@svar-ui/svelte-gantt";
 import type { Summary } from "../../lib/api/api";
 import { eventDates } from "../../lib/resources/timed-event.ts";
-import { exclusiveSchedule, widgetDate } from "./planning.ts";
+import { exclusiveSchedule } from "./planning.ts";
+import { widgetDate } from "./widget-dates.ts";
 
 export type AstraTask = ITask & {
   astra: Summary;

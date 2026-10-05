@@ -3,8 +3,8 @@
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
-  import { widgetDate } from "./planning";
-  import { isCalendarDate, type CalendarLayout } from "./planning-navigation";
+  import type { CalendarLayout } from "./planning-navigation";
+  import { isCalendarDate, widgetDate } from "./widget-dates";
 
   let {
     date,

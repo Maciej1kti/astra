@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  isCalendarDate,
   navigateCalendar,
   calendarWidgetView,
 } from "../../apps/web/src/features/planning/planning-navigation.ts";
+import { isCalendarDate } from "../../apps/web/src/features/planning/widget-dates.ts";
 
 test("calendar navigation preserves its period across month, year and leap boundaries", () => {
   assert.equal(navigateCalendar("2026-01-31", "month", 1), "2026-02-01");

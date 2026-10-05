@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  widgetDate,
-  dateOnly,
   exclusiveSchedule,
   inclusiveSchedule,
 } from "../../apps/web/src/features/planning/planning.ts";
+import {
+  widgetDate,
+  dateOnly,
+} from "../../apps/web/src/features/planning/widget-dates.ts";
 
 test("widget boundaries round-trip inclusive dates in different client timezones", () => {
   const previous = process.env.TZ;

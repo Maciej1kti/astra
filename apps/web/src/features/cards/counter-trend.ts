@@ -1,4 +1,4 @@
-import { calendarShift } from "../../lib/ui/calendar-dates.ts";
+import { calendarShift } from "../../lib/ui/calendar-grid.ts";
 
 /** Fixed calendar window; missing entries stay distinct from recorded zero. */
 export function counterTrend(values: Record<string, number>, today: string) {

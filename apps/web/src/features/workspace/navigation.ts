@@ -1,8 +1,6 @@
 import { isUuid } from "../../lib/api/uuid.ts";
-import {
-  isCalendarDate,
-  type CalendarLayout,
-} from "../planning/planning-navigation.ts";
+import type { CalendarLayout } from "../planning/planning-navigation.ts";
+import { isCalendarDate } from "../planning/widget-dates.ts";
 
 export const workspaceViews = [
   "focus",

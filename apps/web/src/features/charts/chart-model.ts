@@ -1,8 +1,5 @@
-import {
-  calendarShift,
-  dayDistance,
-  validCalendarDate,
-} from "../../lib/ui/calendar-dates.ts";
+import { dayDistance, validCalendarDate } from "../../lib/ui/calendar-dates.ts";
+import { calendarShift } from "../../lib/ui/calendar-grid.ts";
 
 export interface ChartSeries {
   project_id: string;

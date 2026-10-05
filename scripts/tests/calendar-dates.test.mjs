@@ -1,15 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  calendarCells,
-  calendarMonth,
-  calendarShift,
-  calendarRange,
   calendarToday,
   dayDistance,
   isCivilDate,
   validCalendarDate,
 } from "../../apps/web/src/lib/ui/calendar-dates.ts";
+import {
+  calendarCells,
+  calendarMonth,
+  calendarShift,
+  calendarRange,
+} from "../../apps/web/src/lib/ui/calendar-grid.ts";
 test("calendar grids respect week start, leap days and civil year boundaries", () => {
   const monday = calendarCells("2026-09-01", "monday");
   const sunday = calendarCells("2026-09-01", "sunday");

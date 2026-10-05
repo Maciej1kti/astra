@@ -5,7 +5,7 @@
   import type { Summary } from "../../lib/api/api";
   import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
   import { dateGesture } from "./date-gesture";
-  import { dateOnly } from "./planning";
+  import { dateOnly } from "./widget-dates";
   import { shiftDate } from "./dates";
   import { dayDistance } from "../../lib/ui/calendar-dates";
 

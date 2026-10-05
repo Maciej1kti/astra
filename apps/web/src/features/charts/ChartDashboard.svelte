@@ -1,7 +1,7 @@
 <script lang="ts">
   import PageHeading from "../../lib/ui/PageHeading.svelte";
   import EmptyState from "../../lib/ui/EmptyState.svelte";
-  import { calendarShift } from "../../lib/ui/calendar-dates";
+  import { calendarShift } from "../../lib/ui/calendar-grid";
   import ChartPlot from "./ChartPlot.svelte";
   import {
     chartDate,

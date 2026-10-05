@@ -5,14 +5,14 @@
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
   import { plannedDays } from "../../lib/ui/locale";
+  import { validCalendarDate } from "../../lib/ui/calendar-dates";
   import {
     calendarCells,
     calendarLabel,
     calendarMonth,
     calendarRange,
     calendarShift,
-    validCalendarDate,
-  } from "../../lib/ui/calendar-dates";
+  } from "../../lib/ui/calendar-grid";
   let {
     start,
     end,

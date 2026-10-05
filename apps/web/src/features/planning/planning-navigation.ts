@@ -1,18 +1,7 @@
-import { isCivilDate } from "../../lib/ui/calendar-dates.ts";
 import { shiftDate } from "./dates.ts";
-import { dateOnly, widgetDate } from "./planning.ts";
+import { dateOnly, isCalendarDate, widgetDate } from "./widget-dates.ts";
 
 export type CalendarLayout = "day" | "week" | "month" | "agenda";
-
-/** A civil date that this browser's local calendar can also represent for the widgets. */
-export function isCalendarDate(value: string): boolean {
-  if (!isCivilDate(value)) return false;
-  try {
-    return dateOnly(widgetDate(value)) === value;
-  } catch {
-    return false;
-  }
-}
 
 export function navigateCalendar(
   date: string,
