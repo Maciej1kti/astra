@@ -99,7 +99,7 @@
       <!-- The text is ordinary content, so its links and wording reach assistive
            technology. Clicking it is only a pointer shortcut for the labelled
            button below, which is the keyboard and screen-reader control. -->
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (Pointer shortcut only; the button below is the control.) -->
       <div class="resource-description-rendered" onclick={beginEdit}>
         {#if body.trim()}<Markdown source={body} />{:else}<p
             class="empty-context"

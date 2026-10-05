@@ -93,7 +93,7 @@
 </script>
 
 {#if eligible}
-  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex (Matches the native event markup: the article takes the button role and focus only when the event can be opened.) -->
   <article
     bind:this={el}
     class={classes}
