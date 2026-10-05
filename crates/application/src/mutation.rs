@@ -122,24 +122,43 @@ impl Engine {
         .execute(&mut store, &command, prepared.references, now, |_| {
             Ok(prepared.draft)
         })?;
-        if reply.http_status == 200
-            && reply.body["status"] == "committed"
-            && self
-                .index
-                .refresh_targets(&store, &project_id, &[(kind, id.clone())], now)
-                .is_err()
-        {
-            if let Some(warnings) = reply.body["warnings"].as_array_mut() {
-                warnings.push(json!({"code":"PROJECTION_DEGRADED","message":"Source committed; the search index needs rebuilding."}));
-            }
-            let _ = self
-                .index
-                .mark_unavailable(&project_id, "PROJECTION_DEGRADED", now);
-            // The source is already committed. Failure to enrich the replay warning
-            // must not turn this successful write into a rejected command.
-            let _ = self.journal.update_result(&command, &reply);
-        }
+        self.project_committed(&store, &command, &mut reply, now);
         Ok(reply)
+    }
+
+    /// Bring the projection up to date with a committed source command.
+    /// Returns whether the projection is degraded and needs a repair. The
+    /// source is already committed: neither a failed refresh nor a failure to
+    /// add the replay warning may turn the write into a rejected command.
+    pub(crate) fn project_committed(
+        &self,
+        store: &ProjectStore,
+        command: &Command,
+        reply: &mut Reply,
+        now: i64,
+    ) -> bool {
+        let project_id = &command.target.project_id;
+        let target = (command.target.kind, command.target.id.clone());
+        if reply.http_status != 200
+            || reply.body["status"] != "committed"
+            || self
+                .index
+                .refresh_targets(store, project_id, &[target], now)
+                .is_ok()
+        {
+            return false;
+        }
+        if let Some(warnings) = reply.body["warnings"].as_array_mut() {
+            warnings.push(json!({
+                "code": "PROJECTION_DEGRADED",
+                "message": "Source committed; the search index needs rebuilding."
+            }));
+        }
+        let _ = self
+            .index
+            .mark_unavailable(project_id, "PROJECTION_DEGRADED", now);
+        let _ = self.journal.update_result(command, reply);
+        true
     }
 }
 /// A patch remains JSON until defaults, placement and references are resolved.

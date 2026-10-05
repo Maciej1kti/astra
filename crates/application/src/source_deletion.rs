@@ -139,24 +139,7 @@ impl Engine {
             |store| deletion_guard(store, kind, project_id, id, request_id),
             |_| Ok(()),
         )?;
-        let repair_projection = reply.http_status == 200
-            && reply.body["status"] == "committed"
-            && self
-                .index
-                .refresh_targets(&store, project_id, &[(kind, id.into())], now)
-                .is_err();
-        if repair_projection {
-            if let Some(warnings) = reply.body["warnings"].as_array_mut() {
-                warnings.push(json!({
-                    "code": "PROJECTION_DEGRADED",
-                    "message": "Source committed; the search index needs rebuilding."
-                }));
-            }
-            let _ = self
-                .index
-                .mark_unavailable(project_id, "PROJECTION_DEGRADED", now);
-            let _ = self.journal.update_result(&command, &reply);
-        }
+        let repair_projection = self.project_committed(&store, &command, &mut reply, now);
         // Projection repair may open this store again; release its mutex first.
         drop(store);
         if repair_projection
