@@ -16,10 +16,93 @@ use tokio::sync::{mpsc, watch};
 
 /// Profiles keep the existing watcher/reconciliation lifecycle, including users
 /// created while this daemon is running. The bound on profiles also bounds tasks.
-pub async fn run_users(service: projectd::Service, mut shutdown: watch::Receiver<bool>) {
-    let mut started = BTreeSet::new();
+pub async fn run_users(service: projectd::Service, shutdown: watch::Receiver<bool>) {
+    supervise(
+        move || {
+            let worker = service.clone();
+            async move {
+                match tokio::task::spawn_blocking(move || worker.user_engines()).await {
+                    Ok(Ok(engines)) => engines,
+                    Ok(Err(error)) => {
+                        project_application::record_failure(
+                            "user_watcher_membership",
+                            &error,
+                            None,
+                            None,
+                        );
+                        Vec::new()
+                    }
+                    Err(error) => {
+                        project_application::record_worker_failure(
+                            "user_watcher_membership",
+                            &error,
+                            None,
+                        );
+                        Vec::new()
+                    }
+                }
+            }
+        },
+        run,
+        Supervision::default(),
+        shutdown,
+    )
+    .await;
+}
+
+/// How often membership is read and how a stopped watcher is restarted.
+#[derive(Clone, Copy)]
+struct Supervision {
+    membership: Duration,
+    /// Delay before the first restart; it doubles up to `restart_limit`.
+    restart: Duration,
+    restart_limit: Duration,
+    /// A watcher that ran this long starts again from the first delay.
+    stable: Duration,
+}
+impl Default for Supervision {
+    fn default() -> Self {
+        Self {
+            membership: Duration::from_secs(2),
+            restart: Duration::from_secs(2),
+            restart_limit: Duration::from_secs(300),
+            stable: Duration::from_secs(600),
+        }
+    }
+}
+
+impl Supervision {
+    fn delay(&self, failures: u32) -> Duration {
+        let doubled = self
+            .restart
+            .saturating_mul(1u32 << failures.saturating_sub(1).min(16));
+        doubled.min(self.restart_limit)
+    }
+}
+
+/// One member's task. A profile without a running task has lost its source
+/// notifications, reconciliation, retention and recovery passes.
+struct Supervised {
+    task: Option<tokio::task::Id>,
+    started: tokio::time::Instant,
+    failures: u32,
+    restart_at: tokio::time::Instant,
+}
+
+/// Keep one background task per member for as long as the daemon runs. A task
+/// that returns or panics is recorded and started again after a growing delay.
+async fn supervise<T, M, F>(
+    mut members: impl FnMut() -> M,
+    start: impl Fn(T, watch::Receiver<bool>) -> F,
+    supervision: Supervision,
+    mut shutdown: watch::Receiver<bool>,
+) where
+    M: Future<Output = Vec<(String, T)>>,
+    F: Future<Output = ()> + Send + 'static,
+{
+    let mut supervised: BTreeMap<String, Supervised> = BTreeMap::new();
     let mut tasks = tokio::task::JoinSet::new();
-    let mut membership = tokio::time::interval(Duration::from_secs(2));
+    let mut membership = tokio::time::interval(supervision.membership);
     membership.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         if *shutdown.borrow() {
@@ -27,14 +110,48 @@ pub async fn run_users(service: projectd::Service, mut shutdown: watch::Receiver
         }
         tokio::select! {
             _ = shutdown.changed() => break,
+            Some(ended) = tasks.join_next_with_id(), if !tasks.is_empty() => {
+                if *shutdown.borrow() {
+                    break;
+                }
+                let task = match &ended {
+                    Ok((task, ())) => *task,
+                    Err(error) => error.id(),
+                };
+                match &ended {
+                    Ok(_) => project_application::record_failure(
+                        "user_watcher_stopped",
+                        &project_application::AppError::Unavailable("source watcher"),
+                        None,
+                        None,
+                    ),
+                    Err(error) => {
+                        project_application::record_worker_failure("user_watcher_stopped", error, None)
+                    }
+                }
+                if let Some(entry) = supervised.values_mut().find(|entry| entry.task == Some(task)) {
+                    entry.task = None;
+                    if entry.started.elapsed() >= supervision.stable {
+                        entry.failures = 0;
+                    }
+                    entry.failures = entry.failures.saturating_add(1);
+                    entry.restart_at = tokio::time::Instant::now() + supervision.delay(entry.failures);
+                }
+            }
             _ = membership.tick() => {
-                let worker = service.clone();
-                match tokio::task::spawn_blocking(move || worker.user_engines()).await {
-                    Ok(Ok(engines)) => for (id, engine) in engines {
-                        if started.insert(id) { tasks.spawn(run(engine, shutdown.clone())); }
-                    },
-                    Ok(Err(error)) => project_application::record_failure("user_watcher_membership", &error, None, None),
-                    Err(error) => project_application::record_worker_failure("user_watcher_membership", &error, None),
+                for (id, member) in members().await {
+                    let now = tokio::time::Instant::now();
+                    let entry = supervised.entry(id).or_insert(Supervised {
+                        task: None,
+                        started: now,
+                        failures: 0,
+                        restart_at: now,
+                    });
+                    if entry.task.is_some() || now < entry.restart_at {
+                        continue;
+                    }
+                    entry.task = Some(tasks.spawn(start(member, shutdown.clone())).id());
+                    entry.started = now;
                 }
             }
         }
@@ -42,7 +159,37 @@ pub async fn run_users(service: projectd::Service, mut shutdown: watch::Receiver
     tasks.abort_all();
 }
 
-pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
+/// Intervals of one profile's background loop.
+#[derive(Clone, Copy)]
+struct Schedule {
+    membership: Duration,
+    /// Full reconciliation and retention when native notifications work.
+    reconcile: Duration,
+    /// The same pass when sources can only be polled.
+    polling_reconcile: Duration,
+    /// One retention pass soon after start, for daemons restarted more often
+    /// than the reconciliation interval.
+    first_retention: Duration,
+    /// Retry of interrupted source intents that no write has completed.
+    recovery: Duration,
+}
+impl Default for Schedule {
+    fn default() -> Self {
+        Self {
+            membership: Duration::from_secs(2),
+            reconcile: Duration::from_secs(900),
+            polling_reconcile: Duration::from_secs(30),
+            first_retention: Duration::from_secs(30),
+            recovery: Duration::from_secs(30),
+        }
+    }
+}
+
+pub async fn run(engine: Arc<Engine>, shutdown: watch::Receiver<bool>) {
+    run_with(engine, shutdown, Schedule::default()).await;
+}
+
+async fn run_with(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>, schedule: Schedule) {
     let (sender, mut receiver) = mpsc::channel(1024);
     let overflow = Arc::new(AtomicBool::new(false));
     let lost = overflow.clone();
@@ -62,13 +209,25 @@ pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
     let mut retry_refresh = tokio::time::Instant::now() - Duration::from_secs(30);
     let mut projects = BTreeMap::new();
     let mut reconcile_startup = true;
-    let mut membership = tokio::time::interval(Duration::from_secs(2));
+    let mut membership = tokio::time::interval(schedule.membership);
     membership.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let reconcile_every = if watcher.is_some() {
+        schedule.reconcile
+    } else {
+        schedule.polling_reconcile
+    };
     let mut reconcile = tokio::time::interval_at(
-        tokio::time::Instant::now() + Duration::from_secs(if watcher.is_some() { 900 } else { 30 }),
-        Duration::from_secs(if watcher.is_some() { 900 } else { 30 }),
+        tokio::time::Instant::now() + reconcile_every,
+        reconcile_every,
     );
     reconcile.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut first_retention = std::pin::pin!(tokio::time::sleep(schedule.first_retention));
+    let mut retained = false;
+    let mut recovery = tokio::time::interval_at(
+        tokio::time::Instant::now() + schedule.recovery,
+        schedule.recovery,
+    );
+    recovery.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         if *shutdown.borrow() {
             break;
@@ -111,13 +270,13 @@ pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
             },
             _ = reconcile.tick() => {
                 refresh(&engine, &projects, None, &mut shutdown).await;
-                let worker=engine.clone();
-                match tokio::task::spawn_blocking(move || worker.retain_history(project_application::now_millis())).await {
-                    Ok(Ok(_)) => {}
-                    Ok(Err(error)) => project_application::record_failure("watcher_retention", &error, None, None),
-                    Err(error) => project_application::record_worker_failure("watcher_retention", &error, None),
-                }
+                retain(&engine).await;
             },
+            _ = &mut first_retention, if !retained => {
+                retained = true;
+                retain(&engine).await;
+            },
+            _ = recovery.tick() => recover(&engine).await,
             event = receiver.recv(), if watcher.is_some() => {
                 let Some(event) = event else { break; };
                 let mut paths = BTreeSet::new();
@@ -137,6 +296,33 @@ pub async fn run(engine: Arc<Engine>, mut shutdown: watch::Receiver<bool>) {
                 else { refresh(&engine,&projects,Some(&paths),&mut shutdown).await; }
             }
         }
+    }
+}
+/// One bounded retention batch; later passes continue any backlog.
+async fn retain(engine: &Arc<Engine>) {
+    let worker = engine.clone();
+    match tokio::task::spawn_blocking(move || {
+        worker.retain_history(project_application::now_millis())
+    })
+    .await
+    {
+        Ok(Ok(_)) => {}
+        Ok(Err(error)) => {
+            project_application::record_failure("watcher_retention", &error, None, None)
+        }
+        Err(error) => project_application::record_worker_failure("watcher_retention", &error, None),
+    }
+}
+/// Retry this profile's interrupted source intents. Startup and the next write
+/// do the same; this pass covers a project that only another profile writes.
+async fn recover(engine: &Arc<Engine>) {
+    let worker = engine.clone();
+    match tokio::task::spawn_blocking(move || worker.recover_pending()).await {
+        Ok(Ok(_)) => {}
+        Ok(Err(error)) => {
+            project_application::record_failure("watcher_recovery", &error, None, None)
+        }
+        Err(error) => project_application::record_worker_failure("watcher_recovery", &error, None),
     }
 }
 type Projects = BTreeMap<PathBuf, String>;
@@ -290,6 +476,198 @@ mod tests {
         );
         assert_eq!(classify(root, &root.join(".project/cards"), id), None);
     }
+    fn registered_engine() -> (tempfile::TempDir, PathBuf, PathBuf, String) {
+        let temp = tempfile::tempdir().unwrap();
+        let root = project_store::filesystem::Directory::open(&temp.path().canonicalize().unwrap())
+            .unwrap();
+        let state = root.child("state", true).unwrap();
+        let project = root.child("project", true).unwrap();
+        let engine = Engine::open(state.path()).unwrap();
+        let plan = engine
+            .registration_plan(project.path().to_str().unwrap(), Some("Fixture"), true)
+            .unwrap();
+        engine
+            .commit_registration(
+                plan["plan_id"].as_str().unwrap(),
+                &uuid::Uuid::now_v7().to_string(),
+                engine.command_epoch(),
+            )
+            .unwrap();
+        (
+            temp,
+            state.path().to_owned(),
+            project.path().to_owned(),
+            plan["project_id"].as_str().unwrap().to_owned(),
+        )
+    }
+    fn state_value(state: &Path, sql: &str) -> Option<String> {
+        use rusqlite::OptionalExtension;
+        rusqlite::Connection::open(state.join("state.sqlite"))
+            .unwrap()
+            .query_row(sql, [], |row| row.get(0))
+            .optional()
+            .unwrap()
+    }
+    async fn eventually(what: &str, mut done: impl FnMut() -> bool) {
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while !done() {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("{what}"));
+    }
+    async fn stop(shutdown: watch::Sender<bool>, task: tokio::task::JoinHandle<()>) {
+        shutdown.send(true).unwrap();
+        tokio::time::timeout(Duration::from_secs(2), task)
+            .await
+            .expect("the background loop must stop with the daemon")
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn stopped_and_panicked_watchers_are_restarted_with_backoff() {
+        use std::sync::Mutex;
+        let starts: Arc<Mutex<Vec<(String, std::time::Instant)>>> = Arc::default();
+        let observed = starts.clone();
+        let supervision = Supervision {
+            membership: Duration::from_millis(5),
+            restart: Duration::from_millis(60),
+            restart_limit: Duration::from_millis(120),
+            stable: Duration::from_secs(60),
+        };
+        let (shutdown, signal) = watch::channel(false);
+        let task = tokio::spawn(supervise(
+            || async {
+                vec![
+                    ("failing".to_owned(), "failing"),
+                    ("healthy".to_owned(), "healthy"),
+                ]
+            },
+            move |member: &'static str, mut shutdown: watch::Receiver<bool>| {
+                let attempt = {
+                    let mut starts = observed.lock().unwrap();
+                    starts.push((member.to_owned(), std::time::Instant::now()));
+                    starts.iter().filter(|(id, _)| id == member).count()
+                };
+                async move {
+                    match (member, attempt) {
+                        // The loop ended on its own, as when its event source closes.
+                        ("failing", 1) => {}
+                        ("failing", 2 | 3) => panic!("Synthetic watcher failure"),
+                        _ => {
+                            let _ = shutdown.changed().await;
+                        }
+                    }
+                }
+            },
+            supervision,
+            signal,
+        ));
+        let count = |member: &str| {
+            starts
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|(id, _)| id == member)
+                .count()
+        };
+        eventually("a stopped watcher was never restarted", || {
+            count("failing") == 4
+        })
+        .await;
+        // The surviving attempt keeps running, and a healthy watcher is untouched.
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        assert_eq!(count("failing"), 4);
+        assert_eq!(count("healthy"), 1);
+        let times: Vec<_> = starts
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(id, _)| id == "failing")
+            .map(|(_, time)| *time)
+            .collect();
+        // Delays double from the first one up to the limit.
+        for (index, minimum) in [60, 120, 120].into_iter().enumerate() {
+            let waited = times[index + 1] - times[index];
+            assert!(
+                waited >= Duration::from_millis(minimum),
+                "restart {index} waited only {waited:?}"
+            );
+        }
+        stop(shutdown, task).await;
+    }
+
+    #[tokio::test]
+    async fn retention_runs_shortly_after_startup_without_waiting_for_reconciliation() {
+        let (_temp, state, _, _) = registered_engine();
+        let retained = "SELECT value FROM meta WHERE key='history_retention'";
+        assert_eq!(state_value(&state, retained), None);
+        let engine = Arc::new(Engine::open_for_service(&state).unwrap());
+        let (shutdown, signal) = watch::channel(false);
+        let task = tokio::spawn(run_with(
+            engine,
+            signal,
+            Schedule {
+                first_retention: Duration::from_millis(50),
+                ..Schedule::default()
+            },
+        ));
+        eventually("retention waited for the reconciliation interval", || {
+            state_value(&state, retained).is_some()
+        })
+        .await;
+        stop(shutdown, task).await;
+    }
+
+    #[tokio::test]
+    async fn interrupted_intents_are_completed_without_a_write_or_a_restart() {
+        let (_temp, state, _, project_id) = registered_engine();
+        let engine = Arc::new(Engine::open_for_service(&state).unwrap());
+        let request = uuid::Uuid::now_v7().to_string();
+        let created = engine
+            .mutate(project_application::Mutation {
+                project_id,
+                kind: Kind::Card,
+                id: None,
+                payload: serde_json::json!({"title":"Interrupted after its rename"}),
+                request_id: request.clone(),
+                epoch: engine.command_epoch().into(),
+                expected: None,
+            })
+            .unwrap();
+        assert_eq!(created.http_status, 200, "{created:?}");
+        // Return the journal to the moment after the rename and before the
+        // commit record: the source holds the new bytes, the intent is open.
+        {
+            let db = rusqlite::Connection::open(state.join("state.sqlite")).unwrap();
+            for sql in [
+                "UPDATE commands SET state='prepared' WHERE request_id=?1",
+                "UPDATE write_intents SET resolved=0 WHERE request_id=?1",
+                "DELETE FROM history WHERE request_id=?1",
+            ] {
+                assert_eq!(db.execute(sql, [&request]).unwrap(), 1, "{sql}");
+            }
+        }
+        let committed = format!("SELECT state FROM commands WHERE request_id='{request}'");
+        assert_eq!(state_value(&state, &committed).as_deref(), Some("prepared"));
+        let (shutdown, signal) = watch::channel(false);
+        let task = tokio::spawn(run_with(
+            engine,
+            signal,
+            Schedule {
+                recovery: Duration::from_millis(50),
+                ..Schedule::default()
+            },
+        ));
+        eventually(
+            "the interrupted intent waited for a write or restart",
+            || state_value(&state, &committed).as_deref() == Some("committed"),
+        )
+        .await;
+        stop(shutdown, task).await;
+    }
+
     #[tokio::test]
     async fn initial_membership_reconciles_an_empty_index_without_waiting_for_the_timer() {
         let temp = tempfile::tempdir().unwrap();
