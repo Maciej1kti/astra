@@ -26,7 +26,7 @@
   import { PlanningRead } from "./planning-read";
   import { projectionNotice } from "../../lib/api/projection-state";
   import { resourcePath, type Summary } from "../../lib/api/api";
-  import { shiftDate, shiftedSchedule } from "./dates";
+  import { shiftDate } from "./dates";
   import {
     calendarTarget,
     calendarLabel,
@@ -35,6 +35,11 @@
     type CalendarItem,
   } from "./planning";
   import type { DateProposal } from "./proposals";
+  import {
+    calendarEventAccess,
+    calendarGestureGuard,
+    calendarShortcuts,
+  } from "./calendar-keyboard";
   import {
     calendarWidgetView,
     isCalendarDate,
@@ -110,7 +115,6 @@
     loading = value;
   });
   let cancelled = false;
-  let pointer: number | null = null;
   let reset = $state(0);
   let gestureRevision = $state(0);
   let projectedGesture = -1;
@@ -312,136 +316,28 @@
   function changeLayout(value: CalendarLayout) {
     if (!active) onCalendarNavigate(date, value);
   }
-  function shortcutRegion(node: HTMLElement) {
-    node.addEventListener("keydown", shortcuts);
-    return { destroy: () => node.removeEventListener("keydown", shortcuts) };
-  }
-  function shortcuts(event: KeyboardEvent) {
-    if (
-      (event.target as HTMLElement).closest(
-        "input,textarea,select,[contenteditable=true]",
-      )
-    )
-      return;
-    if (!event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      navigate(-1);
-    }
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      navigate(1);
-    }
-    if (event.key.toLowerCase() === "t") {
-      event.preventDefault();
-      today();
-    }
-    if (["1", "2", "3", "4"].includes(event.key)) {
-      event.preventDefault();
-      changeLayout(
-        (["day", "week", "month", "agenda"] as const)[Number(event.key) - 1],
-      );
-    }
-  }
-  function eventAccess(node: HTMLElement, item: CalendarItem) {
-    const parent = node.closest<HTMLElement>("article, [role=button]");
-    const label = () => {
-      parent?.setAttribute(
-        "aria-label",
-        `${calendarLabel(item)}: ${item.title}`,
-      );
-      parent?.setAttribute("data-source-version", item.version);
-    };
-    const key = (event: KeyboardEvent) => eventKey(event, item);
-    label();
-    parent?.addEventListener("keydown", key, true);
-    return {
-      update: (next: CalendarItem) => {
-        item = next;
-        label();
-      },
-      destroy: () => parent?.removeEventListener("keydown", key, true),
-    };
-  }
-  function eventKey(event: KeyboardEvent, item: CalendarItem) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      open(calendarTarget(item));
-    }
-    if (
-      ready &&
-      !error &&
-      event.altKey &&
-      ["ArrowLeft", "ArrowRight"].includes(event.key) &&
-      (item.kind === "card_schedule" || item.kind === "card_event")
-    ) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      onpropose({
-        path: resourcePath(calendarTarget(item)),
-        version: item.version,
-        ...(item.event
-          ? {
-              event: {
-                ...item.event,
-                start: `${shiftDate(item.event.start.slice(0, 10), (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 7 : 1))}T${item.event.start.slice(11)}`,
-              },
-            }
-          : {
-              schedule: shiftedSchedule(
-                item,
-                (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 7 : 1),
-                "move",
-              ),
-            }),
-      });
-    }
-  }
-  function guard(node: HTMLElement) {
-    const down = (event: PointerEvent) => {
-      if (pointer !== null && pointer !== event.pointerId) {
-        cancel();
-        return;
-      }
-      if (!node.contains(event.target as Node) || event.button !== 0) return;
-      pointer = event.pointerId;
+  const shortcutActions = { navigate, today, layout: changeLayout };
+  const eventAccess = calendarEventAccess({
+    open: (item) => open(calendarTarget(item)),
+    movable: () => ready && !error,
+    propose: (proposal) => onpropose(proposal),
+  });
+  const gestureHooks = {
+    started: () => {
       cancelled = false;
       active = true;
       reads.pause(true);
-    };
-    const release = () => {
-      queueMicrotask(() => {
-        pointer = null;
-        active = false;
-        reads.pause(false);
-      });
-    };
-    const cancel = () => {
-      if (pointer === null) return;
+    },
+    released: () => {
+      active = false;
+      reads.pause(false);
+    },
+    cancelled: () => {
       cancelled = true;
       reset++;
       gestureRevision++;
-      release();
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cancel();
-    };
-    window.addEventListener("pointerdown", down, true);
-    window.addEventListener("pointerup", release);
-    window.addEventListener("pointercancel", cancel, true);
-    window.addEventListener("orientationchange", cancel);
-    window.addEventListener("keydown", key, true);
-    return {
-      destroy: () => {
-        window.removeEventListener("pointerdown", down, true);
-        window.removeEventListener("pointerup", release);
-        window.removeEventListener("pointercancel", cancel, true);
-        window.removeEventListener("orientationchange", cancel);
-        window.removeEventListener("keydown", key, true);
-      },
-    };
-  }
+    },
+  };
   onMount(() => {
     const media = window.matchMedia(compactCalendarQuery);
     const update = () => (compact = media.matches);
@@ -459,7 +355,7 @@
   class="calendar-region"
   aria-label="Planowanie w kalendarzu"
   tabindex="-1"
-  use:shortcutRegion
+  use:calendarShortcuts={shortcutActions}
 >
   <CalendarToolbar
     {date}
@@ -490,7 +386,7 @@
     aria-busy={loading}
     class:month={monthGrid}
     class:agenda={monthAgenda || mode === "agenda"}
-    use:guard
+    use:calendarGestureGuard={gestureHooks}
   >
     {#if loading}<p class="loading-indicator" role="status">
         Ładowanie kalendarza…
