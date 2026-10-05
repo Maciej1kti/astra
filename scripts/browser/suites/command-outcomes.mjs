@@ -267,9 +267,45 @@ await runBrowserSuite(
               exact: true,
             }),
           ).toBeVisible();
-          await expect(dialog.locator("pre")).toContainText(
-            "Changed elsewhere",
+          // The saved version is labelled text, not a dump of its JSON source.
+          const current = dialog
+            .locator("details")
+            .filter({ hasText: "Aktualna zapisana wersja" });
+          await current.locator("summary").click();
+          const fields = current.locator("dl");
+          await expect(fields.locator("dt").first()).toBeVisible();
+          const shown = Object.fromEntries(
+            await fields
+              .locator("div")
+              .evaluateAll((rows) =>
+                rows.map((row) => [
+                  row.querySelector("dt").textContent.trim(),
+                  row.querySelector("dd").textContent.trim(),
+                ]),
+              ),
           );
+          assert.equal(shown["Tytuł"], "Changed elsewhere");
+          assert.equal(shown["Status"], "Aktywne");
+          assert.equal(shown["Opis"], "Saved body");
+          assert.equal(shown["Plan"], "8 września 2026 – 9 września 2026");
+          assert.doesNotMatch(
+            await fields.innerText(),
+            /[{}]|"|\b(title|updated_at)\b|\d{4}-\d{2}-\d{2}T/,
+          );
+          await current
+            .getByRole("button", {
+              name: "Kopiuj aktualną wersję",
+              exact: true,
+            })
+            .click();
+          await expect(
+            dialog
+              .getByText("Skopiowano aktualną wersję.", { exact: true })
+              .or(
+                dialog.getByText("Schowek jest niedostępny", { exact: false }),
+              )
+              .first(),
+          ).toBeVisible();
         }
         await expect(dialog.getByTestId("autosave-status")).toHaveText(
           "Niezapisane",
@@ -324,8 +360,9 @@ await runBrowserSuite(
         .click();
       await rejected.recover(dialog);
       if (unavailable)
-        await expect(dialog).toContainText(
-          "Aktualny element jest niedostępny; proponowane daty pozostają tutaj.",
+        // The appended sentence must not run into the rejection message.
+        await expect(dialog.getByRole("alert")).toHaveText(
+          /\S Aktualny element jest niedostępny; proponowane daty pozostają tutaj\.$/,
         );
       else
         await expect(

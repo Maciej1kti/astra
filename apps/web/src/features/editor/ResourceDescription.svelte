@@ -95,27 +95,25 @@
       onblur={blur}
       {disabled}></textarea>
   {:else}
-    <div
-      class="resource-description-rendered"
-      role="button"
-      tabindex={disabled ? -1 : 0}
-      aria-label={`Edytuj opis: ${resourceLabel(type)}`}
-      aria-disabled={disabled}
-      onclick={beginEdit}
-      onkeydown={(event) => {
-        if (event.target instanceof Element && event.target.closest("a"))
-          return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          beginEdit(event);
-        }
-      }}
-    >
-      {#if body.trim()}<Markdown source={body} />{:else}<p
-          class="empty-context"
-        >
-          Dodaj opis…
-        </p>{/if}
+    <div class="resource-description-view">
+      <!-- The text is ordinary content, so its links and wording reach assistive
+           technology. Clicking it is only a pointer shortcut for the labelled
+           button below, which is the keyboard and screen-reader control. -->
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <div class="resource-description-rendered" onclick={beginEdit}>
+        {#if body.trim()}<Markdown source={body} />{:else}<p
+            class="empty-context"
+          >
+            Dodaj opis…
+          </p>{/if}
+      </div>
+      <button
+        type="button"
+        class="description-edit"
+        aria-label={`Edytuj opis: ${resourceLabel(type)}`}
+        {disabled}
+        onclick={() => (editing = true)}>Edytuj opis</button
+      >
     </div>
   {/if}
 </section>

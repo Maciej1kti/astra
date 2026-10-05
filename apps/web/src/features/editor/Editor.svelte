@@ -61,7 +61,11 @@
   import { EditorAutosave, type AutosaveState } from "./editor-autosave.ts";
   import { editTarget, type EditorTarget } from "./editor-target";
 
-  import { resourceLabel } from "../../lib/resources/resource-presentation";
+  import {
+    formatTimestamp,
+    resourceLabel,
+  } from "../../lib/resources/resource-presentation";
+  import { fieldLabel, sourceFields } from "./source-fields";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command, type Resource, type Pending } from "../../lib/api/api";
   import { deleteCard } from "../../lib/api/resources";
@@ -206,14 +210,17 @@
     operation.prepare(command);
     intent = Object.freeze(next);
   }
-  let baseline = $state(untrack(() => autosaveSnapshot(draft)));
+  // One serialization per draft change serves dirty checks, scheduling and
+  // queueing; reading it outside an effect still yields the current draft.
+  const persistedSnapshot = $derived(autosaveSnapshot(draft));
+  let baseline = $state(untrack(() => persistedSnapshot));
   const explicitBaseline = untrack(snapshot);
   const autosaveResource = $derived(
     draft.type === "card" || draft.type === "project",
   );
   const persistedDirty = $derived(
     autosaveResource
-      ? autosaveSnapshot(draft) !== baseline
+      ? persistedSnapshot !== baseline
       : snapshot() !== explicitBaseline,
   );
   const unfinishedEntry = $derived(
@@ -259,6 +266,21 @@
         "Schowek jest niedostępny. Zaznacz i skopiuj pola wersji roboczej.";
     }
   }
+  /** The readable summary omits nothing a manual merge needs: copy the source. */
+  async function copyCurrent() {
+    if (!conflict?.current) return;
+    copyMessage = "";
+    try {
+      const { metadata, body, version } = conflict.current;
+      await navigator.clipboard.writeText(
+        JSON.stringify({ metadata, body, version }, null, 2),
+      );
+      copyMessage = "Skopiowano aktualną wersję.";
+    } catch {
+      error =
+        "Schowek jest niedostępny. Zaznacz i skopiuj pola aktualnej wersji.";
+    }
+  }
   onMount(() => () => {
     disposed = true;
     opening?.cancel();
@@ -289,9 +311,14 @@
     void close();
     return true;
   }
+  let discardGroup = $state<HTMLDivElement>();
   function keepEditing() {
+    // The confirmation's buttons disappear with it; focus returns to the
+    // control that asks instead of being lost to the page.
+    const focused = discardGroup?.contains(document.activeElement);
     discard = false;
     onkeepediting?.();
+    if (focused) descriptionCloseButton?.focus({ preventScroll: true });
   }
   function finishTextEdit() {
     if (autosaveResource && persistedDirty && !closing)
@@ -312,7 +339,6 @@
 
   let history = $state<HistoryEntry[]>([]);
   let historyCursor = $state<string | null>(null);
-  let historyLoaded = false;
   let pinned = $derived(
     resource?.type === "card" && resource.metadata.pinned === true,
   );
@@ -432,7 +458,6 @@
       );
       history = page.items;
       historyCursor = page.page.next_cursor;
-      historyLoaded = true;
     } catch (e) {
       error = errorMessage(e);
     }
@@ -529,7 +554,6 @@
       baseline = submittedSnapshot;
       autosaveError = "";
       onautosaved?.(next);
-      if (historyLoaded) void loadHistory();
       if (autoCreate && !autosaveCreated) {
         autosaveCreated = true;
         onsaved();
@@ -609,7 +633,7 @@
   function queueAutosave() {
     autosaveTimer = null;
     if (!autosaveResource || conflict || deleteBusy || deletePending) return;
-    const snapshotValue = autosaveSnapshot(draft);
+    const snapshotValue = persistedSnapshot;
     if (resource && snapshotValue === baseline && !autosave.hasWork) {
       // Reverting a local validation error requires no write or command reset.
       if (autosaveState.phase === "idle" || autosaveState.phase === "saved")
@@ -646,18 +670,17 @@
         throw new Error(
           autosaveError || "Wersja robocza nie jest jeszcze prawidłowa.",
         );
-      await autosave.enqueue(
-        detachedEditorDraft(draft),
-        autosaveSnapshot(draft),
-      );
+      await autosave.enqueue(detachedEditorDraft(draft), persistedSnapshot);
     }
     await autosave.flush();
   }
-  let watchedAutosaveSnapshot = $state(untrack(() => autosaveSnapshot(draft)));
-  let immediateAutosave = $state(false);
+  // Plain bookkeeping: the effect below must depend on the draft alone, so it
+  // runs once per change instead of again for its own writes.
+  let watchedAutosaveSnapshot = untrack(() => persistedSnapshot);
+  let immediateAutosave = false;
   $effect(() => {
     if (!autosaveResource) return;
-    const current = autosaveSnapshot(draft);
+    const current = persistedSnapshot;
     if (current === watchedAutosaveSnapshot) return;
     const previous = watchedAutosaveSnapshot;
     watchedAutosaveSnapshot = current;
@@ -854,11 +877,10 @@
         const rebuilt = draftForResource(next);
         carryUnsubmittedEntries(rebuilt, draft);
         draft = rebuilt;
-        baseline = autosaveSnapshot(draft);
+        baseline = persistedSnapshot;
         watchedAutosaveSnapshot = baseline;
         autosave.reset(next);
         onautosaved?.(next);
-        if (historyLoaded) void loadHistory();
         statusMessage = "Zapisano";
         onchanged?.();
       } else {
@@ -1011,13 +1033,17 @@
           <p>{deleteError}</p>
         </div>{/if}
       {#if conflict}
-        {#if conflict.current}<details>
+        {#if conflict.current}<details class="conflict-current">
             <summary>Aktualna zapisana wersja</summary>
-            <pre>{JSON.stringify(
-                conflict.current.metadata,
-                null,
-                2,
-              )}{"\n"}{conflict.current.body}</pre>
+            <dl>
+              {#each sourceFields(conflict.current) as field (field.name)}<div>
+                  <dt>{field.label}</dt>
+                  <dd>{field.value}</dd>
+                </div>{/each}
+            </dl>
+            <button type="button" onclick={copyCurrent}
+              >Kopiuj aktualną wersję</button
+            >
           </details>
         {:else}<p>
             Aktualna zapisana wersja jest niedostępna. Wersja robocza została
@@ -1064,8 +1090,14 @@
         oncheck={() => void checkDelete()}
         onretry={() => void retryDelete()}
       />
-      {#if discard}<div role="alert" class="notice">
-          <p>
+      {#if discard}<div
+          bind:this={discardGroup}
+          class="notice"
+          role="group"
+          aria-labelledby="discard-draft-question"
+        >
+          <!-- Only the question is announced; the choices stay ordinary buttons. -->
+          <p id="discard-draft-question" role="alert">
             {pending || deletePending || autosaveWork
               ? "Wynik polecenia może nadal być nieznany. Zachowaj identyfikator żądania przed zamknięciem."
               : "Odrzucić niezapisaną wersję roboczą?"}
@@ -1077,9 +1109,9 @@
             >Odrzuć wersję roboczą</button
           ><button type="button" onclick={keepEditing}>Kontynuuj edycję</button>
         </div>{/if}
-      {#if deleteConfirmation}<section
+      {#if deleteConfirmation}<div
           class="notice delete-confirmation"
-          role="alert"
+          role="alertdialog"
           aria-labelledby="delete-card-heading"
           aria-describedby="delete-card-description"
         >
@@ -1115,7 +1147,7 @@
               >Kontynuuj edycję</button
             >
           </div>
-        </section>{/if}
+        </div>{/if}
       {#if statusMessage && statusMessage !== "Zapisano" && !error && !autosaveError && !deleteError && !conflict && !pending && !deletePending && !discard && !deleteConfirmation}<p
           class="action-status"
           role="status"
@@ -1445,8 +1477,12 @@
               Poczekaj na zapis zmian lub rozstrzygnij wersję roboczą przed
               cofnięciem zapisanej zmiany.
             </p>{/if}{#each history as entry}<div class="historyentry">
-              <small>{entry.recorded_at}</small>
-              <p>{entry.changed_fields.join(", ")}</p>
+              <small
+                ><time datetime={entry.recorded_at} title={entry.recorded_at}
+                  >{formatTimestamp(entry.recorded_at)}</time
+                ></small
+              >
+              <p>{entry.changed_fields.map(fieldLabel).join(", ")}</p>
               <button
                 type="button"
                 disabled={locked ||

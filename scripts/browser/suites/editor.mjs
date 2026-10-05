@@ -961,6 +961,65 @@ export async function runEditorChecks({
     },
   );
 
+  await check(
+    "A10-history",
+    "Milestone history shows readable dates and Polish field names, and still undoes",
+    async () => {
+      const path = `${base}/milestones`;
+      const created = await mutate("POST", path, {
+        title: "History milestone",
+        due: { date: "2026-10-01" },
+      });
+      const item = `${path}/${created.id}`;
+      await mutate(
+        "PATCH",
+        item,
+        {
+          set: {
+            title: "History milestone renamed",
+            status: "active",
+            due: { date: "2026-10-15" },
+          },
+        },
+        cli("get", item).version,
+      );
+      const entries = cli("get", `${item}/history`).items;
+      const edit = entries.find((entry) => entry.can_undo);
+      assert(edit, "the milestone edit should be undoable");
+      assert.deepEqual(edit.changed_fields, ["due", "status", "title"]);
+      await route("list", { type: "milestone", resource: created.id });
+      await expect(title()).toHaveValue("History milestone renamed");
+      await dialog().getByText("Historia zmian", { exact: true }).click();
+      await dialog()
+        .getByRole("button", { name: "Pierwsza strona historii", exact: true })
+        .click();
+      const rows = dialog().locator(".historyentry");
+      await expect(rows).toHaveCount(entries.length);
+      const undo = (scope) =>
+        scope.getByRole("button", { name: "Cofnij tę zmianę", exact: true });
+      const row = rows.filter({ has: page.locator("button:enabled") });
+      await expect(row).toHaveCount(1);
+      // Field names follow the editor's own labels, in the recorded order.
+      await expect(row.locator("p")).toHaveText("Termin, Status, Tytuł");
+      const recorded = row.locator("time");
+      await expect(recorded).toHaveAttribute("datetime", edit.recorded_at);
+      const shown = (await recorded.innerText()).trim();
+      assert.match(shown, /^\d{1,2} \p{L}{3,} \d{4}, \d{2}:\d{2} UTC$/u);
+      for (const entry of await rows.allInnerTexts()) {
+        assert.doesNotMatch(entry, /\d{4}-\d{2}-\d{2}T/);
+        assert.doesNotMatch(entry, /\b(title|status|due|created_at)\b/);
+      }
+      await screenshot("A10-history");
+      await undo(row).click();
+      await expect(dialog()).toHaveCount(0);
+      const restored = cli("get", item).metadata;
+      assert.equal(restored.title, "History milestone");
+      assert.equal(restored.status, "planned");
+      assert.deepEqual(restored.due, { date: "2026-10-01" });
+      return { shown, entries: entries.length };
+    },
+  );
+
   await writeFile(
     join(evidenceDir, "results.json"),
     JSON.stringify({ results, errors }, null, 2),

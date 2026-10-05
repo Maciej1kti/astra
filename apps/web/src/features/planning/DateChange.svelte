@@ -100,7 +100,7 @@
           conflict = { current: await api<Resource>(path) };
         } catch {
           error +=
-            "Aktualny element jest niedostępny; proponowane daty pozostają tutaj.";
+            " Aktualny element jest niedostępny; proponowane daty pozostają tutaj.";
         }
       }
     }

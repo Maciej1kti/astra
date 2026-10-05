@@ -91,9 +91,27 @@
 .editor .resource-description-rendered:hover {
   background: var(--soft);
 }
-.editor .resource-description-rendered:focus-visible {
-  outline: var(--focus-width) solid var(--accent-ink);
-  outline-offset: var(--space-2);
+.editor .resource-description-view {
+  position: relative;
+}
+/* Pointer users click the text; the control appears for keyboard focus and is
+   always present for assistive technology. */
+.editor .description-edit {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+.editor .description-edit:not(:focus-visible) {
+  width: var(--stroke);
+  height: var(--stroke);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .editor .action-status,
 .editor .empty-context {
@@ -172,6 +190,23 @@
 .editor .historyentry {
   padding: var(--space-6) 0;
   border-bottom: var(--stroke) solid var(--line);
+}
+.editor .conflict-current dl {
+  display: grid;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+  padding: var(--space-6);
+  background: var(--soft);
+  border-radius: var(--radius-control);
+}
+.editor .conflict-current dt {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.editor .conflict-current dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 .editor .editor-form > .dialog-footer {
   position: sticky;
