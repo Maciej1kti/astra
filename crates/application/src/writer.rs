@@ -4,6 +4,7 @@ use crate::command_state::CommandState;
 use crate::{
     AppError, Reply, instant,
     journal::{Command, Intent, Journal, Reference},
+    source::unacceptable_form,
 };
 use project_domain::validate_document;
 use project_store::{
@@ -104,12 +105,19 @@ impl Writer<'_> {
             Some(references) => references,
             None => return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id)),
         };
-        if !references_match(store, &references)? {
-            return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id));
+        match references_match(store, &references).map_err(unacceptable_form) {
+            Ok(true) => {}
+            Ok(false) => {
+                return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id));
+            }
+            Err(AppError::Rejected(reply)) => {
+                return reject(reply.for_request(&command.request_id));
+            }
+            Err(error) => return Err(error),
         }
-        if let Err(error) = guard(store) {
+        if let Err(error) = guard(store).map_err(unacceptable_form) {
             return match error {
-                AppError::Rejected(reply) => reject(reply),
+                AppError::Rejected(reply) => reject(reply.for_request(&command.request_id)),
                 error => Err(error),
             };
         }
@@ -263,8 +271,15 @@ impl Writer<'_> {
             Some(references) => references,
             None => return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id)),
         };
-        if !references_match(store, &references)? {
-            return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id));
+        match references_match(store, &references).map_err(unacceptable_form) {
+            Ok(true) => {}
+            Ok(false) => {
+                return reject(Reply::error(412, "REFERENCE_CHANGED", &command.request_id));
+            }
+            Err(AppError::Rejected(reply)) => {
+                return reject(reply.for_request(&command.request_id));
+            }
+            Err(error) => return Err(error),
         }
         let previous_value = previous.as_ref().map(|p| p.value());
         let mut value = match build(previous_value.as_ref()) {

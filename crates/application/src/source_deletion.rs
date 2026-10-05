@@ -9,7 +9,7 @@ use crate::{
     engine::Engine,
     journal::{Command, Intent, Reference, Target},
     now_millis,
-    source::read,
+    source::{read, unacceptable_form},
     writer::Writer,
 };
 use project_store::{
@@ -111,15 +111,20 @@ impl Engine {
         let mut store = handle
             .lock()
             .map_err(|_| AppError::LockPoisoned("project store"))?;
+        // No intent exists yet, so an unacceptable source is a definite outcome.
+        let reject_error = |error| {
+            self.journal
+                .reject_error(&command, unacceptable_form(error), now)
+        };
         if let Err(error) = preflight_source(&store, kind, id, command.expected.as_deref()) {
-            return self.journal.reject_error(&command, error, now);
+            return reject_error(error);
         }
         if let Err(error) = deletion_guard(&store, kind, project_id, id, request_id) {
-            return self.journal.reject_error(&command, error, now);
+            return reject_error(error);
         }
         let project = match read(&store, Kind::Project, project_id) {
             Ok(project) => project,
-            Err(error) => return self.journal.reject_error(&command, error, now),
+            Err(error) => return reject_error(error),
         };
         if project.document.get().status() == Some("archived") {
             return reject(Reply::error(409, "PROJECT_ARCHIVED", request_id));

@@ -29,6 +29,31 @@ pub fn pretty(value: &impl serde::Serialize) -> Vec<u8> {
     bytes.push(b'\n');
     bytes
 }
+/// Store refusals that describe a source, or an entry of its collection, that
+/// exists in a form the store will not read. They last until the folder is
+/// repaired, unlike a replaced project directory or an I/O failure.
+const UNACCEPTABLE_FORMS: [&str; 6] = [
+    "INVALID_ID",
+    "SYMLINK_OR_INVALID_DIRECTORY",
+    "SPECIAL_FILE_OR_HARDLINK",
+    "DOCUMENT_LIMIT",
+    "NON_UTF8_PATH",
+    "DIRECTORY_ENTRY_LIMIT",
+];
+
+/// While a command has no intent, nothing can have been written, so a source in
+/// an unacceptable form is the definite `DOCUMENT_INVALID` rejection rather
+/// than an uncertain storage failure. Callers apply this only before an intent
+/// is journaled: afterwards the outcome belongs to withdrawal and recovery, and
+/// a storage error must never read as a rejection.
+pub(crate) fn unacceptable_form(error: AppError) -> AppError {
+    match error {
+        AppError::Store(StoreError::Invalid(code)) if UNACCEPTABLE_FORMS.contains(&code) => {
+            AppError::reject(409, "DOCUMENT_INVALID")
+        }
+        error => error,
+    }
+}
 pub(crate) fn read(
     store: &ProjectStore,
     kind: Kind,
@@ -346,6 +371,38 @@ mod tests {
             assert!(result.is_ok());
         }
         assert_eq!(active.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn only_unacceptable_source_forms_become_definite_rejections() {
+        for code in UNACCEPTABLE_FORMS {
+            let AppError::Rejected(reply) =
+                unacceptable_form(AppError::Store(StoreError::Invalid(code)))
+            else {
+                panic!("{code} describes a source in an unacceptable form");
+            };
+            assert_eq!(reply.http_status, 409);
+            assert_eq!(reply.body["error"]["code"], "DOCUMENT_INVALID");
+        }
+        // A replaced project folder, a lost lease, a conflict or an I/O failure
+        // is not a statement about one source and stays a storage failure.
+        for error in [
+            StoreError::Invalid("DIRECTORY_CHANGED"),
+            StoreError::Invalid("LEASE_REPLACED"),
+            StoreError::Invalid("PRIVATE_DIRECTORY_REQUIRED"),
+            StoreError::Conflict,
+            StoreError::MissingCollection,
+            StoreError::Io(std::io::ErrorKind::PermissionDenied.into()),
+        ] {
+            assert!(matches!(
+                unacceptable_form(AppError::Store(error)),
+                AppError::Store(_)
+            ));
+        }
+        assert!(matches!(
+            unacceptable_form(AppError::invariant("unrelated")),
+            AppError::Invariant("unrelated")
+        ));
     }
 
     fn fixture() -> (tempfile::TempDir, ProjectStore, Vec<String>) {

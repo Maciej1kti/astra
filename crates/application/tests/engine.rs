@@ -145,6 +145,9 @@ mod recovery_review;
 #[path = "engine/writes.rs"]
 mod writes;
 
+#[path = "engine/invalid_sources.rs"]
+mod invalid_sources;
+
 #[path = "engine/card_fields.rs"]
 mod card_fields;
 

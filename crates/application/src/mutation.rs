@@ -4,7 +4,7 @@ use crate::{
     instant,
     journal::{Command, Reference, Target},
     now_millis,
-    source::{collection, read},
+    source::{collection, read, unacceptable_form},
     wire,
     writer::Writer,
 };
@@ -114,7 +114,10 @@ impl Engine {
             .lock()
             .map_err(|_| AppError::LockPoisoned("project store"))?;
         let now = now_millis();
-        let prepared = match prepare(&self.journal, &store, &command, create, now) {
+        // No intent exists yet, so an unacceptable source is a definite outcome.
+        let prepared = match prepare(&self.journal, &store, &command, create, now)
+            .map_err(unacceptable_form)
+        {
             Ok(value) => value,
             Err(AppError::Rejected(reply)) => return reject(reply),
             Err(error) => return Err(error),
@@ -123,7 +126,9 @@ impl Engine {
             debug_assert!(membership);
             drop(store);
             if let Err(error) = self.admit_pin(&project_id) {
-                return self.journal.reject_error(&command, error, now);
+                return self
+                    .journal
+                    .reject_error(&command, unacceptable_form(error), now);
             }
             store = handle
                 .lock()

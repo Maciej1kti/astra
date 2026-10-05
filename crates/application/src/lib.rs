@@ -96,6 +96,13 @@ impl Reply {
         }
         reply
     }
+    /// Name the command in an error reply that was built without its request ID.
+    pub(crate) fn for_request(mut self, request_id: &str) -> Self {
+        if let Some(error) = self.body.get_mut("error").and_then(Value::as_object_mut) {
+            error.insert("request_id".into(), json!(request_id));
+        }
+        self
+    }
     pub fn replay(mut self) -> Self {
         if self.body.get("replayed").is_some() {
             self.body["replayed"] = json!(true);
