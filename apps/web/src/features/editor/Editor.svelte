@@ -18,7 +18,7 @@
     HistoryEntry,
     CommandResponse,
   } from "../../lib/contracts/api.generated";
-  import ReportFields from "./ReportFields.svelte";
+  import RecordForm from "./RecordForm.svelte";
   import UpdateDetails from "./UpdateDetails.svelte";
   import CardPlanningFields from "./CardPlanningFields.svelte";
   import CardLayoutMenu from "./CardLayoutMenu.svelte";
@@ -31,8 +31,7 @@
   import { countersDirty } from "../cards/card-counters";
   import CardComments from "../cards/CardComments.svelte";
   import "../../styles/editor.css";
-  import CommandRecovery from "../../lib/ui/CommandRecovery.svelte";
-  import SessionNotice from "../../lib/ui/SessionNotice.svelte";
+  import EditorMessages from "./EditorMessages.svelte";
   import {
     commandOperation,
     sessionAccess,
@@ -42,7 +41,6 @@
     isRejectedConflict,
   } from "../../lib/api/command-result";
   import { untrack, onMount } from "svelte";
-  import Markdown from "../../lib/ui/Markdown.svelte";
 
   import { acceptanceValidation } from "../cards/card-work";
   import { tagValidation } from "../tags/tags";
@@ -61,20 +59,16 @@
   import { EditorAutosave, type AutosaveState } from "./editor-autosave.ts";
   import { editTarget, type EditorTarget } from "./editor-target";
 
-  import {
-    formatTimestamp,
-    resourceLabel,
-  } from "../../lib/resources/resource-presentation";
-  import { fieldLabel, sourceFields } from "./source-fields";
+  import { resourceLabel } from "../../lib/resources/resource-presentation";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command, type Resource, type Pending } from "../../lib/api/api";
-  import { deleteCard } from "../../lib/api/resources";
+  import { cardDeletion } from "./card-deletion.svelte";
 
   const access = sessionAccess({
     ended: () => {
       opening?.cancel();
       // Without unsaved work nothing is retained below the pairing layer.
-      if (!dirty && !pending && !deletePending && !autosave.hasWork) {
+      if (!dirty && !pending && !deletion.pending && !autosave.hasWork) {
         onclose();
         return;
       }
@@ -84,7 +78,23 @@
   });
   const accessLost = $derived(access.lost);
   const operation = commandOperation(() => !access.lost);
-  const deleteOperation = commandOperation(() => !access.lost);
+  const deletion = cardDeletion({
+    accessLost: () => access.lost,
+    card: () =>
+      draft.type === "card" && resource
+        ? { project, id: resource.metadata.id, version: resource.version }
+        : null,
+    locked: () => locked,
+    commandActive: () => busy || !!pending,
+    conflict: () => !!conflict,
+    dirty: () => dirty,
+    unsaved: () => autosaveResource && (autosave.hasWork || persistedDirty),
+    flush: () => flushAutosave(),
+    flushFailed: (cause) => {
+      autosaveError = errorMessage(cause);
+    },
+    deleted: () => ondeleted(),
+  });
 
   let {
     target,
@@ -155,13 +165,6 @@
   let error = $state("");
   let busy = $derived(operation.busy);
   let pending = $derived(operation.pending);
-  let deleteBusy = $derived(deleteOperation.busy);
-  let deletePending = $derived(deleteOperation.pending);
-  let deleteError = $state("");
-  let deleteConflict = $state(false);
-  let deleteFlushing = $state(false);
-  let deleteConfirmation = $state<"drafts" | "final" | null>(null);
-  let deleteNotice = $state<HTMLDivElement>();
   let conflict = $state<{ current: Resource | null } | null>(null);
   let autosaveState = $state<AutosaveState>({
     phase: "idle",
@@ -179,7 +182,7 @@
                 !!message &&
                 message !== error &&
                 message !== autosaveError &&
-                message !== deleteError,
+                message !== deletion.error,
             ),
           ),
         ]
@@ -189,18 +192,18 @@
   let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
   let autosaveCreated = false;
   let disposed = false;
-  const autosaveBusy = $derived(
-    autosaveState.phase === "submitting" || autosaveState.phase === "checking",
-  );
   const autosaveWork = $derived(
     !!autosaveState.pending || autosaveState.queued,
   );
 
-  let preview = $state(false);
   let descriptionEditing = $state(false);
   let descriptionCloseButton = $state<HTMLButtonElement>();
   let discard = $state(false);
   let closing = $state(false);
+  // A quick card is being created and nothing needs the user's attention yet.
+  const creating = $derived(
+    autoCreate && !error && !autosaveError && !conflict && !discard,
+  );
 
   function snapshot() {
     return draftSnapshot(draft);
@@ -237,10 +240,10 @@
     busy ||
       !!pending ||
       accessLost ||
-      deleteBusy ||
-      !!deletePending ||
-      !!deleteConfirmation ||
-      deleteFlushing ||
+      deletion.busy ||
+      !!deletion.pending ||
+      !!deletion.confirmation ||
+      deletion.flushing ||
       commentFlushing ||
       closing,
   );
@@ -254,7 +257,7 @@
             fields: JSON.parse(snapshot()),
             pending,
             autosave_pending: autosave.pending,
-            delete_pending: deletePending,
+            delete_pending: deletion.pending,
           },
           null,
           2,
@@ -287,7 +290,7 @@
     clearAutosaveTimer();
   });
   function close() {
-    if (closing || busy || deleteBusy || commentFlushing) return;
+    if (closing || busy || deletion.busy || commentFlushing) return;
     if (autosaveResource && (autosave.hasWork || persistedDirty)) {
       closing = true;
       void flushAutosave()
@@ -303,22 +306,19 @@
         });
       return;
     }
-    if (dirty || pending || deletePending) discard = true;
+    if (dirty || pending || deletion.pending) discard = true;
     else onclose();
   }
   export function requestClose() {
-    if (busy || deleteBusy) return false;
+    if (busy || deletion.busy) return false;
     void close();
     return true;
   }
-  let discardGroup = $state<HTMLDivElement>();
-  function keepEditing() {
-    // The confirmation's buttons disappear with it; focus returns to the
-    // control that asks instead of being lost to the page.
-    const focused = discardGroup?.contains(document.activeElement);
+  function keepEditing(returnFocus: boolean) {
     discard = false;
     onkeepediting?.();
-    if (focused) descriptionCloseButton?.focus({ preventScroll: true });
+    // Focus returns to the control that asks instead of being lost to the page.
+    if (returnFocus) descriptionCloseButton?.focus({ preventScroll: true });
   }
   function finishTextEdit() {
     if (autosaveResource && persistedDirty && !closing)
@@ -326,12 +326,8 @@
         autosaveError = errorMessage(cause);
       });
   }
-  function focusDeleteAction(node: HTMLButtonElement) {
-    node.focus({ preventScroll: true });
-    node.scrollIntoView({ block: "center", inline: "nearest" });
-  }
   function beforeUnload(event: BeforeUnloadEvent) {
-    if (dirty || pending || deletePending || autosave.hasWork) {
+    if (dirty || pending || deletion.pending || autosave.hasWork) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -480,10 +476,6 @@
     );
     await transmit();
   }
-  let notice = $state<HTMLDivElement>();
-  $effect(() => {
-    if (error) notice?.scrollIntoView({ block: "center" });
-  });
   let readonly = $derived(draft.type === "update" && !!resource);
   const cardStatuses = [
     "planned",
@@ -492,13 +484,7 @@
     "done",
     "cancelled",
   ] as const;
-  const statuses = $derived(
-    draft.type === "project"
-      ? ["active", "paused", "archived"]
-      : draft.type === "milestone"
-        ? ["planned", "active", "achieved", "cancelled"]
-        : cardStatuses,
-  );
+  const projectStatuses = ["active", "paused", "archived"];
   function path() {
     const root = `/api/v1/projects/${project}`;
     return draft.type === "project"
@@ -540,9 +526,9 @@
     allowed: () =>
       !disposed &&
       !accessLost &&
-      !deleteBusy &&
-      !deletePending &&
-      !deleteConfirmation &&
+      !deletion.busy &&
+      !deletion.pending &&
+      !deletion.confirmation &&
       !pending,
     oncommitted: (next, submittedSnapshot) => {
       if (disposed) return;
@@ -632,7 +618,8 @@
   }
   function queueAutosave() {
     autosaveTimer = null;
-    if (!autosaveResource || conflict || deleteBusy || deletePending) return;
+    if (!autosaveResource || conflict || deletion.busy || deletion.pending)
+      return;
     const snapshotValue = persistedSnapshot;
     if (resource && snapshotValue === baseline && !autosave.hasWork) {
       // Reverting a local validation error requires no write or command reset.
@@ -724,89 +711,6 @@
     }
   }
 
-  async function requestDelete() {
-    if (
-      draft.type !== "card" ||
-      !resource ||
-      locked ||
-      conflict ||
-      deleteConflict ||
-      deleteFlushing
-    )
-      return;
-    if (autosaveResource && (autosave.hasWork || persistedDirty)) {
-      deleteFlushing = true;
-      try {
-        await flushAutosave();
-      } catch (cause) {
-        autosaveError = errorMessage(cause);
-        return;
-      } finally {
-        deleteFlushing = false;
-      }
-      if (autosave.hasWork || persistedDirty) return;
-    }
-    deleteError = "";
-    deleteConflict = false;
-    deleteConfirmation = dirty ? "drafts" : "final";
-  }
-  function cancelDelete() {
-    if (deleteBusy) return;
-    deleteConfirmation = null;
-    deleteError = "";
-  }
-  function continueDelete() {
-    if (deleteBusy || !resource || draft.type !== "card") return;
-    deleteConfirmation = "final";
-  }
-  async function deleteSavedCard() {
-    if (
-      deleteConfirmation !== "final" ||
-      deleteBusy ||
-      deletePending ||
-      busy ||
-      pending ||
-      conflict ||
-      deleteConflict ||
-      draft.type !== "card" ||
-      !resource ||
-      accessLost
-    )
-      return;
-    deleteConfirmation = null;
-    deleteError = "";
-    deleteConflict = false;
-    try {
-      deleteOperation.prepare(
-        deleteCard(project, resource.metadata.id, resource.version),
-      );
-    } catch (cause) {
-      deleteError = commandErrorMessage(cause);
-      return;
-    }
-    await runDelete("submit");
-  }
-  async function checkDelete() {
-    await runDelete("status");
-  }
-  async function retryDelete() {
-    await runDelete("submit");
-  }
-  async function runDelete(action: "submit" | "status") {
-    if (!deletePending || deleteBusy || accessLost) return;
-    deleteError = "";
-    try {
-      if (action === "status") await deleteOperation.confirm();
-      else await deleteOperation.commit();
-      ondeleted();
-    } catch (cause) {
-      deleteError = commandErrorMessage(cause);
-      if (isRejectedConflict(deleteOperation.phase, cause)) {
-        deleteConflict = true;
-        deleteError = `${deleteError} Karta nie została usunięta. Zamknij i otwórz ją ponownie przed kolejną próbą.`;
-      }
-    }
-  }
   async function transmit() {
     await runCommand("submit");
   }
@@ -894,13 +798,6 @@
       : "Oznaczono jako nieprzeczytane.";
     onchanged?.();
   }
-  $effect(() => {
-    if (!deleteError || !deleteNotice) return;
-    queueMicrotask(() => {
-      deleteNotice?.scrollIntoView({ block: "center", inline: "nearest" });
-      deleteNotice?.focus({ preventScroll: true });
-    });
-  });
 </script>
 
 <svelte:window onbeforeunload={beforeUnload} />
@@ -1002,165 +899,39 @@
       {/if}
     {/snippet}
     {#snippet editorMessages()}
-      {#if autoCreate && !error && !autosaveError && !conflict && !discard}<p
-          role="status"
-        >
-          Tworzenie karty…
-        </p>{/if}
-      {#if fieldMessages.length}
-        <div class="notice" role="alert">
-          {#each fieldMessages as message}<p>
-              {message}
-            </p>{/each}
-        </div>
-      {/if}
-      <SessionNotice
-        lost={accessLost}
-        message="Sesja wygasła. Wersja robocza została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
-      />
-      {#if error}<div bind:this={notice} class="notice" role="alert">
-          {error}
-        </div>{/if}
-      {#if autosaveResource && autosaveError}<div class="notice" role="alert">
-          {autosaveError}
-        </div>{/if}
-      {#if deleteError}<div
-          bind:this={deleteNotice}
-          class="notice"
-          role="alert"
-          tabindex="-1"
-        >
-          <p>{deleteError}</p>
-        </div>{/if}
-      {#if conflict}
-        {#if conflict.current}<details class="conflict-current">
-            <summary>Aktualna zapisana wersja</summary>
-            <dl>
-              {#each sourceFields(conflict.current) as field (field.name)}<div>
-                  <dt>{field.label}</dt>
-                  <dd>{field.value}</dd>
-                </div>{/each}
-            </dl>
-            <button type="button" onclick={copyCurrent}
-              >Kopiuj aktualną wersję</button
-            >
-          </details>
-        {:else}<p>
-            Aktualna zapisana wersja jest niedostępna. Wersja robocza została
-            zachowana w edytorze.
-          </p>{/if}
-        <p>
-          Zamknij i otwórz ponownie, aby edytować aktualną wersję. Najpierw
-          skopiuj zmiany, które chcesz zachować.
-        </p>{/if}
-      <CommandRecovery
+      <EditorMessages
+        {creating}
+        {fieldMessages}
+        {accessLost}
+        {error}
+        {autosaveError}
+        autosaves={autosaveResource}
+        {autosaveState}
+        {conflict}
         {pending}
         {busy}
-        {accessLost}
+        {dirty}
+        {discard}
+        {copyMessage}
+        {statusMessage}
+        title={draft.common.title}
+        {deletion}
         oncheck={resolve}
         onretry={transmit}
+        onautosavecheck={autosaveCheck}
+        onautosaveretry={autosaveRetry}
+        oncopy={copyDraft}
+        oncopycurrent={copyCurrent}
+        ondiscard={onclose}
+        onkeepediting={keepEditing}
       />
-      {#if (dirty || pending || deletePending || autosaveState.pending) && (!autosaveResource || discard || accessLost || !!error || !!autosaveError || !!conflict || !!pending || !!deletePending)}<button
-          type="button"
-          onclick={copyDraft}>Kopiuj wersję roboczą</button
-        >{/if}
-      {#if copyMessage}<p class="action-status" role="status">
-          {copyMessage}
-        </p>{/if}
-      {#if autosaveResource && (autosaveState.phase === "uncertain" || autosaveState.phase === "conflict")}
-        <CommandRecovery
-          pending={autosaveState.pending}
-          {accessLost}
-          label="Żądanie automatycznego zapisu"
-          oncheck={autosaveState.phase === "uncertain"
-            ? autosaveCheck
-            : undefined}
-          onretry={autosaveState.phase === "uncertain"
-            ? autosaveRetry
-            : undefined}
-        />
-      {/if}
-      <CommandRecovery
-        pending={deletePending}
-        busy={deleteBusy}
-        {accessLost}
-        label="Żądanie usunięcia"
-        checkLabel="Sprawdź stan usunięcia"
-        retryLabel="Ponów to samo usunięcie"
-        oncheck={() => void checkDelete()}
-        onretry={() => void retryDelete()}
-      />
-      {#if discard}<div
-          bind:this={discardGroup}
-          class="notice"
-          role="group"
-          aria-labelledby="discard-draft-question"
-        >
-          <!-- Only the question is announced; the choices stay ordinary buttons. -->
-          <p id="discard-draft-question" role="alert">
-            {pending || deletePending || autosaveWork
-              ? "Wynik polecenia może nadal być nieznany. Zachowaj identyfikator żądania przed zamknięciem."
-              : "Odrzucić niezapisaną wersję roboczą?"}
-          </p>
-          <button
-            type="button"
-            onclick={onclose}
-            disabled={busy || deleteBusy || autosaveBusy}
-            >Odrzuć wersję roboczą</button
-          ><button type="button" onclick={keepEditing}>Kontynuuj edycję</button>
-        </div>{/if}
-      {#if deleteConfirmation}<div
-          class="notice delete-confirmation"
-          role="alertdialog"
-          aria-labelledby="delete-card-heading"
-          aria-describedby="delete-card-description"
-        >
-          <h3 id="delete-card-heading">
-            {deleteConfirmation === "drafts"
-              ? "Odrzucić wersje robocze przed usunięciem?"
-              : "Trwale usunąć kartę?"}
-          </h3>
-          <p id="delete-card-description">
-            {#if deleteConfirmation === "drafts"}
-              Niezapisane wersje robocze karty lub raportu zostaną odrzucone
-              przed trwałym usunięciem karty „{draft.common.title}”.
-            {:else}
-              Trwale usunąć kartę „{draft.common.title}”? Spowoduje to usunięcie
-              pliku źródłowego i nie można tego cofnąć.
-            {/if}
-          </p>
-          <div class="row">
-            {#if deleteConfirmation === "drafts"}<button
-                type="button"
-                class="primary"
-                onclick={continueDelete}
-                use:focusDeleteAction
-                disabled={deleteBusy}>Odrzuć wersje robocze i kontynuuj</button
-              >{:else}<button
-                type="button"
-                class="danger"
-                onclick={() => void deleteSavedCard()}
-                use:focusDeleteAction
-                disabled={deleteBusy || accessLost}>Trwale usuń kartę</button
-              >{/if}
-            <button type="button" onclick={cancelDelete} disabled={deleteBusy}
-              >Kontynuuj edycję</button
-            >
-          </div>
-        </div>{/if}
-      {#if statusMessage && statusMessage !== "Zapisano" && !error && !autosaveError && !deleteError && !conflict && !pending && !deletePending && !discard && !deleteConfirmation}<p
-          class="action-status"
-          role="status"
-        >
-          {statusMessage}
-        </p>{/if}
     {/snippet}
     <DialogHeader
       content={draft.type === "card" ? cardHeaderContent : undefined}
       messages={editorMessages}
       onclose={close}
       closeLabel="Zamknij edytor"
-      disabled={busy || deleteBusy || closing}
+      disabled={busy || deletion.busy || closing}
       bind:closeButton={descriptionCloseButton}
       onclosepointerdown={(event) => {
         // Preserve the clicked target while a description edit changes height.
@@ -1219,8 +990,8 @@
             <button
               type="button"
               class="quiet destructive-action"
-              onclick={requestDelete}
-              disabled={locked || !!conflict || deleteConflict}
+              onclick={deletion.request}
+              disabled={locked || !!conflict || deletion.conflict}
               >Usuń kartę</button
             >
           </ActionMenu>
@@ -1229,11 +1000,7 @@
     </DialogHeader>
     <form
       class="dialog-body editor-form"
-      class:quick-pending={autoCreate &&
-        !error &&
-        !autosaveError &&
-        !conflict &&
-        !discard}
+      class:quick-pending={creating}
       onchange={handleChange}
       onsubmit={(e) => {
         e.preventDefault();
@@ -1382,124 +1149,52 @@
             </div>
           {/each}
         </div>
-      {:else}
-        {#if draft.type !== "update"}<div class="editor-properties">
-            <label
-              >Status<select
-                aria-label="Status"
-                bind:value={draft.fields.status}
-                disabled={locked}
-                >{#each statuses as item}<option value={item}
-                    >{resourceLabel(item)}</option
-                  >{/each}</select
-              ></label
-            >
-          </div>{/if}
-        {#if draft.type === "update"}<label
-            >Rodzaj<select
-              aria-label="Rodzaj"
-              bind:value={draft.fields.kind}
-              disabled={readonly || locked}
-              >{#each ["result", "blocker", "decision_needed", "note", "correction", "resolution"] as item}<option
-                  value={item}>{resourceLabel(item)}</option
+      {:else if draft.type === "project"}
+        <div class="editor-properties">
+          <label
+            >Status<select
+              aria-label="Status"
+              bind:value={draft.fields.status}
+              disabled={locked}
+              >{#each projectStatuses as item}<option value={item}
+                  >{resourceLabel(item)}</option
                 >{/each}</select
             ></label
-          >{/if}
-        {#if draft.type === "project"}<FolderPicker
-            bind:value={draft.fields.folder}
-            bind:draft={draft.fields.folderDraft}
-            disabled={locked}
-          />{/if}
-        {#if draft.type === "project"}
-          <ResourceDescription
-            type={draft.type}
-            bind:body={draft.common.body}
-            bind:editing={descriptionEditing}
-            disabled={locked}
-            closeButton={descriptionCloseButton}
-            onfinish={finishTextEdit}
-          />
-        {:else}
-          <label class="description-label"
-            >Opis <span>Źródło Markdown</span><textarea
-              bind:value={draft.common.body}
-              rows="8"
-              disabled={readonly || locked}></textarea></label
           >
-          <button type="button" onclick={() => (preview = !preview)}
-            >{preview ? "Ukryj podgląd" : "Podgląd Markdown"}</button
-          >
-          {#if preview}<Markdown source={draft.common.body} />{/if}
-        {/if}
-        {#if draft.type === "milestone"}<div class="row">
-            <label
-              >Termin<input
-                type="date"
-                bind:value={draft.fields.due}
-                disabled={locked}
-              /></label
-            >
-          </div>{/if}
-        {#if draft.type === "update" && !readonly}<label
-            >Autor<input
-              bind:value={draft.fields.author}
-              required
-              maxlength="120"
-              disabled={locked}
-            /></label
-          >{/if}
-        {#if draft.type === "update"}<ReportFields
-            bind:fields={draft.fields}
-            locked={readonly || locked}
-          />{/if}
+        </div>
+        <FolderPicker
+          bind:value={draft.fields.folder}
+          bind:draft={draft.fields.folderDraft}
+          disabled={locked}
+        />
+        <ResourceDescription
+          type="project"
+          bind:body={draft.common.body}
+          bind:editing={descriptionEditing}
+          disabled={locked}
+          closeButton={descriptionCloseButton}
+          onfinish={finishTextEdit}
+        />
+      {:else}
+        <RecordForm
+          bind:draft
+          {locked}
+          saved={!!resource}
+          {busy}
+          {accessLost}
+          {dirty}
+          {history}
+          {historyCursor}
+          undoBlocked={locked ||
+            autosaveWork ||
+            !canUndoDraft(dirty, !!pending, busy) ||
+            accessLost}
+          onhistory={(more) => void loadHistory(more)}
+          onundo={(id) => void undo(id)}
+        />
       {/if}
-      {#if !readonly && (draft.type === "milestone" || draft.type === "update")}<details
-        >
-          <summary>Dodatkowe pola</summary>
-          <p>
-            Rozszerzenia techniczne i dowody raportu. Do zwykłych zmian używaj
-            nazwanych pól powyżej. Serwer sprawdza każde pole.
-          </p>
-          <textarea
-            aria-label="Dodatkowe pola JSON"
-            bind:value={draft.common.advanced}
-            rows="5"
-            spellcheck="false"
-            disabled={locked}></textarea>
-        </details>{/if}
-      {#if resource && !readonly && draft.type !== "project" && draft.type !== "card"}<details
-        >
-          <summary>Historia zmian</summary><button
-            type="button"
-            onclick={() => loadHistory()}
-            disabled={busy || accessLost}>Pierwsza strona historii</button
-          >{#if dirty}<p class="empty-context">
-              Poczekaj na zapis zmian lub rozstrzygnij wersję roboczą przed
-              cofnięciem zapisanej zmiany.
-            </p>{/if}{#each history as entry}<div class="historyentry">
-              <small
-                ><time datetime={entry.recorded_at} title={entry.recorded_at}
-                  >{formatTimestamp(entry.recorded_at)}</time
-                ></small
-              >
-              <p>{entry.changed_fields.map(fieldLabel).join(", ")}</p>
-              <button
-                type="button"
-                disabled={locked ||
-                  autosaveWork ||
-                  !entry.can_undo ||
-                  !canUndoDraft(dirty, !!pending, busy) ||
-                  accessLost}
-                onclick={() => undo(entry.id)}>Cofnij tę zmianę</button
-              >
-            </div>{/each}{#if historyCursor}<button
-              type="button"
-              disabled={busy || accessLost}
-              onclick={() => loadHistory(true)}>Starsze zmiany</button
-            >{/if}
-        </details>{/if}
       {#if !autosaveResource && !readonly}<footer class="dialog-footer">
-          <button type="button" onclick={close} disabled={busy || deleteBusy}
+          <button type="button" onclick={close} disabled={busy || deletion.busy}
             >Anuluj</button
           >{#if !readonly}<Button
               variant="primary"
