@@ -1149,3 +1149,26 @@ async fn recovery_review_is_a_strict_local_only_operation() {
         .unwrap();
     assert_eq!(remote.status(), 404);
 }
+
+#[tokio::test]
+async fn local_routes_need_the_local_socket_and_an_exact_path() {
+    let app = Running::new().await;
+    // A doubled slash is not another spelling of a route.
+    for (method, path) in [
+        ("GET", "//local/v1/hello"),
+        ("GET", "//local/v1/doctor"),
+        ("POST", "//local/v1/maintenance/plans"),
+        ("GET", "//api/v1/projects"),
+    ] {
+        let mut request = app.local(method, path);
+        if method == "POST" {
+            request = request.json(&json!({}));
+        }
+        let response = request.send().await.unwrap();
+        assert_eq!(response.status(), 404, "{method} {path}");
+        let body: Value = response.json().await.unwrap();
+        assert_eq!(body["error"]["code"], "NOT_FOUND", "{method} {path}");
+    }
+    let exact = app.local("GET", "/local/v1/doctor").send().await.unwrap();
+    assert_eq!(exact.status(), 200);
+}
