@@ -262,8 +262,13 @@ export async function runCardChecks({
         }),
       ).toHaveCount(0);
 
-      await descriptionRendered().focus();
-      await descriptionRendered().press("Enter");
+      // The rendered text is content; its labelled button is the keyboard control.
+      const edit = dialog().getByRole("button", {
+        name: "Edytuj opis: Karta",
+        exact: true,
+      });
+      await edit.focus();
+      await edit.press("Enter");
       await expect(description()).toBeVisible();
       await expect(description()).toHaveValue(initialSource);
       const nextSource = [
