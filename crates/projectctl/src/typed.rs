@@ -464,7 +464,8 @@ impl Action {
                     identity,
                 )
             }
-            _ => unreachable!(),
+            // Every other action returned its request above.
+            _ => return Err("Unsupported command".into()),
         })
     }
 }

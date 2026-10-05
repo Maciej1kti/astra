@@ -26,15 +26,6 @@ use tokio::{
 };
 use url::Url;
 mod assets;
-// The dispatcher is restructured on main, which removes its `unreachable!`.
-// This expectation then fails and must be deleted with it.
-#[cfg_attr(
-    not(test),
-    expect(
-        clippy::unreachable,
-        reason = "removed by the dispatcher split in main"
-    )
-)]
 mod dispatch;
 mod encoding;
 mod events;

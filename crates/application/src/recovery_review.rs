@@ -37,10 +37,7 @@ impl Engine {
     /// Unresolved source intents with the versions an operator needs to judge
     /// them. A source that cannot be read reports no current version.
     pub fn recovery_intents(&self, project_id: Option<&str>) -> Result<Value, AppError> {
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let projects = match project_id {
             Some(id) => vec![id.to_owned()],
             None => self
@@ -54,9 +51,7 @@ impl Engine {
         let mut items = Vec::new();
         for project in projects {
             let handle = self.store(&project)?;
-            let store = handle
-                .lock()
-                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            let store = crate::engine::lock_store(&handle)?;
             for intent in self.journal.pending(&project)? {
                 if !source_intent(&intent) {
                     continue;
@@ -94,14 +89,9 @@ impl Engine {
         if !crate::valid_request_id(request_id) {
             return Err(AppError::reject(400, "INVALID_REQUEST_ID"));
         }
-        let _gate = self
-            .gate
-            .read()
-            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let _gate = self.shared_gate()?;
         let handle = self.store(project_id)?;
-        let store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
+        let store = crate::engine::lock_store(&handle)?;
         let intent = self
             .journal
             .pending(project_id)?
