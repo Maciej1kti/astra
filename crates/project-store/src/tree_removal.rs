@@ -503,6 +503,23 @@ pub fn deletion_lease(
     if identity(&file)? != entry.identity {
         return Err(StoreError::Invalid("LEASE_REPLACED"));
     }
-    fs::flock(&file, FlockOperation::NonBlockingLockExclusive)?;
+    lock_released_lease(&file)?;
     Ok(Some(file))
+}
+
+/// The caller released its cached lease just before this call. A subprocess
+/// being spawned on another thread can keep that open file alive until its
+/// exec closes it, so a refusal is retried briefly. A lock another owner really
+/// holds is still refused once the bounded wait ends.
+fn lock_released_lease(file: &File) -> Result<(), StoreError> {
+    const ATTEMPTS: u32 = 50;
+    for attempt in 0.. {
+        match fs::flock(file, FlockOperation::NonBlockingLockExclusive) {
+            Err(rustix::io::Errno::WOULDBLOCK) if attempt < ATTEMPTS => {
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            result => return Ok(result?),
+        }
+    }
+    Ok(())
 }
