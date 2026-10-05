@@ -38,6 +38,8 @@ export const messages: Record<string, string> = {
   REGISTRATION_RECOVERY_REQUIRED:
     "Rejestracja wymaga odzyskania. Sprawdź diagnostykę.",
   RECOVERY_REQUIRED: "Stan wymaga odzyskania. Sprawdź diagnostykę.",
+  RECOVERY_ABANDONED:
+    "Przerwany zapis został porzucony na serwerze. Zachowano aktualny plik; sprawdź go i w razie potrzeby wprowadź zmianę ponownie.",
   RECOVERY_PENDING:
     "Trwa odzyskiwanie stanu. Sprawdź wynik oczekującej operacji.",
   DOCUMENT_INVALID: "Plik źródłowy jest nieprawidłowy. Sprawdź diagnostykę.",

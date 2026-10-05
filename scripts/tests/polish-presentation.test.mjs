@@ -1,3 +1,4 @@
+import { messages as catalog } from "../../apps/web/src/lib/api/message-catalog.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { TransportError } from "../../apps/web/src/lib/api/transport-errors.ts";
@@ -122,6 +123,9 @@ test("server and browser failures have Polish presentation while protocol detail
     /English/,
   );
   assert.match(serverMessage("FUTURE_ERROR"), /FUTURE_ERROR/);
+  // An operator settled a reviewed write on the host; the original command
+  // then answers with this code and must not read as an unknown failure.
+  assert.match(catalog.RECOVERY_ABANDONED, /porzucony/);
   assert.match(errorMessage(new TransportError()), /połączyć z serwerem/);
   assert.match(
     errorMessage(new SyntaxError("Unexpected token")),
