@@ -341,7 +341,8 @@ network body is collected, `handle` classifies the request: static assets, healt
 and pairing status read no body; the two pairing writes use a small dedicated
 collector budget; every other route needs a passively verified session first.
 A refusal drops its permit, discards the unread body without buffering and only
-then replies, which keeps a proxy's reused connection in step.
+then replies, which keeps a proxy's reused connection in step. A small budget
+bounds how many refusals wait this way and for how long.
 Dispatch still performs full authentication and CSRF checks. Collection routes
 reject a malformed resource ID as `RESOURCE_NOT_FOUND` before it can reach the
 store. See [ADR-066](ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md).

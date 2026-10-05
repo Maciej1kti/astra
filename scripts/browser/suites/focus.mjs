@@ -508,7 +508,11 @@ await runBrowserSuite(
             exact: true,
           });
           await chip.scrollIntoViewIfNeeded();
-          assert.ok((await chip.boundingBox()).width >= 44);
+          // The reloaded editor may still be settling its entrance and the
+          // narrow layout; measure the touch target once it has.
+          await expect
+            .poll(async () => (await chip.boundingBox())?.width ?? 0)
+            .toBeGreaterThanOrEqual(44);
           assert.ok(
             await editor(page).evaluate(
               (el) => el.scrollWidth <= el.clientWidth + 1,

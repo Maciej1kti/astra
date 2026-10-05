@@ -84,8 +84,15 @@ under it: a probe through the test proxy turned 79% of 64 KiB and 90% of
 900 KiB unauthenticated writes into an empty `503` or a reset, and reset
 unrelated requests sharing the proxy's connections. After the change all 360
 such writes received `401` and no other request was disturbed. The same applies
-to `SERVER_BUSY`. An unfinished upload therefore occupies a connection for at
-most the body timeout, but never an admission permit.
+to `SERVER_BUSY`. An unfinished upload never occupies an admission permit.
+
+At most 16 refusals drain at a time, each for at most 2 seconds; beyond that
+budget a refusal answers at once and its connection closes. Without the budget,
+300 callers that kept starting slow unauthenticated uploads held every network
+connection: in a 40-second probe no static asset was served, while the local
+CLI stayed available. With it, the same callers received 10,430 refusals, 185
+of 188 asset requests were served (p95 36 ms, the other three refused by the
+test proxy's own listener) and all 190 CLI calls succeeded (p95 17 ms).
 
 ## Not changed
 

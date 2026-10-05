@@ -48,6 +48,10 @@ pub struct Service {
     browser_slots: Arc<Semaphore>,
     /// Bodies collected before any session exists: only pairing needs one.
     guest_bodies: Arc<Semaphore>,
+    /// Refused uploads being read and dropped so their reply is not a reset.
+    /// Beyond this many, a refusal answers at once and the connection closes.
+    refusal_drains: Arc<Semaphore>,
+    refusal_drain: Duration,
     streams: Arc<Semaphore>,
     shutdown: watch::Sender<bool>,
     body_timeout: Duration,
@@ -90,6 +94,8 @@ impl Service {
             slots: Arc::new(Semaphore::new(8)),
             browser_slots: Arc::new(Semaphore::new(8)),
             guest_bodies: Arc::new(Semaphore::new(2)),
+            refusal_drains: Arc::new(Semaphore::new(16)),
+            refusal_drain: Duration::from_secs(2),
             streams: Arc::new(Semaphore::new(64)),
             shutdown: watch::channel(false).0,
             body_timeout: Duration::from_secs(10),
@@ -268,15 +274,19 @@ impl Entry {
         }
     }
 }
-/// Read and drop what a refused caller is still sending. No admission is held,
-/// nothing is buffered, and the wait is bounded: a proxy that already started
-/// its upload then receives the reply instead of a reset, and the connection
-/// stays in step for its next request.
-async fn discard(body: axum::body::Body, limit: Duration) {
+/// Read and drop what a refused caller is still sending. No admission is held
+/// and nothing is buffered: a proxy that already started its upload then
+/// receives the reply instead of a reset, and its connection stays in step.
+/// Only a few refusals wait this way, each briefly, so slow uploads from
+/// callers without a session cannot occupy the listener's connections.
+async fn discard(service: &Service, body: axum::body::Body) {
     use axum::body::HttpBody;
+    let Ok(_drain) = service.refusal_drains.try_acquire() else {
+        return;
+    };
     let mut body = std::pin::pin!(body);
     let mut remaining = 1_100_000_usize;
-    let _ = tokio::time::timeout(limit, async {
+    let _ = tokio::time::timeout(service.refusal_drain.min(service.body_timeout), async {
         while remaining > 0
             && let Some(Ok(frame)) = std::future::poll_fn(|cx| body.as_mut().poll_frame(cx)).await
         {
@@ -286,7 +296,7 @@ async fn discard(body: axum::body::Body, limit: Duration) {
     .await;
 }
 async fn refuse(service: &Service, body: axum::body::Body, reply: Reply) -> Response {
-    discard(body, service.body_timeout).await;
+    discard(service, body).await;
     response(reply)
 }
 async fn handle(service: Service, request: Request, local: bool) -> Response {
@@ -368,7 +378,7 @@ async fn handle(service: Service, request: Request, local: bool) -> Response {
         };
         if let Some(error) = refused {
             drop(permit);
-            discard(body, service.body_timeout).await;
+            discard(&service, body).await;
             return failure(error);
         }
     }
@@ -652,13 +662,14 @@ mod tests {
         let (_temp, mut service) = service();
         // Each unfinished body is read for this long before its 401 is sent.
         service.body_timeout = Duration::from_secs(60);
+        service.refusal_drain = Duration::from_secs(60);
         let mut requests = Vec::new();
         for (method, path) in [
             ("POST", "/api/v1/projects/any/cards"),
             ("GET", "/api/v1/bootstrap"),
             ("PATCH", "/api/v1/workspace/preferences"),
         ] {
-            for _ in 0..6 {
+            for _ in 0..5 {
                 requests.push(tokio::spawn(handle(
                     service.clone(),
                     browser_request(method, path, true),
@@ -676,7 +687,7 @@ mod tests {
         }
 
         // Once the upload ends or its bounded wait passes, the caller is told why.
-        service.body_timeout = Duration::from_millis(20);
+        service.refusal_drain = Duration::from_millis(20);
         for pending_body in [true, false] {
             let refused = handle(
                 service.clone(),
@@ -688,6 +699,68 @@ mod tests {
             assert_eq!(code(refused).await, "SESSION_REQUIRED");
         }
         assert_eq!(service.browser_slots.available_permits(), 8);
+    }
+    #[tokio::test]
+    async fn only_a_few_refused_uploads_are_drained_and_only_briefly() {
+        let (_temp, mut service) = service();
+        service.body_timeout = Duration::from_secs(60);
+        service.refusal_drain = Duration::from_secs(60);
+        let mut requests = Vec::new();
+        for _ in 0..40 {
+            requests.push(tokio::spawn(handle(
+                service.clone(),
+                browser_request("POST", "/api/v1/projects/any/cards", true),
+                false,
+            )));
+        }
+        // Past the drain budget a refusal answers at once instead of holding
+        // another connection open for an upload nobody will read.
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while requests
+                .iter()
+                .filter(|request| request.is_finished())
+                .count()
+                < 24
+            {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("refusals beyond the drain budget must not wait");
+        tokio::task::yield_now().await;
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|request| !request.is_finished())
+                .count(),
+            16
+        );
+        assert_eq!(service.refusal_drains.available_permits(), 0);
+        for request in requests {
+            if request.is_finished() {
+                // Either refusal: no session, or no free admission slot.
+                let status = request.await.unwrap().status();
+                assert!(status == 401 || status == 503, "{status}");
+            } else {
+                request.abort();
+                let _ = request.await;
+            }
+        }
+        assert_eq!(service.refusal_drains.available_permits(), 16);
+
+        // The drain itself is bounded far below the body timeout.
+        service.refusal_drain = Duration::from_millis(20);
+        let refused = tokio::time::timeout(
+            Duration::from_secs(5),
+            handle(
+                service.clone(),
+                browser_request("POST", "/api/v1/projects/any/cards", true),
+                false,
+            ),
+        )
+        .await
+        .expect("a drain must end at its own bound");
+        assert_eq!(refused.status(), 401);
     }
     #[tokio::test]
     async fn network_bodies_cannot_exhaust_local_or_asset_admission() {
