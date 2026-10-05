@@ -398,18 +398,23 @@ export async function runEditorChecks({
           metrics.scrollWidth <= metrics.width + 1,
           JSON.stringify(metrics),
         );
-        const target = await dialog()
-          .getByRole("button", { name: "Usuń tag Repair tag 2", exact: true })
-          .boundingBox();
-        assert(
-          target.width >= 44 && target.height >= 44,
-          JSON.stringify(target),
-        );
+        // A chip that was just added is still settling its entrance, which
+        // scales it slightly; measure the touch target once it is at rest.
+        const remove = dialog().getByRole("button", {
+          name: "Usuń tag Repair tag 2",
+          exact: true,
+        });
+        await expect
+          .poll(async () => {
+            const target = await remove.boundingBox();
+            return Math.min(target?.width ?? 0, target?.height ?? 0);
+          })
+          .toBeGreaterThanOrEqual(44);
         await screenshot("A10-mobile-tag-limit");
         await waitForAutosaveACK();
         assert.equal(get(card.id).metadata.labels.length, 20);
         assert.equal([...get(card.id).metadata.labels.at(-1)].length, 48);
-        return { metrics, removalTarget: target };
+        return { metrics, removalTarget: await remove.boundingBox() };
       } finally {
         await page.setViewportSize({ width: 1440, height: 1000 });
       }
