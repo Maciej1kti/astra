@@ -1,0 +1,18 @@
+{
+  "body": "An interrupted write whose source was then changed by another tool becomes needs_review and blocks further writes to that project. Astra never overwrites or restores the source in that state, and no CLI or API command settles the review; the only current exit is editing the state database by hand.\n\nProposal: a host-local command that lists unresolved source intents and abandons one after the operator confirms the current source version. It would keep the current bytes, record the command as rejected and never write a source file. Decide whether to add it, and whether blocked intents and other profiles' journals should be covered.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "5e09c0e3-0475-4ffb-813b-5e625ad00afe",
+    "kind": "decision_needed",
+    "recorded_at": "2026-10-05T12:30:56.597Z",
+    "summary": "Decide how a needs_review write is settled",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

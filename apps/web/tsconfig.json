@@ -14,7 +14,9 @@
     "skipLibCheck": true,
     "types": ["svelte", "vite/client"],
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true
   },
   "include": ["src/**/*.ts", "src/**/*.svelte", "vite.config.ts"]
 }

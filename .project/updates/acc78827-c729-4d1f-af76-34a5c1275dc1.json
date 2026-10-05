@@ -1,0 +1,18 @@
+{
+  "body": "The findings of the owner-requested repository review are fixed. Server: a write that fails before its rename no longer blocks the project until restart, interrupted writes complete at the next write, malformed resource IDs return 404 instead of 503, network request bodies require a session, and request paths return errors instead of panicking. Browser: pairing opens above a dialog retained through session loss, a refused event stream is replaced, command recovery and unload guards are shared, Settings can leave a version conflict deliberately, and Polish count forms and error messages are corrected.\n\nThe 15-step gate passes 647 tests. Chromium passes all 39 suites plus the broad HTTPS/planning chain; WebKit passes 17 selected suites. See progress/2026-10-05-repository-review-fixes.md and docs/ADR-066-DEFINITE-OUTCOMES-AND-ADMISSION.md for evidence, the rejected fsync probe and limits.\n\nThe rebuilt embedded release application is verified at its existing HTTPS address. Restart comparison preserves identity/epoch, both profiles, 41 resource versions, three pins, preferences, roots and certificate; all 65 served assets match. About 28 GB of reproducible build copies under test-results/ were not deleted. Physical-device and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "acc78827-c729-4d1f-af76-34a5c1275dc1",
+    "kind": "result",
+    "recorded_at": "2026-10-05T12:30:50.571Z",
+    "summary": "Repository review findings fixed and verified",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
