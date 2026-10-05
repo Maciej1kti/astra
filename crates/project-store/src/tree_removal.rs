@@ -6,7 +6,11 @@
 //! content digest.  `remove_step` is idempotent so a caller can persist its
 //! cursor after each fsync and safely retry after a process failure.
 
-use crate::{StoreError, document::version};
+use crate::{
+    StoreError,
+    document::version,
+    filesystem::{component, open_directory},
+};
 use rustix::fs::{self, AtFlags, FlockOperation, Mode, OFlags};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -14,7 +18,7 @@ use std::{
     collections::BTreeMap,
     fs::File,
     io::Read,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 pub const MAX_FILES: usize = 100_000;
@@ -62,39 +66,6 @@ impl Inventory {
 pub enum RemovalOutcome {
     Removed,
     AlreadyAbsent,
-}
-
-fn component(name: &str) -> Result<(), StoreError> {
-    if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\0']) {
-        return Err(StoreError::Invalid("UNSAFE_PATH"));
-    }
-    Ok(())
-}
-
-fn open_directory(path: &Path) -> Result<File, StoreError> {
-    if !path.is_absolute() || path.to_str().is_none() {
-        return Err(StoreError::Invalid("ABSOLUTE_UTF8_PATH_REQUIRED"));
-    }
-    let mut fd = fs::open(
-        "/",
-        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
-        Mode::empty(),
-    )?;
-    for part in path.components() {
-        match part {
-            Component::RootDir => {}
-            Component::Normal(name) => {
-                fd = fs::openat(
-                    &fd,
-                    name,
-                    OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-                    Mode::empty(),
-                )?;
-            }
-            _ => return Err(StoreError::Invalid("UNSAFE_PATH")),
-        }
-    }
-    Ok(File::from(fd))
 }
 
 fn identity(file: &File) -> Result<(u64, u64), StoreError> {

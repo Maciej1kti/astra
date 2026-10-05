@@ -16,13 +16,15 @@ pub struct Directory {
     file: File,
     path: PathBuf,
 }
-fn component(name: &str) -> Result<(), StoreError> {
+/// One path component that cannot leave or alias its directory.
+pub(crate) fn component(name: &str) -> Result<(), StoreError> {
     if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\0']) {
         return Err(StoreError::Invalid("UNSAFE_PATH"));
     }
     Ok(())
 }
-fn open_directory(path: &Path) -> Result<File, StoreError> {
+/// Open an absolute UTF-8 path one component at a time, never through a link.
+pub(crate) fn open_directory(path: &Path) -> Result<File, StoreError> {
     open_directory_with_ancestor(path, None)
 }
 fn open_directory_with_ancestor(
