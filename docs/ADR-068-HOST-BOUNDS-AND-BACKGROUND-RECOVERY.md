@@ -75,6 +75,15 @@ releases the previous store and leases the new one. A job status read takes its
 two plan fields in SQL instead of parsing every step's bytes. The saved plan
 format is unchanged: its byte arrays are a tested compatibility contract.
 
+## Workflow command status
+
+A finished workflow's command status is `committed` without a `result`: the
+command row keeps the accepted reply, and the job is read separately. The schema
+already makes `result` optional. The browser refused that reply as invalid, so a
+status check could never settle a tag rename or registration; it now accepts
+`committed` without a result for workflow commands only. The server reply is
+unchanged, and every other command still requires its result.
+
 ## Panics and structure
 
 Non-test Rust in every crate also rejects `unreachable!`, `panic!`, `todo!` and

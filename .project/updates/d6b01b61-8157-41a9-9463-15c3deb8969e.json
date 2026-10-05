@@ -1,0 +1,18 @@
+{
+  "body": "The items left open by the first review pass are finished, apart from local test data as directed. Server: `projectctl recovery list` and `recovery abandon` settle a needs_review write by keeping the current source; a refused upload no longer resets a proxy's connections; both listeners bound open connections; receipts are removed with their report or project; watcher tasks are supervised and each profile retries interrupted writes every 30 seconds; an unacceptable file in a collection is a definite DOCUMENT_INVALID instead of 503. Browser: accessible description and confirmation controls, a status check for settings and tag-rename commands, readable history and conflicts, an ESLint gate and stricter TypeScript, with Editor, App, CalendarView and workspace styles split along their seams.\n\nThe 16-step gate passes 846 tests. Chromium passes all 40 suites and the broad HTTPS/planning chain; WebKit ran all 40 with the results and open items listed in progress/2026-10-05-review-completion.md. Remote CI is green on macOS and on Ubuntu at the revisions recorded there; failed suites and gate steps are now named in workflow annotations. See docs/ADR-067 and docs/ADR-068.\n\nThe rebuilt embedded release application is verified at its existing HTTPS address. Restart comparison preserves identity/epoch, both profiles, 44 resource versions, three pins, preferences, roots and certificate; all 65 served assets match, and a normally paired read-only visit of all eight views showed no error and sent no write before its session was revoked. Left open: the ChartDashboard split, exactOptionalPropertyTypes, the WebKit responsive failure at 320px that predates this work, and the limits recorded in docs/LIMITATIONS.md. Physical-device and full release acceptance remain open.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "d6b01b61-8157-41a9-9463-15c3deb8969e",
+    "kind": "result",
+    "recorded_at": "2026-10-05T21:26:55.797Z",
+    "summary": "Repository review completed",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

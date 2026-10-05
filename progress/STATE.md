@@ -7,18 +7,19 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
-The [repository review fixes](2026-10-05-repository-review-fixes.md) resolve the
-confirmed findings of an owner-requested review. Writes that fail before their
-rename no longer block a project until restart, interrupted writes complete at
-the next write, malformed IDs are not found, and network request bodies require
-a session. The browser can pair again above a retained dialog, replaces a refused
-event stream and shares command recovery across its owners. The 15-step gate
-passes 647 tests; Chromium passes all 39 suites and the broad HTTPS/planning
-chain, and WebKit passes 17 selected suites. The rebuilt existing HTTPS app
-preserves identity/epoch, both profiles, 41 resource versions, three pins,
-settings, roots and certificate; all 65 served assets match. A `needs_review`
-resolution command, the remaining review items and physical-device and full
-release acceptance remain open.
+The [repository review completion](2026-10-05-review-completion.md) finishes what
+the [first pass](2026-10-05-repository-review-fixes.md) left open. A reviewed
+`needs_review` write can be settled from the host CLI; refused uploads no longer
+reset a proxy's connections; listeners bound their connections; background
+recovery, receipt pruning and watcher supervision run per profile; the browser
+gains accessible description and confirmation controls, a lint gate and stricter
+types. The 16-step gate passes 846 tests; Chromium passes all 40 suites and the
+broad HTTPS/planning chain. The rebuilt existing HTTPS app preserves
+identity/epoch, both profiles, 44 resource versions, three pins, settings, roots
+and certificate; all 65 served assets match and a paired read-only visit of all
+eight views is clean. Remote CI is green on macOS and on Ubuntu at the revisions
+recorded there. Open items, including the WebKit `responsive` failure, are listed
+in the record; physical-device and full release acceptance remain open.
 
 ## Dated evidence
 
@@ -28,6 +29,7 @@ page does not repeat them. The
 is preserved at its immutable revision. No requirement or acceptance result was
 removed or changed by this consolidation.
 
+- **2026-10-05:** [Repository review fixes](2026-10-05-repository-review-fixes.md); [Repository review completion](2026-10-05-review-completion.md).
 - **2026-10-04:** [Definition and API cleanup](2026-10-04-definition-usage-cleanup.md); [Polish browser interface](2026-10-04-polish-ui.md); [Navigation selector correction](2026-10-04-navigation-section-selector.md); [Projects status board consolidation](2026-10-04-projects-status-board.md); [Definition and consumer audit](2026-10-04-definition-usage-audit.md); [Main project status board](2026-10-04-main-project-board.md); [UI component audit](2026-10-04-ui-component-audit.md); [Counter Chart dashboard](2026-10-04-counter-chart.md); [Shared exercise project implementation](2026-10-04-shared-exercise-project.md); [Compact navigation feature](2026-10-04-compact-navigation.md); [Trusted user profiles implementation](2026-10-04-trusted-user-profiles.md); [Folder review](2026-10-04-multi-user-folder-review.md).
 - **2026-10-03:** [Deleted-project diagnostics correction](2026-10-03-deleted-project-diagnostics.md).
 - **2026-10-01:** [Soft-motion refinement](2026-10-01-soft-motion.md); [Context entry allocation iteration](2026-10-01-context-entry-allocation.md); [Bounded JSON map probe](2026-10-01-source-map-probe.md); [Focus counter footer correction](2026-10-01-focus-section-counters.md); [Motion choreography follow-up](2026-10-01-motion-choreography.md); [Canonical metadata-counter iteration](2026-10-01-source-metadata-budget.md); [Scoped context-read iteration](2026-10-01-context-candidate-reads.md); [Shared motion system](2026-10-01-motion-system.md); [Owner-directed UI corrections](2026-10-01-ui-corrections.md); [Context byte-accounting iteration](2026-10-01-context-budget.md); [Source pin-read iteration](2026-10-01-source-focus-stream.md); [CLI runtime probe](2026-10-01-cli-runtime-probe.md); [Focus widget Rust reader](2026-10-01-widget-focus-reader.md); [Tag-source cost probes](2026-10-01-tag-source-cost-probes.md); [Editor source-overlap iteration](2026-10-01-editor-source-overlap.md); [Complete Calendar popup renderer](2026-10-01-calendar-popup-rendering.md); [Calendar popup probes](2026-10-01-calendar-popup-probes.md); [Editor read-overlap iteration](2026-10-01-editor-read-overlap.md); [Calendar pass-work iteration](2026-10-01-calendar-pass-work.md); [Calendar main-grid DOM iteration](2026-10-01-calendar-sparse-grid.md); [Planning read-scope iteration](2026-10-01-planning-read-scopes.md); [Measured Calendar month renderer](2026-10-01-calendar-measured-rendering.md); [Calendar hidden-list iteration](2026-10-01-calendar-hidden-lists.md); [Calendar geometry/query probes](2026-10-01-calendar-probes.md).
