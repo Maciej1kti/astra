@@ -195,6 +195,7 @@ fn complete_intent(engine: &Engine, command: &Command) -> Result<(), AppError> {
         "UPDATE write_intents SET resolved=1 WHERE epoch=?1 AND request_id=?2",
         params![command.epoch, command.request_id],
     )?;
+    crate::receipts::forget_project(&tx, &command.target.project_id)?;
     tx.commit()?;
     Ok(())
 }

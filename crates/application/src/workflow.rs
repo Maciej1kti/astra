@@ -340,6 +340,9 @@ VALUES (?1,
         let tx = db.transaction()?;
         tx.execute("UPDATE workflow_jobs SET state='done' WHERE id=?1", [id])?;
         Journal::set_command_state(&tx, &epoch, &request_id, CommandState::Committed)?;
+        if plan.kind == crate::workflow_kind::WorkflowKind::Unregister {
+            crate::receipts::forget_project(&tx, &plan.project_id)?;
+        }
         tx.commit()?;
         Ok(())
     }

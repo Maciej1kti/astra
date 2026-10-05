@@ -4,7 +4,13 @@ use serde_json::{Value, json};
 
 impl Engine {
     pub fn retain_history(&self, now: i64) -> Result<Value, AppError> {
-        self.journal.retain(now)
+        let retained = self.journal.retain(now)?;
+        // Optional cleanup: an unreadable workspace must never remove receipts,
+        // and its failure does not undo the history pass above.
+        if let Err(error) = self.prune_receipts() {
+            crate::diagnostics::record_failure("receipt_retention", &error, None, None);
+        }
+        Ok(retained)
     }
     pub fn rotate_after_restore(&mut self, now: i64) -> Result<(), AppError> {
         self.journal.rotate_after_restore(now)

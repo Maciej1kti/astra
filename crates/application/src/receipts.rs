@@ -120,6 +120,30 @@ VALUES (?1,
         }
         Ok(reply)
     }
+    /// Remove one bounded batch of receipts whose project left this workspace
+    /// before receipts were removed with it. The shared gate orders the
+    /// membership snapshot with registration, unregistration and deletion.
+    pub(crate) fn prune_receipts(&self) -> Result<usize, AppError> {
+        let _gate = self
+            .gate
+            .read()
+            .map_err(|_| AppError::LockPoisoned("workspace operation gate"))?;
+        let workspace = self.workspace()?.value;
+        let registered: Vec<_> = workspace
+            .projects
+            .iter()
+            .map(|project| project.project_id.as_str())
+            .collect();
+        let registered = serde_json::to_string(&registered)
+            .map_err(|source| AppError::stored("registered project IDs", source))?;
+        Ok(self.journal.db()?.execute(
+            "DELETE FROM read_receipts WHERE rowid IN (
+                 SELECT rowid FROM read_receipts
+                 WHERE project_id NOT IN (SELECT value FROM json_each(?1))
+                 LIMIT ?2)",
+            params![registered, RECEIPT_SWEEP_BATCH],
+        )?)
+    }
     pub(crate) fn receipt(&self, project: &str, id: &str) -> Result<bool, AppError> {
         Ok(self.journal.db()?.query_row(
             "SELECT EXISTS(SELECT 1 FROM read_receipts WHERE project_id=?1 AND update_id=?2)",
@@ -127,6 +151,21 @@ VALUES (?1,
             |r| r.get(0),
         )?)
     }
+}
+/// One retention pass removes at most this many orphaned receipts.
+const RECEIPT_SWEEP_BATCH: i64 = 500;
+
+/// A project that leaves the workspace takes its receipts along, in the
+/// journal transaction that commits its unregistration or deletion.
+pub(crate) fn forget_project(
+    tx: &rusqlite::Transaction<'_>,
+    project_id: &str,
+) -> Result<(), AppError> {
+    tx.execute(
+        "DELETE FROM read_receipts WHERE project_id=?1",
+        [project_id],
+    )?;
+    Ok(())
 }
 fn receipt_key(item: &Value) -> Result<(&str, &str), AppError> {
     Ok((

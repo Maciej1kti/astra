@@ -169,6 +169,9 @@ mod decision_attention;
 #[path = "engine/receipt_attention.rs"]
 mod receipt_attention;
 
+#[path = "engine/receipt_retention.rs"]
+mod receipt_retention;
+
 #[path = "engine/context.rs"]
 mod context;
 

@@ -648,6 +648,13 @@ VALUES (?1,
                 instant(now)
             ],
         )?;
+        if intent.after.is_none() && command.target.kind == Kind::Update {
+            // A deleted report can never be shown again; its receipt leaves with it.
+            tx.execute(
+                "DELETE FROM read_receipts WHERE project_id=?1 AND update_id=?2",
+                params![command.target.project_id, command.target.id],
+            )?;
+        }
         tx.commit()?;
         Ok(())
     }
