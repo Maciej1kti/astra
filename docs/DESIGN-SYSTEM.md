@@ -9,13 +9,16 @@ additional UI framework, styling runtime or component dependency is required.
   shadows, control sizes and surface dimensions for light and dark appearance.
 - `lib/ui/` owns `Button`, `Badge`, `Icon`, `Brand`, `PageHeading`,
   `SectionHeading`, `EmptyState`, `ResourceCard`, `ResourceMetadata`,
-  `DialogHeader`, `EditableTitle`, `ActionMenu`, `CommandRecovery` and
-  `SessionNotice`.
+  `DialogHeader`, `EditableTitle`, `ActionMenu`, `CommandRecovery`,
+  `SessionNotice`, `DeferredHost` and `DeferredView`.
   `SectionHeading` supports compact level-three headings, counts and section
   actions; `ActionMenu` can show a text label beside its status icon.
+  `Button` is `type="button"` unless a form's submit control says otherwise.
 - `styles/base.css` also styles native inputs, selects, textareas and buttons.
   Native controls remain appropriate for DOM bindings and drag actions.
 - `styles/workspace.css` owns the responsive shell and workspace layouts;
+  `styles/focus.css` owns pinned cards and their daily counter controls, and is
+  imported directly after it so the cascade order is one sequence;
   `styles/editor.css` and `styles/dialog.css` own editing surfaces.
 - `styles/motion.css` owns surface, disclosure and control effects.
   `lib/ui/motion.ts` owns bounded content cascades, the moving navigation
@@ -131,6 +134,21 @@ behind a modal is locked until it closes.
 A dialog that submits a command renders `CommandRecovery` for the request ID,
 status check and identical retry, and `SessionNotice` for session loss. Errors
 use `role="alert"`; confirmations such as a copied draft use `role="status"`.
+
+An alert is read out as one message, so it wraps the message text only. A retry
+or reload control sits beside it as an ordinary button. A question with choices
+is not an alert: when it moves focus to its first choice it is a
+`role="alertdialog"` named by its heading or question, as the card deletion and
+settings discard prompts are; when focus stays where it was it is a
+`role="group"` labelled by its question, whose text alone is the alert, as the
+editor's discard prompt is. Dismissing such a prompt returns focus to the
+control that raised it.
+
+Rendered Markdown is ordinary content, never the inside of a control. The
+description's text starts editing on a pointer click, and a separate labelled
+button does the same for keyboard and assistive technology. That button takes no
+space until it has keyboard focus, when it appears in the top corner of the
+description without moving the text.
 Pairing is the one foreground layer: `use:modal={{ onclose, foreground: true }}`
 keeps it above workspace dialogs retained through session loss. It is a small
 dialog showing the same pairing controls as the full page and focuses its

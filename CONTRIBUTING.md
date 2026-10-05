@@ -90,6 +90,7 @@ automatic refetch-and-overwrite. Keep durability and reference rechecks intact.
 | Scope | Useful focused command |
 | --- | --- |
 | Frontend types/contracts | `npm run check` |
+| Frontend and script lint | `npm run lint` |
 | Frontend behavioral unit tests | `npm run test:unit` |
 | One JS test | `node --test scripts/tests/planning-read.test.mjs` |
 | One Rust crate | `scripts/cargo-local test -p project-domain --locked` |

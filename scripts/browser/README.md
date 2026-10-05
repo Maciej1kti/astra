@@ -77,6 +77,18 @@ separate Main shortcut or default-view option remains.
 Chromium captures rendered desktop and phone boards; WebKit exercises behavior
 without screenshot preparation. All sources belong to the disposable test host.
 
+The `accessibility` suite checks that a rendered description is ordinary
+content with working links and a separate labelled edit button, operated by
+keyboard alone and by pointer at 1440, 390 and 320px; that the editor's discard
+prompt is a labelled group which returns focus; that card deletion and the
+settings discard prompt are named alert dialogs holding focus; and that no
+alert region contains a button or link. WebKit uses Alt+Tab, as Safari does.
+
+```sh
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs accessibility
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs accessibility
+```
+
 The `menus` suite covers the shared native action/date/navigation popover,
 lower-edge clipping, viewport bounds, start alignment, panel growth, rotation,
 scroll anchoring, Tab/Escape focus and menus inside a narrow card dialog.
@@ -270,7 +282,10 @@ re-paired session to the next one because the host accepts five pairing
 requests per minute. The `command-recovery` suite checks the unload guard of
 every command dialog, the settings conflict path, retained unsubmitted editor
 entries, the tag refresh without a stream, status feedback for copied drafts and
-Polish read-failure messages. Run both in each engine:
+Polish read-failure messages. It also loses the reply of a settings write and of
+a tag rename after the host has accepted them: a failed status lookup must keep
+the command pending with both continuations, and a later check must settle it
+with the original request ID and epoch and no second write. Run both in each engine:
 
 ```sh
 ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs session-recovery command-recovery

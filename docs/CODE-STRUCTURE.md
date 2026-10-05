@@ -22,6 +22,19 @@ and connects their callbacks. Long-lived state has three owners:
 - [view data](../apps/web/src/features/workspace/view-data.ts) owns loaded rows,
   cursors, request cancellation, generations and queued invalidations.
 
+Two route-independent command owners sit beside them, so navigation, refresh
+and session loss cannot discard a command:
+[focus order](../apps/web/src/features/workspace/focus-order-state.svelte.ts)
+holds the proposed Focus order with its command, acknowledgement and recovery,
+and `FocusScreen` receives that one object;
+`features/cards/focus-counter-state.svelte.ts` does the same for a pinned
+counter. Which concurrent preferences reply is applied
+([preference-reads](../apps/web/src/features/session/preference-reads.ts)) and
+which pinned summaries show acknowledged totals
+([focus-counter-overlay](../apps/web/src/features/cards/focus-counter-overlay.ts))
+are plain modules with unit tests, because rune modules cannot be imported by
+Node.
+
 Features live under `apps/web/src/features/`: workspace, editor, cards, charts, board,
 planning, tags, session, settings, registration and host diagnostics. Import the
 specific module needed; there are no catch-all feature barrels. Cross-feature
@@ -61,6 +74,11 @@ a definitive rejection, so an interrupted mutation stays uncertain. Views show
 failures through `errorMessage`, never `String(error)`. A 401 is published as
 session loss only for a session that an accepted bootstrap created.
 Server/CLI protocol messages and write recovery remain unchanged.
+`messages.ts` repeats a few catalog entries so frequent codes are translated
+before the catalog loads; a unit test keeps the two equal. `lib/api/uuid.ts`
+is the one identifier check: lowercase version 4 for resources, users and jobs,
+version 7 for request IDs, and either case only for checklist items written by
+other tools.
 
 The charts feature owns Chart's bounded counter-series reads, selection,
 aggregation, statistics and SVG plots. `chart-data.ts` owns cancellation,
@@ -92,7 +110,12 @@ recovers an existing pairing if the other request is cancelled.
 Editor, settings, pairing and administrative components load on demand through
 `lib/ui/deferred-component.svelte.ts`, along with List/Updates views and card-project,
 move/date proposal dialogs. This keeps Polish presentation within the initial
-80 KiB gzip budget. Deferred routes retain visible loading and retry controls. Editor code warms immediately after the
+80 KiB gzip budget. `DeferredHost` mounts such a dialog while it is wanted: it
+starts the import and shows the closable loading/retry dialog until the component
+arrives; `DeferredView` does the same for a view in the page flow. A module that
+the first view imports is loaded whole, so `lib/ui/calendar-dates.ts` and
+`planning/widget-dates.ts` hold only what route parsing and the application
+clock need. Deferred routes retain visible loading and retry controls. Editor code warms immediately after the
 initial ordinary view read, without competing for its network transfer, and
 loads alongside resource reads on an early click. Once loaded, the registration
 browser stays mounted while hidden so its pending command is retained. Loading
@@ -134,7 +157,9 @@ identical route or editing a loaded-title filter does not request the same page
 again; actual query changes and planning revisions still read current data.
 Their read owners retain queued invalidations during active reads and gestures,
 including a fresh follow-up when source data changes while an earlier request is
-unfinished.
+unfinished. All three use [PlanningRead](../apps/web/src/features/planning/planning-read.ts);
+the board's publication is asynchronous, so its read stays busy until the
+scroll position has been restored.
 
 `lib/api` owns transport, bounded reads, invalidation batching, typed resource/
 planning/tag endpoints and command execution. Feature code should use a named
@@ -176,6 +201,10 @@ one command from preparation to a definitive result.
 It retains the original payload, request ID, epoch and expected version during
 uncertainty. A failed status lookup does not prove that the write failed.
 Registration features additionally own their accepted job's polling lifecycle.
+A workflow's command row keeps its acceptance, so the status of a finished tag
+rename or registration is `committed` with no result and no job reference. The
+status check accepts that reply for workflow commands only and returns it as a
+`finished` outcome; every other command still needs its committed result.
 
 The adapter also owns what every command dialog needs, so features cannot drift
 apart: `commandOperation` guards unload while its command is unresolved,
@@ -191,7 +220,8 @@ slot that carries errors.
 Settings records a rejected preferences conflict and locks its form. Loading
 the current settings is an explicit read: `settings-draft.ts` keeps the fields
 the user edited and lets untouched fields follow the saved state, so a second
-save cannot revert another change.
+save cannot revert another change. Settings and the tag manager render the same
+`CommandRecovery` as the other dialogs, with both continuations.
 
 [Editor targets](../apps/web/src/features/editor/editor-target.ts) bind the
 resource kind to its source shape. Each kind has its own fields and initial
@@ -211,8 +241,22 @@ App keeps acknowledged resource routing separate from editor instance identity
 so refreshes cannot replace a queued draft. Reports retain explicit submission.
 See [ADR-035](ADR-035-EDITOR-AUTOSAVE.md) for queue and recovery behavior.
 
+`Editor.svelte` keeps the draft and every decision; four modules hold what it
+used to carry inline.
+[editor-autosave-state](../apps/web/src/features/editor/editor-autosave-state.svelte.ts)
+is to the autosave queue what `commandOperation` is to one command: the
+acknowledged baseline, the typing debounce, validation before queueing and the
+queue's reactive state.
+[card-deletion](../apps/web/src/features/editor/card-deletion.svelte.ts) owns
+permanent deletion: saved edits first, the confirmations, then one conditional
+command with its recovery. `EditorMessages` presents the header feedback row and
+`RecordForm` the explicitly submitted milestone and report fields with their
+history. `source-fields.ts` names source fields as the editor labels them, for
+history entries and for the saved version shown in a conflict.
+
 [ResourceDescription](../apps/web/src/features/editor/ResourceDescription.svelte)
-owns Markdown display/editing, focus and pointer transitions. It binds the existing
+owns Markdown display/editing, focus and pointer transitions. The rendered text
+is ordinary content and a separate labelled button is its keyboard control. It binds the existing
 draft body and tells the editor when editing finishes; the editor retains autosave,
 conflict and close ownership. Draft snapshot classification lives with the draft
 model, so picker/checklist changes bypass only the typing debounce.
@@ -231,7 +275,10 @@ grouped order into that single list. Visibility is the source-owned card field
 calendar; `CardPlanningFields` owns the disclosure, whose initial creation state
 does not change when the card is first acknowledged. `ScheduleCalendar` stages a
 civil date/range in a nested native modal; Apply updates the existing editor draft.
-`lib/ui/calendar-dates.ts` owns its timezone-independent date arithmetic. Neither
+`lib/ui/calendar-dates.ts` owns the civil-date check, day distance and the
+workspace's current day; `lib/ui/calendar-grid.ts` the picker's steps, month
+cells and range selection. `lib/ui/coarse-clock.svelte.ts` is the one
+half-minute clock behind relative schedule labels and day rollover. Neither
 section reordering nor calendar selection changes source formats or server preferences.
 
 `CardComments` renders source-owned conversations and an explicit comment draft.
@@ -259,8 +306,8 @@ Reports target projects or milestones.
 ### Planning and tag ownership
 
 [PlanningRead](../apps/web/src/features/planning/planning-read.ts) owns one view's
-request generation, cancellation and deferred publication during gestures. Calendar
-and Gantt keep their own pagination policy. Calendar agenda pages hold 200 items;
+request generation, cancellation and deferred publication during gestures. Calendar,
+Gantt and the board keep their own pagination policy. Calendar agenda pages hold 200 items;
 grid/time views retain 1,000. The page size participates in read scope, so changing
 layout resets an incompatible cursor. Read-only calendar snapshots and widget
 events use shallow reactive ownership, with explicit replacement on changes.
@@ -274,7 +321,10 @@ source rows. Gantt gesture activity is passed through its instance context.
 
 `CalendarToolbar` composes the shared buttons, icons and date disclosure. It emits
 navigation and creation callbacks; `CalendarView` retains route integration,
-versioned reads, paging, gesture guards and date proposals. Calendar presentation
+versioned reads, paging and date proposals. `calendar-keyboard.ts` owns the Alt
+shortcuts of the planning region, an event's keyboard access with its Alt+arrow
+proposal, and the pointer guard that cancels a gesture on Escape, a second
+pointer, pointercancel or rotation. Calendar presentation
 does not replace or cache the source projection. `calendar-motion.ts` supplies
 bounded native grid/event-group layers to the shared readiness-aware sequence.
 Project/date/widget-view keys start entrances only after the current page is
@@ -571,7 +621,7 @@ See [ADR-033](ADR-033-AUDIT-OWNERSHIP-AND-RECOVERY.md) for these boundaries.
 
 Run `.venv-check/bin/python scripts/check.py`, then
 `ASTRA_TEST_PROFILE=release npm run test:browser`. TypeScript rejects unused locals
-and parameters. Prettier covers the frontend and all maintained JavaScript
+and parameters, implicit returns and unchecked indexed access. Prettier covers the frontend and all maintained JavaScript
 scripts/tests; Rust uses rustfmt and Clippy with warnings rejected. Non-test Rust code
 also rejects `unwrap` and `expect`: a request path returns an error, because a
 panic under a held lock poisons it until restart. A case that cannot fail keeps
@@ -580,13 +630,26 @@ rejects shared frontend imports of feature implementations. Compile-time endpoin
 examples live in `apps/web/src/type-tests`; behavioral unit tests run with
 `npm run test:unit`.
 
+`npm run lint` runs ESLint from [eslint.config.js](../eslint.config.js) with
+warnings rejected: the browser application with type information, the
+maintained scripts without. Prettier keeps formatting and svelte-check keeps
+Svelte diagnostics; the linter looks for defects. `no-unnecessary-condition`
+reports a fallback or guard on a value that cannot be absent. Where a value is
+re-read after an `await` or in a later callback the check is real, and the
+line carries a disable comment that says what changes in between. The
+configuration states why each rule that is off cannot work here. TypeScript's
+`exactOptionalPropertyTypes` stays off for the same reason: optional component
+props and option bags are passed `undefined` throughout.
+
 White-box application tests compile inside the crate, so production APIs do not
 need fixture accessors. Engine scenarios are grouped under `tests/engine/` and
 share the parent fixture. Subprocess durability tests still terminate at every
 write boundary and verify recovery using the original command identity.
 
 The `session-recovery` and `command-recovery` suites exercise pairing above
-retained dialogs, stream replacement, unload guards and settings conflicts.
+retained dialogs, stream replacement, unload guards, settings conflicts and
+status checks of settings and tag commands. The `accessibility` suite checks
+roles, names and keyboard-only operation of the description and confirmations.
 Browser regressions share [host](../scripts/browser/host.mjs) and
 [runtime](../scripts/browser/runtime.mjs) helpers for explicit fixture selection,
 CLI outcomes, real pairing and cleanup. Each selected suite receives a fresh

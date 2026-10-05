@@ -148,9 +148,11 @@ acknowledged write. Incomplete fields, a conflict or a lost response can keep a
 draft open for correction or recovery. Use the editor's explicit close/discard
 flow to protect unsaved input.
 
-Descriptions display Markdown. Click the description to edit it; keyboard users
-can focus it and press Enter or Space. Leaving the field returns to the formatted
-view. Embedded HTML is escaped and remote images are not loaded.
+Descriptions display Markdown, and links in them work as links. Click the text
+to edit it. Keyboard and screen-reader users reach **Edytuj opis**, a button
+beside the text that appears when it has keyboard focus; Enter or Space starts
+editing. Leaving the field returns to the formatted view. Embedded HTML is
+escaped and remote images are not loaded.
 
 Cards have six freely reorderable sections: Description, Checklist, Counters,
 Comments, Schedule and Labels. Open Card layout in the header and drag a six-dot
@@ -174,6 +176,8 @@ mark the card Done, and Done cards may still have incomplete checklist items.
 
 Labels belong to cards. Suggestions come from the selected project's card labels.
 A project tag rename is a reviewed background workflow; wait for job completion.
+If its confirmation is lost, **Sprawdź stan** reports whether the rename has
+finished and **Ponów to samo polecenie** continues the same job.
 A project's Folder category is a separate value used to group projects in Focus.
 
 ### Comments and daily counters
@@ -294,8 +298,10 @@ or milestones; cards use comments. A correction points to an earlier report, and
 a resolution explicitly closes a decision signal. Reading a report clears its
 unread reminder across the instance's devices but does not change the decision.
 
-History records supported changes. Undo proposes a new conditional edit and may
-conflict with later changes. It is not a restore system for deleted resources.
+History records supported changes. Each entry shows when it was recorded and
+which fields changed, named as in the editor. Undo proposes a new conditional
+edit and may conflict with later changes. It is not a restore system for deleted
+resources.
 
 Archive, unregister and delete have different effects:
 
@@ -319,8 +325,8 @@ copy. [CLI deletion](../CLI.md#permanent-deletion) describes the conditional com
 | Situation | Appropriate next step |
 | --- | --- |
 | Invalid input | Correct it while retaining the draft |
-| Another edit changed the resource | Compare the current resource and your intent, then deliberately prepare a new edit |
-| Response lost / command pending | Check status or retry the same command; retain its request ID, epoch, payload and original version |
+| Another edit changed the resource | Open **Aktualna zapisana wersja** to compare its fields with your intent (**Kopiuj aktualną wersję** copies its source), then deliberately prepare a new edit |
+| Response lost / command pending | Check status or retry the same command; retain its request ID, epoch, payload and original version. Settings, new users and tag renames offer both, like every other dialog |
 | Session expired/revoked | Pair again in the panel shown above your open work, then follow the command's recovery state |
 | Settings changed elsewhere | Load the current settings, review your retained changes and save them again deliberately |
 | Host offline | Restore the host connection; writes do not fall back to local files |
