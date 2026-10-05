@@ -154,6 +154,9 @@ mod card_fields;
 #[path = "engine/registration.rs"]
 mod registration;
 
+#[path = "engine/plan_side_effects.rs"]
+mod plan_side_effects;
+
 #[path = "engine/workspace.rs"]
 mod workspace;
 

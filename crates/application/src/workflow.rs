@@ -98,6 +98,20 @@ impl Plan {
         Ok(&actual == expected)
     }
 
+    /// Whether current sources still hold the bytes this plan was built from.
+    /// It only reads: no store is opened and nothing is created.
+    fn stale(&self) -> Result<bool, AppError> {
+        if !self.collection_matches()? {
+            return Ok(true);
+        }
+        for step in &self.steps {
+            if step.read()? != step.before {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     pub(crate) fn command(&self, request_id: &str, epoch: &str) -> Command {
         Command {
             request_id: request_id.into(),
@@ -141,6 +155,29 @@ impl Workflows<'_> {
             .ok_or_else(|| AppError::reject(404, "PLAN_NOT_FOUND"))?;
         serde_json::from_str(&text)
             .map_err(|source| AppError::stored("stored workflow plan", source))
+    }
+    /// Record the refusal of an expired or stale plan before its caller opens
+    /// the destination store, which creates private state and takes the writer
+    /// lease. `commit` repeats both checks under that lease.
+    pub(crate) fn refuse_unusable(
+        &self,
+        plan: &Plan,
+        command: &Command,
+        now: i64,
+    ) -> Result<Option<Reply>, AppError> {
+        let code = if now >= plan.expires_at {
+            "PLAN_EXPIRED"
+        } else if plan.stale()? {
+            "PLAN_STALE"
+        } else {
+            return Ok(None);
+        };
+        let reply = Reply::error(409, code, &command.request_id);
+        Ok(Some(
+            self.journal
+                .record(command, &reply, None, now, true)?
+                .unwrap_or(reply),
+        ))
     }
     /// Caller holds the maintenance gate and relevant project lease throughout.
     pub fn commit(
@@ -189,13 +226,8 @@ impl Workflows<'_> {
         if self.journal.has_pending(&plan.project_id)? {
             return reject("PROJECT_RECOVERY_REQUIRED");
         }
-        if !plan.collection_matches()? {
+        if plan.stale()? {
             return reject("PLAN_STALE");
-        }
-        for step in &plan.steps {
-            if step.read()? != step.before {
-                return reject("PLAN_STALE");
-            }
         }
         let job_id = Uuid::new_v4().to_string();
         let reply = Reply {

@@ -4,7 +4,7 @@ use crate::{
     AppError, Reply,
     engine::Engine,
     instant, now_millis,
-    source::{collection, pretty, read},
+    source::{collection, pretty},
     workflow::{Plan, PlanLocation, Step, Workflows},
 };
 use project_domain::validate_document;
@@ -207,17 +207,15 @@ impl Engine {
                 {
                     return Err(AppError::reject(409, "PATH_ALREADY_REGISTERED"));
                 }
-                self.release_store_path(&path)?;
-                let handle = self.store_path(&new_absolute_path, false)?;
-                let store = handle
-                    .lock()
-                    .map_err(|_| AppError::LockPoisoned("project store"))?;
-                read(&store, Kind::Project, &project)?;
+                // A preview only reads. It takes no lease, creates nothing at
+                // the new path and keeps the registered folder's store open.
                 let directory = Directory::open(Path::new(&new_absolute_path))?;
-                let (source, name) = store.location(Kind::Project, &project, false)?;
-                let bytes = source
-                    .read(&name)?
-                    .ok_or(AppError::Unavailable("relocation project source"))?;
+                let bytes = directory
+                    .child(".project", false)?
+                    .read("project.json")?
+                    .ok_or_else(|| AppError::reject(404, "RESOURCE_NOT_FOUND"))?;
+                document::parse(Kind::Project, Some(&project), &bytes)
+                    .map_err(|_| AppError::reject(409, "DOCUMENT_INVALID"))?;
                 steps.push(Step::plan(
                     &directory,
                     &[".project", "project.json"],
@@ -310,10 +308,23 @@ impl Engine {
         if self.journal.has_pending("workspace")? {
             return Err(AppError::reject(409, "WORKSPACE_RECOVERY_REQUIRED"));
         }
+        // Opening a store creates its private state and takes the writer
+        // lease, so a plan that cannot be committed is refused first.
+        if let Some(reply) =
+            workflows.refuse_unusable(&plan, &plan.command(request, epoch), now_millis())?
+        {
+            return Ok(reply);
+        }
+        let destination = plan.location.destination.as_str();
+        if plan.kind == WorkflowKind::Relocate {
+            // A moved folder carries the lease file this engine still holds
+            // under the previous path; release it before leasing the new one.
+            self.release_store_path(plan.location.previous_path()?)?;
+        }
         let handle = if plan.kind == WorkflowKind::Unregister {
             None
         } else {
-            Some(self.store_path(plan.location.destination.as_str(), false)?)
+            Some(self.store_path(destination, false)?)
         };
         let store = handle
             .as_ref()
@@ -344,6 +355,9 @@ impl Engine {
         )?;
         drop(store);
         drop(handle);
+        if plan.kind == WorkflowKind::Relocate && reply.http_status != 202 {
+            self.release_unregistered_store(destination);
+        }
         if let Some(job) = reply.body["job_id"].as_str() {
             match workflows.job(job) {
                 Ok(job) if job["state"] == "done" => {

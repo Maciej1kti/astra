@@ -229,22 +229,57 @@ impl Engine {
                     .unwrap_or(reply));
             }
         }
-        let handle = self.store_path(plan.location.destination.as_str(), true)?;
-        let store = handle
-            .lock()
-            .map_err(|_| AppError::LockPoisoned("project store"))?;
-        let reply = workflows.commit(plan_id, request_id, epoch, now_millis())?;
-        if let Some(job) = reply.body["job_id"].as_str()
-            && workflows.job(job)?["state"] == "done"
-            && self
-                .index
-                .refresh(&store, &plan.project_id, now_millis())
-                .is_err()
+        // Opening the store creates `.project/.local` and takes the writer
+        // lease, so a plan that cannot be committed is refused first.
+        if let Some(reply) =
+            workflows.refuse_unusable(&plan, &plan.command(request_id, epoch), now_millis())?
         {
-            let _ =
-                self.index
-                    .mark_unavailable(&plan.project_id, "PROJECTION_DEGRADED", now_millis());
+            return Ok(reply);
+        }
+        let destination = plan.location.destination.as_str();
+        let handle = self.store_path(destination, true)?;
+        let reply = {
+            let store = handle
+                .lock()
+                .map_err(|_| AppError::LockPoisoned("project store"))?;
+            let reply = workflows.commit(plan_id, request_id, epoch, now_millis())?;
+            if let Some(job) = reply.body["job_id"].as_str()
+                && workflows.job(job)?["state"] == "done"
+                && self
+                    .index
+                    .refresh(&store, &plan.project_id, now_millis())
+                    .is_err()
+            {
+                let _ = self.index.mark_unavailable(
+                    &plan.project_id,
+                    "PROJECTION_DEGRADED",
+                    now_millis(),
+                );
+            }
+            reply
+        };
+        if reply.http_status != 202 {
+            self.release_unregistered_store(destination);
         }
         Ok(reply)
+    }
+
+    /// A refused plan must not keep the writer lease of a folder that this
+    /// workspace does not register. Cleanup never replaces the recorded reply.
+    pub(crate) fn release_unregistered_store(&self, path: &str) {
+        let released = self.workspace().and_then(|workspace| {
+            if workspace
+                .value
+                .projects
+                .iter()
+                .any(|item| item.path == path)
+            {
+                return Ok(());
+            }
+            self.release_store_path(path)
+        });
+        if let Err(error) = released {
+            crate::diagnostics::record_failure("plan_store_release", &error, None, None);
+        }
     }
 }

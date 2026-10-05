@@ -49,10 +49,12 @@ fn completed_maintenance_survives_projection_failure(operation: &str, restart: b
     };
     let plan = engine.maintenance_plan(&input).unwrap();
     if operation == "relocate" {
-        // A previous path can be reused after the preview releases its original store.
-        // Keep a registry-owned lease there to exercise completion's separate cleanup.
-        fs::create_dir(&old_root).unwrap();
-        drop(engine.store_path(old_root.to_str().unwrap(), true).unwrap());
+        // The preview is read-only: the moved folder's lease stays with the
+        // registered store until the commit moves it to the new path.
+        assert!(
+            project_store::filesystem::ProjectStore::open(&env.root.join("moved"), false).is_err()
+        );
+        assert!(!old_root.exists());
     }
     let fault = projection_failure(&env);
     let request = Uuid::now_v7().to_string();
@@ -101,9 +103,16 @@ fn completed_maintenance_survives_projection_failure(operation: &str, restart: b
         fs::read(env.root.join("state/workspace.json")).unwrap(),
         workspace
     );
-    if matches!(operation, "unregister" | "relocate") {
+    if operation == "unregister" {
         let _lease = project_store::filesystem::ProjectStore::open(&old_root, false)
             .expect("completed maintenance releases the previous store despite projection failure");
+    }
+    if operation == "relocate" {
+        // The lease moved with the registration and is held once, by the new path.
+        assert!(
+            project_store::filesystem::ProjectStore::open(&env.root.join("moved"), false).is_err()
+        );
+        assert!(engine.get(&project, Kind::Card, id).is_ok());
     }
     if operation == "unregister" {
         assert!(engine.workspace().unwrap().value.projects.is_empty());
