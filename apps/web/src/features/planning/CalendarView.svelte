@@ -1,5 +1,6 @@
 <script lang="ts">
   import { errorMessage } from "../../lib/api/messages.ts";
+  import { countedDatedItems } from "../../lib/ui/locale.ts";
   import { revealLayers } from "../../lib/ui/motion-layers";
   import { calendarLayers } from "./calendar-motion";
   import type { CardCreate } from "../../lib/contracts/api.generated";
@@ -594,7 +595,7 @@
     </details>
   </div>
   {#if cursor || paged}<p class="hint">
-      Wyświetlono {items.length} elementów z datą na tej stronie.
+      Wyświetlono {countedDatedItems(items.length)} z datą na tej stronie.
     </p>{/if}
   {#if cursor}<button disabled={loading} onclick={() => load(true)}
       >Następna strona elementów z datą</button

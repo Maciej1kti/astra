@@ -4,6 +4,7 @@
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
+  import { plannedDays } from "../../lib/ui/locale";
   import {
     calendarCells,
     calendarLabel,
@@ -284,7 +285,7 @@
           : target === "end"
             ? "Wybierz datę końcową"
             : length
-              ? `${length} ${length === 1 ? "dzień" : "dni"} zaplanowanych`
+              ? plannedDays(length)
               : "Wybierz datę początkową"}</span
       >
       <Button

@@ -2,6 +2,27 @@ import type { Summary } from "../../../lib/api/api.ts";
 import type { WorkspaceRoute } from "../navigation.ts";
 import type { Attention } from "../view-queries.ts";
 import { visibleCards } from "./screen-data.ts";
+import { counted } from "../../../lib/ui/locale.ts";
+
+/** Section counts agree with their number: 1 widoczny plan, 3 widoczne plany. */
+export const focusSectionCount = {
+  attention: (count: number) =>
+    counted(
+      count,
+      "widoczny element",
+      "widoczne elementy",
+      "widocznych elementów",
+    ),
+  motion: (count: number) =>
+    counted(count, "widoczny plan", "widoczne plany", "widocznych planów"),
+  events: (count: number) =>
+    counted(
+      count,
+      "widoczne wydarzenie",
+      "widoczne wydarzenia",
+      "widocznych wydarzeń",
+    ),
+};
 
 export type FocusAttention = Attention & { reasons: string[] };
 export type FocusCard = Summary & { attentionReasons: string[] };

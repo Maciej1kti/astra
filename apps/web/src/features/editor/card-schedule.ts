@@ -2,6 +2,7 @@ import type { CardFields } from "./editor-draft";
 import { counterDay } from "../cards/card-counters.ts";
 import { dayDistance } from "../planning/dates.ts";
 import { eventEnd } from "../../lib/resources/timed-event.ts";
+import { countedDays as days } from "../../lib/ui/locale.ts";
 
 type Schedule = Pick<
   CardFields,
@@ -13,7 +14,6 @@ type Summary = {
   overdue?: boolean;
   valid: boolean;
 };
-const days = (count: number) => `${count} ${count === 1 ? "dzień" : "dni"}`;
 const dateValid = (value: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(value) &&
   Number.isFinite(Date.parse(`${value}T12:00:00Z`)) &&

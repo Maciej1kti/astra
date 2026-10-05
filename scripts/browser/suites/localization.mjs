@@ -103,6 +103,28 @@ await runBrowserSuite(
               exact: true,
             }),
           ).toBeVisible();
+          // Every section count agrees with whatever number the fixture shows.
+          const forms = {
+            attention: ["widoczny element", "widoczne elementy", "elementów"],
+            motion: ["widoczny plan", "widoczne plany", "widocznych planów"],
+            events: ["widoczne wydarzenie", "widoczne wydarzenia", "wydarzeń"],
+          };
+          for (const [section, [one, few, many]] of Object.entries(forms)) {
+            const text = await page
+              .locator(`[data-focus-section="${section}"] .sectiontitle span`)
+              .first()
+              .innerText();
+            const count = Number(text.match(/^\d+/)?.[0]);
+            const last = count % 10;
+            const teens = count % 100;
+            const expected =
+              count === 1
+                ? one
+                : last >= 2 && last <= 4 && !(teens >= 12 && teens <= 14)
+                  ? few
+                  : many;
+            assert(text.endsWith(expected), `${section}: ${text}`);
+          }
         }
         if (view === "chart") {
           await expect(

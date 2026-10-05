@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { TransportError } from "../../apps/web/src/lib/api/transport-errors.ts";
-import { counted, uiLocale } from "../../apps/web/src/lib/ui/locale.ts";
+import {
+  counted,
+  countedDatedItems,
+  countedDays,
+  countedFiles,
+  plannedDays,
+  uiLocale,
+} from "../../apps/web/src/lib/ui/locale.ts";
+import { focusSectionCount } from "../../apps/web/src/features/workspace/screens/focus-sections.ts";
 import {
   serverMessage,
   errorMessage,
@@ -44,6 +52,51 @@ test("Polish count forms handle teens, compound counts and fractions", () => {
     [1.5, "1,5 liczników"],
   ])
     assert.equal(counted(value, "licznik", "liczniki", "liczników"), expected);
+});
+
+test("days, files and visible Focus rows agree with their count", () => {
+  assert.deepEqual([0, 1, 2, 5, 12, 22, 25].map(countedDays), [
+    "0 dni",
+    "1 dzień",
+    "2 dni",
+    "5 dni",
+    "12 dni",
+    "22 dni",
+    "25 dni",
+  ]);
+  assert.deepEqual([1, 3, 6, 23].map(plannedDays), [
+    "1 dzień zaplanowany",
+    "3 dni zaplanowane",
+    "6 dni zaplanowanych",
+    "23 dni zaplanowane",
+  ]);
+  assert.deepEqual([1, 2, 5].map(countedFiles), [
+    "1 plik",
+    "2 pliki",
+    "5 plików",
+  ]);
+  assert.deepEqual([1, 4, 11].map(countedDatedItems), [
+    "1 element",
+    "4 elementy",
+    "11 elementów",
+  ]);
+  for (const [section, forms] of [
+    [
+      "attention",
+      ["1 widoczny element", "3 widoczne elementy", "5 widocznych elementów"],
+    ],
+    ["motion", ["1 widoczny plan", "3 widoczne plany", "5 widocznych planów"]],
+    [
+      "events",
+      [
+        "1 widoczne wydarzenie",
+        "3 widoczne wydarzenia",
+        "5 widocznych wydarzeń",
+      ],
+    ],
+  ])
+    assert.deepEqual([1, 3, 5].map(focusSectionCount[section]), forms);
+  assert.equal(focusSectionCount.attention(0), "0 widocznych elementów");
 });
 
 test("chart presentation uses decimal commas without changing stored quantities", () => {

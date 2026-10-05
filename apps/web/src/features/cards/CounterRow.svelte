@@ -3,6 +3,7 @@
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
   import Badge from "../../lib/ui/Badge.svelte";
+  import { countedDays } from "../../lib/ui/locale";
   import type {
     CardCounter,
     CardPatch,
@@ -237,9 +238,7 @@
   {#if historyOpen}
     <div class="counter-history-panel" id={`${id}-history`}>
       <div class="counter-history-heading">
-        <strong>Historia</strong><span
-          >{dates.length} {dates.length === 1 ? "dzień" : "dni"}</span
-        >
+        <strong>Historia</strong><span>{countedDays(dates.length)}</span>
       </div>
       <p class="field-hint">
         Zapisane wyniki dzienne. Podgląd obejmuje 14 dni; kropki oznaczają dni

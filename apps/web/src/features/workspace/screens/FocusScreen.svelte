@@ -18,6 +18,7 @@
     focusSections,
     type FocusAttention,
     type FocusCard,
+    focusSectionCount,
   } from "./focus-sections";
   import { focusOrderGesture } from "../focus-order-gesture";
 
@@ -240,7 +241,7 @@
   <SectionHeading
     id="attention-section-title"
     title="Potrzebuje mojej uwagi"
-    count={`${attention.length} widocznych elementów`}
+    count={focusSectionCount.attention(attention.length)}
   />
   {#each attention as item (attentionKey(item))}<button
       class="listrow"
@@ -275,7 +276,7 @@
   <SectionHeading
     id="motion-section-title"
     title="W toku"
-    count={`${activeCards.length} widocznych planów`}
+    count={focusSectionCount.motion(activeCards.length)}
   />
   <div class="focus-stack">
     {#each activeCards as item (item.project_id + ":" + item.id)}<PinnedCard
@@ -306,7 +307,7 @@
   <SectionHeading
     id="events-section-title"
     title="Wydarzenia"
-    count={`${sections.eventCards.length} widocznych wydarzeń`}
+    count={focusSectionCount.events(sections.eventCards.length)}
   />
   <div class="focus-stack">
     {#each sections.eventCards as item (item.project_id + ":" + item.id)}

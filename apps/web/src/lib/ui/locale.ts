@@ -21,3 +21,13 @@ export function counted(
         : many;
   return `${count.toLocaleString(uiLocale)} ${word}`;
 }
+
+/** Days have a single plural form: 2 dni, 5 dni, 22 dni. */
+export const countedDays = (count: number) =>
+  counted(count, "dzień", "dni", "dni");
+export const plannedDays = (count: number) =>
+  counted(count, "dzień zaplanowany", "dni zaplanowane", "dni zaplanowanych");
+export const countedFiles = (count: number) =>
+  counted(count, "plik", "pliki", "plików");
+export const countedDatedItems = (count: number) =>
+  counted(count, "element", "elementy", "elementów");
