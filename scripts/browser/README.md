@@ -107,7 +107,10 @@ view navigation and selection, browser-local order and visibility persistence,
 upgrades that normalize Main entries to Projects and remove duplicates, all-hidden
 recovery, keyboard
 focus/dismissal, touch targets, landscape scrolling, desktop rotation and reduced
-motion at 320–1024px. Its shared grip/eye selector covers mouse and touch ordering,
+motion at 320–1024px. It measures the bar itself: even insets, one label size and
+resting weight, centered labels, cells that do not move with the selection and,
+in Chromium, an emulated home-indicator inset that lifts the bar without
+stretching it. Its shared grip/eye selector covers mouse and touch ordering,
 Escape/Tab/outside cancellation, inert aligned previews, ArrowUp/Down/Home/End
 and retained handle focus. Chromium captures rendered
 surfaces; WebKit checks the same behavior without screenshot preparation.

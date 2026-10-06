@@ -109,7 +109,8 @@
     aria-controls={id}
     {disabled}
     onclick={toggle}
-    ><Icon name={icon} />{#if text}<span>{text}</span>{/if}</button
+    ><Icon name={icon} />{#if text}<span data-label={text}>{text}</span
+      >{/if}</button
   >
   {#if open}<div
       use:popoverPosition={{ anchor: trigger!, align, placement }}

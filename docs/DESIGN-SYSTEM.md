@@ -51,6 +51,12 @@ The sidebar starts directly with Focus. On short viewports, including landscape
 phones, the whole sidebar scrolls vertically so all views and Sign out remain
 reachable. Rotation reveals the active view within the new navigation axis.
 The bar scrolls when extra shortcuts or larger browser text require more space.
+Every shortcut, More included, shares one icon size, label size and resting
+weight. A label reserves its selected width, so choosing a view moves no cell;
+cells are equal while the bar fits and follow their labels once it scrolls. The
+selection surface is concentric with the bar's corners, and a scrolling bar
+fades only the edge that still hides views. A bottom safe area lifts the whole
+bar above the home indicator instead of padding its content.
 Its floating menu stays within the viewport and scrolls independently in short
 landscape layouts. Workspace content clears the navigation and floating action.
 

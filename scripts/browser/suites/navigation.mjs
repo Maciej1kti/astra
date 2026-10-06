@@ -300,6 +300,129 @@ await runBrowserSuite(
         `Default dock should be shorter than the screen: ${JSON.stringify(dock)}`,
       );
       await screenshot("navigation-default-390");
+      const dockGeometry = async () => {
+        await settle();
+        return nav.evaluate((element) => {
+          const box = (item) => {
+            const bounds = item.getBoundingClientRect();
+            return {
+              left: bounds.left,
+              right: bounds.right,
+              top: bounds.top,
+              bottom: bounds.bottom,
+              width: bounds.width,
+            };
+          };
+          const surface = box(element.closest("aside"));
+          const bar = box(element);
+          return {
+            viewport: innerHeight,
+            surface,
+            inset: {
+              top: bar.top - surface.top,
+              bottom: surface.bottom - bar.bottom,
+              left: bar.left - surface.left,
+              right: surface.right - bar.right,
+            },
+            items: [...element.querySelectorAll("button[data-view]")].map(
+              (button) => {
+                const style = getComputedStyle(button);
+                return {
+                  view: button.dataset.view,
+                  chosen: button.classList.contains("chosen"),
+                  size: style.fontSize,
+                  weight: style.fontWeight,
+                  button: box(button),
+                  label: box(button.querySelector("span")),
+                };
+              },
+            ),
+          };
+        });
+      };
+      const checkDock = (geometry, message) => {
+        const { inset, items } = geometry;
+        assert.ok(
+          Math.abs(inset.top - inset.bottom) < 0.6 &&
+            Math.abs(inset.left - inset.right) < 0.6 &&
+            Math.abs(inset.top - inset.left) < 0.6,
+          `${message}: dock content is inset evenly: ${JSON.stringify(inset)}`,
+        );
+        const resting = items.filter((item) => !item.chosen);
+        assert.equal(
+          new Set(items.map((item) => item.size)).size,
+          1,
+          `${message}: dock labels share one size`,
+        );
+        assert.equal(
+          new Set(resting.map((item) => item.weight)).size,
+          1,
+          `${message}: resting dock labels share one weight`,
+        );
+        for (const item of items) {
+          assert.ok(
+            item.label.left - item.button.left >= 4 &&
+              item.button.right - item.label.right >= 4 &&
+              Math.abs(
+                item.label.left +
+                  item.label.right -
+                  item.button.left -
+                  item.button.right,
+              ) < 1.2,
+            `${message}: ${item.view} label is centered inside its cell: ${JSON.stringify(item)}`,
+          );
+          assert.ok(
+            Math.abs(item.label.top - items[0].label.top) < 0.6 &&
+              Math.abs(item.button.top - items[0].button.top) < 0.6 &&
+              Math.abs(item.button.bottom - items[0].button.bottom) < 0.6,
+            `${message}: ${item.view} shares the dock baseline`,
+          );
+        }
+      };
+      const focusDock = await dockGeometry();
+      checkDock(focusDock, "Focus selected");
+      assert.equal(
+        new Set(focusDock.items.map((item) => item.button.width)).size,
+        1,
+        `Default dock cells are equal: ${JSON.stringify(focusDock.items.map((item) => item.button.width))}`,
+      );
+      await nav.getByRole("button", { name: "Projekty", exact: true }).click();
+      await expect(page).toHaveURL(/view=projects/);
+      const projectsDock = await dockGeometry();
+      checkDock(projectsDock, "Projects selected");
+      assert.deepEqual(
+        projectsDock.items.map((item) => item.button),
+        focusDock.items.map((item) => item.button),
+        "Choosing another view must not move or resize a dock cell",
+      );
+      if (browser.browserType().name() === "chromium") {
+        // Chromium can emulate a home-indicator inset; WebKit has no override.
+        const device = await context.newCDPSession(page);
+        await device.send("Emulation.setSafeAreaInsetsOverride", {
+          insets: { bottom: 34 },
+        });
+        await route("focus");
+        const inset = await dockGeometry();
+        checkDock(inset, "Home indicator inset");
+        const below = inset.viewport - inset.surface.bottom;
+        assert.ok(
+          below >= 20 && below <= 34,
+          `The dock floats above the home indicator without growing: ${JSON.stringify({ below, surface: inset.surface })}`,
+        );
+        assert.equal(
+          inset.surface.bottom - inset.surface.top,
+          focusDock.surface.bottom - focusDock.surface.top,
+          "A bottom safe area must not stretch the dock",
+        );
+        await device.send("Emulation.setSafeAreaInsetsOverride", {
+          insets: {},
+        });
+        await device.detach();
+      }
+      await route("focus");
+      checks.push(
+        "dock cells, labels and insets stay even across selection and a bottom safe area",
+      );
       checks.push(
         "mobile default shows Focus, Projects and More in a shorter dock",
       );

@@ -96,11 +96,28 @@
         if (offset) sidebar.scrollBy({ top: offset, behavior: "instant" });
       }
     };
-    void tick().then(reveal);
-    const observer = new ResizeObserver(reveal);
+    // The dock fades only the edge that still hides views.
+    const edges = () => {
+      const hidden = navigation.scrollWidth - navigation.clientWidth;
+      navigation.toggleAttribute("data-fade-start", navigation.scrollLeft > 1);
+      navigation.toggleAttribute(
+        "data-fade-end",
+        navigation.scrollLeft < hidden - 1,
+      );
+    };
+    const update = () => {
+      reveal();
+      edges();
+    };
+    void tick().then(update);
+    const observer = new ResizeObserver(update);
     observer.observe(navigation);
     if (sidebar) observer.observe(sidebar);
-    return () => observer.disconnect();
+    navigation.addEventListener("scroll", edges, { passive: true });
+    return () => {
+      observer.disconnect();
+      navigation.removeEventListener("scroll", edges);
+    };
   });
 </script>
 
@@ -116,11 +133,14 @@
         aria-current={view === item ? "page" : undefined}
         class:chosen={view === item}
         onclick={() => onchange(item)}
-        ><Icon name={item} /><span>{viewLabel(item)}</span></button
+        ><Icon name={item} /><span data-label={viewLabel(item)}
+          >{viewLabel(item)}</span
+        ></button
       >{/each}
     <ActionMenu
       label="Więcej widoków"
       text="Więcej"
+      icon="views"
       current={overflowActive}
       navigationKey="more"
       panelClass="navigation-menu-panel"
