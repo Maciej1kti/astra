@@ -144,3 +144,76 @@ test("Chart refresh keeps loaded later pages and stops catalog growth at its exp
   assert.match(owner.state.notice, /500 liczników/);
   owner.dispose();
 });
+
+test("Chart keeps the loaded series on screen while only the date range changes", async () => {
+  const next = deferred();
+  const calls = [];
+  const owner = new ChartData(
+    () => {},
+    async (scope, cursor) => {
+      calls.push([scope.from, scope.project, cursor]);
+      if (scope.project !== "p") return page([]);
+      if (scope.from === query.from)
+        return cursor ? page(["c"]) : page(["a", "b"], "more");
+      return cursor ? page(["f"]) : next.promise;
+    },
+  );
+  await owner.refresh(query);
+  await owner.more();
+  assert.deepEqual(
+    owner.state.series.map((row) => row.id),
+    ["a", "b", "c"],
+  );
+  const job = owner.refresh({ ...query, from: "2026-08-01" });
+  assert.deepEqual(
+    owner.state.series.map((row) => row.id),
+    ["a", "b", "c"],
+    "The previous range stays until the new one arrives",
+  );
+  assert.equal(owner.state.loading, true);
+  assert.equal(
+    owner.state.cursor,
+    null,
+    "No further page of the old range can be requested",
+  );
+  next.resolve(page(["d", "e"], "more"));
+  await job;
+  assert.deepEqual(
+    owner.state.series.map((row) => row.id),
+    ["d", "e"],
+  );
+  assert.equal(owner.state.loading, false);
+  assert.deepEqual(calls.at(-1), ["2026-08-01", "p", null]);
+
+  const other = owner.refresh({ ...query, project: "other" });
+  assert.deepEqual(
+    owner.state.series,
+    [],
+    "Another project never shows the previous project's counters",
+  );
+  await other;
+  const archived = owner.refresh({ ...query, includeArchived: true });
+  assert.deepEqual(owner.state.series, []);
+  await archived;
+  owner.dispose();
+});
+
+test("Chart drops a kept range when its replacement cannot be read", async () => {
+  const owner = new ChartData(
+    () => {},
+    async (scope) => {
+      if (scope.from === query.from) return page(["a"]);
+      throw new ApiError(503, "INDEX_UNAVAILABLE", "offline");
+    },
+  );
+  await owner.refresh(query);
+  await owner.refresh({ ...query, from: "2026-08-01" });
+  assert.deepEqual(
+    owner.state.series,
+    [],
+    "Values of the old range are not left under the new dates",
+  );
+  assert.notEqual(owner.state.error, "");
+  assert.equal(owner.state.loading, false);
+  owner.dispose();
+});

@@ -18,7 +18,6 @@ export interface ChartSeries {
   values: Record<string, number>;
 }
 export type ChartBucket = "day" | "week" | "month";
-export type ChartScale = "values" | "relative" | "converted";
 export interface ChartPeriod {
   from: string;
   to: string;
@@ -43,9 +42,7 @@ export interface ChartStats {
 export interface ChartPlotSeries {
   source: ChartSeries;
   points: ChartPoint[];
-  stats: ChartStats;
   color: number;
-  rate: number | null;
 }
 export interface ChartPanel {
   unit: string;
@@ -194,56 +191,20 @@ export function chartColorSlots(
   return slots;
 }
 
+/** Counters share a plot only when their units match. */
 export function chartPanels(
   series: ChartSeries[],
   periods: ChartPeriod[],
   cumulative: boolean,
-  scale: ChartScale,
-  rates: Record<string, string>,
-  outputUnit: string,
   colors: Record<string, number> = {},
 ): ChartPanel[] {
   const panels = new Map<string, ChartPlotSeries[]>();
   for (const [position, source] of series.entries()) {
-    const color = colors[chartSeriesKey(source)] ?? position;
-    const rate = chartRate(rates[chartSeriesKey(source)]);
-    if (scale === "converted" && rate === null) continue;
-    const points = chartPoints(source.values, periods, cumulative);
-    const peak = Math.max(
-      0,
-      ...points.map((point) => Math.abs(point.value ?? 0)),
-    );
-    const scaled = (value: number | null) =>
-      value === null
-        ? null
-        : scale === "relative"
-          ? peak === 0
-            ? 0
-            : (value / peak) * 100
-          : scale === "converted"
-            ? value * (rate ?? 0)
-            : value;
-    const transformed = points.map((point) => ({
-      ...point,
-      value: scaled(point.value),
-      carried: scaled(point.carried),
-    }));
-    const unit =
-      scale === "relative"
-        ? "% własnego maksimum"
-        : scale === "converted"
-          ? outputUnit.trim() || "value"
-          : source.unit.trim() || "units";
+    const unit = source.unit.trim() || "units";
     const row = {
       source,
-      points: transformed,
-      stats: chartStats(
-        source.values,
-        periods[0]?.from ?? "",
-        periods.at(-1)?.to ?? "",
-      ),
-      color,
-      rate,
+      points: chartPoints(source.values, periods, cumulative),
+      color: colors[chartSeriesKey(source)] ?? position,
     };
     if (!panels.has(unit)) panels.set(unit, []);
     panels.get(unit)!.push(row);

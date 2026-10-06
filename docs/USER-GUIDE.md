@@ -216,7 +216,9 @@ counter keeps its colour while you add or remove others.
 
 Pick **7 dni**, **30 dni**, **90 dni** or **1 rok**, or open **Własny** for an
 inclusive **Od**/**Do** range. Group results by **Dni**, **Tygodnie** or
-**Miesiące**. Until you pick a grouping yourself it follows the range: days up
+**Miesiące**. On a desktop or tablet these controls sit above the plots. On a
+phone the range, grouping and totals are three menus in one row directly below
+the plots, so the plot follows the counter list at once. Until you pick a grouping yourself it follows the range: days up
 to 45 days, weeks up to 180 and months beyond. **Sumy okresów** draws one bar
 per group; **Narastająco** draws a stepped line that adds recorded values from
 the beginning of the range and stays level through groups without a recording.
@@ -227,12 +229,11 @@ lines that break at missing recordings.
 The row above each plot names every counter and shows its value for one group,
 starting with the latest recorded one. Move the pointer over the plot, drag or
 tap it, or focus the plot and use the arrow keys, Home and End to read another
-group. **Pokaż dane wykresu** opens the same values in a table.
+group. A group without a recording reads **Brak zapisu**; in a running total it
+reads the held total with **bez zapisu**.
 
-**Wartości** overlays counters with the same unit and gives different units
-separate plots. **% własnego maksimum** puts different units on a common
-percentage scale for comparing their patterns. **Przeliczone** multiplies each
-counter by its rate.
+Plots always show recorded values. Counters with the same unit share a plot and
+different units get separate plots, each with its own scale.
 
 **Podsumowanie okresu** lists each selected counter's total, recorded days,
 average and best day; on a narrow screen every counter becomes its own card.
@@ -241,7 +242,8 @@ compares totals with the first of them. To estimate a cost, payment or other
 derived value, enter an individual **Stawka** in that counter's row. For example,
 ten recorded hours at a rate of 100 give 1,000 in the chosen **Jednostka
 wynikowa**. **Razem** adds same-unit totals and the converted values. Only
-counters with a valid rate contribute; zero is a valid rate. Rates and the
+counters with a valid rate contribute; zero is a valid rate. Rates value the
+summary only and do not change the plots. Rates and the
 output label are saved in this browser for the selected workspace profile. These
 controls do not change counter units or recorded sources.
 

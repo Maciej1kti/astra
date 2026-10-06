@@ -30,6 +30,8 @@ export class ChartData {
   private query: CounterQuery | null = null;
   private job: Promise<void> | null = null;
   private queued = false;
+  /** Series of the previous date range, shown until its replacement arrives. */
+  private kept = false;
   private disposed = false;
   private changed: (state: ChartDataState) => void;
   private read: typeof getCounterSeries;
@@ -54,13 +56,23 @@ export class ChartData {
       this.queued = true;
       return this.job;
     }
+    // A new date range keeps the same counters, so their plots stay in place
+    // until its values arrive. Another project or archive scope starts empty.
+    const scoped =
+      this.query?.project === query.project &&
+      this.query.includeArchived === query.includeArchived;
     this.controller?.abort();
     this.queued = false;
     this.query = { ...query };
-    if (!same) this.publish(initialState());
+    if (!same) {
+      this.kept = scoped && this.snapshot.series.length > 0;
+      this.publish(
+        this.kept ? { cursor: null, error: "", notice: "" } : initialState(),
+      );
+    }
     return this.load(
       null,
-      same ? Math.max(1, Math.ceil(this.snapshot.series.length / 100)) : 1,
+      scoped ? Math.max(1, Math.ceil(this.snapshot.series.length / 100)) : 1,
     );
   }
   more(): Promise<void> {
@@ -122,6 +134,7 @@ export class ChartData {
             ? "Lista jest ograniczona do 500 liczników. Wybierz projekt, aby zawęzić wyniki."
             : "",
         ].filter(Boolean);
+        this.kept = false;
         this.publish({
           series: series.slice(0, chartCatalogLimit),
           cursor: capped ? null : page.page.next_cursor,
@@ -133,7 +146,9 @@ export class ChartData {
           !isAbortError(cause) &&
           !this.disposed
         )
+          // Values of another range must not stay under the requested dates.
           this.publish({
+            ...(this.kept ? { series: [], cursor: null } : {}),
             error: errorMessage(cause),
           });
       } finally {

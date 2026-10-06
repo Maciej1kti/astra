@@ -459,9 +459,14 @@ place, so the plot stays within the first screen on tablets and phones. With
 nothing selected the list is always open. The width test is a CSS container
 query on the view, not the viewport, because the sidebar changes the room left.
 
-Range presets share the heading row; a custom range opens beneath them.
-Grouping and totals are segmented controls and the scale is a select. Controls
-wrap by container width and never shrink below the 44px target.
+Range presets share the heading row; a custom range opens beneath them, and
+grouping and totals are segmented controls. Controls wrap by container width
+and never shrink below the 44px target. In the shell's phone layout, at most
+700px wide, the same three choices are `ChartMenu` buttons in one row directly
+below the plots: each names its current choice and opens the shared
+`ActionMenu` panel. The heading then holds only the title, so the plot starts
+right after the collapsed counter list. Plots show recorded values only; there
+is no scale choice.
 
 A plot is chosen by the data's job. Period totals are grouped bars, at most
 24px thick, square on the baseline and rounded at the data end, with a surface
@@ -475,14 +480,16 @@ Series use the eight `--series-*` tokens in their fixed order, which was checked
 for colour-vision separation on both paper surfaces. A counter keeps its slot
 while the selection around it changes. Three light-theme steps are below 3:1 on
 white, so identity never rests on colour alone: the legend above each plot
-always names every series, and an exact-value table is one disclosure away.
+always names every series beside its exact value.
 Do not reuse status colours for a series, and do not colour text with a series
 colour.
 
 The legend doubles as the readout. It shows each series' value for one period,
 by default the latest recorded one, and follows the pointer, a touch drag or
 the plot's visually hidden range input, which is the keyboard route and paints
-a focus ring on the plot. A refresh dims the current plots rather than clearing
+a focus ring on the plot. That input announces the same reading, and it is the
+only non-visual route to a period's values since the per-plot data table was
+removed at the owner's direction; keep it when changing the plot. A refresh or a new date range dims the current plots rather than clearing
 them.
 
 The period summary is one ARIA table holding statistics and the browser-local

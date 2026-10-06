@@ -17,19 +17,16 @@
     type ChartBucket,
     type ChartPanel,
     type ChartPeriod,
-    type ChartScale,
   } from "./chart-model";
 
   let {
     panel,
     cumulative,
     bucket,
-    scale,
   }: {
     panel: ChartPanel;
     cumulative: boolean;
     bucket: ChartBucket;
-    scale: ChartScale;
   } = $props();
 
   let inspected = $state<number | null>(null);
@@ -88,7 +85,6 @@
           ? "sumy miesięczne"
           : "sumy dzienne",
   );
-  const suffix = $derived(scale === "relative" ? "%" : "");
   // The slider announces what the legend shows for the same period.
   const reading = $derived(
     period
@@ -97,7 +93,7 @@
             const point = row.points[index];
             const value = point?.value ?? point?.carried ?? null;
             return `${row.source.name} ${
-              value === null ? "brak zapisu" : `${chartValue(value)}${suffix}`
+              value === null ? "brak zapisu" : chartValue(value)
             }`;
           })
           .join(", ")}`
@@ -135,12 +131,12 @@
             >
             <span class="legend-value">
               {#if point.value !== null}<strong
-                  >{chartValue(point.value)}{suffix}</strong
+                  >{chartValue(point.value)}</strong
                 >{#if point.days > 1}<small
                     >{point.recorded} z {point.days} dni</small
                   >{/if}
               {:else if point.carried !== null}<strong class="held"
-                  >{chartValue(point.carried)}{suffix}</strong
+                  >{chartValue(point.carried)}</strong
                 ><small>bez zapisu</small>
               {:else}<small>Brak zapisu</small>{/if}
             </span>
@@ -167,8 +163,7 @@
       <title>Wykres licznika: {panel.unit}</title>
       <desc
         >Zapisane {mode}. Okresy bez zapisów pozostają puste. Wskaż okres myszą,
-        dotykiem albo strzałkami, lub otwórz dane wykresu, aby zobaczyć dokładne
-        wartości.</desc
+        dotykiem albo strzałkami, aby odczytać dokładne wartości w legendzie.</desc
       >
       {#if period}
         {#if bars}<rect
@@ -198,7 +193,7 @@
           x={frame.left - 10}
           y={chartY(tick, min, max, frame) + 4}
           text-anchor="end"
-          class="axis-text">{chartValue(tick, true)}{suffix}</text
+          class="axis-text">{chartValue(tick, true)}</text
         >
       {/each}
       {#each panel.series as row, position (chartSeriesKey(row.source))}
@@ -269,45 +264,6 @@
         }}
       />{/if}
   </div>
-  <details class="chart-data">
-    <summary>Pokaż dane wykresu</summary>
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex (The scrollable data table needs keyboard access.) -->
-    <div
-      class="data-scroll"
-      tabindex="0"
-      role="region"
-      aria-label={`Tabela danych w ${panel.unit}`}
-    >
-      <table>
-        <caption
-          >Dokładne wartości wykresu w {panel.unit}. Kreska oznacza brak zapisu.</caption
-        >
-        <thead
-          ><tr
-            ><th scope="col">Okres</th
-            >{#each panel.series as row (chartSeriesKey(row.source))}<th
-                scope="col"
-                >{row.source.name}<small>{row.source.card_title}</small></th
-              >{/each}</tr
-          ></thead
-        >
-        <tbody>
-          {#each periods as point, i (point.from)}
-            <tr>
-              <th scope="row">{span(point)}</th>
-              {#each panel.series as row (chartSeriesKey(row.source))}
-                {@const cell = row.points[i]}
-                <td
-                  >{#if cell}{chartValue(cell.value)}<small
-                      >{cell.recorded}/{point.days} dni z zapisami</small
-                    >{/if}</td
-                >{/each}
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  </details>
 </section>
 
 <style>
@@ -399,7 +355,7 @@
   }
   .plot-canvas {
     position: relative;
-    margin: 0 var(--space-4);
+    margin: 0 var(--space-4) var(--space-4);
     border-radius: var(--radius-control);
   }
   .plot-measure {
@@ -463,68 +419,6 @@
     stroke: var(--paper);
     stroke-width: 2;
   }
-  .chart-data {
-    margin-top: var(--space-2);
-    padding: 0 var(--space-9);
-    border-top: var(--stroke) solid var(--line);
-    font-size: var(--text-label);
-  }
-  summary {
-    cursor: pointer;
-    min-height: var(--tap-target);
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    color: var(--muted);
-    list-style: none;
-  }
-  summary::-webkit-details-marker {
-    display: none;
-  }
-  summary::before {
-    content: "";
-    width: var(--space-3);
-    height: var(--space-3);
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
-    transform: rotate(-45deg);
-  }
-  details[open] summary::before {
-    transform: rotate(45deg);
-  }
-  .data-scroll {
-    max-height: 360px;
-    overflow: auto;
-    margin-bottom: var(--space-8);
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--text-label);
-    font-variant-numeric: tabular-nums;
-    text-align: left;
-  }
-  caption {
-    text-align: left;
-    color: var(--muted);
-    padding: 0 0 var(--space-6);
-  }
-  th,
-  td {
-    padding: var(--space-4) var(--space-8) var(--space-4) 0;
-    border-bottom: var(--stroke) solid var(--line);
-    white-space: nowrap;
-  }
-  th {
-    font-weight: var(--weight-medium);
-  }
-  th small,
-  td small {
-    display: block;
-    color: var(--muted);
-    font-size: var(--text-xs);
-    font-weight: var(--weight-normal);
-  }
   @container chart (max-width: 520px) {
     .plot-heading {
       padding: var(--space-7) var(--space-8) 0;
@@ -535,9 +429,6 @@
     }
     .plot-canvas {
       margin-inline: var(--space-2);
-    }
-    .chart-data {
-      padding-inline: var(--space-8);
     }
   }
 </style>

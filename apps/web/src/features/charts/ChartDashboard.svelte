@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import PageHeading from "../../lib/ui/PageHeading.svelte";
   import EmptyState from "../../lib/ui/EmptyState.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import { countedDays } from "../../lib/ui/locale.ts";
   import ChartCounterPicker from "./ChartCounterPicker.svelte";
+  import ChartMenu from "./ChartMenu.svelte";
   import ChartPlot from "./ChartPlot.svelte";
   import ChartRange from "./ChartRange.svelte";
   import ChartSegments from "./ChartSegments.svelte";
@@ -20,7 +22,6 @@
     readChartPreferences,
     writeChartPreferences,
     type ChartBucket,
-    type ChartScale,
     type ChartSeries,
   } from "./chart-model";
 
@@ -66,10 +67,29 @@
   /** Until a grouping is picked, it follows the length of the range. */
   let bucketChosen = false;
   let cumulative = $state(false);
-  let scale = $state<ChartScale>("values");
   let rates = $state<Record<string, string>>({});
   let outputUnit = $state("PLN");
   let storageMessage = $state("");
+  // The shell's phone layout: display controls move below the plot.
+  const phoneQuery = "(max-width: 700px)";
+  let phone = $state(matchMedia(phoneQuery).matches);
+  onMount(() => {
+    const query = matchMedia(phoneQuery);
+    const update = () => (phone = query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  });
+
+  const buckets: { value: ChartBucket; label: string }[] = [
+    { value: "day", label: "Dni" },
+    { value: "week", label: "Tygodnie" },
+    { value: "month", label: "Miesiące" },
+  ];
+  const totals = [
+    { value: "period", label: "Sumy okresów" },
+    { value: "running", label: "Narastająco" },
+  ];
 
   function select(keys: string[]) {
     selectedKeys = keys;
@@ -96,17 +116,7 @@
     series.filter((item) => selectedKeys.includes(chartSeriesKey(item))),
   );
   const periods = $derived(chartPeriods(from, to, bucket));
-  const panels = $derived(
-    chartPanels(
-      selected,
-      periods,
-      cumulative,
-      scale,
-      rates,
-      outputUnit,
-      colors,
-    ),
-  );
+  const panels = $derived(chartPanels(selected, periods, cumulative, colors));
   const rows = $derived(
     selected.map((source, position) => ({
       source,
@@ -122,7 +132,6 @@
     ...new Set(selected.map((item) => item.unit.trim() || "units")),
   ]);
   const days = $derived(chartRangeDays(from, to));
-  const valueUnit = $derived(outputUnit.trim() || "wartość");
 
   function toggleSeries(item: ChartSeries) {
     const key = chartSeriesKey(item);
@@ -141,6 +150,13 @@
     }
     onrangechange(start, end);
   }
+  function chooseBucket(value: ChartBucket) {
+    bucket = value;
+    bucketChosen = true;
+  }
+  function chooseTotals(value: string) {
+    cumulative = value === "running";
+  }
   function savePreferences() {
     storageMessage = writeChartPreferences(preferenceKey, { rates, outputUnit })
       ? ""
@@ -154,42 +170,7 @@
   data-chart-from={from}
   data-chart-to={to}
 >
-  <PageHeading title="Wykres"
-    ><ChartRange {from} {to} {today} onrangechange={changeRange} /></PageHeading
-  >
-
-  <div class="chart-options">
-    <ChartSegments
-      label="Grupuj według"
-      options={[
-        { value: "day", label: "Dni" },
-        { value: "week", label: "Tygodnie" },
-        { value: "month", label: "Miesiące" },
-      ]}
-      value={bucket}
-      onselect={(value) => {
-        bucket = value;
-        bucketChosen = true;
-      }}
-    />
-    <ChartSegments
-      label="Sumy na wykresie"
-      options={[
-        { value: "period", label: "Sumy okresów" },
-        { value: "running", label: "Narastająco" },
-      ]}
-      value={cumulative ? "running" : "period"}
-      onselect={(value) => {
-        cumulative = value === "running";
-      }}
-    />
-    <label class="scale-choice"
-      >Skala<select bind:value={scale}
-        ><option value="values">Wartości</option><option value="relative"
-          >% własnego maksimum</option
-        ><option value="converted">Przeliczone na {valueUnit}</option></select
-      ></label
-    >
+  {#snippet period()}
     <p class="chart-period">
       <span>{chartDate(from)} – {chartDate(to, true)}</span>
       <span>{countedDays(days)}</span>
@@ -197,7 +178,34 @@
         >{loading ? "Ładowanie historii liczników…" : ""}</span
       >
     </p>
-  </div>
+  {/snippet}
+
+  <PageHeading title="Wykres"
+    >{#if !phone}<ChartRange
+        {from}
+        {to}
+        {today}
+        onrangechange={changeRange}
+      />{/if}</PageHeading
+  >
+
+  {#if !phone}
+    <div class="chart-options">
+      <ChartSegments
+        label="Grupuj według"
+        options={buckets}
+        value={bucket}
+        onselect={chooseBucket}
+      />
+      <ChartSegments
+        label="Sumy na wykresie"
+        options={totals}
+        value={cumulative ? "running" : "period"}
+        onselect={chooseTotals}
+      />
+      {@render period()}
+    </div>
+  {/if}
 
   {#if error}<div class="notice">
       <span role="alert">{error}</span><Button
@@ -237,28 +245,8 @@
               {panel}
               {cumulative}
               {bucket}
-              {scale}
             />{/each}
         </div>
-        <p class="chart-note">
-          {#if scale === "relative"}Najwyższa wartość każdego licznika to 100%,
-            więc liczniki w różnych jednostkach pokazują sam przebieg.
-          {:else if scale === "converted"}Wykres pokazuje zapisane wyniki
-            pomnożone przez stawkę. Liczniki bez stawki są pominięte.
-          {:else if units.length > 1}Każda jednostka ma własny wykres i własną
-            skalę.{/if}
-          {#if cumulative}Suma narastająca liczy od początku zakresu i biegnie
-            poziomo przez okresy bez zapisu.
-          {:else}Okres bez zapisu zostaje pusty, a zapisane zero ma własny
-            znacznik.{/if}
-          {#if bucket === "week"}Tygodnie zaczynają się w poniedziałek.{/if}
-        </p>
-      {:else if selected.length && scale === "converted"}<EmptyState
-          ><strong>Dodaj stawkę, aby zobaczyć przeliczone wartości.</strong>
-          <p>
-            Wpisz stawkę przy liczniku w podsumowaniu okresu poniżej.
-          </p></EmptyState
-        >
       {:else}<EmptyState
           ><strong
             >{series.length
@@ -275,6 +263,36 @@
                 : "Dodaj licznik do karty i zapisz wynik. Jego dzienna historia pojawi się tutaj."}
           </p></EmptyState
         >{/if}
+      {#if phone}
+        <div class="chart-controls">
+          <ChartRange compact {from} {to} {today} onrangechange={changeRange}>
+            <ChartMenu
+              label="Grupuj według"
+              options={buckets}
+              value={bucket}
+              onselect={chooseBucket}
+            />
+            <ChartMenu
+              label="Sumy na wykresie"
+              options={totals}
+              value={cumulative ? "running" : "period"}
+              text={cumulative ? undefined : "Sumy"}
+              onselect={chooseTotals}
+            />
+          </ChartRange>
+          {@render period()}
+        </div>
+      {/if}
+      {#if panels.length && records > 0}
+        <p class="chart-note">
+          {#if units.length > 1}Każda jednostka ma własny wykres i własną skalę.{/if}
+          {#if cumulative}Suma narastająca liczy od początku zakresu i biegnie
+            poziomo przez okresy bez zapisu.
+          {:else}Okres bez zapisu zostaje pusty, a zapisane zero ma własny
+            znacznik.{/if}
+          {#if bucket === "week"}Tygodnie zaczynają się w poniedziałek.{/if}
+        </p>
+      {/if}
     </div>
   </div>
 
@@ -314,18 +332,6 @@
     flex-wrap: wrap;
     gap: var(--space-6);
     margin-bottom: var(--space-8);
-  }
-  .scale-choice {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    min-width: 0;
-    color: var(--muted);
-    font-size: var(--text-label);
-  }
-  .scale-choice select {
-    min-width: 0;
-    font-size: var(--text-label);
   }
   .chart-period {
     display: flex;
@@ -376,6 +382,16 @@
   .chart-panels.refreshing {
     opacity: 0.6;
   }
+  .chart-controls {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+  }
+  .chart-controls .chart-period {
+    justify-content: flex-start;
+    margin: 0;
+    font-size: var(--text-sm);
+  }
   .chart-note {
     max-width: 78ch;
     margin: var(--space-6) 0 0;
@@ -424,9 +440,6 @@
   @container chart (max-width: 480px) {
     .chart-options > :global(*) {
       flex: 1 1 100%;
-    }
-    .scale-choice select {
-      flex: 1;
     }
   }
 </style>

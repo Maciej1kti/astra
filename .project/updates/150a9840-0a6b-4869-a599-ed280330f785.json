@@ -1,0 +1,18 @@
+{
+  "body": "Three owner-requested follow-ups to the Chart view. On a phone the range, grouping and totals controls are now three menus in one row directly below the plots, so the first plot starts 287px down the page instead of 555px with the owner's counters. The scale choice is removed and plots show recorded values only; rates still value the period summary. The per-plot \"Pokaż dane wykresu\" table is removed; exact values are read from the legend by pointer, touch or keyboard. Desktop and tablet keep their controls above the plots.\n\nWhile checking the live application a defect was found and fixed: changing only the date range emptied the view during the read, which collapsed the page and sent a reader at the controls back to the top. The loaded series now stay, dimmed, until the new range arrives.\n\nThe 16-step gate passes (389 Rust, 456 Node, 9 Python tests). The charts suite passes in release Chromium and WebKit; localization, navigation and responsive pass in Chromium. Another session was editing the same checkout, so the change was also verified alone in a clean worktree. See progress/2026-10-06-chart-phone-controls.md.\n\nThe rebuilt release application runs at its existing HTTPS address with identity, epoch, profiles, certificate, settings and all counter series unchanged; all 65 served assets match. A normally paired read-only phone visit confirmed the layout and the kept page position; its session was revoked.\n\nNot verified: a physical phone. Acceptance of the layout is the owner's.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "150a9840-0a6b-4869-a599-ed280330f785",
+    "kind": "result",
+    "recorded_at": "2026-10-06T09:18:42.707Z",
+    "summary": "Chart phone controls moved below the plot; scale and data table removed",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

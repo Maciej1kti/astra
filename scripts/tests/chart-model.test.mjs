@@ -222,7 +222,7 @@ test("a counter keeps its colour slot while the selection changes", () => {
     series("Two", "reps", { "2026-10-01": 2 }, "two"),
   ];
   const periods = chartPeriods("2026-10-01", "2026-10-01", "day");
-  const panels = chartPanels(rows, periods, false, "values", {}, "PLN", {
+  const panels = chartPanels(rows, periods, false, {
     [chartSeriesKey(rows[1])]: 5,
   });
   assert.deepEqual(
@@ -231,63 +231,44 @@ test("a counter keeps its colour slot while the selection changes", () => {
   );
 });
 
-test("raw units retain independent scales; relative and explicit-rate modes safely overlay", () => {
+test("counters share a plot only when their units match", () => {
   const rows = [
     series("Push-ups", "reps", { "2026-10-01": 10, "2026-10-02": 20 }),
-    series("Squats", "reps", { "2026-10-01": 20 }),
+    series("Squats", " reps ", { "2026-10-01": 20 }, "squats"),
     series("Work", "hours", { "2026-10-01": 2, "2026-10-02": 3 }),
+    series("Unnamed", "", { "2026-10-01": 0 }),
   ];
   const periods = chartPeriods("2026-10-01", "2026-10-02", "day");
-  const raw = chartPanels(rows, periods, false, "values", {}, "PLN");
+  const panels = chartPanels(rows, periods, false);
   assert.deepEqual(
-    raw.map((panel) => [panel.unit, panel.series.length]),
+    panels.map((panel) => [panel.unit, panel.series.length]),
     [
       ["reps", 2],
       ["hours", 1],
+      ["units", 1],
     ],
   );
-  assert.deepEqual(chartDomain(raw[0]), { min: 0, max: 20 });
-  const normalized = chartPanels(rows, periods, false, "relative", {}, "PLN");
-  assert.equal(normalized.length, 1);
-  assert.equal(normalized[0].unit, "% własnego maksimum");
+  assert.deepEqual(chartDomain(panels[0]), { min: 0, max: 20 });
+  assert.deepEqual(chartDomain(panels[1]), { min: 0, max: 3 });
   assert.deepEqual(
-    normalized[0].series[0].points.map((point) => point.value),
-    [50, 100],
+    panels[0].series[1].points.map((point) => point.value),
+    [20, null],
   );
   assert.deepEqual(
-    normalized[0].series[1].points.map((point) => point.value),
-    [100, null],
+    panels[2].series[0].points.map((point) => point.value),
+    [0, null],
+    "A recorded zero stays a plotted value",
   );
-  const rates = {
-    [chartSeriesKey(rows[0])]: "2.5",
-    [chartSeriesKey(rows[2])]: "100",
-  };
-  const converted = chartPanels(
-    rows,
-    periods,
-    false,
-    "converted",
-    rates,
-    "PLN",
-  );
-  assert.equal(converted.length, 1);
-  assert.equal(converted[0].series.length, 2);
-  assert.equal(converted[0].unit, "PLN");
+  assert.deepEqual(chartDomain(panels[2]), { min: 0, max: 1 });
   assert.deepEqual(
-    converted[0].series[0].points.map((point) => point.value),
-    [25, 50],
-  );
-  assert.deepEqual(
-    converted[0].series[1].points.map((point) => point.value),
-    [200, 300],
-  );
-  assert.deepEqual(
-    chartPanels(rows, periods, false, "converted", {}, "PLN"),
-    [],
+    chartPanels(rows, periods, true)[0].series[0].points.map(
+      (point) => point.value,
+    ),
+    [10, 30],
   );
 });
 
-test("zero rates and all-zero normalized series remain plotted, while invalid rates are absent", () => {
+test("a rate accepts zero and decimal commas, and rejects everything else", () => {
   for (const raw of [
     undefined,
     "",
@@ -309,27 +290,6 @@ test("zero rates and all-zero normalized series remain plotted, while invalid ra
     ["1000000000", 1_000_000_000],
   ])
     assert.equal(chartRate(raw), value);
-  const rows = [
-    series("Zero", "reps", { "2026-10-01": 0 }),
-    series("Missing", "reps", {}),
-  ];
-  const periods = chartPeriods("2026-10-01", "2026-10-02", "day");
-  const normalized = chartPanels(rows, periods, true, "relative", {}, "points");
-  assert.deepEqual(
-    normalized[0].series[0].points.map((point) => point.value),
-    [0, null],
-  );
-  assert.deepEqual(chartDomain(normalized[0]), { min: 0, max: 1 });
-  const converted = chartPanels(
-    rows,
-    periods,
-    false,
-    "converted",
-    { [chartSeriesKey(rows[0])]: "0" },
-    "",
-  );
-  assert.equal(converted[0].unit, "value");
-  assert.equal(converted[0].series[0].points[0].value, 0);
 });
 
 test("rate preferences are profile-scoped, bounded and survive unavailable browser storage", () => {
