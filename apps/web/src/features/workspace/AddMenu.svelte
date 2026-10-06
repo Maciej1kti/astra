@@ -120,6 +120,7 @@
   >
     {#each choices as choice, index (choice.id)}
       <Button
+        variant="primary"
         class="add-choice"
         role="menuitem"
         data-choice={choice.id}
@@ -202,9 +203,9 @@
     -webkit-touch-callout: none;
   }
   .add-menu :global(.add-choice[data-hovered]) {
-    background: var(--accent-ink);
-    border-color: var(--accent-ink);
-    color: var(--paper);
+    background: var(--primary-hover);
+    outline: var(--focus-width) solid var(--primary-hover);
+    outline-offset: var(--space-1);
   }
   .add-menu :global([data-activity])::after {
     content: "";
