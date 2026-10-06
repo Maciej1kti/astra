@@ -18,7 +18,8 @@ use protocol::{Final, Provider};
 use rustix::fs::{Access, access};
 use serde_json::{Value, json};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet, VecDeque},
+    ffi::OsStr,
     path::{Path, PathBuf},
     sync::{
         Arc, Condvar, Mutex, MutexGuard, PoisonError,
@@ -34,6 +35,10 @@ const MAX_CONVERSATIONS: usize = 32;
 const MAX_RUNS: usize = 50;
 /// Runs that may be running at once on the host.
 const MAX_RUNNING: usize = 2;
+/// IDs of dropped runs that are remembered, so that an old request cannot start again.
+const MAX_FORGOTTEN: usize = 4096;
+/// How often a start re-reads what it needs when a concurrent start changed its basis.
+const ATTEMPTS: usize = 3;
 /// `AGENTS.md` larger than this is not accepted as instructions.
 const MAX_INSTRUCTIONS: u64 = 64 * 1024;
 
@@ -101,11 +106,35 @@ struct Conversation {
     used: u64,
 }
 
+/// The IDs of runs the registry has dropped, oldest first and bounded.
+#[derive(Default)]
+struct Forgotten {
+    order: VecDeque<String>,
+    ids: HashSet<String>,
+}
+impl Forgotten {
+    fn insert(&mut self, id: String) {
+        if self.ids.insert(id.clone()) {
+            self.order.push_back(id);
+            while self.order.len() > MAX_FORGOTTEN {
+                if let Some(oldest) = self.order.pop_front() {
+                    self.ids.remove(&oldest);
+                }
+            }
+        }
+    }
+    fn contains(&self, id: &str) -> bool {
+        self.ids.contains(id)
+    }
+}
+
 #[derive(Default)]
 struct State {
     conversations: HashMap<Key, Conversation>,
     /// Which conversation holds each known run ID.
     runs: HashMap<String, Key>,
+    /// Runs the registry no longer holds. Their IDs stay taken.
+    forgotten: Forgotten,
     /// Runs in state `running`, which is also the number of live supervisors.
     running: usize,
     clock: u64,
@@ -128,6 +157,75 @@ impl State {
             .iter()
             .position(|run| run.id == run_id)?;
         Some((key.clone(), index))
+    }
+    fn run_at(&self, key: &Key, index: usize) -> Result<&Run, AppError> {
+        self.conversations
+            .get(key)
+            .and_then(|conversation| conversation.runs.get(index))
+            .ok_or(AppError::invariant("agent run registry"))
+    }
+    /// Drop a run but keep its ID taken.
+    fn forget(&mut self, run_id: String) {
+        self.runs.remove(&run_id);
+        self.forgotten.insert(run_id);
+    }
+}
+
+/// The registry's decision about a start request.
+enum Admission {
+    /// An identical retry of a run it holds: answer with this.
+    Known(Reply),
+    /// A new run may start. `provider` is the conversation's, when it exists.
+    New {
+        provider: Option<Provider>,
+        evict: Option<Key>,
+    },
+}
+
+/// What `launch` needs, decided and read before the process starts.
+struct Launching<'a> {
+    profile: &'a UserProfile,
+    key: Key,
+    input: &'a Value,
+    run_id: &'a str,
+    conversation_id: &'a str,
+    message: &'a str,
+    provider: Provider,
+    session: Option<String>,
+    evict: Option<Key>,
+    executable: PathBuf,
+    prompt: String,
+}
+
+/// Settles a run as failed if its supervisor unwinds before settling it.
+struct Settling {
+    agents: Arc<Agents>,
+    key: Key,
+    run_id: String,
+    provider: Provider,
+    started: Instant,
+    settled: bool,
+}
+impl Drop for Settling {
+    fn drop(&mut self) {
+        if !self.settled {
+            let failed = Outcome {
+                result: Final::Failed {
+                    code: "AGENT_OUTPUT_INVALID",
+                    detail: None,
+                },
+                session: None,
+            };
+            // The session is left as it was: this says nothing about it.
+            self.agents.finish(
+                &self.key,
+                &self.run_id,
+                self.provider,
+                false,
+                failed,
+                self.started,
+            );
+        }
     }
 }
 
@@ -161,18 +259,21 @@ impl Agents {
     /// The executable a provider currently resolves to, if it is a file this
     /// process may execute.
     fn resolve(&self, provider: Provider) -> Option<PathBuf> {
+        self.resolve_in(provider, std::env::var_os("PATH").as_deref())
+    }
+
+    /// `resolve` against a given `PATH`; relative entries are never searched.
+    fn resolve_in(&self, provider: Provider, path: Option<&OsStr>) -> Option<PathBuf> {
         let configured = match provider {
             Provider::Claude => &self.config.claude,
             Provider::Codex => &self.config.codex,
         };
         match configured {
-            Some(path) => executable(path).then(|| path.clone()),
-            None => std::env::var_os("PATH").and_then(|paths| {
-                std::env::split_paths(&paths)
-                    .filter(|directory| directory.is_absolute())
-                    .map(|directory| directory.join(provider.name()))
-                    .find(|candidate| executable(candidate))
-            }),
+            Some(configured) => executable(configured).then(|| configured.clone()),
+            None => std::env::split_paths(path?)
+                .filter(|directory| directory.is_absolute())
+                .map(|directory| directory.join(provider.name()))
+                .find(|candidate| executable(candidate)),
         }
     }
 
@@ -200,50 +301,39 @@ impl Agents {
         }))
     }
 
-    /// Start a run. Returns the HTTP status (202 for a new run, 200 for an
-    /// identical retry of a known one) and the `AgentRun`.
-    pub fn start(
-        self: &Arc<Self>,
-        profile: &UserProfile,
-        engine: &Engine,
+    /// What the registry decides about a start request. Called with the lock
+    /// held, and again after the slow reads, so that nothing decided earlier is
+    /// taken for granted.
+    fn admit(
+        &self,
+        state: &State,
+        profile: &str,
+        key: &Key,
         input: &Value,
-    ) -> Result<Reply, AppError> {
-        wire::validate("AgentRunInput", input)?;
-        let text = |name: &str| {
-            input[name]
-                .as_str()
-                .ok_or(AppError::invariant("validated agent run input"))
-        };
-        let (run_id, conversation_id) = (text("run_id")?, text("conversation_id")?);
-        if text("boot_id")? != self.boot_id {
-            return Err(AppError::reject(409, "AGENT_HOST_RESTARTED"));
-        }
-        // Read before the registry lock: this only reads the profile's own data.
-        let preference = Self::preference(engine)?;
-        let prompt = context::gather(engine, &profile.name, input, now_millis())?;
-
-        let mut state = self.lock()?;
-        if self.stopping.load(Ordering::Acquire) {
-            return Err(AppError::reject(503, "SERVICE_UNAVAILABLE"));
-        }
-        if let Some((key, index)) = state.locate(&profile.id, run_id) {
+    ) -> Result<Admission, AppError> {
+        let run_id = input["run_id"]
+            .as_str()
+            .ok_or(AppError::invariant("validated agent run input"))?;
+        if let Some((known, index)) = state.locate(profile, run_id) {
             // The run is known and it is this profile's: only an identical
             // request is a retry.
-            let run = &state.conversations[&key].runs[index];
+            let run = state.run_at(&known, index)?;
             return if run.input == *input {
-                Ok(Reply {
+                Ok(Admission::Known(Reply {
                     http_status: 200,
                     body: run.record.clone(),
-                })
+                }))
             } else {
                 Err(AppError::reject(409, "AGENT_RUN_ID_REUSED"))
             };
         }
-        if state.runs.contains_key(run_id) {
+        if state.runs.contains_key(run_id) || state.forgotten.contains(run_id) {
             return Err(AppError::reject(409, "AGENT_RUN_ID_REUSED"));
         }
-        let key: Key = (profile.id.clone(), conversation_id.to_owned());
-        let existing = state.conversations.get(&key);
+        if self.stopping.load(Ordering::Acquire) {
+            return Err(AppError::reject(503, "SERVICE_UNAVAILABLE"));
+        }
+        let existing = state.conversations.get(key);
         if existing.is_some_and(|conversation| conversation.runs.iter().any(Run::running)) {
             return Err(AppError::reject(409, "AGENT_RUN_ACTIVE"));
         }
@@ -262,19 +352,115 @@ impl Agents {
         } else {
             None
         };
-        let provider = existing.map_or(preference, |conversation| conversation.provider);
-        let session = existing.and_then(|conversation| conversation.session.clone());
+        Ok(Admission::New {
+            provider: existing.map(|conversation| conversation.provider),
+            evict,
+        })
+    }
 
-        if !instructions_usable(&self.config.directory) {
-            return Err(AppError::reject(409, "AGENT_INSTRUCTIONS_MISSING"));
+    /// Start a run. Returns the HTTP status (202 for a new run, 200 for an
+    /// identical retry of a known one) and the `AgentRun`.
+    ///
+    /// The registry lock is taken to decide, released for the reads that touch
+    /// the profile's data and the file system, then taken again to decide once
+    /// more and to start the process, so that two requests cannot both start.
+    pub fn start(
+        self: &Arc<Self>,
+        profile: &UserProfile,
+        engine: &Engine,
+        input: &Value,
+    ) -> Result<Reply, AppError> {
+        wire::validate("AgentRunInput", input)?;
+        let text = |name: &str| {
+            input[name]
+                .as_str()
+                .ok_or(AppError::invariant("validated agent run input"))
+        };
+        let (run_id, conversation_id, message) =
+            (text("run_id")?, text("conversation_id")?, text("message")?);
+        if text("boot_id")? != self.boot_id {
+            return Err(AppError::reject(409, "AGENT_HOST_RESTARTED"));
         }
-        if !executable(&self.config.cli_dir.join("projectctl")) {
-            return Err(AppError::reject(409, "AGENT_CLI_UNAVAILABLE"));
-        }
-        let executable = self
-            .resolve(provider)
-            .ok_or(AppError::reject(409, "AGENT_PROVIDER_UNAVAILABLE"))?;
+        let key: Key = (profile.id.clone(), conversation_id.to_owned());
+        // An identical retry is answered from the registry alone.
+        let mut existing = match self.admit(&*self.lock()?, &profile.id, &key, input)? {
+            Admission::Known(reply) => return Ok(reply),
+            Admission::New { provider, .. } => provider,
+        };
+        for _ in 0..ATTEMPTS {
+            // The slow reads, without the lock. An existing conversation keeps
+            // its provider; only a new one consults the preference.
+            let provider = match existing {
+                Some(provider) => provider,
+                None => Self::preference(engine)?,
+            };
+            let prompt = context::gather(engine, &profile.name, input, now_millis())?;
+            if !instructions_usable(&self.config.directory) {
+                return Err(AppError::reject(409, "AGENT_INSTRUCTIONS_MISSING"));
+            }
+            if !executable(&self.config.cli_dir.join("projectctl")) {
+                return Err(AppError::reject(409, "AGENT_CLI_UNAVAILABLE"));
+            }
+            let executable = self
+                .resolve(provider)
+                .ok_or(AppError::reject(409, "AGENT_PROVIDER_UNAVAILABLE"))?;
 
+            let mut state = self.lock()?;
+            match self.admit(&state, &profile.id, &key, input)? {
+                Admission::Known(reply) => return Ok(reply),
+                Admission::New {
+                    provider: now,
+                    evict,
+                } => {
+                    if now != existing {
+                        // Another start created or removed this conversation
+                        // meanwhile; what was read may not apply any more.
+                        existing = now;
+                        continue;
+                    }
+                    let session = state
+                        .conversations
+                        .get(&key)
+                        .and_then(|conversation| conversation.session.clone());
+                    return self.launch(
+                        &mut state,
+                        Launching {
+                            profile,
+                            key,
+                            input,
+                            run_id,
+                            conversation_id,
+                            message,
+                            provider,
+                            session,
+                            evict,
+                            executable,
+                            prompt,
+                        },
+                    );
+                }
+            }
+        }
+        Err(AppError::reject(429, "AGENT_BUSY"))
+    }
+
+    /// Start the process and record the run. Called with the registry lock held.
+    /// From the moment the process exists nothing here can fail: it is either
+    /// handed to its supervisor or ended by its own `Drop`.
+    fn launch(self: &Arc<Self>, state: &mut State, new: Launching<'_>) -> Result<Reply, AppError> {
+        let Launching {
+            profile,
+            key,
+            input,
+            run_id,
+            conversation_id,
+            message,
+            provider,
+            session,
+            evict,
+            executable,
+            prompt,
+        } = new;
         // The supervisor exists before the child, so a failure to create it
         // cannot strand a started process. It waits here for its child.
         let (hand_over, receive) = mpsc::channel::<Watched>();
@@ -283,10 +469,7 @@ impl Agents {
         std::thread::Builder::new()
             .name("agent-run".into())
             .spawn(move || {
-                let Ok(watched) = receive.recv() else { return };
-                let (provider, started) = (watched.provider, Instant::now());
-                let outcome = process::supervise(watched, &agents.stopping);
-                agents.finish(&supervised, &id, provider, resumed, outcome, started);
+                agents.supervise_run(receive, supervised, id, resumed, process::supervise)
             })
             .map_err(|_| AppError::reject(429, "AGENT_BUSY"))?;
         let arguments = protocol::arguments(provider, &self.config.directory, session.as_deref());
@@ -310,7 +493,7 @@ impl Agents {
             "conversation_id": conversation_id,
             "provider": provider.name(),
             "state": "running",
-            "message": text("message")?,
+            "message": message,
             "reply": null,
             "reply_truncated": false,
             "error": null,
@@ -322,7 +505,7 @@ impl Agents {
             && let Some(removed) = state.conversations.remove(&victim)
         {
             for run in removed.runs {
-                state.runs.remove(&run.id);
+                state.forget(run.id);
             }
         }
         state.clock += 1;
@@ -351,15 +534,17 @@ impl Agents {
             dropped.push(conversation.runs.remove(oldest).id);
         }
         for id in dropped {
-            state.runs.remove(&id);
+            state.forget(id);
         }
         state.runs.insert(run_id.to_owned(), key);
         state.running += 1;
-        // The supervisor is waiting for this; it cannot have gone away.
+        // If the supervisor is somehow gone the process comes back here and is
+        // ended by its `Drop`; the run then never settles, which cannot happen
+        // because the supervisor waits for this message.
         let _ = hand_over.send(Watched {
             process,
             provider,
-            deadline: Instant::now() + self.config.timeout,
+            deadline: process::deadline_after(self.config.timeout),
             cancel,
         });
         Ok(Reply {
@@ -368,7 +553,39 @@ impl Agents {
         })
     }
 
-    /// Settle a run whose process is gone. Runs on the supervisor's thread.
+    /// The supervisor thread's body: wait for the child, supervise it, settle the
+    /// run. If anything in here unwinds, the run is settled as failed and its
+    /// slot released, so a panic cannot leave a run `running` for good.
+    fn supervise_run(
+        self: &Arc<Self>,
+        receive: mpsc::Receiver<Watched>,
+        key: Key,
+        run_id: String,
+        resumed: bool,
+        supervise: impl FnOnce(Watched, &AtomicBool) -> Outcome,
+    ) {
+        let Ok(watched) = receive.recv() else { return };
+        let mut guard = Settling {
+            agents: self.clone(),
+            key,
+            run_id,
+            provider: watched.provider,
+            started: Instant::now(),
+            settled: false,
+        };
+        let outcome = supervise(watched, &self.stopping);
+        self.finish(
+            &guard.key,
+            &guard.run_id,
+            guard.provider,
+            resumed,
+            outcome,
+            guard.started,
+        );
+        guard.settled = true;
+    }
+
+    /// Settle a run whose process is gone. Settling twice has no further effect.
     fn finish(
         &self,
         key: &Key,
@@ -387,11 +604,13 @@ impl Agents {
         {
             // Settling must not be lost to a panic elsewhere.
             let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-            state.running = state.running.saturating_sub(1);
-            if let Some(conversation) = state.conversations.get_mut(key) {
-                if let Some(run) = conversation.runs.iter_mut().find(|run| run.id == run_id) {
-                    run.settle(&outcome.result);
-                }
+            if let Some(conversation) = state.conversations.get_mut(key)
+                && let Some(run) = conversation
+                    .runs
+                    .iter_mut()
+                    .find(|run| run.id == run_id && run.running())
+            {
+                run.settle(&outcome.result);
                 match outcome.session {
                     Some(session) => conversation.session = Some(session),
                     // The provider did not know the session it was asked to
@@ -404,6 +623,7 @@ impl Agents {
                     }
                     None => {}
                 }
+                state.running = state.running.saturating_sub(1);
             }
             if state.running == 0 {
                 self.idle.notify_all();
@@ -428,7 +648,7 @@ impl Agents {
             .locate(profile, run_id)
             .ok_or(AppError::reject(404, "AGENT_RUN_NOT_FOUND"))?;
         state.touch(&key);
-        Ok(state.conversations[&key].runs[index].record.clone())
+        Ok(state.run_at(&key, index)?.record.clone())
     }
 
     /// Ask a running run to stop. The supervisor settles it, so the answer may
@@ -439,7 +659,7 @@ impl Agents {
             .locate(profile, run_id)
             .ok_or(AppError::reject(404, "AGENT_RUN_NOT_FOUND"))?;
         state.touch(&key);
-        let run = &state.conversations[&key].runs[index];
+        let run = state.run_at(&key, index)?;
         if run.running() {
             run.cancel.store(true, Ordering::Release);
         }
@@ -453,7 +673,10 @@ impl Agents {
             return Err(AppError::reject(404, "AGENT_CONVERSATION_NOT_FOUND"));
         }
         state.touch(&key);
-        let conversation = &state.conversations[&key];
+        let conversation = state
+            .conversations
+            .get(&key)
+            .ok_or(AppError::invariant("agent conversation registry"))?;
         Ok(json!({
             "conversation_id": conversation_id,
             "provider": conversation.provider.name(),
@@ -662,5 +885,153 @@ mod tests {
         std::fs::remove_file(&file).unwrap();
         std::fs::create_dir(&file).unwrap();
         assert!(!instructions_usable(temp.path()));
+    }
+
+    #[test]
+    fn forgotten_ids_are_bounded_and_first_in_first_out() {
+        let mut forgotten = Forgotten::default();
+        for number in 0..MAX_FORGOTTEN + 10 {
+            forgotten.insert(format!("run-{number}"));
+        }
+        assert_eq!(forgotten.order.len(), MAX_FORGOTTEN);
+        assert_eq!(forgotten.ids.len(), MAX_FORGOTTEN);
+        assert!(!forgotten.contains("run-0"));
+        assert!(!forgotten.contains("run-9"));
+        assert!(forgotten.contains("run-10"));
+        assert!(forgotten.contains(&format!("run-{}", MAX_FORGOTTEN + 9)));
+        // Inserting an ID twice does not take two places.
+        forgotten.insert("run-10".into());
+        assert_eq!(forgotten.order.len(), MAX_FORGOTTEN);
+    }
+
+    #[test]
+    fn a_forgotten_run_id_is_refused_without_reading_anything() {
+        let fixture = fixture();
+        let input = fixture.input(&Uuid::new_v4().to_string());
+        {
+            let mut registry = fixture.agents.state.lock().unwrap();
+            registry.forget(input["run_id"].as_str().unwrap().to_owned());
+        }
+        // Not even the missing AGENTS.md is looked at.
+        assert_eq!(fixture.code(&input), "AGENT_RUN_ID_REUSED");
+    }
+
+    #[test]
+    fn a_run_is_settled_once_however_often_it_is_reported() {
+        let fixture = fixture();
+        let key = fixture.conversation(&Uuid::new_v4().to_string(), "running", 1);
+        let run_id = fixture.agents.state.lock().unwrap().conversations[&key].runs[0]
+            .id
+            .clone();
+        // Another run holds a slot too; settling this one twice must not free it.
+        fixture.agents.state.lock().unwrap().running = 2;
+        for _ in 0..2 {
+            fixture.agents.finish(
+                &key,
+                &run_id,
+                Provider::Claude,
+                false,
+                Outcome {
+                    result: Final::Cancelled,
+                    session: None,
+                },
+                Instant::now(),
+            );
+        }
+        let registry = fixture.agents.state.lock().unwrap();
+        assert_eq!(registry.running, 1);
+        assert_eq!(
+            registry.conversations[&key].runs[0].record["state"],
+            "cancelled"
+        );
+    }
+
+    #[test]
+    fn a_supervisor_that_unwinds_settles_its_run_as_failed_and_frees_its_slot() {
+        let fixture = fixture();
+        let key = fixture.conversation(&Uuid::new_v4().to_string(), "running", 1);
+        let run_id = fixture.agents.state.lock().unwrap().conversations[&key].runs[0]
+            .id
+            .clone();
+        fixture.agents.state.lock().unwrap().running = 1;
+        let directory = fixture._temp.path().to_owned();
+        let process = process::spawn(&Launch {
+            executable: Path::new("/bin/sleep"),
+            arguments: &["30".into()],
+            directory: &directory,
+            socket: &directory,
+            cli_dir: &directory,
+            profile: "profile",
+            stdin: String::new(),
+        })
+        .ok()
+        .unwrap();
+        let (hand_over, receive) = mpsc::channel();
+        hand_over
+            .send(Watched {
+                process,
+                provider: Provider::Claude,
+                deadline: process::deadline_after(Duration::from_secs(60)),
+                cancel: Arc::new(AtomicBool::new(false)),
+            })
+            .ok()
+            .unwrap();
+        let agents = fixture.agents.clone();
+        let (supervised, id) = (key.clone(), run_id.clone());
+        let thread = std::thread::spawn(move || {
+            agents.supervise_run(receive, supervised, id, true, |_watched, _stopping| {
+                panic!("the supervisor failed")
+            });
+        });
+        assert!(thread.join().is_err(), "the panic is not swallowed");
+        assert!(fixture.agents.wait_idle(Duration::from_secs(2)));
+        let registry = fixture.agents.state.lock().unwrap();
+        assert_eq!(registry.running, 0);
+        let record = &registry.conversations[&key].runs[0].record;
+        assert_eq!(record["state"], "failed");
+        assert_eq!(record["error"]["code"], "AGENT_OUTPUT_INVALID");
+        assert!(record["finished_at"].is_string());
+    }
+
+    #[test]
+    fn providers_are_searched_on_the_given_path_only_in_absolute_executable_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let make = |directory: &str, name: &str, mode: u32| {
+            let directory = temp.path().join(directory);
+            std::fs::create_dir_all(&directory).unwrap();
+            let file = directory.join(name);
+            std::fs::write(&file, "#!/bin/sh\n").unwrap();
+            std::fs::set_permissions(&file, std::os::unix::fs::PermissionsExt::from_mode(mode))
+                .unwrap();
+            directory
+        };
+        let plain = make("plain", "claude", 0o644);
+        let first = make("first", "claude", 0o755);
+        let second = make("second", "claude", 0o755);
+        let only_codex = make("codex-only", "codex", 0o755);
+        let fixture = fixture();
+        let path = |directories: &[&Path]| std::env::join_paths(directories).unwrap();
+        // A file without the execute bit is skipped; the first executable one wins.
+        let search = path(&[&plain, &first, &second]);
+        assert_eq!(
+            fixture.agents.resolve_in(Provider::Claude, Some(&search)),
+            Some(first.join("claude"))
+        );
+        assert_eq!(
+            fixture.agents.resolve_in(Provider::Codex, Some(&search)),
+            None
+        );
+        let search = path(&[&only_codex]);
+        assert_eq!(
+            fixture.agents.resolve_in(Provider::Codex, Some(&search)),
+            Some(only_codex.join("codex"))
+        );
+        // A relative entry is never searched, and no PATH finds nothing.
+        let relative = std::env::join_paths([Path::new("relative-dir")]).unwrap();
+        assert_eq!(
+            fixture.agents.resolve_in(Provider::Claude, Some(&relative)),
+            None
+        );
+        assert_eq!(fixture.agents.resolve_in(Provider::Claude, None), None);
     }
 }

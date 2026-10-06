@@ -2384,7 +2384,7 @@ paths:
         Errors:
         - AGENT_DISABLED (404): the host was not started with an agent directory.
         - AGENT_HOST_RESTARTED (409): the daemon restarted since the client read boot_id; nothing was started and earlier runs can no longer be read back.
-        - AGENT_RUN_ID_REUSED (409): the same run_id was sent with different input.
+        - AGENT_RUN_ID_REUSED (409): the same run_id was sent with different input, or the run is no longer retained by the daemon (evicted with its conversation or dropped beyond the 50 kept per conversation), so it cannot be started again.
         - AGENT_RUN_ACTIVE (409): the conversation already has a running run.
         - AGENT_PROVIDER_UNAVAILABLE (409): the provider's executable was not found or could not start.
         - AGENT_CLI_UNAVAILABLE (409): projectctl is not installed beside the daemon.

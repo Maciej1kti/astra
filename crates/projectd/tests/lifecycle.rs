@@ -291,3 +291,82 @@ async fn sigterm_ends_a_running_agent_and_its_process_group_before_the_daemon_ex
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
 }
+
+#[tokio::test]
+async fn a_provider_without_a_configured_path_is_found_on_the_daemons_own_path() {
+    support::projectctl_dir();
+    let (temp, state, agent) = agent_directories();
+    // The daemon's PATH is built here: a directory with only `claude`, then the
+    // system's, which has neither provider.
+    let bin = temp.path().join("bin");
+    std::fs::create_dir(&bin).unwrap();
+    std::os::unix::fs::symlink(support::FAKE_AGENT, bin.join("claude")).unwrap();
+    let path =
+        std::env::join_paths([bin.as_path(), Path::new("/usr/bin"), Path::new("/bin")]).unwrap();
+    let socket = state.join("projectd.sock");
+    let mut daemon = Daemon(
+        daemon_command(&state, &["--agent-dir", agent.to_str().unwrap()])
+            .env("PATH", path)
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !socket.exists() {
+        assert!(
+            daemon.0.try_wait().unwrap().is_none(),
+            "daemon exited early"
+        );
+        assert!(Instant::now() < deadline, "daemon startup timed out");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let client = reqwest::Client::builder()
+        .unix_socket(socket)
+        .no_proxy()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .unwrap();
+    let status: Value = client
+        .get("http://localhost/api/v1/agent")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        status["providers"],
+        json!([{"id":"claude","available":true},{"id":"codex","available":false}])
+    );
+    let run_id = uuid::Uuid::now_v7().to_string();
+    let started = client
+        .post("http://localhost/api/v1/agent/runs")
+        .json(&json!({
+            "run_id": run_id,
+            "boot_id": status["boot_id"],
+            "conversation_id": uuid::Uuid::new_v4().to_string(),
+            "message": "found on path",
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(started.status(), 202, "{}", started.text().await.unwrap());
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let run: Value = client
+            .get(format!("http://localhost/api/v1/agent/runs/{run_id}"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        if run["state"] != "running" {
+            assert_eq!(run["state"], "succeeded", "{run}");
+            assert_eq!(run["reply"], "fake claude new: found on path");
+            break;
+        }
+        assert!(Instant::now() < deadline, "the run did not finish");
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}

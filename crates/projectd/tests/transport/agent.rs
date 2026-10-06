@@ -62,8 +62,11 @@ async fn finished(app: &Running, run: &str) -> Value {
 }
 /// Start a run and wait for its final state.
 async fn ask(app: &Running, boot: &str, conversation: &str, message: &str) -> Value {
-    let body = input(boot, conversation, message);
-    let (status, value) = start(app, &body).await;
+    ask_with(app, &input(boot, conversation, message)).await
+}
+/// Start the run a request describes and wait for its final state.
+async fn ask_with(app: &Running, body: &Value) -> Value {
+    let (status, value) = start(app, body).await;
     assert_eq!(status, 202, "{value}");
     wire::validate("AgentRun", &value).unwrap();
     finished(app, body["run_id"].as_str().unwrap()).await
@@ -921,35 +924,6 @@ async fn missing_instructions_cli_or_provider_are_refused_and_not_recorded() {
     );
 }
 #[tokio::test]
-async fn the_provider_without_an_explicit_path_is_found_on_the_daemons_path() {
-    // No configured path: the name is looked up on PATH when the run starts.
-    let app = Running::with_agent(|config| {
-        config.claude = None;
-        config.codex = None;
-    })
-    .await;
-    let (_, status) = get(&app, "/api/v1/agent").await;
-    let on_path = |name: &str| {
-        std::env::var_os("PATH")
-            .into_iter()
-            .flat_map(|paths| std::env::split_paths(&paths).collect::<Vec<_>>())
-            .any(|dir| {
-                dir.join(name).metadata().is_ok_and(|m| {
-                    m.is_file()
-                        && std::os::unix::fs::PermissionsExt::mode(&m.permissions()) & 0o111 != 0
-                })
-            })
-    };
-    assert_eq!(
-        status["providers"],
-        json!([
-            {"id":"claude","available":on_path("claude")},
-            {"id":"codex","available":on_path("codex")}
-        ])
-    );
-}
-
-#[tokio::test]
 async fn a_new_conversation_follows_the_preference_but_an_existing_one_keeps_its_provider() {
     let app = Running::with_agent(|_| {}).await;
     let boot = boot(&app).await;
@@ -1000,10 +974,15 @@ async fn at_most_thirty_two_conversations_are_kept_and_the_oldest_idle_one_is_ev
     let boot = boot(&app).await;
     let conversations: Vec<String> = (0..32).map(|_| Uuid::new_v4().to_string()).collect();
     let mut first_run = String::new();
+    let mut second_request = Value::Null;
     for (index, conversation) in conversations.iter().enumerate() {
-        let run = ask(&app, &boot, conversation, "hi").await;
+        let body = input(&boot, conversation, "hi");
+        let run = ask_with(&app, &body).await;
         if index == 0 {
             first_run = run["run_id"].as_str().unwrap().to_owned();
+        }
+        if index == 1 {
+            second_request = body;
         }
     }
     // Reading the oldest conversation makes it recent; the next one is evicted instead.
@@ -1028,6 +1007,19 @@ async fn at_most_thirty_two_conversations_are_kept_and_the_oldest_idle_one_is_ev
         status, 404,
         "the least recently used conversation was evicted"
     );
+    // Its run is forgotten, but its ID is not: the same request cannot start again.
+    let runs_started = log(&app).len();
+    let repeat = start(&app, &second_request).await;
+    assert_eq!((repeat.0, code(&repeat)), (409, "AGENT_RUN_ID_REUSED"));
+    wire::validate("Error", &repeat.1).unwrap();
+    assert_eq!(
+        read_run(&app, second_request["run_id"].as_str().unwrap(), None)
+            .await
+            .0,
+        404
+    );
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(log(&app).len(), runs_started, "nothing was started");
     let (status, _) = get(
         &app,
         &format!("/api/v1/agent/conversations/{}", conversations[2]),
@@ -1042,9 +1034,14 @@ async fn a_conversation_keeps_its_last_fifty_runs() {
     let boot = boot(&app).await;
     let conversation = Uuid::new_v4().to_string();
     let mut ids = Vec::new();
+    let mut first_request = Value::Null;
     for number in 0..52 {
-        let run = ask(&app, &boot, &conversation, &format!("run {number}")).await;
+        let body = input(&boot, &conversation, &format!("run {number}"));
+        let run = ask_with(&app, &body).await;
         ids.push(run["run_id"].as_str().unwrap().to_owned());
+        if number == 0 {
+            first_request = body;
+        }
     }
     let (_, value) = get(&app, &format!("/api/v1/agent/conversations/{conversation}")).await;
     wire::validate("AgentConversation", &value).unwrap();
@@ -1061,6 +1058,11 @@ async fn a_conversation_keeps_its_last_fifty_runs() {
     );
     assert_eq!(read_run(&app, &ids[0], None).await.0, 404);
     assert_eq!(read_run(&app, &ids[51], None).await.0, 200);
+    // A dropped run is gone, but its ID is not free: repeating its request starts nothing.
+    let repeat = start(&app, &first_request).await;
+    assert_eq!((repeat.0, code(&repeat)), (409, "AGENT_RUN_ID_REUSED"));
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(log(&app).len(), 52, "nothing was started");
 }
 
 #[tokio::test]
@@ -1156,8 +1158,14 @@ async fn a_descendant_left_behind_in_the_group_is_killed_when_the_run_ends() {
     let run = ask(&app, &boot, &Uuid::new_v4().to_string(), "[[orphan]]").await;
     assert_eq!(run["state"], "succeeded");
     assert_eq!(run["reply"], "orphaned");
-    // The pipes closed with the group, so there was no wait for the drain limit.
-    assert!(started.elapsed() < Duration::from_secs(5));
+    // The descendant held the output pipes open. Killing its group when the agent
+    // exited closed them, so the run settled at once instead of at the 2 s drain limit.
+    assert!(
+        started.elapsed() < Duration::from_millis(1800),
+        "{:?}",
+        started.elapsed()
+    );
+    // The system reaps the killed descendant asynchronously; allow for that.
     let orphan = recorded_pid(&app, ".fake-agent-orphan");
     let deadline = Instant::now() + Duration::from_secs(5);
     while pid_alive(orphan) {
@@ -1184,4 +1192,117 @@ async fn a_descendant_that_escaped_the_group_cannot_keep_a_run_running() {
     assert_eq!(run["reply"], "escaped");
     assert!(still_alive, "the escaped descendant should have survived");
     assert!(elapsed < Duration::from_secs(10), "{elapsed:?}");
+}
+
+async fn post_runs_concurrently(app: &Running, body: &Value, count: usize) -> Vec<(u16, Value)> {
+    let tasks: Vec<_> = (0..count)
+        .map(|_| {
+            let request = app.local("POST", "/api/v1/agent/runs").json(body).send();
+            tokio::spawn(async move {
+                let response = request.await.unwrap();
+                (
+                    response.status().as_u16(),
+                    response.json::<Value>().await.unwrap(),
+                )
+            })
+        })
+        .collect();
+    let mut replies = Vec::new();
+    for task in tasks {
+        replies.push(task.await.unwrap());
+    }
+    replies
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn identical_posts_sent_at_once_start_exactly_one_process() {
+    let app = Running::with_agent(|_| {}).await;
+    let boot = boot(&app).await;
+    let body = input(&boot, &Uuid::new_v4().to_string(), "once [[sleep 1]]");
+    let replies = post_runs_concurrently(&app, &body, 8).await;
+    let created = replies.iter().filter(|reply| reply.0 == 202).count();
+    let repeated = replies.iter().filter(|reply| reply.0 == 200).count();
+    assert_eq!((created, repeated), (1, 7), "{replies:?}");
+    for (_, run) in &replies {
+        assert_eq!(run["run_id"], body["run_id"]);
+    }
+    finished(&app, body["run_id"].as_str().unwrap()).await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(log(&app).len(), 1, "the agent was invoked exactly once");
+}
+
+#[tokio::test]
+async fn an_identical_post_while_the_run_is_running_returns_it_and_starts_nothing() {
+    let app = Running::with_agent(|_| {}).await;
+    let boot = boot(&app).await;
+    let body = input(&boot, &Uuid::new_v4().to_string(), "[[sleep 20]]");
+    let first = start(&app, &body).await;
+    assert_eq!(first.0, 202);
+    wait_for_log(&app, 1).await;
+    let again = start(&app, &body).await;
+    assert_eq!(again.0, 200);
+    assert_eq!(again.1["state"], "running");
+    assert_eq!(again.1["run_id"], body["run_id"]);
+    assert_eq!(again.1["created_at"], first.1["created_at"]);
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(log(&app).len(), 1);
+    call(
+        &app,
+        "POST",
+        &format!(
+            "/api/v1/agent/runs/{}/cancel",
+            body["run_id"].as_str().unwrap()
+        ),
+        None,
+        Some(&json!({})),
+    )
+    .await;
+    finished(&app, body["run_id"].as_str().unwrap()).await;
+}
+
+#[tokio::test]
+async fn an_identical_retry_is_answered_from_the_registry_whatever_else_is_broken() {
+    let app = Running::with_agent(|_| {}).await;
+    let config = app.agent.clone().unwrap();
+    let boot = boot(&app).await;
+    let body = input(&boot, &Uuid::new_v4().to_string(), "answer me");
+    let done = ask_with(&app, &body).await;
+    // Break everything a new run needs: the workspace, the instructions, the CLI.
+    let state = config.socket.parent().unwrap();
+    std::fs::write(state.join("workspace.json"), "not json").unwrap();
+    std::fs::remove_file(config.directory.join("AGENTS.md")).unwrap();
+    std::fs::remove_file(config.cli_dir.join("projectctl")).unwrap();
+    let retry = start(&app, &body).await;
+    assert_eq!(retry.0, 200, "{}", retry.1);
+    assert_eq!(retry.1, done);
+    // A different run cannot start, which shows the breakage is real.
+    let other = start(&app, &input(&boot, &Uuid::new_v4().to_string(), "new")).await;
+    assert_ne!(other.0, 202);
+}
+
+#[tokio::test]
+async fn waiting_for_agents_ends_them_even_when_nobody_called_shutdown() {
+    let app = Running::with_agent(|_| {}).await;
+    let boot = boot(&app).await;
+    let body = input(&boot, &Uuid::new_v4().to_string(), "[[sleep 60]]");
+    assert_eq!(start(&app, &body).await.0, 202);
+    let pid: i32 = field(&wait_for_log(&app, 1).await[0], "pid")
+        .parse()
+        .unwrap();
+    let service = app.service.clone();
+    let stopped =
+        tokio::task::spawn_blocking(move || service.wait_for_agents(Duration::from_secs(10)))
+            .await
+            .unwrap();
+    assert!(stopped);
+    assert_eq!(
+        read_run(&app, body["run_id"].as_str().unwrap(), None)
+            .await
+            .1["state"],
+        "cancelled"
+    );
+    group_gone(pid).await;
+    // And nothing new starts once the host is stopping.
+    let refused = start(&app, &input(&boot, &Uuid::new_v4().to_string(), "late")).await;
+    assert_eq!(refused.0, 503);
 }

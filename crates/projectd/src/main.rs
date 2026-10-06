@@ -122,7 +122,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         service.serve_browser(tcp, Limits::NETWORK, signal.clone()),
         service.serve_local(unix, Limits::LOCAL, signal),
     );
-    // Shutdown already asked every agent run to end; leave no agent process behind.
+    // Whatever made the listeners return, end every agent run and leave no agent
+    // process behind.
     let agents = service.clone();
     if !tokio::task::spawn_blocking(move || agents.wait_for_agents(Duration::from_secs(20)))
         .await

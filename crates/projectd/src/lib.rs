@@ -145,11 +145,14 @@ impl Service {
             agents.begin_stop();
         }
     }
-    /// After `shutdown`, wait until no agent process is left. True when none is.
+    /// Ask every agent run to end and wait until none is left, so that no agent
+    /// process outlives the daemon. True when none is. Call it once the listeners
+    /// have returned, whatever the reason; it does not depend on `shutdown`.
     pub fn wait_for_agents(&self, limit: Duration) -> bool {
-        self.agents
-            .as_ref()
-            .is_none_or(|agents| agents.wait_idle(limit))
+        self.agents.as_ref().is_none_or(|agents| {
+            agents.begin_stop();
+            agents.wait_idle(limit)
+        })
     }
     pub fn user_engines(&self) -> Result<Vec<(String, Arc<Engine>)>, AppError> {
         self.users.engines()

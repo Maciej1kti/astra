@@ -113,8 +113,11 @@ async fn command_status_requires_the_original_epoch_and_validates_its_response()
 }
 impl Drop for Running {
     fn drop(&mut self) {
-        // Ends any agent child a test left running.
+        // Ends any agent child a test left running, and waits until none is left
+        // so that a failing test cannot leave processes behind.
         self.service.shutdown();
+        self.service
+            .wait_for_agents(std::time::Duration::from_secs(20));
         for task in &self.tasks {
             task.abort();
         }
