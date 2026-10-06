@@ -133,7 +133,7 @@ export type Effect =
 export type Step = { chat: Chat; effects: Effect[] };
 
 /** What the floating button reports while the dialog is closed. */
-export type AgentActivity = "" | "working" | "answered";
+export type AgentActivity = "" | "pracuje" | "nowa odpowiedź";
 
 /** Automatic retries of an identical POST that got no usable answer. */
 export const retryDelays = [1000, 2000, 4000, 8000] as const;

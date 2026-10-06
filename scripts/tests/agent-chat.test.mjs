@@ -548,6 +548,20 @@ test("a new conversation is refused while a turn is active and clears the list o
   assert.deepEqual(last.effects, [{ kind: "stop" }]);
 });
 
+test("a new conversation is allowed when the only unresolved turn is lost", () => {
+  const lost = play(
+    running(),
+    post("poll-failed", { failure: failure("not-found") }),
+  ).chat;
+  assert.equal(turnOf(lost).state, "lost");
+  const { chat } = play(lost, {
+    type: "new-conversation",
+    conversationId: next,
+  });
+  assert.equal(chat.conversationId, next);
+  assert.deepEqual(chat.turns, []);
+});
+
 test("cancel asks once, shows no final state itself and repeats safely when it failed", () => {
   const chat = running();
   const asked = reduce(chat, post("cancel"));

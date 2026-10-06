@@ -36,7 +36,7 @@ const readTimeout = 10_000;
 
 type Hooks = {
   /** The profile whose conversation this is; it never changes in a tab. */
-  userId: string;
+  userId: () => string;
   /** Where the owner is now; sent with each new message. */
   context: () => AgentRunContext | undefined;
   /** Whether the dialog is showing, which decides what counts as unseen. */
@@ -76,7 +76,7 @@ export function agentSession(hooks: Hooks) {
     const state = storedState(chat);
     const serialized = JSON.stringify(state);
     if (serialized === written) return;
-    if (writeAgentState(hooks.userId, state)) written = serialized;
+    if (writeAgentState(hooks.userId(), state)) written = serialized;
   }
 
   /** A result the owner has not seen: a settled or stuck turn while closed. */
@@ -272,7 +272,7 @@ export function agentSession(hooks: Hooks) {
       await loadMessages();
       const next = await readStatus();
       if (!restored) {
-        const stored = readAgentState(hooks.userId);
+        const stored = readAgentState(hooks.userId());
         let remote: AgentConversation | "not-found" = "not-found";
         if (stored) {
           try {
@@ -314,7 +314,7 @@ export function agentSession(hooks: Hooks) {
 
   onMount(() => {
     // A conversation that exists in this browser resumes without being opened.
-    if (readAgentState(hooks.userId)) void load();
+    if (readAgentState(hooks.userId())) void load();
     document.addEventListener("visibilitychange", wake);
     window.addEventListener("online", wake);
     return () => {

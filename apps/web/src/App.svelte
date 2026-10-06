@@ -19,7 +19,6 @@
   import type { DailyCounterSummary } from "./lib/contracts/api.generated";
   import FocusScreen from "./features/workspace/screens/FocusScreen.svelte";
   import type { ProjectState } from "./features/workspace/screens/projects-board";
-  import BoardOverview from "./features/workspace/screens/BoardOverview.svelte";
 
   import "./styles/workspace.css";
   // Kept directly after the workspace rules so their cascade order is unchanged.
@@ -125,6 +124,9 @@
   );
   const chartUI = deferredComponent(
     () => import("./features/charts/ChartView.svelte"),
+  );
+  const overviewUI = deferredComponent(
+    () => import("./features/workspace/screens/BoardOverview.svelte"),
   );
   const projectsUI = deferredComponent(
     () => import("./features/workspace/screens/ProjectsScreen.svelte"),
@@ -289,6 +291,7 @@
     if (view === "updates") void updatesUI.load();
     if (view === "list") void listUI.load();
     if (view === "projects") void projectsUI.load();
+    if (view === "board") void overviewUI.load();
   });
 
   let dateDraft = $state<DateProposal | null>(null);
@@ -427,7 +430,6 @@
     activity: "",
     holds: false,
   });
-  let agentUser = $state("");
   const agentEnabled = $derived(boot?.agent_enabled === true);
 
   let today = $derived(boot ? calendarToday(boot.timezone, clockTime) : "");
@@ -609,14 +611,9 @@
   $effect(() => {
     if (adding) void registrationUI.load();
   });
+  // Load the chat so a conversation in progress resumes after a reload.
   $effect(() => {
-    if (boot?.agent_enabled) agentUser = boot.user?.id ?? "default";
-  });
-  // Warm the chat so a conversation in progress resumes after a reload.
-  $effect(() => {
-    if (!agentEnabled) return;
-    const timer = setTimeout(() => void agentUI.load(), agentOpen ? 0 : 150);
-    return () => clearTimeout(timer);
+    if (agentEnabled) void agentUI.load();
   });
   // Warm the most common action after the first view has rendered. Opening a
   // resource also starts this import alongside its read, without waiting here.
@@ -875,12 +872,18 @@
                   <button onclick={loadBoard}>Ponów ładowanie tablicy</button>
                 </p>{:else}<p role="status">Ładowanie tablicy…</p>{/if}
             {:else if routing.current.view === "board"}
-              <BoardOverview
-                route={routing.current}
-                {projects}
-                {cards}
-                {open}
-              />
+              <DeferredView
+                source={overviewUI}
+                loading="Ładowanie tablicy…"
+                quiet
+              >
+                {#snippet children(BoardOverview)}<BoardOverview
+                    route={routing.current}
+                    {projects}
+                    {cards}
+                    {open}
+                  />{/snippet}
+              </DeferredView>
             {:else if routing.current.view === "calendar" || routing.current.view === "gantt"}<DateViews
                 project={routing.current.project}
                 month={routing.current.month}
@@ -950,13 +953,7 @@
                   agentOpen = true;
                 }}>Agent</Button
               >
-              <span class="sr" role="status"
-                >{agentChat.activity === "working"
-                  ? "pracuje"
-                  : agentChat.activity === "answered"
-                    ? "nowa odpowiedź"
-                    : ""}</span
-              >
+              <span class="sr" role="status">{agentChat.activity}</span>
             {/if}
             {#if routing.current.view === "focus"}
               <Button
@@ -1160,11 +1157,11 @@
   />{/if}
 
 <!-- Keep the conversation alive while its dialog is closed. -->
-{#if AgentChat && agentUser}<AgentChat
+{#if AgentChat}<AgentChat
     bind:open={agentOpen}
     view={routing.current.view}
     project={routing.current.project}
-    userId={agentUser}
+    userId={boot?.user?.id ?? ""}
     onstate={(state) => (agentChat = state)}
     onsettings={() => (settings = true)}
   />{:else if agentOpen}<DeferredDialog

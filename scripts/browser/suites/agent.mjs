@@ -28,17 +28,10 @@ await runBrowserSuite(
     const checks = [];
     const errors = [];
     let current = "setup";
-    page.on("pageerror", (error) => {
-      // The first load of a cold browser intermittently reports an empty easing
-      // from the existing entrance motion (motion-layers); it precedes every
-      // scenario and does not involve the agent.
-      if (
-        current === "setup" &&
-        /Easing may not be the empty string/.test(error.message)
-      )
-        return;
-      errors.push(`${current}: ${error.message}`);
-    });
+    page.on("pageerror", (error) =>
+      errors.push(`${current}: ${error.message}`),
+    );
+
     const screenshots = process.env.ASTRA_TEST_BROWSER !== "webkit";
     // Safari moves between controls with Alt+Tab unless the user changed a setting.
     const tabKey =
@@ -516,12 +509,7 @@ await runBrowserSuite(
           });
           const phone = await touch.newPage();
           phone.setDefaultTimeout(12000);
-          // Chromium's mobile emulation intermittently reports an empty easing from the
-          // existing entrance motion while a page loads, before this scenario acts.
-          phone.on("pageerror", (error) => {
-            if (!/Easing may not be the empty string/.test(error.message))
-              errors.push(error.message);
-          });
+          phone.on("pageerror", (error) => errors.push(error.message));
           try {
             await visit("list", { target: phone });
             assert(
@@ -699,14 +687,14 @@ await runBrowserSuite(
           await expect(buttonStatus()).toHaveText("pracuje");
           await expect(agentButton()).toHaveAttribute(
             "data-activity",
-            "working",
+            "pracuje",
           );
           await expect(buttonStatus()).toHaveText("nowa odpowiedź", {
             timeout: 15000,
           });
           await expect(agentButton()).toHaveAttribute(
             "data-activity",
-            "answered",
+            "nowa odpowiedź",
           );
           const again = await open();
           await expect(text(again, "w tle [[sleep 4]]")).toBeVisible();

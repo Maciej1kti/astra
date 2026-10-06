@@ -14,6 +14,17 @@ test("WebKit's report of a read cancelled by navigation is not a page failure", 
   );
 });
 
+test("the same report for the event stream is not a page failure either", () => {
+  assert.equal(
+    navigationCancelledRead({
+      name: "EventSource cannot load https",
+      message:
+        "/localhost:49739/api/v1/events?cursor=a%3A1 due to access control checks.",
+    }),
+    true,
+  );
+});
+
 test("script failures and other load errors still count", () => {
   for (const error of [
     new TypeError("undefined is not an object"),

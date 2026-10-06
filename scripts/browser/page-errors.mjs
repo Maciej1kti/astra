@@ -1,13 +1,13 @@
 /**
  * WebKit logs "Fetch API cannot load <url> due to access control checks." when
- * a navigation or reload cancels a read that is still in flight, and Playwright
+ * a navigation or reload cancels a read (or the event stream) that is still in flight, and Playwright
  * reports that console line as a page error split at its first colon. The
  * application handled the cancelled read; nothing failed. Chromium tears the
  * page down silently.
  */
 export function navigationCancelledRead(error) {
   return (
-    /^Fetch API cannot load https?$/.test(error?.name ?? "") &&
+    /^(Fetch API|EventSource) cannot load https?$/.test(error?.name ?? "") &&
     /due to access control checks\.$/.test(error?.message ?? "")
   );
 }

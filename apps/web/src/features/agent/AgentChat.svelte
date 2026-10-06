@@ -29,8 +29,13 @@
     onsettings: () => void;
   } = $props();
 
+  // A tab keeps its profile; the last known one outlives a lost session.
+  let user = untrack(() => userId) || "default";
+  $effect(() => {
+    if (userId) user = userId;
+  });
   const chat = agentSession({
-    userId: untrack(() => userId),
+    userId: () => user,
     context: () => ({
       ...(view ? { view } : {}),
       ...(project ? { project_id: project } : {}),
@@ -44,7 +49,7 @@
 
   $effect(() => {
     onstate({
-      activity: chat.active ? "working" : chat.unseen ? "answered" : "",
+      activity: chat.active ? "pracuje" : chat.unseen ? "nowa odpowiedź" : "",
       holds: chat.holds,
     });
   });
@@ -305,7 +310,32 @@
 
 <style>
   .agent-dialog {
-    height: min(80dvh, 680px);
+    --agent-height: 680px;
+    height: min(80dvh, var(--agent-height));
+  }
+  /* The floating Agent button lives in the shell; this loads with the dialog. */
+  :global(.app .agent-action) {
+    position: relative;
+  }
+  :global(.app .agent-action[data-activity]::after) {
+    content: "";
+    position: absolute;
+    top: calc(-1 * var(--space-1));
+    right: calc(-1 * var(--space-1));
+    width: var(--space-5);
+    height: var(--space-5);
+    box-sizing: border-box;
+    border: var(--focus-width) solid var(--accent-ink);
+    border-radius: var(--radius-pill);
+    background: var(--paper);
+  }
+  :global(.app .agent-action[data-activity="nowa odpowiedź"]::after) {
+    border-color: var(--success);
+    background: var(--success);
+  }
+  /* The centered counter bar would sit under the group at some widths. */
+  :global(.app.counter-editing .agent-action) {
+    display: none;
   }
   .agent-title {
     display: flex;
