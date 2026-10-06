@@ -80,6 +80,75 @@ fn projects_default_view_is_conditional_replayable_and_durable() {
 }
 
 #[test]
+fn agent_provider_preference_is_committed_kept_by_later_patches_and_validated() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let original = engine.workspace().unwrap();
+    assert!(json!(original.value)["preferences"]["agent_provider"].is_null());
+    let epoch = engine.journal.epoch.clone();
+    let payload: Value = serde_json::from_str(include_str!(
+        "../../../../examples/requests/agent-provider-preference.json"
+    ))
+    .unwrap();
+    assert_eq!(payload, json!({"preferences":{"agent_provider":"codex"}}));
+    wire::validate("PreferencesPatch", &payload).unwrap();
+
+    let reply = engine
+        .mutate_workspace(
+            "preferences",
+            &payload,
+            &Uuid::now_v7().to_string(),
+            &epoch,
+            Some(&original.version),
+        )
+        .unwrap();
+    assert_eq!(reply.http_status, 200);
+    wire::validate("CommandResponse", &reply.body).unwrap();
+    let saved = engine.workspace().unwrap();
+    let mut expected = json!(original.value);
+    expected["preferences"]["agent_provider"] = json!("codex");
+    assert_eq!(json!(saved.value), expected);
+    assert_ne!(saved.version, original.version);
+
+    let week = engine
+        .mutate_workspace(
+            "preferences",
+            &json!({"preferences":{"week_start":"sunday"}}),
+            &Uuid::now_v7().to_string(),
+            &epoch,
+            Some(&saved.version),
+        )
+        .unwrap();
+    assert_eq!(week.http_status, 200);
+    let after_week = engine.workspace().unwrap();
+    expected["preferences"]["week_start"] = json!("sunday");
+    assert_eq!(json!(after_week.value), expected);
+    assert_eq!(
+        json!(after_week.value)["preferences"]["agent_provider"],
+        "codex"
+    );
+
+    for invalid in [json!("gemini"), json!("Codex"), json!(null)] {
+        let rejected = engine
+            .mutate_workspace(
+                "preferences",
+                &json!({"preferences":{"agent_provider":invalid}}),
+                &Uuid::now_v7().to_string(),
+                &epoch,
+                Some(&after_week.version),
+            )
+            .unwrap();
+        assert_eq!(rejected.http_status, 422);
+        assert_eq!(rejected.body["error"]["code"], "VALIDATION_FAILED");
+        assert_eq!(engine.workspace().unwrap().version, after_week.version);
+    }
+    drop(engine);
+
+    let engine = env.engine();
+    assert_eq!(json!(engine.workspace().unwrap().value), expected);
+}
+
+#[test]
 fn legacy_main_preferences_preserve_source_version_and_command_recovery() {
     use project_application::{AppError, writer::CommitPoint};
     use project_store::document::version;

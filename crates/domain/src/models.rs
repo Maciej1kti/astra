@@ -57,6 +57,7 @@ wire_enum!(ReportTargetKind { Project, Milestone });
 wire_enum!(EvidenceKind { Url, Commit, Path });
 wire_enum!(Locale { Pl, En });
 wire_enum!(WeekStart { Monday, Sunday });
+wire_enum!(AgentProvider { Claude, Codex });
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum View {
@@ -265,6 +266,8 @@ pub struct Preferences {
     pub week_start: Option<WeekStart>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_view: Option<View>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_provider: Option<AgentProvider>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

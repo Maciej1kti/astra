@@ -731,6 +731,13 @@
             "list",
             "updates"
           ]
+        },
+        "agent_provider": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "codex"
+          ]
         }
       },
       "required": [],

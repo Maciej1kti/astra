@@ -578,6 +578,7 @@ fn host(route: &Route<'_>) -> Result<Routed, AppError> {
                     "csrf_token": session.map(|s| s.csrf.as_str()).unwrap_or("local-uid"),
                     "snapshot_cursor": engine.snapshot_cursor()?,
                     "capabilities": ["projects","cards","milestones","updates","registration","search"],
+                    "agent_enabled": false,
                 })
             }
             ("GET", ["api", "v1", "diagnostics"]) => engine.diagnostics()?,

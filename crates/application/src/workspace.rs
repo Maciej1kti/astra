@@ -172,6 +172,9 @@ impl Engine {
                     if let Some(view) = preferences.default_view {
                         workspace.preferences.default_view = Some(view);
                     }
+                    if let Some(provider) = preferences.agent_provider {
+                        workspace.preferences.agent_provider = Some(provider);
+                    }
                 }
             }
         }

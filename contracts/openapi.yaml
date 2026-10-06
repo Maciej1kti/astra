@@ -2351,6 +2351,153 @@ paths:
         schema:
           $ref: '#/components/schemas/UUID'
       responses: *id008
+  /api/v1/agent:
+    parameters:
+    - $ref: '#/components/parameters/AstraUser'
+    get:
+      operationId: getAgentStatus
+      tags: [agent]
+      summary: Read the agent status of the selected profile
+      description: |-
+        Reports the daemon's current boot_id (new on every daemon start; clients copy it into AgentRunInput), the selected profile's effective provider preference and whether each provider's executable was found. Errors: AGENT_DISABLED (404) when the host was not started with an agent directory.
+      responses:
+        '200':
+          description: Agent status for the selected profile
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentStatus'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/agent/runs:
+    parameters:
+    - $ref: '#/components/parameters/AstraUser'
+    post:
+      operationId: startAgentRun
+      tags: [agent]
+      summary: Start an agent run for one chat message
+      description: |-
+        Starts the selected profile's agent provider for one message and returns the run immediately; poll getAgentRun until the state is final. The client generates run_id, so a repeated POST cannot start the agent twice: the same run_id with the same input returns the existing run with 200 and starts nothing. A run is accepted only when boot_id equals the daemon's current boot_id from getAgentStatus. Runs are kept in memory only, so after a daemon restart a run_id is unknown and the outcome of an earlier run cannot be read back.
+
+        Errors:
+        - AGENT_DISABLED (404): the host was not started with an agent directory.
+        - AGENT_HOST_RESTARTED (409): the daemon restarted since the client read boot_id; nothing was started and earlier runs can no longer be read back.
+        - AGENT_RUN_ID_REUSED (409): the same run_id was sent with different input.
+        - AGENT_RUN_ACTIVE (409): the conversation already has a running run.
+        - AGENT_PROVIDER_UNAVAILABLE (409): the provider's executable was not found or could not start.
+        - AGENT_CLI_UNAVAILABLE (409): projectctl is not installed beside the daemon.
+        - AGENT_INSTRUCTIONS_MISSING (409): the agent directory has no usable AGENTS.md.
+        - AGENT_BUSY (429): too many runs or conversations at once.
+        - VALIDATION_FAILED (422): the request body does not match AgentRunInput.
+      parameters:
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AgentRunInput'}
+      responses:
+        '202':
+          description: A new run was started and is running
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentRun'}
+        '200':
+          description: The same run_id was repeated with the same input; the existing run is returned and nothing was started
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentRun'}
+        '408': {$ref: '#/components/responses/RequestTimeout'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/agent/runs/{run_id}:
+    parameters:
+    - $ref: '#/components/parameters/AstraUser'
+    - name: run_id
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/RequestID'}
+    get:
+      operationId: getAgentRun
+      tags: [agent]
+      summary: Read one agent run
+      description: |-
+        Returns the current state of a run held in memory by this daemon. Errors: AGENT_DISABLED (404) when the host was not started with an agent directory; AGENT_RUN_NOT_FOUND (404) when the run_id is unknown, including every run started before a daemon restart.
+      responses:
+        '200':
+          description: The run in its current state
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentRun'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/agent/runs/{run_id}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/AstraUser'
+    - name: run_id
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/RequestID'}
+    post:
+      operationId: cancelAgentRun
+      tags: [agent]
+      summary: Cancel a running agent run
+      description: |-
+        Asks the daemon to stop a running run and returns it; the body is an empty JSON object. Cancelling a run that has already finished returns it unchanged. Errors: AGENT_DISABLED (404) when the host was not started with an agent directory; AGENT_RUN_NOT_FOUND (404) when the run_id is unknown.
+      parameters:
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+              additionalProperties: false
+      responses:
+        '200':
+          description: The run after the cancellation request, or unchanged when it had already finished
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentRun'}
+        '408': {$ref: '#/components/responses/RequestTimeout'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/agent/conversations/{conversation_id}:
+    parameters:
+    - $ref: '#/components/parameters/AstraUser'
+    - name: conversation_id
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/UUID'}
+    get:
+      operationId: getAgentConversation
+      tags: [agent]
+      summary: Read the runs of one conversation
+      description: |-
+        Returns up to 50 runs of a conversation held in memory by this daemon, oldest first. Errors: AGENT_DISABLED (404) when the host was not started with an agent directory; AGENT_CONVERSATION_NOT_FOUND (404) when the conversation is unknown, including every conversation started before a daemon restart.
+      responses:
+        '200':
+          description: The conversation with its runs, oldest first
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentConversation'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
 components:
   headers:
     ReadContentEncoding:
@@ -3254,6 +3401,8 @@ components:
           - chart
           - list
           - updates
+        agent_provider:
+          $ref: '#/components/schemas/AgentProvider'
       required: []
       additionalProperties: false
     Workspace:
@@ -4480,6 +4629,9 @@ components:
             minLength: 1
             maxLength: 100
           maxItems: 100
+        agent_enabled:
+          type: boolean
+          description: True when the host was started with an agent directory.
       required:
       - user
       - api_version
@@ -4493,6 +4645,7 @@ components:
       - csrf_token
       - snapshot_cursor
       - capabilities
+      - agent_enabled
       additionalProperties: false
     RegistrationPlanInput:
       type: object
@@ -5349,3 +5502,163 @@ components:
           type:
           - string
           - 'null'
+    AgentProvider:
+      type: string
+      enum:
+      - claude
+      - codex
+    AgentRunState:
+      type: string
+      enum:
+      - running
+      - succeeded
+      - failed
+      - cancelled
+      - timed_out
+    AgentRunContext:
+      type: object
+      additionalProperties: false
+      properties:
+        view:
+          type: string
+          description: The workspace view the user was looking at; the same names as Preferences.default_view.
+          enum:
+          - focus
+          - projects
+          - board
+          - calendar
+          - gantt
+          - chart
+          - list
+          - updates
+        project_id:
+          $ref: '#/components/schemas/UUID'
+    AgentRunInput:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - boot_id
+      - conversation_id
+      - message
+      properties:
+        run_id:
+          $ref: '#/components/schemas/RequestID'
+        boot_id:
+          $ref: '#/components/schemas/UUID'
+          description: The boot_id the client read from GET /api/v1/agent. A run is accepted only when it equals the daemon's current boot_id, so repeating a request after the daemon restarted cannot start the agent a second time.
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        message:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        context:
+          $ref: '#/components/schemas/AgentRunContext'
+    AgentRunError:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - detail
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
+        detail:
+          type:
+          - string
+          - 'null'
+          maxLength: 2000
+    AgentRun:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - conversation_id
+      - provider
+      - state
+      - message
+      - reply
+      - reply_truncated
+      - error
+      - created_at
+      - finished_at
+      properties:
+        run_id:
+          $ref: '#/components/schemas/RequestID'
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        provider:
+          $ref: '#/components/schemas/AgentProvider'
+        state:
+          $ref: '#/components/schemas/AgentRunState'
+        message:
+          type: string
+        reply:
+          type:
+          - string
+          - 'null'
+          maxLength: 65536
+          description: The agent's final text; null until the run has produced one.
+        reply_truncated:
+          type: boolean
+          description: True when the reply was cut to fit the size limit.
+        error:
+          oneOf:
+          - $ref: '#/components/schemas/AgentRunError'
+          - type: 'null'
+        created_at:
+          $ref: '#/components/schemas/Instant'
+        finished_at:
+          oneOf:
+          - $ref: '#/components/schemas/Instant'
+          - type: 'null'
+    AgentProviderStatus:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - available
+      properties:
+        id:
+          $ref: '#/components/schemas/AgentProvider'
+        available:
+          type: boolean
+    AgentStatus:
+      type: object
+      additionalProperties: false
+      required:
+      - boot_id
+      - provider
+      - providers
+      properties:
+        boot_id:
+          $ref: '#/components/schemas/UUID'
+          description: Generated when the daemon starts; it changes on every start.
+        provider:
+          $ref: '#/components/schemas/AgentProvider'
+          description: The selected profile's effective provider preference.
+        providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentProviderStatus'
+    AgentConversation:
+      type: object
+      additionalProperties: false
+      required:
+      - conversation_id
+      - provider
+      - runs
+      properties:
+        conversation_id:
+          $ref: '#/components/schemas/UUID'
+        provider:
+          $ref: '#/components/schemas/AgentProvider'
+        runs:
+          type: array
+          description: Runs of the conversation, oldest first.
+          items:
+            $ref: '#/components/schemas/AgentRun'
+          maxItems: 50

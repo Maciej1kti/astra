@@ -347,6 +347,23 @@ fn workspace_default_views_round_trip_and_reject_unknown_names() {
 }
 
 #[test]
+fn workspace_agent_provider_round_trips_and_rejects_unknown_names() {
+    let mut workspace = read("examples/workspace.json");
+    for provider in ["claude", "codex"] {
+        workspace["preferences"]["agent_provider"] = json!(provider);
+        assert_eq!(
+            serde_json::to_value(validate_workspace(workspace.clone()).unwrap().get()).unwrap(),
+            workspace,
+            "{provider}"
+        );
+    }
+    for invalid in [json!("Codex"), json!("gemini"), json!(""), json!(null)] {
+        workspace["preferences"]["agent_provider"] = invalid;
+        assert!(validate_workspace(workspace.clone()).is_err());
+    }
+}
+
+#[test]
 fn legacy_main_default_decodes_as_projects_without_accepting_other_retired_names() {
     let mut workspace = read("examples/workspace.json");
     workspace["preferences"]["default_view"] = json!("main");

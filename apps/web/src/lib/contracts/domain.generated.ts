@@ -582,4 +582,5 @@ export interface Preferences {
    * Canonical workspace view. The server reads the retired main spelling as projects without rewriting existing workspace bytes.
    */
   default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
+  agent_provider?: "claude" | "codex";
 }

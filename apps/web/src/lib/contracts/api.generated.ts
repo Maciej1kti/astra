@@ -366,6 +366,15 @@ export interface ApiContracts {
   GitObservation: GitObservation;
   NativeFolderInput: NativeFolderInput;
   NativeFolderSelection: NativeFolderSelection;
+  AgentProvider: "claude" | "codex";
+  AgentRunState: "running" | "succeeded" | "failed" | "cancelled" | "timed_out";
+  AgentRunContext: AgentRunContext;
+  AgentRunInput: AgentRunInput;
+  AgentRunError: AgentRunError;
+  AgentRun: AgentRun;
+  AgentProviderStatus: AgentProviderStatus;
+  AgentStatus: AgentStatus;
+  AgentConversation: AgentConversation;
 }
 export interface TimedEvent {
   start: string;
@@ -567,6 +576,7 @@ export interface ProjectRegistration {
 export interface Preferences {
   week_start?: "monday" | "sunday";
   default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
+  agent_provider?: "claude" | "codex";
 }
 export interface Workspace {
   format_version: 1;
@@ -964,6 +974,7 @@ export interface Bootstrap {
    * @maxItems 100
    */
   capabilities: string[];
+  agent_enabled: boolean;
 }
 export interface RegistrationPlanInput {
   root_id: string;
@@ -1264,6 +1275,50 @@ export interface NativeFolderSelection {
   plan: RegistrationPlan | null;
   error: string | null;
 }
+export interface AgentRunContext {
+  view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
+  project_id?: string;
+}
+export interface AgentRunInput {
+  run_id: string;
+  boot_id: string;
+  conversation_id: string;
+  message: string;
+  context?: AgentRunContext;
+}
+export interface AgentRunError {
+  code: string;
+  detail: string | null;
+}
+export interface AgentRun {
+  run_id: string;
+  conversation_id: string;
+  provider: "claude" | "codex";
+  state: "running" | "succeeded" | "failed" | "cancelled" | "timed_out";
+  message: string;
+  reply: string | null;
+  reply_truncated: boolean;
+  error: AgentRunError | null;
+  created_at: string;
+  finished_at: string | null;
+}
+export interface AgentProviderStatus {
+  id: "claude" | "codex";
+  available: boolean;
+}
+export interface AgentStatus {
+  boot_id: string;
+  provider: "claude" | "codex";
+  providers: AgentProviderStatus[];
+}
+export interface AgentConversation {
+  conversation_id: string;
+  provider: "claude" | "codex";
+  /**
+   * @maxItems 50
+   */
+  runs: AgentRun[];
+}
 
 export type UUID = ApiContracts["UUID"];
 
@@ -1294,3 +1349,7 @@ export type CardPatch = ApiContracts["CardPatch"];
 export type MilestonePatch = ApiContracts["MilestonePatch"];
 
 export type TagName = ApiContracts["TagName"];
+
+export type AgentProvider = ApiContracts["AgentProvider"];
+
+export type AgentRunState = ApiContracts["AgentRunState"];

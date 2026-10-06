@@ -61,3 +61,11 @@ see [ADR-064](../docs/ADR-064-PROJECTS-STATUS-BOARD.md).
 [Recovery review](requests/local-recovery-review.http) lists unresolved source
 writes and abandons one reviewed intent over the local socket; see
 [ADR-067](../docs/ADR-067-REVIEWED-INTENT-RESOLUTION.md).
+
+[Agent run request](requests/agent-run.json) starts a chat message for the profile's
+selected provider. The client generates `run_id` and copies `boot_id` from the
+[agent status](agent-status.json), so repeating the request cannot start the agent
+twice and a request sent after a daemon restart is refused. The result is an
+[agent run](agent-run.json) that the client polls until it reaches a final state.
+The [provider preference](requests/agent-provider-preference.json) is an ordinary
+conditional preferences patch. Runs live in daemon memory only.

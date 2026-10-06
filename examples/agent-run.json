@@ -1,0 +1,12 @@
+{
+  "run_id": "019913e8-8000-7000-8000-0000000000a1",
+  "conversation_id": "33333333-3333-4333-8333-333333333333",
+  "provider": "claude",
+  "state": "succeeded",
+  "message": "Zrobiłem 10 pompek",
+  "reply": "Dodałem 10 pompek do dzisiejszego licznika.",
+  "reply_truncated": false,
+  "error": null,
+  "created_at": "2026-10-06T08:30:00Z",
+  "finished_at": "2026-10-06T08:30:12Z"
+}
