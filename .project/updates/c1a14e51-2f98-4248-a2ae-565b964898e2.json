@@ -1,0 +1,18 @@
+{
+  "body": "The findings of the visual review are corrected in 334f6c9 and running in the existing HTTPS app: nine visible defects, three motion durations without staged entrances, one card and one board style, one create action per view, a single colour definition for both themes and six type sizes.\n\nStill open for the owner: accepting the calmer motion and the merged controls. Left unchanged on purpose: spacing token names, the sections shown on a new card and the floating add button on phone Focus. WebKit still fails the existing `responsive` check on the header project picker. Evidence: progress/2026-10-06-ui-refinement.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "c1a14e51-2f98-4248-a2ae-565b964898e2",
+    "kind": "result",
+    "recorded_at": "2026-10-06T10:43:40.719Z",
+    "summary": "Interface refined after the visual review",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
