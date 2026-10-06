@@ -1,0 +1,18 @@
+{
+  "body": "Touching a menu action inside a dialog did nothing in WebKit, so a card could not be deleted from its editor on a phone. Fixed in 48c697b and running in the existing HTTPS app.\n\nStill open for the owner: a card pinned to Focus is refused by the server (CARD_IN_FOCUS) and must be unpinned and reopened first. Evidence: progress/2026-10-06-touch-menu-actions.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "e136735d-f5c4-41f1-a2b8-fa9fbbce9af6",
+    "kind": "result",
+    "recorded_at": "2026-10-06T09:26:33.583Z",
+    "summary": "Touched menu actions work in WebKit dialogs",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
