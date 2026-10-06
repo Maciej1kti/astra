@@ -10,35 +10,48 @@ ASTRA_TEST_PROFILE=release npm run test:browser
 
 ## Motion verification
 
-After the build above, run the shared motion scenarios against the real release
-daemon in both engines:
+After the build above, run the shared motion and Calendar scenarios against the
+real release daemon in both engines:
 
 ```sh
-ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs motion
-ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs motion
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs motion calendar-motion
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs motion calendar-motion
 ```
 
-Follow the [design system](../../docs/DESIGN-SYSTEM.md#motion-vocabulary) for
-parameters and ownership.
+Changes to native Calendar group ownership also need `planning`, `calendar-pages`,
+`calendar-layout`, `calendar-popup`, `events` and `card-calendar`. Follow the
+[design system](../../docs/DESIGN-SYSTEM.md#motion-vocabulary) for parameters and
+ownership; the [dated evidence](../../progress/2026-10-01-soft-motion.md) records
+the tested revision and rollout without implying physical-device acceptance.
 
-The `motion` suite requires that loaded content starts no scripted animation and
-that no entrance is delayed or blurred: a view fades once within 200 ms, a
-dialog arrives within 280 ms and a menu within 120 ms, each already readable
-halfway through, and a data refresh or an edit starts nothing. It checks the
-moving navigation selection across desktop/tablet/mobile, rapid navigation,
-keyboard opening, menu reversal, native dismissal/focus restoration, the tag
-confirmation pulse, live reduced-motion changes and the release CSP, and that
-Calendar, Timeline and Board arrive without staged layers. Effects are sampled
-by pausing the actual animation at a fixed time, independent of runner
-scheduling. It captures rendered light/dark surfaces in Chromium; WebKit
-retains its existing screenshot/CSP restriction. These are browser checks, not
-physical-device acceptance or a frame-rate benchmark. Raw pointer/keyboard
-scenarios wait for native `dialog[open]` removal before acting on the
-background; exiting layers leave the accessibility tree before their brief
-visual exit ends. Disclosure helpers use `aria-expanded` to distinguish an open
-panel from its outgoing painted surface. Native Calendar drag, resize,
-cancellation, conflict/retry and touch behavior remain covered by the planning,
-events and calendar-popup suites.
+The `motion` suite exercises bounded loaded-content cascades, refresh stability,
+rapid navigation, selection geometry across desktop/tablet/mobile, keyboard
+opening, menu reversal, native dismissal/focus restoration, live reduced-motion
+changes and the release CSP. It captures rendered light/dark surfaces in Chromium;
+rendered effects sampled at 150 ms also guard against navigation, content, menus
+and dialogs collapsing their visible travel into the first few frames.
+Samples at 50 ms verify gentle opacity onset; headings and tags also resolve
+from a small blur to fully sharp, opaque content without leaving an active filter.
+The card-layer scenarios check titles/context, metadata, labels and daily counters
+in In focus/In motion/Events, Projects, List (within one project and across
+projects) and both Board modes. Actual bounds
+stay fixed while inner effects run; a counter save and ordinary refresh do not
+replay entrances. A narrow Focus case retains its visible footer.
+WebKit retains its existing screenshot/CSP restriction. These are browser checks,
+not physical-device acceptance or a frame-rate benchmark. Raw pointer/keyboard
+scenarios wait for native `dialog[open]` removal before acting on the background;
+exiting layers leave the accessibility tree before their brief visual exit ends.
+Disclosure helpers use `aria-expanded` to distinguish an open panel from its
+outgoing painted surface.
+
+The `calendar-motion` suite holds the real period read to verify entrance readiness,
+then checks separate native grid/event or agenda-day layers in every desktop and
+narrow-screen mode. It covers project/date changes, an empty project, source-write
+and refresh stability, source opening, live reduced motion and the month overflow
+popup's gentle layers. Sampled bounds remain fixed, with no per-event animation.
+Chromium captures settled layouts and intermediate rendered frames; native drag,
+resize, cancellation, conflict/retry and touch behavior remain covered by the
+planning, events and calendar-popup suites.
 
 ## Polish interface verification
 

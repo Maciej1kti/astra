@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
@@ -33,7 +34,7 @@
   const title = $derived(monthFormat.format(widgetDate(date)));
 </script>
 
-<div class="calendar-toolbar">
+<div class="calendar-toolbar" use:revealLayers={controlsLayers}>
   <div class="period-title">
     <ActionMenu
       label="Wybierz datę kalendarza"

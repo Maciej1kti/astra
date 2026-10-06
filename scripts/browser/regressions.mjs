@@ -15,6 +15,7 @@ const suites = [
   "navigation",
   "menus",
   "motion",
+  "calendar-motion",
   "loading",
   "session",
   "session-recovery",

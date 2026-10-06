@@ -86,7 +86,7 @@ test("viewport breakpoints come from one short list", () => {
   assert.deepEqual(used, []);
 });
 
-test("the palette is defined once and motion keeps three durations", () => {
+test("the palette is defined once and motion durations stay a named set", () => {
   const text = readFileSync(tokens, "utf8");
   assert.equal(
     text.includes("prefers-color-scheme"),
@@ -94,8 +94,23 @@ test("the palette is defined once and motion keeps three durations", () => {
     "light-dark() carries both themes",
   );
   assert.deepEqual(
-    [...text.matchAll(/--motion-[a-z]+(?=:\s*\d+ms)/g)].map(([name]) => name),
-    ["--motion-fast", "--motion-base", "--motion-slow", "--motion-exit"],
+    [...text.matchAll(/--motion-[a-z-]+(?=:\s*\d+ms)/g)].map(([name]) => name),
+    [
+      "--motion-quick",
+      "--motion-enter",
+      "--motion-heading",
+      "--motion-content",
+      "--motion-detail",
+      "--motion-backdrop",
+      "--motion-dialog",
+      "--motion-scene",
+      "--motion-selection",
+      "--motion-exit",
+      "--motion-stagger",
+      "--motion-press-in",
+      "--motion-popup-heading",
+      "--motion-popup-content",
+    ],
   );
   assert.deepEqual(
     [...text.matchAll(/--text-[a-z]+/g)].map(([name]) => name),

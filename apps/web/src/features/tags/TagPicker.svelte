@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { revealLayers, suggestionLayers } from "../../lib/ui/motion-layers";
   import { all } from "../../lib/api/api";
   import Icon from "../../lib/ui/Icon.svelte";
   import SectionHeading from "../../lib/ui/SectionHeading.svelte";
@@ -301,6 +302,7 @@
     <ul
       id={`${id}-options`}
       class="suggestions"
+      use:revealLayers={suggestionLayers}
       role="listbox"
       aria-label={folder ? "Istniejące foldery" : "Istniejące tagi"}
     >

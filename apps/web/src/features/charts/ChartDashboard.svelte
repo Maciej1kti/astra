@@ -376,7 +376,7 @@
   .chart-panels {
     display: grid;
     gap: var(--space-6);
-    transition: opacity var(--motion-fast) var(--motion-ease);
+    transition: opacity var(--motion-quick) var(--motion-ease);
   }
   /* A refresh keeps the previous plot in place instead of clearing it. */
   .chart-panels.refreshing {

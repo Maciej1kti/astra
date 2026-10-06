@@ -171,9 +171,11 @@ scroll position has been restored.
 planning/tag endpoints and command execution. Feature code should use a named
 endpoint when one exists; response types are asserted only at transport boundaries. `lib/contracts` contains generated types; `lib/resources` contains
 shared resource presentation; `lib/ui` contains shared rendering and dialog
-behavior and the small shared component set. `lib/ui/motion.ts` owns shared
-timing, the measured navigation selection and live reduced-motion cleanup;
-entrances are plain CSS in `styles/motion.css`. Visual values live in
+behavior and the small shared component set. `lib/ui/motion.ts` owns bounded
+scene entrances, bounded inner card layers, measured navigation selection and live reduced-motion cleanup;
+`lib/ui/motion-layers.ts` owns bounded heading/content/detail sequences for native
+layers and workspace controls, with explicit per-opening keys and cleanup;
+features supply their navigation keys and readiness without changing read lifetimes. Visual values live in
 `styles/tokens.css`; workspace and editor styles consume those tokens. See the
 [UI design system](DESIGN-SYSTEM.md) for component and layout ownership.
 
@@ -329,9 +331,11 @@ versioned reads, paging and date proposals. `calendar-keyboard.ts` owns the Alt
 shortcuts of the planning region, an event's keyboard access with its Alt+arrow
 proposal, and the pointer guard that cancels a gesture on Escape, a second
 pointer, pointercancel or rotation. Calendar presentation
-does not replace or cache the source projection. Calendar has no entrance of
-its own: it arrives with its view, native events are never animated
-individually, and the month popup only fades.
+does not replace or cache the source projection. `calendar-motion.ts` supplies
+bounded native grid/event-group layers to the shared readiness-aware sequence.
+Project/date/widget-view keys start entrances only after the current page is
+ready; refreshes and writes retain the sequence. Native events are never animated
+individually, and the month popup's opacity layers preserve positioning/gestures.
 
 The calendar's reviewed build transform lives in `apps/web/build`; it is guarded
 by exact upstream source hashes and required-module checks. Planning owns its

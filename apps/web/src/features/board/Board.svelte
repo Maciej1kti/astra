@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { revealScene } from "../../lib/ui/motion";
+  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import Icon from "../../lib/ui/Icon.svelte";
   import { errorMessage } from "../../lib/api/messages.ts";
   import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
@@ -510,14 +512,29 @@
     {#if !busy && !boardCards.length}Brak pasujących kart na wczytanych
       stronach.{/if}
   </p>{/if}
-{#if columns.length}<nav class="board-column-nav" aria-label="Kolumny tablicy">
+{#if columns.length}<nav
+    class="board-column-nav"
+    aria-label="Kolumny tablicy"
+    use:revealLayers={controlsLayers}
+  >
     {#each columns as column}<button
         aria-current={visibleStatus === column.status ? "true" : undefined}
         onclick={() => showColumn(column.status)}
         >{resourceLabel(column.status)} <span>{column.total}</span></button
       >{/each}
   </nav>{/if}
-<div class="astra-board" aria-busy={busy} use:scrolling>
+<div
+  use:revealScene={{
+    ready: !busy && !!columns.length,
+    key: project,
+    selector: ".board-column-nav, .wx-column",
+    cardSelector: "[data-board-card]",
+    distance: "0px",
+  }}
+  class="astra-board"
+  aria-busy={busy}
+  use:scrolling
+>
   <WidgetLocale>
     <Willow fonts={false} children={undefined} />
     <div class="board-theme wx-theme wx-willow-theme">

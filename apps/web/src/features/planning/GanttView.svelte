@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { revealScene } from "../../lib/ui/motion";
+  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import { errorMessage } from "../../lib/api/messages.ts";
   import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
@@ -334,7 +336,11 @@
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
   {#if loading}<p role="status">Ładowanie osi czasu…</p>{/if}
   {#if pageNotice}<p class="hint" role="status">{pageNotice}</p>{/if}
-  <div class="selection-bar" aria-label="Wybór na osi czasu">
+  <div
+    class="selection-bar"
+    aria-label="Wybór na osi czasu"
+    use:revealLayers={controlsLayers}
+  >
     <select class="scale" aria-label="Skala osi czasu" bind:value={scale}
       ><option value="days">Dni</option><option value="weeks">Tygodnie</option
       ><option value="months">Miesiące</option></select
@@ -378,7 +384,16 @@
         </span>
       </div>{/if}
   </div>
-  <div class="astra-gantt" aria-label="Wykres Gantta projektu">
+  <div
+    use:revealScene={{
+      ready: !loading && !!data,
+      key: `${project}:${month}:${scale}`,
+      selector: ":scope > .chart",
+      distance: "0px",
+    }}
+    class="astra-gantt"
+    aria-label="Wykres Gantta projektu"
+  >
     <WidgetLocale>
       <Willow fonts={false} />
       <div

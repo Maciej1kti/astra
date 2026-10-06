@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import type { Summary } from "../../lib/api/api";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
@@ -58,7 +59,7 @@
   );
 </script>
 
-<header class="topbar">
+<header class="topbar" use:revealLayers={controlsLayers}>
   {#if focus}
     <select
       class="workspace-project"

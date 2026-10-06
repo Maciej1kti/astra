@@ -121,9 +121,16 @@ and explicit confirmation.
 
 ### Motion and accessibility
 
-Motion is brief and answers what you did. A view fades in as a whole; a dialog
-or menu arrives once, without separate stages for its headings, sections or
-tags. Adding a tag and an acknowledged save give a short confirmation.
+Navigation, loaded content, menus and dialogs share layered motion effects.
+Surfaces appear first, followed by headings, sections and small details. Existing
+tags enter with their section; adding a tag gives a separate confirmation pulse.
+Entrances gently fade into view with subtle movement; headings and small tag
+details also resolve from a light blur into sharp text.
+Card context, titles, metadata, labels and daily counter footers have their own
+opening layers across views. Editing a counter or refreshing data keeps them in place.
+Calendar reveals its headings, grid and event groups in stages after the selected
+period loads. Agenda days and the month overflow popup use the same gentle effects,
+on desktop and mobile; moving an event does not replay the whole calendar.
 Buttons respond to a press, and the navigation highlight follows the selected
 view on desktop and mobile. To disable these effects, enable **Reduce motion**
 in your operating system; Astra follows changes immediately, including while

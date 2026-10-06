@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { revealLayers } from "../../lib/ui/motion-layers";
+  import { calendarLayers } from "./calendar-motion";
   import { errorMessage } from "../../lib/api/messages.ts";
   import { countedDatedItems } from "../../lib/ui/locale.ts";
   import type { CardCreate } from "../../lib/contracts/api.generated";
@@ -373,6 +375,11 @@
     </p>{/if}
   <div
     class="calendar-surface"
+    use:revealLayers={{
+      ready: ready && !loading,
+      key: `${project}:${date}:${widgetView}`,
+      layers: calendarLayers,
+    }}
     aria-busy={loading}
     class:month={monthGrid}
     class:agenda={monthAgenda || mode === "agenda"}
@@ -932,6 +939,22 @@
     }
     .view-meta {
       gap: 0 var(--space-8);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .agenda :global(.ec-event) {
+      transition: background-color var(--motion-quick) ease;
+    }
+    .calendar-surface :global(.ec-popup) {
+      animation: astra-fade var(--motion-content) var(--motion-emerge);
+    }
+    .calendar-surface :global(.ec-popup > .ec-day-head) {
+      animation: astra-fade var(--motion-heading) var(--motion-emerge)
+        var(--motion-popup-heading) backwards;
+    }
+    .calendar-surface :global(.ec-popup > .ec-events) {
+      animation: astra-fade var(--motion-content) var(--motion-emerge)
+        var(--motion-popup-content) backwards;
     }
   }
 </style>

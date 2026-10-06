@@ -421,6 +421,18 @@
   td:last-child {
     text-align: right;
   }
+  @media (prefers-reduced-motion: no-preference) {
+    .counter-confirmation,
+    .counter-history-panel {
+      animation: astra-reveal var(--motion-detail) var(--motion-emerge);
+    }
+    .counter-value {
+      transition:
+        background var(--motion-quick),
+        border-color var(--motion-quick),
+        color var(--motion-quick);
+    }
+  }
   @media (min-width: 641px) {
     .counter-insight {
       flex-direction: row;

@@ -1,19 +1,43 @@
-/* Surfaces arrive once, controls answer the hand, and selection moves as one layer. */
+/* Surfaces arrive, controls respond, and selection moves as one continuous layer. */
 @keyframes astra-reveal {
   from {
     opacity: 0;
     translate: 0 var(--motion-distance);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }
 @keyframes astra-fade {
   from {
     opacity: 0;
   }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes astra-surface-fade {
+  from {
+    opacity: 0;
+  }
+  80%,
+  to {
+    opacity: 1;
+  }
 }
 @keyframes astra-dialog {
   from {
     opacity: 0;
-    transform: translateY(var(--motion-distance)) scale(var(--motion-scale));
+    transform: translateY(var(--motion-dialog-distance))
+      scale(var(--motion-scale));
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 @keyframes astra-menu {
@@ -22,6 +46,13 @@
     transform: translateY(calc(-0.5 * var(--motion-distance)))
       scale(var(--motion-scale));
   }
+  80% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 @keyframes astra-backdrop-out {
   to {
@@ -29,8 +60,14 @@
   }
 }
 @keyframes astra-confirm {
-  from {
+  0% {
     scale: var(--motion-press);
+  }
+  55% {
+    scale: 1.025;
+  }
+  100% {
+    scale: 1;
   }
 }
 
@@ -59,14 +96,15 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .view-content {
-    animation: astra-fade var(--motion-base) var(--motion-ease);
+    /* Reveal the parent before its children's travel has nearly finished. */
+    animation: astra-fade var(--motion-quick) linear;
   }
   .app-dialog[open] {
     transform-origin: 50% 40%;
-    animation: astra-dialog var(--motion-slow) var(--motion-ease);
+    animation: astra-dialog var(--motion-dialog) var(--motion-emerge);
   }
   .app-dialog[open]::backdrop {
-    animation: astra-fade var(--motion-base) var(--motion-ease);
+    animation: astra-fade var(--motion-backdrop) var(--motion-emerge);
   }
   .app-dialog[open][inert] {
     animation: none;
@@ -76,10 +114,13 @@
   }
   .action-menu-panel {
     transform-origin: top right;
-    animation: astra-menu var(--motion-fast) var(--motion-ease);
+    animation: astra-menu var(--motion-enter) var(--motion-emerge);
   }
   .action-menu-panel.above {
     transform-origin: bottom right;
+  }
+  .action-menu-panel.beside {
+    transform-origin: top right;
   }
   .action-menu.align-start .action-menu-panel {
     transform-origin: top left;
@@ -90,19 +131,17 @@
   .list-filter-fields.expanded,
   .counter-configuration,
   .counter-history-panel,
-  .counter-confirmation,
   .focus-counter-bar,
   .focus-counter-saved,
   .tags .suggestions {
-    animation: astra-reveal var(--motion-base) var(--motion-ease);
+    animation: astra-reveal var(--motion-enter) var(--motion-emerge);
   }
   .tags .chips > li.chip-added,
   .save-indicator.saved {
-    animation: astra-confirm var(--motion-base) var(--motion-spring);
+    animation: astra-confirm var(--motion-detail) var(--motion-spring);
   }
-  .schedule-calendar-grid,
-  .calendar-surface .ec-popup {
-    animation: astra-fade var(--motion-base) var(--motion-ease);
+  .schedule-calendar-grid {
+    animation: astra-fade var(--motion-enter) var(--motion-emerge);
   }
   :where(
     button,
@@ -113,16 +152,29 @@
     .resource-description-rendered
   ) {
     transition:
-      scale var(--motion-base) var(--motion-spring),
-      background-color var(--motion-fast) ease,
-      border-color var(--motion-fast) ease,
-      color var(--motion-fast) ease,
-      box-shadow var(--motion-fast) ease;
+      background-color var(--motion-quick) ease,
+      border-color var(--motion-quick) ease,
+      color var(--motion-quick) ease,
+      box-shadow var(--motion-enter) var(--motion-ease);
   }
-  :where(.resource-card, .projectcard, .update, .agenda .ec-event) {
+  :where(
+    .ui-button,
+    .icon-button,
+    .app-dialog button,
+    .focus-add-action,
+    .action-menu > button,
+    .topbar button,
+    .calendar-toolbar button,
+    .schedule-calendar-dialog button,
+    .board-column-nav button,
+    .app > aside nav button
+  ) {
     transition:
-      background-color var(--motion-fast) ease,
-      border-color var(--motion-fast) ease;
+      scale var(--motion-enter) var(--motion-spring),
+      background-color var(--motion-quick) ease,
+      border-color var(--motion-quick) ease,
+      color var(--motion-quick) ease,
+      box-shadow var(--motion-enter) var(--motion-ease);
   }
   :where(
       .ui-button,
@@ -137,36 +189,78 @@
       .app > aside nav button
     ):active:not(:disabled) {
     scale: var(--motion-press);
-    transition-duration: calc(var(--motion-fast) / 2);
+    transition-duration: var(--motion-press-in);
+  }
+  .app > aside nav button .ui-icon {
+    transition: scale var(--motion-selection) var(--motion-spring);
+  }
+  .app > aside nav button.chosen .ui-icon {
+    scale: 1.1;
+  }
+  .editor .focus-toggle .ui-icon,
+  .editor .priority-toggle .ui-icon {
+    transition: transform var(--motion-enter) var(--motion-spring);
+  }
+  .editor .priority-toggle[aria-pressed="true"] .ui-icon {
+    transform: rotate(-10deg) scale(1.1);
+  }
+  .editor .focus-toggle.pinned .ui-icon {
+    transform: rotate(-12deg) scale(1.1);
   }
   .schedule-disclosure {
     transition:
-      grid-template-rows var(--motion-base) var(--motion-ease),
-      visibility 0s var(--motion-base);
+      grid-template-rows var(--motion-enter) var(--motion-ease),
+      visibility 0s var(--motion-enter);
   }
   .card-section {
     transition:
-      grid-template-rows var(--motion-base) var(--motion-ease),
-      margin-top var(--motion-base) var(--motion-ease),
-      padding-top var(--motion-base) var(--motion-ease),
+      grid-template-rows var(--motion-enter) var(--motion-ease),
+      margin-top var(--motion-enter) var(--motion-ease),
+      padding-top var(--motion-enter) var(--motion-ease),
       visibility 0s;
   }
   .card-section-hidden {
-    transition-delay: 0s, 0s, 0s, var(--motion-base);
+    transition-delay: 0s, 0s, 0s, var(--motion-enter);
   }
   .schedule-disclosure.expanded {
     transition-delay: 0s;
   }
   .schedule-chevron {
-    transition: transform var(--motion-base) var(--motion-ease);
+    transition: transform var(--motion-enter) var(--motion-spring);
+  }
+  input[type="checkbox"] {
+    transition: scale var(--motion-enter) var(--motion-spring);
+  }
+  input[type="checkbox"]:active:not(:disabled) {
+    scale: 0.86;
   }
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .app .resource-card:not(.focus-card),
+  .app .projectcard,
+  .app .update {
+    transition:
+      transform var(--motion-enter) var(--motion-spring),
+      box-shadow var(--motion-enter) ease,
+      border-color var(--motion-quick) ease;
+  }
   .app .resource-card:not(.focus-card):hover,
   .app .projectcard:hover,
   .app .update:hover {
+    transform: translateY(calc(-1 * var(--motion-lift)));
+    box-shadow: var(--shadow-floating);
     border-color: var(--line-strong);
+  }
+  .app .resource-card:not(.focus-card):active,
+  .app .update:active {
+    transform: translateY(0) scale(0.99);
+  }
+  .listrow > :first-child {
+    transition: translate var(--motion-enter) var(--motion-ease);
+  }
+  .listrow:hover > :first-child {
+    translate: var(--space-1) 0;
   }
 }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { menuLayers, revealLayers } from "./motion-layers";
   import { layerExit, layerPresence } from "./dialog";
   import { popoverPosition } from "./popover-position";
   import type { Snippet } from "svelte";
@@ -117,6 +118,7 @@
   {#if open}<div
       use:popoverPosition={{ anchor: trigger!, align, placement }}
       use:layerPresence
+      use:revealLayers={menuLayers}
       out:layerExit
       class={`action-menu-panel floating ${panelClass}`}
       popover="manual"

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { errorMessage, serverMessage } from "./lib/api/messages.ts";
-  import { motionEnvironment } from "./lib/ui/motion";
+  import { motionEnvironment, revealScene } from "./lib/ui/motion";
   import PageHeading from "./lib/ui/PageHeading.svelte";
   import Button from "./lib/ui/Button.svelte";
   import Icon from "./lib/ui/Icon.svelte";
@@ -774,7 +774,21 @@
             onchange={routing.changeFilters}
             changeMonth={routing.changeMonth}
           />{/if}
-        {#key routing.current.view}<div class="view-content">
+        {#key routing.current.view}<div
+            class="view-content"
+            use:revealScene={{
+              ...(routing.current.view === "projects"
+                ? { distance: "0px" }
+                : {}),
+              ready:
+                queryReady &&
+                !["calendar", "gantt", "chart"].includes(
+                  routing.current.view,
+                ) &&
+                !(routing.current.view === "board" && routing.current.project),
+              key: routing.current.project,
+            }}
+          >
             {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
               <div class="empty" role="status">Ładowanie danych…</div>
             {:else if routing.current.view === "focus"}
