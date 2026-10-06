@@ -4,7 +4,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { pair, root, writeRuntime } from "./host.mjs";
+import { createHost, pair, root, writeRuntime } from "./host.mjs";
+import { agentDaemonArgs } from "./agent-host.mjs";
 import { withBrowser, withHost } from "./runtime.mjs";
 import { seed } from "./fixture.mjs";
 import { artifactManifest } from "./artifacts.mjs";
@@ -50,7 +51,11 @@ const suites = [
   "command-outcomes",
   "deletion",
   "focus",
+  "agent",
 ];
+
+/** Suites whose daemon needs more than the default command line. */
+const hostOptions = { agent: { daemonArgs: agentDaemonArgs } };
 
 export async function runSuites(selected = suites) {
   if (!selected.length || selected.some((suite) => !suites.includes(suite)))
@@ -66,6 +71,8 @@ export async function runSuites(selected = suites) {
     const start = Date.now();
     const output = join(evidence, suite);
     await mkdir(output, { recursive: true });
+    const withSuiteHost = (run) =>
+      withHost(run, { create: () => createHost(hostOptions[suite]) });
     let child;
     const stopChild = () => {
       stopped = true;
@@ -74,7 +81,7 @@ export async function runSuites(selected = suites) {
     process.once("SIGTERM", stopChild);
     process.once("SIGINT", stopChild);
     try {
-      await withHost(async (host) => {
+      await withSuiteHost(async (host) => {
         const config = await seed(host);
         const runtime = await writeRuntime(host, config);
         await withBrowser(async ({ newContext }) => {

@@ -36,6 +36,7 @@
   import { sessionState } from "./features/session/session.svelte";
   import { viewData } from "./features/workspace/view-data.svelte";
   import { onMount, onDestroy, untrack } from "svelte";
+  import type { AgentActivity } from "./features/agent/agent-chat";
 
   onMount(motionEnvironment);
   import {
@@ -91,6 +92,10 @@
     () => import("./features/registration/RegistrationBrowser.svelte"),
   );
   const RegistrationBrowser = $derived(registrationUI.component);
+  const agentUI = deferredComponent(
+    () => import("./features/agent/AgentChat.svelte"),
+  );
+  const AgentChat = $derived(agentUI.component);
   const editorUI = deferredComponent(
     () => import("./features/editor/Editor.svelte"),
   );
@@ -148,6 +153,7 @@
           projectMove ||
           settings ||
           adding ||
+          agentOpen ||
           nativeAdding ||
           manageTags ||
           gitProject ||
@@ -415,6 +421,14 @@
   );
   let adding = $state(false);
   let projectDeletion = $state<Summary | null>(null);
+  // The floating Agent button, and the chat dialog that outlives its closing.
+  let agentOpen = $state(false);
+  let agentChat = $state<{ activity: AgentActivity; holds: boolean }>({
+    activity: "",
+    holds: false,
+  });
+  let agentUser = $state("");
+  const agentEnabled = $derived(boot?.agent_enabled === true);
 
   let today = $derived(boot ? calendarToday(boot.timezone, clockTime) : "");
   function currentQuery(): ViewQuery {
@@ -448,6 +462,7 @@
     choosingCardProject = null;
     // Read-only dialogs hold no work. Owners of drafts and unresolved commands
     // stay mounted and are covered by the pairing layer until access returns.
+    if (!agentChat.holds) agentOpen = false;
     diagnostics = false;
     gitProject = "";
     error = "Sesja wygasła. Połącz tę przeglądarkę ponownie, aby kontynuować.";
@@ -594,6 +609,15 @@
   $effect(() => {
     if (adding) void registrationUI.load();
   });
+  $effect(() => {
+    if (boot?.agent_enabled) agentUser = boot.user?.id ?? "default";
+  });
+  // Warm the chat so a conversation in progress resumes after a reload.
+  $effect(() => {
+    if (!agentEnabled) return;
+    const timer = setTimeout(() => void agentUI.load(), agentOpen ? 0 : 150);
+    return () => clearTimeout(timer);
+  });
   // Warm the most common action after the first view has rendered. Opening a
   // resource also starts this import alongside its read, without waiting here.
   $effect(() => {
@@ -608,6 +632,7 @@
       moveDraft ||
       projectMove ||
       adding ||
+      agentChat.holds ||
       nativeAdding ||
       manageTags ||
       projectDeletion ||
@@ -723,7 +748,8 @@
       />
       <main
         class="content"
-        class:focus-content={routing.current.view === "focus"}
+        class:floating-content={routing.current.view === "focus" ||
+          agentEnabled}
       >
         {#if routing.current.view === "focus"}
           <h1 class="sr">Focus</h1>
@@ -912,15 +938,37 @@
               </DeferredView>
             {/if}
           </div>{/key}
-        {#if routing.current.view === "focus"}
-          <Button
-            variant="primary"
-            class="focus-add-action"
-            onclick={(event) => {
-              event.currentTarget.focus({ preventScroll: true });
-              create("card");
-            }}><Icon name="plus" small />Dodaj kartę</Button
-          >
+        {#if routing.current.view === "focus" || agentEnabled}
+          <div class="floating-actions">
+            {#if agentEnabled}
+              <Button
+                class="agent-action"
+                aria-haspopup="dialog"
+                data-activity={agentChat.activity || undefined}
+                onclick={(event) => {
+                  event.currentTarget.focus({ preventScroll: true });
+                  agentOpen = true;
+                }}>Agent</Button
+              >
+              <span class="sr" role="status"
+                >{agentChat.activity === "working"
+                  ? "pracuje"
+                  : agentChat.activity === "answered"
+                    ? "nowa odpowiedź"
+                    : ""}</span
+              >
+            {/if}
+            {#if routing.current.view === "focus"}
+              <Button
+                variant="primary"
+                class="focus-add-action"
+                onclick={(event) => {
+                  event.currentTarget.focus({ preventScroll: true });
+                  create("card");
+                }}><Icon name="plus" small />Dodaj kartę</Button
+              >
+            {/if}
+          </div>
         {/if}
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =
             routing.current.view === "updates"
@@ -1032,6 +1080,7 @@
   >
     {#snippet children(Settings)}<Settings
         {canSwitchUser}
+        {agentEnabled}
         onuserchange={switchUser}
         ontags={() => {
           manageTags = true;
@@ -1107,6 +1156,23 @@
     retry={registrationUI.load}
     onclose={() => {
       adding = false;
+    }}
+  />{/if}
+
+<!-- Keep the conversation alive while its dialog is closed. -->
+{#if AgentChat && agentUser}<AgentChat
+    bind:open={agentOpen}
+    view={routing.current.view}
+    project={routing.current.project}
+    userId={agentUser}
+    onstate={(state) => (agentChat = state)}
+    onsettings={() => (settings = true)}
+  />{:else if agentOpen}<DeferredDialog
+    title="Agent"
+    error={agentUI.error}
+    retry={agentUI.load}
+    onclose={() => {
+      agentOpen = false;
     }}
   />{/if}
 

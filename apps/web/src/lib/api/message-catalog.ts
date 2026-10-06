@@ -138,4 +138,17 @@ export const messages: Record<string, string> = {
   GIT_UNAVAILABLE: "Repozytorium Git jest niedostępne.",
   GIT_BUSY: "Repozytorium Git jest zajęte. Spróbuj ponownie za chwilę.",
   GIT_TIMEOUT: "Upłynął czas sprawdzania repozytorium Git.",
+  AGENT_DISABLED: "Agent nie jest włączony na tym hoście.",
+  AGENT_HOST_RESTARTED: "Host został uruchomiony ponownie.",
+  AGENT_RUN_NOT_FOUND: "Host nie zna tej wiadomości.",
+  AGENT_CONVERSATION_NOT_FOUND: "Host nie zna tej rozmowy.",
+  AGENT_RUN_ID_REUSED: "Ten identyfikator wiadomości został już użyty.",
+  AGENT_RUN_ACTIVE: "Agent jeszcze pracuje nad poprzednią wiadomością.",
+  AGENT_BUSY: "Agent jest zajęty innymi zadaniami. Spróbuj za chwilę.",
+  AGENT_PROVIDER_UNAVAILABLE:
+    "Na hoście nie udało się uruchomić wybranego dostawcy agenta.",
+  AGENT_CLI_UNAVAILABLE: "Na hoście brakuje polecenia projectctl obok demona.",
+  AGENT_INSTRUCTIONS_MISSING: "W katalogu agenta brakuje pliku AGENTS.md.",
+  AGENT_PROVIDER_FAILED: "Dostawca agenta zgłosił błąd.",
+  AGENT_OUTPUT_INVALID: "Agent zakończył pracę bez odpowiedzi.",
 };

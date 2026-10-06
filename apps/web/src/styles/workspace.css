@@ -200,15 +200,46 @@
   margin: 0 auto;
   width: 100%;
 }
-.app .content.focus-content {
+.app .content.floating-content {
   padding-bottom: calc(var(--tap-target) + var(--space-16));
 }
-.app .focus-add-action {
+.app .floating-actions {
   position: fixed;
   right: calc(var(--space-12) + env(safe-area-inset-right, 0px));
   bottom: calc(var(--space-12) + env(safe-area-inset-bottom, 0px));
   z-index: var(--layer-floating);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.app .focus-add-action,
+.app .agent-action {
   box-shadow: var(--shadow-floating);
+}
+.app .agent-action {
+  position: relative;
+}
+.app .agent-action[data-activity]::after {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
+  width: var(--space-5);
+  height: var(--space-5);
+  box-sizing: border-box;
+  border: var(--focus-width) solid var(--accent-ink);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+}
+.app .agent-action[data-activity="answered"]::after {
+  border-color: var(--success);
+  background: var(--success);
+}
+/* The counter bar is centered and wide; the group would reach into it. */
+@media (max-width: 1150px) {
+  .app.counter-editing .agent-action {
+    display: none;
+  }
 }
 .app .heading {
   display: flex;
@@ -759,10 +790,10 @@
   .app .content {
     padding: var(--space-9) var(--space-8);
   }
-  .app .content.focus-content {
+  .app .content.floating-content {
     padding-bottom: calc(var(--space-20) + var(--space-12));
   }
-  .app .focus-add-action {
+  .app .floating-actions {
     right: var(--space-8);
     bottom: calc(
       var(--dock-height) + var(--space-9) + env(safe-area-inset-bottom, 0px)

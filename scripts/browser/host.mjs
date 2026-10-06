@@ -62,7 +62,12 @@ export function localClient(
   };
 }
 
-export async function createHost() {
+/**
+ * `daemonArgs` adds options to the daemon's command line: a list, or a function
+ * that receives the temporary directory and the repository root. Without it the
+ * daemon starts exactly as it does for every other suite.
+ */
+export async function createHost({ daemonArgs = [] } = {}) {
   const temp = await realpath(
     await mkdtemp(join(await realpath("/tmp"), "lp-test-")),
   );
@@ -157,9 +162,21 @@ export async function createHost() {
       proxy.listen(0, "127.0.0.1", done);
     });
     const origin = `https://localhost:${proxy.address().port}`;
+    const extraArgs =
+      typeof daemonArgs === "function"
+        ? await daemonArgs({ temp, root })
+        : daemonArgs;
     daemon = spawn(
       join(binaries, "projectd"),
-      ["--data-dir", state, "--public-origin", origin, "--port", String(port)],
+      [
+        "--data-dir",
+        state,
+        "--public-origin",
+        origin,
+        "--port",
+        String(port),
+        ...extraArgs,
+      ],
       { stdio: ["ignore", "ignore", "pipe"] },
     );
     let startError;

@@ -77,6 +77,10 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
           await expect(
             dialog.getByLabel("Strefa czasowa", { exact: true }),
           ).toBeEnabled();
+          // Without an agent directory the provider choice has no meaning.
+          await expect(
+            dialog.getByLabel("Dostawca agenta", { exact: true }),
+          ).toHaveCount(0);
           await dialog
             .getByRole("button", { name: "Zamknij ustawienia" })
             .click();

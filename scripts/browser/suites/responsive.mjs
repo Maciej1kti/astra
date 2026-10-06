@@ -64,6 +64,10 @@ await runBrowserSuite(
           const header = page.locator("header.topbar");
           await expect(header).toHaveCount(1);
           await expect(page.locator("footer.topbar")).toHaveCount(0);
+          // This host was started without an agent directory: no Agent button.
+          await expect(
+            page.getByRole("button", { name: "Agent", exact: true }),
+          ).toHaveCount(0);
           const headerBox = await header.boundingBox();
           const mainBox = await page.locator("main").boundingBox();
           assert.ok(

@@ -234,15 +234,8 @@ function sessionScope() {
     userId: bootstrap.user?.id ?? selectedUserId(),
   };
 }
-export function command(
-  path: string,
-  method: string,
-  payload: unknown,
-  version?: string,
-  scope?: { userId: string; epoch: string },
-): Pending {
-  const origin = scope ?? sessionScope();
-  // RFC 9562 UUIDv7: a millisecond timestamp followed by random bits.
+/** A fresh request identifier: RFC 9562 UUIDv7, a server-aligned millisecond timestamp then random bits. */
+export function newRequestId() {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   let time = BigInt(Math.trunc(Date.now() + clockOffset));
   for (let i = 5; i >= 0; i--) {
@@ -254,7 +247,17 @@ export function command(
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(
     "",
   );
-  const requestId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+export function command(
+  path: string,
+  method: string,
+  payload: unknown,
+  version?: string,
+  scope?: { userId: string; epoch: string },
+): Pending {
+  const origin = scope ?? sessionScope();
+  const requestId = newRequestId();
   return Object.freeze({
     path,
     method,

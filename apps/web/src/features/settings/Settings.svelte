@@ -5,6 +5,7 @@
   import Button from "../../lib/ui/Button.svelte";
 
   import type {
+    AgentProvider,
     PreferencesResource as Preferences,
     Session,
     Pairing,
@@ -48,17 +49,20 @@
     ontags,
     onuserchange,
     canSwitchUser = true,
+    agentEnabled = false,
   }: {
     onclose: () => void;
     onsaved: () => void;
     ontags: () => void;
     onuserchange: (id: string) => void;
     canSwitchUser?: boolean;
+    agentEnabled?: boolean;
   } = $props();
   let baseline = $state<Preferences | null>(null);
   let timezone = $state("");
   let week = $state("monday");
   let view = $state("focus");
+  let agent = $state<AgentProvider>("claude");
   let error = $state("");
   let info = $state("");
   let loading = $state(true);
@@ -79,6 +83,7 @@
     timezone: "strefa czasowa",
     week: "początek tygodnia",
     view: "widok domyślny",
+    agent: "dostawca agenta",
   };
   let confirmClose = $state(false);
   let generation = 0;
@@ -88,7 +93,9 @@
     !!baseline &&
       (timezone !== baseline.timezone ||
         week !== (baseline.preferences.week_start ?? "monday") ||
-        view !== (baseline.preferences.default_view ?? "focus")),
+        view !== (baseline.preferences.default_view ?? "focus") ||
+        (agentEnabled &&
+          agent !== (baseline.preferences.agent_provider ?? "claude"))),
   );
   const dirty = $derived(preferencesDirty || !!userName);
   function close() {
@@ -121,6 +128,7 @@
             timezone,
             week_start: week,
             default_view: view,
+            ...(agentEnabled ? { agent_provider: agent } : {}),
             expected_version: baseline?.version,
             pending,
             new_user_name: userName,
@@ -157,7 +165,7 @@
       if (generation !== current) return;
       if (p) {
         baseline = p;
-        ({ timezone, week, view } = settingsDraft(p));
+        ({ timezone, week, view, agent } = settingsDraft(p));
       }
       sessions = s.items;
       pairings = a.items;
@@ -188,7 +196,11 @@
         {
           timezone,
           locale: "pl",
-          preferences: { week_start: week, default_view: view },
+          preferences: {
+            week_start: week,
+            default_view: view,
+            ...(agentEnabled ? { agent_provider: agent } : {}),
+          },
         },
         baseline.version,
       ),
@@ -244,10 +256,10 @@
       const rebased = rebaseSettingsDraft(
         settingsDraft(baseline),
         settingsDraft(current),
-        { timezone, week, view },
+        { timezone, week, view, agent },
       );
       baseline = current;
-      ({ timezone, week, view } = rebased.draft);
+      ({ timezone, week, view, agent } = rebased.draft);
       operation.acknowledge();
       info = rebased.kept.length
         ? `Wczytano aktualne ustawienia. Twoje zmiany (${rebased.kept.map((field) => labels[field]).join(", ")}) pozostały w formularzu; zapisz je ponownie, jeśli nadal są potrzebne.`
@@ -533,6 +545,21 @@
           ></label
         >
       </div>
+      {#if agentEnabled}<label
+          >Dostawca agenta<select
+            aria-label="Dostawca agenta"
+            bind:value={agent}
+            disabled={!baseline ||
+              busy ||
+              !!pending ||
+              !!userName ||
+              accessLost ||
+              conflict}
+            ><option value="claude">Claude Code</option><option value="codex"
+              >Codex</option
+            ></select
+          ></label
+        >{/if}
       {#if pending && commandKind === "preferences"}<section class="notice">
           <p>
             Oczekujące polecenie: czeka na potwierdzenie. Przesłane ustawienia

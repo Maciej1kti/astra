@@ -1,13 +1,22 @@
-import type { PreferencesResource } from "../../lib/contracts/api.generated";
+import type {
+  AgentProvider,
+  PreferencesResource,
+} from "../../lib/contracts/api.generated";
 
-export type SettingsDraft = { timezone: string; week: string; view: string };
-const fields = ["timezone", "week", "view"] as const;
+export type SettingsDraft = {
+  timezone: string;
+  week: string;
+  view: string;
+  agent: AgentProvider;
+};
+const fields = ["timezone", "week", "view", "agent"] as const;
 
 export function settingsDraft(saved: PreferencesResource): SettingsDraft {
   return {
     timezone: saved.timezone,
     week: saved.preferences.week_start ?? "monday",
     view: saved.preferences.default_view ?? "focus",
+    agent: saved.preferences.agent_provider ?? "claude",
   };
 }
 
@@ -21,9 +30,10 @@ export function rebaseSettingsDraft(
   current: SettingsDraft,
   draft: SettingsDraft,
 ) {
-  const rebased = { ...current };
+  const rebased: SettingsDraft = { ...current };
   for (const field of fields)
-    if (draft[field] !== opened[field]) rebased[field] = draft[field];
+    if (draft[field] !== opened[field])
+      Object.assign(rebased, { [field]: draft[field] });
   return {
     draft: rebased,
     kept: fields.filter((field) => rebased[field] !== current[field]),
