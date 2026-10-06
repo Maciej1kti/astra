@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { chartLayers, revealLayers } from "../../lib/ui/motion-layers";
   import { onMount } from "svelte";
   import PageHeading from "../../lib/ui/PageHeading.svelte";
   import EmptyState from "../../lib/ui/EmptyState.svelte";
@@ -58,6 +59,11 @@
   } = $props();
 
   const selectionLimit = 8;
+  // The first read starts after mount; content enters once it has arrived.
+  let reading = $state(false);
+  $effect(() => {
+    if (loading) reading = true;
+  });
 
   let selectedKeys = $state<string[]>([]);
   let colors = $state<Record<string, number>>({});
@@ -169,6 +175,11 @@
   aria-label="Panel liczników"
   data-chart-from={from}
   data-chart-to={to}
+  use:revealLayers={{
+    key: preferenceKey,
+    ready: reading && !loading,
+    layers: chartLayers,
+  }}
 >
   {#snippet period()}
     <p class="chart-period">

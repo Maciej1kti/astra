@@ -1,6 +1,10 @@
 <script lang="ts">
   import { revealScene } from "../../lib/ui/motion";
-  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
+  import {
+    controlsLayers,
+    groupLayers,
+    revealLayers,
+  } from "../../lib/ui/motion-layers";
   import { errorMessage } from "../../lib/api/messages.ts";
   import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
@@ -427,7 +431,13 @@
       </div>
     </WidgetLocale>
   </div>
-  <section>
+  <section
+    use:revealLayers={{
+      ready: !loading && !!data,
+      key: `${project}:${month}`,
+      layers: groupLayers,
+    }}
+  >
     <h3>Karty bez harmonogramu</h3>
     <div class="unscheduled">
       {#each cards.filter((r) => !r.schedule && !r.event) as row}<button

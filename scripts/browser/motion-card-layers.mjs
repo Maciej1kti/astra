@@ -171,13 +171,14 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
     [
       "Lista",
       `view=list&project=${project}`,
-      ".listrow",
+      ".listrow:has(.tags)",
       ["title", "metadata", "labels"],
     ],
     [
       "Lista wszystkich projektów",
       "view=list",
-      ".listrow",
+      // Row order differs between engines; inspect a row that has labels.
+      ".listrow:has(.tags)",
       ["context", "title", "metadata", "labels"],
     ],
     [

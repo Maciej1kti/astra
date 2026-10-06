@@ -137,6 +137,7 @@
   --motion-lift: var(--space-1);
   --motion-scale: 0.992;
   --motion-press: 0.96;
+  --motion-rise: 0.82;
   --layer-raised: 5;
   --layer-navigation: 10;
   --layer-floating: 20;

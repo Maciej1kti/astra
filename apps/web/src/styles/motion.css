@@ -85,6 +85,12 @@
 .app > aside nav[data-motion-navigation] > .action-menu > button.chosen {
   background: transparent;
 }
+/* Chart marks rise from their baseline. */
+.plot-marks,
+.counter-trend {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
 .navigation-indicator {
   position: absolute;
   z-index: 0;
@@ -133,6 +139,9 @@
   .counter-history-panel,
   .focus-counter-bar,
   .focus-counter-saved,
+  .planning-save-status,
+  .project-save-status,
+  .app .connection,
   .tags .suggestions {
     animation: astra-reveal var(--motion-enter) var(--motion-emerge);
   }

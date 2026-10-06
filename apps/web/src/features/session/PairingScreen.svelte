@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { pairingLayers, revealLayers } from "../../lib/ui/motion-layers";
   import { stateLabel } from "../../lib/resources/state-presentation";
   import Brand from "../../lib/ui/Brand.svelte";
 
@@ -109,7 +110,7 @@
 {/snippet}
 
 {#if !retained}
-  <main class="welcome">
+  <main class="welcome" use:revealLayers={pairingLayers}>
     <Brand />
     <h1>Jaśniejszy obraz<br />kolejnych kroków.</h1>
     <p class="lead">

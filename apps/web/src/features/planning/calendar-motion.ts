@@ -26,3 +26,8 @@ export const calendarLayers = [
     stagger: 45,
   },
 ] as const;
+
+/** The legend and shortcut help follow the calendar they describe. */
+export const metaLayers = [
+  { selector: ":scope > *", role: "detail", delay: 300, stagger: 60 },
+] as const;

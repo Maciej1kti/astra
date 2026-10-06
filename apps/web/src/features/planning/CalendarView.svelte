@@ -1,6 +1,6 @@
 <script lang="ts">
   import { revealLayers } from "../../lib/ui/motion-layers";
-  import { calendarLayers } from "./calendar-motion";
+  import { calendarLayers, metaLayers } from "./calendar-motion";
   import { errorMessage } from "../../lib/api/messages.ts";
   import { countedDatedItems } from "../../lib/ui/locale.ts";
   import type { CardCreate } from "../../lib/contracts/api.generated";
@@ -464,7 +464,14 @@
         {/snippet}
       </Calendar>{/key}
   </div>
-  <div class="view-meta">
+  <div
+    class="view-meta"
+    use:revealLayers={{
+      ready: ready && !loading,
+      key: project,
+      layers: metaLayers,
+    }}
+  >
     <p class="legend">
       <span><Icon name="planned" small />Wydarzenie</span><span
         ><Icon name="calendar" small />Plan</span

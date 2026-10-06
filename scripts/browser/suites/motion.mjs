@@ -5,6 +5,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { runBrowserSuite } from "../runtime.mjs";
 import { checkCardLayers } from "../motion-card-layers.mjs";
+import { checkChartLayers } from "../motion-chart-layers.mjs";
 
 await runBrowserSuite(async (fixture) => {
   const { config, evidence, newContext, browser, cli, runtime } = fixture;
@@ -431,7 +432,37 @@ await runBrowserSuite(async (fixture) => {
       "selection geometry and native layers at 1440/1024/768/390/320; dark appearance",
     );
     assert.deepEqual(await page.evaluate(() => window.motionProbe.csp), []);
+    // Before the stylesheet applies there is no curve to follow. Content must
+    // then simply appear; an entrance may never throw.
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(
+      `${config.origin}/?${new URLSearchParams({ view: "list", project: config.projects[0].id })}`,
+    );
+    await expect(page.locator(".listrow").first()).toBeVisible();
+    await settle();
+    await page.evaluate(() => {
+      for (const token of ["--motion-emerge", "--motion-spring"])
+        document.documentElement.style.setProperty(token, " ");
+    });
+    await nav.getByRole("button", { name: "Projekty", exact: true }).click();
+    await expect(page.locator(".projectcard").first()).toBeVisible();
+    await settle();
+    assert.deepEqual(errors, [], "A missing curve must not raise an error");
+    assert.equal(
+      await page
+        .locator(".projectcard")
+        .first()
+        .evaluate((node) => getComputedStyle(node).opacity),
+      "1",
+    );
+    await page.evaluate(() => {
+      for (const token of ["--motion-emerge", "--motion-spring"])
+        document.documentElement.style.removeProperty(token);
+    });
+    checks.push("entrances are skipped, not broken, while tokens are missing");
     checks.push(await checkCardLayers({ page, config, cli, runtime, settle }));
+    checks.push(await checkChartLayers({ page, config, settle }));
     assert.deepEqual(errors, []);
   } finally {
     await writeFile(

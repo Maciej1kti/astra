@@ -362,6 +362,7 @@ parameters in light/dark themes and desktop/mobile layouts.
 | `--motion-dialog-distance` | 12px | Dialog travel |
 | `--motion-scale` | 0.992 | Starting scale of a dialog or menu |
 | `--motion-press` | 0.96 | Pressed control scale |
+| `--motion-rise` | 0.82 | Starting height of chart marks, as a share of their own |
 | `--motion-press-in` | 70 ms | Press feedback onset |
 | `--motion-popup-heading`, `--motion-popup-content` | 100, 220 ms | Month popup layer delays |
 
@@ -382,7 +383,26 @@ in its first frames or while a parent is still invisible.
 | Calendar | `calendar-motion.ts` supplies `revealLayers` with current-page readiness and project/date/widget-view keys; popup layers stay in `CalendarView` |
 | Timeline | Feature-owned `revealScene` on the native chart with zero travel |
 | Page headings, dialogs, menus, suggestions and toolbars | `revealLayers` with explicit local selectors and opening keys |
+| Chart | `chartLayers` on the dashboard, ready after the first read and keyed by the project preference key: controls, the counter list and its rows, plot surfaces and headings, the note and summary rows |
+| Plot marks and readout | `plotLayers` on each plot, keyed by what is plotted (series, grouping, totals and range): the legend values, then the `.plot-marks` group rising from the baseline |
+| Counter trends in the card editor | `dialogLayers` raises each `.counter-trend` after its section |
+| Timeline's unscheduled cards, Calendar legend and help | `groupLayers` and `metaLayers`, ready with their view's current page |
+| Pairing page | `pairingLayers`: brand, headline, lead, the pairing surface and its contents |
+| Sidebar and phone dock | `controlsLayers` on the navigation, once per page load; opacity only, so measured selection geometry is unchanged |
+| List filter panel | Its surface and fields follow the search row in `WorkspaceFilters` |
 | Navigation, shared controls and disclosures | Shared motion actions and `styles/motion.css`; no feature-specific replacement |
+
+Every view, dialog and menu has an entrance; a new surface joins one of the
+sequences above instead of appearing at once. Chart marks do not animate one
+by one: a layer with `rise` scales its whole group from `--motion-rise` (0.82)
+about the transform origin that `styles/motion.css` puts on the baseline, so a
+plot costs one effect whatever its number of bars. A refresh or source write
+never replays a chart; selecting counters or changing grouping, totals or
+range lets only the marks and readout rise again.
+
+An effect needs its curve from the tokens. If a sequence starts before the
+stylesheet has applied them, `motion.ts` skips the effect and the content
+appears at once; it never passes an empty easing to the browser.
 
 Local sequences consider at most 16 candidates per layer descriptor and start at
 most 32 visible effects per opening/navigation key, with delays capped at 560 ms.

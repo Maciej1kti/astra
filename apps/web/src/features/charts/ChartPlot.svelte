@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { plotLayers, revealLayers } from "../../lib/ui/motion-layers";
   import {
     chartBand,
     chartBar,
@@ -36,6 +37,16 @@
   const frame = $derived(chartFrame(width, height));
   const periods = $derived<ChartPeriod[]>(panel.series[0]?.points ?? []);
   const count = $derived(periods.length);
+  // The marks rise again when what is plotted changes, not on a refresh.
+  const shape = $derived(
+    [
+      panel.series.map((row) => chartSeriesKey(row.source)).join(","),
+      bucket,
+      cumulative,
+      periods[0]?.from,
+      periods.at(-1)?.from,
+    ].join("|"),
+  );
   const band = $derived(chartBand(count, frame));
   const bars = $derived(
     cumulative ? null : chartBarLayout(band, panel.series.length),
@@ -112,7 +123,11 @@
   }
 </script>
 
-<section class="chart-panel" aria-label={`Wykres w ${panel.unit}`}>
+<section
+  class="chart-panel"
+  aria-label={`Wykres w ${panel.unit}`}
+  use:revealLayers={{ key: shape, layers: plotLayers }}
+>
   <div class="plot-heading">
     <h2>{panel.unit}<small data-plot-mode>{mode}</small></h2>
     {#if period}<p class="plot-period">{span(period)}</p>{/if}
@@ -196,48 +211,50 @@
           class="axis-text">{chartValue(tick, true)}</text
         >
       {/each}
-      {#each panel.series as row, position (chartSeriesKey(row.source))}
-        <g
-          data-series-key={chartSeriesKey(row.source)}
-          class={`series-color-${row.color % 8}`}
-        >
-          {#if bars}
-            {@const group =
-              panel.series.length * bars.width +
-              (panel.series.length - 1) * bars.gap}
-            {#each row.points as point, i (point.from)}
-              {#if point.value !== null}<path
-                  data-point
-                  class="series-bar"
-                  d={chartBar(
-                    chartX(i, count, frame) -
-                      group / 2 +
-                      position * (bars.width + bars.gap),
-                    bars.width,
-                    baseline,
-                    chartY(point.value, min, max, frame),
-                  )}
-                />{/if}
-            {/each}
-          {:else}
-            <path
-              class="series-line"
-              d={cumulative
-                ? chartStepLine(row.points, min, max, frame)
-                : chartLine(row.points, min, max, frame)}
-            />
-            {#each row.points as point, i (point.from)}
-              {#if point.value !== null}<circle
-                  data-point
-                  class="series-dot"
-                  cx={chartX(i, count, frame)}
-                  cy={chartY(point.value, min, max, frame)}
-                  r={i === index ? 5 : count > 120 ? 2 : count > 45 ? 3 : 4}
-                />{/if}
-            {/each}
-          {/if}
-        </g>
-      {/each}
+      <g class="plot-marks">
+        {#each panel.series as row, position (chartSeriesKey(row.source))}
+          <g
+            data-series-key={chartSeriesKey(row.source)}
+            class={`series-color-${row.color % 8}`}
+          >
+            {#if bars}
+              {@const group =
+                panel.series.length * bars.width +
+                (panel.series.length - 1) * bars.gap}
+              {#each row.points as point, i (point.from)}
+                {#if point.value !== null}<path
+                    data-point
+                    class="series-bar"
+                    d={chartBar(
+                      chartX(i, count, frame) -
+                        group / 2 +
+                        position * (bars.width + bars.gap),
+                      bars.width,
+                      baseline,
+                      chartY(point.value, min, max, frame),
+                    )}
+                  />{/if}
+              {/each}
+            {:else}
+              <path
+                class="series-line"
+                d={cumulative
+                  ? chartStepLine(row.points, min, max, frame)
+                  : chartLine(row.points, min, max, frame)}
+              />
+              {#each row.points as point, i (point.from)}
+                {#if point.value !== null}<circle
+                    data-point
+                    class="series-dot"
+                    cx={chartX(i, count, frame)}
+                    cy={chartY(point.value, min, max, frame)}
+                    r={i === index ? 5 : count > 120 ? 2 : count > 45 ? 3 : 4}
+                  />{/if}
+              {/each}
+            {/if}
+          </g>
+        {/each}
+      </g>
       {#each labels as i (i)}
         {@const start = periods[i]?.from}
         {#if start}<text

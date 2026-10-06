@@ -16,7 +16,9 @@ function play(
   frames: Keyframe[],
   options: KeyframeAnimationOptions,
 ) {
-  if (preference().matches) return;
+  // Until the stylesheet applies its tokens there is no curve to follow, and
+  // an empty easing would throw. The content then simply appears.
+  if (preference().matches || options.easing === "") return;
   const animation = node.animate(frames, options);
   active.add(animation);
   const release = () => active.delete(animation);
@@ -38,9 +40,10 @@ export function enter(
     distance: string;
     surface?: boolean;
     softness?: string;
+    rise?: string;
   },
 ) {
-  const { distance, surface, softness, ...timing } = options;
+  const { distance, surface, softness, rise, ...timing } = options;
   const moving = distance !== "0px";
   return play(
     node,
@@ -49,12 +52,15 @@ export function enter(
         opacity: 0,
         ...(moving ? { translate: `0 ${distance}` } : {}),
         ...(softness ? { filter: `blur(${softness})` } : {}),
+        // Chart marks grow from their baseline; their origin is set in CSS.
+        ...(rise ? { scale: `1 ${rise}` } : {}),
       },
       ...(surface ? [{ opacity: 1, offset: 0.8 }] : []),
       {
         opacity: 1,
         ...(moving ? { translate: "0 0" } : {}),
         ...(softness ? { filter: "blur(0px)" } : {}),
+        ...(rise ? { scale: "1 1" } : {}),
       },
     ],
     { ...timing, fill: "backwards" },
@@ -109,13 +115,13 @@ const cardLayers = [
   {
     name: "context",
     selector:
-      ".focus-card-context, .card-content > small, :scope.listrow > div:first-of-type > small, .projectinitial",
+      ".focus-card-context, .card-content > small, :scope.listrow > div:first-of-type > small, :scope.update > div > small, .projectinitial",
     delay: 60,
   },
   {
     name: "title",
     selector:
-      ".focus-card-title, .card-title, :scope.listrow > div:first-of-type > strong, :scope[data-board-card] h3",
+      ".focus-card-title, .card-title, :scope.listrow > div:first-of-type > strong, :scope.update h3, :scope[data-board-card] h3",
     delay: 100,
   },
   {

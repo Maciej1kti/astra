@@ -131,6 +131,11 @@ opening layers across views. Editing a counter or refreshing data keeps them in 
 Calendar reveals its headings, grid and event groups in stages after the selected
 period loads. Agenda days and the month overflow popup use the same gentle effects,
 on desktop and mobile; moving an event does not replay the whole calendar.
+Chart opens the same way: its controls, counter list and plot surfaces appear
+in turn and the bars or lines rise from the baseline. They rise again when you
+change the selected counters, grouping, totals or range, and stay still during
+a refresh. The pairing page, the sidebar, List filters and the cards listed
+under Timeline use the same soft entrances.
 Buttons respond to a press, and the navigation highlight follows the selected
 view on desktop and mobile. To disable these effects, enable **Reduce motion**
 in your operating system; Astra follows changes immediately, including while

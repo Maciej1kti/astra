@@ -32,6 +32,12 @@ rendered effects sampled at 150 ms also guard against navigation, content, menus
 and dialogs collapsing their visible travel into the first few frames.
 Samples at 50 ms verify gentle opacity onset; headings and tags also resolve
 from a small blur to fully sharp, opaque content without leaving an active filter.
+The chart scenario checks that Chart controls, the counter list, plot surfaces,
+headings, readout and marks each enter as a layer, that the marks rise from a
+fixed baseline without moving the plot, that a refresh replays nothing, that a
+new grouping lets only the marks rise again and that reduced motion starts none.
+It also blanks the easing tokens and navigates: entrances must then be skipped
+without a page error, as when a page loads before its stylesheet applies.
 The card-layer scenarios check titles/context, metadata, labels and daily counters
 in In focus/In motion/Events, Projects, List (within one project and across
 projects) and both Board modes. Actual bounds

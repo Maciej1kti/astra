@@ -35,6 +35,14 @@
         delay: 80,
         stagger: 40,
       },
+      { selector: ":scope > .list-filter-fields", role: "content", delay: 140 },
+      {
+        selector: ":scope > .list-filter-fields > *",
+        role: "detail",
+        delay: 220,
+        stagger: 40,
+        afterParent: true,
+      },
     ],
   }}
 >

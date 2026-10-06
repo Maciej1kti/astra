@@ -1,5 +1,6 @@
 <script lang="ts">
   import { navigationMotion } from "../../lib/ui/motion";
+  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import Icon from "../../lib/ui/Icon.svelte";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
@@ -124,6 +125,7 @@
 <aside>
   <nav
     use:navigationMotion={{ selected, layout: views.join(",") }}
+    use:revealLayers={controlsLayers}
     bind:this={navElement}
     aria-label="Widoki przestrzeni roboczej"
   >
