@@ -1,8 +1,6 @@
 <script lang="ts">
   import { errorMessage } from "../../lib/api/messages.ts";
   import { countedDatedItems } from "../../lib/ui/locale.ts";
-  import { revealLayers } from "../../lib/ui/motion-layers";
-  import { calendarLayers } from "./calendar-motion";
   import type { CardCreate } from "../../lib/contracts/api.generated";
   import { eventFromDates } from "../../lib/resources/timed-event.ts";
   import {
@@ -361,13 +359,11 @@
     {mode}
     {compact}
     {monthGrid}
-    {project}
     {navigate}
     {today}
     {changeDate}
     {changeLayout}
     changeMonthGrid={(grid) => (mobileMonthGrid = grid)}
-    create={() => oncreate({ schedule: { start: date, end: date } })}
   />
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
   {#if pageNotice}<p role="status" class="hint">{pageNotice}</p>{/if}
@@ -377,11 +373,6 @@
     </p>{/if}
   <div
     class="calendar-surface"
-    use:revealLayers={{
-      ready: ready && !loading,
-      key: `${project}:${date}:${widgetView}`,
-      layers: calendarLayers,
-    }}
     aria-busy={loading}
     class:month={monthGrid}
     class:agenda={monthAgenda || mode === "agenda"}
@@ -572,7 +563,7 @@
   }
   .calendar-surface :global(.ec-day.ec-sat),
   .calendar-surface :global(.ec-day.ec-sun) {
-    --ec-day-bg-color: color-mix(in srgb, var(--soft) 50%, var(--paper));
+    --ec-day-bg-color: var(--wash);
   }
   .calendar-surface :global(.ec-day:has([data-workspace-today="true"])) {
     --ec-day-bg-color: color-mix(in srgb, var(--accent) 25%, var(--paper));
@@ -589,7 +580,7 @@
     width: var(--space-11);
     height: var(--space-11);
     border-radius: var(--radius-pill);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     font-weight: var(--weight-medium);
     font-variant-numeric: tabular-nums;
   }
@@ -640,7 +631,7 @@
   }
   .calendar-surface :global(.ec-popup .ec-day-head) {
     align-items: center;
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     font-weight: var(--weight-semibold);
     margin-bottom: var(--space-3);
   }
@@ -694,7 +685,7 @@
   }
   .calendar-item strong {
     display: block;
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     font-weight: var(--weight-medium);
     line-height: var(--leading-body);
     overflow: hidden;
@@ -749,7 +740,7 @@
   }
   .timed .item-time {
     color: var(--accent-ink);
-    font-size: var(--text-compact);
+    font-size: var(--text-xs);
   }
   .timed .item-copy {
     flex: initial;
@@ -775,7 +766,7 @@
     align-items: center;
     padding: var(--space-4) var(--space-6);
     background: var(--paper);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     font-weight: var(--weight-semibold);
     border-bottom-color: var(--line);
     margin: 0;
@@ -791,10 +782,9 @@
     background: var(--accent-ink);
     color: var(--paper);
   }
+  /* The toolbar already names the month being shown. */
   .agenda :global(.ec-day-head .ec-day-side) {
-    font-size: var(--text-xs);
-    font-weight: var(--weight-normal);
-    color: var(--muted);
+    display: none;
   }
   .agenda :global(.ec-main) {
     display: block;
@@ -828,9 +818,10 @@
     min-height: var(--tap-target);
   }
   .agenda .item-time {
-    width: var(--space-16);
+    width: var(--space-20);
     padding-top: var(--space-1);
     font-size: var(--text-sm);
+    white-space: nowrap;
   }
   .agenda .event .item-time {
     color: var(--accent-ink);
@@ -864,7 +855,7 @@
   .calendar-surface :global(.ec-no-events) {
     padding: var(--space-20) var(--space-8);
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   .calendar-surface :global(.ec-event:focus-visible) {
     outline: var(--focus-width) solid var(--accent-ink);
@@ -906,7 +897,7 @@
     max-width: var(--reading-width);
     line-height: var(--leading-body);
   }
-  @media (max-width: 720px) {
+  @media (max-width: 700px) {
     .month :global(.ec-col-head) {
       padding-inline: 0;
       font-size: var(--text-xs);
@@ -937,26 +928,10 @@
       font-size: var(--text-xs);
     }
     .month .item-time {
-      font-size: var(--text-compact);
+      font-size: var(--text-xs);
     }
     .view-meta {
       gap: 0 var(--space-8);
-    }
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .agenda :global(.ec-event) {
-      transition: background-color var(--motion-quick) ease;
-    }
-    .calendar-surface :global(.ec-popup) {
-      animation: astra-fade var(--motion-content) var(--motion-emerge);
-    }
-    .calendar-surface :global(.ec-popup > .ec-day-head) {
-      animation: astra-fade var(--motion-heading) var(--motion-emerge) 100ms
-        backwards;
-    }
-    .calendar-surface :global(.ec-popup > .ec-events) {
-      animation: astra-fade var(--motion-content) var(--motion-emerge) 220ms
-        backwards;
     }
   }
 </style>

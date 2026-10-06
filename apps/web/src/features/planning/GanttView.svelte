@@ -2,8 +2,7 @@
   import { errorMessage } from "../../lib/api/messages.ts";
   import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
-  import { revealScene } from "../../lib/ui/motion";
-  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
+  import { formatCivilDate, formatCivilRange } from "../../lib/ui/locale";
   import { timelineMetrics as metrics } from "../../lib/ui/planning-metrics";
   import { onMount, setContext, untrack, tick } from "svelte";
   import {
@@ -322,14 +321,6 @@
 
 {#if !project}<p>Wybierz projekt, aby zobaczyć jego zaplanowane daty.</p>
 {:else}
-  <div class="toolbar" use:revealLayers={controlsLayers}>
-    <label
-      >Skala osi czasu<select aria-label="Skala osi czasu" bind:value={scale}
-        ><option value="days">Dni</option><option value="weeks">Tygodnie</option
-        ><option value="months">Miesiące</option></select
-      ></label
-    >
-  </div>
   {#if orderNotice}<p role="status">{orderNotice}</p>{/if}
   {#if error}<p>
       <span role="alert">{error}</span>
@@ -344,8 +335,12 @@
   {#if loading}<p role="status">Ładowanie osi czasu…</p>{/if}
   {#if pageNotice}<p class="hint" role="status">{pageNotice}</p>{/if}
   <div class="selection-bar" aria-label="Wybór na osi czasu">
+    <select class="scale" aria-label="Skala osi czasu" bind:value={scale}
+      ><option value="days">Dni</option><option value="weeks">Tygodnie</option
+      ><option value="months">Miesiące</option></select
+    >
     <label>
-      Wybrany element<select
+      <span class="sr">Wybrany element</span><select
         aria-label="Wybrana karta"
         value={selection}
         onchange={(event) => selectCard(event.currentTarget.value)}
@@ -375,22 +370,15 @@
               ? resourceLabel(selected.status)
               : "Karta"}
           {selected.schedule
-            ? ` · ${selected.schedule.start} → ${selected.schedule.end}`
+            ? ` · ${formatCivilRange(selected.schedule.start, selected.schedule.end)}`
             : "· Brak zapisanego planu"}
-          {selected.due ? ` · ◆ Termin: ${selected.due.date}` : ""}
+          {selected.due
+            ? ` · Termin: ${formatCivilDate(selected.due.date)}`
+            : ""}
         </span>
       </div>{/if}
   </div>
-  <div
-    use:revealScene={{
-      ready: !loading && !!data,
-      key: `${project}:${month}:${scale}`,
-      selector: ":scope > .chart",
-      distance: "0px",
-    }}
-    class="astra-gantt"
-    aria-label="Wykres Gantta projektu"
-  >
+  <div class="astra-gantt" aria-label="Wykres Gantta projektu">
     <WidgetLocale>
       <Willow fonts={false} />
       <div
@@ -428,7 +416,8 @@
     <h3>Karty bez harmonogramu</h3>
     <div class="unscheduled">
       {#each cards.filter((r) => !r.schedule && !r.event) as row}<button
-          onclick={() => open(row)}>{row.title} · Ustaw zaplanowane daty</button
+          title="Ustaw zaplanowane daty"
+          onclick={() => open(row)}>{row.title}</button
         >{:else}<p>Brak kart bez harmonogramu na tej stronie.</p>{/each}
     </div>
   </section>
@@ -455,30 +444,26 @@
 
 <style>
   strong {
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
   }
-  .toolbar,
   .selection-bar,
   nav {
     display: flex;
-    gap: var(--space-6);
-    align-items: end;
+    gap: var(--space-4);
+    align-items: center;
     flex-wrap: wrap;
-    margin: var(--space-8) 0;
-  }
-  .selection-bar {
-    padding: var(--space-6);
-    border: var(--stroke) solid var(--line);
-    border-radius: var(--radius-control);
-    background: var(--paper);
     margin: var(--space-6) 0;
   }
   .selection-bar label {
     flex: 1 1 var(--field-width);
   }
-  .selection-bar select {
+  .selection-bar label select {
     max-width: 100%;
     width: 100%;
+  }
+  .selection-bar > :global(button),
+  .unscheduled > :global(button) {
+    font-size: var(--text-base);
   }
   .selected-summary {
     flex-basis: 100%;
@@ -505,7 +490,7 @@
   }
   .hint,
   .notice {
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     color: var(--muted);
   }
   .notice {
@@ -570,22 +555,12 @@
   section h3 {
     margin-top: var(--space-10);
   }
-  @media (max-width: 720px) {
+  @media (max-width: 700px) {
     .chart {
       height: var(--chart-mobile-height);
     }
-    .toolbar {
-      gap: var(--space-4);
-      margin: var(--space-6) 0;
-    }
-    .selection-bar {
-      gap: var(--space-4);
-    }
     .selection-bar label {
-      flex-basis: 100%;
-    }
-    select {
-      max-width: 100%;
+      flex-basis: calc(100% - var(--field-min-width));
     }
   }
 </style>

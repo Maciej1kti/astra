@@ -72,20 +72,15 @@ input[type="radio"] {
   font-weight: var(--weight-medium);
 }
 .primary {
-  background: var(--primary-fill);
+  background: var(--primary);
   color: var(--on-primary);
   border-color: var(--primary);
-  box-shadow: var(--shadow-button);
   font-weight: var(--weight-medium);
   white-space: nowrap;
 }
 .primary:hover {
   background: var(--primary-hover);
   color: var(--on-primary);
-}
-.primary:disabled {
-  background: var(--primary);
-  box-shadow: none;
 }
 .quiet {
   background: transparent;
@@ -101,12 +96,6 @@ input[type="radio"] {
   color: var(--paper);
   border-color: var(--danger);
 }
-.eyebrow {
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking-label);
-  font-weight: var(--weight-semibold);
-  color: var(--muted);
-}
 .notice {
   background: var(--notice-bg);
   color: var(--notice-ink);
@@ -114,6 +103,30 @@ input[type="radio"] {
   border: var(--stroke) solid var(--notice-line);
   border-radius: var(--radius-control);
   overflow-wrap: anywhere;
+}
+/* One disclosure marker everywhere instead of the native triangle. */
+summary {
+  list-style: none;
+  cursor: pointer;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::before {
+  content: "";
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--space-3);
+  height: var(--space-3);
+  margin-inline: var(--space-1) var(--space-5);
+  border-inline-end: var(--focus-width) solid currentColor;
+  border-block-end: var(--focus-width) solid currentColor;
+  rotate: -45deg;
+  opacity: var(--pending-opacity);
+}
+details[open] > summary::before {
+  translate: 0 calc(-1 * var(--space-1));
+  rotate: 45deg;
 }
 .sr {
   position: absolute;
@@ -185,9 +198,11 @@ input[type="radio"] {
   color: var(--accent-ink);
 }
 code,
-pre,
-time {
+pre {
   font-family: var(--font-mono);
+}
+code {
+  font-size: 0.9em;
 }
 h1,
 h2,

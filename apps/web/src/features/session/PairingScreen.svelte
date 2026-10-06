@@ -85,7 +85,7 @@
       ><Button
         variant="primary"
         onclick={startPairing}
-        disabled={busy || !device.trim()}>Poproś o dostęp <span>↗</span></Button
+        disabled={busy || !device.trim()}>Poproś o dostęp</Button
       >
       <p class="small">
         Wymagane jest zatwierdzenie na serwerze. Sam link nie zapewnia dostępu
@@ -111,7 +111,6 @@
 {#if !retained}
   <main class="welcome">
     <Brand />
-    <p class="eyebrow">Twoja praca na Twoim komputerze</p>
     <h1>Jaśniejszy obraz<br />kolejnych kroków.</h1>
     <p class="lead">
       Projekty, decyzje i postępy.<br />Połączone z folderami, których już
@@ -136,9 +135,6 @@
     margin: var(--space-20) auto;
     padding: var(--space-12);
   }
-  .welcome > .eyebrow {
-    margin-top: var(--space-16);
-  }
   .welcome h1 {
     font-size: var(--text-display);
     letter-spacing: var(--tracking-tight);
@@ -158,7 +154,7 @@
     margin-top: var(--space-12);
   }
   .pairbox h2 {
-    font-size: var(--text-section);
+    font-size: var(--text-xl);
     margin-top: 0;
   }
   .pairbox label {

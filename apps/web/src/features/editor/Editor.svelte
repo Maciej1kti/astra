@@ -1058,8 +1058,11 @@
         />
       {/if}
       {#if !autosaveResource && !readonly}<footer class="dialog-footer">
-          <button type="button" onclick={close} disabled={busy || deletion.busy}
-            >Anuluj</button
+          <button
+            type="button"
+            class="quiet"
+            onclick={close}
+            disabled={busy || deletion.busy}>Anuluj</button
           >{#if !readonly}<Button
               variant="primary"
               type="submit"

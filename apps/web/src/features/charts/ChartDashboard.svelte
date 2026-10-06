@@ -340,7 +340,7 @@
     gap: 0 var(--space-6);
     margin: 0 0 0 auto;
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     font-variant-numeric: tabular-nums;
   }
   .chart-period span:first-child {
@@ -366,7 +366,7 @@
   /* The picker becomes a side rail once the plot keeps a useful width. */
   @container chart (min-width: 940px) {
     .chart-body {
-      grid-template-columns: 280px minmax(0, 1fr);
+      grid-template-columns: var(--panel-width) minmax(0, 1fr);
       gap: var(--space-9);
     }
   }
@@ -376,7 +376,7 @@
   .chart-panels {
     display: grid;
     gap: var(--space-6);
-    transition: opacity var(--motion-quick) var(--motion-ease);
+    transition: opacity var(--motion-fast) var(--motion-ease);
   }
   /* A refresh keeps the previous plot in place instead of clearing it. */
   .chart-panels.refreshing {
@@ -393,7 +393,7 @@
     font-size: var(--text-sm);
   }
   .chart-note {
-    max-width: 78ch;
+    max-width: var(--measure);
     margin: var(--space-6) 0 0;
     color: var(--muted);
     font-size: var(--text-sm);

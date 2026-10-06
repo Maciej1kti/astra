@@ -161,7 +161,9 @@
       </details>{/if}
   </div>
   <footer class="dialog-footer">
-    <button onclick={close} disabled={busy || !!pending}>Anuluj</button><Button
+    <button class="quiet" onclick={close} disabled={busy || !!pending}
+      >Anuluj</button
+    ><Button
       variant="primary"
       onclick={save}
       disabled={busy ||

@@ -20,22 +20,21 @@
   const items = $derived(visibleCards(cards, route));
 </script>
 
-<div class="table">
-  <div class="tablehead">
-    <span>Tytuł / projekt</span><span>Szczegóły karty</span>
+{#if items.length}
+  <div class="table">
+    {#each items as item}<button class="listrow" onclick={() => open(item)}
+        ><div>
+          <strong>{item.title}</strong>{#if !route.project}<small
+              >{projectLabel(projects, item.project_id)}</small
+            >{/if}
+        </div>
+        <div class="row-metadata">
+          <ResourceMetadata {item} showStatus compact />
+        </div></button
+      >{/each}
   </div>
-  {#each items as item}<button class="listrow" onclick={() => open(item)}
-      ><div>
-        <strong>{item.title}</strong><small
-          >{projectLabel(projects, item.project_id)}</small
-        >
-      </div>
-      <div class="row-metadata">
-        <ResourceMetadata {item} showStatus compact />
-      </div></button
-    >{:else}<EmptyState>
-      {route.archived
-        ? "Brak zarchiwizowanych kart pasujących do wyboru. Wyczyść filtry, aby zobaczyć więcej zarchiwizowanych kart."
-        : "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry."}
-    </EmptyState>{/each}
-</div>
+{:else}<EmptyState>
+    {route.archived
+      ? "Brak zarchiwizowanych kart pasujących do wyboru. Wyczyść filtry, aby zobaczyć więcej zarchiwizowanych kart."
+      : "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry."}
+  </EmptyState>{/if}

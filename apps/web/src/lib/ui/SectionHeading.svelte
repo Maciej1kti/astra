@@ -45,7 +45,7 @@
   }
   .sectiontitle-compact h3 {
     margin: 0;
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
     font-weight: var(--weight-semibold);
     letter-spacing: var(--tracking-tight);
   }

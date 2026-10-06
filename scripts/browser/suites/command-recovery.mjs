@@ -321,7 +321,7 @@ await runBrowserSuite(
           "POST",
         );
         await visit(page, { view: "projects" });
-        await page.getByRole("button", { name: "＋ Dodaj projekt" }).click();
+        await page.getByRole("button", { name: "Dodaj projekt" }).click();
         const dialog = page.getByRole("dialog", {
           name: "Dodaj projekt",
           exact: true,
@@ -367,7 +367,7 @@ await runBrowserSuite(
           "POST",
         );
         await visit(page, { view: "projects" });
-        await page.getByRole("button", { name: "＋ Dodaj projekt" }).click();
+        await page.getByRole("button", { name: "Dodaj projekt" }).click();
         const native = page.getByRole("dialog", {
           name: "Dodaj projekt",
           exact: true,

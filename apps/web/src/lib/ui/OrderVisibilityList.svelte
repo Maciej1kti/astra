@@ -119,7 +119,7 @@
     align-items: center;
     gap: var(--space-2);
     border-radius: var(--radius-sm);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     min-height: calc(var(--tap-target) + var(--space-2));
     padding-inline: var(--space-2);
   }

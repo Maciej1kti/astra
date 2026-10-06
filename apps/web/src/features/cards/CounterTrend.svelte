@@ -29,9 +29,11 @@
 <style>
   .counter-trend {
     display: block;
-    width: 112px;
+    --trend-width: 112px;
+    --trend-height: 26px;
+    width: var(--trend-width);
     max-width: 100%;
-    height: 26px;
+    height: var(--trend-height);
     overflow: visible;
   }
   rect {

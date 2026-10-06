@@ -84,7 +84,8 @@ the previous order.
 Hidden views remain available in More; when one is selected, More is highlighted.
 **Przywróć nawigację** restores Focus and Projects. Order and bar visibility are
 saved in this browser, across projects and profiles; other devices keep their own
-layout. The desktop sidebar keeps every view available in the chosen order.
+layout. The desktop sidebar keeps every view available in the chosen order, so
+its **Więcej** entry holds only **Dostosuj nawigację**.
 
 | View | Use it for | Key behavior |
 | --- | --- | --- |
@@ -120,16 +121,9 @@ and explicit confirmation.
 
 ### Motion and accessibility
 
-Navigation, loaded content, menus and dialogs share layered motion effects.
-Surfaces appear first, followed by headings, sections and small details. Existing
-tags enter with their section; adding a tag gives a separate confirmation pulse.
-Entrances gently fade into view with subtle movement; headings and small tag
-details also resolve from a light blur into sharp text.
-Card context, titles, metadata, labels and daily counter footers have their own
-opening layers across views. Editing a counter or refreshing data keeps them in place.
-Calendar reveals its headings, grid and event groups in stages after the selected
-period loads. Agenda days and the month overflow popup use the same gentle effects,
-on desktop and mobile; moving an event does not replay the whole calendar.
+Motion is brief and answers what you did. A view fades in as a whole; a dialog
+or menu arrives once, without separate stages for its headings, sections or
+tags. Adding a tag and an acknowledged save give a short confirmation.
 Buttons respond to a press, and the navigation highlight follows the selected
 view on desktop and mobile. To disable these effects, enable **Reduce motion**
 in your operating system; Astra follows changes immediately, including while
@@ -195,8 +189,9 @@ it. The card editor shows a 14-day trend and saved history; In focus, In motion 
 compact daily controls for their active counters. Missing history is not a recorded zero. The current-day
 control can start at zero when nothing has been saved.
 
-Use Add counter for the first counter and the counter menu for existing/archived
-ones. Archiving hides a counter
+Use **Dodaj licznik** below the list to add a counter. Once a counter has been
+archived, a menu in the same place offers Add counter and **Zarchiwizowane**.
+Archiving hides a counter
 without erasing its history. Units cannot change after a result has been recorded;
 counter data has no destructive clear/undo operation. New edits use the latest
 acknowledged card version, while a pending edit retains its original day/version.

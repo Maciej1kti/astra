@@ -241,14 +241,17 @@
   }
   .counter-search input {
     width: 100%;
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   .counter-options {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(var(--card-min-width), 1fr)
+    );
     column-gap: var(--space-4);
     min-height: 0;
-    max-height: min(60dvh, 420px);
+    max-height: min(60dvh, var(--dialog-small));
     overflow-y: auto;
   }
   .counter-option {
@@ -279,7 +282,7 @@
     display: grid;
   }
   .counter-text strong {
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     font-weight: var(--weight-medium);
     overflow-wrap: anywhere;
   }
@@ -300,7 +303,7 @@
     font-size: var(--text-xs);
   }
   .counter-total {
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     font-variant-numeric: tabular-nums;
     text-align: right;
     white-space: nowrap;
@@ -324,14 +327,14 @@
     margin: 0;
     padding: var(--space-4);
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   .picker-limit {
     font-size: var(--text-sm);
   }
   .load-counters {
     margin: var(--space-4);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   .picker-footer {
     display: flex;

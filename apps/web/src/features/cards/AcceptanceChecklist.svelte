@@ -424,7 +424,7 @@
     padding-left: var(--space-4);
   }
   .error {
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     color: var(--notice-ink);
     padding: 0 var(--space-4);
   }

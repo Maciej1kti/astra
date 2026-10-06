@@ -1,9 +1,8 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
   import { errorMessage } from "../../lib/api/messages.ts";
   import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
-  import { revealScene } from "../../lib/ui/motion";
-  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import { onMount, onDestroy, setContext, untrack, tick } from "svelte";
   import { on } from "svelte/events";
   import { readBoardView, writeBoardView } from "./board-view";
@@ -511,29 +510,14 @@
     {#if !busy && !boardCards.length}Brak pasujących kart na wczytanych
       stronach.{/if}
   </p>{/if}
-{#if columns.length}<nav
-    class="board-column-nav"
-    aria-label="Kolumny tablicy"
-    use:revealLayers={controlsLayers}
-  >
+{#if columns.length}<nav class="board-column-nav" aria-label="Kolumny tablicy">
     {#each columns as column}<button
         aria-current={visibleStatus === column.status ? "true" : undefined}
         onclick={() => showColumn(column.status)}
         >{resourceLabel(column.status)} <span>{column.total}</span></button
       >{/each}
   </nav>{/if}
-<div
-  use:revealScene={{
-    ready: !busy && !!columns.length,
-    key: project,
-    selector: ".board-column-nav, .wx-column",
-    cardSelector: "[data-board-card]",
-    distance: "0px",
-  }}
-  class="astra-board"
-  aria-busy={busy}
-  use:scrolling
->
+<div class="astra-board" aria-busy={busy} use:scrolling>
   <WidgetLocale>
     <Willow fonts={false} children={undefined} />
     <div class="board-theme wx-theme wx-willow-theme">
@@ -591,7 +575,7 @@
           onclick={() => {
             quickTitles[column.status] ??= "";
             quickStatus = column.status;
-          }}>+ Dodaj kartę</button
+          }}><Icon name="plus" small /> Dodaj kartę</button
         >
       {/if}
       {#if column.total > 50}
@@ -645,15 +629,23 @@
     --wx-color-primary: var(--ink);
     --wx-icon-color: var(--ink);
     --wx-border-radius: var(--radius-control);
-    --wx-kanban-card-shadow: var(--shadow-sm);
+    --wx-kanban-card-shadow: var(--shadow-card);
     --wx-kanban-card-shadow-hover: var(--shadow-card);
   }
   .astra-board :global(.wx-column) {
-    border: var(--stroke) solid var(--line);
+    border: 0;
+    border-radius: var(--radius-panel);
+    overflow: hidden;
   }
   .astra-board :global(.wx-column-header) {
     padding: var(--space-2);
     gap: var(--space-1);
+    border: 0;
+    background: transparent;
+  }
+  /* The footer of every column and the page action already add a card. */
+  .astra-board :global(.wx-add) {
+    display: none;
   }
   .astra-board :global(.wx-column-header button),
   .astra-board :global(.wx-expand) {
@@ -672,32 +664,32 @@
     touch-action: pan-y;
     padding: 0;
     border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-card);
   }
   .astra-board :global(.wx-card:hover),
   .astra-board :global(.wx-card:focus-within) {
-    border-color: var(--muted);
+    border-color: var(--line-strong);
   }
   .astra-board :global(.wx-icon) {
-    color: var(--ink);
+    color: var(--muted);
     margin-top: 0;
   }
+  /* Collapse and expand use the interface chevron instead of a text glyph. */
   .astra-board :global(.wx-icon::before) {
-    font-family: var(--font-sans);
-    font-style: normal;
-  }
-  .astra-board :global(.wxi-plus::before) {
-    content: "+";
-  }
-  .astra-board :global(.wxi-angle-left::before) {
-    content: "‹";
+    content: "";
+    display: block;
+    width: var(--space-4);
+    height: var(--space-4);
+    border-inline-start: var(--focus-width) solid currentColor;
+    border-block-end: var(--focus-width) solid currentColor;
+    rotate: 45deg;
   }
   .astra-board :global(.wxi-angle-right::before) {
-    content: "›";
+    rotate: -135deg;
   }
   .column-footer {
     flex-shrink: 0;
-    padding: var(--space-4);
-    border-top: var(--stroke) solid var(--line);
+    padding: var(--space-2) var(--space-4) var(--space-4);
     display: grid;
     gap: var(--space-3);
     background: var(--soft);
@@ -718,6 +710,7 @@
     text-align: left;
     border: 0;
     background: transparent;
+    color: var(--muted);
   }
   .add-card:hover {
     background: var(--hover);
@@ -729,7 +722,7 @@
   .pagination button {
     flex: 1;
     padding: var(--space-3);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   @media (max-width: 700px) {
     .board-column-nav {
@@ -758,7 +751,15 @@
       margin-left: var(--space-1);
     }
     .astra-board {
-      height: clamp(320px, 52dvh, 520px);
+      --board-phone-chrome: 340px;
+      height: clamp(
+        var(--board-min-height),
+        calc(100dvh - var(--board-phone-chrome)),
+        var(--dialog-max-height)
+      );
+    }
+    .astra-board :global(.wx-column:not(.wx-collapsed) .wx-column-header) {
+      display: none;
     }
     .astra-board :global(.wx-column:not(.wx-collapsed)) {
       flex-basis: calc(100vw - var(--space-20) - var(--space-4));

@@ -246,32 +246,35 @@
     letter-spacing: var(--tracking-tight);
   }
   .summary-heading p {
-    max-width: 62ch;
+    max-width: var(--measure);
     margin: var(--space-2) 0 0;
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   .summary-heading label {
     display: flex;
     align-items: center;
     gap: var(--space-4);
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     white-space: nowrap;
   }
   .summary-heading input {
-    width: 128px;
-    font-size: var(--text-label);
+    width: var(--field-compact);
+    font-size: var(--text-base);
   }
   .summary-table {
     --stat-columns: 4;
     display: grid;
     grid-template-columns:
-      minmax(180px, 1.7fr) repeat(var(--stat-columns), minmax(0, 1fr))
-      minmax(128px, 1.1fr) minmax(0, 1fr);
+      minmax(var(--field-min-width), 1.7fr) repeat(
+        var(--stat-columns),
+        minmax(0, 1fr)
+      )
+      minmax(var(--field-compact), 1.1fr) minmax(0, 1fr);
     border: var(--stroke) solid var(--line);
     border-radius: var(--radius-card);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     font-variant-numeric: tabular-nums;
   }
   .summary-table.comparable {
@@ -341,15 +344,15 @@
   }
   .cell-rate input {
     width: 100%;
-    max-width: 128px;
-    font-size: var(--text-label);
+    max-width: var(--field-compact);
+    font-size: var(--text-base);
   }
   .cell-rate input[aria-invalid="true"] {
     border-color: var(--danger);
   }
   @container summary (max-width: 860px) {
     .summary-table {
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(var(--panel-width), 1fr));
       gap: var(--space-6);
       border: 0;
       border-radius: 0;

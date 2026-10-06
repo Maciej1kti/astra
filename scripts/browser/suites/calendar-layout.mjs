@@ -418,7 +418,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
       await checkpoint(`${viewport.width}x${viewport.height}`);
     }
     await page.evaluate(() => {
-      document.documentElement.style.setProperty("--text-label", "48px");
+      document.documentElement.style.setProperty("--text-base", "48px");
       document.documentElement.style.setProperty("--text-xs", "42px");
     });
     await page.evaluate(
@@ -442,7 +442,7 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
       await checkpoint(`large-text-${viewport.width}`);
     }
     await page.evaluate(() => {
-      document.documentElement.style.removeProperty("--text-label");
+      document.documentElement.style.removeProperty("--text-base");
       document.documentElement.style.removeProperty("--text-xs");
     });
     await page.setViewportSize({ width: 1440, height: 1000 });

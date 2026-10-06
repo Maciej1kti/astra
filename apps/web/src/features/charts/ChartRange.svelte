@@ -150,12 +150,12 @@
     color: var(--muted);
   }
   .range-form input {
-    width: 152px;
-    font-size: var(--text-label);
+    width: var(--field-min-width);
+    font-size: var(--text-base);
   }
   .notice {
     margin: 0;
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   @container chart (max-width: 620px) {
     .chart-range {

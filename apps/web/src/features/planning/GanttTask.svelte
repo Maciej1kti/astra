@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getContext } from "svelte";
+  import Icon from "../../lib/ui/Icon.svelte";
   import { on } from "svelte/events";
   import type { ITask } from "@svar-ui/svelte-gantt";
   import type { Summary } from "../../lib/api/api";
@@ -108,7 +109,8 @@
         operation: "start",
       }}
       onkeydown={(e) => keyboard(e, "start")}
-      onclick={() => actions.propose(row, 0, "start")}>‹</button
+      onclick={() => actions.propose(row, 0, "start")}
+      ><Icon name="chevronLeft" small /></button
     >
     <button
       class="handle move"
@@ -136,7 +138,8 @@
         operation: "end",
       }}
       onkeydown={(e) => keyboard(e, "end")}
-      onclick={() => actions.propose(row, 0, "end")}>›</button
+      onclick={() => actions.propose(row, 0, "end")}
+      ><Icon name="chevronRight" small /></button
     >
   {/if}
 </div>

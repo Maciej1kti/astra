@@ -107,10 +107,10 @@
             >{/if}</span
         >{/if}
       {#if item.acceptance_progress?.total}<span title="Lista kontrolna"
-          ><Icon name="check" small />{item.acceptance_progress.completed}/{item
-            .acceptance_progress.total}<span class="sr">
-            pozycji listy kontrolnej</span
-          ></span
+          ><Icon name="check" small /><span class="sr"
+            >Lista kontrolna:&nbsp;</span
+          >{item.acceptance_progress.completed}/{item.acceptance_progress
+            .total}</span
         >{/if}
       {#if item.comment_count}<span
           >{counted(

@@ -195,7 +195,7 @@
         class="calendar-prev"
         aria-label="Poprzedni miesiąc"
         disabled={month === "0001-01"}
-        onclick={() => moveMonth(-1)}><Icon name="arrow" small /></Button
+        onclick={() => moveMonth(-1)}><Icon name="chevronLeft" small /></Button
       >
       <strong id={`${id}-month`} aria-live="polite">{monthLabel}</strong>
       <Button
@@ -203,7 +203,7 @@
         variant="quiet"
         aria-label="Następny miesiąc"
         disabled={month === "9999-12"}
-        onclick={() => moveMonth(1)}><Icon name="arrow" small /></Button
+        onclick={() => moveMonth(1)}><Icon name="chevronRight" small /></Button
       >
     </div>
     <p class="sr" id={`${id}-help`}>

@@ -37,6 +37,9 @@ export const iconPaths = {
   layout: "M4 4h16v16H4zM4 9h16M15 9v11",
   chevronUp: "m6 15 6-6 6 6",
   chevronDown: "m6 9 6 6 6-6",
+  scrub: "M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4",
+  chevronLeft: "m15 6-6 6 6 6",
+  chevronRight: "m9 6 6 6-6 6",
   flag: "M5 21V4c5-4 9 4 14 0v10c-5 4-9-4-14 0",
 } as const;
 export type IconName = keyof typeof iconPaths;

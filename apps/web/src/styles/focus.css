@@ -23,7 +23,7 @@
   cursor: pointer;
 }
 .app .focus-card-open:hover {
-  background: color-mix(in srgb, var(--soft) 65%, var(--paper));
+  background: var(--wash);
 }
 .app .focus-card-open:focus-visible {
   outline-offset: calc(-1 * var(--focus-offset));
@@ -98,7 +98,7 @@
   gap: var(--space-4) var(--space-8);
   padding: var(--space-6) var(--space-9);
   border-top: var(--stroke) solid var(--line);
-  background: color-mix(in srgb, var(--soft) 55%, var(--paper));
+  background: var(--wash);
   cursor: auto;
 }
 .focus-counter-day {
@@ -114,7 +114,7 @@
 }
 .focus-counter-name {
   color: var(--muted);
-  font-size: var(--text-label);
+  font-size: var(--text-base);
   min-width: 0;
   overflow-wrap: anywhere;
   white-space: normal;
@@ -145,6 +145,14 @@
 .focus-counter-value .scrub-hint {
   margin-left: var(--space-2);
 }
+.scrub-hint {
+  display: inline-flex;
+  align-self: center;
+}
+.scrub-hint .ui-icon {
+  width: var(--space-6);
+  height: var(--space-6);
+}
 .focus-counter-chip.editing .focus-counter-value,
 .focus-counter-value[data-scrubbing] {
   background: var(--accent);
@@ -158,9 +166,9 @@
 .focus-counter-saved {
   position: fixed;
   z-index: var(--layer-floating);
-  left: max(var(--space-8), calc(50% - 340px));
+  left: max(var(--space-8), calc(50% - var(--dialog-medium) / 2));
   bottom: var(--space-9);
-  width: min(680px, calc(100% - 2 * var(--space-8)));
+  width: min(var(--dialog-medium), calc(100% - 2 * var(--space-8)));
   padding: var(--space-6) var(--space-8);
   border: var(--stroke) solid var(--line-strong);
   border-radius: var(--radius-card);
@@ -173,22 +181,22 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-6);
-  max-height: min(440px, 65dvh);
+  max-height: min(var(--dialog-small), 65dvh);
   overflow-y: auto;
 }
 .focus-counter-bar-heading {
   display: grid;
   flex: 1;
-  min-width: 120px;
+  min-width: var(--field-compact);
 }
 .focus-counter-bar-heading strong {
   overflow-wrap: anywhere;
-  font-size: var(--text-card);
+  font-size: var(--text-lg);
 }
 .focus-counter-bar-heading span {
   color: var(--muted);
   font-size: var(--text-sm);
-  max-width: 280px;
+  max-width: var(--panel-width);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -204,7 +212,7 @@
   flex-wrap: wrap;
 }
 .focus-counter-bar-controls input {
-  width: 120px;
+  width: var(--field-compact);
   font-size: var(--text-lg);
   font-variant-numeric: tabular-nums;
 }
@@ -231,14 +239,14 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  font-size: var(--text-label);
+  font-size: var(--text-base);
   color: var(--success);
 }
 .focus-counter-saved button {
   margin-left: auto;
 }
 .app.counter-editing .workspace {
-  padding-bottom: 260px;
+  padding-bottom: var(--card-min-width);
 }
 @media (max-width: 640px) {
   .app .focus-card-open {

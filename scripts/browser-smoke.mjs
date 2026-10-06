@@ -206,9 +206,7 @@ try {
   await page
     .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
-  await page
-    .getByRole("button", { name: "＋ Dodaj kartę", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Dodaj kartę", exact: true }).click();
   await page.getByLabel("Tytuł", { exact: true }).fill("Ship the field guide");
   await page.getByLabel("Początek", { exact: true }).fill("2026-09-07");
   await page.getByLabel("Koniec", { exact: true }).fill("2026-09-12");
@@ -1357,7 +1355,7 @@ try {
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(7);
   await expectCalendarDate(
     page,
-    (await page.locator(".topbar .date").innerText()).trim(),
+    (await page.locator(".topbar .date").getAttribute("datetime")).trim(),
   );
   await setCalendarDate(page, "2026-09-08");
   await page
@@ -1375,9 +1373,7 @@ try {
   await expect(
     page.getByLabel("Układ kalendarza", { exact: true }),
   ).toHaveValue("week");
-  await page
-    .getByRole("button", { name: "Nowa zaplanowana karta", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Dodaj kartę", exact: true }).click();
   await expect(page.getByLabel("Początek", { exact: true })).toHaveValue(
     "2026-09-09",
   );

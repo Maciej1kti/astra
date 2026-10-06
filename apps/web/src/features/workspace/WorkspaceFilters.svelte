@@ -3,7 +3,6 @@
   import type { RouteFilters } from "./navigation-state.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
   import Icon from "../../lib/ui/Icon.svelte";
-  import { revealLayers } from "../../lib/ui/motion-layers";
 
   let {
     route,
@@ -23,21 +22,7 @@
   );
 </script>
 
-<div
-  class="workspace-filters"
-  class:list-filters={route.view === "list"}
-  use:revealLayers={{
-    key: route.view,
-    layers: [
-      {
-        selector: ":scope > .toolbar > *",
-        role: "detail",
-        delay: 80,
-        stagger: 40,
-      },
-    ],
-  }}
->
+<div class="workspace-filters" class:list-filters={route.view === "list"}>
   <div class="toolbar">
     <div class="filter-search-group">
       <input
@@ -77,7 +62,7 @@
     {#if route.view === "gantt"}
       <div class="month">
         <button onclick={() => changeMonth(-1)} aria-label="Poprzedni miesiąc"
-          >←</button
+          ><Icon name="chevronLeft" small /></button
         >
         <input
           type="month"
@@ -86,7 +71,7 @@
           onchange={(event) => onchange({ month: event.currentTarget.value })}
         />
         <button onclick={() => changeMonth(1)} aria-label="Następny miesiąc"
-          >→</button
+          ><Icon name="chevronRight" small /></button
         >
       </div>
     {/if}

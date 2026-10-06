@@ -498,6 +498,10 @@
             conflict}
         /></label
       >
+      <p class="field-hint">
+        Daty są zgodne z tą strefą czasową. Jej zmiana nie przesuwa zapisanych
+        dat całodniowych.
+      </p>
       <div class="row">
         <label
           >Początek tygodnia<select
@@ -529,10 +533,6 @@
           ></label
         >
       </div>
-      <p>
-        Daty są zgodne z tą strefą czasową. Jej zmiana nie przesuwa zapisanych
-        dat całodniowych.
-      </p>
       {#if pending && commandKind === "preferences"}<section class="notice">
           <p>
             Oczekujące polecenie: czeka na potwierdzenie. Przesłane ustawienia
@@ -698,7 +698,7 @@
   }
   h3 {
     margin: 0;
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
   }
   label {
     display: block;
@@ -714,17 +714,20 @@
   p,
   small {
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     line-height: var(--leading-body);
   }
   small,
   code {
     display: block;
   }
+  .field-hint {
+    margin: calc(-1 * var(--space-4)) 0 0;
+  }
   .item {
     padding: var(--space-8) 0;
     border-top: var(--stroke) solid var(--line);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   .item > div {
     flex: 1;
@@ -739,7 +742,7 @@
   }
   code {
     margin-top: var(--space-4);
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
     overflow-wrap: anywhere;
   }
   .notice {

@@ -432,11 +432,11 @@ export async function runCardChecks({
         .locator("main .table")
         .getByRole("button")
         .filter({ hasText: card.title });
-      await expect(row).toContainText("Lista kontrolna 2/2");
+      await expect(row).toContainText("Lista kontrolna: 2/2");
       await screenshot("C02-list-summary");
       await route("board", { q: card.title });
       const boardCard = page.locator(`[data-board-card="${card.id}"]`);
-      await expect(boardCard).toContainText("Lista kontrolna 2/2");
+      await expect(boardCard).toContainText("Lista kontrolna: 2/2");
       await screenshot("C02-board-summary");
       return {
         card: card.id,

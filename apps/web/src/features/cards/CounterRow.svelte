@@ -183,7 +183,8 @@
           onclick={enter}
         >
           <strong>{value}</strong><span class="counter-unit"
-            >{counter.unit}<span class="scrub-hint" aria-hidden="true">↔</span
+            >{counter.unit}<span class="scrub-hint"
+              ><Icon name="scrub" small /></span
             ></span
           >
         </button>
@@ -303,7 +304,7 @@
     max-width: 100%;
   }
   .counter-name strong {
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
     font-weight: var(--weight-semibold);
     overflow-wrap: anywhere;
   }
@@ -312,8 +313,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 76px;
-    min-height: 60px;
+    min-width: calc(var(--tap-target) + var(--space-12));
+    min-height: calc(var(--tap-target) + var(--space-8));
     padding: var(--space-3) var(--space-4);
     border-color: transparent;
     background: var(--soft);
@@ -350,7 +351,7 @@
     cursor: grabbing;
   }
   .counter-entry {
-    width: 112px;
+    width: var(--field-compact);
     min-width: 0;
     margin: 0;
     text-align: center;
@@ -378,7 +379,7 @@
     color: var(--muted);
     font-size: var(--text-sm);
     flex: 1;
-    min-width: 60px;
+    min-width: var(--space-20);
   }
   .counter-error {
     color: var(--danger);
@@ -394,14 +395,14 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-4);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   .counter-history-heading span {
     color: var(--muted);
     font-size: var(--text-sm);
   }
   .counter-history {
-    max-height: 240px;
+    max-height: var(--field-width);
     overflow: auto;
     overscroll-behavior: contain;
   }
@@ -419,18 +420,6 @@
   th:last-child,
   td:last-child {
     text-align: right;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .counter-confirmation,
-    .counter-history-panel {
-      animation: astra-reveal var(--motion-detail) var(--motion-emerge);
-    }
-    .counter-value {
-      transition:
-        background var(--motion-quick),
-        border-color var(--motion-quick),
-        color var(--motion-quick);
-    }
   }
   @media (min-width: 641px) {
     .counter-insight {

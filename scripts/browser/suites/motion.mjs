@@ -4,52 +4,46 @@ import { expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { runBrowserSuite } from "../runtime.mjs";
-import { checkCardLayers } from "../motion-card-layers.mjs";
-
 await runBrowserSuite(async (fixture) => {
-  const { config, evidence, newContext, browser, cli, runtime } = fixture;
+  const { config, evidence, newContext, browser } = fixture;
   const context = await newContext({ reducedMotion: "no-preference" });
   const page = await context.newPage();
   const errors = [],
     checks = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript(() => {
-    localStorage.setItem(
-      "astra-card-layout:v2",
-      JSON.stringify([
-        "labels",
-        "description",
-        "checklist",
-        "counters",
-        "comments",
-        "schedule",
-      ]),
-    );
-    window.motionProbe = { scenes: [], csp: [], animations: [] };
+    window.motionProbe = { scripted: [], styled: [], csp: [], animations: [] };
     document.addEventListener("securitypolicyviolation", (event) =>
       window.motionProbe.csp.push(event.violatedDirective),
     );
     const animate = Element.prototype.animate;
     Element.prototype.animate = function (frames, options) {
-      if (options?.id?.startsWith("astra-scene-"))
-        window.motionProbe.scenes.push({
-          id: options.id,
-          target: this.className,
-          delay: options.delay,
-          duration: options.duration,
-        });
+      window.motionProbe.scripted.push({
+        target: this.className,
+        content: !!this.closest?.(".view-content, .app-dialog"),
+        delay: options?.delay ?? 0,
+        duration: options?.duration ?? 0,
+      });
       const animation = animate.call(this, frames, options);
       window.motionProbe.animations.push(animation);
       return animation;
     };
     document.addEventListener("animationstart", (event) => {
-      window.motionProbe.animations.push(
-        ...event.target
-          .getAnimations()
-          .filter(
-            (animation) => animation.animationName === event.animationName,
-          ),
-      );
+      const started = event.target
+        .getAnimations()
+        .filter((animation) => animation.animationName === event.animationName);
+      window.motionProbe.animations.push(...started);
+      for (const animation of started) {
+        const timing = animation.effect.getTiming();
+        const style = getComputedStyle(event.target);
+        window.motionProbe.styled.push({
+          name: event.animationName,
+          target: event.target.className,
+          delay: timing.delay,
+          duration: timing.duration,
+          blurred: style.filter !== "none",
+        });
+      }
     });
   });
   const nav = page.getByRole("navigation", {
@@ -107,108 +101,90 @@ await runBrowserSuite(async (fixture) => {
       await page.screenshot({ path: join(evidence, `${name}.png`) });
   };
   // Sample the actual rendered effect, independent of runner/CPU scheduling.
-  const at150ms = (selector, name) =>
+  const sample = (selector, name, time) =>
     page.evaluate(
-      ({ selector, name }) => {
+      ({ selector, name, time }) => {
         const animation = window.motionProbe.animations.findLast(
           (animation) =>
             animation.effect?.target?.matches(selector) &&
             (!name || animation.animationName === name),
         );
-        if (!animation) throw new Error(`No entrance for ${selector}`);
+        if (!animation) throw new Error(`No effect for ${selector}`);
+        const timing = animation.effect.getTiming();
         animation.pause();
-        animation.currentTime = animation.effect.getTiming().delay;
-        const start = new DOMMatrixReadOnly(
-          getComputedStyle(animation.effect.target).transform,
-        );
-        const startY = parseFloat(
-          getComputedStyle(animation.effect.target).translate.split(" ")[1] ??
-            "0",
-        );
-        animation.currentTime = animation.effect.getTiming().delay + 50;
-        const earlyOpacity = Number(
-          getComputedStyle(animation.effect.target).opacity,
-        );
-        animation.currentTime = animation.effect.getTiming().delay + 150;
+        animation.currentTime = time;
         const style = getComputedStyle(animation.effect.target);
-        const current = new DOMMatrixReadOnly(style.transform);
-        const distance = Math.hypot(start.m41, start.m42);
         const result = {
+          delay: timing.delay,
+          duration: timing.duration,
           opacity: Number(style.opacity),
-          earlyOpacity,
-          blur: parseFloat(style.filter.replace("blur(", "")) || 0,
-          y: current.m42,
-          remaining: distance
-            ? Math.hypot(current.m41, current.m42) / distance
-            : startY
-              ? Math.abs(parseFloat(style.translate.split(" ")[1]) / startY)
-              : 0,
-          translateY: parseFloat(style.translate.split(" ")[1] ?? "0"),
+          moving: style.transform !== "none",
         };
         animation.finish();
         const settled = getComputedStyle(animation.effect.target);
         return {
           ...result,
           settledOpacity: Number(settled.opacity),
-          settledBlur: parseFloat(settled.filter.replace("blur(", "")) || 0,
+          settledFilter: settled.filter,
         };
       },
-      { selector, name },
+      { selector, name, time },
     );
+  // One short arrival: no stagger, readable halfway through, nothing left behind.
+  const brief = (effect, limit) => {
+    assert.equal(effect.delay, 0, JSON.stringify(effect));
+    assert(
+      effect.duration > 0 && effect.duration <= limit,
+      `Entrance lasts at most ${limit} ms: ${JSON.stringify(effect)}`,
+    );
+    assert(
+      effect.opacity >= 0.5,
+      `Content is readable halfway through: ${JSON.stringify(effect)}`,
+    );
+    assert.equal(effect.settledOpacity, 1);
+    assert.equal(effect.settledFilter, "none");
+  };
+  const contentEffects = () =>
+    page.evaluate(() => ({
+      scripted: window.motionProbe.scripted.filter((item) => item.content),
+      styled: window.motionProbe.styled,
+    }));
   try {
     await page.goto(
       `${config.origin}/?${new URLSearchParams({ view: "list", project: config.projects[0].id })}`,
     );
     await expect(page.locator(".listrow").first()).toBeVisible();
     await indicatorMatches();
-    const rowEntrance = await at150ms(".listrow:first-of-type");
-    assert(
-      rowEntrance.remaining > 0.25 && rowEntrance.remaining < 0.95,
-      `A row must retain visible travel after 150 ms: ${JSON.stringify(rowEntrance)}`,
-    );
-    const softOnset = (effect) => {
-      assert(
-        effect.earlyOpacity < 0.1,
-        `Entrance starts gently: ${JSON.stringify(effect)}`,
-      );
-      assert(
-        effect.opacity > 0.05 && effect.opacity < 0.8,
-        `Entrance is still emerging at 150 ms: ${JSON.stringify(effect)}`,
-      );
-      assert.equal(effect.settledOpacity, 1);
-      assert.equal(effect.settledBlur, 0);
-    };
-    softOnset(rowEntrance);
-    const initial = await page.evaluate(() => window.motionProbe.scenes);
-    assert(initial.length > 1 && initial.length <= 96);
-    assert(
-      initial.filter((item) => !item.id.startsWith("astra-scene-card-"))
-        .length <= 24,
+    const viewEntrance = await sample(".view-content", "astra-fade", 100);
+    brief(viewEntrance, 200);
+    const initial = await contentEffects();
+    assert.deepEqual(
+      initial.scripted,
+      [],
+      "Loaded content has no scripted cascade",
     );
     assert(
-      initial.filter((item) => item.id.startsWith("astra-scene-card-"))
-        .length <= 72,
+      initial.styled.every((item) => item.delay === 0 && !item.blurred),
+      JSON.stringify(initial.styled),
     );
-    assert(initial.some((item) => item.delay > 0));
-    assert(Math.max(...initial.map((item) => item.delay)) <= 600);
     await page.getByRole("button", { name: "Odśwież", exact: true }).click();
     await expect(
       page.getByText("Ładowanie danych…", { exact: true }),
     ).toHaveCount(0);
     await settle();
-    assert.equal(
-      await page.evaluate(() => window.motionProbe.scenes.length),
-      initial.length,
-      "A data refresh must not replay the entrance",
+    assert.deepEqual(
+      await contentEffects(),
+      initial,
+      "A data refresh must not start an entrance",
     );
-    checks.push("bounded readiness cascade; refresh retains the scene");
+    checks.push("one view fade; no cascade; refresh starts nothing");
 
     await select("Projekty");
     await settle();
-    const selection = await at150ms(".navigation-indicator");
+    const selection = await sample(".navigation-indicator", "", 100);
     assert(
-      selection.remaining > 0.2 && selection.remaining < 0.85,
-      `Navigation must retain visible travel after 150 ms: ${JSON.stringify(selection)}`,
+      selection.duration <= 280 && selection.moving,
+      `The selection still travels at 100 ms and ends within 280 ms: ${JSON.stringify(selection)}`,
     );
     // Direct DOM clicks intentionally interrupt the moving selection before it settles.
     await nav
@@ -229,66 +205,14 @@ await runBrowserSuite(async (fixture) => {
     await expect(editor).toBeVisible();
     assert.equal(await editor.evaluate((node) => node.matches(":modal")), true);
     await settle();
-    const dialogLayers = await page.evaluate(() =>
-      window.motionProbe.animations
-        .filter(
-          (a) =>
-            a.id.startsWith("astra-layer-") &&
-            a.effect?.target?.closest(".editor"),
-        )
-        .map((a) => ({
-          role: a.id,
-          target: a.effect.target.className,
-          section: a.effect.target.closest("[data-card-section]")?.dataset
-            .cardSection,
-          chip: a.effect.target.matches(".tags .chips > li"),
-          delay: a.effect.getTiming().delay,
-          duration: a.effect.getTiming().duration,
-        })),
-    );
-    const contextLayer = dialogLayers.find(
-      (layer) => layer.target === "dialog-heading",
-    );
-    const titleLayer = dialogLayers.find(
-      (layer) => layer.target === "card-heading",
-    );
-    const sections = dialogLayers.filter(
-      (layer) => layer.target === "card-section-content",
-    );
-    const chips = dialogLayers.filter((layer) => layer.chip);
-    assert(chips.length > 0);
+    const dialogEntrance = await sample(".editor", "astra-dialog", 140);
+    brief(dialogEntrance, 280);
+    const opened = await contentEffects();
+    assert.deepEqual(opened.scripted, [], "A dialog has no scripted layers");
     assert(
-      chips.every(
-        (chip) =>
-          chip.delay >
-          sections.find((section) => section.section === chip.section).delay,
-      ),
+      opened.styled.every((item) => item.delay === 0 && !item.blurred),
+      JSON.stringify(opened.styled),
     );
-    assert(contextLayer && titleLayer && sections.length > 1);
-    assert(
-      contextLayer.delay < titleLayer.delay &&
-        titleLayer.delay < sections[0].delay,
-    );
-    assert(sections[0].delay < sections.at(-1).delay);
-    assert(
-      dialogLayers.length <= 32 &&
-        Math.max(...dialogLayers.map((layer) => layer.delay)) <= 560,
-    );
-    const dialogEntrance = await at150ms(".editor", "astra-dialog");
-    assert(
-      dialogEntrance.remaining > 0.25 && dialogEntrance.remaining < 0.95,
-      `The visible dialog must retain travel after 150 ms: ${JSON.stringify(dialogEntrance)}`,
-    );
-    softOnset(dialogEntrance);
-    const titleEntrance = await at150ms(".card-heading");
-    const tagEntrance = await at150ms(".tags .chips > li");
-    for (const effect of [titleEntrance, tagEntrance]) {
-      softOnset(effect);
-      assert(
-        effect.blur > 0 && effect.blur <= 2,
-        "Small layers gently resolve to sharp text",
-      );
-    }
     await screenshot("desktop-editor");
     await editor
       .getByRole("combobox", { name: "Etykiety", exact: true })
@@ -303,26 +227,20 @@ await runBrowserSuite(async (fixture) => {
       }),
     ).toBeVisible();
     await settle();
-    const feedback = await page.evaluate(() => ({
-      sections: window.motionProbe.animations.filter(
-        (a) =>
-          a.id === "astra-layer-content" &&
-          a.effect?.target?.matches(".card-section-content"),
-      ).length,
-      added: window.motionProbe.animations.some(
-        (a) =>
-          a.animationName === "astra-confirm" &&
-          a.effect?.target?.matches(".chip-added"),
-      ),
-    }));
-    assert.equal(
-      feedback.sections,
-      sections.length,
-      "Editing must not replay mounted sections",
-    );
     assert(
-      feedback.added,
+      await page.evaluate(() =>
+        window.motionProbe.animations.some(
+          (a) =>
+            a.animationName === "astra-confirm" &&
+            a.effect?.target?.matches(".chip-added"),
+        ),
+      ),
       "An explicit tag add retains its own confirmation pulse",
+    );
+    assert.deepEqual(
+      (await contentEffects()).scripted,
+      [],
+      "Editing starts no scripted entrance",
     );
     const layout = editor.getByRole("button", {
       name: "Dostosuj układ karty",
@@ -331,21 +249,14 @@ await runBrowserSuite(async (fixture) => {
     await layout.click();
     await expect(editor.locator(".action-menu-panel")).toBeVisible();
     await settle();
-    const menuEntrance = await at150ms(".action-menu-panel .layout-order > li");
-    softOnset(menuEntrance);
-    assert(
-      menuEntrance.opacity < 0.9,
-      `The menu entrance must remain legible after 150 ms: ${JSON.stringify(menuEntrance)}`,
-    );
+    const menuEntrance = await sample(".action-menu-panel", "", 60);
+    brief(menuEntrance, 120);
     checks.push({
-      name: "Distinct opening layers and visible navigation, row, dialog and menu travel",
+      name: "Brief view, dialog and menu arrivals; moving selection",
       selection,
-      rowEntrance,
+      viewEntrance,
       dialogEntrance,
-      titleEntrance,
-      tagEntrance,
       menuEntrance,
-      dialogLayers,
     });
     await page.keyboard.press("Escape");
     await expect(layout).toBeFocused();
@@ -379,9 +290,7 @@ await runBrowserSuite(async (fixture) => {
       ),
       0,
     );
-    const sceneCount = await page.evaluate(
-      () => window.motionProbe.scenes.length,
-    );
+    const before = await contentEffects();
     await select("Lista");
     await page.locator(".listrow").first().click();
     await expect(editor).toBeVisible();
@@ -391,9 +300,10 @@ await runBrowserSuite(async (fixture) => {
     );
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog")).toHaveCount(0);
-    assert.equal(
-      await page.evaluate(() => window.motionProbe.scenes.length),
-      sceneCount,
+    assert.deepEqual(
+      await contentEffects(),
+      before,
+      "Reduced motion starts no entrance",
     );
     await page.emulateMedia({ reducedMotion: "no-preference" });
     checks.push(
@@ -430,8 +340,28 @@ await runBrowserSuite(async (fixture) => {
     checks.push(
       "selection geometry and native layers at 1440/1024/768/390/320; dark appearance",
     );
+    // Planning widgets arrive with their view; nothing is staged inside them.
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    for (const [view, surface] of [
+      ["calendar", ".ec"],
+      ["gantt", ".wx-gantt"],
+      ["board", ".astra-board .wx-column"],
+    ]) {
+      await page.goto(
+        `${config.origin}/?${new URLSearchParams({ view, project: config.projects[0].id })}`,
+      );
+      await expect(page.locator(surface).first()).toBeVisible();
+      await settle();
+    }
+    const planning = await contentEffects();
+    assert.deepEqual(planning.scripted, [], "Widgets have no scripted layers");
+    assert(
+      planning.styled.every((item) => item.delay === 0 && !item.blurred),
+      JSON.stringify(planning.styled),
+    );
+    checks.push("Calendar, Timeline and Board arrive without staged layers");
     assert.deepEqual(await page.evaluate(() => window.motionProbe.csp), []);
-    checks.push(await checkCardLayers({ page, config, cli, runtime, settle }));
     assert.deepEqual(errors, []);
   } finally {
     await writeFile(

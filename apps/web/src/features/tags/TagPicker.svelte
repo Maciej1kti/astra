@@ -8,7 +8,6 @@
   import type { TagCatalog } from "../../lib/contracts/api.generated";
   import { isAbortError } from "../../lib/api/read-requests";
   import { addTag, matchingTags, TAG_LIMIT } from "./tags";
-  import { revealLayers, suggestionLayers } from "../../lib/ui/motion-layers";
 
   let {
     labels = $bindable<string[]>([]),
@@ -302,7 +301,6 @@
     <ul
       id={`${id}-options`}
       class="suggestions"
-      use:revealLayers={suggestionLayers}
       role="listbox"
       aria-label={folder ? "Istniejące foldery" : "Istniejące tagi"}
     >
@@ -345,7 +343,7 @@
   }
   .heading {
     justify-content: space-between;
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     margin-bottom: var(--space-4);
   }
   label {
@@ -386,30 +384,46 @@
   .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-3);
+    gap: 0 var(--space-3);
   }
   .chips li {
+    position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
-    gap: var(--space-2);
     max-width: 100%;
-    background: var(--bg);
-    border: var(--stroke) solid var(--line);
-    border-radius: var(--radius-control);
-    padding-left: var(--space-5);
+    padding-left: var(--space-4);
     font-size: var(--text-sm);
+  }
+  /* The visible chip is shorter than the 44px target it sits in. */
+  .chips li::before {
+    content: "";
+    position: absolute;
+    inset: var(--space-4) 0;
+    z-index: -1;
+    border-radius: var(--radius-sm);
+    background: var(--soft);
   }
   .chips li span {
     overflow-wrap: anywhere;
     white-space: pre-wrap;
   }
   .chips button {
+    display: grid;
+    place-items: center;
+    /* A full target centred on the small mark; it may overlap the label's end. */
+    width: var(--tap-target);
     min-width: var(--tap-target);
     min-height: var(--tap-target);
+    margin-inline: calc(-1 * var(--space-3));
     padding: 0;
     border: 0;
     background: transparent;
-    font-size: var(--text-xl);
+    color: var(--muted);
+  }
+  .chips button:hover {
+    color: var(--ink);
+    background: transparent;
   }
   .suggestions {
     border: var(--stroke) solid var(--line);
@@ -431,7 +445,7 @@
   }
   .tag-error {
     color: var(--danger);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
   .sr-only {
     position: absolute;

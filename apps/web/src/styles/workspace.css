@@ -53,8 +53,8 @@
   font-weight: inherit;
 }
 .action-menu-panel.navigation-menu-panel {
-  width: min(22rem, calc(100vw - 24px));
-  max-width: calc(100vw - 24px);
+  width: min(var(--field-max-width), calc(100vw - var(--space-10)));
+  max-width: calc(100vw - var(--space-10));
 }
 .navigation-panel {
   overflow-wrap: anywhere;
@@ -77,6 +77,17 @@
 .navigation-customization {
   margin-top: var(--space-4);
   border-top: var(--stroke) solid var(--line);
+}
+@media (min-width: 701px) {
+  .navigation-panel > strong,
+  .navigation-panel > .navigation-menu-link,
+  .navigation-panel > .navigation-hint:not([role]) {
+    display: none;
+  }
+  .navigation-customization {
+    margin-top: 0;
+    border-top: 0;
+  }
 }
 .navigation-customization summary {
   padding: var(--space-5);
@@ -156,8 +167,8 @@
 }
 .app .topbar .date {
   color: var(--muted);
-  font-family: var(--font-mono);
   margin-right: var(--space-4);
+  white-space: nowrap;
 }
 .app .workspace-label {
   flex: 1;
@@ -213,7 +224,7 @@
 }
 .app .heading p {
   margin: var(--space-4) 0 0;
-  font-size: var(--text-label);
+  font-size: var(--text-base);
   color: var(--muted);
 }
 .app .workspace-filters .toolbar {
@@ -286,7 +297,7 @@
   margin: var(--space-10) 0 var(--space-6);
 }
 .app .sectiontitle h2 {
-  font-size: var(--text-section);
+  font-size: var(--text-xl);
   letter-spacing: var(--tracking-tight);
   margin: 0;
 }
@@ -396,10 +407,6 @@
   min-width: 0;
   flex: 1;
 }
-.app .projectcard .projectopen-icon {
-  color: var(--muted);
-  font-size: var(--text-xl);
-}
 .app .projectcard .project-availability {
   min-width: 0;
   overflow: hidden;
@@ -447,7 +454,7 @@
   border: var(--stroke) dashed var(--line);
   padding: var(--space-10);
   border-radius: var(--radius-card);
-  font-size: var(--text-label);
+  font-size: var(--text-base);
   color: var(--muted);
   grid-column: 1/-1;
 }
@@ -501,16 +508,10 @@
 .app .table .listrow {
   margin: 0;
   border: 0;
-  border-top: var(--stroke) solid var(--line);
   border-radius: 0;
 }
-.app .tablehead {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: var(--space-6) var(--space-9);
-  font-size: var(--text-sm);
-  color: var(--muted);
-  background: var(--soft);
+.app .table .listrow + .listrow {
+  border-top: var(--stroke) solid var(--line);
 }
 .app .updates {
   max-width: var(--reading-width);
@@ -537,6 +538,10 @@
 .app .update small {
   font-size: var(--text-sm);
   color: var(--muted);
+}
+.app .update small time::before {
+  content: "·";
+  margin-inline: var(--space-3);
 }
 .app .update h3 {
   font-size: var(--text-lg);
@@ -833,12 +838,6 @@
   .app .workspace-filters .toolbar .month input {
     flex: 1;
   }
-  .app .tablehead {
-    grid-template-columns: 1fr;
-  }
-  .app .tablehead span:last-child {
-    display: none;
-  }
   .app .table .listrow {
     display: block;
   }
@@ -880,7 +879,7 @@
 @media (max-width: 360px) {
   .app > aside nav > button,
   .app > aside nav > .action-menu > button {
-    font-size: var(--text-compact);
+    font-size: var(--text-xs);
   }
   .app .list-filter-fields {
     grid-template-columns: 1fr;

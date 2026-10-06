@@ -300,7 +300,10 @@
   }
   .plot-legend {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(var(--field-min-width), 1fr)
+    );
     gap: var(--space-2) var(--space-8);
     margin: 0;
     padding: var(--space-6) var(--space-9) var(--space-2);
@@ -321,7 +324,7 @@
   }
   .series-key.line {
     width: var(--space-7);
-    height: 3px;
+    height: calc(var(--stroke) * 3);
     border-radius: var(--radius-pill);
   }
   .legend-name {
@@ -340,7 +343,7 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-3);
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
     font-variant-numeric: tabular-nums;
   }
   .legend-value strong {
@@ -424,7 +427,10 @@
       padding: var(--space-7) var(--space-8) 0;
     }
     .plot-legend {
-      grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+      grid-template-columns: repeat(
+        auto-fill,
+        minmax(var(--field-compact), 1fr)
+      );
       padding-inline: var(--space-8);
     }
     .plot-canvas {

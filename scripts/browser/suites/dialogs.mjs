@@ -148,13 +148,12 @@ await runBrowserSuite(
             page.locator(".astra-board .wx-theme"),
           ).not.toHaveAttribute("style");
           await expect(primaryCard).toContainText("Wysoki priorytet");
-          for (const text of [
-            "Plan",
-            "2026-09-10",
-            "2026-09-15",
-            "Research, discovery",
-          ])
+          for (const text of ["Plan", "Research, discovery"])
             await expect(primaryCard).toContainText(text);
+          // The range reads as a short date and keeps its machine value.
+          await expect(
+            primaryCard.locator('time[datetime="2026-09-10"]'),
+          ).toHaveText(/^10–15 wrz( 2026)?$/);
           await expect(primaryCard.locator(".tag")).toHaveCount(3);
           await expect(primaryCard.locator("button")).toHaveCount(1);
           assert.deepEqual(

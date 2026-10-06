@@ -81,10 +81,7 @@
           // this explicit trigger focus when its local proposal closes.
           event.currentTarget.focus({ preventScroll: true });
           calendarOpen = true;
-        }}
-        ><Icon name="calendar" small />Wybierz daty<span aria-hidden="true"
-          >↗</span
-        ></Button
+        }}><Icon name="calendar" small />Wybierz daty</Button
       >
       <div class="editor-properties card-properties">
         <label class="schedule-start">

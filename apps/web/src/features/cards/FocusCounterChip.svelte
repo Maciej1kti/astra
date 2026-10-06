@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from "../../lib/ui/Icon.svelte";
   import type { Summary } from "../../lib/api/api";
   import type { DailyCounterSummary } from "../../lib/contracts/api.generated";
   import { counterScrub } from "./counter-scrub";
@@ -80,8 +81,7 @@
     use:counterScrub={options()}
     onclick={() => onchange(item, counter, value, true)}
     ><strong>{value}</strong><span>{observed.unit}</span><span
-      class="scrub-hint"
-      aria-hidden="true">↔</span
+      class="scrub-hint"><Icon name="scrub" small /></span
     ></button
   >
   <span id={`${id}-help`} class="sr"

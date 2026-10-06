@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import type { Summary } from "../../lib/api/api";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
+  import { uiLocale } from "../../lib/ui/locale";
 
   let {
     project,
@@ -20,6 +20,7 @@
     onrefresh,
     logout,
     userName = "Właściciel",
+    defaultUser = true,
   }: {
     project: string;
     focus?: boolean;
@@ -35,16 +36,29 @@
     onrefresh: () => void;
     logout: () => void;
     userName?: string;
+    defaultUser?: boolean;
   } = $props();
   const folders = $derived(
     [...new Set(projects.flatMap((p) => (p.folder ? [p.folder] : [])))].sort(),
   );
+  const dayFormat = new Intl.DateTimeFormat(uiLocale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+  const dayLabel = $derived.by(() => {
+    const [year, month, day] = today.split("-").map(Number);
+    return year && month && day
+      ? dayFormat.format(new Date(Date.UTC(year, month - 1, day)))
+      : today;
+  });
   const projectName = $derived(
     projects.find((item) => item.id === project)?.title ?? "Wszystkie projekty",
   );
 </script>
 
-<header class="topbar" use:revealLayers={controlsLayers}>
+<header class="topbar">
   {#if focus}
     <select
       class="workspace-project"
@@ -80,7 +94,7 @@
           variant="quiet"
           onclick={ongit}>Git</Button
         >{/if}
-      <span class="date">{today}</span><Button
+      <time class="date" datetime={today}>{dayLabel}</time><Button
         variant="quiet"
         aria-label="Diagnostyka serwera"
         onclick={ondiagnostics}><Icon name="info" /></Button
@@ -91,7 +105,7 @@
       aria-label="Ustawienia przestrzeni roboczej"
       title={`Użytkownik: ${userName}`}
       onclick={onsettings}
-      ><span class="current-user">{userName}</span><Icon
+      ><span class="current-user" class:sr={defaultUser}>{userName}</span><Icon
         name="settings"
       /></Button
     ><Button variant="quiet" onclick={onrefresh} aria-label="Odśwież"
@@ -129,14 +143,14 @@
 
 <style>
   .current-user {
-    max-width: 8rem;
+    max-width: var(--field-compact);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   @media (max-width: 700px) {
     .current-user {
-      max-width: 4rem;
+      max-width: var(--space-20);
     }
   }
   @media (max-width: 360px) {

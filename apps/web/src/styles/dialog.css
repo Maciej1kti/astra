@@ -58,13 +58,13 @@ dialog::backdrop {
 }
 .dialog-heading h2 {
   margin: 0;
-  font-size: var(--text-section);
+  font-size: var(--text-xl);
   overflow-wrap: anywhere;
 }
 .dialog-heading p {
   margin: var(--space-2) 0 0;
   color: var(--muted);
-  font-size: var(--text-label);
+  font-size: var(--text-base);
 }
 .dialog-header-actions,
 .record-actions {
@@ -123,13 +123,13 @@ dialog::backdrop {
   max-width: 100%;
 }
 .app-dialog label {
-  font-size: var(--text-label);
+  font-size: var(--text-base);
   font-weight: var(--weight-medium);
 }
 .app-dialog summary {
   min-height: var(--tap-target);
-  display: list-item;
-  align-content: center;
+  display: flex;
+  align-items: center;
   cursor: pointer;
   font-weight: var(--weight-medium);
 }
@@ -151,7 +151,7 @@ dialog::backdrop {
   justify-content: center;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
-  font-size: var(--text-label);
+  font-size: var(--text-base);
   font-weight: var(--weight-medium);
 }
 .action-menu-panel {

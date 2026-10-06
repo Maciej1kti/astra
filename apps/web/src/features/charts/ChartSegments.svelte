@@ -49,7 +49,7 @@
     border-radius: calc(var(--radius-control) - var(--space-1));
     background: transparent;
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     white-space: nowrap;
   }
   .chart-segments :global(button:hover) {

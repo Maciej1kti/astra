@@ -29,6 +29,7 @@ const labels: Record<string, string> = {
   agent: "Bot",
   bot: "Bot",
   unavailable: "Niedostępne",
+  stale: "Nieaktualne",
   prepared: "Przygotowane",
   blocked: "Zablokowane",
   needs_review: "Wymaga sprawdzenia",

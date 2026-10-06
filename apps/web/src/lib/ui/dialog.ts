@@ -1,5 +1,4 @@
 import { motionDuration } from "./motion";
-import { dialogLayers, revealLayers } from "./motion-layers";
 
 type ModalOptions = {
   onclose: () => void;
@@ -113,13 +112,11 @@ export function modal(element: HTMLDialogElement, options: ModalOptions) {
       focused.focus({ preventScroll: true });
   }
   for (const changed of [...modalObservers]) changed();
-  const entrance = revealLayers(element, dialogLayers);
   return {
     update(next: ModalOptions) {
       options = next;
     },
     destroy() {
-      entrance.destroy();
       presence.destroy();
       element.removeEventListener("cancel", cancel);
       element.removeEventListener("click", pointerFocus, true);
@@ -152,8 +149,7 @@ export function modal(element: HTMLDialogElement, options: ModalOptions) {
 export function layerExit(node: HTMLElement) {
   // Read preferences again when a quickly reopened layer starts another exit.
   return () => ({
-    duration: motionDuration(node, "--motion-exit", 220),
-    css: (t: number) =>
-      `opacity: ${t}; transform: translateY(${(1 - t) * 6}px) scale(${0.985 + t * 0.015});`,
+    duration: motionDuration(node, "--motion-exit", 160),
+    css: (t: number) => `opacity: ${t};`,
   });
 }

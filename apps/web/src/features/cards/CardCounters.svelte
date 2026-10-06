@@ -135,6 +135,7 @@
         >
         <button
           type="button"
+          class="quiet"
           {disabled}
           onclick={() => {
             draft.configuration = null;
@@ -158,12 +159,13 @@
     </div>
   {/if}
   <div class="counter-actions">
-    {#if counters.length === 0}
+    {#if !counters.some((counter) => counter.archived)}
       <Button
         type="button"
         variant="quiet"
         disabled={!canAdd}
-        onclick={() => void configure()}>Dodaj licznik</Button
+        onclick={() => void configure()}
+        ><Icon name="plus" small />Dodaj licznik</Button
       >
     {:else}
       <ActionMenu label="Działania licznika">

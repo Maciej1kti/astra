@@ -55,7 +55,7 @@ await runBrowserSuite(
       );
       await expect.poll(rows).toHaveLength(3);
       await expect(
-        page.getByRole("button", { name: "Nowa zaplanowana karta" }),
+        page.getByTitle("Nowa karta zaplanowana na wybrany dzień"),
       ).toHaveCount(0);
       await expect(page.getByText("Oś czasu shortcuts & editing")).toHaveCount(
         0,

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { layerExit, layerPresence } from "./dialog";
-  import { menuLayers, revealLayers } from "./motion-layers";
   import { popoverPosition } from "./popover-position";
   import type { Snippet } from "svelte";
   import Icon from "./Icon.svelte";
@@ -118,7 +117,6 @@
   {#if open}<div
       use:popoverPosition={{ anchor: trigger!, align, placement }}
       use:layerPresence
-      use:revealLayers={menuLayers}
       out:layerExit
       class={`action-menu-panel floating ${panelClass}`}
       popover="manual"
@@ -135,6 +133,6 @@
     margin: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    animation-name: astra-surface-fade;
+    animation-name: astra-fade;
   }
 </style>

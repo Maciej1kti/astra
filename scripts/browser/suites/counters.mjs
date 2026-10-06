@@ -68,8 +68,8 @@ await runBrowserSuite(
           name: "Działania licznika",
           exact: true,
         });
-        if (name === "Push-ups") await expect(menu).toHaveCount(0);
-        else await menu.click();
+        // The menu appears only once a counter has been archived.
+        await expect(menu).toHaveCount(0);
         await section
           .getByRole("button", { name: "Dodaj licznik", exact: true })
           .click();

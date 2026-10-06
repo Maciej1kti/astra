@@ -91,7 +91,7 @@
     outline-offset: var(--focus-width);
   }
   h3 {
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
     margin: 0;
     overflow-wrap: anywhere;
   }

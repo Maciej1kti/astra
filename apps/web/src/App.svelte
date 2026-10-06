@@ -1,8 +1,9 @@
 <script lang="ts">
   import { errorMessage, serverMessage } from "./lib/api/messages.ts";
-  import { motionEnvironment, revealScene } from "./lib/ui/motion";
+  import { motionEnvironment } from "./lib/ui/motion";
   import PageHeading from "./lib/ui/PageHeading.svelte";
   import Button from "./lib/ui/Button.svelte";
+  import Icon from "./lib/ui/Icon.svelte";
   import DeferredDialog from "./lib/ui/DeferredDialog.svelte";
   import DeferredHost from "./lib/ui/DeferredHost.svelte";
   import DeferredView from "./lib/ui/DeferredView.svelte";
@@ -430,6 +431,12 @@
   }
   let queryKey = $derived(viewQueryKey(currentQuery()));
   const projectOverview = $derived(routing.current.view === "projects");
+  // In Calendar the page action plans the new card on the day being shown.
+  const scheduledCreate = $derived(
+    routing.current.view === "calendar" &&
+      !!routing.current.project &&
+      !!routing.current.calendarDate,
+  );
   let queryReady = $derived(loadedQueryKey === queryKey);
   function sessionEnded() {
     editor?.opening?.cancel();
@@ -699,6 +706,7 @@
     <div class="workspace">
       <WorkspaceHeader
         userName={boot.user?.name ?? "Właściciel"}
+        defaultUser={boot.user?.is_default ?? true}
         project={routing.current.project}
         {projects}
         selectable={!projectOverview}
@@ -723,10 +731,21 @@
           <PageHeading title={viewLabel(routing.current.view)}>
             <Button
               variant="primary"
+              title={scheduledCreate
+                ? "Nowa karta zaplanowana na wybrany dzień"
+                : undefined}
               onclick={projectOverview
                 ? addProject
-                : () => create(primaryResource(routing.current.view))}
-              >＋ {projectOverview
+                : scheduledCreate
+                  ? () =>
+                      create("card", {
+                        schedule: {
+                          start: routing.current.calendarDate,
+                          end: routing.current.calendarDate,
+                        },
+                      })
+                  : () => create(primaryResource(routing.current.view))}
+              ><Icon name="plus" small />{projectOverview
                 ? "Dodaj projekt"
                 : routing.current.view === "updates"
                   ? "Dodaj aktualizację"
@@ -738,7 +757,8 @@
             <span role="alert">{error}</span><Button
               variant="quiet"
               onclick={() => (error = "")}
-              aria-label="Zamknij komunikat błędu">✕</Button
+              aria-label="Zamknij komunikat błędu"
+              ><Icon name="close" small /></Button
             >
           </div>{/if}
         {#if !connected}<div class="connection">
@@ -754,21 +774,7 @@
             onchange={routing.changeFilters}
             changeMonth={routing.changeMonth}
           />{/if}
-        {#key routing.current.view}<div
-            class="view-content"
-            use:revealScene={{
-              ...(routing.current.view === "projects"
-                ? { distance: "0px" }
-                : {}),
-              ready:
-                queryReady &&
-                !["calendar", "gantt", "chart"].includes(
-                  routing.current.view,
-                ) &&
-                !(routing.current.view === "board" && routing.current.project),
-              key: routing.current.project,
-            }}
-          >
+        {#key routing.current.view}<div class="view-content">
             {#if (!queryReady || (projectionMessage && !projects.length)) && ["focus", "list", "updates", "projects"].includes(routing.current.view)}
               <div class="empty" role="status">Ładowanie danych…</div>
             {:else if routing.current.view === "focus"}
@@ -899,7 +905,7 @@
             onclick={(event) => {
               event.currentTarget.focus({ preventScroll: true });
               create("card");
-            }}>＋ Dodaj kartę</Button
+            }}><Icon name="plus" small />Dodaj kartę</Button
           >
         {/if}
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =

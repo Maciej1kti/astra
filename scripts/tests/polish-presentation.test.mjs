@@ -9,6 +9,8 @@ import {
   countedFiles,
   plannedDays,
   uiLocale,
+  formatCivilDate,
+  formatCivilRange,
 } from "../../apps/web/src/lib/ui/locale.ts";
 import { focusSectionCount } from "../../apps/web/src/features/workspace/screens/focus-sections.ts";
 import {
@@ -131,4 +133,26 @@ test("server and browser failures have Polish presentation while protocol detail
     errorMessage(new SyntaxError("Unexpected token")),
     /Nieprawidłowe dane JSON/,
   );
+});
+
+test("civil dates read as short Polish dates and name the year only when it differs", () => {
+  assert.equal(formatCivilDate("2026-09-07", 2026), "7 wrz");
+  assert.equal(formatCivilDate("2025-12-31", 2026), "31 gru 2025");
+  assert.equal(formatCivilRange("2026-09-07", "2026-09-09", 2026), "7–9 wrz");
+  assert.equal(
+    formatCivilRange("2026-09-28", "2026-10-02", 2026),
+    "28 wrz – 2 paź",
+  );
+  assert.equal(
+    formatCivilRange("2026-12-30", "2027-01-02", 2026),
+    "30 gru 2026 – 2 sty 2027",
+  );
+  assert.equal(
+    formatCivilRange("2027-03-01", "2027-03-04", 2026),
+    "1–4 mar 2027",
+  );
+  assert.equal(formatCivilRange("2026-09-07", undefined, 2026), "7 wrz");
+  assert.equal(formatCivilRange("2026-09-07", "2026-09-07", 2026), "7 wrz");
+  // An event start keeps its civil day; its time is shown separately.
+  assert.equal(formatCivilDate("2026-10-06T14:30", 2026), "6 paź");
 });

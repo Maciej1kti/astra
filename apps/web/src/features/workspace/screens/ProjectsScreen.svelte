@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resourceLabel } from "../../../lib/resources/resource-presentation";
   import { counted } from "../../../lib/ui/locale.ts";
   import type { Summary } from "../../../lib/api/api";
   import ActionMenu from "../../../lib/ui/ActionMenu.svelte";
@@ -88,13 +89,14 @@
           >{item.title}</span
         ></span
       >
-      <span class="projectopen-icon" aria-hidden="true">↗</span>
     </button>
     {#if item.folder || (item.availability && item.availability !== "ready")}
       <div class="resource-metadata project-board-meta">
         {#if item.folder}<Badge>{item.folder}</Badge>{/if}
         {#if item.availability && item.availability !== "ready"}
-          <span class="project-availability">{item.availability}</span>
+          <span class="project-availability"
+            >{resourceLabel(item.availability)}</span
+          >
         {/if}
       </div>
     {/if}
@@ -113,7 +115,7 @@
       <div class="project-board-menus">
         <ActionMenu
           placement="auto"
-          icon="arrow"
+          icon="board"
           label={`Przenieś ${item.title}`}
           disabled={disabled || !canMoveProject(item)}
         >
@@ -152,7 +154,7 @@
 {/snippet}
 
 <div class="projects-screen">
-  <p class="projects-help" id={helpId}>
+  <p class="projects-help sr" id={helpId}>
     Przeciągnij projekt za uchwyt lub użyj menu przenoszenia, aby zmienić
     status.
   </p>
@@ -236,7 +238,7 @@
   .projects-help {
     margin: 0 0 var(--space-8);
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     line-height: var(--leading-body);
   }
   .project-status-board {
@@ -277,7 +279,7 @@
   }
   .project-board .card-title {
     margin: 0;
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
   }
   .project-board-meta {
     display: flex;
@@ -293,17 +295,16 @@
     white-space: normal;
     overflow-wrap: anywhere;
   }
-  .project-availability {
-    text-transform: capitalize;
-  }
   .project-board-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: var(--space-4);
-    margin-top: var(--space-6);
-    padding-top: var(--space-4);
-    border-top: var(--stroke) solid var(--line);
+    margin: var(--space-2) calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+    color: var(--muted);
+  }
+  .project-board-actions :global(button) {
+    color: inherit;
   }
   .project-board-handle {
     touch-action: none;
@@ -320,7 +321,7 @@
   .projects-unavailable {
     margin-top: var(--space-8);
   }
-  @media (max-width: 767px) {
+  @media (max-width: 700px) {
     .project-state-column {
       flex-basis: min(82vw, var(--field-max-width));
     }

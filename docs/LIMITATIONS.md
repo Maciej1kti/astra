@@ -52,6 +52,7 @@ it does not provide a migration tool for arbitrary existing data.
 | Playwright WebKit | Targeted macOS suites have evidence; some suite/harness limits are recorded in dated reports |
 | Physical iPhone / Safari | Full device acceptance remains open; phone viewport emulation and desktop WebKit are not substitutes |
 | Other architectures/browsers | No blanket compatibility or support claim; a new target needs its own build and behavioral evidence |
+| Browser age | Colours use CSS `light-dark()` and menus use native popovers, so the interface needs Chrome/Edge 123, Firefox 120 or Safari 17.5 and later; an older browser shows unstyled colours |
 
 The [CI definition](../.github/workflows/check.yml) specifies Ubuntu 24.04 and
 macOS 15. Its presence is not proof that the latest remote run passed. See the

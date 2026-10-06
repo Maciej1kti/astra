@@ -1,35 +1,30 @@
 <script lang="ts">
-  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
   import ActionMenu from "../../lib/ui/ActionMenu.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
   import type { CalendarLayout } from "./planning-navigation";
-  import { isCalendarDate, widgetDate } from "./widget-dates";
+  import { widgetDate } from "./widget-dates";
 
   let {
     date,
     mode,
     compact,
     monthGrid,
-    project,
     navigate,
     today,
     changeDate,
     changeLayout,
     changeMonthGrid,
-    create,
   }: {
     date: string;
     mode: CalendarLayout;
     compact: boolean;
     monthGrid: boolean;
-    project: string;
     navigate: (delta: number) => void;
     today: () => void;
     changeDate: (input: HTMLInputElement) => void;
     changeLayout: (mode: CalendarLayout) => void;
     changeMonthGrid: (grid: boolean) => void;
-    create: () => void;
   } = $props();
   const monthFormat = new Intl.DateTimeFormat("pl-PL", {
     month: "long",
@@ -38,7 +33,7 @@
   const title = $derived(monthFormat.format(widgetDate(date)));
 </script>
 
-<div class="calendar-toolbar" use:revealLayers={controlsLayers}>
+<div class="calendar-toolbar">
   <div class="period-title">
     <ActionMenu
       label="Wybierz datę kalendarza"
@@ -66,13 +61,13 @@
       variant="quiet"
       class="icon-button previous"
       aria-label="Poprzedni okres kalendarza"
-      onclick={() => navigate(-1)}><Icon name="chevronDown" /></Button
+      onclick={() => navigate(-1)}><Icon name="chevronLeft" /></Button
     >
     <Button
       variant="quiet"
       class="icon-button next"
       aria-label="Następny okres kalendarza"
-      onclick={() => navigate(1)}><Icon name="chevronDown" /></Button
+      onclick={() => navigate(1)}><Icon name="chevronRight" /></Button
     >
   </div>
   <div class="view-controls">
@@ -109,17 +104,6 @@
         >
       </div>
     {/if}
-    {#if project}
-      <Button
-        variant="quiet"
-        class="create-scheduled"
-        aria-label="Nowa zaplanowana karta"
-        title="Nowa zaplanowana karta"
-        disabled={!isCalendarDate(date)}
-        onclick={create}
-        ><Icon name="plus" small /><span>Nowa karta</span></Button
-      >
-    {/if}
   </div>
 </div>
 
@@ -140,7 +124,7 @@
     justify-content: flex-end;
     max-width: 100%;
     padding-inline: 0;
-    font-size: var(--text-section);
+    font-size: var(--text-xl);
     font-weight: var(--weight-semibold);
     letter-spacing: var(--tracking-tight);
     text-align: left;
@@ -180,23 +164,17 @@
     gap: var(--space-1);
   }
   .navigation :global(.today) {
-    min-width: 60px;
+    min-width: var(--space-20);
     padding-inline: var(--space-5);
-    font-size: var(--text-label);
-  }
-  .navigation :global(.previous .ui-icon) {
-    transform: rotate(90deg);
-  }
-  .navigation :global(.next .ui-icon) {
-    transform: rotate(-90deg);
+    font-size: var(--text-base);
   }
   .view-controls {
     gap: var(--space-6);
   }
   select {
-    min-width: 110px;
+    min-width: var(--field-compact);
     min-height: var(--tap-target);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
     background: var(--soft);
     border-color: transparent;
     cursor: pointer;
@@ -215,11 +193,6 @@
     color: var(--accent-ink);
     box-shadow: var(--shadow-sm);
   }
-  .view-controls :global(.create-scheduled) {
-    font-size: var(--text-label);
-    padding-inline: var(--space-5);
-    white-space: nowrap;
-  }
   @media (max-width: 1100px) {
     .calendar-toolbar {
       display: grid;
@@ -229,11 +202,8 @@
     .view-controls {
       grid-column: 1 / -1;
     }
-    .view-controls :global(.create-scheduled) {
-      margin-left: auto;
-    }
   }
-  @media (max-width: 720px) {
+  @media (max-width: 700px) {
     .period-title :global(.action-menu-labeled) {
       font-size: var(--text-xl);
       gap: var(--space-3);
@@ -245,15 +215,6 @@
       flex: 1;
       min-width: 0;
       font-size: var(--text-lg);
-    }
-    .view-controls :global(.create-scheduled) {
-      min-width: var(--tap-target);
-      padding-inline: var(--space-5);
-    }
-  }
-  @media (max-width: 360px) {
-    .view-controls :global(.create-scheduled span) {
-      display: none;
     }
   }
 </style>

@@ -112,6 +112,6 @@
   dt,
   small {
     color: var(--muted);
-    font-size: var(--text-label);
+    font-size: var(--text-base);
   }
 </style>

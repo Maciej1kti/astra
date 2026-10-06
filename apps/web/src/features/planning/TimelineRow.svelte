@@ -27,7 +27,7 @@
       }}><Icon name="grip" small /></button
     >
     <span>{row.text}</span>
-  {:else}<span class="empty-label">Wybierz datę →</span>{/if}
+  {:else}<span class="empty-label">Wybierz datę</span>{/if}
 </div>
 
 <style>
@@ -41,6 +41,13 @@
   .row-label span {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  /* The compact grid wraps titles; show two whole lines, never a cut one. */
+  :global(.compact) .row-label span {
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
   .row-grip {
     display: inline-flex;

@@ -141,7 +141,7 @@ await runBrowserSuite(
       );
       await context.storageState({ path: join(runtime, "browser-state.json") });
       const workspaceToday = (
-        await page.locator(".topbar .date").innerText()
+        await page.locator(".topbar .date").getAttribute("datetime")
       ).trim();
       assert.match(workspaceToday, /^\d{4}-\d{2}-\d{2}$/);
       report.workspaceToday = workspaceToday;

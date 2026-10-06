@@ -117,7 +117,7 @@
 
 <style>
   h3 {
-    font-size: var(--text-card);
+    font-size: var(--text-lg);
     margin-top: var(--space-10);
   }
   small {
