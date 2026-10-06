@@ -1,0 +1,18 @@
+{
+  "body": "The soft, layered entrances are back in 849b2da and running in the existing HTTPS app: views, dialogs, menus, toolbars, Calendar and card details appear in layers again with their original timing and curves, at the owner's direction. The rest of the interface refinement is unchanged.\n\nRemoving them had been a wrong reading of the minimalism brief. Changes to this motion need the owner's agreement first. Evidence: progress/2026-10-06-layered-motion-restored.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "3025f222-089c-4822-bd78-ac2e8e1ea612",
+    "kind": "result",
+    "recorded_at": "2026-10-06T11:31:42.021Z",
+    "summary": "Soft layered entrances restored",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
