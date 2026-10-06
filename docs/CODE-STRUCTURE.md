@@ -174,7 +174,9 @@ shared resource presentation; `lib/ui` contains shared rendering and dialog
 behavior and the small shared component set. `lib/ui/motion.ts` owns bounded
 scene entrances, bounded inner card layers, measured navigation selection and live reduced-motion cleanup;
 `lib/ui/motion-layers.ts` owns bounded heading/content/detail sequences for native
-layers, workspace controls, the Chart view and plot marks, with explicit per-opening keys and cleanup;
+layers, menus and workspace controls, with explicit per-opening keys and cleanup;
+sequences used by one lazily loaded feature live beside it, as in
+`features/charts/chart-motion.ts` and `features/planning/calendar-motion.ts`;
 features supply their navigation keys and readiness without changing read lifetimes. Visual values live in
 `styles/tokens.css`; workspace and editor styles consume those tokens. See the
 [UI design system](DESIGN-SYSTEM.md) for component and layout ownership.

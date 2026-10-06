@@ -1,10 +1,7 @@
 <script lang="ts">
   import { revealScene } from "../../lib/ui/motion";
-  import {
-    controlsLayers,
-    groupLayers,
-    revealLayers,
-  } from "../../lib/ui/motion-layers";
+  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
+  import { groupLayers } from "./calendar-motion";
   import { errorMessage } from "../../lib/api/messages.ts";
   import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
   import { resourceLabel } from "../../lib/resources/resource-presentation";

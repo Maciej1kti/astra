@@ -52,7 +52,7 @@ export function revealLayers(node: HTMLElement, initial: Sequence) {
               onScreen(element),
           );
         for (const [index, element] of targets.entries()) {
-          if (planned.length >= 32) break;
+          if (planned.length >= 48) break;
           const parent = layer.afterParent
             ? planned.filter((item) => item.element.contains(element)).at(-1)
             : undefined;
@@ -140,20 +140,38 @@ export const dialogLayers: Sequence = {
       afterParent: true,
       rise: true,
     },
+    // Fields, rows and notes inside each block of an ordinary dialog.
+    {
+      selector: ".dialog-body > :not(.card-body-grid, .dialog-footer) > *",
+      role: "detail",
+      delay: 260,
+      stagger: 36,
+      afterParent: true,
+    },
+    // Rows inside a card section.
+    {
+      selector:
+        ".card-section-content :is(.checklist li, .add-row, .counter, .counter-actions, .comment-composer, .comment-history > li, .schedule-heading, .tags .input-row)",
+      role: "detail",
+      delay: 260,
+      stagger: 36,
+      afterParent: true,
+    },
   ],
 };
 
 export const menuLayers: Sequence = {
   layers: [
     {
-      selector: ":scope > .layout-panel-heading",
+      selector: ":scope > .layout-panel-heading, .navigation-panel > strong",
       role: "heading",
       delay: 50,
       distance: "4px",
     },
+    // A wrapper is not a layer: its items enter one by one.
     {
       selector:
-        ":scope > :not(.layout-order, .layout-panel-heading, .layout-panel-footer), .layout-order > li",
+        ":scope > :not(.layout-order, .layout-panel-heading, .layout-panel-footer, .navigation-panel), .layout-order > li, .navigation-panel > :not(strong)",
       role: "detail",
       delay: 100,
       stagger: 36,
@@ -177,70 +195,6 @@ export const suggestionLayers: Sequence = {
 export const controlsLayers: Sequence = {
   layers: [{ selector: ":scope > *", role: "detail", delay: 80, stagger: 40 }],
 };
-
-/** Chart view: controls, the counter list, plot surfaces and the summary. */
-export const chartLayers = [
-  {
-    selector: ".chart-options > *, .chart-controls > *",
-    role: "detail",
-    delay: 80,
-    stagger: 40,
-  },
-  { selector: ".counter-picker", role: "content", delay: 100 },
-  {
-    selector: ".picker-summary, .counter-search",
-    role: "heading",
-    delay: 160,
-    stagger: 40,
-    afterParent: true,
-    soften: false,
-  },
-  {
-    selector: ".counter-option",
-    role: "detail",
-    delay: 220,
-    stagger: 32,
-    afterParent: true,
-  },
-  {
-    selector: ".chart-panel, .chart-workspace > .empty",
-    role: "content",
-    delay: 160,
-    stagger: 60,
-  },
-  {
-    selector: ".plot-heading",
-    role: "heading",
-    delay: 240,
-    afterParent: true,
-    distance: "4px",
-  },
-  { selector: ".chart-note", role: "detail", delay: 360 },
-  {
-    selector: ".summary-heading",
-    role: "heading",
-    delay: 300,
-    distance: "4px",
-  },
-  {
-    selector: ".summary-row",
-    role: "detail",
-    delay: 360,
-    stagger: 36,
-  },
-] as const;
-
-/** One plot: its readout, then the marks rising from the baseline. */
-export const plotLayers = [
-  {
-    selector: ".plot-legend > li",
-    role: "detail",
-    delay: 280,
-    stagger: 36,
-    soften: true,
-  },
-  { selector: ".plot-marks", role: "content", delay: 320, rise: true },
-] as const;
 
 /** Pairing page: brand, headline, lead and the pairing surface. */
 export const pairingLayers: Sequence = {
@@ -268,15 +222,3 @@ export const pairingLayers: Sequence = {
     },
   ],
 };
-
-/** A titled group of small items below a view, such as unscheduled cards. */
-export const groupLayers: Sequence["layers"] = [
-  { selector: ":scope > h3", role: "heading", delay: 60, distance: "4px" },
-  {
-    selector:
-      ":scope > * > button, :scope > * > p, :scope > p, :scope > details",
-    role: "detail",
-    delay: 140,
-    stagger: 32,
-  },
-];

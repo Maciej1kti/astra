@@ -38,6 +38,10 @@ fixed baseline without moving the plot, that a refresh replays nothing, that a
 new grouping lets only the marks rise again and that reduced motion starts none.
 It also blanks the easing tokens and navigates: entrances must then be skipped
 without a page error, as when a page loads before its stylesheet applies.
+The inner-layer scenario opens Settings, the phone header menu and the
+navigation menu: fields must follow their block, menu items and customization
+rows must enter in turn, a menu wrapper may not be a layer of its own, a
+disclosure must reveal its content softly and reduced motion must start none.
 The card-layer scenarios check titles/context, metadata, labels and daily counters
 in In focus/In motion/Events, Projects, List (within one project and across
 projects) and both Board modes. Actual bounds

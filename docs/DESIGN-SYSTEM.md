@@ -383,13 +383,17 @@ in its first frames or while a parent is still invisible.
 | Calendar | `calendar-motion.ts` supplies `revealLayers` with current-page readiness and project/date/widget-view keys; popup layers stay in `CalendarView` |
 | Timeline | Feature-owned `revealScene` on the native chart with zero travel |
 | Page headings, dialogs, menus, suggestions and toolbars | `revealLayers` with explicit local selectors and opening keys |
-| Chart | `chartLayers` on the dashboard, ready after the first read and keyed by the project preference key: controls, the counter list and its rows, plot surfaces and headings, the note and summary rows |
+| Chart | `chartLayers` (`features/charts/chart-motion.ts`) on the dashboard, ready after the first read and keyed by the project preference key: controls, the counter list and its rows, plot surfaces and headings, the note and summary rows |
 | Plot marks and readout | `plotLayers` on each plot, keyed by what is plotted (series, grouping, totals and range): the legend values, then the `.plot-marks` group rising from the baseline |
 | Counter trends in the card editor | `dialogLayers` raises each `.counter-trend` after its section |
 | Timeline's unscheduled cards, Calendar legend and help | `groupLayers` and `metaLayers`, ready with their view's current page |
 | Pairing page | `pairingLayers`: brand, headline, lead, the pairing surface and its contents |
 | Sidebar and phone dock | `controlsLayers` on the navigation, once per page load; opacity only, so measured selection geometry is unchanged |
 | List filter panel | Its surface and fields follow the search row in `WorkspaceFilters` |
+| Fields and rows inside a dialog | `dialogLayers`: the children of each body block, and checklist, counter, comment, schedule and tag rows of a card, follow their block from 260 ms in 36 ms steps |
+| Menu items | `menuLayers`: every item is its own layer. A wrapper such as `.navigation-panel` is excluded and its children are listed instead, so a menu never fades in as one block |
+| Disclosures | `details[open] > :not(summary)` rises softly in `styles/motion.css`. The navigation customization also staggers its rows one frame after opening, once the panel has been repositioned |
+| Feedback and rows that arrive later | Editor feedback, new comments, counters and tag rows fade in; opacity only, and never on a reorderable list, where moving a row would restart the effect |
 | Navigation, shared controls and disclosures | Shared motion actions and `styles/motion.css`; no feature-specific replacement |
 
 Every view, dialog and menu has an entrance; a new surface joins one of the
@@ -405,7 +409,7 @@ stylesheet has applied them, `motion.ts` skips the effect and the content
 appears at once; it never passes an empty easing to the browser.
 
 Local sequences consider at most 16 candidates per layer descriptor and start at
-most 32 visible effects per opening/navigation key, with delays capped at 560 ms.
+most 48 visible effects per opening/navigation key, with delays capped at 560 ms.
 This effect limit is distinct from the number of candidate measurements.
 No persistent observer or per-event widget
 animation is added. General control groups, draggable content and metadata only fade;

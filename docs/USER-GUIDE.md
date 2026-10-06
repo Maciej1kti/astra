@@ -135,7 +135,9 @@ Chart opens the same way: its controls, counter list and plot surfaces appear
 in turn and the bars or lines rise from the baseline. They rise again when you
 change the selected counters, grouping, totals or range, and stay still during
 a refresh. The pairing page, the sidebar, List filters and the cards listed
-under Timeline use the same soft entrances.
+under Timeline use the same soft entrances. Inside a dialog the fields and
+rows follow their section, menu items appear one after another, and an opened
+disclosure such as **Dostosuj nawigację** reveals its rows in turn.
 Buttons respond to a press, and the navigation highlight follows the selected
 view on desktop and mobile. To disable these effects, enable **Reduce motion**
 in your operating system; Astra follows changes immediately, including while

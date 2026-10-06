@@ -31,3 +31,15 @@ export const calendarLayers = [
 export const metaLayers = [
   { selector: ":scope > *", role: "detail", delay: 300, stagger: 60 },
 ] as const;
+
+/** A titled group of small items below a view, such as unscheduled cards. */
+export const groupLayers = [
+  { selector: ":scope > h3", role: "heading", delay: 60, distance: "4px" },
+  {
+    selector:
+      ":scope > * > button, :scope > * > p, :scope > p, :scope > details",
+    role: "detail",
+    delay: 140,
+    stagger: 32,
+  },
+] as const;

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { plotLayers, revealLayers } from "../../lib/ui/motion-layers";
+  import { revealLayers } from "../../lib/ui/motion-layers";
+  import { plotLayers } from "./chart-motion";
   import {
     chartBand,
     chartBar,

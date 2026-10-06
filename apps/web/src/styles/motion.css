@@ -152,6 +152,20 @@
   .schedule-calendar-grid {
     animation: astra-fade var(--motion-enter) var(--motion-emerge);
   }
+  /* A disclosure's content and a banner arriving later appear softly too. */
+  details[open] > :not(summary),
+  .app main > .notice {
+    animation: astra-reveal var(--motion-enter) var(--motion-emerge);
+  }
+  /* Opacity only: feedback and new rows must not shift measured layout, and a
+     reorderable list is left out because moving a row would restart it. */
+  .dialog-header-messages > *,
+  .navigation-customization,
+  .comment-history > li,
+  .counter-list > .counter,
+  .tag-list li {
+    animation: astra-fade var(--motion-detail) var(--motion-emerge);
+  }
   :where(
     button,
     input,

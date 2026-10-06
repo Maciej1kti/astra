@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { runBrowserSuite } from "../runtime.mjs";
 import { checkCardLayers } from "../motion-card-layers.mjs";
 import { checkChartLayers } from "../motion-chart-layers.mjs";
+import { checkInnerLayers } from "../motion-inner-layers.mjs";
 
 await runBrowserSuite(async (fixture) => {
   const { config, evidence, newContext, browser, cli, runtime } = fixture;
@@ -272,7 +273,7 @@ await runBrowserSuite(async (fixture) => {
     );
     assert(sections[0].delay < sections.at(-1).delay);
     assert(
-      dialogLayers.length <= 32 &&
+      dialogLayers.length <= 48 &&
         Math.max(...dialogLayers.map((layer) => layer.delay)) <= 560,
     );
     const dialogEntrance = await at150ms(".editor", "astra-dialog");
@@ -463,6 +464,7 @@ await runBrowserSuite(async (fixture) => {
     checks.push("entrances are skipped, not broken, while tokens are missing");
     checks.push(await checkCardLayers({ page, config, cli, runtime, settle }));
     checks.push(await checkChartLayers({ page, config, settle }));
+    checks.push(await checkInnerLayers({ page, config, settle }));
     assert.deepEqual(errors, []);
   } finally {
     await writeFile(

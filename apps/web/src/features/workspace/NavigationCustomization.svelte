@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { revealLayers } from "../../lib/ui/motion-layers";
   import Button from "../../lib/ui/Button.svelte";
   import OrderVisibilityList from "../../lib/ui/OrderVisibilityList.svelte";
   import { viewLabel } from "./navigation";
@@ -28,12 +29,25 @@
     });
     announcement = `${viewLabel(item)} ${showing ? "na pasku" : "poza paskiem"} nawigacji.`;
   }
+  // Each opening lets the rows enter in turn. The panel is repositioned for
+  // its new height first, so the rows are measured where they will be shown;
+  // the disclosure's own soft reveal covers that one frame.
+  let opened = $state(0);
+  const rows = [
+    { selector: ".layout-order > li", role: "detail", delay: 60, stagger: 36 },
+  ] as const;
 </script>
 
 <details
   class="navigation-customization"
+  use:revealLayers={{
+    key: String(opened),
+    ready: open && opened > 0,
+    layers: rows,
+  }}
   ontoggle={(event) => {
     open = event.currentTarget.open;
+    if (open) requestAnimationFrame(() => (opened += 1));
   }}
 >
   <summary>Dostosuj nawigację</summary>

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { chartLayers, revealLayers } from "../../lib/ui/motion-layers";
+  import { revealLayers } from "../../lib/ui/motion-layers";
+  import { chartLayers } from "./chart-motion";
   import { onMount } from "svelte";
   import PageHeading from "../../lib/ui/PageHeading.svelte";
   import EmptyState from "../../lib/ui/EmptyState.svelte";
