@@ -1,0 +1,21 @@
+{
+  "body": "Ok",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Maciek"
+    },
+    "id": "13086d15-7f45-455c-b505-497f72d8f355",
+    "kind": "resolution",
+    "recorded_at": "2026-10-05T20:56:47.759Z",
+    "resolves": [
+      "5e09c0e3-0475-4ffb-813b-5e625ad00afe"
+    ],
+    "summary": "Rozstrzygnięto: Decide how a needs_review write is settled",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
