@@ -28,7 +28,8 @@ On macOS, install the command-line development tools. On Linux, provide a C buil
 toolchain and Python venv support through your distribution. The intended host
 targets are macOS ARM64 and Linux x86_64, with Arch/Omarchy a target environment.
 Windows is not implemented: the daemon and CLI use Unix sockets and Unix filesystem
-facilities. CI runs on Ubuntu 24.04 and macOS 15; see the coverage limits linked above.
+facilities. The manually started CI workflow covers Ubuntu 24.04 and macOS 15; see
+the coverage limits linked above.
 
 Runtime and build dependencies differ: an installed daemon embeds the frontend
 and uses bundled SQLite. Node is needed for building and the trial proxy, Python

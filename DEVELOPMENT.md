@@ -113,9 +113,13 @@ acceptance. Artifacts go to ignored `test-results/browser/` by default.
 
 ## Packaging and CI
 
-[CI](.github/workflows/check.yml) runs on Ubuntu 24.04 and macOS 15. It installs the
-pinned toolchains, runs the local gate, Chromium browser suites, host packaging and
-package installation/recovery smoke. Workflow results apply to the tested commit.
+Verification is local: run the gate and the affected browser suites before a
+push, and push only work that passed them. [CI](.github/workflows/check.yml)
+does not start on a push or pull request; start it by hand from the Actions tab
+when a second-platform run is wanted. It then runs on Ubuntu 24.04 and macOS 15,
+installs the pinned toolchains, runs the local gate, Chromium browser suites,
+host packaging and package installation/recovery smoke. Workflow results apply
+to the tested commit.
 Advisory scanning is a [separate workflow](SECURITY.md#dependency-advisories).
 
 ```sh

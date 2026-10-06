@@ -66,7 +66,10 @@ roadmap and limitations accurate without inventing scope or acceptance decisions
 ## Verification and evidence
 
 Start data-loss/conflict fixes with a failing regression. Run checks appropriate
-to the change and the full gate before integration. Measure release builds when
+to the change and the full gate before integration. All verification runs
+locally, following the owner's 2026-10-06 direction: push only work whose local
+checks have passed, and do not start or wait for a remote workflow run unless
+the owner asks. The source workflow on GitHub starts only by manual dispatch. Measure release builds when
 reporting performance; report environment and coverage limits honestly.
 For UI changes, exercise affected workflows through the real daemon with
 [Playwright](scripts/browser/README.md), including relevant narrow-screen and

@@ -1,8 +1,6 @@
 name: Verify source and package
+# Verification is local; this second-platform run starts only by hand.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 permissions:
   contents: read

@@ -87,6 +87,13 @@ ignored `test-results/chart-redesign/` and
 `test-results/browser/chart-redesign-final-chromium/` and `-webkit/`. The
 histories were synthetic and lived in temporary hosts.
 
+## Remote workflow
+
+The push of `9170612` started the source workflow automatically. On both
+systems its gate step passed and its browser step was still running when the
+owner directed that verification stay local; its outcome was not awaited and
+is not part of this record. The workflow now starts only by manual dispatch.
+
 ## Limits
 
 - Browser emulation is not a physical iPhone or iPad test. Touch dragging was
