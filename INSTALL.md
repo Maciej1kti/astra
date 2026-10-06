@@ -91,6 +91,8 @@ Return to the browser to connect. The launcher starts a real release daemon on
 loopback port 47831 and a local HTTPS proxy on 47832. It creates a synthetic sample
 project on first use. `.manual/` retains sources, state, certificates and edits
 between runs. Ctrl+C stops the launcher; it does not erase the trial workspace.
+`ASTRA_TRY_AGENT=1 npm run try` also enables the in-app agent with the
+repository's `agent/` directory; see [Enable the in-app agent](#enable-the-in-app-agent).
 
 No system service or certificate trust is installed. Do not run this alongside
 another host already using those ports. For an existing tailnet trial and the
@@ -203,6 +205,45 @@ Then choose **Browse approved folders** in the browser. Local CLI registration
 does not require an approved browser root. No parent-folder or Git-remote search
 selects a project on your behalf.
 
+### Enable the in-app agent
+
+The browser's **Agent** button is off unless you start `projectd` with
+`--agent-dir`. It then runs a local Claude Code or Codex for each chat message,
+with your user's full rights and no permission prompts. Enable it only on an
+instance that people you trust use; read [limitations](docs/LIMITATIONS.md#in-app-agent)
+and [ADR-070](docs/ADR-070-AGENT-RUNS.md) first. The agent inherits the daemon's
+environment.
+
+Prerequisites on the host: Claude Code (`claude`) or Codex (`codex`), installed
+and signed in for the daemon's user; `projectctl` in the same directory as the
+`projectd` executable; and a directory holding the agent's instructions as
+`AGENTS.md`. The repository's [`agent/`](agent/AGENTS.md) is that directory:
+
+```sh
+target/release/projectd \
+  --data-dir "$HOME/.lp" \
+  --public-origin https://YOUR_PRIVATE_HOST \
+  --agent-dir "$PWD/agent"
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--agent-dir PATH` | Enables the agent. The directory must exist; it is the agent's working directory and must hold a non-empty `AGENTS.md` of at most 64 KiB |
+| `--agent-claude-bin PATH`, `--agent-codex-bin PATH` | Provider executables. By default the daemon looks for `claude` and `codex` on its own `PATH` when a run starts, which can differ from your shell's. Both need `--agent-dir` |
+| `--agent-timeout SECONDS` | Limit of one run, 1 to 3600; the default is 600. Needs `--agent-dir` |
+
+`AGENTS.md` is read when a run starts, so editing it changes new runs without a
+restart or rebuild. Each person chooses Claude Code or Codex in **Ustawienia
+przestrzeni roboczej → Dostawca agenta**; the setting appears only when the
+agent is enabled. The dialog is described in the
+[user guide](docs/USER-GUIDE.md#use-the-agent).
+
+A source build has the `agent/` directory; the package archive and the generated
+service units do not include it and pass none of these options. For an installed
+host, keep a directory with a copy of `agent/AGENTS.md` and add the options to
+your own service definition deliberately. A SIGTERM or Ctrl+C stop ends running
+agents; stopping the daemon with SIGKILL leaves them running.
+
 ## Package and install your build
 
 After building and checking the same revision:
@@ -274,6 +315,7 @@ automatic uninstaller or general source-format migration tool.
 | Server will not open its state directory | Use an existing owner-only 0700 directory, safe absolute paths and a short socket path |
 | Address/socket already in use | Identify the existing host; use its connection or stop it deliberately before starting a replacement |
 | Browser cannot connect or gets Host/Origin errors | Compare the browser origin, proxy Host forwarding and `--public-origin` exactly |
+| The Agent button is missing, or its dialog reports a missing command | The host was started without `--agent-dir`; or the daemon's `PATH` lacks `claude`/`codex` (pass `--agent-claude-bin` / `--agent-codex-bin`) or `projectctl` is not beside `projectd` |
 | Folder picker appears to do nothing remotely | Look at the host desktop or use approved-root browsing / local CLI registration |
 | CLI write times out | Keep its request ID, epoch, payload and version; inspect command status using [safe retries](CLI.md#uncertain-results-and-safe-retries) |
 | Source validation/recovery warning | Inspect `doctor` and the affected source; do not delete operational state or overwrite a conflict |

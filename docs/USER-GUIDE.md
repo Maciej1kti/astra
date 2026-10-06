@@ -349,6 +349,67 @@ There is no trash or built-in restore for permanent deletion. A deleted resoluti
 can reopen a decision. Use an external stopped-server backup if you need a recovery
 copy. [CLI deletion](../CLI.md#permanent-deletion) describes the conditional commands.
 
+## Use the agent
+
+The **Agent** button appears at the lower right of every view, beside **Dodaj
+kartę** in Focus, only when the host's OS owner started `projectd` with
+`--agent-dir` ([installation](../INSTALL.md#enable-the-in-app-agent)). Without
+that option the button is absent. The agent is a local Claude Code or Codex that
+changes data through `projectctl`, with the daemon user's full rights and no
+permission prompts; see [limitations](LIMITATIONS.md#in-app-agent).
+
+Open the dialog and write a sentence, such as „zrobiłem 10 pompek” or „dodaj
+komentarz do karty o fakturze”. The agent finds the project and card, makes the
+change and answers once. The dialog shows only your message and that answer, not
+what the agent did on the way, so check the card when it matters. Each message
+carries today's date in the workspace timezone, the open view and the selected
+project, so relative dates and the project you are looking at are known to the
+agent. Answers are shown as Markdown.
+
+- **Wyślij** sends; a message holds up to 8,000 characters. Enter sends on a
+  desktop and Shift+Enter starts a new line. On a touch screen Enter is a line
+  break and only the button sends; Ctrl or Cmd with Enter always sends.
+- One message runs at a time per conversation, and the host runs at most two
+  agents together. Later messages resume the provider's session, so a follow-up
+  can refer to the previous answer. **Nowa rozmowa** starts afresh and
+  is available when nothing is running.
+- Closing the dialog does not stop the agent. A ring on the button means it is
+  working, a green mark that a new answer waits. Reloading restores the
+  conversation from the host.
+- The **Dostawca agenta** setting in **Ustawienia przestrzeni roboczej** (shown
+  only when the agent is enabled) selects **Claude Code** or **Codex** for the
+  current profile. It applies to new conversations; the dialog's badge shows the
+  provider a conversation keeps. If the host cannot find the chosen command, the
+  dialog says so and offers **Otwórz ustawienia**.
+
+| What the dialog shows | Meaning |
+| --- | --- |
+| **Wysyłanie…** | The message is on its way. After a lost connection the browser repeats the identical request up to four times, 1 to 8 seconds apart; the host starts the agent once however often it arrives |
+| **Nie udało się potwierdzić, że wiadomość dotarła do hosta.** with **Ponów** | The retries are used up. **Ponów** repeats the same request, so it cannot run the agent twice. The message may have arrived |
+| **Agent pracuje…** with a clock and **Przerwij** | The agent is running. Cancelling asks the host to end it (**Przerywanie…**); it may already have made some changes |
+| The answer | The run succeeded. **Odpowiedź została skrócona.** means it exceeded 65,536 characters |
+| An error message, with **Szczegóły** | The run failed: the provider reported an error (its message is under **Szczegóły**) or ended without an answer (**Agent zakończył pracę bez odpowiedzi.**) |
+| **Przerwano. Agent mógł zdążyć wykonać część zmian.** | You cancelled the run |
+| **Agent nie skończył w wyznaczonym czasie i został zatrzymany.** | The time limit (default 10 minutes) ended it; part of the work may be done |
+| **Host został uruchomiony ponownie i nie pamięta tej wiadomości.** with **Wyślij ponownie** and **Odrzuć** | The daemon restarted. Whether the agent acted is unknown: check the card before **Wyślij ponownie**, which sends the text as a new message in a new conversation |
+| **Poprzednia rozmowa nie jest już dostępna na hoście.** | After a restart the host no longer has the conversation; a new one begins |
+
+A message the host refuses (for example because the agent is busy, the chosen
+provider cannot be started or `projectctl` is missing beside the daemon) starts
+nothing: the reason appears above the composer and the text returns to it.
+
+Conversations and runs are kept in the daemon's memory only. A restart loses
+them, and the outcome of a run that was in progress cannot be read back. Only
+the unacknowledged message and the conversation's ID are kept in the browser, so
+a reload can resume. An expired session keeps the dialog and the conversation;
+pair the browser again to continue. Switching profile is disabled while the
+dialog holds a draft or a running message, and each profile has its own
+conversation.
+
+The agent follows [instructions](../agent/AGENTS.md) written for it, such as
+changing only what you asked and not guessing between two cards. They guide it;
+they do not restrict it.
+
 ## When a save needs attention
 
 | Situation | Appropriate next step |

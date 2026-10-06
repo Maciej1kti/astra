@@ -9,7 +9,7 @@ that matches your task; historical requirements are indexed separately below.
 | --- | --- |
 | [Overview](../README.md) | Product, capabilities, quick start and license status |
 | [Build and install](../INSTALL.md) | Prerequisites, source build, trial, foreground host, package, pairing and upgrades |
-| [User guide](USER-GUIDE.md) | Views, cards, dates, Focus, reports, recovery and deletion behavior |
+| [User guide](USER-GUIDE.md) | Views, cards, dates, Focus, the Agent dialog, reports, recovery and deletion behavior |
 | [CLI reference](../CLI.md) | Implemented commands, JSON/text output, versions and safe retries |
 | [Manual walkthrough](../MANUAL-TESTING.md) | Synthetic trial, remote trial access and practical checks |
 | [Operations](../ops/README.md) | Configuration and host lifecycle |
@@ -42,7 +42,7 @@ that matches your task; historical requirements are indexed separately below.
 | [CLI output](../contracts/cli-output.schema.json) | Stable machine-readable CLI envelopes |
 | [Local IPC](../contracts/local-ipc.json) | Host-local administrative transport contract |
 | [Examples](../examples/README.md) | Validated synthetic documents and protocol vectors |
-| [Architecture decisions](12-ADRS.md) | Rationale and invariants; later decisions can supersede earlier ones |
+| [Architecture decisions](12-ADRS.md) | Rationale and invariants; later decisions can supersede earlier ones, such as [ADR-070](ADR-070-AGENT-RUNS.md) for the optional in-app agent |
 | [Owner scope decisions](../progress/SCOPE.md) | Explicit scope overrides, deferrals and removals |
 
 Generated schema representations and TypeScript types are checked for drift by

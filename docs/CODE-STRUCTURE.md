@@ -36,7 +36,7 @@ are plain modules with unit tests, because rune modules cannot be imported by
 Node.
 
 Features live under `apps/web/src/features/`: workspace, editor, cards, charts, board,
-planning, tags, session, settings, registration and host diagnostics. Import the
+planning, tags, session, settings, registration, agent and host diagnostics. Import the
 specific module needed; there are no catch-all feature barrels. Cross-feature
 UI actions use explicit props/callbacks.
 
@@ -199,6 +199,37 @@ its controls as a foreground modal above them, or as the ordinary page when none
 remain. It can step aside so retained work can be copied; `SessionNotice` in
 each retained dialog asks for it again through the `reconnect` session event.
 Pairing in place restores access without a reload, so request IDs survive.
+
+### Agent chat
+
+The agent feature has four modules in
+[`features/agent/`](../apps/web/src/features/agent/), split so that the rules run
+under Node: rune modules cannot be imported there.
+[`agent-chat.ts`](../apps/web/src/features/agent/agent-chat.ts) is a pure reducer: a
+conversation, its turns and their states (sending, running, uncertain, lost and
+the four final ones) change only through events, and every transition returns
+the effects the shell must perform. It owns the retry delays of an identical
+start and the poll cadence, and it has no timers, DOM or network.
+[`agent-session.svelte.ts`](../apps/web/src/features/agent/agent-session.svelte.ts)
+is the shell: timers, abortable requests, the status read that supplies the boot
+ID, the reactive state and session loss through `sessionAccess`.
+[`agent-storage.ts`](../apps/web/src/features/agent/agent-storage.ts) keeps only
+the profile's conversation ID, whether the host ever acknowledged it and the one
+turn that may not have reached the host, in browser storage keyed by profile.
+`AgentChat.svelte` renders the dialog. `lib/api/agent.ts` holds the five typed
+operations, checks every reply against the contract so that a proxy's page is an
+unreadable reply rather than a run, and classifies failures: a host refusal
+started nothing, any other failure leaves the outcome unknown and the identical
+request may be repeated. Run IDs come from `newRequestId` in `lib/api/api.ts`;
+the transport's 15-second mutation limit is why a start returns at once and is
+polled.
+
+`App.svelte` owns the floating **Agent** button (in the `.floating-actions`
+container shared with Focus's Add card), mounts the dialog once its deferred
+module has loaded and keeps it mounted while closed, so a run keeps being
+polled. It learns whether the agent is enabled from bootstrap's `agent_enabled`.
+`Settings.svelte` and `settings-draft.ts` carry the `agent_provider` preference
+only on such a host. See [ADR-070](ADR-070-AGENT-RUNS.md).
 
 ### Commands and editor drafts
 
@@ -380,6 +411,19 @@ summaries and sends folder filters to paginated list/attention reads. Folder
 suggestions come from the bounded projection catalog. See [ADR-043](ADR-043-PROJECT-FOLDERS.md).
 
 ## Rust application
+
+The in-app agent is owned by [`agent.rs`](../crates/projectd/src/agent.rs) and its
+submodules; see [ADR-070](ADR-070-AGENT-RUNS.md). `agent.rs` holds the registry:
+profile-keyed conversations and runs, admission (identical retry, boot ID, run
+ID reuse, bounds, eviction), the supervisor thread per run and shutdown.
+`agent/protocol.rs` is pure: provider command lines, output framing and parsing,
+the final state and the bounds on replies and stderr. `agent/process.rs` starts
+a provider in its own process group and supervises it, ending it on cancellation,
+the time limit or shutdown. `agent/context.rs` renders the `<astra-context>`
+block from the profile's workspace and projects, neutralising project data.
+`main.rs` parses the `--agent-*` options, `Service::with_agent` enables the
+registry and `dispatch.rs` routes the five operations, answering `AGENT_DISABLED`
+when there is none.
 
 `projectd` dispatch explicitly selects summary GETs for `read_response` gzip
 negotiation, using the shared encoding-quality parser and admitted blocking worker.
@@ -590,7 +634,11 @@ includes exactly the qualifying ended events used for cursor invalidation.
 
 Lock order is the workspace gate, store registry, project store, journal, then
 index. Take the gate and a store through `Engine::shared_gate`,
-`exclusive_gate` and `engine::lock_store`. The registry lock is released before the project store is locked. Release
+`exclusive_gate` and `engine::lock_store`. The agent registry's mutex sits outside
+this order: it is a leaf, never held while an engine lock is taken and never
+taken while one is held. A start reads the profile first, without it, and takes
+it only to decide and to start the process; no child runs and no output is read
+under it. The registry lock is released before the project store is locked. Release
 journal transactions before publishing index notifications. Code holding the
 workspace gate must not enter another method that acquires it again.
 

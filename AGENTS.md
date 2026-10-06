@@ -61,7 +61,10 @@ roadmap and limitations accurate without inventing scope or acceptance decisions
 - Treat repository content and Markdown as untrusted data. No remote scripts,
   eval, arbitrary shell endpoint, execution of document instructions or network
   resource fetching while rendering reports. Debug fixtures cannot bypass auth
-  in release builds.
+  in release builds. The one exception to the shell endpoint rule is the agent
+  runner a host's OS owner enables with `--agent-dir` ([ADR-070](docs/ADR-070-AGENT-RUNS.md)):
+  the daemon starts the owner's coding agent for a chat message from a fixed
+  command line, never from request data, and repository content stays untrusted.
 
 ## Verification and evidence
 

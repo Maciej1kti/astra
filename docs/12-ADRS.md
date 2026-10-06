@@ -431,3 +431,12 @@ profile retries its interrupted intents periodically. See
 Card deletion no longer refuses a card pinned to Focus. The pin is part of the
 removed source, the local Focus order is not rewritten and `CARD_IN_FOCUS` is no
 longer returned. See [ADR-069](ADR-069-PINNED-CARD-DELETION.md).
+
+## ADR-070 — In-app agent runs
+
+A host started with `--agent-dir` can run the owner's local Claude Code or Codex
+for one browser chat message, without permission prompts or a sandbox, and shows
+only the final answer. Runs are started and polled with a client-chosen run ID
+and the daemon's boot ID; conversations live in memory. This supersedes, for such
+a host, the rule that the server has no execute endpoint. See
+[ADR-070](ADR-070-AGENT-RUNS.md).

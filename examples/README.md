@@ -68,4 +68,5 @@ selected provider. The client generates `run_id` and copies `boot_id` from the
 twice and a request sent after a daemon restart is refused. The result is an
 [agent run](agent-run.json) that the client polls until it reaches a final state.
 The [provider preference](requests/agent-provider-preference.json) is an ordinary
-conditional preferences patch. Runs live in daemon memory only.
+conditional preferences patch. Runs live in daemon memory only; see
+[ADR-070](../docs/ADR-070-AGENT-RUNS.md).

@@ -14,6 +14,11 @@ For implemented trust boundaries, see the
 and the [detailed security requirements](docs/07-SECURITY.md).
 The daemon is intended for loopback access behind an owner-managed private HTTPS
 proxy. Packaging does not install or configure a public service automatically.
+An owner can additionally start it with `--agent-dir`, which lets paired browsers
+instruct a local coding agent that runs without permission prompts or a sandbox
+with the daemon user's rights; the option is off by default. See
+[ADR-070](docs/ADR-070-AGENT-RUNS.md) and its
+[limitations](docs/LIMITATIONS.md#in-app-agent).
 
 ## Dependency advisories
 

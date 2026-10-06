@@ -255,10 +255,35 @@ transaction. Undo is a new conditional command; permanent deletion, append-only
 comments and counter history have specific restrictions. See the
 [CLI guide](../CLI.md) and [write contract](04-WRITES-AND-RECOVERY.md).
 
+## In-app agent
+
+An optional runner lets a browser chat message drive a local coding agent. It is
+off unless the OS owner starts `projectd` with `--agent-dir`; see
+[ADR-070](ADR-070-AGENT-RUNS.md). The agent is not a second writer: it changes
+data through `projectctl`, so every change takes the ordinary conditional,
+journaled path.
+
+```text
+  Browser dialog --start / poll--> projectd agent registry (memory only)
+                                        | one supervised process per run
+                                        v
+                      claude | codex  (cwd = --agent-dir, instructions = AGENTS.md)
+                           |  message on stdin, final answer on stdout
+                           v
+                      projectctl --ASTRA_SOCKET--> projectd Unix socket --> engine
+```
+
+The browser starts a run with a client-chosen run ID and the daemon's boot ID,
+then polls it; an identical repeated start returns the same run, so a lost
+response cannot run the agent twice. Registry, supervision and the context block
+are in `crates/projectd/src/agent*`; the browser side is
+`apps/web/src/features/agent/`. Runs and conversations are never persisted.
+
 ## Repository map
 
 ```text
   astra/
+  |-- agent/                 AGENTS.md instructions of the optional in-app agent
   |-- apps/web/              Svelte SPA, feature UI, typed API client
   |-- crates/
   |   |-- domain/            pure domain types, dates, validation, ordering
@@ -304,5 +329,13 @@ as the OS owner. Profile selection separates workspaces and is not an access
 control boundary between paired people. Author labels on comments/reports are
 attribution, not verified separate user identities.
 The server has no public shell endpoint, auto-commit, auto-fetch or multi-host merge.
-See [Security](../SECURITY.md), [limitations](LIMITATIONS.md) and
+The one exception to the shell-endpoint rule is the agent runner
+([ADR-070](ADR-070-AGENT-RUNS.md)), which exists only on a host whose OS owner
+started it with `--agent-dir`; the browser cannot enable it. It starts the
+owner's Claude Code or Codex from a fixed command line, with the message on
+stdin, no permission prompts and no sandbox. Any paired browser, in any profile,
+can then instruct an agent that holds the daemon user's rights, and profiles do
+not limit it. Repository content stays untrusted data, and `AGENTS.md` guides
+the agent without enforcing anything.
+See [Security](../SECURITY.md), [limitations](LIMITATIONS.md#in-app-agent) and
 [operations](../ops/README.md) before changing those boundaries.

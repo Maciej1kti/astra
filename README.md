@@ -26,7 +26,7 @@ collaboration; **the project license has not yet been selected**. See
 | Work across views | Focus, Projects, List, Board, Calendar, Timeline, Updates and Chart |
 | Compare counters | Daily and cumulative charts, selected overlays, statistics and rate-based valuation |
 | Record outcomes | Project/milestone reports, explicit corrections and decision resolutions, profile read receipts |
-| Automate | Local CLI with JSON output, bounded project context, conditional writes and command recovery |
+| Automate | Local CLI with JSON output, bounded project context, conditional writes and command recovery; an optional, off-by-default [Agent](docs/USER-GUIDE.md#use-the-agent) dialog that hands a sentence to a local Claude Code or Codex |
 | Inspect and recover | Search, change history, conditional undo, diagnostics, Git observations and maintenance workflows |
 
 Card and project editors autosave valid changes and preserve drafts when a write

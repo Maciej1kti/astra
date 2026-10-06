@@ -28,6 +28,7 @@ verification is indexed in [current status](progress/STATE.md).
 | Counter analysis | Selected histories, overlays, daily/cumulative grouping, statistics and browser-local rate valuation | [Chart guide](docs/USER-GUIDE.md#compare-counters-in-chart) |
 | Card workflows | Autosave, checklist, tags, comments, daily counters, inclusive plans and timed events | [User guide](docs/USER-GUIDE.md#create-and-edit-cards) |
 | Project context | Folder categories, independent milestones, reports, corrections/resolutions and read receipts | [User guide](docs/USER-GUIDE.md#reports-history-and-deletion) |
+| In-app agent | Optional Agent dialog backed by a local Claude Code or Codex, enabled by the host's OS owner; full access by the owner's direction | [ADR-070](docs/ADR-070-AGENT-RUNS.md), [limitations](docs/LIMITATIONS.md#in-app-agent) |
 | Maintenance | Diagnostics, Git observation, index rebuild, durable workflows and explicit permanent deletion | [CLI](CLI.md), [operations](ops/README.md) |
 | Distribution tooling | Source build, host archive, user-service generator, package smoke and stopped-copy recovery | [Installation](INSTALL.md), [recovery](ops/RECOVERY.md) |
 | Contributor tooling | Pinned dependencies, contract generation, local/CI checks, browser regressions and evidence records | [Contributing](CONTRIBUTING.md), [development](DEVELOPMENT.md) |

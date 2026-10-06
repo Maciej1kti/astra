@@ -327,3 +327,17 @@ modals, settings, accessibility labels, calendar/widget words and recovery/error
 messages. Focus retains its name. This supersedes the English UI-text rule;
 code identifiers, comments, maintained documentation, commits and CLI/protocol
 values remain English. User-authored source content is preserved.
+
+## In-app agent — owner direction, 2026-10-06
+
+Add an Agent button to the left of the floating Add card action. It opens a
+chat dialog backed by Claude Code or Codex, selectable in Settings. Give the
+agent full access with permission prompts skipped for now, because only the
+owner uses this instance. Show only the owner's input and the agent's final
+output, with thorough error and run-state handling. The agent may start in a
+subdirectory of the Astra repository and have its own `AGENTS.md` there.
+
+For a host started with the agent option, this supersedes the earlier rule that
+the server has no execute endpoint. It authorizes nothing beyond that; a host
+started without the option keeps the earlier rule. See
+[ADR-070](../docs/ADR-070-AGENT-RUNS.md).

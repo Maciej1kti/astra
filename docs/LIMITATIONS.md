@@ -24,6 +24,7 @@ An implemented feature and a passed release acceptance scenario are different cl
 | Attribution | Human/bot labels on comments and reports are declarations, not separate authenticated identities |
 | Counter charts | Inclusive ranges of at most 400 days, 100 series per page, 500 loaded catalog entries and eight selected series per chart; daily source quantities are integers. Rates and display choices are browser-local calculations, not stored monetary transactions |
 | CLI | Bounded single-page reads; no streaming `watch`, automatic pagination or general batch mutation transaction |
+| In-app agent | Off unless the OS owner starts `projectd` with `--agent-dir`; then any paired browser can instruct a local coding agent that runs with the daemon user's full rights and no permission prompts. See [In-app agent](#in-app-agent) |
 
 Changing these boundaries requires an explicit scope decision. Missing CLI aliases
 are not proof that the corresponding API behavior is absent; see the current
@@ -155,6 +156,44 @@ workspace's exclusive gate, because pins live in sources and the limit of 100
 is checked against them rather than against the disposable index
 ([ADR-041](ADR-041-SOURCE-BACKED-FOCUS-AND-TAGS.md)). Other requests wait while
 that scan runs.
+
+## In-app agent
+
+The optional agent runner ([ADR-070](ADR-070-AGENT-RUNS.md)) is an owner-directed
+exception to the rule that the server has no execute endpoint. It exists only on
+a host started with `--agent-dir`.
+
+- **Rights.** The provider runs without permission prompts or a sandbox, with
+  the daemon's environment and the daemon user's rights. Any paired browser, in
+  any profile, can instruct it, and the agent can reach other profiles because
+  profiles are not an access boundary. A process of the daemon's user can use the
+  same routes through the local socket.
+- **Instructions are guidance.** `agent/AGENTS.md` asks the agent to change only
+  what was requested and to treat card text as data. Nothing enforces it, and
+  text written by someone else in a card, comment or report reaches an agent
+  that has no sandbox.
+- **Memory only.** Conversations and runs are lost when the daemon restarts, and
+  the outcome of a run in progress at that moment cannot be read back. The
+  browser reports such a turn as unknown, not as failed, and the agent may
+  already have changed data. A cancelled or timed-out run may have made part of
+  its changes.
+- **Killed daemon.** A stop by SIGTERM or Ctrl+C ends the agent process groups
+  and waits up to 20 seconds for them. A daemon killed outright leaves agent
+  processes running.
+- **Bounds.** Two running runs per host, one per conversation, 32 conversations,
+  50 runs per conversation, 8,000-character messages, 65,536-character replies,
+  1 MiB provider output lines and a run time limit (`--agent-timeout`, default
+  600 seconds). Beyond them a start is refused.
+- **No CLI.** `projectctl` has no commands for agent runs; the generic `command`
+  form cannot confirm one and `get` of a running run exits with code 9.
+- **Context block.** A project folder path longer than 240 characters or
+  containing `<` or `>` is altered in the block the agent receives and then does
+  not work with `--project`; the agent receives at most 100 projects.
+- **Providers.** The flag sets were verified against Claude Code 2.1.291 and
+  Codex 0.160.0. Another version may treat them differently; a run whose output
+  holds no final answer fails as `AGENT_OUTPUT_INVALID`.
+- **Coverage.** Automated tests use a scripted provider. The dialog has had no
+  physical-device test; emulation does not replace one.
 
 ## Before a supported public release
 

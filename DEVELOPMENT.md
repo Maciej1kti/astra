@@ -22,6 +22,11 @@ npm run try
 `npm run try` uses the release binaries and persistent ignored `.manual/` data.
 A debug-only Rust build is insufficient for that launcher. Use the
 [manual guide](MANUAL-TESTING.md) for pairing and walkthroughs.
+`ASTRA_TRY_AGENT=1 npm run try` starts that daemon with
+`--agent-dir` set to this repository's `agent/` directory, which enables the
+[in-app agent](docs/ADR-070-AGENT-RUNS.md); it needs Claude Code or Codex
+installed and signed in. The agent has the daemon user's full rights, so use it
+with synthetic data.
 
 For a debug build, keep the same frontend-first order:
 
@@ -64,6 +69,8 @@ suites, package installation, advisory scans or physical-device acceptance.
 | JavaScript behavior | `npm run test:unit` |
 | One behavior test | `node --test scripts/tests/planning-read.test.mjs` |
 | Domain rules | `scripts/cargo-local test -p project-domain --locked` |
+| In-app agent (daemon) | `scripts/cargo-local test -p projectd --locked`; the tests use the scripted provider `crates/projectd/tests/fixtures/fake-agent.sh`, never a real one |
+| In-app agent (browser logic) | `node --test scripts/tests/agent-api.test.mjs scripts/tests/agent-chat.test.mjs scripts/tests/agent-storage.test.mjs` |
 | Application rules/recovery | `scripts/cargo-local test -p project-application --lib --locked` |
 | Frontend dependency boundaries | `node scripts/check-boundaries.mjs` |
 | Bundle budget, after build | `npm run check:bundle` |

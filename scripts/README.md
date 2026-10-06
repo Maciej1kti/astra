@@ -12,7 +12,8 @@ fixture parser is not the production source parser. It does not start services.
 representations; their check modes catch drift. `assemble_spec.py` combines
 retained requirement chapters into ignored `test-results/docs/MASTER-SPEC.md`.
 
-`try.mjs` starts a manual synthetic fixture; `try-pair.mjs` approves an exact
+`try.mjs` starts a manual synthetic fixture (`ASTRA_TRY_AGENT=1` also enables the
+in-app agent with the repository's `agent/` directory); `try-pair.mjs` approves an exact
 owner-provided pairing challenge. [Browser tests](browser/README.md) use temporary
 fixtures and the real pairing/transport flow.
 

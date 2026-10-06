@@ -381,6 +381,11 @@ read receipts and project metadata. See [OpenAPI](contracts/openapi.yaml).
 CLI does not currently implement streaming `watch`, automatic pagination,
 browser-local appearance settings or a batch mutation transaction.
 
+The browser's in-app agent ([ADR-070](docs/ADR-070-AGENT-RUNS.md)) calls this
+CLI itself, with `ASTRA_SOCKET` and `ASTRA_USER` set. Runs of that agent have no
+`projectctl` commands: `command` cannot confirm a start or a cancel, and `get`
+of a running run exits with code 9. Use the browser.
+
 Run `projectctl --help` and `projectctl COMMAND --help` for the implemented command
 tree. The [historical CLI requirements](docs/06-CLI-AND-AGENTS.md) retain outstanding
 requirements and projected aliases; they are not a command reference.

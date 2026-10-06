@@ -120,6 +120,40 @@ reorder is saved. Use Add item for a new entry. Card editors have no Record
 progress, Card updates, Additional fields or Connections and blockers sections. Reports target projects
 or milestones; cards have no custom metadata extensions.
 
+## Try the agent
+
+The in-app agent is off in the launcher by default. Stop it and start it again
+with the repository's `agent/` directory enabled; Claude Code or Codex must be
+installed and signed in on this computer:
+
+```sh
+ASTRA_TRY_AGENT=1 npm run try
+```
+
+The agent runs with your user's full rights and no permission prompts, so keep
+this to the synthetic sample project. See
+[Enable the in-app agent](INSTALL.md#enable-the-in-app-agent) and the
+[user guide](docs/USER-GUIDE.md#use-the-agent).
+
+1. Check that **Agent** appears at the lower right in every view and, in Focus,
+   to the left of **Dodaj kartę**. Without `ASTRA_TRY_AGENT=1` it must be absent.
+2. In **Ustawienia przestrzeni roboczej → Dostawca agenta** choose Claude Code or
+   Codex. Open the dialog: its badge names the provider, and a missing command
+   is reported with **Otwórz ustawienia**.
+3. Add a counter to a sample card and send „zrobiłem 10 pompek” (or a request
+   naming that card). The dialog shows **Agent pracuje…**, then only the answer;
+   open the card and check the counter's total for today.
+4. Send a follow-up that refers to the answer. Close the dialog while a message
+   runs: the button shows a ring, then a green mark when the answer arrives.
+5. Use **Przerwij** on a long request, reload during a run, and restart the
+   launcher while a message runs. After the restart the dialog must report that
+   the host no longer remembers the message instead of calling it failed.
+6. Repeat on a narrow viewport and with the keyboard only: Tab reaches every
+   control, Enter sends on a desktop, Escape closes the dialog.
+
+A browser emulator is not a physical phone; record a real-device check
+separately.
+
 ## Known limits
 
 - The launcher defaults to localhost on the host computer. Its explicit tailnet

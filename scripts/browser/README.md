@@ -144,6 +144,30 @@ card precedence, filters, inline pointer ordering and the viewport anchored card
 action. It also marks a decision read, verifies it remains in Focus, then resolves
 it through the update editor while another unresolved decision remains visible.
 
+The `agent` suite covers the in-app agent through the real browser and an
+ordinary daemon started with the agent enabled. That daemon needs more than the
+default command line, so the runner passes
+[`agent-host.mjs`](agent-host.mjs) to `createHost({ daemonArgs })` for this suite
+only (`daemonArgs` is a list of options, or a function of the temporary directory
+and the repository root). It makes a temporary agent directory holding a copy of
+the repository's `agent/AGENTS.md` and starts the daemon with `--agent-dir`,
+`--agent-claude-bin` and `--agent-codex-bin` set to the scripted provider
+`crates/projectd/tests/fixtures/fake-agent.sh`, and `--agent-timeout 8`. No real
+Claude Code or Codex runs, and nothing needs to be installed or signed in.
+The suite checks the floating button in all eight views and beside Dodaj kartę
+in Focus, clearance of the floating buttons and of an open counter edit, opening,
+closing and focus return, message limits, Enter/Shift+Enter and the touch
+behavior, failed, truncated, timed-out, silent and cancelled runs, Markdown
+answers, closing or reloading during a run, a new conversation, an unknown
+conversation, a lost POST response retried with one run, an unreachable host and
+a connection lost while waiting, provider choice in Settings, keyboard-only use
+and narrow layouts, with screenshots in Chromium.
+
+```sh
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs agent
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs agent
+```
+
 The tags suite also adds 80 external source cards to exercise larger catalogs
 through normal paired HTTP reads. It checks updated usage counts after a source
 edit and the exact current card version in a browser rename preview, alongside
