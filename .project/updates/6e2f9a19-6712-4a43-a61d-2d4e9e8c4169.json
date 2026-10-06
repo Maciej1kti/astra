@@ -1,0 +1,18 @@
+{
+  "body": "An Agent button now opens a chat backed by Claude Code or Codex, in c2fa5a0 to 7d4f115 and running in the existing HTTPS app. A message such as \"zrobiłem 10 pompek\" is applied by the agent through projectctl, and the dialog shows only the message and the final answer. The provider is chosen in Settings; the agent's instructions are agent/AGENTS.md.\n\nThe host runs the agent only when started with --agent-dir (ASTRA_TRY_AGENT=1 for the manual app), with full access and no permission prompts by the owner's direction. Conversations live in memory and end with a daemon restart. No physical phone was used. Evidence: progress/2026-10-06-agent-chat.md; decision: docs/ADR-070-AGENT-RUNS.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "6e2f9a19-6712-4a43-a61d-2d4e9e8c4169",
+    "kind": "result",
+    "recorded_at": "2026-10-06T15:13:01.130Z",
+    "summary": "In-app agent with Claude Code or Codex",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
