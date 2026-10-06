@@ -1,0 +1,18 @@
+{
+  "body": "The phone navigation bar was uneven: a bottom safe area padded it from inside, More used another type and a hairline icon, and labels had no inline room. Fixed in 37f9aa5; the existing HTTPS app was rebuilt and restarted with unchanged identity, users and sessions.\n\nVerified in Chromium and WebKit on synthetic hosts, including an emulated home-indicator inset in Chromium. No physical iPhone was used. Evidence: progress/2026-10-06-phone-dock-alignment.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "6ed8ec9e-105b-4bdf-a353-155084031827",
+    "kind": "result",
+    "recorded_at": "2026-10-06T09:05:32.318Z",
+    "summary": "Phone navigation bar evened out",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
