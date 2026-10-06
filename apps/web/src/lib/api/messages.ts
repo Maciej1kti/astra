@@ -3,8 +3,6 @@
  * its entries to stay out of the deferred chunk; a unit test keeps them equal.
  */
 export const commonMessages: Record<string, string> = {
-  CARD_IN_FOCUS:
-    "Ta karta jest przypięta do Focus. Usuń ją z Focus przed usunięciem.",
   VERSION_CONFLICT:
     "Ten element zmienił się od otwarcia. Wersja robocza została zachowana.",
   UNDO_TARGET_CHANGED:

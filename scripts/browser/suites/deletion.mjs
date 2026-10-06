@@ -270,6 +270,66 @@ await runBrowserSuite(
       );
 
       await check(
+        "D01-pinned",
+        "A card pinned to Focus is deleted in one step and leaves Focus",
+        async () => {
+          const card = await createCard(`Delete pinned ${Date.now()}`);
+          await mutate(
+            "PATCH",
+            `${base}/cards/${card.id}`,
+            { set: { pinned: true } },
+            cli("get", `${base}/cards/${card.id}`).version,
+          );
+          await route(page, "focus");
+          await expect(
+            page.getByRole("main").getByText(card.title, { exact: true }),
+          ).toBeVisible();
+          await openCard(page, card);
+          await expect(
+            editor(page).getByRole("button", {
+              name: "Usuń z Focus",
+              exact: true,
+            }),
+          ).toBeVisible();
+          await editor(page)
+            .getByRole("button", { name: "Działania karty", exact: true })
+            .click();
+          await editor(page)
+            .getByRole("button", { name: "Usuń kartę", exact: true })
+            .click();
+          await page
+            .getByRole("alertdialog", {
+              name: "Trwale usunąć kartę?",
+              exact: true,
+            })
+            .getByRole("button", { name: "Trwale usuń kartę", exact: true })
+            .click();
+          await expect(editor(page)).toBeHidden();
+          assert.equal(
+            await exists(
+              join(
+                config.projects[0].folder,
+                ".project/cards",
+                `${card.id}.json`,
+              ),
+            ),
+            false,
+          );
+          await route(page, "focus");
+          await expect(page.getByText(card.title, { exact: true })).toHaveCount(
+            0,
+          );
+          const focus = cli("get", "/api/v1/workspace/focus");
+          assert.equal(
+            focus.items.some((item) => item.card_id === card.id),
+            false,
+            "A deleted card must leave Focus membership",
+          );
+          return { card: card.id, pinned: true, sourceRemoved: true };
+        },
+      );
+
+      await check(
         "D02-autosave-delete",
         "Card deletion waits for a held autosave and previews the latest version",
         async () => {

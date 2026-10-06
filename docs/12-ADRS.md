@@ -425,3 +425,9 @@ an unacceptable source is a definite refusal before an intent exists; receipts
 are removed with their report or project; watchers are supervised and each
 profile retries its interrupted intents periodically. See
 [ADR-068](ADR-068-HOST-BOUNDS-AND-BACKGROUND-RECOVERY.md).
+
+## ADR-069 — A pinned card is deleted in one command
+
+Card deletion no longer refuses a card pinned to Focus. The pin is part of the
+removed source, the local Focus order is not rewritten and `CARD_IN_FOCUS` is no
+longer returned. See [ADR-069](ADR-069-PINNED-CARD-DELETION.md).

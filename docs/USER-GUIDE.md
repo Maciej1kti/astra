@@ -329,7 +329,7 @@ Archive, unregister and delete have different effects:
 | --- | --- |
 | Archive a card/project | Retain sources while changing ordinary visibility; restore an archived project before editing its cards |
 | Unregister a project | Remove the host registration through local maintenance; retain the project's source directory |
-| Delete a card | Permanently remove its JSON source; unpin it first |
+| Delete a card | Permanently remove its JSON source; a card pinned to Focus leaves Focus with it |
 | Delete a report through CLI/API | Permanently remove it after reference checks; delete referencing reports first |
 | Delete a project | Review a directory snapshot, then permanently remove `.project/` and its host registration; other project files remain |
 

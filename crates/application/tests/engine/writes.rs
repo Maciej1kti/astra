@@ -387,10 +387,20 @@ fn card_delete_ignores_unrelated_archived_cards() {
 }
 
 #[test]
-fn card_delete_requires_explicit_focus_removal() {
+fn pinned_card_delete_removes_it_from_focus_in_one_command() {
     let env = Environment::new();
     let engine = env.engine();
     let project = register(&engine, &env.path());
+    let kept = create(&engine, &project, "Kept in focus");
+    let kept_id = kept.body["result"]["id"].as_str().unwrap();
+    let kept = patch(
+        &engine,
+        &project,
+        kept_id,
+        kept.body["result"]["version"].as_str().unwrap(),
+        json!({"set":{"pinned":true}}),
+    );
+    assert_eq!(kept.http_status, 200, "{kept:?}");
     let created = create(&engine, &project, "Focused card");
     let id = created.body["result"]["id"].as_str().unwrap();
     let pinned = patch(
@@ -400,7 +410,23 @@ fn card_delete_requires_explicit_focus_removal() {
         created.body["result"]["version"].as_str().unwrap(),
         json!({"set":{"pinned":true}}),
     );
-    let blocked = engine
+    assert_eq!(pinned.http_status, 200, "{pinned:?}");
+    // The local order ranks the card that is about to disappear first.
+    let workspace = engine.workspace().unwrap();
+    let ordered = engine
+        .mutate_workspace(
+            "focus",
+            &json!({"items":[
+                {"project_id": project, "card_id": id},
+                {"project_id": project, "card_id": kept_id}
+            ]}),
+            &Uuid::now_v7().to_string(),
+            &engine.journal.epoch,
+            Some(&workspace.version),
+        )
+        .unwrap();
+    assert_eq!(ordered.http_status, 200, "{ordered:?}");
+    let deleted = engine
         .delete_card(
             &project,
             id,
@@ -415,8 +441,21 @@ fn card_delete_requires_explicit_focus_removal() {
             ),
         )
         .unwrap();
-    assert_eq!(blocked.http_status, 409);
-    assert_eq!(blocked.body["error"]["code"], "CARD_IN_FOCUS");
+    assert_eq!(deleted.http_status, 200, "{deleted:?}");
+    assert_eq!(deleted.body["result"]["deleted"], true);
+    assert!(
+        !env.root
+            .join(format!("project/.project/cards/{id}.json"))
+            .exists()
+    );
+    // Membership follows the source; the stale local rank names no card.
+    let focus = engine.focus_resource().unwrap();
+    assert_eq!(focus["complete"], true, "{focus}");
+    assert_eq!(
+        focus["items"],
+        json!([{"project_id": project, "card_id": kept_id}])
+    );
+    assert_eq!(focus["cards"].as_array().unwrap().len(), 1);
 }
 
 #[test]

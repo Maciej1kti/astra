@@ -197,7 +197,7 @@ projectctl --project /absolute/project card get CARD_ID
 projectctl --project /absolute/project card delete CARD_ID --if-version CARD_VERSION
 ```
 
-Focus blocks card removal. Set `pinned` to `false` on the card first.
+A card pinned to Focus is deleted the same way and leaves Focus with its source.
 There is no undo or restore for a deleted card. Reports can target projects or milestones; card targets are
 rejected.
 

@@ -1906,7 +1906,7 @@
           "cards"
         ],
         "summary": "Permanently delete a card source file",
-        "description": "Requires the observed card version. Workspace focus references must first be removed explicitly. Reports and operational history are retained. Deletion has no undo or restore operation. A lost reply is uncertain; preserve the original request ID, epoch, version and empty payload when checking or retrying.",
+        "description": "Requires the observed card version. A card pinned to Focus is deleted like any other; its pin is part of the removed source, so it leaves Focus with it. Reports and operational history are retained. Deletion has no undo or restore operation. A lost reply is uncertain; preserve the original request ID, epoch, version and empty payload when checking or retrying.",
         "parameters": [
           {
             "$ref": "#/components/parameters/project_id"

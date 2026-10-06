@@ -122,7 +122,8 @@ editor draft safety, board/settings dialogs, planning navigation, bounded view
 reads, real stale-page recovery in all five paged views, and direct/status command
 outcomes with preserved drafts and unavailable conflict details. The deletion
 suite covers permanent card and project metadata deletion, a touched card menu
-action inside the editor at 390px, confirmation safety,
+action inside the editor at 390px, one-step deletion of a card pinned to Focus,
+confirmation safety,
 command uncertainty, conflicts and current-project navigation.
 
 The autosave suite covers automatic card/project writes, queued edits, creation,

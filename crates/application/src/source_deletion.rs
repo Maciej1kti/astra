@@ -114,7 +114,7 @@ impl Engine {
         if let Err(error) = preflight_source(&store, kind, id, command.expected.as_deref()) {
             return reject_error(error);
         }
-        if let Err(error) = deletion_guard(&store, kind, project_id, id, request_id) {
+        if let Err(error) = deletion_guard(&store, kind, id, request_id) {
             return reject_error(error);
         }
         let project = match read(&store, Kind::Project, project_id) {
@@ -136,7 +136,7 @@ impl Engine {
                 version: Some(project.version),
             }],
             now,
-            |store| deletion_guard(store, kind, project_id, id, request_id),
+            |store| deletion_guard(store, kind, id, request_id),
             |_| Ok(()),
         )?;
         let repair_projection = self.project_committed(&store, &command, &mut reply, now);
@@ -154,16 +154,6 @@ impl Engine {
         }
         Ok(reply)
     }
-}
-
-fn focus_blocker(request_id: &str, project_id: &str, card_id: &str) -> Reply {
-    let mut reply = Reply::error(409, "CARD_IN_FOCUS", request_id);
-    reply.body["error"]["details"] = json!({
-        "project_id": project_id,
-        "card_id": card_id,
-        "message": "Unpin the card before deleting it.",
-    });
-    reply
 }
 
 fn preflight_source(
@@ -195,22 +185,13 @@ fn preflight_source(
 fn deletion_guard(
     store: &ProjectStore,
     kind: Kind,
-    project_id: &str,
     id: &str,
     request_id: &str,
 ) -> Result<(), AppError> {
     match kind {
-        Kind::Card => match read(store, kind, id) {
-            Ok(card) if matches!(card.document.get(), project_domain::models::Document::Card { metadata, .. } if metadata.pinned == Some(true)) =>
-            {
-                return Err(AppError::Rejected(focus_blocker(
-                    request_id, project_id, id,
-                )));
-            }
-            Err(AppError::Rejected(reply)) if reply.http_status == 404 => {}
-            Err(error) => return Err(error),
-            _ => {}
-        },
+        // A pin is part of the card's own source and disappears with it; the
+        // local Focus order only ranks cards that are still pinned.
+        Kind::Card => {}
         Kind::Update => {
             // Read source membership again, including reports created externally
             // since preparation. Never use the disposable index for this guard.
@@ -233,8 +214,8 @@ fn deletion_guard(
     Ok(())
 }
 
-/// Startup holds the exclusive workspace gate. Recheck pins/report references
-/// even if unlink already happened; a new reference requires explicit review.
+/// Startup holds the exclusive workspace gate. Recheck report references even
+/// if unlink already happened; a new reference requires explicit review.
 pub(crate) fn recovery_guard(
     _engine: &Engine,
     store: &ProjectStore,
@@ -257,7 +238,6 @@ pub(crate) fn recoverable(store: &ProjectStore, intent: &Intent) -> Result<bool,
     match deletion_guard(
         store,
         intent.command.target.kind,
-        &intent.command.target.project_id,
         &intent.command.target.id,
         &intent.command.request_id,
     ) {

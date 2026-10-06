@@ -9,7 +9,9 @@ browser changes membership through a versioned CardPatch. `workspace.focus`
 remains a host-local ordering preference: entries rank pinned cards, and new
 pins follow in source position order. An order write must include exactly the
 currently pinned cards, so it cannot add or remove membership. Card deletion
-checks the source pin. Existing cards without the field are unpinned.
+originally refused a pinned card;
+[ADR-069](ADR-069-PINNED-CARD-DELETION.md) removes that refusal. Existing cards
+without the field are unpinned.
 
 The tag catalog for a project is the set of exact labels on its cards, including
 archived cards. There is no second project vocabulary file. Adding a new label
