@@ -27,6 +27,8 @@ export interface ChartPeriod {
 export interface ChartPoint extends ChartPeriod {
   value: number | null;
   recorded: number;
+  /** A running total held through a period without a recording. */
+  carried: number | null;
 }
 export interface ChartStats {
   total: number;
@@ -48,6 +50,13 @@ export interface ChartPlotSeries {
 export interface ChartPanel {
   unit: string;
   series: ChartPlotSeries[];
+}
+/** One selected counter over the whole range, whatever the plot shows. */
+export interface ChartSummaryRow {
+  source: ChartSeries;
+  stats: ChartStats;
+  rate: number | null;
+  color: number;
 }
 
 export function chartSeriesKey(series: ChartSeries): string {
@@ -125,6 +134,7 @@ export function chartPoints(
   cumulative = false,
 ): ChartPoint[] {
   let running = 0;
+  let seen = false;
   return periods.map((period) => {
     let total = 0;
     let recorded = 0;
@@ -140,10 +150,12 @@ export function chartPoints(
       }
     }
     running += total;
+    seen ||= recorded > 0;
     return {
       ...period,
       recorded,
       value: recorded ? (cumulative ? running : total) : null,
+      carried: cumulative && seen ? running : null,
     };
   });
 }
@@ -158,6 +170,30 @@ export function chartRate(raw: string | undefined): number | null {
     : null;
 }
 
+/** A counter keeps its colour while the selection around it changes. */
+export function chartColorSlots(
+  previous: Record<string, number>,
+  keys: string[],
+): Record<string, number> {
+  const slots: Record<string, number> = {};
+  const taken = new Set<number>();
+  for (const key of keys) {
+    const slot = previous[key];
+    if (slot !== undefined && !taken.has(slot)) {
+      slots[key] = slot;
+      taken.add(slot);
+    }
+  }
+  let next = 0;
+  for (const key of keys) {
+    if (slots[key] !== undefined) continue;
+    while (taken.has(next)) next++;
+    slots[key] = next;
+    taken.add(next);
+  }
+  return slots;
+}
+
 export function chartPanels(
   series: ChartSeries[],
   periods: ChartPeriod[],
@@ -165,9 +201,11 @@ export function chartPanels(
   scale: ChartScale,
   rates: Record<string, string>,
   outputUnit: string,
+  colors: Record<string, number> = {},
 ): ChartPanel[] {
   const panels = new Map<string, ChartPlotSeries[]>();
-  for (const [color, source] of series.entries()) {
+  for (const [position, source] of series.entries()) {
+    const color = colors[chartSeriesKey(source)] ?? position;
     const rate = chartRate(rates[chartSeriesKey(source)]);
     if (scale === "converted" && rate === null) continue;
     const points = chartPoints(source.values, periods, cumulative);
@@ -175,18 +213,20 @@ export function chartPanels(
       0,
       ...points.map((point) => Math.abs(point.value ?? 0)),
     );
+    const scaled = (value: number | null) =>
+      value === null
+        ? null
+        : scale === "relative"
+          ? peak === 0
+            ? 0
+            : (value / peak) * 100
+          : scale === "converted"
+            ? value * (rate ?? 0)
+            : value;
     const transformed = points.map((point) => ({
       ...point,
-      value:
-        point.value === null
-          ? null
-          : scale === "relative"
-            ? peak === 0
-              ? 0
-              : (point.value / peak) * 100
-            : scale === "converted"
-              ? point.value * (rate ?? 0)
-              : point.value,
+      value: scaled(point.value),
+      carried: scaled(point.carried),
     }));
     const unit =
       scale === "relative"
@@ -237,12 +277,106 @@ export function chartDomain(panel: ChartPanel): { min: number; max: number } {
   return { min, max: max === min ? min + 1 : max };
 }
 
+/** Round axis steps, so gridlines land on values a reader can name. */
+export function chartTicks(min: number, max: number, target = 4): number[] {
+  const rough = (max - min || 1) / target;
+  const power = 10 ** Math.floor(Math.log10(rough));
+  const step =
+    [1, 2, 5].map((factor) => factor * power).find((size) => size >= rough) ??
+    10 * power;
+  const first = Math.floor(min / step);
+  const last = Math.max(first + 1, Math.ceil(max / step));
+  return Array.from({ length: last - first + 1 }, (_, index) =>
+    Number(((first + index) * step).toPrecision(12)),
+  );
+}
+
+/** The plotting area inside an SVG whose user units are CSS pixels. */
+export interface ChartFrame {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+export function chartFrame(width: number, height: number): ChartFrame {
+  const compact = width < 550;
+  return {
+    left: compact ? 44 : 56,
+    right: width - (compact ? 12 : 16),
+    top: 12,
+    bottom: height - 30,
+  };
+}
+/** Every period owns an equal band; marks sit at its centre. */
+export function chartBand(count: number, frame: ChartFrame): number {
+  return (frame.right - frame.left) / Math.max(1, count);
+}
+export function chartX(
+  index: number,
+  count: number,
+  frame: ChartFrame,
+): number {
+  return frame.left + (index + 0.5) * chartBand(count, frame);
+}
+export function chartY(
+  value: number,
+  min: number,
+  max: number,
+  frame: ChartFrame,
+): number {
+  return (
+    frame.bottom - ((value - min) / (max - min)) * (frame.bottom - frame.top)
+  );
+}
+export function chartIndex(
+  x: number,
+  count: number,
+  frame: ChartFrame,
+): number {
+  const index = Math.floor((x - frame.left) / chartBand(count, frame));
+  return Math.min(Math.max(0, index), Math.max(0, count - 1));
+}
+
+/** Null when the bands are too narrow for grouped bars to stay readable. */
+export function chartBarLayout(
+  band: number,
+  series: number,
+): { width: number; gap: number } | null {
+  if (series < 1) return null;
+  const gap = band / series < 8 ? 1 : 2;
+  const width = Math.min(24, (band * 0.8 - gap * (series - 1)) / series);
+  return width >= 3 ? { width, gap } : null;
+}
+
+/** A bar is square on the baseline and rounded at the end that carries data. */
+export function chartBar(
+  x: number,
+  width: number,
+  baseline: number,
+  end: number,
+): string {
+  // A recorded zero keeps a visible stub; a missing period draws nothing.
+  const tip = Math.abs(end - baseline) < 2 ? baseline - 2 : end;
+  const radius = Math.min(4, width / 2, Math.abs(tip - baseline));
+  const turn = tip < baseline ? radius : -radius;
+  const right = x + width;
+  return [
+    `M${x.toFixed(2)},${baseline.toFixed(2)}`,
+    `V${(tip + turn).toFixed(2)}`,
+    `Q${x.toFixed(2)},${tip.toFixed(2)} ${(x + radius).toFixed(2)},${tip.toFixed(2)}`,
+    `H${(right - radius).toFixed(2)}`,
+    `Q${right.toFixed(2)},${tip.toFixed(2)} ${right.toFixed(2)},${(tip + turn).toFixed(2)}`,
+    `V${baseline.toFixed(2)}`,
+    "Z",
+  ].join(" ");
+}
+
 /** Each gap starts a new segment, so the SVG cannot invent missing recordings. */
 export function chartLine(
   points: ChartPoint[],
   min: number,
   max: number,
-  width = 920,
+  frame: ChartFrame,
 ): string {
   let connected = false;
   return points
@@ -251,23 +385,37 @@ export function chartLine(
         connected = false;
         return "";
       }
-      const x = chartX(index, points.length, width);
-      const y = chartY(point.value, min, max);
+      const x = chartX(index, points.length, frame);
+      const y = chartY(point.value, min, max, frame);
       const command = connected ? "L" : "M";
       connected = true;
       return `${command}${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(" ");
 }
-export function chartX(index: number, count: number, width = 920): number {
-  const left = width < 550 ? 44 : 66;
-  const right = width - (width < 550 ? 24 : 38);
-  return count <= 1
-    ? (left + right) / 2
-    : left + (index / (count - 1)) * (right - left);
-}
-export function chartY(value: number, min: number, max: number): number {
-  return 250 - ((value - min) / (max - min)) * 216;
+
+/**
+ * A running total stays level until the next recording, then steps. Nothing is
+ * drawn before the first recording in the range.
+ */
+export function chartStepLine(
+  points: ChartPoint[],
+  min: number,
+  max: number,
+  frame: ChartFrame,
+): string {
+  let started = false;
+  return points
+    .map((point, index) => {
+      if (point.carried === null) return "";
+      const x = chartX(index, points.length, frame).toFixed(2);
+      const y = chartY(point.carried, min, max, frame).toFixed(2);
+      if (started) return `H${x} V${y}`;
+      started = true;
+      return `M${x},${y}`;
+    })
+    .join(" ")
+    .trim();
 }
 
 export interface ChartPreferences {

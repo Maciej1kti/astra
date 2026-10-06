@@ -255,11 +255,15 @@ unit protection, response-loss replay and concurrent conflict coverage.
 
 The `charts` suite creates temporary counter histories through ordinary conditional
 CLI writes. It checks counter selection, shared-unit overlays, separate unit
-panels, daily and running totals, date grouping, conversion rates and statistics,
-project filtering, empty history and source refreshes. Keyboard and touch scenarios
-exercise the Chart view at desktop, 390 and 320 px; Chromium captures the rendered
-dashboard and WebKit checks behavior without screenshot preparation. Synthetic
-counter sources and credentials are removed with the temporary host at teardown.
+panels, period bars with a zero stub, the stepped running total, the line form
+for dense ranges, range-following and chosen grouping, stable series colours,
+conversion rates and statistics, project filtering, empty history and source
+refreshes. At 1440, 1024, 768, 390 and 320 px it checks touch targets, page
+containment, unclipped statistics, the collapsed counter list and that the plot
+starts within the first screen. Keyboard and touch scenarios read values from
+the plot; Chromium captures the rendered dashboard and WebKit checks behavior
+without screenshot preparation. Synthetic counter sources and credentials are
+removed with the temporary host at teardown.
 
 The editor-header suite checks the three persistent header rows and conditional
 feedback row while a long card is scrolled, including visible field/save errors,

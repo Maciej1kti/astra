@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  chartBar,
+  chartBarLayout,
+  chartColorSlots,
   chartDomain,
+  chartFrame,
+  chartIndex,
   chartLine,
   chartPanels,
   chartPeriods,
@@ -10,6 +15,9 @@ import {
   chartRate,
   chartSeriesKey,
   chartStats,
+  chartStepLine,
+  chartTicks,
+  chartX,
   readChartPreferences,
   writeChartPreferences,
 } from "../../apps/web/src/features/charts/chart-model.ts";
@@ -93,21 +101,133 @@ test("recorded zeroes count in statistics while missing and out-of-range days do
 });
 
 test("chart lines break on missing buckets and retain a recorded zero", () => {
+  const frame = chartFrame(920, 300);
+  assert.deepEqual(frame, { left: 56, right: 904, top: 12, bottom: 270 });
   const points = chartPoints(
     { "2026-10-01": 10, "2026-10-02": 0, "2026-10-04": 30 },
     chartPeriods("2026-10-01", "2026-10-04", "day"),
   );
-  const line = chartLine(points, 0, 30);
+  const line = chartLine(points, 0, 30, frame);
   assert.equal((line.match(/M/g) ?? []).length, 2);
   assert.equal((line.match(/L/g) ?? []).length, 1);
-  assert.match(line, /L338\.00,250\.00/);
+  assert.match(line, /L374\.00,270\.00/);
   assert.equal(
     chartLine(
       chartPoints({}, chartPeriods("2026-10-01", "2026-10-04", "day")),
       0,
       1,
+      frame,
     ).trim(),
     "",
+  );
+});
+
+test("a running total holds its level through missing days and starts at the first recording", () => {
+  const frame = chartFrame(920, 300);
+  const periods = chartPeriods("2026-10-01", "2026-10-05", "day");
+  const points = chartPoints(
+    { "2026-10-02": 10, "2026-10-03": 0, "2026-10-05": 30 },
+    periods,
+    true,
+  );
+  assert.deepEqual(
+    points.map((point) => [point.value, point.carried]),
+    [
+      [null, null],
+      [10, 10],
+      [10, 10],
+      [null, 10],
+      [40, 40],
+    ],
+  );
+  assert.deepEqual(
+    chartPoints({ "2026-10-02": 10 }, periods).map((point) => point.carried),
+    [null, null, null, null, null],
+    "Period totals carry nothing between recordings",
+  );
+  const line = chartStepLine(points, 0, 40, frame);
+  assert.equal((line.match(/M/g) ?? []).length, 1);
+  assert.equal((line.match(/H/g) ?? []).length, 3);
+  assert.ok(
+    line.startsWith(`M${chartX(1, 5, frame).toFixed(2)},`),
+    "Nothing is drawn before the first recording",
+  );
+  assert.ok(line.endsWith("V12.00"), "The last recording reaches the peak");
+  assert.equal(chartStepLine(chartPoints({}, periods, true), 0, 1, frame), "");
+});
+
+test("axis steps are round and periods map to equal bands", () => {
+  assert.deepEqual(chartTicks(0, 20), [0, 5, 10, 15, 20]);
+  assert.deepEqual(chartTicks(0, 500), [0, 200, 400, 600]);
+  assert.deepEqual(chartTicks(0, 1), [0, 0.5, 1]);
+  assert.deepEqual(chartTicks(0, 0.3), [0, 0.1, 0.2, 0.3]);
+  assert.deepEqual(chartTicks(-10, 30), [-10, 0, 10, 20, 30]);
+  assert.deepEqual(chartTicks(5, 5), [5, 5.5]);
+  const frame = chartFrame(320, 220);
+  assert.deepEqual(frame, { left: 44, right: 308, top: 12, bottom: 190 });
+  assert.equal(chartX(0, 4, frame), 77);
+  assert.equal(chartX(0, 1, frame), 176);
+  assert.equal(chartIndex(44, 4, frame), 0);
+  assert.equal(chartIndex(109.9, 4, frame), 0);
+  assert.equal(chartIndex(110.1, 4, frame), 1);
+  assert.equal(chartIndex(-50, 4, frame), 0);
+  assert.equal(chartIndex(9999, 4, frame), 3);
+  assert.equal(chartIndex(100, 0, frame), 0);
+});
+
+test("grouped bars give way to lines when bands are too narrow, and a zero keeps a stub", () => {
+  assert.deepEqual(chartBarLayout(120, 1), { width: 24, gap: 2 });
+  const pair = chartBarLayout(28, 2);
+  assert.equal(pair.gap, 2);
+  assert.ok(Math.abs(pair.width - 10.2) < 0.001);
+  assert.equal(chartBarLayout(9, 2).gap, 1);
+  assert.equal(chartBarLayout(9, 3), null);
+  assert.equal(chartBarLayout(2.3, 1), null);
+  assert.equal(chartBarLayout(40, 0), null);
+  assert.equal(
+    chartBar(10, 8, 100, 40),
+    "M10.00,100.00 V44.00 Q10.00,40.00 14.00,40.00 H14.00 Q18.00,40.00 18.00,44.00 V100.00 Z",
+  );
+  assert.match(
+    chartBar(10, 8, 100, 100),
+    /^M10\.00,100\.00 V100\.00 Q10\.00,98\.00 12\.00,98\.00 /,
+    "A recorded zero is a two-pixel stub above the baseline",
+  );
+  assert.match(
+    chartBar(10, 8, 100, 130),
+    /V126\.00 Q10\.00,130\.00 /,
+    "A negative total rounds its lower end",
+  );
+});
+
+test("a counter keeps its colour slot while the selection changes", () => {
+  const first = chartColorSlots({}, ["a", "b", "c"]);
+  assert.deepEqual(first, { a: 0, b: 1, c: 2 });
+  const without = chartColorSlots(first, ["b", "c"]);
+  assert.deepEqual(without, { b: 1, c: 2 });
+  assert.deepEqual(chartColorSlots(without, ["d", "b", "c"]), {
+    b: 1,
+    c: 2,
+    d: 0,
+  });
+  assert.deepEqual(
+    Object.values(
+      chartColorSlots({ a: 3, b: 3 }, ["a", "b", "c", "d", "e", "f", "g", "h"]),
+    ).sort(),
+    [0, 1, 2, 3, 4, 5, 6, 7],
+    "Eight selections always receive eight distinct slots",
+  );
+  const rows = [
+    series("One", "reps", { "2026-10-01": 1 }, "one"),
+    series("Two", "reps", { "2026-10-01": 2 }, "two"),
+  ];
+  const periods = chartPeriods("2026-10-01", "2026-10-01", "day");
+  const panels = chartPanels(rows, periods, false, "values", {}, "PLN", {
+    [chartSeriesKey(rows[1])]: 5,
+  });
+  assert.deepEqual(
+    panels[0].series.map((row) => row.color),
+    [0, 5],
   );
 });
 

@@ -22,6 +22,15 @@
   --success: #32725b;
   --plan-bg: #e6f1ec;
   --review-bg: #efedf6;
+  /* Counter series: fixed order, checked for colour-vision separation. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
   --backdrop: rgb(31 33 42 / 24%);
   --shadow-sm: 0 2px 4px rgb(28 31 42 / 4%);
   --shadow-card: 0 3px 12px rgb(28 31 42 / 4%);
@@ -155,6 +164,14 @@
   --success: #91c9b1;
   --plan-bg: #293d35;
   --review-bg: #373346;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
   --backdrop: rgb(0 0 0 / 48%);
   --primary-fill: linear-gradient(180deg, #f4f4f6, #d9dbe2);
 }
@@ -183,6 +200,14 @@
     --success: #91c9b1;
     --plan-bg: #293d35;
     --review-bg: #373346;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
     --backdrop: rgb(0 0 0 / 48%);
     --primary-fill: linear-gradient(180deg, #f4f4f6, #d9dbe2);
   }

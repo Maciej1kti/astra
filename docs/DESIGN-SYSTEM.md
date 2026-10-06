@@ -6,7 +6,8 @@ additional UI framework, styling runtime or component dependency is required.
 ## Ownership
 
 - `apps/web/src/styles/tokens.css` owns colors, spacing, typography, radii,
-  shadows, control sizes and surface dimensions for light and dark appearance.
+  shadows, control sizes and surface dimensions for light and dark appearance,
+  including the ordered `--series-*` colours for [Chart](#chart-view).
 - `lib/ui/` owns `Button`, `Badge`, `Icon`, `Brand`, `PageHeading`,
   `SectionHeading`, `EmptyState`, `ResourceCard`, `ResourceMetadata`,
   `DialogHeader`, `EditableTitle`, `ActionMenu`, `CommandRecovery`,
@@ -443,21 +444,53 @@ author controls; existing attribution and CLI/API bot comments remain visible.
 The date-plan and label-entry helper sentences are omitted from the card form.
 
 
+## Chart view
+
+The workspace Chart view in `features/charts` puts the plot first. From a
+940px-wide view the counter list is a sticky side rail beside the plots; below
+that it is one row above them that names the selection count and expands in
+place, so the plot stays within the first screen on tablets and phones. With
+nothing selected the list is always open. The width test is a CSS container
+query on the view, not the viewport, because the sidebar changes the room left.
+
+Range presets share the heading row; a custom range opens beneath them.
+Grouping and totals are segmented controls and the scale is a select. Controls
+wrap by container width and never shrink below the 44px target.
+
+A plot is chosen by the data's job. Period totals are grouped bars, at most
+24px thick, square on the baseline and rounded at the data end, with a surface
+gap between neighbours. A recorded zero keeps a two-pixel stub and a missing
+period draws nothing. When bands are too narrow for readable bars the plot
+draws 2px lines that break at missing periods. A running total is a stepped
+line that holds its level between recordings. Raw quantities share a plot only
+when their units match; gridlines are solid hairlines on round values.
+
+Series use the eight `--series-*` tokens in their fixed order, which was checked
+for colour-vision separation on both paper surfaces. A counter keeps its slot
+while the selection around it changes. Three light-theme steps are below 3:1 on
+white, so identity never rests on colour alone: the legend above each plot
+always names every series, and an exact-value table is one disclosure away.
+Do not reuse status colours for a series, and do not colour text with a series
+colour.
+
+The legend doubles as the readout. It shows each series' value for one period,
+by default the latest recorded one, and follows the pointer, a touch drag or
+the plot's visually hidden range input, which is the keyboard route and paints
+a focus ring on the plot. A refresh dims the current plots rather than clearing
+them.
+
+The period summary is one ARIA table holding statistics and the browser-local
+rate for every selected counter, so a counter appears once. Below an 860px
+container each row becomes a card that labels its own values; nothing scrolls
+sideways. Browser-local rates and selections are separate from the source-read
+lifecycle, so acknowledged source changes refresh data while preserving the
+chosen analysis.
+
+Measure a plot's width from an element whose size the plot cannot change.
+Observing the element that also receives the computed height reports a resize
+loop in WebKit.
+
 ## Compact card counters
-
-The workspace Chart view has its own counter catalog and analysis surface in
-`features/charts`. A desktop catalog sits beside the plots; on narrow screens
-it follows the statistics and precedes the plots in one column. Date, grouping
-and scale controls wrap without horizontal page overflow. Raw quantities share
-a plot only when their units match; relative and configured-value modes have
-explicit axis labels. Series colors apply consistently to catalog swatches,
-plots, inspection values and comparison rows in both themes.
-
-Each plot provides a keyboard/touch date slider and an expandable exact-value
-table. Gaps preserve unrecorded dates, while recorded zero has a visible point.
-Grouping labels show recorded-day coverage. Browser-local rates and selections
-are separate from the source-read lifecycle, so acknowledged source changes
-refresh data while preserving the chosen analysis.
 
 Counters share a compact divided list. Each row contains its name, a fourteen-day
 bar preview, a value with its unit, and a quiet configuration icon. Desktop places

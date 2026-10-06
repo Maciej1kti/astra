@@ -118,9 +118,17 @@ await runBrowserSuite(
         exact: true,
       });
     const statRow = (name) =>
-      dashboard.locator(`tr[data-counter-name="${name}"]`);
+      dashboard.locator(`[data-chart-row][data-counter-name="${name}"]`);
     const statistic = (name, field) =>
       statRow(name).locator(`[data-chart-stat="${field}"]`);
+    const segment = (group, name) =>
+      dashboard
+        .getByRole("group", { name: group, exact: true })
+        .getByRole("button", { name, exact: true });
+    const scale = dashboard.getByRole("combobox", {
+      name: "Skala",
+      exact: true,
+    });
     const rate = (name, cardTitle) =>
       dashboard.getByLabel(`Stawka dla ${name} · ${cardTitle}`, {
         exact: true,
@@ -167,9 +175,7 @@ await runBrowserSuite(
       await expect(dashboard).toBeVisible();
       await expect(dashboard.getByRole("img")).toHaveCount(0);
       await expect(dashboard).toContainText(/brak liczników/i);
-      const today = await dashboard
-        .getByLabel("Data końcowa", { exact: true })
-        .inputValue();
+      const today = await dashboard.getAttribute("data-chart-to");
       assert.match(today, /^\d{4}-\d{2}-\d{2}$/);
       const day = (offset) => {
         const date = new Date(`${today}T12:00:00Z`);
@@ -253,12 +259,12 @@ await runBrowserSuite(
       await expect(
         checkbox("Retired repetitions", "Synthetic training"),
       ).toHaveCount(0);
-      await dashboard
-        .getByRole("button", { name: "7 dni", exact: true })
-        .click();
-      await expect(
-        dashboard.getByLabel("Data początkowa", { exact: true }),
-      ).toHaveValue(day(6));
+      await segment("Zakres dat", "7 dni").click();
+      await expect(dashboard).toHaveAttribute("data-chart-from", day(6));
+      await expect(segment("Zakres dat", "7 dni")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
 
       // Explicit choices avoid depending on initial suggestion order.
       await dashboard
@@ -288,44 +294,97 @@ await runBrowserSuite(
       assert.equal(recorded[2][0].recording, "1/1 dni z zapisami");
       assert.equal(recorded[1][0].recording, "0/1 dni z zapisami");
       const pushKey = `${config.projects[0].id}/${training.card.metadata.id}/${training.items[0].id}`;
-      assert.equal(
-        await chart("reps")
-          .locator(`[data-series-key="${pushKey}"] circle`)
-          .count(),
-        4,
-        "The recorded zero has a point; missing dates do not",
+      const pushSeries = chart("reps").locator(
+        `[data-series-key="${pushKey}"]`,
       );
-      const path = await chart("reps")
-        .locator(`[data-series-key="${pushKey}"] path`)
-        .getAttribute("d");
+      await expect(
+        pushSeries.locator("path.series-bar[data-point]"),
+      ).toHaveCount(4);
+      await expect(pushSeries.locator(".series-line")).toHaveCount(0);
+      assert.equal(
+        await pushSeries.locator("[data-point]").count(),
+        4,
+        "The recorded zero has a bar stub; missing dates have no mark",
+      );
+      const colorOf = (key) =>
+        chart("reps")
+          .locator(`[data-series-key="${key}"] [data-point]`)
+          .first()
+          .evaluate((mark) => getComputedStyle(mark).fill);
+      const squatKey = `${config.projects[0].id}/${training.card.metadata.id}/${training.items[1].id}`;
+      const squatColor = await colorOf(squatKey);
+      assert.notEqual(await colorOf(pushKey), squatColor);
+      await checkbox("Push-ups", "Synthetic training").uncheck();
+      await expect(chart("reps").locator("[data-series-key]")).toHaveCount(1);
+      assert.equal(
+        await colorOf(squatKey),
+        squatColor,
+        "A counter keeps its colour when another selection is removed",
+      );
+      await checkbox("Push-ups", "Synthetic training").check();
+      await expect(chart("reps").locator("[data-series-key]")).toHaveCount(2);
+
+      // Until a grouping is picked it follows the range: a year shows months.
+      await segment("Zakres dat", "1 rok").click();
+      await expect(segment("Grupuj według", "Miesiące")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      await expect(pushSeries.locator("path.series-bar")).toHaveCount(
+        new Set([6, 4, 2, 0].map((offset) => day(offset).slice(0, 7))).size,
+      );
+      await screenshot("chart-year-months");
+      // A year of daily bands is too dense for bars, so the plot draws lines.
+      await segment("Grupuj według", "Dni").click();
+      await expect(pushSeries.locator(".series-bar")).toHaveCount(0);
+      await expect(pushSeries.locator("circle[data-point]")).toHaveCount(4);
+      const path = await pushSeries.locator(".series-line").getAttribute("d");
       assert.equal(
         path.match(/M/g).length,
         4,
         "Separated recorded days do not interpolate across missing values",
       );
+      await screenshot("chart-year-lines");
+      await segment("Zakres dat", "7 dni").click();
+      await expect(segment("Grupuj według", "Dni")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      await expect(pushSeries.locator("path.series-bar")).toHaveCount(4);
       await screenshot("chart-shared-unit-overlay");
       checks.push("project-scoped counter catalog and shared-unit overlay");
-      await expect(panel("reps").locator(".eyebrow")).toHaveText(
-        "SUMY OKRESÓW",
+      await expect(panel("reps").locator("[data-plot-mode]")).toHaveText(
+        "sumy dzienne",
       );
       await expect(statistic("Push-ups", "total")).toHaveText("60");
       await expect(statistic("Push-ups", "recorded")).toHaveText("4");
       await expect(statistic("Push-ups", "average")).toHaveText("15");
       await expect(statistic("Push-ups", "peak")).toHaveText("30");
       await expect(statistic("Squats", "total")).toHaveText("80");
-      await expect(statRow("Squats").locator("td").nth(4)).toContainText(
-        "+20 reps",
-      );
+      await expect(statistic("Squats", "difference")).toHaveText("+20 reps");
       await expect(
         dashboard.locator('[data-chart-summary="records"]'),
       ).toHaveText("7");
 
-      await dashboard
-        .getByRole("button", { name: "Suma narastająca", exact: true })
-        .click();
-      await expect(panel("reps").locator(".eyebrow")).toHaveText(
-        "SUMA NARASTAJĄCA",
+      await segment("Sumy na wykresie", "Narastająco").click();
+      await expect(panel("reps").locator("[data-plot-mode]")).toHaveText(
+        "suma narastająca",
       );
+      const running = await pushSeries
+        .locator(".series-line")
+        .getAttribute("d");
+      assert.equal(
+        running.match(/M/g).length,
+        1,
+        "A running total is one line from its first recording",
+      );
+      assert.equal(
+        running.match(/H/g).length,
+        6,
+        "A running total stays level through days without a recording",
+      );
+      await expect(pushSeries.locator("circle[data-point]")).toHaveCount(4);
+      await screenshot("chart-running-total");
       assert.deepEqual(
         (await tableValues("reps")).at(-1).map((cell) => cell.value),
         ["60", "80"],
@@ -334,13 +393,15 @@ await runBrowserSuite(
         (await tableValues("reps"))[1].map((cell) => cell.value),
         ["—", "—"],
       );
-      await dashboard
-        .getByRole("button", { name: "Sumy dzienne", exact: true })
-        .click();
-      for (const bucket of ["week", "month"]) {
-        await dashboard
-          .getByRole("combobox", { name: "Grupuj według", exact: true })
-          .selectOption(bucket);
+      await segment("Sumy na wykresie", "Sumy okresów").click();
+      for (const [bucket, label, mode] of [
+        ["week", "Tygodnie", "sumy tygodniowe"],
+        ["month", "Miesiące", "sumy miesięczne"],
+      ]) {
+        await segment("Grupuj według", label).click();
+        await expect(panel("reps").locator("[data-plot-mode]")).toHaveText(
+          mode,
+        );
         const cells = await tableValues("reps");
         assert.ok(cells.length >= 1 && cells.length <= 2);
         assert.deepEqual(
@@ -357,9 +418,7 @@ await runBrowserSuite(
         );
         await screenshot(`chart-grouped-${bucket}`);
       }
-      await dashboard
-        .getByRole("combobox", { name: "Grupuj według", exact: true })
-        .selectOption("day");
+      await segment("Grupuj według", "Dni").click();
       await screenshot("chart-period-statistics");
       checks.push(
         "saved zero, missing-date gaps, cumulative totals and week/month sums",
@@ -389,7 +448,7 @@ await runBrowserSuite(
       await checkbox("Push-ups", "Synthetic training").check();
       await checkbox("Squats", "Synthetic training").check();
       await dashboard
-        .getByLabel("Uwzględnij zarchiwizowane liczniki", { exact: true })
+        .getByLabel("Także zarchiwizowane", { exact: true })
         .check();
       await expect(
         checkbox("Retired repetitions", "Synthetic training"),
@@ -397,7 +456,7 @@ await runBrowserSuite(
       await checkbox("Retired repetitions", "Synthetic training").check();
       await expect(statistic("Retired repetitions", "total")).toHaveText("40");
       await dashboard
-        .getByLabel("Uwzględnij zarchiwizowane liczniki", { exact: true })
+        .getByLabel("Także zarchiwizowane", { exact: true })
         .uncheck();
       await expect(
         checkbox("Retired repetitions", "Synthetic training"),
@@ -414,9 +473,7 @@ await runBrowserSuite(
       await expect(chart("reps")).toBeVisible();
       await expect(chart("hours")).toBeVisible();
       await expect(dashboard.getByRole("img")).toHaveCount(2);
-      await dashboard
-        .getByRole("combobox", { name: "Skala porównania", exact: true })
-        .selectOption("relative");
+      await scale.selectOption("relative");
       await expect(chart("% własnego maksimum")).toBeVisible();
       await expect(dashboard.getByRole("img")).toHaveCount(1);
       assert.deepEqual(
@@ -427,9 +484,7 @@ await runBrowserSuite(
       );
       await screenshot("chart-relative-units");
 
-      await dashboard
-        .getByRole("combobox", { name: "Skala porównania", exact: true })
-        .selectOption("converted");
+      await scale.selectOption("converted");
       await expect(dashboard).toContainText(
         "Dodaj stawkę, aby zobaczyć przeliczone wartości.",
       );
@@ -479,27 +534,36 @@ await runBrowserSuite(
         "Dashboard selections and filters must not rewrite counter sources",
       );
 
+      const custom = segment("Zakres dat", "Własny");
+      await expect(custom).toHaveAttribute("aria-expanded", "false");
+      await custom.click();
+      await expect(custom).toHaveAttribute("aria-expanded", "true");
+      await expect(dashboard.getByLabel("Do", { exact: true })).toHaveValue(
+        today,
+      );
+      await dashboard.getByLabel("Od", { exact: true }).fill(day(400));
       await dashboard
-        .getByLabel("Data początkowa", { exact: true })
-        .fill(day(400));
-      await dashboard
-        .getByRole("button", { name: "Zastosuj daty", exact: true })
+        .getByRole("button", { name: "Zastosuj zakres", exact: true })
         .click();
       await expect(dashboard.getByRole("alert")).toContainText("400 dni");
+      await screenshot("chart-custom-range");
       await expect(statistic("Push-ups", "total")).toHaveText("60");
+      await dashboard.getByLabel("Od", { exact: true }).fill(day(8));
       await dashboard
-        .getByLabel("Data początkowa", { exact: true })
-        .fill(day(6));
-      await dashboard
-        .getByRole("button", { name: "Zastosuj daty", exact: true })
+        .getByRole("button", { name: "Zastosuj zakres", exact: true })
         .press("Enter");
       await expect(dashboard.getByRole("alert")).toHaveCount(0);
+      await expect(dashboard).toHaveAttribute("data-chart-from", day(8));
+      await expect(custom).toHaveClass(/active/);
+      await segment("Zakres dat", "7 dni").click();
+      await expect(dashboard).toHaveAttribute("data-chart-from", day(6));
+      await expect(custom).toHaveAttribute("aria-expanded", "false");
 
       for (const width of [1440, 1024, 768, 390, 320]) {
         await page.setViewportSize({ width, height: 1000 });
         await expect(chart("EUR")).toBeVisible();
         const compactTargets = await dashboard
-          .locator(".range-presets button, .display-mode button")
+          .locator(".chart-segments button")
           .evaluateAll((buttons) =>
             buttons.map((button) => button.getBoundingClientRect().height),
           );
@@ -513,6 +577,42 @@ await runBrowserSuite(
           ),
           `Chart has no page overflow at ${width}px`,
         );
+        const plotTop = await chart("EUR").evaluate(
+          (plot) => plot.getBoundingClientRect().top + scrollY,
+        );
+        const picker = dashboard.getByRole("button", { name: /^Liczniki/ });
+        if (width >= 1440) {
+          await expect(picker).toHaveCount(0);
+          await expect(
+            checkbox("Work hours", "Synthetic paid work"),
+          ).toBeVisible();
+        } else if (width <= 768) {
+          assert.ok(
+            plotTop < 640,
+            `The plot starts in the first screen at ${width}px, not at ${plotTop}px`,
+          );
+          await expect(picker).toHaveAttribute("aria-expanded", "false");
+          await expect(
+            checkbox("Work hours", "Synthetic paid work"),
+          ).toHaveCount(0);
+          await picker.click();
+          await expect(picker).toHaveAttribute("aria-expanded", "true");
+          await expect(
+            checkbox("Work hours", "Synthetic paid work"),
+          ).toBeChecked();
+          await screenshot(`chart-picker-open-${width}`);
+          await picker.click();
+          await expect(
+            checkbox("Work hours", "Synthetic paid work"),
+          ).toHaveCount(0);
+        }
+        for (const field of ["total", "peak", "converted"]) {
+          const box = await statistic("Work hours", field).boundingBox();
+          assert.ok(
+            box && box.x >= 0 && box.x + box.width <= width,
+            `The ${field} statistic is not clipped at ${width}px`,
+          );
+        }
         await rate(
           "Work hours",
           "Synthetic paid work",
@@ -529,21 +629,24 @@ await runBrowserSuite(
           });
         }
       }
-      await dashboard
-        .getByRole("combobox", { name: "Skala porównania", exact: true })
-        .selectOption("values");
-      const inspect = panel("reps").getByLabel("Sprawdź reps datę", {
+      await scale.selectOption("values");
+      const inspect = panel("reps").getByLabel("Wskazany okres: reps", {
         exact: true,
       });
+      const readout = panel("reps")
+        .getByRole("listitem")
+        .filter({ hasText: "Push-ups" });
+      await expect(readout).toContainText("30");
       await inspect.focus();
       await inspect.press("Home");
       await expect(inspect).toHaveValue("0");
       await inspect.press("ArrowRight");
       await expect(inspect).toHaveValue("1");
-      await expect(panel("reps")).toContainText("Brak zapisu");
+      await expect(readout).toContainText("Brak zapisu");
       await inspect.press("End");
       await expect(inspect).toHaveValue("6");
-      await expect(panel("reps")).toContainText("30 reps");
+      await expect(readout).toContainText("30");
+      await expect(readout).not.toContainText("Brak zapisu");
       await chart("reps").scrollIntoViewIfNeeded();
       const touchBox = await chart("reps").boundingBox();
       await chart("reps").tap({
@@ -657,9 +760,7 @@ await runBrowserSuite(
       await checkbox("Push-ups", "Synthetic training").check();
       await expect(statistic("Push-ups", "total")).toHaveText("75");
       await checkbox("Study minutes", "Synthetic study").check();
-      await dashboard
-        .getByRole("combobox", { name: "Skala porównania", exact: true })
-        .selectOption("relative");
+      await scale.selectOption("relative");
       await expect(
         chart("% własnego maksimum").locator("[data-series-key]"),
       ).toHaveCount(3);

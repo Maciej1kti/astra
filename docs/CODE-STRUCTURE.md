@@ -84,9 +84,12 @@ The charts feature owns Chart's bounded counter-series reads, selection,
 aggregation, statistics and SVG plots. `chart-data.ts` owns cancellation,
 generation checks, stale-page restart and invalidations received during active
 reads; workspace view revisions trigger refresh without replacing browser-local
-chart choices. `chart-model.ts` keeps quantity and valuation calculations separate
-from rendering. The Chart component loads on demand and uses the named counter
-endpoint in `lib/api/counters.ts`.
+chart choices. `chart-model.ts` keeps quantity and valuation calculations, colour
+slots, axis steps and plot geometry separate from rendering. `ChartDashboard`
+owns the selection and display state and composes `ChartRange`,
+`ChartCounterPicker`, one `ChartPlot` per unit and `ChartSummary`;
+`ChartSegments` is their shared segmented control. The Chart component loads on
+demand and uses the named counter endpoint in `lib/api/counters.ts`.
 
 Focus reads its pinned summaries with the ordered membership snapshot. Missing
 retained references become unavailable placeholders; older hosts without summaries

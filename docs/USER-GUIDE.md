@@ -204,28 +204,46 @@ acknowledged card version, while a pending edit retains its original day/version
 ## Compare counters in Chart
 
 Open **Wykres** from the sidebar or the phone's **Więcej** menu. Use the Project
-selector to inspect one project or all registered projects, then choose up to
-eight counters
-by their name and source card. **Znajdź licznik** filters the catalog; **Uwzględnij zarchiwizowane liczniki** also reveals histories retained on archived counters, cards
-and projects. A counter without recorded history remains available to select.
+selector to inspect one project or all registered projects.
 
-Choose an inclusive date range or a period shortcut, then group results by day,
-week or month. **Sumy dzienne** shows the sum in each group; **Suma narastająca**
-adds recorded values from the beginning of the selected range. Missing recordings
-stay visible as gaps, and a saved zero remains a recorded value. **Pokaż dane wykresu**
-opens the same values in a table. Use the date slider, pointer or touch to inspect
-individual groups. Statistics show each selected counter's total, recorded days,
-average and peak for the range. **Różnica** compares totals with the first
-counter in the statistics table that shares the same unit.
+The plot is the main surface. On a wide screen the **Liczniki** list sits beside
+it; on a tablet or phone it collapses to one row showing how many counters are
+selected, and opens in place when tapped. Choose up to eight counters by their
+name and source card. **Znajdź licznik** filters the list; **Także zarchiwizowane**
+also reveals histories retained on archived counters, cards and projects. A
+counter without recorded history remains available to select. Each selected
+counter keeps its colour while you add or remove others.
 
-**Wartości** overlays counters with the same unit and gives different units separate
-charts. **Względem własnego maksimum** puts different units on a common percentage scale
-for comparing their patterns. To estimate a cost, payment or other derived value,
-enter an individual **Stawka** and choose **Przeliczona wartość**. For example, ten
-recorded hours at a rate of 100 give 1,000 in the chosen **Jednostka wynikowa**. Only
-counters with a valid rate contribute to the converted total; zero is a valid
-rate. Rates and the output label are saved in this browser for the selected
-workspace profile. These controls do not change counter units or recorded sources.
+Pick **7 dni**, **30 dni**, **90 dni** or **1 rok**, or open **Własny** for an
+inclusive **Od**/**Do** range. Group results by **Dni**, **Tygodnie** or
+**Miesiące**. Until you pick a grouping yourself it follows the range: days up
+to 45 days, weeks up to 180 and months beyond. **Sumy okresów** draws one bar
+per group; **Narastająco** draws a stepped line that adds recorded values from
+the beginning of the range and stays level through groups without a recording.
+A group without a recording has no bar, and a saved zero keeps a short stub.
+When the groups are too narrow for bars, such as a year of days, the plot draws
+lines that break at missing recordings.
+
+The row above each plot names every counter and shows its value for one group,
+starting with the latest recorded one. Move the pointer over the plot, drag or
+tap it, or focus the plot and use the arrow keys, Home and End to read another
+group. **Pokaż dane wykresu** opens the same values in a table.
+
+**Wartości** overlays counters with the same unit and gives different units
+separate plots. **% własnego maksimum** puts different units on a common
+percentage scale for comparing their patterns. **Przeliczone** multiplies each
+counter by its rate.
+
+**Podsumowanie okresu** lists each selected counter's total, recorded days,
+average and best day; on a narrow screen every counter becomes its own card.
+**Różnica** appears when at least two selected counters share a unit, and
+compares totals with the first of them. To estimate a cost, payment or other
+derived value, enter an individual **Stawka** in that counter's row. For example,
+ten recorded hours at a rate of 100 give 1,000 in the chosen **Jednostka
+wynikowa**. **Razem** adds same-unit totals and the converted values. Only
+counters with a valid rate contribute; zero is a valid rate. Rates and the
+output label are saved in this browser for the selected workspace profile. These
+controls do not change counter units or recorded sources.
 
 Ranges are limited to 400 days. Counter catalogs are paged; use **Wczytaj więcej liczników** when
 offered to discover further counters, up to 500 loaded entries; narrow the Project
