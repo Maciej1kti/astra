@@ -92,6 +92,35 @@
     composer.style.height = `${composer.scrollHeight + composer.offsetHeight - composer.clientHeight}px`;
   });
 
+  // iOS Safari keeps the layout viewport under its keyboard. While the keyboard
+  // covers the page, the dialog is fitted to the visible area instead.
+  let dialog = $state<HTMLDialogElement>();
+  $effect(() => {
+    const viewport = window.visualViewport;
+    if (!open || !dialog || !viewport) return;
+    const element = dialog;
+    const fit = () => {
+      const covered = window.innerHeight - viewport.height > 120;
+      if (!covered) {
+        element.removeAttribute("data-keyboard");
+        element.style.removeProperty("--vv-top");
+        element.style.removeProperty("--vv-height");
+        return;
+      }
+      element.dataset.keyboard = "";
+      element.style.setProperty("--vv-top", `${viewport.offsetTop}px`);
+      element.style.setProperty("--vv-height", `${viewport.height}px`);
+      if (body) body.scrollTop = body.scrollHeight;
+    };
+    fit();
+    viewport.addEventListener("resize", fit);
+    viewport.addEventListener("scroll", fit);
+    return () => {
+      viewport.removeEventListener("resize", fit);
+      viewport.removeEventListener("scroll", fit);
+    };
+  });
+
   function close() {
     open = false;
   }
@@ -117,6 +146,7 @@
 
 {#if open}
   <dialog
+    bind:this={dialog}
     use:modal={{ onclose: close }}
     out:layerExit|global
     class="app-dialog agent-dialog"
@@ -313,29 +343,16 @@
     --agent-height: 680px;
     height: min(80dvh, var(--agent-height));
   }
-  /* The floating Agent button lives in the shell; this loads with the dialog. */
-  :global(.app .agent-action) {
-    position: relative;
+  .agent-dialog:global([data-keyboard]) {
+    position: fixed;
+    inset: var(--vv-top) 0 auto;
+    margin: 0 auto;
+    height: var(--vv-height);
+    max-height: var(--vv-height);
+    border-radius: 0;
   }
-  :global(.app .agent-action[data-activity]::after) {
-    content: "";
-    position: absolute;
-    top: calc(-1 * var(--space-1));
-    right: calc(-1 * var(--space-1));
-    width: var(--space-5);
-    height: var(--space-5);
-    box-sizing: border-box;
-    border: var(--focus-width) solid var(--accent-ink);
-    border-radius: var(--radius-pill);
-    background: var(--paper);
-  }
-  :global(.app .agent-action[data-activity="nowa odpowiedź"]::after) {
-    border-color: var(--success);
-    background: var(--success);
-  }
-  /* The centered counter bar would sit under the group at some widths. */
-  :global(.app.counter-editing .agent-action) {
-    display: none;
+  .agent-dialog:global([data-keyboard]) .agent-composer {
+    padding-bottom: var(--space-6);
   }
   .agent-title {
     display: flex;

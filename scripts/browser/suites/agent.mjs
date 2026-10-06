@@ -3,6 +3,7 @@
  * button, the chat dialog, resilience to a lost connection or reload, and settings.
  * The host's test double answers by marker; see crates/projectd/tests/fixtures.
  */
+import { addTrigger, holdAndChoose } from "../add-menu.mjs";
 import { runBrowserSuite } from "../runtime.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
@@ -38,8 +39,8 @@ await runBrowserSuite(
       process.env.ASTRA_TEST_BROWSER === "webkit" ? "Alt+Tab" : "Tab";
     const project = config.projects[0].id;
 
-    const agentButton = (target = page) =>
-      target.getByRole("button", { name: "Agent", exact: true });
+    // The Agent is one choice of the floating "+"; its state shows on the "+".
+    const agentButton = (target = page) => addTrigger(target);
     const dialogOf = (target = page) =>
       target.getByRole("dialog", { name: "Agent", exact: true });
     const composerOf = (dialog) =>
@@ -88,7 +89,7 @@ await runBrowserSuite(
       await agentButton(target).waitFor();
     }
     async function open(target = page) {
-      await agentButton(target).click();
+      await holdAndChoose(target, "agent");
       const dialog = dialogOf(target);
       await expect(dialog).toBeVisible();
       await expect(text(dialog, "Łączenie z agentem…")).toHaveCount(0);
@@ -174,7 +175,7 @@ await runBrowserSuite(
       });
 
       await check(
-        "The button stands beside Dodaj kartę in Focus and alone elsewhere",
+        "One add button holds the corner in every view and width",
         async () => {
           const layouts = [];
           for (const [width, height] of [
@@ -188,52 +189,37 @@ await runBrowserSuite(
                 `${config.origin}/?view=${view}&project=${project}`,
               );
               await waitForView(view);
-              const agent = await box(agentButton());
-              const dock = page.locator(".app > aside");
-              const rects = { agent };
-              assert(agent.height >= 44 - 1, "A touch target is 44px");
-              if (view === "focus") {
-                rects.add = await box(page.locator(".focus-add-action"));
+              const add = await box(agentButton());
+              assert(add.height >= 44 - 1, "A touch target is 44px");
+              assert(add.right <= width - 8, "Inside the right margin");
+              assert(add.right >= width - 60, `${width}: it keeps the corner`);
+              assert(add.x >= 0);
+              if (width <= 700)
                 assert(
-                  agent.right <= rects.add.x,
-                  `${width}: Agent must lie to the left of Dodaj kartę`,
+                  !intersects(add, await box(page.locator(".app > aside"))),
+                  "Above the navigation",
                 );
-                assert(
-                  rects.add.x - agent.right <= 16,
-                  "The two buttons form one group",
-                );
-                assert(
-                  Math.abs(
-                    agent.y +
-                      agent.height / 2 -
-                      (rects.add.y + rects.add.height / 2),
-                  ) <= 2,
-                  "The buttons share a baseline",
-                );
-                assert(!intersects(agent, rects.add));
-                assert(rects.add.right <= width - 8, "Inside the right margin");
-              } else {
-                await expect(page.locator(".focus-add-action")).toHaveCount(0);
-                assert(agent.right <= width - 8, "Inside the right margin");
-                // Alone, it takes the corner the add button has in Focus.
-                assert(
-                  agent.right >= width - 60,
-                  `${width}: Agent keeps the corner (${agent.right})`,
-                );
-              }
-              assert(agent.x >= 0);
-              if (width <= 700) {
-                rects.dock = await box(dock);
-                assert(!intersects(agent, rects.dock), "Above the navigation");
-                if (rects.add) assert(!intersects(rects.add, rects.dock));
-              }
-              layouts.push({ width, view, rects });
+              layouts.push({ width, view, add });
             }
           }
           await page.setViewportSize({ width: 1440, height: 1000 });
           return layouts;
         },
       );
+
+      await check("Releasing outside the menu folds it back", async () => {
+        await visit("list");
+        const trigger = agentButton();
+        const at = await box(trigger);
+        await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+        await page.mouse.down();
+        await expect(page.getByRole("menu", { name: "Dodaj" })).toBeVisible();
+        await expect(page.getByRole("menuitem")).toHaveCount(3);
+        await page.mouse.move(at.x - 200, at.y - 400, { steps: 4 });
+        await page.mouse.up();
+        await expect(page.getByRole("menu", { name: "Dodaj" })).toBeHidden();
+        await expect(dialogOf()).toHaveCount(0);
+      });
 
       await check(
         "Workspace content clears the floating buttons in every view and width",
@@ -388,6 +374,7 @@ await runBrowserSuite(
           const trigger = agentButton();
           await trigger.focus();
           await trigger.press("Enter");
+          await page.keyboard.press("Enter");
           const dialog = dialogOf();
           await expect(dialog).toBeVisible();
           await expect(composerOf(dialog)).toBeFocused();
@@ -417,7 +404,7 @@ await runBrowserSuite(
           await page.keyboard.press("Escape");
           await expect(nativeDialogs).toHaveCount(0);
           await expect(trigger).toBeFocused();
-          await trigger.click();
+          await holdAndChoose(page, "agent");
           await expect(dialog).toBeVisible();
           await close(dialog);
           await expect(trigger).toBeFocused();
@@ -1030,6 +1017,7 @@ await runBrowserSuite(
         await visit("list");
         const trigger = agentButton();
         await trigger.focus();
+        await page.keyboard.press("Enter");
         await page.keyboard.press("Enter");
         const dialog = dialogOf();
         await expect(composerOf(dialog)).toBeFocused();

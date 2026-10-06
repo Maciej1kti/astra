@@ -7,7 +7,7 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
-The [in-app agent](2026-10-06-agent-chat.md) adds an Agent button and a chat
+The [in-app agent](2026-10-06-agent-chat.md) adds an Agent choice in the floating **+** menu and a chat
 dialog backed by Claude Code or Codex. A host started with `--agent-dir` runs
 the selected provider for one message and shows only its final answer; the
 agent changes cards through `projectctl`. The gate and all 41 Chromium suites

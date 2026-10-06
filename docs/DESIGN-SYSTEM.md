@@ -230,18 +230,23 @@ button into the document; recovery controls appear when the draft needs them.
 ## Floating actions and the Agent dialog
 
 `.floating-actions` in `App.svelte` is the one fixed container at the lower right
-(above the phone navigation dock). It holds the **Agent** button, when the host
-enables the agent, then Focus's primary **Dodaj kartę**, so Agent sits to its
-left and stands alone in the corner in other views. Buttons inside it share
-`--shadow-floating`, and the content reserves room under it whenever it is
-shown. Add a further floating action to this container instead of positioning
-another one.
+(above the phone navigation dock), shown in every view. It holds one large **+**
+(`AddMenu`). Pressing it opens a menu upward while the pointer stays down: slide
+onto **Agent** (only when the host enables the agent), **Karta** or **Projekt**
+and release there to choose; releasing anywhere else folds the menu back. A quick
+tap released on the button keeps the menu open, and keyboard users open it with
+Enter or Space, move with Tab and choose with Enter; Escape folds it. **Karta**
+asks for a project when none is selected, as Focus did. The button shares
+`--shadow-floating`, and the content reserves room under it. Add a further
+choice to the menu instead of another floating control.
 
-The Agent button is an ordinary `Button` named "Agent" with
-`aria-haspopup="dialog"`. While the dialog is closed it reports activity with a
-ring (working) or a green mark (a new answer waits) set from `data-activity`,
-and a visually hidden `role="status"` beside it says the same, so colour is
-never the only signal. It is hidden while the centered counter bar is open.
+Agent activity shows on the **+** while the dialog is closed: a ring (working) or
+a green mark (a new answer waits) set from `data-activity`, with a visually
+hidden `role="status"` beside it, so colour is never the only signal. The whole
+container is hidden while the centered counter bar is open.
+
+While the iOS keyboard covers the page, the Agent dialog is fitted to
+`visualViewport` (`data-keyboard`), so the composer stays above the keyboard.
 
 The dialog is a native `modal` with `DialogHeader`, height `min(80dvh, 680px)`
 and nearly the full viewport height at 520px and narrower. Its log shows the owner's text and, below it,

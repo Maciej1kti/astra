@@ -13,6 +13,7 @@
 
   import WorkspaceNavigation from "./features/workspace/WorkspaceNavigation.svelte";
   import WorkspaceHeader from "./features/workspace/WorkspaceHeader.svelte";
+  import AddMenu from "./features/workspace/AddMenu.svelte";
   import WorkspaceFilters from "./features/workspace/WorkspaceFilters.svelte";
   import FocusCounterBar from "./features/cards/FocusCounterBar.svelte";
   import { focusCounterState } from "./features/cards/focus-counter-state.svelte";
@@ -495,7 +496,7 @@
     autoCreate = false,
   ) {
     let project = routing.current.project;
-    if (routing.current.view === "focus") {
+    if (routing.current.view === "focus" || !project) {
       const candidates = projects.filter(
         (p) =>
           p.availability === "ready" &&
@@ -743,11 +744,7 @@
         onrefresh={() => refresh().catch(message)}
         {logout}
       />
-      <main
-        class="content"
-        class:floating-content={routing.current.view === "focus" ||
-          agentEnabled}
-      >
+      <main class="content floating-content">
         {#if routing.current.view === "focus"}
           <h1 class="sr">Focus</h1>
         {:else if routing.current.view !== "chart"}
@@ -941,32 +938,17 @@
               </DeferredView>
             {/if}
           </div>{/key}
-        {#if routing.current.view === "focus" || agentEnabled}
-          <div class="floating-actions">
-            {#if agentEnabled}
-              <Button
-                class="agent-action"
-                aria-haspopup="dialog"
-                data-activity={agentChat.activity || undefined}
-                onclick={(event) => {
-                  event.currentTarget.focus({ preventScroll: true });
-                  agentOpen = true;
-                }}>Agent</Button
-              >
-              <span class="sr" role="status">{agentChat.activity}</span>
-            {/if}
-            {#if routing.current.view === "focus"}
-              <Button
-                variant="primary"
-                class="focus-add-action"
-                onclick={(event) => {
-                  event.currentTarget.focus({ preventScroll: true });
-                  create("card");
-                }}><Icon name="plus" small />Dodaj kartę</Button
-              >
-            {/if}
-          </div>
-        {/if}
+        <div class="floating-actions">
+          <AddMenu
+            agent={agentEnabled}
+            activity={agentChat.activity}
+            onchoose={(choice) => {
+              if (choice === "agent") agentOpen = true;
+              else if (choice === "project") addProject();
+              else create("card");
+            }}
+          />
+        </div>
         {#if queryReady && ["board", "list", "updates"].includes(routing.current.view) && (routing.current.view !== "board" || !routing.current.project)}{@const kind =
             routing.current.view === "updates"
               ? "update"

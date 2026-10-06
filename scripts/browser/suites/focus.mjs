@@ -1,4 +1,5 @@
 /** Focus layout and creation regressions against a real paired synthetic host. */
+import { addTrigger, holdAndChoose } from "../add-menu.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -76,7 +77,7 @@ await runBrowserSuite(
     }
 
     function focusButton(page) {
-      return page.getByRole("button", { name: /Dodaj kartę$/ });
+      return addTrigger(page);
     }
 
     function editor(page) {
@@ -532,7 +533,7 @@ await runBrowserSuite(
           await expect(page.getByLabel("Folder", { exact: true })).toHaveValue(
             "Work",
           );
-          await focusButton(page).click();
+          await holdAndChoose(page, "card");
           const chooser = page.getByRole("dialog", {
             name: "Wybierz projekt dla karty",
           });
@@ -655,7 +656,7 @@ await runBrowserSuite(
               fullPage: false,
             });
 
-            await add.click();
+            await holdAndChoose(page, "card");
             const modal = editor(page);
             await expect(modal).toBeVisible();
             const modalBox = await modal.boundingBox();
@@ -692,7 +693,7 @@ await runBrowserSuite(
             (url) => url.pathname === `${base}/cards`,
           ).length;
           const createdTitle = `Focus created card ${suffix}`;
-          await focusButton(page).click();
+          await holdAndChoose(page, "card");
           const modal = editor(page);
           const post = page.waitForResponse(
             (response) =>

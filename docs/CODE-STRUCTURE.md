@@ -224,8 +224,8 @@ request may be repeated. Run IDs come from `newRequestId` in `lib/api/api.ts`;
 the transport's 15-second mutation limit is why a start returns at once and is
 polled.
 
-`App.svelte` owns the floating **Agent** button (in the `.floating-actions`
-container shared with Focus's Add card), mounts the dialog once its deferred
+`App.svelte` owns the floating **+** (`AddMenu` in `.floating-actions`: Agent,
+Karta, Projekt), mounts the dialog once its deferred
 module has loaded and keeps it mounted while closed, so a run keeps being
 polled. It learns whether the agent is enabled from bootstrap's `agent_enabled`.
 `Settings.svelte` and `settings-draft.ts` carry the `agent_provider` preference
