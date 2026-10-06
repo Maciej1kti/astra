@@ -222,6 +222,54 @@ await runBrowserSuite(
       );
 
       await check(
+        "D01-touch",
+        "A touched menu action reaches card deletion on a phone",
+        async () => {
+          const card = await createCard(`Delete touch ${Date.now()}`);
+          const touchContext = await newContext({
+            hasTouch: true,
+            viewport: { width: 390, height: 844 },
+          });
+          try {
+            const phone = await touchContext.newPage();
+            await openCard(phone, card);
+            const menu = editor(phone).getByRole("button", {
+              name: "Działania karty",
+              exact: true,
+            });
+            await menu.tap();
+            await expect(menu).toHaveAttribute("aria-expanded", "true");
+            // The tap's focus change must not dismiss the menu before its click.
+            await editor(phone)
+              .getByRole("button", { name: "Usuń kartę", exact: true })
+              .tap();
+            const confirmation = phone.getByRole("alertdialog", {
+              name: "Trwale usunąć kartę?",
+              exact: true,
+            });
+            await expect(confirmation).toContainText(card.title);
+            await confirmation
+              .getByRole("button", { name: "Trwale usuń kartę", exact: true })
+              .tap();
+            await expect(editor(phone)).toBeHidden();
+            assert.equal(
+              await exists(
+                join(
+                  config.projects[0].folder,
+                  ".project/cards",
+                  `${card.id}.json`,
+                ),
+              ),
+              false,
+            );
+            return { card: card.id, touched: true, sourceRemoved: true };
+          } finally {
+            await touchContext.close();
+          }
+        },
+      );
+
+      await check(
         "D02-autosave-delete",
         "Card deletion waits for a held autosave and previews the latest version",
         async () => {

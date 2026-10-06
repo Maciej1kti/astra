@@ -169,6 +169,8 @@ Escape continues through the existing close and unresolved-draft guards.
 `ActionMenu` is a small keyboard-accessible disclosure, with ordinary buttons and
 checkboxes. Card pinning stays in the header; archive and permanent deletion are
 inside its actions. Escape dismisses the disclosure and restores trigger focus.
+A pointer or focus move outside dismisses it; focus landing on an element that
+contains the menu, as WebKit does on the dialog after a touch, does not.
 Every action/date/navigation menu uses the same native popover and
 `popover-position.ts` observer. It measures the trigger and visual viewport,
 honors start/end alignment, chooses space below/above/beside, bounds long content

@@ -64,10 +64,13 @@
     };
     const outsideFocus = (event: FocusEvent) => {
       // WebKit can focus the dialog before dispatching a clicked menu button.
+      // A touch has released its pointer by then, so focus on an element that
+      // contains the menu is not a move away from it either.
       if (
         !pointerInside &&
         event.target instanceof Node &&
-        !root.contains(event.target)
+        !root.contains(event.target) &&
+        !event.target.contains(root)
       )
         open = false;
     };
