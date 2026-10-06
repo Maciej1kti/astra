@@ -473,7 +473,6 @@
   margin: var(--space-4) var(--space-4) var(--space-6);
 }
 .app .column .sectiontitle h2 {
-  text-transform: capitalize;
   font-size: var(--text-base);
 }
 .app .column .card {
@@ -858,9 +857,12 @@
   [data-focus-drag-preview] {
     padding: var(--space-8);
   }
+  .app .sectiontitle {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
   .app .sectiontitle > span {
-    max-width: 35%;
-    text-align: right;
+    white-space: nowrap;
   }
   .app .update {
     padding: var(--space-8);

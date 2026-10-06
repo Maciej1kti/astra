@@ -666,7 +666,6 @@
     max-width: var(--tap-target);
   }
   .astra-board :global(.wx-title) {
-    text-transform: capitalize;
     font-size: var(--text-base);
   }
   .astra-board :global(.wx-card) {
@@ -746,7 +745,6 @@
       flex: 0 0 auto;
       min-height: var(--tap-target);
       padding: var(--space-4) var(--space-6);
-      text-transform: capitalize;
       white-space: nowrap;
       background: var(--soft);
     }

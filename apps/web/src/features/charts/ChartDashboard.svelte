@@ -380,7 +380,7 @@
   }
   /* A refresh keeps the previous plot in place instead of clearing it. */
   .chart-panels.refreshing {
-    opacity: 0.6;
+    opacity: var(--pending-opacity);
   }
   .chart-controls {
     display: grid;

@@ -269,7 +269,7 @@
     color: var(--muted);
   }
   .counter-option.stale {
-    opacity: 0.75;
+    opacity: var(--pending-opacity);
   }
   .counter-option > input {
     margin: 0;

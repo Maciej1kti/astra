@@ -50,7 +50,7 @@ dialog::backdrop {
 }
 .dialog-header {
   position: relative;
-  z-index: 2;
+  z-index: var(--layer-raised);
   border-bottom: var(--stroke) solid var(--line);
 }
 .dialog-heading {

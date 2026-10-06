@@ -514,7 +514,6 @@
   .calendar-region {
     --calendar-plan-bg: var(--plan-bg);
     --calendar-due-bg: var(--notice-bg);
-    --calendar-mobile-grid-height: clamp(600px, calc(100dvh - 180px), 700px);
     min-width: 0;
   }
   .calendar-surface {
@@ -528,7 +527,7 @@
     position: absolute;
     top: var(--space-2);
     right: var(--space-4);
-    z-index: 5;
+    z-index: var(--layer-raised);
     margin: 0;
     padding: var(--space-2) var(--space-4);
     border-radius: var(--radius-pill);
@@ -637,7 +636,7 @@
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-floating);
     padding: var(--space-4) var(--space-6) var(--space-6);
-    z-index: 5;
+    z-index: var(--layer-raised);
   }
   .calendar-surface :global(.ec-popup .ec-day-head) {
     align-items: center;

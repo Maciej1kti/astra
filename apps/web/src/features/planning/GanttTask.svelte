@@ -197,7 +197,7 @@
     outline-offset: var(--focus-width);
   }
   button:global([data-dragging]) {
-    z-index: 5;
+    z-index: var(--layer-raised);
     background: var(--paper);
     box-shadow: var(--shadow-floating);
   }

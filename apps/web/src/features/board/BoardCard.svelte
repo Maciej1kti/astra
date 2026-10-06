@@ -72,7 +72,7 @@
     -webkit-touch-callout: none;
   }
   article:global([data-dragging]) {
-    opacity: 0.35;
+    opacity: var(--drag-opacity);
   }
   .title {
     display: block;

@@ -83,6 +83,10 @@ input[type="radio"] {
   background: var(--primary-hover);
   color: var(--on-primary);
 }
+.primary:disabled {
+  background: var(--primary);
+  box-shadow: none;
+}
 .quiet {
   background: transparent;
   border-color: transparent;

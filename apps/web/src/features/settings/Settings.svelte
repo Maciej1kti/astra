@@ -690,6 +690,12 @@
     justify-content: space-between;
     gap: var(--space-6);
   }
+  .row {
+    align-items: flex-end;
+  }
+  .row > :global(button) {
+    margin-bottom: var(--space-8);
+  }
   h3 {
     margin: 0;
     font-size: var(--text-card);

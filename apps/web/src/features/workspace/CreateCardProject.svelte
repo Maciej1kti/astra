@@ -16,7 +16,7 @@
 </script>
 
 <dialog
-  class="app-dialog"
+  class="app-dialog dialog-small"
   use:modal={{ onclose }}
   out:layerExit|global
   aria-label="Wybierz projekt dla karty"
@@ -50,3 +50,13 @@
     </footer>
   </form>
 </dialog>
+
+<style>
+  label {
+    display: grid;
+    gap: var(--space-4);
+  }
+  select {
+    width: 100%;
+  }
+</style>

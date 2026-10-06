@@ -110,13 +110,14 @@
   --chart-height: 480px;
   --chart-mobile-height: 430px;
   --calendar-grid-height: clamp(600px, calc(100dvh - 260px), 820px);
-  --calendar-mobile-grid-height: 740px;
+  --calendar-mobile-grid-height: clamp(600px, calc(100dvh - 180px), 700px);
   --calendar-agenda-height: clamp(400px, calc(100dvh - 240px), 680px);
   --gantt-min-width: 720px;
   --board-min-height: 360px;
   --board-height: 68vh;
   --drag-opacity: 0.28;
   --disabled-opacity: 0.5;
+  --pending-opacity: 0.6;
   --motion-quick: 200ms;
   --motion-enter: 500ms;
   --motion-heading: 600ms;
@@ -134,6 +135,7 @@
   --motion-distance: var(--space-3);
   --motion-softness: 2px;
   --motion-lift: var(--space-1);
+  --layer-raised: 5;
   --layer-navigation: 10;
   --layer-floating: 20;
   --layer-drag-preview: 10000;
