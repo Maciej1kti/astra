@@ -1,6 +1,6 @@
 use project_application::engine::Engine;
 use project_store::filesystem::Directory;
-use projectd::{Limits, Service};
+use projectd::{AgentConfig, Limits, Service};
 use serde_json::{Value, json};
 use tokio::net::{TcpListener, UnixListener};
 use uuid::Uuid;
@@ -13,6 +13,9 @@ struct Running {
     /// Serving ends when this sender is dropped.
     _shutdown: tokio::sync::watch::Sender<bool>,
     project: String,
+    service: Service,
+    /// What the agent was started with, when it is enabled.
+    agent: Option<AgentConfig>,
 }
 
 #[tokio::test]
@@ -110,13 +113,26 @@ async fn command_status_requires_the_original_epoch_and_validates_its_response()
 }
 impl Drop for Running {
     fn drop(&mut self) {
+        // Ends any agent child a test left running.
+        self.service.shutdown();
         for task in &self.tasks {
             task.abort();
         }
     }
 }
+#[path = "support/mod.rs"]
+mod support;
 impl Running {
     async fn new() -> Self {
+        Self::build(None::<fn(&mut AgentConfig)>).await
+    }
+    /// A host with the agent enabled: fake provider executables, an agent
+    /// directory with instructions and a stub `projectctl`. `adjust` may change
+    /// the configuration before the host starts.
+    async fn with_agent(adjust: impl FnOnce(&mut AgentConfig)) -> Self {
+        Self::build(Some(adjust)).await
+    }
+    async fn build<F: FnOnce(&mut AgentConfig)>(agent: Option<F>) -> Self {
         let temp = tempfile::tempdir().unwrap();
         let root = Directory::open(&temp.path().canonicalize().unwrap()).unwrap();
         let state = root.child("state", true).unwrap();
@@ -127,14 +143,35 @@ impl Running {
             .to_str()
             .unwrap()
             .to_owned();
-        let service =
+        let mut service =
             Service::new(Engine::open(state.path()).unwrap(), "https://projects.test").unwrap();
         let tcp = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = format!("http://{}", tcp.local_addr().unwrap());
         let socket = state.path().join("test.sock");
         let unix = UnixListener::bind(&socket).unwrap();
+        let mut agent_config = None;
+        if let Some(adjust) = agent {
+            let directory = root.child("agent", true).unwrap().path().to_owned();
+            std::fs::write(directory.join("AGENTS.md"), "# Test instructions\n").unwrap();
+            let cli_dir = root.child("cli", true).unwrap().path().to_owned();
+            let stub = cli_dir.join("projectctl");
+            std::fs::write(&stub, "#!/bin/sh\nexit 0\n").unwrap();
+            std::fs::set_permissions(&stub, std::os::unix::fs::PermissionsExt::from_mode(0o755))
+                .unwrap();
+            let mut config = AgentConfig {
+                directory,
+                socket: socket.clone(),
+                cli_dir,
+                claude: Some(support::FAKE_AGENT.into()),
+                codex: Some(support::FAKE_AGENT.into()),
+                timeout: std::time::Duration::from_secs(60),
+            };
+            adjust(&mut config);
+            service = service.with_agent(config.clone());
+            agent_config = Some(config);
+        }
         let (shutdown, signal) = tokio::sync::watch::channel(false);
-        let (browser, local) = (service.clone(), service);
+        let (browser, local) = (service.clone(), service.clone());
         let local_signal = signal.clone();
         let tasks = vec![
             tokio::spawn(async move { browser.serve_browser(tcp, Limits::NETWORK, signal).await }),
@@ -152,6 +189,8 @@ impl Running {
             tasks,
             _shutdown: shutdown,
             project,
+            service,
+            agent: agent_config,
         }
     }
     fn browser(&self, method: &str, path: &str) -> reqwest::RequestBuilder {
@@ -928,6 +967,9 @@ mod compression;
 
 #[path = "transport/users.rs"]
 mod users;
+
+#[path = "transport/agent.rs"]
+mod agent;
 
 #[path = "transport/projects.rs"]
 mod projects;

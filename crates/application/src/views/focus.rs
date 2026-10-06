@@ -18,13 +18,7 @@ impl Engine {
             validate_folder(folder)?;
         }
         let workspace = self.workspace()?.value;
-        let zone = workspace
-            .timezone
-            .parse::<chrono_tz::Tz>()
-            .map_err(|_| AppError::invariant("workspace timezone"))?;
-        let local = chrono::DateTime::from_timestamp_millis(now)
-            .ok_or_else(|| AppError::invariant("focus timestamp"))?
-            .with_timezone(&zone);
+        let local = crate::workspace::civil_clock(&workspace.timezone, now, "focus timestamp")?;
         let today = local.date_naive().to_string();
         let clock = local.format("%Y-%m-%d %H:%M:00").to_string();
         self.index.with_snapshot(|db, revision| {

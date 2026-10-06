@@ -18,16 +18,13 @@ impl Engine {
     pub fn focus_resource(&self) -> Result<Value, AppError> {
         let _gate = self.shared_gate()?;
         let workspace = self.workspace()?;
-        let zone = workspace
-            .value
-            .timezone
-            .parse::<chrono_tz::Tz>()
-            .map_err(|_| AppError::invariant("workspace timezone"))?;
-        let today = chrono::DateTime::from_timestamp_millis(crate::now_millis())
-            .ok_or_else(|| AppError::invariant("focus timestamp"))?
-            .with_timezone(&zone)
-            .date_naive()
-            .to_string();
+        let today = crate::workspace::civil_clock(
+            &workspace.value.timezone,
+            crate::now_millis(),
+            "focus timestamp",
+        )?
+        .date_naive()
+        .to_string();
         self.index.with_snapshot(|db, revision| {
             let projection = ProjectionStatus::read(db, None)?;
             let projects = serde_json::to_string(&workspace.value.projects)

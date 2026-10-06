@@ -16,6 +16,45 @@ use project_store::{
 use rusqlite::params;
 use serde_json::{Value, json};
 use std::collections::HashSet;
+
+/// `now` (Unix milliseconds) on the workspace's civil clock. Every "today" the
+/// application reports is derived here, so they cannot disagree on the zone.
+pub(crate) fn civil_clock(
+    timezone: &str,
+    now: i64,
+    label: &'static str,
+) -> Result<chrono::DateTime<chrono_tz::Tz>, AppError> {
+    let zone = timezone
+        .parse::<chrono_tz::Tz>()
+        .map_err(|_| AppError::invariant("workspace timezone"))?;
+    Ok(chrono::DateTime::from_timestamp_millis(now)
+        .ok_or_else(|| AppError::invariant(label))?
+        .with_timezone(&zone))
+}
+
+/// The current civil date of a workspace, for text shown to people and agents.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceDay {
+    /// `YYYY-MM-DD`.
+    pub date: String,
+    /// English weekday name.
+    pub weekday: String,
+    /// IANA zone name from the workspace.
+    pub timezone: String,
+}
+
+impl Engine {
+    /// The date at `now` (Unix milliseconds) in this workspace's timezone.
+    pub fn workspace_day(&self, now: i64) -> Result<WorkspaceDay, AppError> {
+        let workspace = self.workspace()?.value;
+        let local = civil_clock(&workspace.timezone, now, "workspace day timestamp")?;
+        Ok(WorkspaceDay {
+            date: local.date_naive().to_string(),
+            weekday: local.format("%A").to_string(),
+            timezone: workspace.timezone,
+        })
+    }
+}
 impl Engine {
     pub fn mutate_workspace(
         &self,

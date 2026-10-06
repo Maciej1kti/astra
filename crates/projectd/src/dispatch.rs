@@ -544,6 +544,35 @@ fn host(route: &Route<'_>) -> Result<Routed, AppError> {
             ("GET", ["api", "v1", "native-folder-selections", id]) => {
                 service.picker.get(picker_owner, id)?
             }
+            ("GET", ["api", "v1", "agent"]) => {
+                let agents = service.agents()?;
+                parameters(input, &[])?;
+                agents.status(engine)?
+            }
+            ("POST", ["api", "v1", "agent", "runs"]) => {
+                let agents = service.agents()?;
+                parameters(input, &[])?;
+                let started = agents.start(&service.user, engine, &input.body)?;
+                return Ok(Routed::Reply(response(started)));
+            }
+            ("GET", ["api", "v1", "agent", "runs", run]) => {
+                let agents = service.agents()?;
+                parameters(input, &[])?;
+                agents.run(&service.user.id, run)?
+            }
+            ("POST", ["api", "v1", "agent", "runs", run, "cancel"]) => {
+                let agents = service.agents()?;
+                parameters(input, &[])?;
+                if input.body != json!({}) {
+                    return Err(AppError::reject(422, "VALIDATION_FAILED"));
+                }
+                agents.cancel(&service.user.id, run)?
+            }
+            ("GET", ["api", "v1", "agent", "conversations", conversation]) => {
+                let agents = service.agents()?;
+                parameters(input, &[])?;
+                agents.conversation(&service.user.id, conversation)?
+            }
             ("GET", ["api", "v1", "roots"]) => engine.roots()?,
             ("GET", ["api", "v1", "roots", id, "directories"]) => {
                 let mut relative = String::new();
@@ -578,7 +607,7 @@ fn host(route: &Route<'_>) -> Result<Routed, AppError> {
                     "csrf_token": session.map(|s| s.csrf.as_str()).unwrap_or("local-uid"),
                     "snapshot_cursor": engine.snapshot_cursor()?,
                     "capabilities": ["projects","cards","milestones","updates","registration","search"],
-                    "agent_enabled": false,
+                    "agent_enabled": service.agents.is_some(),
                 })
             }
             ("GET", ["api", "v1", "diagnostics"]) => engine.diagnostics()?,

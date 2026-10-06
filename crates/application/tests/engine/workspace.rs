@@ -149,6 +149,24 @@ fn agent_provider_preference_is_committed_kept_by_later_patches_and_validated() 
 }
 
 #[test]
+fn workspace_day_is_the_civil_date_in_the_workspace_timezone() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let workspace = engine.workspace().unwrap().value;
+    assert_eq!(workspace.timezone, "Europe/Warsaw");
+    // 22:30 UTC on Monday is already Tuesday 00:30 in Warsaw (UTC+2 until 25 October).
+    let now = 1_791_239_400_000;
+    let day = engine.workspace_day(now).unwrap();
+    assert_eq!(day.date, "2026-10-06");
+    assert_eq!(day.weekday, "Tuesday");
+    assert_eq!(day.timezone, "Europe/Warsaw");
+    // The same instant a few hours earlier is still Monday there.
+    let earlier = engine.workspace_day(now - 3 * 3_600_000).unwrap();
+    assert_eq!(earlier.date, "2026-10-05");
+    assert_eq!(earlier.weekday, "Monday");
+}
+
+#[test]
 fn legacy_main_preferences_preserve_source_version_and_command_recovery() {
     use project_application::{AppError, writer::CommitPoint};
     use project_store::document::version;

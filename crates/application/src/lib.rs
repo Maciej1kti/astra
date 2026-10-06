@@ -36,6 +36,7 @@ mod workflow_kind;
 mod workspace;
 pub use index::Query;
 pub use mutation::Mutation;
+pub use workspace::WorkspaceDay;
 mod index;
 mod journal;
 pub mod wire;

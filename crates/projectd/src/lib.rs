@@ -25,6 +25,7 @@ use tokio::{
     sync::{OwnedSemaphorePermit, Semaphore, watch},
 };
 use url::Url;
+mod agent;
 mod assets;
 mod dispatch;
 mod encoding;
@@ -32,6 +33,7 @@ mod events;
 mod picker;
 mod read_response;
 mod serve;
+pub use agent::AgentConfig;
 pub use serve::Limits;
 
 #[derive(Clone)]
@@ -40,6 +42,8 @@ pub struct Service {
     users: Arc<Users>,
     user: UserProfile,
     picker: Arc<picker::Picker>,
+    /// Present only when the host was started with an agent directory.
+    agents: Option<Arc<agent::Agents>>,
     origin: String,
     host: String,
     /// Admission for the peer-verified local socket.
@@ -89,6 +93,7 @@ impl Service {
             users,
             user,
             picker: Arc::new(picker::Picker::default()),
+            agents: None,
             origin: url.origin().ascii_serialization(),
             host,
             slots: Arc::new(Semaphore::new(8)),
@@ -100,6 +105,12 @@ impl Service {
             shutdown: watch::channel(false).0,
             body_timeout: Duration::from_secs(10),
         })
+    }
+    /// Enable the in-app agent: runs of a local coding agent started from the
+    /// browser. Without this every agent route answers `AGENT_DISABLED`.
+    pub fn with_agent(mut self, config: AgentConfig) -> Self {
+        self.agents = Some(Arc::new(agent::Agents::new(config)));
+        self
     }
     /// Serve the network listener until `shutdown` reports true or its sender
     /// is dropped, then let open connections finish their current exchange.
@@ -130,9 +141,24 @@ impl Service {
     /// Stop long-lived responses before the listeners finish graceful shutdown.
     pub fn shutdown(&self) {
         self.shutdown.send_replace(true);
+        if let Some(agents) = &self.agents {
+            agents.begin_stop();
+        }
+    }
+    /// After `shutdown`, wait until no agent process is left. True when none is.
+    pub fn wait_for_agents(&self, limit: Duration) -> bool {
+        self.agents
+            .as_ref()
+            .is_none_or(|agents| agents.wait_idle(limit))
     }
     pub fn user_engines(&self) -> Result<Vec<(String, Arc<Engine>)>, AppError> {
         self.users.engines()
+    }
+    /// The agent registry, or `AGENT_DISABLED` when the host has no agent directory.
+    fn agents(&self) -> Result<&Arc<agent::Agents>, AppError> {
+        self.agents
+            .as_ref()
+            .ok_or_else(|| AppError::reject(404, "AGENT_DISABLED"))
     }
     fn scoped(&self, input: &Input, query_user: Option<&str>) -> Result<Self, AppError> {
         if input.headers.get_all("x-astra-user").iter().count() > 1 {

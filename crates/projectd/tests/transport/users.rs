@@ -48,7 +48,7 @@ async fn register(app: &Running, user: &str, epoch: &str) -> Value {
     assert!(committed.status().is_success());
     plan
 }
-async fn paired_cookie(app: &Running) -> String {
+pub(super) async fn paired_cookie(app: &Running) -> String {
     let response = app
         .browser("POST", "/api/v1/auth/pairings")
         .header("origin", "https://projects.test")

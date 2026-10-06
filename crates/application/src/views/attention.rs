@@ -45,13 +45,8 @@ impl Engine {
             validate_folder(folder)?;
         }
         let workspace = self.workspace()?.value;
-        let zone = workspace
-            .timezone
-            .parse::<chrono_tz::Tz>()
-            .map_err(|_| AppError::invariant("workspace timezone"))?;
-        let local_now = chrono::DateTime::from_timestamp_millis(now)
-            .ok_or_else(|| AppError::invariant("attention timestamp"))?
-            .with_timezone(&zone);
+        let local_now =
+            crate::workspace::civil_clock(&workspace.timezone, now, "attention timestamp")?;
         let today = local_now.date_naive();
         let clock = local_now.format("%Y-%m-%d %H:%M:00").to_string();
         let soon = today

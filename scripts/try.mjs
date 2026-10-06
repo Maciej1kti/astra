@@ -63,9 +63,22 @@ try {
 }
 const origin = `https://${remote ? bindHost : "localhost"}:47832`,
   socket = join(data, "projectd.sock");
+// ASTRA_TRY_AGENT=1 enables the in-app agent with the repository's agent/ directory.
+const agentArgs =
+  process.env.ASTRA_TRY_AGENT === "1"
+    ? ["--agent-dir", join(root, "agent")]
+    : [];
 const child = spawn(
   binary,
-  ["--data-dir", data, "--public-origin", origin, "--port", "47831"],
+  [
+    "--data-dir",
+    data,
+    "--public-origin",
+    origin,
+    "--port",
+    "47831",
+    ...agentArgs,
+  ],
   { stdio: ["ignore", "inherit", "inherit"] },
 );
 const proxy = https.createServer(
