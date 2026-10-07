@@ -55,7 +55,12 @@
     viewLabel,
   } from "./features/workspace/navigation";
 
-  import { applyTheme, readTheme } from "./features/settings/appearance";
+  import {
+    applyHand,
+    applyTheme,
+    readHand,
+    readTheme,
+  } from "./features/settings/appearance";
   import DateViews from "./features/planning/DateViews.svelte";
   import {
     loadCalendarView,
@@ -264,6 +269,7 @@
 
   onMount(() => {
     applyTheme(readTheme());
+    applyHand(readHand());
     return observePreloadFailures();
   });
 

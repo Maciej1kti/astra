@@ -634,7 +634,11 @@ await runBrowserSuite(
               "Focus add action must remain inside the viewport",
             );
             assert(before.x + before.width > viewport.width - 110);
-            assert(before.y + before.height > viewport.height - 110);
+            // A phone keeps it a row above the dock, so the lowest choice clears it.
+            assert(
+              before.y + before.height >
+                viewport.height - (viewport.width > 700 ? 110 : 160),
+            );
             await page.evaluate(() =>
               window.scrollTo(0, document.body.scrollHeight),
             );

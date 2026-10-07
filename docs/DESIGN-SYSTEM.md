@@ -240,6 +240,14 @@ asks for a project when none is selected, as Focus did. The button shares
 `--shadow-floating`, and the content reserves room under it. Add a further
 choice to the menu instead of another floating control.
 
+At 700px and narrower the **+** sits one row above the dock and the choices fan
+out beside it, the first above, the middle level and the last below the thumb,
+so the slide is sideways. **Ustawienia → Wygląd → Przycisk dodawania na
+telefonie** moves the button to the left edge and the fan to its right for the
+left hand. The choice is browser-local (`astra-hand:v1`, `data-hand` on the
+root), like the theme, and changes no workspace preference; wider layouts keep
+the button on the right with the choices above it.
+
 Agent activity shows on the **+** while the dialog is closed: a ring (working) or
 a green mark (a new answer waits) set from `data-activity`, with a visually
 hidden `role="status"` beside it, so colour is never the only signal. The whole
@@ -374,28 +382,28 @@ remain owned by their gesture implementation.
 source of truth. Durations below exclude a layer's opening delay. Use the same
 parameters in light/dark themes and desktop/mobile layouts.
 
-| Token | Current value | Purpose |
-| --- | --- | --- |
-| `--motion-quick` | 200 ms | Control colors and the parent view fade |
-| `--motion-enter` | 500 ms | Menus, disclosures and control settling |
-| `--motion-heading` | 600 ms | Headings and card titles |
-| `--motion-content` | 640 ms | Local sections and native Calendar groups |
-| `--motion-detail` | 480 ms | Metadata, labels, counters and confirmation |
-| `--motion-backdrop` | 360 ms | Dialog backdrop |
-| `--motion-dialog` | 760 ms | Dialog surface |
-| `--motion-scene` | 720 ms | Loaded rows and surfaces |
-| `--motion-selection` | 520 ms | Moving navigation selection |
-| `--motion-exit` | 220 ms | Confirmed dismissal |
-| `--motion-stagger` | 52 ms | Bounded scene steps |
-| `--motion-distance` | 6px | Ordinary scene travel; gesture surfaces override with zero |
-| `--motion-softness` | 2px | Temporary blur on selected small layers |
-| `--motion-lift` | 2px | Fine-pointer hover lift on eligible cards |
-| `--motion-dialog-distance` | 12px | Dialog travel |
-| `--motion-scale` | 0.992 | Starting scale of a dialog or menu |
-| `--motion-press` | 0.96 | Pressed control scale |
-| `--motion-rise` | 0.82 | Starting height of chart marks, as a share of their own |
-| `--motion-press-in` | 70 ms | Press feedback onset |
-| `--motion-popup-heading`, `--motion-popup-content` | 100, 220 ms | Month popup layer delays |
+| Token                                              | Current value | Purpose                                                    |
+| -------------------------------------------------- | ------------- | ---------------------------------------------------------- |
+| `--motion-quick`                                   | 200 ms        | Control colors and the parent view fade                    |
+| `--motion-enter`                                   | 500 ms        | Menus, disclosures and control settling                    |
+| `--motion-heading`                                 | 600 ms        | Headings and card titles                                   |
+| `--motion-content`                                 | 640 ms        | Local sections and native Calendar groups                  |
+| `--motion-detail`                                  | 480 ms        | Metadata, labels, counters and confirmation                |
+| `--motion-backdrop`                                | 360 ms        | Dialog backdrop                                            |
+| `--motion-dialog`                                  | 760 ms        | Dialog surface                                             |
+| `--motion-scene`                                   | 720 ms        | Loaded rows and surfaces                                   |
+| `--motion-selection`                               | 520 ms        | Moving navigation selection                                |
+| `--motion-exit`                                    | 220 ms        | Confirmed dismissal                                        |
+| `--motion-stagger`                                 | 52 ms         | Bounded scene steps                                        |
+| `--motion-distance`                                | 6px           | Ordinary scene travel; gesture surfaces override with zero |
+| `--motion-softness`                                | 2px           | Temporary blur on selected small layers                    |
+| `--motion-lift`                                    | 2px           | Fine-pointer hover lift on eligible cards                  |
+| `--motion-dialog-distance`                         | 12px          | Dialog travel                                              |
+| `--motion-scale`                                   | 0.992         | Starting scale of a dialog or menu                         |
+| `--motion-press`                                   | 0.96          | Pressed control scale                                      |
+| `--motion-rise`                                    | 0.82          | Starting height of chart marks, as a share of their own    |
+| `--motion-press-in`                                | 70 ms         | Press feedback onset                                       |
+| `--motion-popup-heading`, `--motion-popup-content` | 100, 220 ms   | Month popup layer delays                                   |
 
 Entrances use `--motion-emerge: cubic-bezier(0.32, 0, 0.24, 1)`, whose initial
 slope is zero. Layout/hover transitions use `--motion-ease` with
@@ -407,25 +415,25 @@ in its first frames or while a parent is still invisible.
 
 ### Extending the system
 
-| Surface | Owner and integration |
-| --- | --- |
-| Loaded Focus, Projects, List, Updates and workspace Board | `revealScene` on the view; visible card roles follow their surface |
-| Project Board | Feature-owned scene with `cardSelector`; columns and inner card groups retain native drag geometry |
-| Calendar | `calendar-motion.ts` supplies `revealLayers` with current-page readiness and project/date/widget-view keys; popup layers stay in `CalendarView` |
-| Timeline | Feature-owned `revealScene` on the native chart with zero travel |
-| Page headings, dialogs, menus, suggestions and toolbars | `revealLayers` with explicit local selectors and opening keys |
-| Chart | `chartLayers` (`features/charts/chart-motion.ts`) on the dashboard, ready after the first read and keyed by the project preference key: controls, the counter list and its rows, plot surfaces and headings, the note and summary rows |
-| Plot marks and readout | `plotLayers` on each plot, keyed by what is plotted (series, grouping, totals and range): the legend values, then the `.plot-marks` group rising from the baseline |
-| Counter trends in the card editor | `dialogLayers` raises each `.counter-trend` after its section |
-| Timeline's unscheduled cards, Calendar legend and help | `groupLayers` and `metaLayers`, ready with their view's current page |
-| Pairing page | `pairingLayers`: brand, headline, lead, the pairing surface and its contents |
-| Sidebar and phone dock | `controlsLayers` on the navigation, once per page load; opacity only, so measured selection geometry is unchanged |
-| List filter panel | Its surface and fields follow the search row in `WorkspaceFilters` |
-| Fields and rows inside a dialog | `dialogLayers`: the children of each body block, and checklist, counter, comment, schedule and tag rows of a card, follow their block from 260 ms in 36 ms steps |
-| Menu items | `menuLayers`: every item is its own layer. A wrapper such as `.navigation-panel` is excluded and its children are listed instead, so a menu never fades in as one block |
-| Disclosures | `details[open] > :not(summary)` rises softly in `styles/motion.css`. The navigation customization also staggers its rows one frame after opening, once the panel has been repositioned |
-| Feedback and rows that arrive later | Editor feedback, new comments, counters and tag rows fade in; opacity only, and never on a reorderable list, where moving a row would restart the effect |
-| Navigation, shared controls and disclosures | Shared motion actions and `styles/motion.css`; no feature-specific replacement |
+| Surface                                                   | Owner and integration                                                                                                                                                                                                                  |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Loaded Focus, Projects, List, Updates and workspace Board | `revealScene` on the view; visible card roles follow their surface                                                                                                                                                                     |
+| Project Board                                             | Feature-owned scene with `cardSelector`; columns and inner card groups retain native drag geometry                                                                                                                                     |
+| Calendar                                                  | `calendar-motion.ts` supplies `revealLayers` with current-page readiness and project/date/widget-view keys; popup layers stay in `CalendarView`                                                                                        |
+| Timeline                                                  | Feature-owned `revealScene` on the native chart with zero travel                                                                                                                                                                       |
+| Page headings, dialogs, menus, suggestions and toolbars   | `revealLayers` with explicit local selectors and opening keys                                                                                                                                                                          |
+| Chart                                                     | `chartLayers` (`features/charts/chart-motion.ts`) on the dashboard, ready after the first read and keyed by the project preference key: controls, the counter list and its rows, plot surfaces and headings, the note and summary rows |
+| Plot marks and readout                                    | `plotLayers` on each plot, keyed by what is plotted (series, grouping, totals and range): the legend values, then the `.plot-marks` group rising from the baseline                                                                     |
+| Counter trends in the card editor                         | `dialogLayers` raises each `.counter-trend` after its section                                                                                                                                                                          |
+| Timeline's unscheduled cards, Calendar legend and help    | `groupLayers` and `metaLayers`, ready with their view's current page                                                                                                                                                                   |
+| Pairing page                                              | `pairingLayers`: brand, headline, lead, the pairing surface and its contents                                                                                                                                                           |
+| Sidebar and phone dock                                    | `controlsLayers` on the navigation, once per page load; opacity only, so measured selection geometry is unchanged                                                                                                                      |
+| List filter panel                                         | Its surface and fields follow the search row in `WorkspaceFilters`                                                                                                                                                                     |
+| Fields and rows inside a dialog                           | `dialogLayers`: the children of each body block, and checklist, counter, comment, schedule and tag rows of a card, follow their block from 260 ms in 36 ms steps                                                                       |
+| Menu items                                                | `menuLayers`: every item is its own layer. A wrapper such as `.navigation-panel` is excluded and its children are listed instead, so a menu never fades in as one block                                                                |
+| Disclosures                                               | `details[open] > :not(summary)` rises softly in `styles/motion.css`. The navigation customization also staggers its rows one frame after opening, once the panel has been repositioned                                                 |
+| Feedback and rows that arrive later                       | Editor feedback, new comments, counters and tag rows fade in; opacity only, and never on a reorderable list, where moving a row would restart the effect                                                                               |
+| Navigation, shared controls and disclosures               | Shared motion actions and `styles/motion.css`; no feature-specific replacement                                                                                                                                                         |
 
 Every view, dialog and menu has an entrance; a new surface joins one of the
 sequences above instead of appearing at once. Chart marks do not animate one
@@ -553,7 +561,6 @@ Comments start with a bordered composer and its explicit Add comment action,
 followed by saved history. Browser comments use human/Owner attribution without
 author controls; existing attribution and CLI/API bot comments remain visible.
 The date-plan and label-entry helper sentences are omitted from the card form.
-
 
 ## Chart view
 

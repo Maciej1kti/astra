@@ -222,6 +222,68 @@ await runBrowserSuite(
       });
 
       await check(
+        "On a phone the choices fan out beside the button, on the chosen side",
+        async () => {
+          const sides = {};
+          for (const hand of ["right", "left"]) {
+            await visit("focus", { width: 390, height: 844 });
+            await page.evaluate(
+              (value) => localStorage.setItem("astra-hand:v1", value),
+              hand,
+            );
+            await page.reload();
+            const trigger = await box(agentButton());
+            assert(
+              hand === "right" ? trigger.x > 195 : trigger.right < 195,
+              `${hand}: the button stands on that side`,
+            );
+            assert(
+              !intersects(trigger, await box(page.locator(".app > aside"))),
+            );
+            await page.mouse.move(
+              trigger.x + trigger.width / 2,
+              trigger.y + trigger.height / 2,
+            );
+            await page.mouse.down();
+            const items = page.getByRole("menuitem");
+            await expect(items).toHaveCount(3);
+            await settle(page);
+            const boxes = [];
+            for (const item of await items.all()) boxes.push(await box(item));
+            const middle = trigger.y + trigger.height / 2;
+            for (const item of boxes) {
+              assert(
+                hand === "right"
+                  ? item.right <= trigger.x
+                  : item.x >= trigger.right,
+                `${hand}: every choice lies beside the button`,
+              );
+              assert(item.x >= 0 && item.right <= 390, "Inside the viewport");
+              assert(item.height >= 44 - 1, "A touch target is 44px");
+            }
+            assert(boxes[0].bottom < middle, "The first choice lies above");
+            assert(
+              boxes[1].y < middle && boxes[1].bottom > middle,
+              "The middle choice is level with the button",
+            );
+            assert(boxes[2].y > middle, "The last choice lies below");
+            assert(
+              !intersects(boxes[2], await box(page.locator(".app > aside"))),
+              "Above the navigation",
+            );
+            await snapshot(`add-menu-phone-${hand}`);
+            await page.mouse.move(195, 200, { steps: 4 });
+            await page.mouse.up();
+            await expect(items.first()).toBeHidden();
+            sides[hand] = { trigger, boxes };
+          }
+          await page.evaluate(() => localStorage.removeItem("astra-hand:v1"));
+          await page.setViewportSize({ width: 1440, height: 1000 });
+          return sides;
+        },
+      );
+
+      await check(
         "Workspace content clears the floating buttons in every view and width",
         async () => {
           const report = [];
@@ -937,6 +999,31 @@ await runBrowserSuite(
           return { hint: true, recovered: true };
         },
       );
+
+      await check("Settings move the phone's add button at once", async () => {
+        await visit("list", { width: 390, height: 844 });
+        await page
+          .getByRole("button", {
+            name: "Ustawienia przestrzeni roboczej",
+            exact: true,
+          })
+          .click();
+        const dialog = page.getByRole("dialog", {
+          name: "Ustawienia przestrzeni roboczej",
+          exact: true,
+        });
+        const select = dialog.getByLabel("Przycisk dodawania na telefonie", {
+          exact: true,
+        });
+        await expect(select).toHaveValue("right");
+        await select.selectOption("left");
+        await expect(page.locator("html")).toHaveAttribute("data-hand", "left");
+        await page.reload();
+        await agentButton().waitFor();
+        assert((await box(agentButton())).right < 195, "It stays on the left");
+        await page.evaluate(() => localStorage.removeItem("astra-hand:v1"));
+        await page.setViewportSize({ width: 1440, height: 1000 });
+      });
 
       await check(
         "Settings choose the provider of a new conversation",

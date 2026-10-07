@@ -20,7 +20,14 @@
   } from "../../lib/api/command-operation.svelte";
   import { rebaseSettingsDraft, settingsDraft } from "./settings-draft";
   import { onMount, tick } from "svelte";
-  import { applyTheme, readTheme, type Theme } from "./appearance";
+  import {
+    applyHand,
+    applyTheme,
+    readHand,
+    readTheme,
+    type Hand,
+    type Theme,
+  } from "./appearance";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command } from "../../lib/api/api";
   import { workspaceViews, viewLabel } from "../workspace/navigation";
@@ -42,6 +49,7 @@
   unloadGuard(() => dirty || !!pending);
 
   let theme = $state<Theme>(readTheme());
+  let hand = $state<Hand>(readHand());
 
   let {
     onclose,
@@ -597,7 +605,17 @@
           ><option value="dark">Ciemny</option></select
         ></label
       >
-      <p>Zmiany motywu są od razu stosowane w tej przeglądarce.</p>
+      <label
+        >Przycisk dodawania na telefonie<select
+          aria-label="Przycisk dodawania na telefonie"
+          bind:value={hand}
+          onchange={() => applyHand(hand)}
+          ><option value="right">Po prawej (dla praworęcznych)</option><option
+            value="left">Po lewej (dla leworęcznych)</option
+          ></select
+        ></label
+      >
+      <p>Zmiany wyglądu są od razu stosowane w tej przeglądarce.</p>
     </section>
     <details class="access-section">
       <summary>Dostęp przeglądarek</summary>

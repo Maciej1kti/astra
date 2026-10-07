@@ -765,13 +765,20 @@
     padding: var(--space-9) var(--space-8);
   }
   .app .content.floating-content {
-    padding-bottom: calc(var(--space-20) + var(--tap-target) + var(--space-12));
+    padding-bottom: calc(
+      var(--space-20) + var(--tap-target) * 2 + var(--space-12)
+    );
   }
   .app .floating-actions {
     right: var(--space-8);
     bottom: calc(
-      var(--dock-height) + var(--space-9) + env(safe-area-inset-bottom, 0px)
+      var(--dock-height) + var(--tap-target) + var(--space-9) +
+        env(safe-area-inset-bottom, 0px)
     );
+  }
+  :root[data-hand="left"] .app .floating-actions {
+    right: auto;
+    left: var(--space-8);
   }
   .app .heading {
     gap: var(--space-6);

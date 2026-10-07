@@ -226,6 +226,38 @@
   .add-menu.open :global([data-activity].add-trigger)::after {
     display: none;
   }
+  /* A phone fans the choices out beside the button: up, level and down from the thumb. */
+  @media (max-width: 700px) {
+    .add-choices {
+      right: calc(100% + var(--space-6));
+      bottom: auto;
+      top: 50%;
+      translate: 0 -50%;
+      gap: var(--space-4);
+      --add-from: var(--space-8) 0;
+    }
+    .add-choices > :global(:first-child:not(:only-child)),
+    .add-choices > :global(:last-child:not(:only-child)) {
+      margin-inline-end: calc(-1 * var(--space-6));
+    }
+    :global(:root[data-hand="left"]) .add-menu {
+      align-items: flex-start;
+    }
+    :global(:root[data-hand="left"]) .add-choices {
+      right: auto;
+      left: calc(100% + var(--space-6));
+      align-items: flex-start;
+      --add-from: calc(-1 * var(--space-8)) 0;
+    }
+    :global(:root[data-hand="left"])
+      .add-choices
+      > :global(:first-child:not(:only-child)),
+    :global(:root[data-hand="left"])
+      .add-choices
+      > :global(:last-child:not(:only-child)) {
+      margin-inline: calc(-1 * var(--space-6)) 0;
+    }
+  }
   @media (prefers-reduced-motion: no-preference) {
     .add-menu.open :global(.add-choice) {
       animation: add-choice-in var(--motion-enter, 0.2s)
@@ -236,7 +268,7 @@
   @keyframes add-choice-in {
     from {
       opacity: 0;
-      translate: 0 var(--space-6);
+      translate: var(--add-from, 0 var(--space-6));
       scale: 0.9;
     }
   }
