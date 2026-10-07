@@ -205,7 +205,7 @@
     rotate: 45deg;
   }
   .add-menu :global(.add-trigger .ui-icon) {
-    transition: rotate var(--motion-enter, 0.2s) var(--motion-spring, ease);
+    transition: rotate var(--motion-enter) var(--motion-spring);
   }
   .add-menu :global(.add-choice) {
     position: relative;
@@ -307,8 +307,8 @@
   }
   @media (prefers-reduced-motion: no-preference) {
     .add-menu.open :global(.add-choice) {
-      animation: add-choice-in var(--motion-enter, 0.2s)
-        var(--motion-spring, ease) backwards;
+      animation: add-choice-in var(--motion-enter) var(--motion-spring)
+        backwards;
     }
   }
   @keyframes add-choice-in {

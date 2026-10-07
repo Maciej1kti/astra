@@ -10,10 +10,10 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 Projects and the card Board now run on [one board engine](2026-10-07-shared-board-engine.md)
 with one card style, and its movement was reviewed and rebuilt: cards part
 around a slot, the preview lands or returns, a move is shown at once and saves
-without a dialog, phone columns page. Smoke and 40 of 41 Chromium suites pass;
-the remaining suite failure, one unit failure and a 45-byte bundle overage come
-from the add-menu work already on `main`. Touch feel on a physical phone and
-acceptance are the owner's.
+without a dialog, phone columns page. The gate, smoke and the Chromium suites
+pass, after a follow-up fixed three failures inherited from the add-menu work;
+the initial bundle is 5 bytes under its budget. Touch feel on a physical phone
+and acceptance are the owner's.
 
 The [in-app agent](2026-10-06-agent-chat.md) adds an Agent choice in the floating **+** menu and a chat
 dialog backed by Claude Code or Codex. A host started with `--agent-dir` runs

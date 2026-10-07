@@ -1,4 +1,5 @@
 /** Shared native dialog lifecycle and creation surfaces in the real daemon. */
+import { addTrigger } from "../add-menu.mjs";
 import { runBrowserSuite } from "../runtime.mjs";
 import { expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
@@ -168,7 +169,15 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
       "Card project selection shares bounded footer and replacement focus",
       async () => {
         await page.goto(`${config.origin}/?view=focus`);
-        const trigger = page.getByRole("button", { name: /Dodaj kartę/ });
+        // Focus adds a card from the floating "+" menu, operated by keyboard here.
+        const trigger = addTrigger(page);
+        const openChooser = async () => {
+          await trigger.focus();
+          await trigger.press("Enter");
+          await page
+            .getByRole("menuitem", { name: "Karta", exact: true })
+            .press("Enter");
+        };
         const layouts = [];
         for (const viewport of [
           { width: 1440, height: 1000 },
@@ -177,8 +186,7 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
           { width: 740, height: 320 },
         ]) {
           await page.setViewportSize(viewport);
-          await trigger.focus();
-          await trigger.press("Enter");
+          await openChooser();
           const dialog = page.getByRole("dialog", {
             name: "Wybierz projekt dla karty",
             exact: true,
@@ -211,7 +219,7 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
           await expect(nativeDialogs).toHaveCount(0);
           await expect(trigger).toBeFocused();
         }
-        await trigger.press("Enter");
+        await openChooser();
         const chooser = page.getByRole("dialog", {
           name: "Wybierz projekt dla karty",
           exact: true,

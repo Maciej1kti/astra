@@ -58,6 +58,17 @@ Rendered frames were inspected for the drag, the drop 60 ms after release, a
 same-column reorder, cancellation, a project status move, and a 390 px touch
 hold, page turn and drop.
 
+## Follow-up: the three inherited failures
+
+Fixed the same day at the owner's request. `AddMenu.svelte` no longer carries raw
+duration fallbacks beside its motion tokens, so `style-rules` passes (519 of 519
+unit tests). The `dialog-components` check opened the card project chooser from a
+button that the floating add menu replaced; it now opens the menu by keyboard
+and chooses Karta. Removing the `.grid` rules that only the former project tiles
+used brings the initial bundle to 81,915 B, 5 B under the budget. With these,
+`scripts/check.py` passes end to end, including `clippy` and `cargo test`, and
+`dialog-components`, `projects`, `responsive`, `focus` and `menus` pass.
+
 ## Limits
 
 - Chromium emulation only for touch; no physical iPhone or Safari check of the

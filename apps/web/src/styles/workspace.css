@@ -313,17 +313,6 @@
 .app .focus-section > .sectiontitle {
   margin-top: 0;
 }
-.app .grid {
-  display: grid;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(min(100%, var(--card-min-width)), 1fr)
-  );
-  gap: var(--space-8);
-}
-.app .grid .card {
-  align-self: start;
-}
 .app .card,
 [data-focus-drag-preview] {
   padding: var(--space-9);
@@ -771,9 +760,6 @@
   }
   .app .list-filter-fields:not(.expanded) {
     display: none;
-  }
-  .app .grid {
-    grid-template-columns: 1fr;
   }
   .app .board-overview {
     display: grid;
