@@ -3,15 +3,12 @@
   import { plotLayers } from "./chart-motion";
   import {
     chartBand,
-    chartBar,
-    chartBarLayout,
     chartDate,
     chartDomain,
     chartFrame,
     chartIndex,
     chartLine,
     chartSeriesKey,
-    chartStepLine,
     chartTicks,
     chartValue,
     chartX,
@@ -49,18 +46,12 @@
     ].join("|"),
   );
   const band = $derived(chartBand(count, frame));
-  const bars = $derived(
-    cumulative ? null : chartBarLayout(band, panel.series.length),
-  );
   const ticks = $derived.by(() => {
     const domain = chartDomain(panel);
     return chartTicks(domain.min, domain.max);
   });
   const min = $derived(ticks[0] ?? 0);
   const max = $derived(ticks.at(-1) ?? 1);
-  const baseline = $derived(
-    chartY(Math.min(Math.max(0, min), max), min, max, frame),
-  );
   // At rest the readout shows the latest period that holds a recording.
   const latest = $derived.by(() => {
     for (let index = count - 1; index >= 0; index--)
@@ -138,8 +129,7 @@
       {#each panel.series as row (chartSeriesKey(row.source))}
         {@const point = row.points[index]}
         {#if point}<li class={`series-color-${row.color % 8}`}>
-            <span class="series-key" class:line={!bars} aria-hidden="true"
-            ></span>
+            <span class="series-key" aria-hidden="true"></span>
             <span class="legend-name"
               >{row.source.name}{#if repeated.has(row.source.name)}<small
                   >{row.source.card_title}</small
@@ -178,23 +168,18 @@
     >
       <title>Wykres licznika: {panel.unit}</title>
       <desc
-        >Zapisane {mode}. Okresy bez zapisów pozostają puste. Wskaż okres myszą,
-        dotykiem albo strzałkami, aby odczytać dokładne wartości w legendzie.</desc
+        >Zapisane {mode}: punkty połączone liniami. Okresy bez zapisów nie mają
+        punktu. Wskaż okres myszą, dotykiem albo strzałkami, aby odczytać
+        dokładne wartości w legendzie.</desc
       >
       {#if period}
-        {#if bars}<rect
-            class="inspection-band"
-            x={frame.left + index * band}
-            y={frame.top}
-            width={band}
-            height={frame.bottom - frame.top}
-          />{:else}<line
-            class="inspection-line"
-            x1={chartX(index, count, frame)}
-            x2={chartX(index, count, frame)}
-            y1={frame.top}
-            y2={frame.bottom}
-          />{/if}
+        <line
+          class="inspection-line"
+          x1={chartX(index, count, frame)}
+          x2={chartX(index, count, frame)}
+          y1={frame.top}
+          y2={frame.bottom}
+        />
       {/if}
       {#each ticks as tick (tick)}
         <line
@@ -213,46 +198,24 @@
         >
       {/each}
       <g class="plot-marks">
-        {#each panel.series as row, position (chartSeriesKey(row.source))}
+        {#each panel.series as row (chartSeriesKey(row.source))}
           <g
             data-series-key={chartSeriesKey(row.source)}
             class={`series-color-${row.color % 8}`}
           >
-            {#if bars}
-              {@const group =
-                panel.series.length * bars.width +
-                (panel.series.length - 1) * bars.gap}
-              {#each row.points as point, i (point.from)}
-                {#if point.value !== null}<path
-                    data-point
-                    class="series-bar"
-                    d={chartBar(
-                      chartX(i, count, frame) -
-                        group / 2 +
-                        position * (bars.width + bars.gap),
-                      bars.width,
-                      baseline,
-                      chartY(point.value, min, max, frame),
-                    )}
-                  />{/if}
-              {/each}
-            {:else}
-              <path
-                class="series-line"
-                d={cumulative
-                  ? chartStepLine(row.points, min, max, frame)
-                  : chartLine(row.points, min, max, frame)}
-              />
-              {#each row.points as point, i (point.from)}
-                {#if point.value !== null}<circle
-                    data-point
-                    class="series-dot"
-                    cx={chartX(i, count, frame)}
-                    cy={chartY(point.value, min, max, frame)}
-                    r={i === index ? 5 : count > 120 ? 2 : count > 45 ? 3 : 4}
-                  />{/if}
-              {/each}
-            {/if}
+            <path
+              class="series-line"
+              d={chartLine(row.points, min, max, frame)}
+            />
+            {#each row.points as point, i (point.from)}
+              {#if point.value !== null}<circle
+                  data-point
+                  class="series-dot"
+                  cx={chartX(i, count, frame)}
+                  cy={chartY(point.value, min, max, frame)}
+                  r={i === index ? 5 : count > 120 ? 2 : count > 45 ? 3 : 4}
+                />{/if}
+            {/each}
           </g>
         {/each}
       </g>
@@ -335,15 +298,10 @@
     min-width: 0;
   }
   .series-key {
-    width: var(--space-5);
-    height: var(--space-5);
-    border-radius: var(--radius-sm);
-    background: var(--series-color);
-  }
-  .series-key.line {
     width: var(--space-7);
     height: calc(var(--stroke) * 3);
     border-radius: var(--radius-pill);
+    background: var(--series-color);
   }
   .legend-name {
     color: var(--muted);
@@ -418,15 +376,9 @@
     font-size: var(--text-xs);
     font-variant-numeric: tabular-nums;
   }
-  .inspection-band {
-    fill: var(--soft);
-  }
   .inspection-line {
     stroke: var(--line-strong);
     stroke-width: 1;
-  }
-  .series-bar {
-    fill: var(--series-color);
   }
   .series-line {
     stroke: var(--series-color);

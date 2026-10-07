@@ -463,7 +463,7 @@ Every view, dialog and menu has an entrance; a new surface joins one of the
 sequences above instead of appearing at once. Chart marks do not animate one
 by one: a layer with `rise` scales its whole group from `--motion-rise` (0.82)
 about the transform origin that `styles/motion.css` puts on the baseline, so a
-plot costs one effect whatever its number of bars. A refresh or source write
+plot costs one effect whatever its number of marks. A refresh or source write
 never replays a chart; selecting counters or changing grouping, totals or
 range lets only the marks and readout rise again.
 
@@ -604,13 +604,14 @@ below the plots: each names its current choice and opens the shared
 right after the collapsed counter list. Plots show recorded values only; there
 is no scale choice.
 
-A plot is chosen by the data's job. Period totals are grouped bars, at most
-24px thick, square on the baseline and rounded at the data end, with a surface
-gap between neighbours. A recorded zero keeps a two-pixel stub and a missing
-period draws nothing. When bands are too narrow for readable bars the plot
-draws 2px lines that break at missing periods. A running total is a stepped
-line that holds its level between recordings. Raw quantities share a plot only
-when their units match; gridlines are solid hairlines on round values.
+Every plot in the Chart view has one form, following the owner's 2026-10-07
+direction: points joined by lines, never bars. The compact counter preview on
+a card keeps its bars by the same direction. Each recording is a dot ringed with the surface,
+and a 2px line joins consecutive recordings of a series, for period totals and
+running totals alike. A recorded zero is a dot on the zero line; a period
+without a recording has no dot and the line passes over it. Raw quantities
+share a plot only when their units match; gridlines are solid hairlines on
+round values.
 
 Series use the eight `--series-*` tokens in their fixed order, which was checked
 for colour-vision separation on both paper surfaces. A counter keeps its slot

@@ -136,7 +136,7 @@ Calendar reveals its headings, grid and event groups in stages after the selecte
 period loads. Agenda days and the month overflow popup use the same gentle effects,
 on desktop and mobile; moving an event does not replay the whole calendar.
 Chart opens the same way: its controls, counter list and plot surfaces appear
-in turn and the bars or lines rise from the baseline. They rise again when you
+in turn and the lines rise from the baseline. They rise again when you
 change the selected counters, grouping, totals or range, and stay still during
 a refresh. The pairing page, the sidebar, List filters and the cards listed
 under Timeline use the same soft entrances. Inside a dialog the fields and
@@ -232,12 +232,11 @@ inclusive **Od**/**Do** range. Group results by **Dni**, **Tygodnie** or
 **Miesiące**. On a desktop or tablet these controls sit above the plots. On a
 phone the range, grouping and totals are three menus in one row directly below
 the plots, so the plot follows the counter list at once. Until you pick a grouping yourself it follows the range: days up
-to 45 days, weeks up to 180 and months beyond. **Sumy okresów** draws one bar
-per group; **Narastająco** draws a stepped line that adds recorded values from
-the beginning of the range and stays level through groups without a recording.
-A group without a recording has no bar, and a saved zero keeps a short stub.
-When the groups are too narrow for bars, such as a year of days, the plot draws
-lines that break at missing recordings.
+to 45 days, weeks up to 180 and months beyond. Every plot draws dots joined
+by lines. **Sumy okresów** puts one dot per group; **Narastająco** adds recorded
+values from the beginning of the range. A group without a recording has no dot
+and the line passes over it to the next recording; a saved zero is a dot on the
+zero line.
 
 The row above each plot names every counter and shows its value for one group,
 starting with the latest recorded one. Move the pointer over the plot, drag or

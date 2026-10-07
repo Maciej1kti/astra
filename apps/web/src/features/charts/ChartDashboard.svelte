@@ -298,10 +298,9 @@
       {#if panels.length && records > 0}
         <p class="chart-note">
           {#if units.length > 1}Każda jednostka ma własny wykres i własną skalę.{/if}
-          {#if cumulative}Suma narastająca liczy od początku zakresu i biegnie
-            poziomo przez okresy bez zapisu.
-          {:else}Okres bez zapisu zostaje pusty, a zapisane zero ma własny
-            znacznik.{/if}
+          {#if cumulative}Suma narastająca liczy od początku zakresu.{/if}
+          Punkt oznacza zapis, także zapisane zero. Linia łączy kolejne zapisy, a
+          okres bez zapisu nie ma punktu.
           {#if bucket === "week"}Tygodnie zaczynają się w poniedziałek.{/if}
         </p>
       {/if}

@@ -320,15 +320,15 @@ await runBrowserSuite(
       const pushSeries = chart("reps").locator(
         `[data-series-key="${pushKey}"]`,
       );
-      await expect(
-        pushSeries.locator("path.series-bar[data-point]"),
-      ).toHaveCount(4);
-      await expect(pushSeries.locator(".series-line")).toHaveCount(0);
+      await expect(pushSeries.locator("circle[data-point]")).toHaveCount(4);
       assert.equal(
-        await pushSeries.locator("[data-point]").count(),
+        (await pushSeries.locator(".series-line").getAttribute("d")).match(
+          /[ML]/g,
+        ).length,
         4,
-        "The recorded zero has a bar stub; missing dates have no mark",
+        "The recorded zero is a point on the line; missing dates have none",
       );
+      await expect(dashboard.locator(".chart-svg rect")).toHaveCount(0);
       const colorOf = (key) =>
         chart("reps")
           .locator(`[data-series-key="${key}"] [data-point]`)
@@ -353,19 +353,18 @@ await runBrowserSuite(
         "aria-pressed",
         "true",
       );
-      await expect(pushSeries.locator("path.series-bar")).toHaveCount(
+      await expect(pushSeries.locator("circle[data-point]")).toHaveCount(
         new Set([6, 4, 2, 0].map((offset) => day(offset).slice(0, 7))).size,
       );
       await screenshot("chart-year-months");
-      // A year of daily bands is too dense for bars, so the plot draws lines.
+      // A year of days keeps the same form: every recording joined by a line.
       await segment("Grupuj według", "Dni").click();
-      await expect(pushSeries.locator(".series-bar")).toHaveCount(0);
       await expect(pushSeries.locator("circle[data-point]")).toHaveCount(4);
       const path = await pushSeries.locator(".series-line").getAttribute("d");
-      assert.equal(
-        path.match(/M/g).length,
-        4,
-        "Separated recorded days do not interpolate across missing values",
+      assert.deepEqual(
+        [path.match(/M/g).length, path.match(/L/g).length],
+        [1, 3],
+        "Separated recorded days are joined into one line",
       );
       await screenshot("chart-year-lines");
       await segment("Zakres dat", "7 dni").click();
@@ -373,7 +372,7 @@ await runBrowserSuite(
         "aria-pressed",
         "true",
       );
-      await expect(pushSeries.locator("path.series-bar")).toHaveCount(4);
+      await expect(pushSeries.locator("circle[data-point]")).toHaveCount(4);
       await screenshot("chart-shared-unit-overlay");
       checks.push("project-scoped counter catalog and shared-unit overlay");
       await expect(panel("reps").locator("[data-plot-mode]")).toHaveText(
@@ -402,9 +401,9 @@ await runBrowserSuite(
         "A running total is one line from its first recording",
       );
       assert.equal(
-        running.match(/H/g).length,
-        6,
-        "A running total stays level through days without a recording",
+        running.match(/L/g).length,
+        3,
+        "A running total joins its recordings with straight lines",
       );
       await expect(pushSeries.locator("circle[data-point]")).toHaveCount(4);
       await screenshot("chart-running-total");
@@ -860,7 +859,7 @@ await runBrowserSuite(
       await expect(statistic("Push-ups", "total")).toHaveText("75");
       await checkbox("Study minutes", "Synthetic study").check();
       await expect(dashboard.getByRole("img")).toHaveCount(3);
-      await expect(chart("min").locator("path.series-bar")).toHaveCount(7);
+      await expect(chart("min").locator("circle[data-point]")).toHaveCount(7);
       await screenshot("chart-workspace-comparison");
       checks.push(
         "rapid project switch discards obsolete reads and all-project scope exposes both projects",

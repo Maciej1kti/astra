@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  chartBar,
-  chartBarLayout,
   chartColorSlots,
   chartDomain,
   chartFrame,
@@ -15,7 +13,6 @@ import {
   chartRate,
   chartSeriesKey,
   chartStats,
-  chartStepLine,
   chartTicks,
   chartX,
   readChartPreferences,
@@ -100,7 +97,7 @@ test("recorded zeroes count in statistics while missing and out-of-range days do
   assert.equal(weekly[0].days, 4);
 });
 
-test("chart lines break on missing buckets and retain a recorded zero", () => {
+test("chart lines join every recording across missing buckets and retain a recorded zero", () => {
   const frame = chartFrame(920, 300);
   assert.deepEqual(frame, { left: 56, right: 904, top: 12, bottom: 270 });
   const points = chartPoints(
@@ -108,21 +105,25 @@ test("chart lines break on missing buckets and retain a recorded zero", () => {
     chartPeriods("2026-10-01", "2026-10-04", "day"),
   );
   const line = chartLine(points, 0, 30, frame);
-  assert.equal((line.match(/M/g) ?? []).length, 2);
-  assert.equal((line.match(/L/g) ?? []).length, 1);
+  assert.equal((line.match(/M/g) ?? []).length, 1);
+  assert.equal((line.match(/L/g) ?? []).length, 2);
   assert.match(line, /L374\.00,270\.00/);
+  assert.ok(
+    line.endsWith(`L${chartX(3, 4, frame).toFixed(2)},12.00`),
+    "The line reaches the recording after the missing day",
+  );
   assert.equal(
     chartLine(
       chartPoints({}, chartPeriods("2026-10-01", "2026-10-04", "day")),
       0,
       1,
       frame,
-    ).trim(),
+    ),
     "",
   );
 });
 
-test("a running total holds its level through missing days and starts at the first recording", () => {
+test("a running total carries its level through missing days and joins its recordings", () => {
   const frame = chartFrame(920, 300);
   const periods = chartPeriods("2026-10-01", "2026-10-05", "day");
   const points = chartPoints(
@@ -145,15 +146,14 @@ test("a running total holds its level through missing days and starts at the fir
     [null, null, null, null, null],
     "Period totals carry nothing between recordings",
   );
-  const line = chartStepLine(points, 0, 40, frame);
+  const line = chartLine(points, 0, 40, frame);
   assert.equal((line.match(/M/g) ?? []).length, 1);
-  assert.equal((line.match(/H/g) ?? []).length, 3);
+  assert.equal((line.match(/L/g) ?? []).length, 2);
   assert.ok(
     line.startsWith(`M${chartX(1, 5, frame).toFixed(2)},`),
     "Nothing is drawn before the first recording",
   );
-  assert.ok(line.endsWith("V12.00"), "The last recording reaches the peak");
-  assert.equal(chartStepLine(chartPoints({}, periods, true), 0, 1, frame), "");
+  assert.ok(line.endsWith(",12.00"), "The last recording reaches the peak");
 });
 
 test("axis steps are round and periods map to equal bands", () => {
@@ -173,31 +173,6 @@ test("axis steps are round and periods map to equal bands", () => {
   assert.equal(chartIndex(-50, 4, frame), 0);
   assert.equal(chartIndex(9999, 4, frame), 3);
   assert.equal(chartIndex(100, 0, frame), 0);
-});
-
-test("grouped bars give way to lines when bands are too narrow, and a zero keeps a stub", () => {
-  assert.deepEqual(chartBarLayout(120, 1), { width: 24, gap: 2 });
-  const pair = chartBarLayout(28, 2);
-  assert.equal(pair.gap, 2);
-  assert.ok(Math.abs(pair.width - 10.2) < 0.001);
-  assert.equal(chartBarLayout(9, 2).gap, 1);
-  assert.equal(chartBarLayout(9, 3), null);
-  assert.equal(chartBarLayout(2.3, 1), null);
-  assert.equal(chartBarLayout(40, 0), null);
-  assert.equal(
-    chartBar(10, 8, 100, 40),
-    "M10.00,100.00 V44.00 Q10.00,40.00 14.00,40.00 H14.00 Q18.00,40.00 18.00,44.00 V100.00 Z",
-  );
-  assert.match(
-    chartBar(10, 8, 100, 100),
-    /^M10\.00,100\.00 V100\.00 Q10\.00,98\.00 12\.00,98\.00 /,
-    "A recorded zero is a two-pixel stub above the baseline",
-  );
-  assert.match(
-    chartBar(10, 8, 100, 130),
-    /V126\.00 Q10\.00,130\.00 /,
-    "A negative total rounds its lower end",
-  );
 });
 
 test("a counter keeps its colour slot while the selection changes", () => {

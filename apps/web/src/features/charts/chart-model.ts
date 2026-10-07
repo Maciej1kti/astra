@@ -298,41 +298,10 @@ export function chartIndex(
   return Math.min(Math.max(0, index), Math.max(0, count - 1));
 }
 
-/** Null when the bands are too narrow for grouped bars to stay readable. */
-export function chartBarLayout(
-  band: number,
-  series: number,
-): { width: number; gap: number } | null {
-  if (series < 1) return null;
-  const gap = band / series < 8 ? 1 : 2;
-  const width = Math.min(24, (band * 0.8 - gap * (series - 1)) / series);
-  return width >= 3 ? { width, gap } : null;
-}
-
-/** A bar is square on the baseline and rounded at the end that carries data. */
-export function chartBar(
-  x: number,
-  width: number,
-  baseline: number,
-  end: number,
-): string {
-  // A recorded zero keeps a visible stub; a missing period draws nothing.
-  const tip = Math.abs(end - baseline) < 2 ? baseline - 2 : end;
-  const radius = Math.min(4, width / 2, Math.abs(tip - baseline));
-  const turn = tip < baseline ? radius : -radius;
-  const right = x + width;
-  return [
-    `M${x.toFixed(2)},${baseline.toFixed(2)}`,
-    `V${(tip + turn).toFixed(2)}`,
-    `Q${x.toFixed(2)},${tip.toFixed(2)} ${(x + radius).toFixed(2)},${tip.toFixed(2)}`,
-    `H${(right - radius).toFixed(2)}`,
-    `Q${right.toFixed(2)},${tip.toFixed(2)} ${right.toFixed(2)},${(tip + turn).toFixed(2)}`,
-    `V${baseline.toFixed(2)}`,
-    "Z",
-  ].join(" ");
-}
-
-/** Each gap starts a new segment, so the SVG cannot invent missing recordings. */
+/**
+ * Every recording is a point and consecutive recordings are joined, so the
+ * line spans periods without one; only a point marks a recording.
+ */
 export function chartLine(
   points: ChartPoint[],
   min: number,
@@ -342,41 +311,15 @@ export function chartLine(
   let connected = false;
   return points
     .map((point, index) => {
-      if (point.value === null) {
-        connected = false;
-        return "";
-      }
+      if (point.value === null) return "";
       const x = chartX(index, points.length, frame);
       const y = chartY(point.value, min, max, frame);
       const command = connected ? "L" : "M";
       connected = true;
       return `${command}${x.toFixed(2)},${y.toFixed(2)}`;
     })
+    .filter(Boolean)
     .join(" ");
-}
-
-/**
- * A running total stays level until the next recording, then steps. Nothing is
- * drawn before the first recording in the range.
- */
-export function chartStepLine(
-  points: ChartPoint[],
-  min: number,
-  max: number,
-  frame: ChartFrame,
-): string {
-  let started = false;
-  return points
-    .map((point, index) => {
-      if (point.carried === null) return "";
-      const x = chartX(index, points.length, frame).toFixed(2);
-      const y = chartY(point.carried, min, max, frame).toFixed(2);
-      if (started) return `H${x} V${y}`;
-      started = true;
-      return `M${x},${y}`;
-    })
-    .join(" ")
-    .trim();
 }
 
 export interface ChartPreferences {

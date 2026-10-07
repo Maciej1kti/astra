@@ -296,8 +296,8 @@ unit protection, response-loss replay and concurrent conflict coverage.
 
 The `charts` suite creates temporary counter histories through ordinary conditional
 CLI writes. It checks counter selection, shared-unit overlays, separate unit
-panels, period bars with a zero stub, the stepped running total, the line form
-for dense ranges, range-following and chosen grouping, stable series colours,
+panels, recordings drawn as dots joined by lines with no bars, a recorded zero as
+a dot, the running total, range-following and chosen grouping, stable series colours,
 rates and statistics, project filtering, empty history and source refreshes.
 Period values are read from the legend with the plot's keyboard slider. At
 1440, 1024, 768, 390 and 320 px it checks touch targets, page containment,
