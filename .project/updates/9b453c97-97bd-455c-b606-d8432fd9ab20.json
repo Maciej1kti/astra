@@ -1,0 +1,18 @@
+{
+  "body": "Plugins and configurable Chart tiles, in 29220a2 and running in the existing HTTPS app, on the owner's 2026-10-07 direction (ADR-073). A plugin is a built-in module a profile switches on under Ustawienia → Wtyczki; the settlement and the Razem totals are the first two and start off. The period summary is a grid of tiles; a tile opens a dialog choosing its values, saved per counter with the profile.\n\n481 Rust tests, 526 Node tests, all 41 Chromium browser suites and the WebKit charts and counters suites pass. A race in the projectctl query tests' mock server, which had failed the gate twice, is fixed. The owner's profile has both plugins off until switched on, so the settlement is not shown at first; the initial bundle sits one byte under its budget. Evidence: progress/2026-10-07-plugins-and-tiles.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "9b453c97-97bd-455c-b606-d8432fd9ab20",
+    "kind": "result",
+    "recorded_at": "2026-10-07T14:26:08.975Z",
+    "summary": "Plugins per profile and Chart tiles that choose their values",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
