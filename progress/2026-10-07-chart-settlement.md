@@ -23,6 +23,26 @@ difference, and a counter's person is taken from its name only.
 - Rates and the output unit stay browser-local, as before; nothing new is
   stored and no protocol changed.
 
+## Correction the same day
+
+The owner then described the arrangement: every push-up is worth 1 PLN, every
+sit-up 0.25 PLN, whoever has more is paid the difference, and the point is
+that the two sides keep chasing each other. The rule matched, but two things
+did not:
+
+- **The debt runs over the whole history.** It had followed the plotted
+  range, 30 days by default, while the owner's counters start on 2026-01-01.
+  `ChartView` now keeps a second `ChartData` reading the 400 days the counter
+  view allows, and the panel names the first recording it covers.
+- **A rate belongs to an activity.** The name without its last word is the
+  activity; `chartSharedRates` copies a typed rate to the same activity's
+  other counters while they still hold the edited counter's previous rate.
+- **Do wyrównania** lists, per activity of the payer, the repetitions that
+  would close the gap.
+
+Unit tests (520) cover the shared rates and the owner's own totals; the
+browser scenario now has a recording 200 days old outside the plotted range.
+
 ## Verification
 
 - Node unit tests pass (519), with a new settlement case: two and three
@@ -40,6 +60,10 @@ Screenshots are in ignored `test-results/browser/regressions/charts/`.
 
 ## Limits
 
+- The counter view reads at most 400 days, so a history older than that is
+  cut off and the panel then says "ostatnie 400 dni". The owner's reaches that
+  limit in February 2027; an unbounded total needs a server change.
+- Rates are still stored per browser, so each device needs them typed once.
 - A name's last word is the only way to assign a person, so unrelated
   counters such as "Work hours" and "Study minutes" read as two people.
 - Summary values keep their shorter number format ("150"); the settlement

@@ -913,7 +913,14 @@ await runBrowserSuite(
 
       // People are the last word of a counter's name; the lower value pays.
       await createCard(config.projects[0].id, "Synthetic bet", [
-        { name: "Pompki Tomek", unit: "rep", values: [[day(1), 300]] },
+        {
+          name: "Pompki Tomek",
+          unit: "rep",
+          values: [
+            [day(200), 1000],
+            [day(1), 300],
+          ],
+        },
         { name: "Pompki Maciek", unit: "rep", values: [[day(0), 33]] },
         { name: "Brzuszki Tomek", unit: "rep", values: [[day(2), 100]] },
         { name: "Brzuszki Maciek", unit: "rep", values: [[day(0), 15]] },
@@ -939,17 +946,27 @@ await runBrowserSuite(
       await picker.click();
       await expect(settlement.locator("[data-chart-debt]")).toHaveCount(0);
       await expect(settlement).toContainText("Wpisz stawki");
-      await rate("Pompki Tomek", "Synthetic bet").fill("0,5");
-      await rate("Pompki Maciek", "Synthetic bet").fill("0,5");
-      await rate("Brzuszki Tomek", "Synthetic bet").fill("0,25");
+      // One rate per activity: typing it for one person fills the other.
+      await rate("Pompki Tomek", "Synthetic bet").fill("1");
+      await expect(rate("Pompki Maciek", "Synthetic bet")).toHaveValue("1");
+      await rate("Brzuszki Maciek", "Synthetic bet").fill("0,25");
+      await expect(rate("Brzuszki Tomek", "Synthetic bet")).toHaveValue("0,25");
+      // The plots show 30 days; the debt counts the recording 200 days ago.
+      await expect(statistic("Pompki Tomek", "total")).toHaveText("300");
+      await expect(settlement.locator("[data-chart-ledger]")).toHaveText(
+        /^cała historia, od /,
+      );
       const debt = settlement.locator("[data-chart-debt]");
       await expect(debt).toHaveCount(1);
       await expect(debt.locator("b")).toHaveText(["Maciek", "Tomek"]);
-      await expect(debt.locator("strong")).toHaveText("158,50EUR");
+      await expect(debt.locator("strong")).toHaveText("1288,25EUR");
       await expect(
         settlement.locator('[data-chart-party="Tomek"] dd'),
-      ).toHaveText("175,00 EUR");
-      await expect(settlement).toContainText("Liczniki bez stawki (1)");
+      ).toHaveText("1325,00 EUR");
+      await expect(debt.locator(".debt-level")).toHaveText(
+        "Do wyrównania: Pompki 1289 albo Brzuszki 5153",
+      );
+      await expect(settlement).not.toContainText("bez stawki");
       const settled = await settlement.boundingBox();
       const firstPlot = await dashboard.getByRole("img").first().boundingBox();
       assert.ok(
@@ -990,7 +1007,7 @@ await runBrowserSuite(
       await page.setViewportSize({ width: 1440, height: 1000 });
       await screenshot("chart-settlement-1440");
       checks.push(
-        "settlement by last-word person: lower value pays the difference, unrated counters excluded, uniform phone cards",
+        "settlement over the whole history by last-word person: lower value pays the difference, one rate per activity, repetitions to draw level, uniform phone cards",
       );
       assert.deepEqual(errors, []);
       assert.deepEqual(await page.evaluate(() => window.chartCsp), []);

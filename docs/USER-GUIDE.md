@@ -222,12 +222,16 @@ selector to inspect one project or all registered projects.
 **Rozliczenie** opens the view when the selected counters name at least two
 people. A person is the last word of a counter's name, so **Pompki Tomek** and
 **Brzuszki Tomek** both belong to Tomek; a one-word name belongs to nobody. A
-person's value is the sum of each of their counters' totals in the range
-multiplied by its rate. Whoever has the lower value pays the difference, shown
-as **Maciek płaci → Tomek** beside the amount, with every person's value
-underneath. A counter without a rate counts for nothing and is mentioned; with
-no rates the panel asks for them. More than two people are settled pair by
-pair.
+person's value is the sum of each of their counters' totals multiplied by its
+rate, over the whole history the view can read (the last 400 days), whatever
+range the plots show. Whoever has the lower value pays the difference, shown
+as **Maciek płaci → Tomek** beside the amount. **Do wyrównania** says how many
+repetitions of any one activity would close the gap, and every person's value
+follows. The rest of the name is the activity, and a rate belongs to it: typing
+a rate for **Pompki Tomek** fills **Pompki Maciek** too, until you give one of
+them its own. A counter without a rate counts for nothing and is mentioned;
+with no rates the panel asks for them. More than two people are settled pair
+by pair.
 
 The plot is the main surface. On a wide screen the **Liczniki** list sits beside
 it; on a tablet or phone it collapses to one row showing how many counters are

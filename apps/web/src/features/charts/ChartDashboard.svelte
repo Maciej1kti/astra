@@ -21,6 +21,7 @@
     chartRangeDays,
     chartRate,
     chartSeriesKey,
+    chartSharedRates,
     chartStats,
     readChartPreferences,
     writeChartPreferences,
@@ -30,6 +31,8 @@
 
   let {
     series,
+    ledger,
+    ledgerFrom,
     from,
     to,
     today,
@@ -45,6 +48,8 @@
     onloadmore,
   }: {
     series: ChartSeries[];
+    ledger: ChartSeries[];
+    ledgerFrom: string;
     from: string;
     to: string;
     today: string;
@@ -132,6 +137,17 @@
       rate: chartRate(rates[chartSeriesKey(source)]),
       color: colors[chartSeriesKey(source)] ?? position,
     })),
+  );
+  // Debts run over the whole readable history, not the plotted range.
+  const ledgerRows = $derived(
+    ledger
+      .filter((item) => selectedKeys.includes(chartSeriesKey(item)))
+      .map((source) => ({
+        source,
+        stats: chartStats(source.values, ledgerFrom, today),
+        rate: chartRate(rates[chartSeriesKey(source)]),
+        color: colors[chartSeriesKey(source)] ?? 0,
+      })),
   );
   const records = $derived(
     rows.reduce((sum, row) => sum + row.stats.recorded, 0),
@@ -228,7 +244,11 @@
     </div>{/if}
   {#if notice}<p class="notice">{notice}</p>{/if}
 
-  {#if selected.length}<ChartSettlement {rows} {from} {to} {outputUnit} />{/if}
+  {#if ledgerRows.length}<ChartSettlement
+      rows={ledgerRows}
+      from={ledgerFrom}
+      {outputUnit}
+    />{/if}
 
   <div class="chart-body">
     <ChartCounterPicker
@@ -317,7 +337,7 @@
       {rates}
       {outputUnit}
       onrate={(key, value) => {
-        rates = { ...rates, [key]: value };
+        rates = chartSharedRates(rates, series, key, value);
         savePreferences();
       }}
       onoutputunit={(value) => {

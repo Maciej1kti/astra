@@ -3,30 +3,42 @@
     chartDate,
     chartMoney,
     chartSettlement,
+    chartValue,
     type ChartSummaryRow,
   } from "./chart-model";
 
   let {
     rows,
     from,
-    to,
     outputUnit,
   }: {
     rows: ChartSummaryRow[];
+    /** The earliest day the history read reaches. */
     from: string;
-    to: string;
     outputUnit: string;
   } = $props();
 
   const settlement = $derived(chartSettlement(rows));
   const unit = $derived(outputUnit.trim());
+  const first = $derived(
+    rows
+      .flatMap((row) => Object.keys(row.source.values))
+      .reduce<string | null>(
+        (earliest, date) => (!earliest || date < earliest ? date : earliest),
+        null,
+      ),
+  );
 </script>
 
 {#if settlement.people > 1}
   <section class="chart-settlement" aria-labelledby="chart-settlement-heading">
     <div class="settlement-heading">
       <h2 id="chart-settlement-heading">Rozliczenie</h2>
-      <p>{chartDate(from, true)} – {chartDate(to, true)}</p>
+      <p data-chart-ledger>
+        {first && first > from
+          ? `cała historia, od ${chartDate(first, true)}`
+          : "ostatnie 400 dni"}
+      </p>
     </div>
     {#if settlement.parties.length > 1}
       {#if settlement.debts.length}
@@ -43,6 +55,11 @@
                 >{chartMoney(debt.amount)}{#if unit}<small>{unit}</small
                   >{/if}</strong
               >
+              {#if debt.level.length}<span class="debt-level"
+                  >Do wyrównania: {debt.level
+                    .map((step) => `${step.activity} ${chartValue(step.count)}`)
+                    .join(" albo ")}</span
+                >{/if}
             </li>
           {/each}
         </ul>
@@ -59,8 +76,9 @@
       </dl>
       <p class="settlement-note">
         Osoba to ostatnie słowo nazwy licznika. Kto ma mniejszą wartość, płaci
-        różnicę.{#if settlement.unrated}{" "}Liczniki bez stawki ({settlement.unrated})
-          nie wchodzą do rozliczenia.{/if}
+        różnicę. Liczy się cała historia, niezależnie od zakresu wykresu.
+        {#if settlement.unrated}Liczniki bez stawki ({settlement.unrated}) nie
+          wchodzą do rozliczenia.{/if}
       </p>
     {:else}
       <p class="settlement-note">
@@ -113,6 +131,12 @@
   .debt-who {
     font-size: var(--text-lg);
     overflow-wrap: anywhere;
+  }
+  .debt-level {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: var(--text-base);
+    font-variant-numeric: tabular-nums;
   }
   .debt-who b {
     font-weight: var(--weight-semibold);

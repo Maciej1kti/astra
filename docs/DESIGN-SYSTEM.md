@@ -608,7 +608,9 @@ is no scale choice.
 at least two people, because who owes whom is the answer the owner opens the
 view for. It states each debt as payer, arrow, receiver and one large amount,
 then every person's value, then the rule in muted text. It follows the
-selection, range, rates and output unit and stores nothing itself.
+selection, rates and output unit, reads the whole available history instead of
+the plotted range, says how many repetitions would draw the payer level, and
+stores nothing itself.
 
 In a narrow container every summary card has the same grid: name and total,
 rate and value, three quiet statistics, then the difference line, which the
