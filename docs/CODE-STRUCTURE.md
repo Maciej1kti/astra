@@ -257,11 +257,15 @@ uncertainty. A failed status lookup does not prove that the write failed.
 Registration features additionally own their accepted job's polling lifecycle.
 `registration/NewProject.svelte` adds a project by name in three retained steps:
 the folder (one creation ID per dialog), the ordinary registration command, and
-the repository, which a host that does not publish refuses with
-`GITHUB_DISABLED`. A failed step is the one repeated. `host/GitObservation`
+the repository when the folder reply says `publish`. A failed step is the one
+repeated. `host/GitObservation`
 shows the repository state of any project through `lib/api/repository.ts` and
 repeats a publication. The dialog calls the repository operations directly: a
 module shared by both would be one more chunk in the initial bundle's list.
+`registration/FolderChooser.svelte` is the dialog's place chooser: it lists
+directories below approved roots, adds a folder and returns a root with a
+relative path. `projectctl/src/project.rs` runs the same three steps for the
+CLI and the agent.
 On the server, `application/src/project_folder.rs` owns folder naming, the
 default root and folder creation; `projectd/src/repository.rs` owns the retained
 creation results and every `git`/`gh` command line

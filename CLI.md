@@ -188,6 +188,30 @@ JSON
 Its create/set input options follow the same pattern. A milestone may have
 `due: {"date":"2026-09-20"}` with no deadline type. Schedule editing is card-only.
 
+### Create a project
+
+`project create` adds a project by name with the same server operations as the
+browser's **Dodaj projekt**: the folder in the profile's default approved root,
+the registration, and a private repository when the host was started with
+`--github` and the profile publishes new projects.
+
+```sh
+projectctl project create --name "Kitchen renovation"
+projectctl project create --name "Kitchen renovation" --root ROOT_ID --path "Clients/Nowak"
+projectctl project create --name "Local only" --no-publish
+```
+
+`--root` takes an approved root's ID from `projectctl get /api/v1/roots`, and
+`--path` an existing directory below it. The reply's `data` holds `project_id`,
+`folder` (the derived name, with a numeric suffix when it was taken), `path`
+(the folder to pass as `--project`), `registration` and `repository`, which is
+`null` for a local project and otherwise a state such as `published` or
+`failed` with an error code. The exit code is 0 once the project is
+registered, even when its publication failed, and 9 when the registration is
+unfinished. Repeat an interrupted attempt with the printed `creation_id` as
+`--creation-id` while the daemon keeps running, so that no second folder is
+made. See [ADR-074](docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).
+
 ## Permanent deletion
 
 Read the card before deleting its source file:

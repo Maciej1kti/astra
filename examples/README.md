@@ -80,5 +80,8 @@ an ordinary conditional preferences patch; the sample identifier must be one of
 your own approved roots. On a host started with `--github`, an empty JSON
 object posted to `/api/v1/projects/{project_id}/repository` publishes the
 folder, and reading the same path returns a
-[repository state](project-repository.json). See
+[repository state](project-repository.json). A
+[directory request](requests/directory.json) posted to
+`/api/v1/roots/{root_id}/directories` adds an empty folder below an approved
+root. See
 [ADR-074](../docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).

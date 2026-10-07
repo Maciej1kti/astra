@@ -68,21 +68,67 @@ impl Engine {
         let directory = self.allowed_directory(&id, "")?;
         Ok((id, directory))
     }
+
+    /// Create one empty folder in an existing directory below an approved
+    /// root. Nothing is registered.
+    pub fn create_directory(&self, root_id: &str, input: &Value) -> Result<Value, AppError> {
+        crate::wire::validate("DirectoryInput", input)?;
+        let (Some(relative), Some(name)) =
+            (input["relative_path"].as_str(), input["name"].as_str())
+        else {
+            return Err(AppError::invariant("validated directory input"));
+        };
+        let name = name.trim_end();
+        if name.is_empty() {
+            return Err(AppError::reject(422, "VALIDATION_FAILED"));
+        }
+        let parent = self.allowed_directory(root_id, relative)?;
+        parent.verify()?;
+        match std::fs::create_dir(parent.path().join(name)) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                return Err(AppError::reject(409, "DIRECTORY_EXISTS"));
+            }
+            Err(error) => return Err(project_store::StoreError::Io(error).into()),
+        }
+        parent.sync()?;
+        let relative_path = if relative.is_empty() || relative == "." {
+            name.to_owned()
+        } else {
+            format!("{relative}/{name}")
+        };
+        // Reopening through the root proves the new entry is a plain directory there.
+        self.allowed_directory(root_id, &relative_path)?;
+        Ok(json!({"name": name, "relative_path": relative_path, "registered": false}))
+    }
 }
 
 impl Users {
     /// Create a folder for a new project and plan its registration with
-    /// tracked planning data. `taken` reports names that are unavailable
-    /// outside the root, such as an existing remote repository.
+    /// tracked planning data. `destination` is an existing directory below an
+    /// approved root; without it the profile's default root is used. `taken`
+    /// reports names that are unavailable elsewhere, such as an existing
+    /// remote repository.
     pub fn create_project_folder(
         &self,
         user: &str,
         name: &str,
+        destination: Option<(&str, &str)>,
         taken: &dyn Fn(&str) -> bool,
     ) -> Result<(String, Value), AppError> {
         let name = name.trim();
         let engine = self.select(Some(user))?.1;
-        let (root_id, root) = engine.project_root()?;
+        let (root_id, root, parent) = match destination {
+            Some((root_id, relative)) => (
+                root_id.to_owned(),
+                engine.allowed_directory(root_id, relative)?,
+                relative.trim_matches('/').to_owned(),
+            ),
+            None => {
+                let (root_id, root) = engine.project_root()?;
+                (root_id, root, String::new())
+            }
+        };
         let base = folder_name(name);
         for suffix in 1..=LAST_SUFFIX {
             let folder = if suffix == 1 {
@@ -107,7 +153,11 @@ impl Users {
                 user,
                 &json!({
                     "root_id": root_id,
-                    "relative_path": folder,
+                    "relative_path": if parent.is_empty() || parent == "." {
+                        folder.clone()
+                    } else {
+                        format!("{parent}/{folder}")
+                    },
                     "name": name,
                     "git_mode": "tracked",
                 }),

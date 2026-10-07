@@ -231,6 +231,8 @@ target/release/projectd \
 | `--github-gh-bin PATH`, `--github-git-bin PATH` | Executables to use instead. Both need `--github` |
 | `--github-remote-base URL` | Prefix of a new repository's remote, default `https://github.com/`; set it for a GitHub Enterprise host. Needs `--github` |
 
+Each profile can turn publication off under **Ustawienia → Publikuj nowe
+projekty na GitHubie**; it is on unless switched off.
 When GitHub cannot be reached the project is still created and works locally;
 repeat the publication from the project's **Git** dialog. The manual launcher
 passes the option with `ASTRA_TRY_GITHUB=1 npm run try`.

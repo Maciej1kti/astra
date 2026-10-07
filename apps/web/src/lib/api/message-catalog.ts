@@ -138,6 +138,7 @@ export const messages: Record<string, string> = {
   GIT_UNAVAILABLE: "Repozytorium Git jest niedostępne.",
   GIT_BUSY: "Repozytorium Git jest zajęte. Spróbuj ponownie za chwilę.",
   GIT_TIMEOUT: "Upłynął czas sprawdzania repozytorium Git.",
+  DIRECTORY_EXISTS: "Folder o tej nazwie już istnieje w tym miejscu.",
   PROJECT_ROOT_NOT_SET:
     "Nie wybrano katalogu nowych projektów. Wskaż go w Ustawieniach.",
   PROJECT_ROOT_NOT_FOUND:

@@ -369,6 +369,8 @@ export interface ApiContracts {
   GitObservation: GitObservation;
   NativeFolderInput: NativeFolderInput;
   NativeFolderSelection: NativeFolderSelection;
+  DirectoryInput: DirectoryInput;
+  Directory: Directory;
   ProjectFolderInput: ProjectFolderInput;
   ProjectFolder: ProjectFolder;
   ProjectRepository: ProjectRepository;
@@ -603,6 +605,7 @@ export interface Preferences {
     [k: string]: string[];
   };
   project_root_id?: string;
+  publish_repositories?: boolean;
 }
 export interface Workspace {
   format_version: 1;
@@ -1302,12 +1305,24 @@ export interface NativeFolderSelection {
   plan: RegistrationPlan | null;
   error: string | null;
 }
+export interface DirectoryInput {
+  relative_path: string;
+  name: string;
+}
+export interface Directory {
+  name: string;
+  relative_path: string;
+  registered: boolean;
+}
 export interface ProjectFolderInput {
   creation_id: string;
   name: string;
+  root_id?: string;
+  relative_path?: string;
 }
 export interface ProjectFolder {
   creation_id: string;
+  publish: boolean;
   folder: string;
   plan: RegistrationPlan;
 }

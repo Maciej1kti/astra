@@ -13,6 +13,8 @@ export type SettingsDraft = {
   plugins: string;
   /** Approved root of new project folders; empty while none is selected. */
   root: string;
+  /** New projects get a private repository on a host that publishes. */
+  publish: boolean;
 };
 const fields = [
   "timezone",
@@ -21,6 +23,7 @@ const fields = [
   "agent",
   "plugins",
   "root",
+  "publish",
 ] as const;
 
 export function settingsDraft(saved: PreferencesResource): SettingsDraft {
@@ -31,6 +34,7 @@ export function settingsDraft(saved: PreferencesResource): SettingsDraft {
     agent: saved.preferences.agent_provider ?? "claude",
     plugins: pluginList(saved.preferences.plugins),
     root: saved.preferences.project_root_id ?? "",
+    publish: saved.preferences.publish_repositories ?? true,
   };
 }
 

@@ -7,6 +7,12 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+[A project's place can be chosen by clicking](2026-10-07-project-places.md),
+with folders added in the dialog; GitHub publication is a profile setting that
+is on by default; and `projectctl project create` gives the CLI and the in-app
+agent the same creation steps as the browser. The agent's use of it was not
+run against a real provider.
+
 [Projects are added by name](2026-10-07-project-creation.md): the server
 creates the folder in the profile's default approved root, with a suffix when
 the name is taken, and a host started with `--github` creates a private

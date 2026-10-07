@@ -772,6 +772,10 @@
         "project_root_id": {
           "description": "Approved root in which new project folders are created.",
           "$ref": "#/$defs/UUID"
+        },
+        "publish_repositories": {
+          "description": "Whether a project created by name is published to a private repository on a host that publishes. Absent means true.",
+          "type": "boolean"
         }
       },
       "required": [],

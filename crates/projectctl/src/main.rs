@@ -72,7 +72,7 @@ enum Action {
     },
     /// Read a bounded five-card Focus preview for a local desktop widget.
     FocusPreview,
-    /// Read a project deletion plan or permanently remove its `.project` tree.
+    /// Create a project by name, read a deletion plan or permanently remove a `.project` tree.
     Project {
         #[command(subcommand)]
         action: project::Action,
@@ -280,6 +280,12 @@ async fn run(args: Arguments) -> Result<transport::Outcome, Box<dyn std::error::
                 code: 0,
                 output: json!({"api_version":"1","ok":true,"http_status":200,"request_id":null,"command_epoch":null,"data":data}),
             });
+        }
+        Action::Project {
+            action: project::Action::Create(arguments),
+        } => {
+            return project::create(&client, arguments, user, Duration::from_secs(args.timeout))
+                .await;
         }
         Action::Project { action } => action.prepare()?,
         Action::Recovery { action } => action.prepare(&client, args.project.as_deref()).await?,

@@ -285,6 +285,7 @@ def check_api_examples() -> dict:
         "agent-run.json": "AgentRunInput",
         "agent-provider-preference.json": "PreferencesPatch",
         "project-folder.json": "ProjectFolderInput",
+        "directory.json": "DirectoryInput",
         "project-root-preference.json": "PreferencesPatch",
     }
     for filename, definition in bindings.items():

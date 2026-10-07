@@ -129,7 +129,8 @@ await runBrowserSuite(
       "A name alone creates the folder, registers the project and pushes a private repository",
       async (page) => {
         const dialog = await open(page);
-        await expect(dialog).toContainText("także prywatne repozytorium");
+        await expect(dialog).toContainText("publikowanie na GitHubie");
+        await expect(dialog).toContainText(`Miejsce: ${home}`);
         await expect(createOf(dialog)).toBeDisabled();
         await expect(
           dialog.getByRole("button", { name: /Wybierz folder/ }),
@@ -282,12 +283,9 @@ await runBrowserSuite(
         const otherRoot = cli("add-root", other, "--label", "Inne projekty");
         const dialog = await open(page);
         await nameOf(dialog).fill("Bez katalogu");
-        await createOf(dialog).click();
-        await expect(dialog.getByRole("alert")).toContainText(
-          "Nie wybrano katalogu nowych projektów. Wskaż go w Ustawieniach.",
-        );
-        // A refused creation leaves nothing behind and can be started again.
-        await expect(nameOf(dialog)).toBeEnabled();
+        // With several roots and no default the place has to be named first.
+        await expect(dialog).toContainText("Miejsce: nie wybrano");
+        await expect(createOf(dialog)).toBeDisabled();
         assert.equal((await readdir(other)).length, 0);
         await dialog
           .getByRole("button", {
@@ -337,8 +335,215 @@ await runBrowserSuite(
         assert(
           await exists(join(other, "w-innym-katalogu/.project/project.json")),
         );
+        // The saved root is revoked on the host: the dialog must not start
+        // from it, and Settings must still save other fields (P07, P08).
         cli("remove-root", otherRoot.id);
         return { root: otherRoot.id, home: homeRoot.id };
+      },
+    );
+
+    await check(
+      "P07",
+      "The place is chosen by clicking through folders, and a folder can be added there",
+      async (page) => {
+        await mkdir(join(home, "Klienci"), { mode: 0o700 });
+        const dialog = await open(page);
+        await nameOf(dialog).fill("Łazienka Nowaków");
+        await dialog
+          .getByRole("button", { name: "Zmień miejsce…", exact: true })
+          .click();
+        const chooser = dialog.getByRole("region", {
+          name: "Miejsce projektu",
+          exact: true,
+        });
+        await chooser
+          .getByRole("button", { name: "Otwórz folder: Klienci", exact: true })
+          .click();
+        await expect(chooser).toContainText(`${home}/Klienci`);
+        await expect(chooser).toContainText("Brak podfolderów.");
+        // Enter in the folder field adds the folder; it must not create the project.
+        const folder = chooser.getByLabel("Nowy folder", { exact: true });
+        await folder.fill("Nowak 2026");
+        await folder.press("Enter");
+        await expect(chooser).toContainText(`${home}/Klienci/Nowak 2026`);
+        assert(await exists(join(home, "Klienci/Nowak 2026")));
+        assert.equal(
+          (await readdir(join(home, "Klienci/Nowak 2026"))).length,
+          0,
+        );
+        await folder.fill("Nowak 2026");
+        await chooser
+          .getByRole("button", { name: "Katalog nadrzędny", exact: true })
+          .click();
+        await chooser
+          .getByLabel("Nowy folder", { exact: true })
+          .fill("Nowak 2026");
+        await chooser
+          .getByRole("button", { name: "Dodaj folder", exact: true })
+          .click();
+        await expect(chooser.getByRole("alert")).toContainText(
+          "Folder o tej nazwie już istnieje w tym miejscu.",
+        );
+        await chooser
+          .getByRole("button", {
+            name: "Otwórz folder: Nowak 2026",
+            exact: true,
+          })
+          .click();
+        await snapshot(page, "P07-chooser.png");
+        await chooser
+          .getByRole("button", { name: "Wybierz ten folder", exact: true })
+          .click();
+        await expect(chooser).toHaveCount(0);
+        await expect(dialog).toContainText(
+          `Miejsce: ${home}/Klienci/Nowak 2026`,
+        );
+        await createOf(dialog).click();
+        await expect(page.locator("dialog[open]")).toHaveCount(0);
+        assert(
+          await exists(
+            join(
+              home,
+              "Klienci/Nowak 2026/lazienka-nowakow/.project/project.json",
+            ),
+          ),
+        );
+        assert(pushedFiles("lazienka-nowakow").includes("AGENTS.md"));
+        return { place: "Klienci/Nowak 2026" };
+      },
+    );
+
+    await check(
+      "P08",
+      "Settings switch publication off: a new project stays local until published by hand",
+      async (page) => {
+        await visit(page);
+        await page
+          .getByRole("button", {
+            name: "Ustawienia przestrzeni roboczej",
+            exact: true,
+          })
+          .click();
+        const settings = page.getByRole("dialog", {
+          name: "Ustawienia przestrzeni roboczej",
+          exact: true,
+        });
+        const toggle = settings.getByRole("checkbox", {
+          name: /Publikuj nowe projekty na GitHubie/,
+        });
+        await expect(toggle).toBeChecked();
+        await toggle.uncheck();
+        // The root saved in P05 was revoked on the host; name an approved one.
+        const select = settings.getByLabel("Katalog nowych projektów", {
+          exact: true,
+        });
+        await expect(select.locator("option").first()).toHaveText(
+          "Katalog nie jest już zatwierdzony",
+        );
+        await select.selectOption(homeRoot.id);
+        await snapshot(page, "P08-settings.png");
+        await settings
+          .getByRole("button", { name: "Zapisz ustawienia", exact: true })
+          .click();
+        await expect
+          .poll(
+            () =>
+              cli("get", "/api/v1/workspace/preferences").preferences
+                .publish_repositories,
+          )
+          .toBe(false);
+        await page.keyboard.press("Escape");
+        await expect(page.locator("dialog[open]")).toHaveCount(0);
+
+        const before = (await calls()).length;
+        const dialog = await open(page);
+        await nameOf(dialog).fill("Tylko lokalnie");
+        await createOf(dialog).click();
+        await expect(page.locator("dialog[open]")).toHaveCount(0);
+        await expect(page).toHaveURL(/project=/);
+        const project = new URL(page.url()).searchParams.get("project");
+        assert(
+          await exists(join(home, "tylko-lokalnie/.project/project.json")),
+        );
+        assert(!(await exists(join(home, "tylko-lokalnie/.git"))));
+        assert.equal((await calls()).length, before, "GitHub was not asked");
+        // The Git dialog still publishes one project deliberately.
+        await page.getByRole("button", { name: "Git", exact: true }).click();
+        const git = page.getByRole("dialog", {
+          name: "Stan repozytorium Git",
+          exact: true,
+        });
+        await git
+          .getByRole("button", {
+            name: "Opublikuj jako prywatne repozytorium",
+            exact: true,
+          })
+          .click();
+        await expect(git).toContainText(
+          "Projekt jest opublikowany w zdalnym repozytorium.",
+        );
+        assert.equal(
+          cli("get", `/api/v1/projects/${project}/repository`).state,
+          "published",
+        );
+        return { project };
+      },
+    );
+
+    await check(
+      "P09",
+      "projectctl project create runs the same steps and follows the same preference",
+      async () => {
+        const patchFile = join(config.temp, "preferences-patch.json");
+        const setPreference = async (preferences) => {
+          await writeFile(patchFile, JSON.stringify({ preferences }));
+          cli(
+            "command",
+            "PATCH",
+            "/api/v1/workspace/preferences",
+            "--json-file",
+            patchFile,
+            "--if-version",
+            cli("get", "/api/v1/workspace/preferences").version,
+          );
+        };
+        // P05 left a revoked root as the default; name the approved one again.
+        await setPreference({ project_root_id: homeRoot.id });
+        // Publication is off from P08: the CLI keeps the project local too.
+        const local = cli("project", "create", "--name", "Z wiersza poleceń");
+        assert.equal(local.repository, null);
+        assert.equal(local.registration, "done");
+        assert.equal(local.path, join(home, "z-wiersza-polecen"));
+        assert(!(await exists(join(local.path, ".git"))));
+
+        await setPreference({ publish_repositories: true });
+        const root = cli("get", "/api/v1/roots").items[0].id;
+        const published = cli(
+          "project",
+          "create",
+          "--name",
+          "Agent: remont",
+          "--root",
+          root,
+          "--path",
+          "Klienci",
+        );
+        assert.equal(published.folder, "agent-remont");
+        assert.equal(published.path, join(home, "Klienci/agent-remont"));
+        assert.equal(published.repository.state, "published");
+        assert(pushedFiles("agent-remont").includes(".project/project.json"));
+        // The new project is usable at once with its folder, as the agent uses it.
+        const cards = cli("--project", published.path, "card", "list");
+        assert.deepEqual(cards.items, []);
+        const kept = cli(
+          "project",
+          "create",
+          "--name",
+          "Bez repo",
+          "--no-publish",
+        );
+        assert.equal(kept.repository, null);
+        return { local: local.folder, published: published.folder };
       },
     );
 

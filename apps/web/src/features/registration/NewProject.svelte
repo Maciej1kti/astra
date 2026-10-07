@@ -4,9 +4,13 @@
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import Button from "../../lib/ui/Button.svelte";
   import type {
+    PreferencesResource,
     ProjectFolder,
+    ProjectFolderInput,
     ProjectRepository,
+    Root,
   } from "../../lib/contracts/api.generated";
+  import FolderChooser from "./FolderChooser.svelte";
   import SessionNotice from "../../lib/ui/SessionNotice.svelte";
   import {
     commandOperation,
@@ -14,12 +18,7 @@
   } from "../../lib/api/command-operation.svelte";
   import { onMount } from "svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
-  import {
-    api,
-    apiCode,
-    command,
-    isDefinitiveRejection,
-  } from "../../lib/api/api";
+  import { api, command, isDefinitiveRejection } from "../../lib/api/api";
 
   let {
     onclose,
@@ -47,7 +46,20 @@
   let busy = $state(false);
   let pending = $derived(operation.pending);
   // One creation ID for the whole dialog: a repeated request names the same folder.
-  let creation = $state<{ creation_id: string; name: string } | null>(null);
+  let creation = $state<ProjectFolderInput | null>(null);
+  let roots = $state<Root[]>([]);
+  // The profile's default root, and the place chosen for this project if any.
+  let defaultRoot = $state("");
+  let place = $state<{ root: string; relative: string } | null>(null);
+  let choosing = $state(false);
+  let placesLoaded = $state(false);
+  const rootPath = (id: string) =>
+    roots.find((item) => item.id === id)?.display_path ?? "";
+  const placeLabel = $derived(
+    place
+      ? `${rootPath(place.root)}${place.relative ? `/${place.relative}` : ""}`
+      : rootPath(defaultRoot),
+  );
   let created = $state<ProjectFolder | null>(null);
   let job = $state<string | null>(null);
   let registered = $state(false);
@@ -114,12 +126,7 @@
     // Called directly: a module shared with the Git dialog would become one
     // more chunk listed in the initial bundle, which has no room for it.
     const path = `/api/v1/projects/${project}/repository`;
-    try {
-      repository = await api<ProjectRepository>(path, "POST", {});
-    } catch (e) {
-      if (apiCode(e) === "GITHUB_DISABLED") return true;
-      throw e;
-    }
+    repository = await api<ProjectRepository>(path, "POST", {});
     while (active && !accessLost && repository.state === "publishing") {
       await wait(700);
       repository = await api<ProjectRepository>(
@@ -135,19 +142,27 @@
 
   /** Runs every remaining step; a failed step is the one repeated next time. */
   async function create() {
-    if (busy || accessLost || !name.trim()) return;
+    if (busy || accessLost || !name.trim() || !placeLabel) return;
+    choosing = false;
     busy = true;
     error = "";
     info = "";
     try {
-      creation ??= { creation_id: crypto.randomUUID(), name: name.trim() };
+      creation ??= {
+        creation_id: crypto.randomUUID(),
+        name: name.trim(),
+        ...(place
+          ? { root_id: place.root, relative_path: place.relative }
+          : {}),
+      };
       created ??= await api<ProjectFolder>(
         "/api/v1/project-folders",
         "POST",
         creation,
       );
       if (!registered && !(await register(created))) return;
-      if (!(await publish(created.plan.project_id))) return;
+      // The server decides: the host publishes and the profile left it on.
+      if (created.publish && !(await publish(created.plan.project_id))) return;
       if (active) onadded(created.plan.project_id);
     } catch (e) {
       error = errorMessage(e);
@@ -174,9 +189,33 @@
         "Schowek jest niedostępny. Skopiuj widoczny identyfikator żądania przed zamknięciem.";
     }
   }
-  onMount(() => () => {
-    active = false;
-    clearTimeout(timer);
+  onMount(() => {
+    void (async () => {
+      try {
+        const [approved, saved] = await Promise.all([
+          api<{ items: Root[] }>("/api/v1/roots"),
+          api<PreferencesResource>("/api/v1/workspace/preferences"),
+        ]);
+        if (!active) return;
+        roots = approved.items;
+        // A saved root that the host no longer approves is no default.
+        const savedRoot = saved.preferences.project_root_id;
+        defaultRoot = savedRoot
+          ? roots.some((item) => item.id === savedRoot)
+            ? savedRoot
+            : ""
+          : roots.length === 1
+            ? (roots[0]?.id ?? "")
+            : "";
+        placesLoaded = true;
+      } catch (e) {
+        if (active) error = errorMessage(e);
+      }
+    })();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   });
 </script>
 
@@ -200,8 +239,8 @@
     }}
   >
     <p>
-      Podaj nazwę. Folder projektu powstanie sam, a na hoście połączonym z
-      GitHubem także prywatne repozytorium.
+      Podaj nazwę. Folder projektu powstanie sam; publikowanie na GitHubie
+      włączasz w Ustawieniach.
     </p>
     <label
       >Nazwa projektu <input
@@ -214,12 +253,40 @@
     >
     {#if created}<p class="created">
         Folder: <code>{created.plan.display_path}</code>
-      </p>{/if}
+      </p>{:else if placesLoaded}
+      <div class="place">
+        <p class="created">
+          Miejsce: {#if placeLabel}<code>{placeLabel}</code>{:else}{roots.length
+              ? "nie wybrano"
+              : "brak zatwierdzonych katalogów na hoście"}{/if}
+        </p>
+        {#if roots.length && !choosing}<button
+            type="button"
+            onclick={() => (choosing = true)}
+            disabled={busy || started}>Zmień miejsce…</button
+          >{/if}
+      </div>
+      {#if choosing}<FolderChooser
+          {roots}
+          start={place ?? {
+            root: defaultRoot || (roots[0]?.id ?? ""),
+            relative: "",
+          }}
+          onchoose={(chosen) => {
+            place = chosen;
+            choosing = false;
+          }}
+          oncancel={() => (choosing = false)}
+        />{/if}
+      {#if !placeLabel && roots.length}<p>
+          Wskaż miejsce projektu albo ustaw katalog nowych projektów w
+          Ustawieniach.
+        </p>{/if}{/if}
     {#if !registered || !repository || repository.state !== "failed"}
       <Button
         type="submit"
         variant="primary"
-        disabled={busy || accessLost || !name.trim()}
+        disabled={busy || accessLost || !name.trim() || !placeLabel}
         >{busy
           ? step
           : job
@@ -293,6 +360,18 @@
   }
   .created {
     overflow-wrap: anywhere;
+  }
+  .place {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4) var(--space-8);
+  }
+  .place p {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
   }
   details {
     margin-top: var(--space-9);

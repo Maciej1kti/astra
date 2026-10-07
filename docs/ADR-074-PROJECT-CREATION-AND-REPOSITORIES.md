@@ -29,7 +29,9 @@ directory capability stays the approved root.
 ### Creating the folder
 
 `POST /api/v1/project-folders` takes a client-made `creation_id` and the
-project name. The server derives the folder name (lowercase ASCII letters,
+project name, and optionally a place: `root_id` with a `relative_path` of an
+existing directory below that approved root, which then replaces the default
+root for this one project. The server derives the folder name (lowercase ASCII letters,
 digits and single hyphens, Polish letters folded, at most 50 characters,
 `projekt` when nothing is left), creates the folder and returns an ordinary
 registration plan for it with tracked planning data. The folder is created with
@@ -49,9 +51,28 @@ A repeated `creation_id` from the same session with the same input returns the
 first result. Results are kept in memory for ten minutes; after a daemon
 restart a repeated request creates a second folder with the next suffix.
 
+### Folders below a root
+
+`POST /api/v1/roots/{root_id}/directories` creates one empty folder in an
+existing directory of an approved root, so that a browser can prepare a place
+by clicking: the dialog's folder chooser lists directories, enters them, adds a
+folder and selects one. The name is one path component of at most 100
+characters that does not start with a dot and holds no slash, backslash or
+control character; an existing entry answers `DIRECTORY_EXISTS`. The server
+still receives no absolute path, and nothing outside an approved root can be
+listed, created or chosen.
+
 ### Publishing
 
 The feature is off unless the OS owner starts `projectd` with `--github`.
+Each profile then decides with the `publish_repositories` preference, shown
+under **Ustawienia** as **Publikuj nowe projekty na GitHubie**; an absent
+preference means on. The server applies the rule and reports it as `publish`
+in the folder reply, so the browser, the CLI and the agent start a publication
+in exactly the same cases. With publication off, GitHub is not asked about
+names and no Git repository is initialized. The preference governs only what
+happens at creation: a project can always be published deliberately from its
+Git dialog.
 
 | Option | Meaning |
 | --- | --- |
@@ -113,7 +134,8 @@ identity, or `Astra <astra@localhost>` when none is configured.
 
 ### The browser
 
-**Dodaj projekt** asks for a name only and runs the three steps in order:
+**Dodaj projekt** asks for a name, shows the place the folder will go to with
+**Zmień miejsce…** opening the folder chooser, and runs the three steps in order:
 folder, registration, publication. A failed step is the one repeated; the
 creation ID and the registration's request identity are kept until the dialog
 closes. A failed publication leaves a working local project, with **Ponów
@@ -138,8 +160,16 @@ and unused by the browser.
 - A daemon stopped between `gh repo create` and `git remote add` leaves an
   empty private repository that the next publication does not adopt; it uses
   the next suffix.
-- `projectctl` has no dedicated command for these operations yet; they are
-  reachable with its generic `command` and `get`.
+
+### The CLI and the agent
+
+`projectctl project create --name NAME [--root ID --path DIR] [--no-publish]`
+runs the same server operations in the same order and prints the project's
+ID, folder, path, registration state and repository state. It exits 0 once the
+project is registered, including when its publication failed, and 9 when the
+registration is not finished. `--creation-id` repeats an earlier attempt. The
+in-app agent creates projects only through this command
+([instructions](../agent/AGENTS.md)); it never makes folders or runs Git itself.
 
 ## Verification
 

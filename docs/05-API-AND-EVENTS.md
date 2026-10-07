@@ -142,6 +142,11 @@ Build ID i contract version są jawne. Przy niezgodności zapisu UI zachowuje sz
 `POST /api/v1/project-folders` creates the folder of a new project in the
 profile's default approved root and returns a registration plan; the folder
 name is derived from the project name and receives a numeric suffix when taken.
+An optional `root_id` and `relative_path` place it in an existing directory
+below an approved root, and `POST /api/v1/roots/{root_id}/directories` creates
+such a directory. The reply's `publish` states whether the client should start
+a publication: the host publishes and the profile's `publish_repositories`
+preference is not false.
 The plan is committed with the ordinary registration command.
 `GET`/`POST /api/v1/projects/{project_id}/repository` read and start the
 publication of a project folder to a private repository, on a host started

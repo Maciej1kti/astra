@@ -20,6 +20,7 @@ test("saved preferences map to explicit form values", () => {
     agent: "claude",
     plugins: "",
     root: "",
+    publish: true,
   });
   assert.deepEqual(
     settingsDraft(
@@ -29,6 +30,7 @@ test("saved preferences map to explicit form values", () => {
         agent_provider: "codex",
         plugins: ["chart-totals", "chart-settlement"],
         project_root_id: "ae0c14a1-72e7-4b4d-af85-613767a87a8e",
+        publish_repositories: false,
       }),
     ),
     {
@@ -38,6 +40,7 @@ test("saved preferences map to explicit form values", () => {
       agent: "codex",
       plugins: "chart-settlement,chart-totals",
       root: "ae0c14a1-72e7-4b4d-af85-613767a87a8e",
+      publish: false,
     },
   );
 });

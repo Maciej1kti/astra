@@ -280,6 +280,9 @@ pub struct Preferences {
     /// The approved root in which the browser creates new project folders.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project_root_id: Option<String>,
+    /// Whether projects created by name are published; absent means true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub publish_repositories: Option<bool>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

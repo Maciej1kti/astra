@@ -330,3 +330,180 @@ async fn the_default_root_is_the_preference_or_the_only_approved_root() {
     let empty = create(&app, &Uuid::new_v4().to_string(), "   ").await;
     assert_eq!((empty.0, code(&empty)), (422, "VALIDATION_FAILED"));
 }
+
+async fn set_preference(app: &Running, preferences: Value) -> u16 {
+    let (_, boot) = call(app, "GET", "/api/v1/bootstrap", None).await;
+    let (_, current) = call(app, "GET", "/api/v1/workspace/preferences", None).await;
+    app.local("PATCH", "/api/v1/workspace/preferences")
+        .header("x-request-id", Uuid::now_v7().to_string())
+        .header("x-command-epoch", boot["command_epoch"].as_str().unwrap())
+        .header(
+            "if-match",
+            format!("\"{}\"", current["version"].as_str().unwrap()),
+        )
+        .json(&json!({"preferences": preferences}))
+        .send()
+        .await
+        .unwrap()
+        .status()
+        .as_u16()
+}
+
+#[tokio::test]
+async fn a_browser_makes_a_folder_below_a_root_and_places_a_project_in_it() {
+    let app = Running::new().await;
+    let (root_id, path) = root(&app, "projects").await;
+    let directories = format!("/api/v1/roots/{root_id}/directories");
+    let made = call(
+        &app,
+        "POST",
+        &directories,
+        Some(&json!({"relative_path":"","name":"Klienci 2026"})),
+    )
+    .await;
+    assert_eq!(made.0, 200, "{}", made.1);
+    wire::validate("Directory", &made.1).unwrap();
+    assert_eq!(
+        made.1,
+        json!({"name":"Klienci 2026","relative_path":"Klienci 2026","registered":false})
+    );
+    assert!(path.join("Klienci 2026").is_dir());
+    let nested = call(
+        &app,
+        "POST",
+        &directories,
+        Some(&json!({"relative_path":"Klienci 2026","name":"Nowak"})),
+    )
+    .await;
+    assert_eq!(nested.1["relative_path"], "Klienci 2026/Nowak");
+    let again = call(
+        &app,
+        "POST",
+        &directories,
+        Some(&json!({"relative_path":"","name":"Klienci 2026"})),
+    )
+    .await;
+    assert_eq!((again.0, code(&again)), (409, "DIRECTORY_EXISTS"));
+    for name in [".hidden", "a/b", "..", "", "a\\b", "tab\tname"] {
+        let refused = call(
+            &app,
+            "POST",
+            &directories,
+            Some(&json!({"relative_path":"","name":name})),
+        )
+        .await;
+        assert_eq!(
+            (refused.0, code(&refused)),
+            (422, "VALIDATION_FAILED"),
+            "{name:?}"
+        );
+    }
+    let outside = call(
+        &app,
+        "POST",
+        &directories,
+        Some(&json!({"relative_path":"../elsewhere","name":"x"})),
+    )
+    .await;
+    assert_eq!((outside.0, code(&outside)), (400, "INVALID_RELATIVE_PATH"));
+    let unknown = call(
+        &app,
+        "POST",
+        &format!("/api/v1/roots/{}/directories", Uuid::new_v4()),
+        Some(&json!({"relative_path":"","name":"x"})),
+    )
+    .await;
+    assert_eq!((unknown.0, code(&unknown)), (404, "ROOT_NOT_FOUND"));
+
+    // The chosen place wins over the default root, and needs no default at all.
+    root(&app, "second").await;
+    let placed = call(
+        &app,
+        "POST",
+        "/api/v1/project-folders",
+        Some(&json!({
+            "creation_id": Uuid::new_v4().to_string(),
+            "name": "Łazienka",
+            "root_id": root_id,
+            "relative_path": "Klienci 2026/Nowak",
+        })),
+    )
+    .await;
+    assert_eq!(placed.0, 200, "{}", placed.1);
+    wire::validate("ProjectFolder", &placed.1).unwrap();
+    assert_eq!(placed.1["folder"], "lazienka");
+    assert_eq!(placed.1["publish"], false);
+    assert!(path.join("Klienci 2026/Nowak/lazienka").is_dir());
+    assert!(
+        placed.1["plan"]["display_path"]
+            .as_str()
+            .unwrap()
+            .ends_with("/projects/Klienci 2026/Nowak/lazienka")
+    );
+    let orphan = call(
+        &app,
+        "POST",
+        "/api/v1/project-folders",
+        Some(&json!({
+            "creation_id": Uuid::new_v4().to_string(),
+            "name": "X",
+            "relative_path": "Klienci 2026",
+        })),
+    )
+    .await;
+    assert_eq!((orphan.0, code(&orphan)), (422, "VALIDATION_FAILED"));
+    let missing = call(
+        &app,
+        "POST",
+        "/api/v1/project-folders",
+        Some(&json!({
+            "creation_id": Uuid::new_v4().to_string(),
+            "name": "X",
+            "root_id": root_id,
+            "relative_path": "no-such-folder",
+        })),
+    )
+    .await;
+    assert_ne!(missing.0, 200, "{}", missing.1);
+    assert!(!path.join("no-such-folder").exists());
+}
+
+#[tokio::test]
+async fn the_profile_switches_publication_of_new_projects_off_and_on() {
+    let app = Running::with_github().await;
+    root(&app, "projects").await;
+    let published = create(&app, &Uuid::new_v4().to_string(), "First").await;
+    assert_eq!(published.1["publish"], true, "{}", published.1);
+
+    assert_eq!(
+        set_preference(&app, json!({"publish_repositories": false})).await,
+        200
+    );
+    let asked = log(&app).len();
+    // A name GitHub already uses is free again: nothing will be published under it.
+    std::fs::create_dir_all(account(&app).join("remotes/octo/second.git")).unwrap();
+    let local = create(&app, &Uuid::new_v4().to_string(), "Second").await;
+    assert_eq!(local.1["publish"], false, "{}", local.1);
+    assert_eq!(local.1["folder"], "second");
+    assert_eq!(
+        log(&app).len(),
+        asked,
+        "GitHub is not asked for a local project"
+    );
+
+    // The owner can still publish one project deliberately.
+    let (project, _) = add(&app, "Third").await;
+    assert_eq!(publish(&app, &project).await.0, 202);
+    assert_eq!(settled(&app, &project).await["state"], "published");
+
+    assert_eq!(
+        set_preference(&app, json!({"publish_repositories": true})).await,
+        200
+    );
+    let again = create(&app, &Uuid::new_v4().to_string(), "Fourth").await;
+    assert_eq!(again.1["publish"], true);
+    assert_eq!(
+        set_preference(&app, json!({"publish_repositories": "yes"})).await,
+        422
+    );
+}

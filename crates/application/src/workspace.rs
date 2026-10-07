@@ -229,6 +229,9 @@ impl Engine {
                         }
                         workspace.preferences.project_root_id = Some(root);
                     }
+                    if let Some(publish) = preferences.publish_repositories {
+                        workspace.preferences.publish_repositories = Some(publish);
+                    }
                 }
             }
         }

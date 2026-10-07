@@ -378,3 +378,16 @@ It is remote access to one's own company for small businesses whose owner
 handles practically everything and would like it all to get done by itself.
 For now the core is strictly about projects, the calendar and delivery: what is
 to be done, laid out in time, and perhaps some simple resources in counters.
+
+## Project places, publication switch and agent parity — owner direction, 2026-10-07
+
+Later the same day the owner asked for three additions. The Add project dialog
+should let the owner choose a folder by clicking and add a folder there, inside
+the application. Publishing to GitHub and creating the private repository must
+be a function switched on or off in Settings, so that not everyone who creates
+projects this way has to archive them on GitHub at once; for the owner it is
+set and on by default. And when the owner asks the agent in the chat to create
+a project with a list of cards, the agent must do it the same way as the
+interface, with the folder, the `.project` data and Git, and the same must be
+available from the Astra CLI. See
+[ADR-074](../docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).

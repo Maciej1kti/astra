@@ -503,10 +503,28 @@ impl Creations {
         let name = input["name"]
             .as_str()
             .ok_or(AppError::invariant("validated project name"))?;
-        let (folder, plan) = users.create_project_folder(user, name, &|candidate| {
-            github.is_some_and(|github| github.name_taken(candidate))
-        })?;
-        let result = json!({"creation_id": id, "folder": folder, "plan": plan});
+        // One rule for the browser, the CLI and the agent: the host publishes
+        // and the profile has not switched publication off.
+        let publish = github.filter(|_| {
+            users.select(Some(user)).is_ok_and(|(_, engine)| {
+                engine.workspace().is_ok_and(|workspace| {
+                    workspace.value.preferences.publish_repositories != Some(false)
+                })
+            })
+        });
+        let destination = input["root_id"]
+            .as_str()
+            .map(|root| (root, input["relative_path"].as_str().unwrap_or("")));
+        let (folder, plan) =
+            users.create_project_folder(user, name, destination, &|candidate| {
+                publish.is_some_and(|github| github.name_taken(candidate))
+            })?;
+        let result = json!({
+            "creation_id": id,
+            "folder": folder,
+            "plan": plan,
+            "publish": publish.is_some(),
+        });
         wire::validate("ProjectFolder", &result)?;
         done.insert(
             id.to_owned(),

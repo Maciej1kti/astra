@@ -433,6 +433,35 @@ paths:
           minLength: 0
           maxLength: 4096
       - $ref: '#/components/parameters/Cursor'
+    post:
+      operationId: createDirectory
+      tags:
+      - registration
+      summary: Create an empty folder below an approved root
+      description: |-
+        Creates one folder inside an existing directory of an approved root, so that a browser can prepare the place of a new project. Nothing is registered. The request is not a journaled command: repeating it answers DIRECTORY_EXISTS.
+
+        Errors: ROOT_NOT_FOUND (404); ROOT_CHANGED (409); INVALID_RELATIVE_PATH (400); DIRECTORY_EXISTS (409) when an entry of that name exists; VALIDATION_FAILED (422) when the body does not match DirectoryInput.
+      parameters:
+      - $ref: '#/components/parameters/root_id'
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DirectoryInput'}
+      responses:
+        '200':
+          description: The created folder
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Directory'}
+        '408': {$ref: '#/components/responses/RequestTimeout'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
   /api/v1/registration-plans:
     parameters:
     - $ref: '#/components/parameters/AstraUser'
@@ -3541,6 +3570,9 @@ components:
         project_root_id:
           $ref: '#/components/schemas/UUID'
           description: Approved root in which new project folders are created.
+        publish_repositories:
+          type: boolean
+          description: Whether a project created by name is published to a private repository on a host that publishes. Absent means true.
       required: []
       additionalProperties: false
     Slug:
@@ -5647,12 +5679,51 @@ components:
           type:
           - string
           - 'null'
+    DirectoryInput:
+      type: object
+      additionalProperties: false
+      required:
+      - relative_path
+      - name
+      properties:
+        relative_path:
+          type: string
+          description: Existing directory, relative to the root, in which the folder is created.
+          minLength: 0
+          maxLength: 4096
+        name:
+          type: string
+          description: One path component that does not start with a dot.
+          minLength: 1
+          maxLength: 100
+          pattern: '^[^./\\\x00-\x1f][^/\\\x00-\x1f]*$'
+    Directory:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - relative_path
+      - registered
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        relative_path:
+          type: string
+          minLength: 1
+          maxLength: 4096
+        registered:
+          type: boolean
     ProjectFolderInput:
       type: object
       additionalProperties: false
       required:
       - creation_id
       - name
+      dependentRequired:
+        relative_path:
+        - root_id
       properties:
         creation_id:
           $ref: '#/components/schemas/UUID'
@@ -5661,6 +5732,14 @@ components:
           minLength: 1
           maxLength: 120
           pattern: '\S'
+        root_id:
+          $ref: '#/components/schemas/UUID'
+          description: Approved root to create the folder in instead of the profile's default.
+        relative_path:
+          type: string
+          description: Existing directory below root_id in which the folder is created; absent means the root itself.
+          minLength: 0
+          maxLength: 4096
     ProjectFolder:
       type: object
       additionalProperties: false
@@ -5668,9 +5747,13 @@ components:
       - creation_id
       - folder
       - plan
+      - publish
       properties:
         creation_id:
           $ref: '#/components/schemas/UUID'
+        publish:
+          type: boolean
+          description: True when the host publishes repositories and the profile's publish_repositories preference is not false; the client then starts publishProjectRepository after registration.
         folder:
           type: string
           description: Name of the created folder inside the default root.

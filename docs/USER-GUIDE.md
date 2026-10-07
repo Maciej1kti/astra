@@ -111,7 +111,14 @@ that is already used gets a numeric suffix. On a host that publishes
 repositories the same step creates a private GitHub repository and pushes the
 project's planning data; if GitHub cannot be reached the project still works,
 and **Git** in the project's header shows the repository state and repeats the
-publication. **Dodaj istniejący folder** in that dialog registers a folder that
+publication. The dialog shows the **Miejsce** the folder goes to; **Zmień
+miejsce…** opens a folder list where you enter folders, add one with **Nowy
+folder** and confirm with **Wybierz ten folder**, all inside the directories
+approved on the host. **Ustawienia → Publikuj nowe projekty na GitHubie** turns
+the repository step off or on for your profile; it is on by default, and with
+it off a project stays local until you publish it from its **Git** dialog. The
+agent creates projects the same way when asked in the chat.
+**Dodaj istniejący folder** in that dialog registers a folder that
 already exists in a directory approved on the host, and **Ustawienia → Katalog
 nowych projektów** chooses where new folders go when the host approves several
 directories ([installation](../INSTALL.md#create-private-github-repositories-for-new-projects)).

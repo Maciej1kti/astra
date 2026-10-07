@@ -80,6 +80,41 @@ Creating a card:
 projectctl --project "<folder>" card create --title 'Call the accountant'
 ```
 
+Creating a project. One command does what the browser's **Dodaj projekt** does:
+it creates the folder, the project's `.project` data and `AGENTS.md`, and, when
+the host and the owner's settings publish new projects, a Git repository with a
+private GitHub repository. Never create the folder, run `git` or run `gh`
+yourself.
+
+```sh
+projectctl project create --name 'Remont kuchni'
+```
+
+`data.path` in the reply is the new project's folder: use it as `--project` for
+the cards you create next, because the context block will not list the project
+until the next message. `data.folder` is the folder's name, which gets a
+numeric suffix when the name was taken. `data.repository` is `null` for a
+project kept local; otherwise its `state` is `published` or `failed` with an
+`error` code. A failed publication does not undo the project: say that it was
+created locally and that the owner can repeat the publication in the project's
+Git dialog.
+
+The folder goes to the owner's default place. Do not ask where to put it. Only
+when the owner names a place, look it up and pass it:
+
+```sh
+projectctl get /api/v1/roots                                   # approved roots: id, label, display_path
+projectctl get '/api/v1/roots/<ROOT_ID>/directories?relative_path='   # folders below one
+projectctl project create --name 'Remont kuchni' --root <ROOT_ID> --path 'Klienci/Nowak'
+```
+
+`--path` must already exist below the root. If the reply is
+`PROJECT_ROOT_NOT_SET`, the owner has several approved places and no default:
+ask which one, naming their labels. Pass `--no-publish` only when the owner
+asked for a project without a repository. If the command fails or times out
+before printing a result, do not run it again with a new name; report what
+happened, since the folder may already exist.
+
 Comments are appended, never edited. Sign them as the agent:
 
 ```sh

@@ -81,6 +81,9 @@
   let enabledPlugins = $state("");
   let root = $state("");
   let roots = $state<Root[]>([]);
+  let publish = $state(true);
+  // Whether this host publishes at all; the choice is hidden when it does not.
+  let githubHost = $state(false);
   let error = $state("");
   let info = $state("");
   let loading = $state(true);
@@ -104,6 +107,7 @@
     agent: "dostawca agenta",
     plugins: "wtyczki",
     root: "katalog nowych projektów",
+    publish: "publikowanie na GitHubie",
   };
   let confirmClose = $state(false);
   let generation = 0;
@@ -116,6 +120,8 @@
         view !== (baseline.preferences.default_view ?? "focus") ||
         enabledPlugins !== pluginList(baseline.preferences.plugins) ||
         root !== (baseline.preferences.project_root_id ?? "") ||
+        (githubHost &&
+          publish !== (baseline.preferences.publish_repositories ?? true)) ||
         (agentEnabled &&
           agent !== (baseline.preferences.agent_provider ?? "claude"))),
   );
@@ -152,7 +158,10 @@
             default_view: view,
             ...(agentEnabled ? { agent_provider: agent } : {}),
             plugins: pluginIds(enabledPlugins),
-            ...(root ? { project_root_id: root } : {}),
+            ...(root && root !== baseline?.preferences.project_root_id
+              ? { project_root_id: root }
+              : {}),
+            ...(githubHost ? { publish_repositories: publish } : {}),
             expected_version: baseline?.version,
             pending,
             new_user_name: userName,
@@ -180,12 +189,13 @@
     loading = true;
     error = "";
     try {
-      const [p, s, a, u, r] = await Promise.all([
+      const [p, s, a, u, r, host] = await Promise.all([
         retained ? null : api<Preferences>("/api/v1/workspace/preferences"),
         api<{ items: Session[] }>("/api/v1/auth/sessions"),
         api<{ items: Pairing[] }>("/api/v1/auth/pairings"),
         api<UserList>("/api/v1/users"),
         api<{ items: Root[] }>("/api/v1/roots"),
+        api<{ github_enabled?: boolean }>("/api/v1/bootstrap"),
       ]);
       if (generation !== current) return;
       if (p) {
@@ -197,9 +207,11 @@
           agent,
           plugins: enabledPlugins,
           root,
+          publish,
         } = settingsDraft(p));
       }
       roots = r.items;
+      githubHost = host.github_enabled === true;
       sessions = s.items;
       pairings = a.items;
       users = u;
@@ -234,7 +246,10 @@
             default_view: view,
             ...(agentEnabled ? { agent_provider: agent } : {}),
             plugins: pluginIds(enabledPlugins),
-            ...(root ? { project_root_id: root } : {}),
+            ...(root && root !== baseline.preferences.project_root_id
+              ? { project_root_id: root }
+              : {}),
+            ...(githubHost ? { publish_repositories: publish } : {}),
           },
         },
         baseline.version,
@@ -291,7 +306,15 @@
       const rebased = rebaseSettingsDraft(
         settingsDraft(baseline),
         settingsDraft(current),
-        { timezone, week, view, agent, plugins: enabledPlugins, root },
+        {
+          timezone,
+          week,
+          view,
+          agent,
+          plugins: enabledPlugins,
+          root,
+          publish,
+        },
       );
       baseline = current;
       ({
@@ -301,6 +324,7 @@
         agent,
         plugins: enabledPlugins,
         root,
+        publish,
       } = rebased.draft);
       operation.acknowledge();
       info = rebased.kept.length
@@ -616,6 +640,9 @@
               >{roots.length === 1
                 ? `Automatycznie: ${roots[0]?.display_path}`
                 : "Nie wybrano"}</option
+            >{:else if !roots.some((item) => item.id === baseline?.preferences.project_root_id)}<option
+              value={baseline.preferences.project_root_id}
+              >Katalog nie jest już zatwierdzony</option
             >{/if}{#each roots as item}<option value={item.id}
               >{item.label} · {item.display_path}</option
             >{/each}</select
@@ -626,6 +653,24 @@
           ? "Dodanie projektu tworzy w tym katalogu folder o nazwie projektu."
           : "Brak zatwierdzonych katalogów. Właściciel hosta dodaje je poleceniem projectctl add-root."}
       </p>
+      {#if githubHost}<label class="plugin"
+          ><input
+            type="checkbox"
+            bind:checked={publish}
+            disabled={!baseline ||
+              busy ||
+              !!pending ||
+              !!userName ||
+              accessLost ||
+              conflict}
+          /><span
+            ><strong>Publikuj nowe projekty na GitHubie</strong><small
+              >Nowy projekt dostaje prywatne repozytorium na koncie hosta. Po
+              wyłączeniu projekty powstają tylko lokalnie; pojedynczy projekt
+              opublikujesz w jego oknie Git.</small
+            ></span
+          ></label
+        >{/if}
       <fieldset class="plugins">
         <legend>Wtyczki</legend>
         <p class="field-hint">
@@ -897,6 +942,11 @@
     align-items: flex-start;
     gap: var(--space-5);
     margin-top: var(--space-5);
+  }
+  .plugin input {
+    flex: none;
+    width: auto;
+    margin-top: var(--space-2);
   }
   .plugin small {
     display: block;

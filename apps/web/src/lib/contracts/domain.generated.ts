@@ -622,4 +622,8 @@ export interface Preferences {
    * Approved root in which new project folders are created.
    */
   project_root_id?: string;
+  /**
+   * Whether a project created by name is published to a private repository on a host that publishes. Absent means true.
+   */
+  publish_repositories?: boolean;
 }

@@ -168,7 +168,8 @@ Adding a project by name and publishing it
   organization choice or visibility setting.
 - **Content.** The first commit holds `.project`, `AGENTS.md` and an existing
   `.gitignore` only. Later changes are not committed or pushed by the server;
-  there is still no auto-commit or auto-fetch.
+  there is still no auto-commit or auto-fetch. A project created with
+  publication off has no Git repository at all.
 - **Names.** Folder names are ASCII, derived from the project name; a name
   written only in another script becomes `projekt`. A repository whose name
   was taken after the folder was created receives its own suffix and then
@@ -179,7 +180,14 @@ Adding a project by name and publishing it
 - **Leftovers.** A creation that is refused after its folder was made can leave
   an empty folder, and a daemon stopped mid-publication can leave an empty
   private repository. Deleting a project never deletes its repository.
-- **CLI.** `projectctl` has no dedicated command; use `command` and `get`.
+- **Preference.** **Publikuj nowe projekty na GitHubie** applies to projects
+  created by name from then on. It does not unpublish anything and does not
+  block a deliberate publication from a project's Git dialog.
+- **Places.** A project can be placed only in an existing directory below an
+  approved root. Folders made in the chooser cannot be renamed or removed from
+  the browser.
+- **CLI.** `projectctl project create` waits for a publication up to
+  `--timeout`; a longer one is reported as `publishing` and finishes on the host.
 - **Host dialog.** The browser no longer opens the host's folder dialog. Its
   API operations remain and still open a dialog on the host's desktop when
   called.

@@ -300,6 +300,10 @@ await runBrowserSuite(
           warnings: [],
           changes: [],
         };
+        // The dialog needs a place: one approved root is its default.
+        const rootFolder = join(config.temp, "recovery-root");
+        await mkdir(rootFolder, { mode: 0o700 });
+        cli("add-root", rootFolder, "--label", "Recovery root");
         await page.route(
           `${config.origin}/api/v1/project-folders`,
           async (route) => {
@@ -354,12 +358,10 @@ await runBrowserSuite(
       "C06",
       "An uncertain browsed registration guards unload while its dialog is closed",
       async (page) => {
-        const rootFolder = join(config.temp, "recovery-root");
-        await mkdir(join(rootFolder, "candidate"), {
-          recursive: true,
+        // The root was approved for the new-project case above.
+        await mkdir(join(config.temp, "recovery-root", "candidate"), {
           mode: 0o700,
         });
-        cli("add-root", rootFolder, "--label", "Recovery root");
         const attempts = await loseCommand(
           page,
           `${config.origin}/api/v1/registrations`,

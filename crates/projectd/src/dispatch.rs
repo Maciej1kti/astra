@@ -628,6 +628,10 @@ fn host(route: &Route<'_>) -> Result<Routed, AppError> {
                 }
                 engine.browse_root(id, &relative, cursor.as_deref())?
             }
+            ("POST", ["api", "v1", "roots", id, "directories"]) => {
+                parameters(input, &[])?;
+                engine.create_directory(id, &input.body)?
+            }
             ("POST", ["api", "v1", "registration-plans"]) => service
                 .users
                 .browser_registration_plan(&service.user.id, &input.body)?,
