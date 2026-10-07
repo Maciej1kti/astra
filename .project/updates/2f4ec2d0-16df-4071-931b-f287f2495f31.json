@@ -1,0 +1,18 @@
+{
+  "body": "Correction to the chart settlement, in f97b4b6 and running in the existing HTTPS app. The owner described the arrangement on 2026-10-07: 1 PLN per push-up, 0.25 PLN per sit-up, whoever has more is paid the difference, so the sides keep chasing each other. The debt now counts the whole readable history (400 days) instead of the plotted range, a rate typed for one counter fills the same activity's other counters, and the panel says how many repetitions would draw the payer level.\n\nUnit tests and the Chromium and WebKit charts suites pass; the full gate was not run. Rates remain browser-local, and a history older than 400 days would be cut off (the owner's reaches that in February 2027). Evidence: progress/2026-10-07-chart-settlement.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "2f4ec2d0-16df-4071-931b-f287f2495f31",
+    "kind": "result",
+    "recorded_at": "2026-10-07T10:30:47.194Z",
+    "summary": "Chart settlement counts the whole history",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
