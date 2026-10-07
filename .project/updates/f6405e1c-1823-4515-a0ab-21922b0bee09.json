@@ -1,0 +1,18 @@
+{
+  "body": "Adding a project now needs only its name, in 1ee9f36 and running in the existing HTTPS app, following the owner's 2026-10-07 direction. The server creates the folder in the default approved root (Ustawienia → Katalog nowych projektów, or the only approved root), gives a taken name a numeric suffix, and registers the project. The instance was restarted with --github, so a new project also gets a private repository in the GitHub account the host's gh is signed in to, with .project and AGENTS.md pushed. Nothing opens on the host's desktop; the browser no longer uses the host folder dialog, and existing folders are added through the approved-folder browser.\n\nThe 16-step gate, the smoke and all 42 Chromium suites pass, including a new project-creation suite and four transport tests that use a scripted GitHub CLI with real Git. Against GitHub itself only read-only calls were run: no repository was created on the owner's account during verification, so the first real creation is the owner's to confirm. If GitHub fails, the project still works locally and the publication can be repeated from the dialog or the project's Git dialog. The owner's product direction (hosted closed system, agent-operated, later customer and offer modules) is recorded in progress/SCOPE.md and ROADMAP.md and not started. Evidence: progress/2026-10-07-project-creation.md; decision: docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "f6405e1c-1823-4515-a0ab-21922b0bee09",
+    "kind": "result",
+    "recorded_at": "2026-10-07T15:03:32.800Z",
+    "summary": "Projects are added by name, with a folder and a private GitHub repository",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
