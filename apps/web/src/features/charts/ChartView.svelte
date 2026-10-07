@@ -1,8 +1,15 @@
 <script lang="ts">
   import { onDestroy, untrack } from "svelte";
   import ChartDashboard from "./ChartDashboard.svelte";
+  import ChartTileDialog from "./ChartTileDialog.svelte";
   import { ChartData, type ChartDataState } from "./chart-data";
-  import type { Summary } from "../../lib/api/api";
+  import { chartSeriesKey, type ChartSummaryRow } from "./chart-model";
+  import { tileSelection, withTileSelection } from "./chart-tiles";
+  import { command, type Summary } from "../../lib/api/api";
+  import { commandOperation } from "../../lib/api/command-operation.svelte";
+  import { errorMessage } from "../../lib/api/messages.ts";
+  import { getPreferences } from "../../lib/api/resources";
+  import type { PreferencesResource } from "../../lib/contracts/api.generated";
 
   let {
     project,
@@ -25,7 +32,6 @@
   let from = $state(untrack(() => daysBefore(today, 29)));
   let to = $state(untrack(() => today));
   let includeArchived = $state(false);
-  // eslint-disable-next-line no-useless-assignment -- the reader below needs this binding before the owner that supplies its first value exists
   let viewState = $state.raw<ChartDataState>();
   const owner = new ChartData((value) => (viewState = value));
   viewState = owner.state;
@@ -40,7 +46,74 @@
     void revision;
     untrack(() => void refresh());
   });
-  onDestroy(() => owner.dispose());
+
+  // Plugins and tile choices belong to the profile. A choice is saved against
+  // the version read here, so a change made elsewhere is a conflict to resolve
+  // by reading again, never an overwrite.
+  let preferences = $state.raw<PreferencesResource | null>(null);
+  let reading = 0;
+  let disposed = false;
+  async function readPreferences() {
+    const current = ++reading;
+    try {
+      const value = await getPreferences({ fresh: true });
+      if (current === reading && !disposed) preferences = value;
+    } catch (cause) {
+      if (current === reading && !disposed && editing)
+        tileError = errorMessage(cause);
+    }
+  }
+  // The workspace revision moves with every refresh, including the one that
+  // follows a preference change made in Settings or by another client.
+  $effect(() => {
+    void revision;
+    untrack(() => void readPreferences());
+  });
+
+  const operation = commandOperation();
+  let editing = $state.raw<ChartSummaryRow | null>(null);
+  let tileError = $state("");
+  async function settle(action: "submit" | "status") {
+    tileError = "";
+    try {
+      if (action === "status") await operation.confirm();
+      else await operation.commit();
+      editing = null;
+      await readPreferences();
+    } catch (cause) {
+      tileError = errorMessage(cause);
+    }
+  }
+  function saveTile(chosen: string[]) {
+    if (!preferences || !editing || operation.pending) return;
+    operation.prepare(
+      command(
+        "/api/v1/workspace/preferences",
+        "PATCH",
+        {
+          preferences: {
+            chart_tiles: withTileSelection(
+              preferences.preferences.chart_tiles,
+              chartSeriesKey(editing.source),
+              chosen,
+              viewState!.series.map(chartSeriesKey),
+            ),
+          },
+        },
+        preferences.version,
+      ),
+    );
+    void settle("submit");
+  }
+  async function reloadPreferences() {
+    tileError = "";
+    await readPreferences();
+    operation.acknowledge();
+  }
+  onDestroy(() => {
+    disposed = true;
+    owner.dispose();
+  });
 </script>
 
 <ChartDashboard
@@ -50,6 +123,8 @@
   {to}
   {includeArchived}
   {preferenceKey}
+  plugins={preferences?.preferences.plugins ?? []}
+  tiles={preferences?.preferences.chart_tiles}
   loading={viewState!.loading}
   error={viewState!.error}
   notice={viewState!.notice}
@@ -60,6 +135,36 @@
   onarchivedchange={(value) => (includeArchived = value)}
   onretry={() => void refresh()}
   onloadmore={viewState!.cursor ? () => void owner.more() : undefined}
-  onopen={(series) =>
-    open({ project_id: series.project_id, id: series.card_id, type: "card" })}
+  onconfigure={(row) => {
+    tileError = "";
+    editing = row;
+  }}
 />
+{#if editing}
+  {@const row = editing}
+  <ChartTileDialog
+    {row}
+    selection={tileSelection(
+      preferences?.preferences.chart_tiles,
+      chartSeriesKey(row.source),
+    )}
+    busy={operation.busy || !preferences}
+    pending={operation.pending}
+    conflict={operation.conflict}
+    error={tileError}
+    onsave={saveTile}
+    onretry={() => void settle("submit")}
+    oncheck={() => void settle("status")}
+    onreload={() => void reloadPreferences()}
+    onopen={() => {
+      // Read the source before the tile is released.
+      const { project_id, card_id: id } = row.source;
+      editing = null;
+      open({ project_id, id, type: "card" });
+    }}
+    onclose={() => {
+      if (operation.conflict) operation.acknowledge();
+      editing = null;
+    }}
+  />
+{/if}

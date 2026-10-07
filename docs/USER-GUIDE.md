@@ -221,7 +221,14 @@ acknowledged card version, while a pending edit retains its original day/version
 Open **Wykres** from the sidebar or the phone's **Więcej** menu. Use the Project
 selector to inspect one project or all registered projects.
 
-**Rozliczenie** opens the view when the selected counters name at least two
+### Plugins
+
+A plugin is an extra function shipped with the application and switched on per
+user profile under **Ustawienia → Wtyczki**; every profile has its own choice
+and all plugins start off. Nothing is installed or downloaded. Two plugins add
+to the Chart view: **Razem na Wykresie** and **Rozliczenie na Wykresie**.
+
+With its plugin on, **Rozliczenie** opens the view when the selected counters name at least two
 people. A person is the last word of a counter's name, so **Pompki Tomek** and
 **Brzuszki Tomek** both belong to Tomek; a one-word name belongs to nobody. A
 person's value is the sum of each of their counters' totals multiplied by that
@@ -261,15 +268,20 @@ reads the held total with **bez zapisu**.
 Plots always show recorded values. Counters with the same unit share a plot and
 different units get separate plots, each with its own scale.
 
-**Podsumowanie okresu** lists each selected counter's total, recorded days,
-average and best day; on a narrow screen every counter becomes its own card.
-**Różnica** appears when at least two selected counters share a unit, and
-compares totals with the first of them. **Stawka** shows the rate saved
-with the counter; change it in the counter's settings on its card, which the
-counter's name opens. For example, ten recorded hours at a rate of 100 give
-1,000 in the chosen **Jednostka wynikowa**. **Razem** adds same-unit totals and
-the converted values. Only counters with a rate contribute; zero is a valid
-rate. Rates value the summary and the settlement and do not change the plots.
+**Podsumowanie okresu** shows one tile per selected counter. A tile starts with
+the total, recorded days, average, best day, rate and value. Click a tile to
+choose its values: the dialog also offers the total and value since the first
+recording, the average over every day of the range, the last recording and
+**Różnica**, which compares the total with the first selected counter of the
+same unit. The choice belongs to that counter and is saved with your profile,
+so it follows you to every device; **Przywróć domyślne** returns to the
+starting set and **Otwórz kartę licznika** opens the card. **Stawka** shows the
+rate saved with the counter; change it in the counter's settings on its card.
+For example, ten recorded hours at a rate of 100 give 1,000 in the chosen
+**Jednostka wynikowa**. With its plugin on, **Razem** adds same-unit totals and
+the converted values below the tiles. Only counters with a rate contribute;
+zero is a valid rate. Rates value the tiles and the plugins and do not change
+the plots.
 The output label is saved in this browser for the selected workspace profile.
 Rates typed into this view by an earlier version stayed in the browser and are
 not carried over.

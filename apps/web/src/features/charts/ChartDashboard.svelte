@@ -11,7 +11,7 @@
   import ChartPlot from "./ChartPlot.svelte";
   import ChartRange from "./ChartRange.svelte";
   import ChartSegments from "./ChartSegments.svelte";
-  import ChartSettlement from "./ChartSettlement.svelte";
+  import { enabledChartPlugins } from "./plugins/chart-plugins";
   import ChartSummary from "./ChartSummary.svelte";
   import {
     chartColorSlots,
@@ -26,6 +26,7 @@
     writeChartPreferences,
     type ChartBucket,
     type ChartSeries,
+    type ChartSummaryRow,
   } from "./chart-model";
 
   let {
@@ -38,10 +39,12 @@
     notice = "",
     includeArchived,
     preferenceKey,
+    plugins,
+    tiles,
+    onconfigure,
     onrangechange,
     onarchivedchange,
     onretry,
-    onopen,
     onloadmore,
   }: {
     series: ChartSeries[];
@@ -53,10 +56,14 @@
     notice?: string;
     includeArchived: boolean;
     preferenceKey: string;
+    /** Identifiers of the plugins this profile has switched on. */
+    plugins: readonly string[];
+    /** Saved tile value choices by counter key. */
+    tiles: Record<string, string[]> | undefined;
+    onconfigure: (row: ChartSummaryRow) => void;
     onrangechange: (from: string, to: string) => void;
     onarchivedchange: (include: boolean) => void;
     onretry: () => void;
-    onopen: (series: ChartSeries) => void;
     onloadmore?: () => void;
   } = $props();
 
@@ -131,16 +138,7 @@
       color: colors[chartSeriesKey(source)] ?? position,
     })),
   );
-  // Debts run over each counter's whole history, not the plotted range.
-  const ledgerRows = $derived(
-    rows.map((row) => ({
-      ...row,
-      stats: {
-        ...row.stats,
-        total: row.source.history?.total ?? row.stats.total,
-      },
-    })),
-  );
+  const active = $derived(enabledChartPlugins(plugins));
   const records = $derived(
     rows.reduce((sum, row) => sum + row.stats.recorded, 0),
   );
@@ -236,7 +234,11 @@
     </div>{/if}
   {#if notice}<p class="notice">{notice}</p>{/if}
 
-  {#if ledgerRows.length}<ChartSettlement rows={ledgerRows} {outputUnit} />{/if}
+  {#if rows.length}
+    {#each active as plugin (plugin.id)}
+      {#if plugin.panel}<plugin.panel {rows} {outputUnit} />{/if}
+    {/each}
+  {/if}
 
   <div class="chart-body">
     <ChartCounterPicker
@@ -322,13 +324,21 @@
     <ChartSummary
       {rows}
       {days}
+      {tiles}
       {outputUnit}
       onoutputunit={(value) => {
         outputUnit = value;
         savePreferences();
       }}
-      {onopen}
-    />
+      {onconfigure}
+    >
+      {#snippet footer()}
+        {#each active as plugin (plugin.id)}
+          {#if plugin.summary}<plugin.summary {rows} {outputUnit} />{/if}
+        {/each}
+      {/snippet}
+    </ChartSummary>
+
     {#if storageMessage}<p role="status" class="notice">
         {storageMessage}
       </p>{/if}

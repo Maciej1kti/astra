@@ -222,6 +222,7 @@ export interface ApiContracts {
   FocusRef: FocusRef;
   ProjectRegistration: ProjectRegistration;
   Preferences: Preferences;
+  Slug: string;
   Workspace: Workspace;
   ProjectResource: ProjectResource;
   CardResource: CardResource;
@@ -588,6 +589,16 @@ export interface Preferences {
   week_start?: "monday" | "sunday";
   default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
   agent_provider?: "claude" | "codex";
+  /**
+   * @maxItems 32
+   */
+  plugins?: string[];
+  chart_tiles?: {
+    /**
+     * @maxItems 16
+     */
+    [k: string]: string[];
+  };
 }
 export interface Workspace {
   format_version: 1;
@@ -1354,6 +1365,8 @@ export type CounterValue = ApiContracts["CounterValue"];
 export type CounterRate = ApiContracts["CounterRate"];
 
 export type CardSection = ApiContracts["CardSection"];
+
+export type Slug = ApiContracts["Slug"];
 
 export type ProjectPatch = ApiContracts["ProjectPatch"];
 

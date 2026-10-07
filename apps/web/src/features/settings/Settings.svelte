@@ -19,6 +19,12 @@
     unloadGuard,
   } from "../../lib/api/command-operation.svelte";
   import { rebaseSettingsDraft, settingsDraft } from "./settings-draft";
+  import {
+    pluginIds,
+    pluginList,
+    plugins,
+    togglePlugin,
+  } from "../../lib/plugins/registry";
   import { onMount, tick } from "svelte";
   import {
     applyHand,
@@ -71,6 +77,7 @@
   let week = $state("monday");
   let view = $state("focus");
   let agent = $state<AgentProvider>("claude");
+  let enabledPlugins = $state("");
   let error = $state("");
   let info = $state("");
   let loading = $state(true);
@@ -92,6 +99,7 @@
     week: "początek tygodnia",
     view: "widok domyślny",
     agent: "dostawca agenta",
+    plugins: "wtyczki",
   };
   let confirmClose = $state(false);
   let generation = 0;
@@ -102,6 +110,7 @@
       (timezone !== baseline.timezone ||
         week !== (baseline.preferences.week_start ?? "monday") ||
         view !== (baseline.preferences.default_view ?? "focus") ||
+        enabledPlugins !== pluginList(baseline.preferences.plugins) ||
         (agentEnabled &&
           agent !== (baseline.preferences.agent_provider ?? "claude"))),
   );
@@ -137,6 +146,7 @@
             week_start: week,
             default_view: view,
             ...(agentEnabled ? { agent_provider: agent } : {}),
+            plugins: pluginIds(enabledPlugins),
             expected_version: baseline?.version,
             pending,
             new_user_name: userName,
@@ -173,7 +183,13 @@
       if (generation !== current) return;
       if (p) {
         baseline = p;
-        ({ timezone, week, view, agent } = settingsDraft(p));
+        ({
+          timezone,
+          week,
+          view,
+          agent,
+          plugins: enabledPlugins,
+        } = settingsDraft(p));
       }
       sessions = s.items;
       pairings = a.items;
@@ -208,6 +224,7 @@
             week_start: week,
             default_view: view,
             ...(agentEnabled ? { agent_provider: agent } : {}),
+            plugins: pluginIds(enabledPlugins),
           },
         },
         baseline.version,
@@ -264,10 +281,16 @@
       const rebased = rebaseSettingsDraft(
         settingsDraft(baseline),
         settingsDraft(current),
-        { timezone, week, view, agent },
+        { timezone, week, view, agent, plugins: enabledPlugins },
       );
       baseline = current;
-      ({ timezone, week, view, agent } = rebased.draft);
+      ({
+        timezone,
+        week,
+        view,
+        agent,
+        plugins: enabledPlugins,
+      } = rebased.draft);
       operation.acknowledge();
       info = rebased.kept.length
         ? `Wczytano aktualne ustawienia. Twoje zmiany (${rebased.kept.map((field) => labels[field]).join(", ")}) pozostały w formularzu; zapisz je ponownie, jeśli nadal są potrzebne.`
@@ -568,6 +591,37 @@
             ></select
           ></label
         >{/if}
+      <fieldset class="plugins">
+        <legend>Wtyczki</legend>
+        <p class="field-hint">
+          Dodatkowe funkcje dostarczane z aplikacją. Włączasz je dla swojego
+          profilu; inni użytkownicy mają własny wybór.
+        </p>
+        {#each plugins as plugin (plugin.id)}
+          <label class="plugin"
+            ><input
+              type="checkbox"
+              checked={pluginIds(enabledPlugins).includes(plugin.id)}
+              onchange={(event) => {
+                enabledPlugins = togglePlugin(
+                  enabledPlugins,
+                  plugin.id,
+                  event.currentTarget.checked,
+                );
+              }}
+              disabled={!baseline ||
+                busy ||
+                !!pending ||
+                !!userName ||
+                accessLost ||
+                conflict}
+            /><span
+              ><strong>{plugin.name}</strong><small>{plugin.description}</small
+              ></span
+            ></label
+          >
+        {/each}
+      </fieldset>
       {#if pending && commandKind === "preferences"}<section class="notice">
           <p>
             Oczekujące polecenie: czeka na potwierdzenie. Przesłane ustawienia
@@ -792,6 +846,27 @@
   }
   .notice {
     margin: var(--space-8) 0;
+  }
+  .plugins {
+    margin: var(--space-8) 0 0;
+    padding: 0;
+    border: 0;
+  }
+  .plugins legend {
+    padding: 0;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+  .plugin {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-5);
+    margin-top: var(--space-5);
+  }
+  .plugin small {
+    display: block;
+    color: var(--muted);
+    font-size: var(--text-sm);
   }
   .appearance,
   .access-section {

@@ -44,7 +44,7 @@ export const chartLayers = [
     distance: "4px",
   },
   {
-    selector: ".summary-row",
+    selector: ".summary-tile, .chart-totals",
     role: "detail",
     delay: 360,
     stagger: 36,

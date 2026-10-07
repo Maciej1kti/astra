@@ -56,7 +56,13 @@ when one is configured, and `history` with the total, the number of recorded
 dates and the first date over every saved date, independent of `from`/`to`.
 `configure_counter` accepts `rate` as an exact decimal string; omitting it keeps
 the stored rate and `null` removes it
-([ADR-072](ADR-072-COUNTER-RATES-AND-HISTORY-TOTALS.md)). Reads preserve source
+([ADR-072](ADR-072-COUNTER-RATES-AND-HISTORY-TOTALS.md)).
+`PATCH /api/v1/workspace/preferences` also accepts `preferences.plugins`, the
+profile's enabled built-in plugins, and `preferences.chart_tiles`, a map from
+`project/card/counter` identifiers to the values that counter's Chart tile
+shows. Each replaces its whole stored value and leaves the other preferences
+alone ([ADR-073](ADR-073-PLUGINS-AND-CHART-TILES.md),
+[example](../examples/requests/chart-plugins-preference.json)). Reads preserve source
 versions and never write history. See [ADR-062](ADR-062-COUNTER-CHART-DASHBOARD.md) and the
 [HTTP example](../examples/requests/counter-series.http).
 

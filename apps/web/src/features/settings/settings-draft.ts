@@ -2,14 +2,17 @@ import type {
   AgentProvider,
   PreferencesResource,
 } from "../../lib/contracts/api.generated";
+import { pluginList } from "../../lib/plugins/registry.ts";
 
 export type SettingsDraft = {
   timezone: string;
   week: string;
   view: string;
   agent: AgentProvider;
+  /** Enabled plugin identifiers in their one stable spelling. */
+  plugins: string;
 };
-const fields = ["timezone", "week", "view", "agent"] as const;
+const fields = ["timezone", "week", "view", "agent", "plugins"] as const;
 
 export function settingsDraft(saved: PreferencesResource): SettingsDraft {
   return {
@@ -17,6 +20,7 @@ export function settingsDraft(saved: PreferencesResource): SettingsDraft {
     week: saved.preferences.week_start ?? "monday",
     view: saved.preferences.default_view ?? "focus",
     agent: saved.preferences.agent_provider ?? "claude",
+    plugins: pluginList(saved.preferences.plugins),
   };
 }
 

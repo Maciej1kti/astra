@@ -271,6 +271,12 @@ pub struct Preferences {
     pub default_view: Option<View>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_provider: Option<AgentProvider>,
+    /// Built-in plugins switched on for this profile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plugins: Option<Vec<String>>,
+    /// Values each Chart summary tile shows, by counter identifier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chart_tiles: Option<BTreeMap<String, Vec<String>>>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

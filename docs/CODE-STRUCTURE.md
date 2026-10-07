@@ -98,7 +98,13 @@ arrive, so the page does not collapse under the reader; another project or
 archive scope starts empty, and a failed range read clears the kept series. `chart-model.ts` keeps quantity and valuation calculations, colour
 slots, axis steps and plot geometry separate from rendering. `ChartDashboard`
 owns the selection and display state and composes `ChartRange`,
-`ChartSettlement`, `ChartCounterPicker`, one `ChartPlot` per unit and `ChartSummary`;
+`ChartCounterPicker`, one `ChartPlot` per unit and `ChartSummary`, whose
+tiles take their values from `chart-tiles.ts` and are configured in
+`ChartTileDialog`. `ChartView` reads the profile's preferences and saves a tile
+choice as a conditional command. `plugins/chart-plugins.ts` defines the plugin
+interface and lists the built-in Chart plugins, each in its own folder with its
+logic beside its component (`plugins/settlement`, `plugins/totals`);
+`lib/plugins/registry.ts` holds the names Settings shows;
 `ChartSegments` is their shared segmented control and `ChartMenu` its phone
 form. The Chart component loads on
 demand and uses the named counter endpoint in `lib/api/counters.ts`.

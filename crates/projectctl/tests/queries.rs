@@ -81,6 +81,9 @@ fn run_read(args: &[&str], project: Option<&Path>, mut replies: Vec<ReadReply>) 
     let worker = std::thread::spawn(move || {
         for expected in replies {
             let mut stream = accept(&listener);
+            // An accepted socket can inherit the listener's non-blocking mode;
+            // a read before the CLI has written would then fail at once.
+            stream.set_nonblocking(false).unwrap();
             stream
                 .set_read_timeout(Some(Duration::from_secs(3)))
                 .unwrap();

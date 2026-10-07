@@ -6,9 +6,6 @@ import {
   chartFrame,
   chartIndex,
   chartLine,
-  chartMoney,
-  chartPerson,
-  chartSettlement,
   chartPanels,
   chartPeriods,
   chartPoints,
@@ -306,65 +303,5 @@ test("the output unit is profile-scoped, drops rates stored by older versions an
   assert.equal(
     writeChartPreferences("a", { outputUnit: "PLN" }, unavailable),
     false,
-  );
-});
-
-test("a settlement names people by the last word and has the lower value pay the difference", () => {
-  assert.equal(chartPerson("Pompki Tomek"), "Tomek");
-  assert.equal(chartPerson("  Brzuszki   poranne Maciek "), "Maciek");
-  assert.equal(chartPerson("Push-ups"), null);
-  const row = (name, total, rate) => ({
-    source: { name },
-    stats: { total },
-    rate,
-    color: 0,
-  });
-  const settlement = chartSettlement([
-    row("Pompki Tomek", 8900, 0.01),
-    row("Pompki Maciek", 33, 0.01),
-    row("Brzuszki Tomek", 9050, 0.02),
-    row("Brzuszki Maciek", 15, null),
-    row("Push-ups", 500, 5),
-  ]);
-  assert.deepEqual(settlement.parties, [
-    { name: "Tomek", value: 270 },
-    { name: "Maciek", value: 0.33 },
-  ]);
-  assert.deepEqual(settlement.debts, [
-    { from: "Maciek", to: "Tomek", amount: 269.67 },
-  ]);
-  assert.equal(settlement.people, 2);
-  assert.equal(settlement.unrated, 1);
-  assert.equal(chartMoney(269.67).replace(/\s/g, " "), "269,67");
-  assert.equal(chartMoney(270), "270,00");
-
-  const three = chartSettlement([
-    row("A Ola", 10, 1),
-    row("A Ala", 30, 1),
-    row("A Ela", 10, 1),
-  ]);
-  assert.deepEqual(
-    three.debts.map((debt) => [debt.from, debt.to, debt.amount]),
-    [
-      ["Ela", "Ala", 20],
-      ["Ola", "Ala", 20],
-    ],
-  );
-  const owner = chartSettlement([
-    row("Pompki Tomek", 15650, 1),
-    row("Pompki Maciek", 358, 1),
-    row("Brzuszki Tomek", 15650, 0.25),
-    row("Brzuszki Maciek", 30, 0.25),
-  ]);
-  assert.deepEqual(owner.debts, [
-    { from: "Maciek", to: "Tomek", amount: 19197 },
-  ]);
-  const unratedOnly = chartSettlement([
-    row("Pompki Tomek", 5, null),
-    row("Pompki Maciek", 3, null),
-  ]);
-  assert.deepEqual(
-    [unratedOnly.people, unratedOnly.parties.length, unratedOnly.debts.length],
-    [2, 0, 0],
   );
 });

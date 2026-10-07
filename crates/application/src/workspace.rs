@@ -214,6 +214,12 @@ impl Engine {
                     if let Some(provider) = preferences.agent_provider {
                         workspace.preferences.agent_provider = Some(provider);
                     }
+                    if let Some(plugins) = preferences.plugins {
+                        workspace.preferences.plugins = Some(plugins);
+                    }
+                    if let Some(tiles) = preferences.chart_tiles {
+                        workspace.preferences.chart_tiles = Some(tiles);
+                    }
                 }
             }
         }

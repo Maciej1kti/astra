@@ -296,6 +296,31 @@ await runBrowserSuite(
       await expect(chart("reps")).toBeVisible();
       await expect(dashboard.getByRole("img")).toHaveCount(1);
       await expect(chart("reps").locator("[data-series-key]")).toHaveCount(2);
+      // Plugins are off until the profile switches them on.
+      const totalsTile = dashboard.locator("[data-chart-totals]");
+      await expect(statRow("Push-ups")).toBeVisible();
+      await expect(totalsTile).toHaveCount(0);
+      await expect(
+        dashboard.getByRole("region", { name: "Rozliczenie", exact: true }),
+      ).toHaveCount(0);
+      const preferencesPath = "/api/v1/workspace/preferences";
+      await writeFile(
+        commandFile,
+        JSON.stringify({
+          preferences: { plugins: ["chart-totals", "chart-settlement"] },
+        }),
+        { mode: 0o600 },
+      );
+      cli(
+        "command",
+        "PATCH",
+        preferencesPath,
+        "--json-file",
+        commandFile,
+        "--if-version",
+        cli("get", preferencesPath).version,
+      );
+      await expect(totalsTile).toBeVisible();
       const daily = await plotValues("reps");
       assert.deepEqual(
         daily.map((row) => row.map((cell) => cell.value)),
@@ -315,7 +340,8 @@ await runBrowserSuite(
         "A recorded zero is a value; a missing day says so",
       );
       await expect(dashboard.getByRole("combobox")).toHaveCount(0);
-      await expect(dashboard.getByRole("table")).toHaveCount(1);
+      await expect(dashboard.getByRole("table")).toHaveCount(0);
+      await expect(dashboard.locator("[data-chart-row]")).toHaveCount(2);
       await expect(dashboard.getByText("Pokaż dane wykresu")).toHaveCount(0);
       const pushKey = `${config.projects[0].id}/${training.card.metadata.id}/${training.items[0].id}`;
       const pushSeries = chart("reps").locator(
@@ -384,7 +410,54 @@ await runBrowserSuite(
       await expect(statistic("Push-ups", "average")).toHaveText("15");
       await expect(statistic("Push-ups", "peak")).toHaveText("30");
       await expect(statistic("Squats", "total")).toHaveText("80");
+      // A tile chooses its own values; the choice is saved with the profile.
+      await expect(statistic("Squats", "difference")).toHaveCount(0);
+      await statRow("Squats").click();
+      const tileDialog = page.getByRole("dialog", {
+        name: "Wartości kafla: Squats",
+        exact: true,
+      });
+      const tileValue = (id) => tileDialog.locator(`input[value="${id}"]`);
+      await expect(tileDialog.getByRole("checkbox")).toHaveCount(11);
+      await expect(tileValue("total")).toBeChecked();
+      await expect(tileValue("difference")).not.toBeChecked();
+      await tileValue("difference").check();
+      await tileValue("peak").uncheck();
+      await tileValue("history-total").check();
+      await screenshot("chart-tile-dialog");
+      await tileDialog
+        .getByRole("button", { name: "Zapisz", exact: true })
+        .click();
+      await expect(tileDialog).toHaveCount(0);
       await expect(statistic("Squats", "difference")).toHaveText("+20 reps");
+      await expect(statistic("Squats", "history-total")).toHaveText("80");
+      await expect(statistic("Squats", "peak")).toHaveCount(0);
+      await expect(statistic("Push-ups", "peak")).toHaveText("30");
+      await expect(statistic("Push-ups", "difference")).toHaveCount(0);
+      const squatKey2 = `${config.projects[0].id}/${training.card.metadata.id}/${training.items[1].id}`;
+      assert.deepEqual(cli("get", preferencesPath).preferences.chart_tiles, {
+        [squatKey2]: [
+          "total",
+          "history-total",
+          "recorded",
+          "average",
+          "difference",
+          "rate",
+          "value",
+        ],
+      });
+      // Cancelling changes nothing.
+      await statRow("Push-ups").click();
+      const pushDialog = page.getByRole("dialog", {
+        name: "Wartości kafla: Push-ups",
+        exact: true,
+      });
+      await pushDialog.locator('input[value="total"]').uncheck();
+      await pushDialog
+        .getByRole("button", { name: "Anuluj", exact: true })
+        .click();
+      await expect(pushDialog).toHaveCount(0);
+      await expect(statistic("Push-ups", "total")).toHaveText("60");
       await expect(
         dashboard.locator('[data-chart-summary="records"]'),
       ).toHaveText("7");
@@ -848,7 +921,11 @@ await runBrowserSuite(
         "rapid project switch discards obsolete reads and all-project scope exposes both projects",
       );
 
-      await statRow("Push-ups").getByRole("button").click();
+      await statRow("Push-ups").click();
+      await page
+        .getByRole("dialog", { name: "Wartości kafla: Push-ups", exact: true })
+        .getByRole("button", { name: "Otwórz kartę licznika", exact: true })
+        .click();
       const editor = page.getByRole("dialog", {
         name: "Edytuj element",
         exact: true,
@@ -962,23 +1039,22 @@ await runBrowserSuite(
         .locator("[data-chart-row]")
         .evaluateAll((rows) =>
           rows.map((row) =>
-            [".cell-name", ".cell-total", ".cell-rate", ".cell-value"].map(
-              (cell) => {
-                const box = row.querySelector(cell).getBoundingClientRect();
-                const own = row.getBoundingClientRect();
-                return [
-                  Math.round(box.x - own.x),
-                  Math.round(box.y - own.y),
-                  Math.round(box.width),
-                ].join();
-              },
-            ),
+            [...row.querySelectorAll(".tile-name, .tile-value")].map((cell) => {
+              const box = cell.getBoundingClientRect();
+              const own = row.getBoundingClientRect();
+              return [
+                cell.dataset.tileMetric ?? "name",
+                Math.round(box.x - own.x),
+                Math.round(box.y - own.y),
+                Math.round(box.width),
+              ].join();
+            }),
           ),
         );
       assert.equal(cards.length, 4);
       assert.ok(
         cards.every((card) => card.join("|") === cards[0].join("|")),
-        `Every counter card has the same layout: ${JSON.stringify(cards)}`,
+        `Tiles with the same values have the same layout: ${JSON.stringify(cards)}`,
       );
       assert.ok(
         await page.evaluate(
@@ -994,15 +1070,51 @@ await runBrowserSuite(
       checks.push(
         "settlement over the whole history by last-word person with counter rates: lower value pays the difference, unrated counters excluded, uniform phone cards",
       );
+
+      // Switching a plugin off in Settings removes what it added.
+      await expect(settlement).toBeVisible();
+      await expect(totalsTile).toBeVisible();
+      await page
+        .getByRole("button", {
+          name: "Ustawienia przestrzeni roboczej",
+          exact: true,
+        })
+        .click();
+      const settingsDialog = page.getByRole("dialog", {
+        name: "Ustawienia przestrzeni roboczej",
+        exact: true,
+      });
+      const pluginBox = (name) =>
+        settingsDialog.getByRole("checkbox", { name: new RegExp(`^${name}`) });
+      await expect(pluginBox("Razem na Wykresie")).toBeChecked();
+      await expect(pluginBox("Rozliczenie na Wykresie")).toBeChecked();
+      await pluginBox("Rozliczenie na Wykresie").uncheck();
+      await screenshot("chart-plugin-settings");
+      await settingsDialog
+        .getByRole("button", { name: "Zapisz ustawienia", exact: true })
+        .click();
+      await expect(settingsDialog).toHaveCount(0);
+      await expect(dashboard).toBeVisible();
+      assert.deepEqual(cli("get", preferencesPath).preferences.plugins, [
+        "chart-totals",
+      ]);
+      await expect(
+        dashboard.getByRole("region", { name: "Rozliczenie", exact: true }),
+      ).toHaveCount(0);
+      checks.push(
+        "plugins off by default, switched on for the profile and off in Settings; per-counter tile values saved conditionally",
+      );
       assert.deepEqual(errors, []);
       assert.deepEqual(await page.evaluate(() => window.chartCsp), []);
-      assert.equal(
-        requests.filter((request) =>
-          ["POST", "PATCH", "PUT", "DELETE"].includes(request.method),
-        ).length,
-        0,
-        "Chart controls are read-only source projections",
+      const writes = requests.filter((request) =>
+        ["POST", "PATCH", "PUT", "DELETE"].includes(request.method),
       );
+      assert.deepEqual(
+        [...new Set(writes.map((request) => request.path))],
+        ["/api/v1/workspace/preferences"],
+        "Chart writes only the profile's preferences, never a source",
+      );
+      assert.equal(writes.length, 2, "One tile choice and one settings save");
     } catch (error) {
       await writeFile(
         join(evidence, "failure.txt"),

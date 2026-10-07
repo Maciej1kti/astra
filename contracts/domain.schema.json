@@ -708,6 +708,10 @@
       ],
       "additionalProperties": false
     },
+    "Slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,39}$"
+    },
     "Preferences": {
       "type": "object",
       "properties": {
@@ -738,6 +742,32 @@
             "claude",
             "codex"
           ]
+        },
+        "plugins": {
+          "type": "array",
+          "description": "Built-in plugins this profile has switched on. Unknown identifiers are kept and ignored.",
+          "items": {
+            "$ref": "#/$defs/Slug"
+          },
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "chart_tiles": {
+          "type": "object",
+          "description": "Values each Chart summary tile shows, by project/card/counter identifier. A counter without an entry shows the default values.",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Slug"
+            },
+            "maxItems": 16,
+            "uniqueItems": true
+          },
+          "maxProperties": 200
         }
       },
       "required": [],

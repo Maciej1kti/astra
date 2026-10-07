@@ -3427,8 +3427,31 @@ components:
           - updates
         agent_provider:
           $ref: '#/components/schemas/AgentProvider'
+        plugins:
+          type: array
+          description: Built-in plugins this profile has switched on. Unknown identifiers are kept and ignored. A patch replaces the whole list.
+          items:
+            $ref: '#/components/schemas/Slug'
+          maxItems: 32
+          uniqueItems: true
+        chart_tiles:
+          type: object
+          description: Values each Chart summary tile shows, by project/card/counter identifier. A counter without an entry shows the default values. A patch replaces the whole map.
+          propertyNames:
+            type: string
+            pattern: ^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}$
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/Slug'
+            maxItems: 16
+            uniqueItems: true
+          maxProperties: 200
       required: []
       additionalProperties: false
+    Slug:
+      type: string
+      pattern: ^[a-z][a-z0-9-]{1,39}$
     Workspace:
       type: object
       properties:

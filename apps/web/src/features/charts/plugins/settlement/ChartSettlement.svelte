@@ -1,21 +1,11 @@
 <script lang="ts">
-  import {
-    chartDate,
-    chartMoney,
-    chartSettlement,
-    type ChartSummaryRow,
-  } from "./chart-model";
+  import { chartDate } from "../../chart-model";
+  import type { ChartPluginContext } from "../chart-plugins";
+  import { money, settle } from "./settlement";
 
-  let {
-    rows,
-    outputUnit,
-  }: {
-    /** Selected counters whose totals cover their whole history. */
-    rows: ChartSummaryRow[];
-    outputUnit: string;
-  } = $props();
+  let { rows, outputUnit }: ChartPluginContext = $props();
 
-  const settlement = $derived(chartSettlement(rows));
+  const settlement = $derived(settle(rows));
   const unit = $derived(outputUnit.trim());
   const first = $derived(
     rows
@@ -49,7 +39,7 @@
                 <b>{debt.to}</b></span
               >
               <strong class="debt-amount"
-                >{chartMoney(debt.amount)}{#if unit}<small>{unit}</small
+                >{money(debt.amount)}{#if unit}<small>{unit}</small
                   >{/if}</strong
               >
             </li>
@@ -62,7 +52,7 @@
         {#each settlement.parties as party (party.name)}
           <div data-chart-party={party.name}>
             <dt>{party.name}</dt>
-            <dd>{chartMoney(party.value)}{unit ? ` ${unit}` : ""}</dd>
+            <dd>{money(party.value)}{unit ? ` ${unit}` : ""}</dd>
           </div>
         {/each}
       </dl>

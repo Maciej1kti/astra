@@ -303,6 +303,7 @@ export type Evidence =
       value: string;
       label?: string;
     };
+export type Slug = string;
 
 export interface ProjectDocument {
   type: "project";
@@ -585,4 +586,36 @@ export interface Preferences {
    */
   default_view?: "focus" | "projects" | "board" | "calendar" | "gantt" | "chart" | "list" | "updates";
   agent_provider?: "claude" | "codex";
+  /**
+   * Built-in plugins this profile has switched on. Unknown identifiers are kept and ignored.
+   *
+   * @maxItems 32
+   */
+  plugins?: Slug[];
+  /**
+   * Values each Chart summary tile shows, by project/card/counter identifier. A counter without an entry shows the default values.
+   */
+  chart_tiles?: {
+    /**
+     * @maxItems 16
+     */
+    [k: string]:
+      | []
+      | [Slug]
+      | [Slug, Slug]
+      | [Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
+      | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug];
+  };
 }

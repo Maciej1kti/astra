@@ -455,3 +455,12 @@ and the counter view returns `history` totals over every saved date beside the
 range-limited values. The Chart settlement uses both, so rates no longer live
 in a browser and the debt is not cut off by the 400-date range. See
 [ADR-072](ADR-072-COUNTER-RATES-AND-HISTORY-TOTALS.md).
+
+## ADR-073 — Plugins and Chart tile values
+
+A plugin is a module shipped with the application that a profile switches on.
+`Preferences.plugins` lists the enabled identifiers and
+`Preferences.chart_tiles` stores, per counter, the values its Chart summary
+tile shows. The Chart settlement and the Razem totals became plugins; no code
+is loaded from project data or the network. See
+[ADR-073](ADR-073-PLUGINS-AND-CHART-TILES.md).

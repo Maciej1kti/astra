@@ -662,3 +662,79 @@ fn broken_workspace_keeps_diagnostics_available_without_recreating_sources() {
         );
     }
 }
+
+#[test]
+fn plugins_and_chart_tiles_are_profile_preferences_replaced_whole_and_bounded() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let original = engine.workspace().unwrap();
+    assert!(json!(original.value)["preferences"]["plugins"].is_null());
+    let epoch = engine.journal.epoch.clone();
+    let payload: Value = serde_json::from_str(include_str!(
+        "../../../../examples/requests/chart-plugins-preference.json"
+    ))
+    .unwrap();
+    wire::validate("PreferencesPatch", &payload).unwrap();
+    let patch = |payload: &Value, version: &str| {
+        engine
+            .mutate_workspace(
+                "preferences",
+                payload,
+                &Uuid::now_v7().to_string(),
+                &epoch,
+                Some(version),
+            )
+            .unwrap()
+    };
+    let reply = patch(&payload, &original.version);
+    assert_eq!(reply.http_status, 200, "{reply:?}");
+    wire::validate("CommandResponse", &reply.body).unwrap();
+    let saved = engine.workspace().unwrap();
+    let mut expected = json!(original.value);
+    expected["preferences"]["plugins"] = payload["preferences"]["plugins"].clone();
+    expected["preferences"]["chart_tiles"] = payload["preferences"]["chart_tiles"].clone();
+    assert_eq!(json!(saved.value), expected);
+
+    // Another preference leaves both alone; a new list replaces the old one.
+    let week = patch(
+        &json!({"preferences":{"week_start":"sunday"}}),
+        &saved.version,
+    );
+    assert_eq!(week.http_status, 200);
+    let after_week = engine.workspace().unwrap();
+    assert_eq!(
+        json!(after_week.value)["preferences"]["plugins"],
+        json!(["chart-settlement", "chart-totals"])
+    );
+    let off = patch(
+        &json!({"preferences":{"plugins":[],"chart_tiles":{}}}),
+        &after_week.version,
+    );
+    assert_eq!(off.http_status, 200);
+    let cleared = engine.workspace().unwrap();
+    assert_eq!(json!(cleared.value)["preferences"]["plugins"], json!([]));
+    assert_eq!(
+        json!(cleared.value)["preferences"]["chart_tiles"],
+        json!({})
+    );
+
+    let counter = "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    for invalid in [
+        json!({"plugins":["Chart"]}),
+        json!({"plugins":["a"]}),
+        json!({"plugins":["chart-totals","chart-totals"]}),
+        json!({"plugins":"chart-totals"}),
+        json!({"plugins":(0..33).map(|n| format!("plugin-{n}")).collect::<Vec<_>>()}),
+        json!({"chart_tiles":{"not a counter":["total"]}}),
+        json!({"chart_tiles":{counter:["Total"]}}),
+        json!({"chart_tiles":{counter:["total","total"]}}),
+        json!({"chart_tiles":{counter:(0..17).map(|n| format!("metric-{n}")).collect::<Vec<_>>()}}),
+    ] {
+        let rejected = patch(&json!({ "preferences": invalid }), &cleared.version);
+        assert_eq!(rejected.http_status, 422, "{invalid}");
+    }
+    assert_eq!(engine.workspace().unwrap().version, cleared.version);
+    drop(engine);
+    let engine = env.engine();
+    assert_eq!(engine.workspace().unwrap().version, cleared.version);
+}

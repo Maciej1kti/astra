@@ -604,7 +604,16 @@ below the plots: each names its current choice and opens the shared
 right after the collapsed counter list. Plots show recorded values only; there
 is no scale choice.
 
-`ChartSettlement` is the view's first surface when the selected counters name
+The Chart view's core is the same for every profile: the counter list, the
+plots and one summary tile per counter, all read from card data. Calculations
+across counters are plugins, built-in modules a profile switches on in
+Settings ([ADR-073](ADR-073-PLUGINS-AND-CHART-TILES.md)). A plugin fills a
+named place, `panel` above the counter list or `summary` below the tiles, and
+derives everything from the selected rows; it has no API access and writes
+nothing. Plugins are listed in Settings as plain checkboxes with a one-line
+description, and are off until chosen.
+
+With the `chart-settlement` plugin on, `ChartSettlement` is the view's first surface when the selected counters name
 at least two people, because who owes whom is the answer the owner opens the
 view for. It states each debt as payer, arrow, receiver and one large amount,
 then every person's value, with no explanation of the rule: the owner asked
@@ -614,10 +623,17 @@ counter's stored rate and whole-history total, and the output unit, not the
 plotted range. The summary shows rates read-only; they are edited in the
 counter's settings on its card.
 
-In a narrow container every summary card has the same grid: name and total,
-rate and value, three quiet statistics, then the difference line, which the
-reference counter keeps so cards do not differ in height. Legend entries keep
-one height whether or not the period has a recording.
+The summary is a grid of tiles at every width, not a table. A tile is one
+button: the counter's name and card, then its chosen values on a fixed
+three-column grid (two below 360px), each with a quiet label and note, so
+tiles showing the same values line up exactly. Pressing a tile opens
+`ChartTileDialog`, a small modal listing every available value with a one-line
+meaning, a way back to the defaults and a way to the counter's card. The
+choice is per counter and saved in the profile's preferences against the
+version that was read; a conflict asks the reader to load the current settings
+and never overwrites. The `chart-totals` plugin adds the **Razem** tile below
+them. Legend entries keep one height whether or not the period has a
+recording.
 
 Every plot in the Chart view has one form, following the owner's 2026-10-07
 direction: points joined by lines, never bars. The compact counter preview on

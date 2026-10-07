@@ -18,6 +18,7 @@ test("saved preferences map to explicit form values", () => {
     week: "monday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   });
   assert.deepEqual(
     settingsDraft(
@@ -25,9 +26,16 @@ test("saved preferences map to explicit form values", () => {
         week_start: "sunday",
         default_view: "list",
         agent_provider: "codex",
+        plugins: ["chart-totals", "chart-settlement"],
       }),
     ),
-    { timezone: "Europe/Warsaw", week: "sunday", view: "list", agent: "codex" },
+    {
+      timezone: "Europe/Warsaw",
+      week: "sunday",
+      view: "list",
+      agent: "codex",
+      plugins: "chart-settlement,chart-totals",
+    },
   );
 });
 
@@ -37,18 +45,21 @@ test("a conflicting draft keeps deliberate edits and follows other saved changes
     week: "monday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   };
   const current = {
     timezone: "UTC",
     week: "sunday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   };
   const mine = {
     timezone: "Europe/Warsaw",
     week: "monday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   };
   assert.deepEqual(rebaseSettingsDraft(opened, current, mine), {
     // Saving this draft again must not put the week back to Monday.
@@ -57,6 +68,7 @@ test("a conflicting draft keeps deliberate edits and follows other saved changes
       week: "sunday",
       view: "focus",
       agent: "claude",
+      plugins: "",
     },
     kept: ["timezone"],
   });
@@ -68,18 +80,21 @@ test("an edit of the same field stays visible instead of being overwritten", () 
     week: "monday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   };
   const current = {
     timezone: "Asia/Tokyo",
     week: "monday",
     view: "board",
     agent: "claude",
+    plugins: "",
   };
   const mine = {
     timezone: "Europe/Warsaw",
     week: "monday",
     view: "list",
     agent: "claude",
+    plugins: "",
   };
   assert.deepEqual(rebaseSettingsDraft(opened, current, mine), {
     draft: {
@@ -87,6 +102,7 @@ test("an edit of the same field stays visible instead of being overwritten", () 
       week: "monday",
       view: "list",
       agent: "claude",
+      plugins: "",
     },
     kept: ["timezone", "view"],
   });
@@ -98,18 +114,21 @@ test("an edit that already matches the saved state leaves nothing to save", () =
     week: "monday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   };
   const current = {
     timezone: "Europe/Warsaw",
     week: "monday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   };
   const mine = {
     timezone: "Europe/Warsaw",
     week: "monday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   };
   assert.deepEqual(rebaseSettingsDraft(opened, current, mine), {
     draft: current,
@@ -128,6 +147,7 @@ test("the agent provider defaults to claude and follows the same rebase rules", 
     week: "monday",
     view: "focus",
     agent: "claude",
+    plugins: "",
   };
   // An untouched provider follows a change made elsewhere ...
   assert.deepEqual(
