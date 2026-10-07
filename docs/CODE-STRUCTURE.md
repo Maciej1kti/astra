@@ -98,7 +98,7 @@ arrive, so the page does not collapse under the reader; another project or
 archive scope starts empty, and a failed range read clears the kept series. `chart-model.ts` keeps quantity and valuation calculations, colour
 slots, axis steps and plot geometry separate from rendering. `ChartDashboard`
 owns the selection and display state and composes `ChartRange`,
-`ChartCounterPicker`, one `ChartPlot` per unit and `ChartSummary`;
+`ChartSettlement`, `ChartCounterPicker`, one `ChartPlot` per unit and `ChartSummary`;
 `ChartSegments` is their shared segmented control and `ChartMenu` its phone
 form. The Chart component loads on
 demand and uses the named counter endpoint in `lib/api/counters.ts`.

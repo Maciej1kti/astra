@@ -298,7 +298,8 @@ The `charts` suite creates temporary counter histories through ordinary conditio
 CLI writes. It checks counter selection, shared-unit overlays, separate unit
 panels, recordings drawn as dots joined by lines with no bars, a recorded zero as
 a dot, the running total, range-following and chosen grouping, stable series colours,
-rates and statistics, project filtering, empty history and source refreshes.
+rates and statistics, the settlement between people named by their counters,
+uniform phone summary cards, project filtering, empty history and source refreshes.
 Period values are read from the legend with the plot's keyboard slider. At
 1440, 1024, 768, 390 and 320 px it checks touch targets, page containment,
 unclipped statistics, the collapsed counter list and that the plot starts

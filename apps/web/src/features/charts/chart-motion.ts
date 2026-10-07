@@ -6,6 +6,7 @@ export const chartLayers = [
     delay: 80,
     stagger: 40,
   },
+  { selector: ".chart-settlement", role: "content", delay: 90 },
   { selector: ".counter-picker", role: "content", delay: 100 },
   {
     selector: ".picker-summary, .counter-search",

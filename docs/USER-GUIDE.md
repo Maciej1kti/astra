@@ -219,6 +219,16 @@ acknowledged card version, while a pending edit retains its original day/version
 Open **Wykres** from the sidebar or the phone's **Więcej** menu. Use the Project
 selector to inspect one project or all registered projects.
 
+**Rozliczenie** opens the view when the selected counters name at least two
+people. A person is the last word of a counter's name, so **Pompki Tomek** and
+**Brzuszki Tomek** both belong to Tomek; a one-word name belongs to nobody. A
+person's value is the sum of each of their counters' totals in the range
+multiplied by its rate. Whoever has the lower value pays the difference, shown
+as **Maciek płaci → Tomek** beside the amount, with every person's value
+underneath. A counter without a rate counts for nothing and is mentioned; with
+no rates the panel asks for them. More than two people are settled pair by
+pair.
+
 The plot is the main surface. On a wide screen the **Liczniki** list sits beside
 it; on a tablet or phone it collapses to one row showing how many counters are
 selected, and opens in place when tapped. The view opens with the first four

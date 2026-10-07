@@ -127,24 +127,24 @@
             ></button
           ></span
         >
-        <span role="cell"
+        <span role="cell" class="cell-total"
           ><span class="cell-label" aria-hidden="true">Suma</span><strong
             data-chart-stat="total"
             >{row.stats.recorded ? chartValue(row.stats.total) : "—"}</strong
           ><small>{row.source.unit}</small></span
         >
-        <span role="cell"
+        <span role="cell" class="cell-stat"
           ><span class="cell-label" aria-hidden="true">Dni z zapisami</span
           ><span data-chart-stat="recorded">{row.stats.recorded}</span><small
             >z {countedDays(days)}</small
           ></span
         >
-        <span role="cell"
+        <span role="cell" class="cell-stat"
           ><span class="cell-label" aria-hidden="true">Średnia na dzień</span
           ><span data-chart-stat="average">{chartValue(row.stats.average)}</span
           ><small>{row.source.unit}</small></span
         >
-        <span role="cell"
+        <span role="cell" class="cell-stat"
           ><span class="cell-label" aria-hidden="true">Najlepszy dzień</span
           ><span data-chart-stat="peak">{chartValue(row.stats.peak)}</span
           ><small
@@ -153,7 +153,10 @@
               : "Brak zapisów"}</small
           ></span
         >
-        {#if comparable}<span role="cell" class:blank={baseline === row}
+        {#if comparable}<span
+            role="cell"
+            class="cell-difference"
+            class:blank={baseline === row}
             ><span class="cell-label" aria-hidden="true">Różnica</span><span
               data-chart-stat="difference"
               >{difference === null
@@ -185,7 +188,7 @@
               : `${valueUnit} za ${row.source.unit || "jednostkę"}`}</small
           ></span
         >
-        <span role="cell"
+        <span role="cell" class="cell-value"
           ><span class="cell-label" aria-hidden="true">Wartość</span><strong
             data-chart-stat="converted"
             >{row.rate !== null && row.stats.recorded
@@ -197,12 +200,12 @@
     {/each}
     <div class="summary-row summary-total" role="row">
       <span class="cell-name" role="rowheader">Razem</span>
-      <span role="cell" class:blank={total === null}
+      <span role="cell" class="cell-total" class:blank={total === null}
         ><span class="cell-label" aria-hidden="true">Suma</span><strong
           >{chartValue(total)}</strong
         ><small>{total === null ? "" : units[0]}</small></span
       >
-      <span role="cell"
+      <span role="cell" class="cell-stat"
         ><span class="cell-label" aria-hidden="true">Dni z zapisami</span><span
           data-chart-summary="records">{chartValue(records)}</span
         ><small>łącznie</small></span
@@ -211,7 +214,7 @@
       <span role="cell" class="blank"></span>
       {#if comparable}<span role="cell" class="blank"></span>{/if}
       <span role="cell" class="blank"></span>
-      <span role="cell"
+      <span role="cell" class="cell-value"
         ><span class="cell-label" aria-hidden="true">Wartość</span><strong
           data-chart-summary="converted"
           >{ratedRecorded ? chartValue(converted) : "—"}<span
@@ -350,6 +353,8 @@
   .cell-rate input[aria-invalid="true"] {
     border-color: var(--danger);
   }
+  /* Narrow: every counter is the same card. Name and total, then rate and
+     value, then the quieter statistics in one line. */
   @container summary (max-width: 860px) {
     .summary-table {
       grid-template-columns: repeat(auto-fill, minmax(var(--panel-width), 1fr));
@@ -367,11 +372,11 @@
       white-space: nowrap;
     }
     .summary-row {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       grid-column: auto;
       align-items: start;
-      gap: var(--space-6) var(--space-8);
-      padding: var(--space-6) var(--space-8) var(--space-8);
+      gap: var(--space-6) var(--space-6);
+      padding: var(--space-6) var(--space-8) var(--space-7);
       border: var(--stroke) solid var(--line);
       border-radius: var(--radius-card);
     }
@@ -379,13 +384,53 @@
       border-radius: var(--radius-card);
     }
     .cell-name {
+      grid-column: 1 / span 4;
+      align-self: center;
+    }
+    .cell-total {
+      grid-column: 5 / span 2;
+    }
+    .cell-rate {
+      grid-column: 1 / span 3;
+      grid-row: 2;
+    }
+    .cell-value {
+      grid-column: 4 / span 3;
+      grid-row: 2;
+    }
+    .cell-total,
+    .cell-value {
+      text-align: right;
+    }
+    .cell-value strong {
+      font-size: var(--text-xl);
+    }
+    .cell-stat {
+      grid-column: span 2;
+      grid-row: 3;
+      font-size: var(--text-sm);
+    }
+    .cell-difference {
       grid-column: 1 / -1;
+      grid-row: 4;
+      font-size: var(--text-sm);
+    }
+    .cell-difference > * {
+      display: inline;
+      margin-right: var(--space-3);
     }
     .cell-label {
       display: block;
     }
+    .cell-total .cell-label {
+      display: none;
+    }
     .blank {
       display: none;
+    }
+    /* The reference counter keeps the line, so cards stay the same height. */
+    .cell-difference.blank {
+      display: block;
     }
     .cell-rate input {
       max-width: none;

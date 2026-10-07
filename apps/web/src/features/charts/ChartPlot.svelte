@@ -294,6 +294,7 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
+    align-content: start;
     column-gap: var(--space-4);
     min-width: 0;
   }
@@ -319,6 +320,8 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-3);
+    /* A period without a recording keeps the height of one with a value. */
+    min-height: 1.5em;
     font-size: var(--text-lg);
     font-variant-numeric: tabular-nums;
   }

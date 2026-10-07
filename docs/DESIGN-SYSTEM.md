@@ -604,6 +604,17 @@ below the plots: each names its current choice and opens the shared
 right after the collapsed counter list. Plots show recorded values only; there
 is no scale choice.
 
+`ChartSettlement` is the view's first surface when the selected counters name
+at least two people, because who owes whom is the answer the owner opens the
+view for. It states each debt as payer, arrow, receiver and one large amount,
+then every person's value, then the rule in muted text. It follows the
+selection, range, rates and output unit and stores nothing itself.
+
+In a narrow container every summary card has the same grid: name and total,
+rate and value, three quiet statistics, then the difference line, which the
+reference counter keeps so cards do not differ in height. Legend entries keep
+one height whether or not the period has a recording.
+
 Every plot in the Chart view has one form, following the owner's 2026-10-07
 direction: points joined by lines, never bars. The compact counter preview on
 a card keeps its bars by the same direction. Each recording is a dot ringed with the surface,

@@ -11,6 +11,7 @@
   import ChartPlot from "./ChartPlot.svelte";
   import ChartRange from "./ChartRange.svelte";
   import ChartSegments from "./ChartSegments.svelte";
+  import ChartSettlement from "./ChartSettlement.svelte";
   import ChartSummary from "./ChartSummary.svelte";
   import {
     chartColorSlots,
@@ -226,6 +227,8 @@
       >
     </div>{/if}
   {#if notice}<p class="notice">{notice}</p>{/if}
+
+  {#if selected.length}<ChartSettlement {rows} {from} {to} {outputUnit} />{/if}
 
   <div class="chart-body">
     <ChartCounterPicker

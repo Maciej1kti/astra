@@ -910,6 +910,88 @@ await runBrowserSuite(
       checks.push(
         "current source opens without edits, phone More keyboard navigation and browser-local rates survive reload",
       );
+
+      // People are the last word of a counter's name; the lower value pays.
+      await createCard(config.projects[0].id, "Synthetic bet", [
+        { name: "Pompki Tomek", unit: "rep", values: [[day(1), 300]] },
+        { name: "Pompki Maciek", unit: "rep", values: [[day(0), 33]] },
+        { name: "Brzuszki Tomek", unit: "rep", values: [[day(2), 100]] },
+        { name: "Brzuszki Maciek", unit: "rep", values: [[day(0), 15]] },
+      ]);
+      await page.reload();
+      const picker = dashboard.getByRole("button", { name: /^Liczniki/ });
+      await picker.click();
+      await dashboard
+        .getByRole("button", { name: "Wyczyść wybór", exact: true })
+        .click();
+      const settlement = dashboard.getByRole("region", {
+        name: "Rozliczenie",
+        exact: true,
+      });
+      await expect(settlement).toHaveCount(0);
+      for (const name of [
+        "Pompki Tomek",
+        "Pompki Maciek",
+        "Brzuszki Tomek",
+        "Brzuszki Maciek",
+      ])
+        await checkbox(name, "Synthetic bet").check();
+      await picker.click();
+      await expect(settlement.locator("[data-chart-debt]")).toHaveCount(0);
+      await expect(settlement).toContainText("Wpisz stawki");
+      await rate("Pompki Tomek", "Synthetic bet").fill("0,5");
+      await rate("Pompki Maciek", "Synthetic bet").fill("0,5");
+      await rate("Brzuszki Tomek", "Synthetic bet").fill("0,25");
+      const debt = settlement.locator("[data-chart-debt]");
+      await expect(debt).toHaveCount(1);
+      await expect(debt.locator("b")).toHaveText(["Maciek", "Tomek"]);
+      await expect(debt.locator("strong")).toHaveText("158,50EUR");
+      await expect(
+        settlement.locator('[data-chart-party="Tomek"] dd'),
+      ).toHaveText("175,00 EUR");
+      await expect(settlement).toContainText("Liczniki bez stawki (1)");
+      const settled = await settlement.boundingBox();
+      const firstPlot = await dashboard.getByRole("img").first().boundingBox();
+      assert.ok(
+        settled.y + settled.height <= firstPlot.y,
+        "The settlement comes before the plots",
+      );
+      const cards = await dashboard
+        .locator("[data-chart-row]")
+        .evaluateAll((rows) =>
+          rows.map((row) =>
+            [".cell-name", ".cell-total", ".cell-rate", ".cell-value"].map(
+              (cell) => {
+                const box = row.querySelector(cell).getBoundingClientRect();
+                const own = row.getBoundingClientRect();
+                return [
+                  Math.round(box.x - own.x),
+                  Math.round(box.y - own.y),
+                  Math.round(box.width),
+                ].join();
+              },
+            ),
+          ),
+        );
+      assert.equal(cards.length, 4);
+      assert.ok(
+        cards.every((card) => card.join("|") === cards[0].join("|")),
+        `Every counter card has the same layout: ${JSON.stringify(cards)}`,
+      );
+      assert.ok(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth <=
+            document.documentElement.clientWidth,
+        ),
+        "The settlement and summary fit a 390px phone",
+      );
+      await screenshot("chart-settlement-390");
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await screenshot("chart-settlement-1440");
+      checks.push(
+        "settlement by last-word person: lower value pays the difference, unrated counters excluded, uniform phone cards",
+      );
       assert.deepEqual(errors, []);
       assert.deepEqual(await page.evaluate(() => window.chartCsp), []);
       assert.equal(
