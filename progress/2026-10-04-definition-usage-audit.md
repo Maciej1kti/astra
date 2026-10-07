@@ -114,7 +114,7 @@ lines 68–100, retains test-only `AcceptanceRowRect`, `acceptanceDropIndex` and
 retarget relevant coverage to the actual production path.
 
 [Brand](../apps/web/src/lib/ui/Brand.svelte), line 2, has a `compact` variant never
-requested by its only caller. [ResourceCard](../apps/web/src/lib/ui/ResourceCard.svelte),
+requested by its only caller. [ResourceCard](https://github.com/Maciej1kti/astra/blob/bc4689261c2f2f7b8f6a3a80668921dcd70a3fde/apps/web/src/lib/ui/ResourceCard.svelte),
 lines 11–21, accepts `pinned`, `showStatus` and `children`, none supplied by its
 only consumer, BoardOverview. Simplify dormant branches while preserving the
 currently rendered behavior. [calendar-events.ts](../apps/web/src/features/planning/calendar-events.ts),
