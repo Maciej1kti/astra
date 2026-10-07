@@ -31,7 +31,7 @@ that matches your task; historical requirements are indexed separately below.
 | [Security reporting](../SECURITY.md) | Reporting status, sanitization and dependency advisory checks |
 | [Scripts](../scripts/README.md) | Tool entry points and generated artifacts |
 | [Browser suites](../scripts/browser/README.md) | Real-host integration coverage and suite selection |
-| [Omarchy integration](../integrations/omarchy/README.md) | Optional Linux desktop integration |
+| [Omarchy integration](../integrations/omarchy/README.md) | Optional Linux bar widget for switching between Astra hosts |
 
 ## Contracts and decisions
 

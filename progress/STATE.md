@@ -31,6 +31,12 @@ pass, after a follow-up fixed three failures inherited from the add-menu work;
 the initial bundle is 5 bytes under its budget. Touch feel on a physical phone
 and acceptance are the owner's.
 
+The Omarchy bar widget [lists Astra hosts](2026-10-07-omarchy-hosts-widget.md)
+instead of the local Focus preview: pasted addresses, one selected host in the
+bar, a reachability check and switching. Parser tests and plugin validation
+pass; the QML has not yet run in the shell, which refuses a restart while the
+session is locked.
+
 On a phone the Agent dialog [stays a rounded card above the keyboard](2026-10-07-agent-dialog-phone.md)
 with an even gap, and its composer is one field. The `agent` suite passes in
 Chromium and WebKit with an emulated keyboard; the physical iPhone is the
@@ -131,7 +137,8 @@ These specific results remain unresolved in addition to the obligations below.
 - A combined responsive-suite attempt was blocked by the profile header's 320px
   picker width ([compact navigation](2026-10-04-compact-navigation.md)).
 - Python remains in the Omarchy window helper; Linux shell/QML coverage is open
-  ([widget reader](2026-10-01-widget-focus-reader.md)).
+  ([widget reader](2026-10-01-widget-focus-reader.md),
+  [hosts widget](2026-10-07-omarchy-hosts-widget.md)).
 
 ## Implemented product
 

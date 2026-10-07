@@ -1,6 +1,9 @@
 # ADR-057: Bounded Rust reader for the Focus widget
 
-Status: accepted implementation optimization, 2026-10-01.
+Status: accepted implementation optimization, 2026-10-01. Since 2026-10-07 the
+bundled Omarchy widget lists Astra hosts and no longer calls this reader; the
+command and its contract remain. See the
+[integration guide](../integrations/omarchy/README.md).
 
 The optional Omarchy status helper starts Python and reads up to five full card
 resources after reading Focus membership. Current servers already include bounded
