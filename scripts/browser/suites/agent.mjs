@@ -247,6 +247,46 @@ await runBrowserSuite(
             await page.mouse.down();
             const items = page.getByRole("menuitem");
             await expect(items).toHaveCount(3);
+            // Each choice starts under the button and travels to its own place.
+            const frame = (time) =>
+              page.evaluate((at) => {
+                const centre = (element) => {
+                  const rect = element.getBoundingClientRect();
+                  return [rect.x + rect.width / 2, rect.y + rect.height / 2];
+                };
+                return [...document.querySelectorAll("[role=menuitem]")].map(
+                  (item) => {
+                    for (const animation of item.getAnimations()) {
+                      animation.pause();
+                      animation.currentTime = at;
+                    }
+                    return centre(item);
+                  },
+                );
+              }, time);
+            const origin = [
+              trigger.x + trigger.width / 2,
+              trigger.y + trigger.height / 2,
+            ];
+            for (const [x, y] of await frame(0))
+              assert(
+                Math.hypot(x - origin[0], y - origin[1]) <= 20,
+                `${hand}: a choice starts under the button (${x}, ${y} from ${origin})`,
+              );
+            await frame(140);
+            if (screenshots)
+              await page.screenshot({
+                path: join(evidence, `add-menu-phone-${hand}-moving.png`),
+              });
+            await page.evaluate(() =>
+              document
+                .querySelectorAll("[role=menuitem]")
+                .forEach((item) =>
+                  item
+                    .getAnimations()
+                    .forEach((animation) => animation.finish()),
+                ),
+            );
             await settle(page);
             const boxes = [];
             for (const item of await items.all()) boxes.push(await box(item));

@@ -34,11 +34,20 @@
   const trigger = () => root?.querySelector<HTMLElement>(".add-trigger");
   const id = $props.id();
 
+  // A choice counts where it comes to rest, also while it still slides there.
   function choiceAt(x: number, y: number): AddChoice | null {
-    const element = document
-      .elementFromPoint(x, y)
-      ?.closest<HTMLElement>("[data-choice]");
-    return (element?.dataset.choice as AddChoice | undefined) ?? null;
+    for (const slot of root?.querySelectorAll<HTMLElement>("[data-slot]") ??
+      []) {
+      const rect = slot.getBoundingClientRect();
+      if (
+        x >= rect.left &&
+        x <= rect.right &&
+        y >= rect.top &&
+        y <= rect.bottom
+      )
+        return slot.dataset.slot as AddChoice;
+    }
+    return null;
   }
   function close() {
     open = false;
@@ -119,19 +128,21 @@
     hidden={!open}
   >
     {#each choices as choice, index (choice.id)}
-      <Button
-        variant="primary"
-        class="add-choice"
-        role="menuitem"
-        data-choice={choice.id}
-        data-hovered={hovered === choice.id || undefined}
-        data-activity={choice.id === "agent"
-          ? activity || undefined
-          : undefined}
-        style="--i: {choices.length - 1 - index}"
-        tabindex={open ? 0 : -1}
-        onclick={() => choose(choice.id)}>{choice.label}</Button
-      >
+      <span class="add-slot" data-slot={choice.id}>
+        <Button
+          variant="primary"
+          class="add-choice"
+          role="menuitem"
+          data-choice={choice.id}
+          data-hovered={hovered === choice.id || undefined}
+          data-activity={choice.id === "agent"
+            ? activity || undefined
+            : undefined}
+          style="--i: {choices.length - 1 - index}"
+          tabindex={open ? 0 : -1}
+          onclick={() => choose(choice.id)}>{choice.label}</Button
+        >
+      </span>
     {/each}
   </div>
   <Button
@@ -171,6 +182,9 @@
   }
   .add-choices[hidden] {
     display: none;
+  }
+  .add-slot {
+    display: flex;
   }
   .add-menu :global(.add-trigger) {
     position: relative;
@@ -226,28 +240,61 @@
   .add-menu.open :global([data-activity].add-trigger)::after {
     display: none;
   }
+  /* Each choice slides out from under the button along the way the finger takes to it. */
+  .add-menu :global(.add-trigger) {
+    z-index: 1;
+  }
+  .add-menu :global(.add-choice) {
+    --add-from-x: 0px;
+    --add-from-y: calc((var(--i) + 1) * (var(--tap-target) + var(--space-3)));
+  }
   /* A phone fans the choices out beside the button: up, level and down from the thumb. */
   @media (max-width: 700px) {
     .add-choices {
-      right: calc(100% + var(--space-6));
+      --add-side: 1;
+      --add-reach: var(--space-10);
+      --add-step: calc(var(--tap-target) + var(--space-9));
+      right: calc(100% + var(--add-reach));
       bottom: auto;
       top: 50%;
       translate: 0 -50%;
-      gap: var(--space-4);
-      --add-from: var(--space-8) 0;
+      gap: var(--space-9);
+    }
+    .add-menu :global(.add-choice) {
+      --add-from-x: calc(
+        var(--add-side) *
+          (
+            50% + var(--add-reach) + (var(--tap-target) + var(--space-8)) / 2 -
+              var(--add-pull, 0px)
+          )
+      );
+      --add-from-y: calc(var(--add-row, 0) * var(--add-step));
     }
     .add-choices > :global(:first-child:not(:only-child)),
     .add-choices > :global(:last-child:not(:only-child)) {
-      margin-inline-end: calc(-1 * var(--space-6));
+      --add-pull: var(--space-8);
+      margin-inline-end: calc(-1 * var(--add-pull));
+    }
+    .add-choices > :global(:first-child:not(:only-child)) {
+      --add-row: 1;
+    }
+    .add-choices > :global(:last-child:not(:only-child)) {
+      --add-row: -1;
+    }
+    .add-choices > :global(:first-child:nth-last-child(2)) {
+      --add-row: 0.5;
+    }
+    .add-choices > :global(:last-child:nth-child(2)) {
+      --add-row: -0.5;
     }
     :global(:root[data-hand="left"]) .add-menu {
       align-items: flex-start;
     }
     :global(:root[data-hand="left"]) .add-choices {
+      --add-side: -1;
       right: auto;
-      left: calc(100% + var(--space-6));
+      left: calc(100% + var(--add-reach));
       align-items: flex-start;
-      --add-from: calc(-1 * var(--space-8)) 0;
     }
     :global(:root[data-hand="left"])
       .add-choices
@@ -255,21 +302,23 @@
     :global(:root[data-hand="left"])
       .add-choices
       > :global(:last-child:not(:only-child)) {
-      margin-inline: calc(-1 * var(--space-6)) 0;
+      margin-inline: calc(-1 * var(--space-8)) 0;
     }
   }
   @media (prefers-reduced-motion: no-preference) {
     .add-menu.open :global(.add-choice) {
       animation: add-choice-in var(--motion-enter, 0.2s)
         var(--motion-spring, ease) backwards;
-      animation-delay: calc(var(--i) * 40ms);
     }
   }
   @keyframes add-choice-in {
     from {
       opacity: 0;
-      translate: var(--add-from, 0 var(--space-6));
-      scale: 0.9;
+      translate: var(--add-from-x) var(--add-from-y);
+      scale: 0.5;
+    }
+    35% {
+      opacity: 1;
     }
   }
 </style>

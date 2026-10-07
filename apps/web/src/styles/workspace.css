@@ -766,13 +766,13 @@
   }
   .app .content.floating-content {
     padding-bottom: calc(
-      var(--space-20) + var(--tap-target) * 2 + var(--space-12)
+      var(--space-20) + var(--tap-target) * 2 + var(--space-20)
     );
   }
   .app .floating-actions {
     right: var(--space-8);
     bottom: calc(
-      var(--dock-height) + var(--tap-target) + var(--space-9) +
+      var(--dock-height) + var(--tap-target) + var(--space-16) +
         env(safe-area-inset-bottom, 0px)
     );
   }

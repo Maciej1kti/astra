@@ -637,7 +637,7 @@ await runBrowserSuite(
             // A phone keeps it a row above the dock, so the lowest choice clears it.
             assert(
               before.y + before.height >
-                viewport.height - (viewport.width > 700 ? 110 : 160),
+                viewport.height - (viewport.width > 700 ? 110 : 190),
             );
             await page.evaluate(() =>
               window.scrollTo(0, document.body.scrollHeight),

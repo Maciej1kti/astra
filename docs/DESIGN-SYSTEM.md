@@ -248,6 +248,11 @@ left hand. The choice is browser-local (`astra-hand:v1`, `data-hand` on the
 root), like the theme, and changes no workspace preference; wider layouts keep
 the button on the right with the choices above it.
 
+Each choice slides out from under the **+** along the way the finger takes to
+it, so the motion shows the direction of the slide. A choice counts where it
+comes to rest (`data-slot`), also while it is still sliding there, so a fast
+slide is not missed.
+
 Agent activity shows on the **+** while the dialog is closed: a ring (working) or
 a green mark (a new answer waits) set from `data-activity`, with a visually
 hidden `role="status"` beside it, so colour is never the only signal. The whole
