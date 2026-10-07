@@ -1,0 +1,18 @@
+{
+  "body": "A counter's rate is now stored in its card and the Chart settlement counts each counter's whole history, in 8c85763 and running in the existing HTTPS app. Both are the owner's 2026-10-07 decisions (ADR-072). The rate is a field in the counter's settings; the Chart summary shows it read-only; the settlement panel no longer shows the catch-up line or the explanation of the rule.\n\nAll 41 Chromium browser suites, the WebKit charts and counters suites, 480 Rust tests and 520 Node tests pass. In the gate run two unrelated projectctl query tests timed out under load and passed on three reruns. The owner's four counters have no stored rate yet, so the settlement asks for rates until they are entered on the card. Evidence: progress/2026-10-07-counter-rates.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "60c0af5b-a209-4bbc-90aa-9fbce2b54fba",
+    "kind": "result",
+    "recorded_at": "2026-10-07T11:33:35.457Z",
+    "summary": "Counter rates live in the card; the debt counts the whole history",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
