@@ -6,6 +6,7 @@
   import Button from "../../lib/ui/Button.svelte";
   import { layerExit, modal } from "../../lib/ui/dialog";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
+  import Icon from "../../lib/ui/Icon.svelte";
   import Markdown from "../../lib/ui/Markdown.svelte";
   import SessionNotice from "../../lib/ui/SessionNotice.svelte";
   import { formatElapsed, type AgentActivity } from "./agent-chat.ts";
@@ -330,8 +331,13 @@
           maxlength={agentMessageLimit}
           autocomplete="off"
           onkeydown={keydown}></textarea>
-        <Button variant="primary" type="submit" disabled={!chat.canSend}
-          >Wyślij</Button
+        <Button
+          variant="primary"
+          type="submit"
+          class="agent-send"
+          aria-label="Wyślij"
+          title="Wyślij"
+          disabled={!chat.canSend}><Icon name="arrow" /></Button
         >
       </form>
     </footer>
@@ -341,18 +347,20 @@
 <style>
   .agent-dialog {
     --agent-height: 680px;
+    --agent-gap: var(--space-4);
+    --agent-top: env(safe-area-inset-top, 0px);
     height: min(80dvh, var(--agent-height));
   }
+  /* Above the keyboard the dialog stays a card: the same gap on every side. */
   .agent-dialog:global([data-keyboard]) {
+    --agent-fitted: calc(
+      var(--vv-height) - var(--agent-top) - 2 * var(--agent-gap)
+    );
     position: fixed;
-    inset: var(--vv-top) 0 auto;
+    inset: calc(var(--vv-top) + var(--agent-top) + var(--agent-gap)) 0 auto;
     margin: 0 auto;
-    height: var(--vv-height);
-    max-height: var(--vv-height);
-    border-radius: 0;
-  }
-  .agent-dialog:global([data-keyboard]) .agent-composer {
-    padding-bottom: var(--space-6);
+    height: var(--agent-fitted);
+    max-height: var(--agent-fitted);
   }
   .agent-title {
     display: flex;
@@ -411,7 +419,7 @@
     justify-self: end;
     max-width: 88%;
     padding: var(--space-4) var(--space-6);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-card);
     background: var(--soft);
   }
   .entry.agent {
@@ -474,21 +482,57 @@
   .agent-composer .notice p {
     margin: 0 0 var(--space-4);
   }
+  /* One field: the text and its send button, with concentric corners. */
   .agent-form {
+    --composer-inset: var(--space-2);
     display: flex;
     align-items: flex-end;
-    gap: var(--space-4);
+    gap: var(--space-2);
+    padding: var(--composer-inset);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--soft);
+  }
+  .agent-form:has(textarea:focus-visible) {
+    border-color: var(--accent-ink);
+    outline: var(--focus-width) solid var(--accent-ink);
+    outline-offset: calc(-1 * var(--stroke));
   }
   .agent-form textarea {
     flex: 1;
     min-width: 0;
     max-height: 40dvh;
+    padding: var(--space-5) var(--space-5);
+    border: 0;
+    border-radius: calc(var(--radius-card) - var(--composer-inset));
+    background: transparent;
+    outline: 0;
     resize: none;
     line-height: var(--leading-body);
   }
+  .agent-form :global(.agent-send) {
+    width: var(--tap-target);
+    padding: 0;
+    border-radius: calc(var(--radius-card) - var(--composer-inset));
+  }
+  /* The shared arrow, turned to point up. */
+  .agent-form :global(.agent-send .ui-icon) {
+    rotate: -90deg;
+  }
   @media (max-width: 520px) {
+    /* Clear of the status bar and, like the dock, lifted above the home indicator. */
     .agent-dialog {
-      height: calc(100dvh - var(--space-8));
+      --agent-bottom: max(
+        0px,
+        calc(env(safe-area-inset-bottom, 0px) - var(--space-8))
+      );
+      inset-block: var(--agent-top) var(--agent-bottom);
+      height: calc(
+        100dvh - var(--agent-top) - var(--agent-bottom) - 2 * var(--agent-gap)
+      );
+    }
+    .agent-composer {
+      padding-bottom: var(--space-4);
     }
     .entry.user {
       max-width: 94%;

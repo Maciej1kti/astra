@@ -1206,6 +1206,79 @@ await runBrowserSuite(
       });
 
       await check(
+        "Above a phone keyboard the dialog stays a rounded card with even gaps",
+        async () => {
+          const touch = await newContext({
+            hasTouch: true,
+            isMobile: true,
+            viewport: { width: 390, height: 844 },
+          });
+          // No engine here raises a keyboard, so the visible height is scripted.
+          await touch.addInitScript(() => {
+            const viewport = window.visualViewport;
+            let covered = 0;
+            Object.defineProperty(viewport, "height", {
+              get: () => window.innerHeight - covered,
+            });
+            window.astraTestKeyboard = (height) => {
+              covered = height;
+              viewport.dispatchEvent(new Event("resize"));
+            };
+          });
+          const phone = await touch.newPage();
+          phone.setDefaultTimeout(12000);
+          phone.on("pageerror", (error) => errors.push(error.message));
+          try {
+            await visit("focus", { target: phone });
+            const dialog = await open(phone);
+            // The entrance moves the dialog; its resting box is what counts.
+            const measure = async () => {
+              await settle(phone);
+              return phone.evaluate(() => {
+                const element = document.querySelector("dialog[open]");
+                const rect = element.getBoundingClientRect();
+                const form = element
+                  .querySelector("form")
+                  .getBoundingClientRect();
+                return {
+                  keyboard: element.hasAttribute("data-keyboard"),
+                  radius: parseFloat(getComputedStyle(element).borderRadius),
+                  top: rect.top,
+                  left: rect.left,
+                  right: innerWidth - rect.right,
+                  below: window.visualViewport.height - rect.bottom,
+                  formInside: form.bottom <= rect.bottom,
+                };
+              });
+            };
+            const resting = await measure();
+            await phone.evaluate(() => window.astraTestKeyboard(336));
+            await expect(dialog).toHaveAttribute("data-keyboard", "");
+            const fitted = await measure();
+            await snapshot("agent-keyboard-390", phone);
+            assert.equal(
+              fitted.radius,
+              resting.radius,
+              "The keyboard must not square the dialog's corners",
+            );
+            assert(fitted.radius > 0, "The dialog has rounded corners");
+            for (const side of ["top", "left", "right", "below"])
+              assert(
+                Math.abs(fitted[side] - 8) <= 1,
+                `An 8px gap ${side}: ${JSON.stringify(fitted)}`,
+              );
+            assert(fitted.formInside, "The composer stays inside the dialog");
+            await phone.evaluate(() => window.astraTestKeyboard(0));
+            await expect(dialog).not.toHaveAttribute("data-keyboard");
+            assert.deepEqual(await measure(), resting);
+            return { resting, fitted };
+          } finally {
+            await touch.close();
+          }
+        },
+      );
+
+      await check(
         "Screenshots record the dialog empty, answered and failed",
         async () => {
           const shots = [];

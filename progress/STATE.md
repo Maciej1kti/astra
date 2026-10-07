@@ -15,6 +15,11 @@ pass, after a follow-up fixed three failures inherited from the add-menu work;
 the initial bundle is 5 bytes under its budget. Touch feel on a physical phone
 and acceptance are the owner's.
 
+On a phone the Agent dialog [stays a rounded card above the keyboard](2026-10-07-agent-dialog-phone.md)
+with an even gap, and its composer is one field. The `agent` suite passes in
+Chromium and WebKit with an emulated keyboard; the physical iPhone is the
+owner's to confirm.
+
 The [in-app agent](2026-10-06-agent-chat.md) adds an Agent choice in the floating **+** menu and a chat
 dialog backed by Claude Code or Codex. A host started with `--agent-dir` runs
 the selected provider for one message and shows only its final answer; the

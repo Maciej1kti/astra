@@ -396,8 +396,8 @@ carries today's date in the workspace timezone, the open view and the selected
 project, so relative dates and the project you are looking at are known to the
 agent. Answers are shown as Markdown.
 
-- **Wyślij** sends; a message holds up to 8,000 characters. Enter sends on a
-  desktop and Shift+Enter starts a new line. On a touch screen Enter is a line
+- **Wyślij**, the arrow button in the message field, sends; a message holds up
+  to 8,000 characters. Enter sends on a desktop and Shift+Enter starts a new line. On a touch screen Enter is a line
   break and only the button sends; Ctrl or Cmd with Enter always sends.
 - One message runs at a time per conversation, and the host runs at most two
   agents together. Later messages resume the provider's session, so a follow-up

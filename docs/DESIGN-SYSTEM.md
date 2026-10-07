@@ -264,6 +264,17 @@ container is hidden while the centered counter bar is open.
 
 While the iOS keyboard covers the page, the Agent dialog is fitted to
 `visualViewport` (`data-keyboard`), so the composer stays above the keyboard.
+Fitted, it is still the same card: it keeps its corner radius and the same
+`--space-4` gap on every side, below the top safe area. Do not square its
+corners or run it to the screen edge. At 520px and narrower it also starts below
+the top safe area and, like the dock, ends above the home indicator instead of
+padding its footer.
+
+The composer is one field: `.agent-form` owns the border, fill and focus ring,
+and holds a borderless textarea with the icon-only **Wyślij** button (the shared
+`arrow` turned upward, named by `aria-label`). The button's radius is the field's radius less its
+inset, so the corners are concentric, as in the dock. The owner's messages use
+`--radius-card`.
 
 The dialog is a native `modal` with `DialogHeader`, height `min(80dvh, 680px)`
 and nearly the full viewport height at 520px and narrower. Its log shows the owner's text and, below it,
