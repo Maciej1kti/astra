@@ -1,0 +1,18 @@
+{
+  "body": "The Chart view now opens with Rozliczenie, in 5199605 and running in the existing HTTPS app. A counter's person is the last word of its name; a person's value is total times rate over their rated counters in the range; whoever has the lower value pays the difference. Both rules are the owner's answers from 2026-10-07. On a phone every summary card now shares one layout.\n\nUnit tests and the Chromium and WebKit charts suites pass, with motion, responsive and localization in Chromium; the full gate was not run. Rates stay browser-local, so the amount appears once rates are entered on that device. Acceptance of the rule's wording and the layout is the owner's. Evidence: progress/2026-10-07-chart-settlement.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "08773f60-2dfa-4946-b8bf-0d902d380dbf",
+    "kind": "result",
+    "recorded_at": "2026-10-07T10:17:15.508Z",
+    "summary": "Chart view opens with who owes whom",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
