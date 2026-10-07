@@ -20,6 +20,8 @@ the compact counter preview on a card keeps its bars.
   the legend key is always a line swatch.
 - **Note under the plots** now describes dots and lines in both totals modes.
 - **Card counter preview unchanged**, by the owner's direction.
+- **Four counters selected on opening**, where there were three, by the
+  owner's follow-up the same day. `charts` and `motion` pass with it.
 
 ## Verification
 

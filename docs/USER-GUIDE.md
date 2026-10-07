@@ -221,7 +221,8 @@ selector to inspect one project or all registered projects.
 
 The plot is the main surface. On a wide screen the **Liczniki** list sits beside
 it; on a tablet or phone it collapses to one row showing how many counters are
-selected, and opens in place when tapped. Choose up to eight counters by their
+selected, and opens in place when tapped. The view opens with the first four
+counters selected. Choose up to eight counters by their
 name and source card. **Znajdź licznik** filters the list; **Także zarchiwizowane**
 also reveals histories retained on archived counters, cards and projects. A
 counter without recorded history remains available to select. Each selected

@@ -114,7 +114,7 @@
   });
   $effect(() => {
     if (!initialized && series.length) {
-      select(series.slice(0, 3).map(chartSeriesKey));
+      select(series.slice(0, 4).map(chartSeriesKey));
       initialized = true;
     }
   });
