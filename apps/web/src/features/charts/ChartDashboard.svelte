@@ -1,4 +1,5 @@
 <script lang="ts">
+  import "../../styles/series.css";
   import { revealLayers } from "../../lib/ui/motion-layers";
   import { chartLayers } from "./chart-motion";
   import { onMount } from "svelte";

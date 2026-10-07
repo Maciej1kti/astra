@@ -141,6 +141,27 @@ existing navigation entries merge into one Projects shortcut.
 Use a project's **Więcej działań → Usuń projekt** for the existing deletion preview
 and explicit confirmation.
 
+### Appearance
+
+**Ustawienia → Wygląd** changes how Astra looks in this browser; nothing is
+saved to the workspace, so each device keeps its own look.
+
+- **Motyw** chooses the light or dark scheme, or **Systemowy** to follow the
+  device.
+- **Kolory jasne** and **Kolory ciemne** each offer four palettes. Pick one for
+  each scheme: **Systemowy** then switches between your two choices when the
+  device changes scheme. The group marked **W użyciu** is the one on screen
+  now; a choice in the other group shows once the scheme changes.
+- **Charakter** sets the shape of the interface in both schemes: **Astra**
+  (rounded, light shadows), **Miękki** (larger corners, a rounded typeface
+  where the device has one), **Redakcyjny** (serif headings, nearly flat) and
+  **Techniczny** (square corners, fixed-width headings, outlines instead of
+  resting shadows).
+
+Every change applies at once. **Kreda** and **Czerń** are the highest-contrast
+palettes; **Czerń** uses true black for OLED screens. Typefaces come from the
+device, so a character can look slightly different on another system.
+
 ### Motion and accessibility
 
 Navigation, loaded content, menus and dialogs share layered motion effects.

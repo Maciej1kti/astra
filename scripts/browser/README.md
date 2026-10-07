@@ -77,6 +77,25 @@ ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs localization
 ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs localization
 ```
 
+## Appearance verification
+
+The `appearance` suite opens Settings and checks the theme, both palette groups
+and the character as labelled radio groups. Every palette must paint the page
+and the dialog with the colours its block declares; a palette chosen for the
+scheme that is not shown must repaint nothing; the system theme must switch
+between the two chosen palettes; each character must set its corners and
+heading typeface without changing a colour. It also covers arrow-key
+selection, persistence across a reload with the stored set in place before the
+application renders, the sets stylesheet being requested only when a choice or
+Settings needs it, 44px targets without sideways scrolling at 390 and 320px,
+and the absence of CSP violations. Chromium captures Settings in every palette
+and character, and Focus, Board, Calendar and Chart in non-default sets.
+
+```sh
+ASTRA_TEST_PROFILE=release node scripts/browser/regressions.mjs appearance
+ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regressions.mjs appearance
+```
+
 ## Other interaction coverage
 
 The `projects` suite checks the whole-project status board, all three project states,

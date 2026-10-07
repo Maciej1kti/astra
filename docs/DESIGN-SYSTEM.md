@@ -6,10 +6,13 @@ additional UI framework, styling runtime or component dependency is required.
 ## Ownership
 
 - `apps/web/src/styles/tokens.css` owns colors, spacing, typography, radii,
-  shadows, control sizes and surface dimensions for light and dark appearance,
-  including the ordered `--series-*` colours for [Chart](#chart-view). Each
-  colour is written once as `light-dark(light, dark)`; `data-theme` only sets
-  `color-scheme`. Do not add a second palette block.
+  shadows, control sizes and surface dimensions of the default appearance.
+  Each colour is written once as `light-dark(light, dark)`; `data-theme` only
+  sets `color-scheme`. Other palettes and characters live in
+  `styles/appearance-sets.css`, described under
+  [Appearance sets](#appearance-sets); do not add a palette block anywhere else.
+  The ordered `--series-*` colours for [Chart](#chart-view) are in
+  `styles/series.css`, loaded with that view.
 - `lib/ui/` owns `Button`, `Badge`, `Icon`, `Brand`, `PageHeading`,
   `SectionHeading`, `EmptyState`, `ResourceMetadata`,
   `DialogHeader`, `EditableTitle`, `ActionMenu`, `CommandRecovery`,
@@ -58,6 +61,66 @@ The native checkbox, editable text, remove action and drag handle in the card
 checklist remain separate controls. The shared touch target is 44px; visible
 icons and checkbox marks can be smaller. Checklist completion never changes a
 card's status automatically.
+
+## Appearance sets
+
+**Ustawienia → Wygląd** holds four browser-local choices: the theme (system,
+light or dark), one light palette, one dark palette and a character. The theme
+decides which palette shows; with the system theme the device switches between
+the two chosen palettes, still in CSS alone. Palettes set colours only. The
+character sets corners, shadows and typefaces only, and is the same in both
+schemes.
+
+| Part | Options (first is the default) | Attribute, storage key |
+| --- | --- | --- |
+| Light palette | Astra, Papier (`paper`), Szałwia (`sage`), Kreda (`chalk`) | `data-light`, `astra-light:v1` |
+| Dark palette | Astra, Atrament (`ink`), Kakao (`cocoa`), Czerń (`black`) | `data-dark`, `astra-dark:v1` |
+| Character | Astra, Miękki (`soft`), Redakcyjny (`editorial`), Techniczny (`technical`) | `data-character`, `astra-character:v1` |
+
+`styles/appearance-sets.css` holds one block for every option. A palette names
+each colour of its scheme once as `--light-*` or `--dark-*`, and the sheet pairs
+them: `--bg: light-dark(var(--light-bg), var(--dark-bg))`. A character
+redeclares `--radius-*`, `--shadow-*`, `--font-sans`, `--font-display` and
+`--tracking-tight`. `--font-display` is the face of headings, the brand, the
+editable title and the Calendar period title; it equals `--font-sans` except in
+Redakcyjny (serif) and Techniczny (fixed width). Typefaces are ones the device
+already has: nothing is fetched, and a missing face falls back along its stack.
+`--radius-pill` belongs to no character, so badges and round buttons keep their
+shape.
+
+The first load does not carry this sheet. `tokens.css` holds the default set by
+value, and `restoreAppearance` in `features/settings/appearance.ts` requests the
+sheet before the application renders only when a stored part is not `astra`;
+Settings loads it for its miniatures. The first block of each list repeats the
+default's values so that any light palette pairs with any dark one, and
+`scripts/tests/appearance.test.mjs` keeps `tokens.css` equal to those blocks.
+Change a default value in both places. An unknown stored value matches no block
+and shows the default.
+
+To add an option, add its block with the complete set of names and one entry in
+`features/settings/appearance-choices.ts`; the test fails on a missing name, on
+a block without a menu entry and on text below WCAG AA (4.5:1 for text and
+state colours on their surfaces, 7:1 for body ink and the primary button).
+Choose an accent that stays apart from the palette's notice, danger and success
+colours, since selection and status must not read alike. Chart series are
+shared by all palettes of a scheme and were checked on the default surfaces
+only.
+
+`ChoiceTiles` draws the theme and each part as a radio group of the cards
+[Settings](#settings) uses for a choice between a few things. The radio covers
+its card, so the card is the target and carries the focus ring; a check marks
+the selection as well as the outline. Four options stand in one row, or in two
+columns once the row is narrower than 500px, never as three and one.
+
+The miniatures are fragments, drawn without inline styles under the release
+CSP. A fragment marked `data-scheme` pairs the palettes again for its own
+scheme, in `tokens.css` and in the sets sheet alike. The theme cards therefore
+show the two palettes that are chosen, and a palette card adds `data-light` or
+`data-dark` to show its own. A character card carries `data-character` and
+draws a heading and a button with that character's corners, shadow and face.
+The palette group whose scheme is on screen is marked **W użyciu**, because
+choosing a palette for the other scheme changes nothing visible until the
+scheme changes.
 
 ## Layout rules
 
@@ -415,7 +478,7 @@ remain owned by their gesture implementation.
 
 [Token definitions](../apps/web/src/styles/tokens.css) are the implementation
 source of truth. Durations below exclude a layer's opening delay. Use the same
-parameters in light/dark themes and desktop/mobile layouts.
+parameters in every palette and character and in desktop/mobile layouts.
 
 | Token                                              | Current value | Purpose                                                    |
 | -------------------------------------------------- | ------------- | ---------------------------------------------------------- |
@@ -722,9 +785,8 @@ Agent, Wtyczki, Tagi, Wygląd and Dostęp.
 
 - A choice between a few things that differ in kind is a row of cards holding
   radio buttons: the people of a host, the agent provider, the appearance. The
-  appearance cards carry a small picture of the workspace; a fragment marked
-  `data-scheme` resolves the one palette for its own scheme, so no colour is
-  written twice.
+  appearance cards carry a small picture of the workspace, described under
+  [Appearance sets](#appearance-sets).
 - A choice that is on or off is a switch (`role="switch"`) at the end of its
   row, with the description under its name.
 - `TimezoneMap` draws the world as dots from `timezone-map.ts`, marks the band

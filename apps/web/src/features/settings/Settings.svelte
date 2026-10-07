@@ -27,14 +27,7 @@
     togglePlugin,
   } from "../../lib/plugins/registry";
   import { onMount, tick } from "svelte";
-  import {
-    applyHand,
-    applyTheme,
-    readHand,
-    readTheme,
-    type Hand,
-    type Theme,
-  } from "./appearance";
+  import AppearanceSettings from "./AppearanceSettings.svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command } from "../../lib/api/api";
   import TimezoneMap from "./TimezoneMap.svelte";
@@ -56,9 +49,6 @@
   const accessLost = $derived(access.lost);
   const operation = commandOperation(() => !access.lost);
   unloadGuard(() => dirty || !!pending);
-
-  let theme = $state<Theme>(readTheme());
-  let hand = $state<Hand>(readHand());
 
   let {
     onclose,
@@ -204,11 +194,6 @@
       found = sections.at(-1)?.id ?? found;
     current = found;
   }
-  const themes: { value: Theme; label: string }[] = [
-    { value: "system", label: "Systemowy" },
-    { value: "light", label: "Jasny" },
-    { value: "dark", label: "Ciemny" },
-  ];
   const providers: { value: AgentProvider; label: string; maker: string }[] = [
     { value: "claude", label: "Claude Code", maker: "Anthropic" },
     { value: "codex", label: "Codex", maker: "OpenAI" },
@@ -897,44 +882,7 @@
           <h3 id="settings-appearance-title">Wygląd</h3>
           <p>Zmiany wyglądu są od razu stosowane w tej przeglądarce.</p>
         </header>
-        <div class="choices themes" role="radiogroup" aria-label="Motyw">
-          {#each themes as option (option.value)}<label
-              class="choice theme"
-              class:chosen={theme === option.value}
-              ><input
-                type="radio"
-                name="settings-theme"
-                value={option.value}
-                checked={theme === option.value}
-                onchange={() => {
-                  theme = option.value;
-                  applyTheme(theme);
-                }}
-              /><span
-                class="preview"
-                data-theme-preview={option.value}
-                aria-hidden="true"
-                >{#each option.value === "system" ? ["light", "dark"] : [option.value] as scheme}<span
-                    class="scene"
-                    data-scheme={scheme}
-                    ><span class="scene-side"></span><span class="scene-page"
-                      ><span class="scene-title"></span><span class="scene-card"
-                      ></span><span class="scene-card short"></span></span
-                    ></span
-                  >{/each}</span
-              ><strong>{option.label}</strong></label
-            >{/each}
-        </div>
-        <label
-          >Przycisk dodawania na telefonie<select
-            aria-label="Przycisk dodawania na telefonie"
-            bind:value={hand}
-            onchange={() => applyHand(hand)}
-            ><option value="right">Po prawej (dla praworęcznych)</option><option
-              value="left">Po lewej (dla leworęcznych)</option
-            ></select
-          ></label
-        >
+        <AppearanceSettings />
       </section>
 
       <section id="settings-access" aria-labelledby="settings-access-title">
@@ -1343,66 +1291,6 @@
     background: var(--accent-ink);
     color: var(--paper);
   }
-  .choice.theme {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-4);
-    padding: var(--space-4) var(--space-4) var(--space-5);
-  }
-  .choice.theme strong {
-    padding-inline: var(--space-2);
-  }
-  /* A small picture of the workspace in each appearance. */
-  .preview {
-    display: flex;
-    aspect-ratio: 16 / 10;
-    overflow: hidden;
-    border: var(--stroke) solid var(--line);
-    border-radius: var(--radius-sm);
-  }
-  .scene {
-    flex: 1;
-    display: flex;
-    gap: var(--space-2);
-    min-width: 0;
-    padding: var(--space-3);
-    background: var(--bg);
-  }
-  .scene-side {
-    flex: none;
-    width: 22%;
-    border-radius: var(--space-2);
-    background: var(--paper);
-  }
-  .scene-page {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    padding: var(--space-3);
-    border-radius: var(--space-2);
-    background: var(--paper);
-  }
-  .scene-title {
-    width: 45%;
-    height: var(--space-2);
-    border-radius: var(--radius-pill);
-    background: var(--ink);
-  }
-  .scene-card {
-    flex: 1;
-    border-radius: var(--space-1);
-    background: var(--accent);
-  }
-  .scene-card.short {
-    width: 70%;
-    background: var(--soft);
-  }
-  /* Half of each: the system decides which is shown. */
-  .preview[data-theme-preview="system"] .scene[data-scheme="dark"] .scene-side {
-    display: none;
-  }
-
   .count {
     display: inline-flex;
     align-items: center;

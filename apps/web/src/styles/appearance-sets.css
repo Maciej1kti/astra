@@ -1,0 +1,336 @@
+/* Every palette and character, loaded when one other than the default is
+   stored or Settings opens. tokens.css carries the default set by value so the
+   first load needs nothing from here; the first block of each list below
+   repeats those values, and scripts/tests/appearance.test.mjs keeps them equal. */
+
+/* A colour pairs the chosen light and dark palette. A fragment with
+   data-scheme pairs them again, so it shows the palette of its own scheme. */
+:root,
+[data-scheme] {
+  --bg: light-dark(var(--light-bg), var(--dark-bg));
+  --paper: light-dark(var(--light-paper), var(--dark-paper));
+  --ink: light-dark(var(--light-ink), var(--dark-ink));
+  --muted: light-dark(var(--light-muted), var(--dark-muted));
+  --line: light-dark(var(--light-line), var(--dark-line));
+  --line-strong: light-dark(var(--light-line-strong), var(--dark-line-strong));
+  --soft: light-dark(var(--light-soft), var(--dark-soft));
+  --hover: light-dark(var(--light-hover), var(--dark-hover));
+  --wash: light-dark(var(--light-wash), var(--dark-wash));
+  --accent: light-dark(var(--light-accent), var(--dark-accent));
+  --accent-ink: light-dark(var(--light-accent-ink), var(--dark-accent-ink));
+  --primary: light-dark(var(--light-primary), var(--dark-primary));
+  --primary-hover: light-dark(
+    var(--light-primary-hover),
+    var(--dark-primary-hover)
+  );
+  --on-primary: light-dark(var(--light-on-primary), var(--dark-on-primary));
+  --notice-bg: light-dark(var(--light-notice-bg), var(--dark-notice-bg));
+  --notice-ink: light-dark(var(--light-notice-ink), var(--dark-notice-ink));
+  --notice-line: light-dark(var(--light-notice-line), var(--dark-notice-line));
+  --danger: light-dark(var(--light-danger), var(--dark-danger));
+  --danger-bg: light-dark(var(--light-danger-bg), var(--dark-danger-bg));
+  --success: light-dark(var(--light-success), var(--dark-success));
+  --plan-bg: light-dark(var(--light-plan-bg), var(--dark-plan-bg));
+  --review-bg: light-dark(var(--light-review-bg), var(--dark-review-bg));
+  --backdrop: light-dark(var(--light-backdrop), var(--dark-backdrop));
+  /* Shadow colours; a character gives each shadow its offset and spread. */
+  --shade-sm: light-dark(rgb(28 31 42 / 4%), rgb(0 0 0 / 20%));
+  --shade-card: light-dark(rgb(28 31 42 / 4%), rgb(0 0 0 / 24%));
+  --shade-floating: light-dark(rgb(28 31 42 / 12%), rgb(0 0 0 / 40%));
+  --shade-dialog: light-dark(rgb(28 31 42 / 20%), rgb(0 0 0 / 56%));
+  --font-display: var(--font-sans);
+}
+
+/* Palettes: each names every colour of its scheme once and sets nothing else. */
+:root,
+[data-light="astra"] {
+  --light-bg: #f2f3f5;
+  --light-paper: #ffffff;
+  --light-ink: #202127;
+  --light-muted: #6b6e79;
+  --light-line: #e4e5e9;
+  --light-line-strong: #c9cbd2;
+  --light-soft: #f5f5f7;
+  --light-hover: #eeeef2;
+  --light-wash: #fafafb;
+  --light-accent: #e5edff;
+  --light-accent-ink: #245ee8;
+  --light-primary: #303136;
+  --light-primary-hover: #202126;
+  --light-on-primary: #ffffff;
+  --light-notice-bg: #fff4de;
+  --light-notice-ink: #85500b;
+  --light-notice-line: #efd6a5;
+  --light-danger: #b43749;
+  --light-danger-bg: #fcebef;
+  --light-success: #32725b;
+  --light-plan-bg: #e6f1ec;
+  --light-review-bg: #efedf6;
+  --light-backdrop: rgb(31 33 42 / 24%);
+}
+/* Warm writing paper with petrol-blue ink. */
+[data-light="paper"] {
+  --light-bg: #efeae0;
+  --light-paper: #fbf8f2;
+  --light-ink: #2b2722;
+  --light-muted: #6c6459;
+  --light-line: #e3dccf;
+  --light-line-strong: #c7bdab;
+  --light-soft: #f4efe6;
+  --light-hover: #ebe5d9;
+  --light-wash: #f7f3ea;
+  --light-accent: #dcebec;
+  --light-accent-ink: #1a6076;
+  --light-primary: #33302b;
+  --light-primary-hover: #221f1b;
+  --light-on-primary: #fbf8f2;
+  --light-notice-bg: #fbedcf;
+  --light-notice-ink: #7c4c08;
+  --light-notice-line: #e8cf9c;
+  --light-danger: #a83042;
+  --light-danger-bg: #f8e4e3;
+  --light-success: #2c6950;
+  --light-plan-bg: #e1ecdf;
+  --light-review-bg: #ebe5ee;
+  --light-backdrop: rgb(43 39 34 / 26%);
+}
+/* Grey-green surfaces; the accent leans teal so it stays apart from done. */
+[data-light="sage"] {
+  --light-bg: #e9eeea;
+  --light-paper: #fbfcfa;
+  --light-ink: #1e2622;
+  --light-muted: #56655d;
+  --light-line: #dbe3dd;
+  --light-line-strong: #bccabf;
+  --light-soft: #f1f5f1;
+  --light-hover: #e6ede7;
+  --light-wash: #f6f9f6;
+  --light-accent: #d5ecea;
+  --light-accent-ink: #136a68;
+  --light-primary: #26332c;
+  --light-primary-hover: #18221d;
+  --light-on-primary: #ffffff;
+  --light-notice-bg: #fdf2d8;
+  --light-notice-ink: #7e500c;
+  --light-notice-line: #ead3a0;
+  --light-danger: #b03648;
+  --light-danger-bg: #fae9ec;
+  --light-success: #3c6e35;
+  --light-plan-bg: #e2efda;
+  --light-review-bg: #ebe9f3;
+  --light-backdrop: rgb(30 38 34 / 24%);
+}
+/* The strongest contrast: white surfaces, black ink and firm lines. */
+[data-light="chalk"] {
+  --light-bg: #f4f4f4;
+  --light-paper: #ffffff;
+  --light-ink: #101010;
+  --light-muted: #4a4a4f;
+  --light-line: #cfcfd4;
+  --light-line-strong: #8c8c94;
+  --light-soft: #f1f1f3;
+  --light-hover: #e6e6ea;
+  --light-wash: #f8f8f9;
+  --light-accent: #dfe7ff;
+  --light-accent-ink: #1140c8;
+  --light-primary: #101010;
+  --light-primary-hover: #000000;
+  --light-on-primary: #ffffff;
+  --light-notice-bg: #ffefc8;
+  --light-notice-ink: #6b3f00;
+  --light-notice-line: #d9b25e;
+  --light-danger: #a01830;
+  --light-danger-bg: #fde3e8;
+  --light-success: #17603f;
+  --light-plan-bg: #d9f0e3;
+  --light-review-bg: #e8e4f5;
+  --light-backdrop: rgb(0 0 0 / 36%);
+}
+
+:root,
+[data-dark="astra"] {
+  --dark-bg: #191a1e;
+  --dark-paper: #24252a;
+  --dark-ink: #f0f0f4;
+  --dark-muted: #b2b3be;
+  --dark-line: #3b3d45;
+  --dark-line-strong: #626470;
+  --dark-soft: #2b2c32;
+  --dark-hover: #35363e;
+  --dark-wash: #2b2c32;
+  --dark-accent: #263956;
+  --dark-accent-ink: #98b9ff;
+  --dark-primary: #e6e7eb;
+  --dark-primary-hover: #ffffff;
+  --dark-on-primary: #202127;
+  --dark-notice-bg: #403523;
+  --dark-notice-ink: #f0c67e;
+  --dark-notice-line: #645033;
+  --dark-danger: #ffa1ae;
+  --dark-danger-bg: #412b33;
+  --dark-success: #91c9b1;
+  --dark-plan-bg: #293d35;
+  --dark-review-bg: #373346;
+  --dark-backdrop: rgb(0 0 0 / 48%);
+}
+/* Deep navy, like a page written in blue-black ink. */
+[data-dark="ink"] {
+  --dark-bg: #0f1524;
+  --dark-paper: #182033;
+  --dark-ink: #e9edf7;
+  --dark-muted: #a3adc4;
+  --dark-line: #2c3650;
+  --dark-line-strong: #50607f;
+  --dark-soft: #1e2740;
+  --dark-hover: #27314d;
+  --dark-wash: #1e2740;
+  --dark-accent: #1d3a66;
+  --dark-accent-ink: #8fc0ff;
+  --dark-primary: #e3e9f6;
+  --dark-primary-hover: #ffffff;
+  --dark-on-primary: #141b2e;
+  --dark-notice-bg: #3d3320;
+  --dark-notice-ink: #f0c67e;
+  --dark-notice-line: #5f4d30;
+  --dark-danger: #ffa3b1;
+  --dark-danger-bg: #40263a;
+  --dark-success: #8fd0b6;
+  --dark-plan-bg: #1c3a3a;
+  --dark-review-bg: #2f2e52;
+  --dark-backdrop: rgb(4 8 18 / 56%);
+}
+/* Warm brown-black; the accent is a dusty blue, apart from the amber notice. */
+[data-dark="cocoa"] {
+  --dark-bg: #1c1815;
+  --dark-paper: #27221e;
+  --dark-ink: #f3ede6;
+  --dark-muted: #b9ada0;
+  --dark-line: #3f3832;
+  --dark-line-strong: #6a5f55;
+  --dark-soft: #2e2824;
+  --dark-hover: #39322d;
+  --dark-wash: #2e2824;
+  --dark-accent: #2b3d4a;
+  --dark-accent-ink: #9cc4e0;
+  --dark-primary: #efe7dd;
+  --dark-primary-hover: #ffffff;
+  --dark-on-primary: #27221e;
+  --dark-notice-bg: #43361f;
+  --dark-notice-ink: #f0c67e;
+  --dark-notice-line: #67522f;
+  --dark-danger: #ffa497;
+  --dark-danger-bg: #44292a;
+  --dark-success: #a4c98f;
+  --dark-plan-bg: #2d3a28;
+  --dark-review-bg: #3a3140;
+  --dark-backdrop: rgb(10 7 5 / 52%);
+}
+/* True black behind the workspace, for OLED screens and the dark. */
+[data-dark="black"] {
+  --dark-bg: #000000;
+  --dark-paper: #0e0e10;
+  --dark-ink: #f5f5f7;
+  --dark-muted: #a9a9b4;
+  --dark-line: #2a2a30;
+  --dark-line-strong: #55555f;
+  --dark-soft: #17171a;
+  --dark-hover: #222227;
+  --dark-wash: #17171a;
+  --dark-accent: #142a52;
+  --dark-accent-ink: #9dbcff;
+  --dark-primary: #f0f0f3;
+  --dark-primary-hover: #ffffff;
+  --dark-on-primary: #0e0e10;
+  --dark-notice-bg: #33290f;
+  --dark-notice-ink: #f3c877;
+  --dark-notice-line: #574420;
+  --dark-danger: #ffa1ae;
+  --dark-danger-bg: #3a1820;
+  --dark-success: #8fd0b1;
+  --dark-plan-bg: #143024;
+  --dark-review-bg: #29243c;
+  --dark-backdrop: rgb(0 0 0 / 64%);
+}
+
+/* Characters: the corners, depth and typefaces of the interface, chosen apart
+   from its colours. Typefaces are ones the device already has, so nothing is
+   fetched. */
+:root,
+[data-character="astra"] {
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
+  --tracking-tight: -0.025em;
+  --radius-sm: 6px;
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-panel: 20px;
+  --radius-shell: 24px;
+  --shadow-sm: 0 2px 4px var(--shade-sm);
+  --shadow-card: 0 3px 12px var(--shade-card);
+  --shadow-floating: 0 8px 28px var(--shade-floating);
+  --shadow-dialog: 0 24px 80px var(--shade-dialog);
+}
+/* Generous corners, wide diffuse shadows and a rounded face where one exists. */
+[data-character="soft"] {
+  --font-sans:
+    ui-rounded, "SF Pro Rounded", Nunito, Inter, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
+  --tracking-tight: -0.015em;
+  --radius-sm: 9px;
+  --radius-control: 14px;
+  --radius-card: 22px;
+  --radius-panel: 26px;
+  --radius-shell: 30px;
+  --shadow-sm: 0 2px 6px var(--shade-sm);
+  --shadow-card: 0 6px 20px var(--shade-card);
+  --shadow-floating: 0 12px 36px var(--shade-floating);
+  --shadow-dialog: 0 28px 90px var(--shade-dialog);
+}
+/* Serif headings over the interface face, slight corners, nearly flat. */
+[data-character="editorial"] {
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display:
+    ui-serif, "New York", "Iowan Old Style", Charter, "Palatino Linotype",
+    Georgia, serif;
+  --tracking-tight: -0.01em;
+  --radius-sm: 3px;
+  --radius-control: 5px;
+  --radius-card: 8px;
+  --radius-panel: 10px;
+  --radius-shell: 12px;
+  --shadow-sm: 0 1px 2px var(--shade-sm);
+  --shadow-card: 0 1px 2px var(--shade-card);
+  --shadow-floating: 0 6px 18px var(--shade-floating);
+  --shadow-dialog: 0 18px 60px var(--shade-dialog);
+}
+/* Square corners, fixed-width headings and no resting shadow; a floating
+   layer is marked by an outline as well as its shadow. */
+[data-character="technical"] {
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display:
+    ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --tracking-tight: -0.03em;
+  --radius-sm: 2px;
+  --radius-control: 3px;
+  --radius-card: 4px;
+  --radius-panel: 5px;
+  --radius-shell: 6px;
+  --shadow-sm: 0 0 0 transparent;
+  --shadow-card: 0 0 0 transparent;
+  --shadow-floating:
+    0 0 0 var(--stroke) var(--line-strong), 0 6px 16px var(--shade-floating);
+  --shadow-dialog:
+    0 0 0 var(--stroke) var(--line-strong), 0 16px 48px var(--shade-dialog);
+}
+
+/* Headings and titles take the character's display face. */
+h1,
+h2,
+h3,
+.brand,
+.editable-title textarea,
+.period-title .action-menu-labeled {
+  font-family: var(--font-display);
+}

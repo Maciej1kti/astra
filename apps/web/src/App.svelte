@@ -55,12 +55,6 @@
     viewLabel,
   } from "./features/workspace/navigation";
 
-  import {
-    applyHand,
-    applyTheme,
-    readHand,
-    readTheme,
-  } from "./features/settings/appearance";
   import DateViews from "./features/planning/DateViews.svelte";
   import {
     loadCalendarView,
@@ -268,8 +262,6 @@
   const moreAttention = data.moreAttention;
 
   onMount(() => {
-    applyTheme(readTheme());
-    applyHand(readHand());
     return observePreloadFailures();
   });
 

@@ -9,6 +9,12 @@ const files = readdirSync(source, { recursive: true })
   .filter((name) => /\.(css|svelte)$/.test(name))
   .map((name) => join(source, name));
 const tokens = join(source, "styles/tokens.css");
+/** The files that hold raw values: tokens, chart series, palettes and characters. */
+const vocabulary = [
+  tokens,
+  join(source, "styles/series.css"),
+  join(source, "styles/appearance-sets.css"),
+];
 
 /** Style text only: whole stylesheets, or the style block of a component. */
 function styles(file) {
@@ -17,7 +23,7 @@ function styles(file) {
   return /<style[^>]*>([\s\S]*?)<\/style>/.exec(text)?.[1] ?? "";
 }
 const declarations = files
-  .filter((file) => file !== tokens)
+  .filter((file) => !vocabulary.includes(file))
   .flatMap((file) =>
     styles(file)
       .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -86,13 +92,14 @@ test("viewport breakpoints come from one short list", () => {
   assert.deepEqual(used, []);
 });
 
-test("the palette is defined once and motion durations stay a named set", () => {
+test("light-dark() carries both schemes and motion durations stay a named set", () => {
   const text = readFileSync(tokens, "utf8");
-  assert.equal(
-    text.includes("prefers-color-scheme"),
-    false,
-    "light-dark() carries both themes",
-  );
+  for (const file of vocabulary)
+    assert.equal(
+      readFileSync(file, "utf8").includes("prefers-color-scheme"),
+      false,
+      "light-dark() carries both schemes",
+    );
   assert.deepEqual(
     [...text.matchAll(/--motion-[a-z-]+(?=:\s*\d+ms)/g)].map(([name]) => name),
     [

@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+Appearance now offers [sets](2026-10-07-appearance-sets.md): four light
+palettes, four dark palettes and four characters (corners, shadows and heading
+typeface), chosen separately in Settings beside the theme. The sets load on
+demand, so the initial download stays within its budget, with 115 bytes to
+spare. Verified in Chromium and WebKit; not on a physical phone, and the look
+of each set awaits the owner's judgement.
+
 [Boards, the calendar and Settings were corrected](2026-10-07-boards-calendar-settings.md)
 after the owner's review: columns are as long as their cards and every list is
 named, the workspace Board uses the shared board, calendar items are compact

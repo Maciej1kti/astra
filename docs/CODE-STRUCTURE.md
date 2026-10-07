@@ -197,7 +197,10 @@ layers, menus and workspace controls, with explicit per-opening keys and cleanup
 sequences used by one lazily loaded feature live beside it, as in
 `features/charts/chart-motion.ts` and `features/planning/calendar-motion.ts`;
 features supply their navigation keys and readiness without changing read lifetimes. Visual values live in
-`styles/tokens.css`; workspace and editor styles consume those tokens. See the
+`styles/tokens.css`; workspace and editor styles consume those tokens. The other
+palettes and characters are in `styles/appearance-sets.css`, loaded on demand:
+`features/settings/appearance.ts` restores the stored choices at startup and
+`appearance-choices.ts` lists them for Settings. See the
 [UI design system](DESIGN-SYSTEM.md) for component and layout ownership.
 
 `lib/ui/reorder-gesture.ts` owns the shared vertical pointer preview lifecycle;
