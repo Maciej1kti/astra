@@ -37,6 +37,8 @@
   } from "./appearance";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command } from "../../lib/api/api";
+  import TimezoneMap from "./TimezoneMap.svelte";
+  import { knownZones, offsetLabel, zoneOffset } from "./timezone-map";
   import { workspaceViews, viewLabel } from "../workspace/navigation";
 
   const access = sessionAccess({
@@ -126,6 +128,93 @@
           agent !== (baseline.preferences.agent_provider ?? "claude"))),
   );
   const dirty = $derived(preferencesDirty || !!userName);
+  /** A preference field is editable only while its draft can still be saved. */
+  const locked = $derived(
+    !baseline || busy || !!pending || !!userName || accessLost || conflict,
+  );
+  const switchLocked = $derived(
+    !users || !canSwitchUser || dirty || busy || !!pending || accessLost,
+  );
+  const status = $derived(
+    info ||
+      (busy
+        ? "Stosowanie zmian…"
+        : pending
+          ? "Wymagane potwierdzenie"
+          : dirty
+            ? userName
+              ? "Wersja robocza nowego użytkownika"
+              : "Niezapisane ustawienia"
+            : loading
+              ? "Ładowanie ustawień…"
+              : baseline
+                ? ""
+                : "Ustawienia niedostępne"),
+  );
+
+  const zones = knownZones();
+  const zoneSet = new Set(zones);
+  // Without a list of zones the browser still accepts the ones it knows.
+  const zoneAvailable = (zone: string) =>
+    zoneSet.size ? zoneSet.has(zone) : zoneOffset(zone, new Date()) !== null;
+  let now = $state(new Date());
+  const zoneNow = $derived.by(() => {
+    const offset = zoneOffset(timezone, now);
+    if (offset === null) return "";
+    return `${new Intl.DateTimeFormat("pl-PL", {
+      weekday: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: timezone,
+    }).format(now)} · ${offsetLabel(offset)}`;
+  });
+
+  const sections = $derived([
+    { id: "settings-profile", label: "Profil" },
+    { id: "settings-time", label: "Czas i widok" },
+    { id: "settings-projects", label: "Projekty" },
+    ...(agentEnabled ? [{ id: "settings-agent", label: "Agent" }] : []),
+    { id: "settings-plugins", label: "Wtyczki" },
+    { id: "settings-tags", label: "Tagi" },
+    { id: "settings-appearance", label: "Wygląd" },
+    { id: "settings-access", label: "Dostęp" },
+  ]);
+  let body = $state<HTMLElement>();
+  let current = $state("settings-profile");
+  function show(id: string) {
+    current = id;
+    body?.querySelector(`#${id}`)?.scrollIntoView({
+      block: "start",
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
+  }
+  /** The section at the top of the scrolled body is the one the rail marks. */
+  function track() {
+    if (!body) return;
+    const top = body.getBoundingClientRect().top;
+    let found = sections[0]?.id ?? "";
+    for (const { id } of sections) {
+      const node = body.querySelector(`#${id}`);
+      if (node && node.getBoundingClientRect().top - top <= 48) found = id;
+    }
+    // The last sections may never reach the top of a body scrolled to its end.
+    if (body.scrollTop + body.clientHeight >= body.scrollHeight - 2)
+      found = sections.at(-1)?.id ?? found;
+    current = found;
+  }
+  const themes: { value: Theme; label: string }[] = [
+    { value: "system", label: "Systemowy" },
+    { value: "light", label: "Jasny" },
+    { value: "dark", label: "Ciemny" },
+  ];
+  const providers: { value: AgentProvider; label: string; maker: string }[] = [
+    { value: "claude", label: "Claude Code", maker: "Anthropic" },
+    { value: "codex", label: "Codex", maker: "OpenAI" },
+  ];
+  const initial = (name: string) =>
+    (name.trim()[0] ?? "?").toLocaleUpperCase("pl");
   function close() {
     if (busy) return;
     if (dirty || pending) {
@@ -178,8 +267,10 @@
   }
   onMount(() => {
     void load();
+    const tick = window.setInterval(() => (now = new Date()), 30_000);
     return () => {
       generation++;
+      window.clearInterval(tick);
     };
   });
   async function load() {
@@ -364,7 +455,8 @@
     );
     await transmit();
   }
-  function switchUser() {
+  function switchUser(id: string) {
+    selectedUser = id;
     if (
       !users ||
       selectedUser === users.current_user_id ||
@@ -425,424 +517,19 @@
 </script>
 
 <dialog
-  class="app-dialog"
+  class="app-dialog dialog-large settings-dialog"
   use:modal={{ onclose: close }}
   out:layerExit|global
   aria-label="Ustawienia przestrzeni roboczej"
   onkeydown={keydown}
 >
   <DialogHeader
-    title="Ustawienia przestrzeni roboczej"
+    title="Ustawienia"
     onclose={close}
     disabled={busy}
     closeLabel="Zamknij ustawienia"
-  />
-  <div class="dialog-body">
-    {#if loading}<p role="status">
-        Ładowanie ustawień przestrzeni roboczej…
-      </p>{/if}
-    <SessionNotice
-      lost={accessLost}
-      message="Sesja wygasła. Wersja robocza ustawień została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
-    />
-    {#if error}<div class="notice" role="alert">{error}</div>{/if}
-    {#if conflict}<section class="notice">
-        <p role="alert">
-          Ustawienia zmieniły się w innym miejscu, więc tej wersji roboczej nie
-          można już zapisać. Wczytaj aktualne ustawienia: zmienione przez Ciebie
-          pola pozostaną w formularzu do ponownego, świadomego zapisu.
-        </p>
-        <button
-          type="button"
-          onclick={loadCurrent}
-          disabled={busy || accessLost}>Wczytaj aktualne ustawienia</button
-        >
-      </section>{/if}
-    {#if !loading && !baseline && !accessLost}<button onclick={load}
-        >Wczytaj ustawienia ponownie</button
-      >{/if}
-    {#if confirmClose}<div
-        class="notice discard"
-        role="alertdialog"
-        aria-labelledby="settings-discard-question"
-      >
-        <p id="settings-discard-question">
-          {pending
-            ? "Wynik polecenia może nadal być nieznany. Odrzucenie wersji roboczej nie anuluje zapisu na serwerze."
-            : "Odrzucić niezapisane ustawienia?"}
-        </p>
-        <div class="actions">
-          <button onclick={keepEditing} use:focusConfirmation
-            >Kontynuuj edycję</button
-          >
-          <button onclick={onclose}>Odrzuć wersję roboczą ustawień</button>
-        </div>
-      </div>{/if}
-    <section class="user-section" aria-labelledby="user-settings-title">
-      <h3 id="user-settings-title">Użytkownik</h3>
-      <p>
-        Każdy użytkownik ma własne foldery projektów i przestrzeń roboczą.
-        Sparowane przeglądarki mogą przełączać się między zaufanymi
-        użytkownikami.
-      </p>
-      <div class="row">
-        <label
-          >Bieżący użytkownik<select
-            aria-label="Bieżący użytkownik"
-            bind:value={selectedUser}
-            disabled={!users || busy || !!pending || dirty || accessLost}
-          >
-            {#each users?.items ?? [] as user}<option value={user.id}
-                >{user.name}{user.is_default ? " · domyślny" : ""}</option
-              >{/each}
-          </select></label
-        >
-        <button
-          onclick={switchUser}
-          disabled={!users ||
-            selectedUser === users.current_user_id ||
-            !canSwitchUser ||
-            dirty ||
-            busy ||
-            !!pending ||
-            accessLost}>Zmień użytkownika</button
-        >
-      </div>
-      {#if !canSwitchUser}<p>
-          Zakończ otwartą edycję lub oczekującą operację projektu przed zmianą
-          użytkownika.
-        </p>{/if}
-      <form
-        class="row"
-        onsubmit={(event) => {
-          event.preventDefault();
-          void addUser();
-        }}
-      >
-        <label
-          >Nazwa nowego użytkownika<input
-            bind:value={userName}
-            maxlength="120"
-            autocomplete="off"
-            disabled={!users ||
-              preferencesDirty ||
-              busy ||
-              !!pending ||
-              accessLost}
-          /></label
-        >
-        <button
-          type="submit"
-          disabled={!users ||
-            !userName.trim() ||
-            preferencesDirty ||
-            busy ||
-            !!pending ||
-            accessLost}>Dodaj użytkownika</button
-        >
-      </form>
-      {#if pending && commandKind === "user"}<section
-          class="notice"
-          role="status"
-        >
-          <p>Utworzenie użytkownika oczekuje na potwierdzenie.</p>
-          <CommandRecovery
-            {pending}
-            {busy}
-            {accessLost}
-            oncheck={check}
-            onretry={transmit}
-          />
-        </section>{/if}
-    </section>
-    <form
-      id="workspace-preferences"
-      bind:this={preferencesForm}
-      onsubmit={(e) => {
-        e.preventDefault();
-        void save();
-      }}
-    >
-      <label
-        >Strefa czasowa<input
-          bind:value={timezone}
-          placeholder="Europe/Warsaw"
-          required
-          disabled={!baseline ||
-            busy ||
-            !!pending ||
-            !!userName ||
-            accessLost ||
-            conflict}
-        /></label
-      >
-      <p class="field-hint">
-        Daty są zgodne z tą strefą czasową. Jej zmiana nie przesuwa zapisanych
-        dat całodniowych.
-      </p>
-      <div class="row">
-        <label
-          >Początek tygodnia<select
-            aria-label="Początek tygodnia"
-            bind:value={week}
-            disabled={!baseline ||
-              busy ||
-              !!pending ||
-              !!userName ||
-              accessLost ||
-              conflict}
-            ><option value="monday">Poniedziałek</option><option value="sunday"
-              >Niedziela</option
-            ></select
-          ></label
-        ><label
-          >Widok domyślny<select
-            aria-label="Widok domyślny"
-            bind:value={view}
-            disabled={!baseline ||
-              busy ||
-              !!pending ||
-              !!userName ||
-              accessLost ||
-              conflict}
-            >{#each workspaceViews as name}<option value={name}
-                >{viewLabel(name)}</option
-              >{/each}</select
-          ></label
-        >
-      </div>
-      {#if agentEnabled}<label
-          >Dostawca agenta<select
-            aria-label="Dostawca agenta"
-            bind:value={agent}
-            disabled={!baseline ||
-              busy ||
-              !!pending ||
-              !!userName ||
-              accessLost ||
-              conflict}
-            ><option value="claude">Claude Code</option><option value="codex"
-              >Codex</option
-            ></select
-          ></label
-        >{/if}
-      <label
-        >Katalog nowych projektów<select
-          aria-label="Katalog nowych projektów"
-          bind:value={root}
-          disabled={!baseline ||
-            busy ||
-            !!pending ||
-            !!userName ||
-            accessLost ||
-            conflict}
-          >{#if !baseline?.preferences.project_root_id}<option value=""
-              >{roots.length === 1
-                ? `Automatycznie: ${roots[0]?.display_path}`
-                : "Nie wybrano"}</option
-            >{:else if !roots.some((item) => item.id === baseline?.preferences.project_root_id)}<option
-              value={baseline.preferences.project_root_id}
-              >Katalog nie jest już zatwierdzony</option
-            >{/if}{#each roots as item}<option value={item.id}
-              >{item.label} · {item.display_path}</option
-            >{/each}</select
-        ></label
-      >
-      <p class="field-hint">
-        {roots.length
-          ? "Dodanie projektu tworzy w tym katalogu folder o nazwie projektu."
-          : "Brak zatwierdzonych katalogów. Właściciel hosta dodaje je poleceniem projectctl add-root."}
-      </p>
-      {#if githubHost}<label class="plugin"
-          ><input
-            type="checkbox"
-            bind:checked={publish}
-            disabled={!baseline ||
-              busy ||
-              !!pending ||
-              !!userName ||
-              accessLost ||
-              conflict}
-          /><span
-            ><strong>Publikuj nowe projekty na GitHubie</strong><small
-              >Nowy projekt dostaje prywatne repozytorium na koncie hosta. Po
-              wyłączeniu projekty powstają tylko lokalnie; pojedynczy projekt
-              opublikujesz w jego oknie Git.</small
-            ></span
-          ></label
-        >{/if}
-      <fieldset class="plugins">
-        <legend>Wtyczki</legend>
-        <p class="field-hint">
-          Dodatkowe funkcje dostarczane z aplikacją. Włączasz je dla swojego
-          profilu; inni użytkownicy mają własny wybór.
-        </p>
-        {#each plugins as plugin (plugin.id)}
-          <label class="plugin"
-            ><input
-              type="checkbox"
-              checked={pluginIds(enabledPlugins).includes(plugin.id)}
-              onchange={(event) => {
-                enabledPlugins = togglePlugin(
-                  enabledPlugins,
-                  plugin.id,
-                  event.currentTarget.checked,
-                );
-              }}
-              disabled={!baseline ||
-                busy ||
-                !!pending ||
-                !!userName ||
-                accessLost ||
-                conflict}
-            /><span
-              ><strong>{plugin.name}</strong><small>{plugin.description}</small
-              ></span
-            ></label
-          >
-        {/each}
-      </fieldset>
-      {#if pending && commandKind === "preferences"}<section class="notice">
-          <p>
-            Oczekujące polecenie: czeka na potwierdzenie. Przesłane ustawienia
-            pozostają niezmienione.
-          </p>
-          <CommandRecovery
-            {pending}
-            {busy}
-            {accessLost}
-            oncheck={check}
-            onretry={transmit}
-          />
-        </section>{/if}
-    </form>
-    <section class="appearance">
-      <h3>Tagi</h3>
-      <p>Zmień nazwę lub połącz tagi używane na kartach projektu.</p>
-      <button
-        disabled={dirty || busy || !!pending || accessLost}
-        onclick={ontags}>Zarządzaj tagami</button
-      >
-      {#if dirty || pending}<p>
-          Zapisz lub odrzuć wersję roboczą ustawień przed zarządzaniem tagami.
-        </p>{/if}
-    </section>
-    <section class="appearance">
-      <h3>Wygląd</h3>
-      <label
-        >Motyw<select
-          aria-label="Motyw"
-          bind:value={theme}
-          onchange={() => applyTheme(theme)}
-          ><option value="system">Systemowy</option><option value="light"
-            >Jasny</option
-          ><option value="dark">Ciemny</option></select
-        ></label
-      >
-      <label
-        >Przycisk dodawania na telefonie<select
-          aria-label="Przycisk dodawania na telefonie"
-          bind:value={hand}
-          onchange={() => applyHand(hand)}
-          ><option value="right">Po prawej (dla praworęcznych)</option><option
-            value="left">Po lewej (dla leworęcznych)</option
-          ></select
-        ></label
-      >
-      <p>Zmiany wyglądu są od razu stosowane w tej przeglądarce.</p>
-    </section>
-    <details class="access-section">
-      <summary>Dostęp przeglądarek</summary>
-      <p>
-        Cofnij dostęp urządzenia, aby zakończyć jego sesję i zatrzymać kolejne
-        żądania.
-      </p>
-      {#each sessions as session}<div class="item">
-          <div>
-            <strong
-              >{session.device_label}{session.current
-                ? "· ta przeglądarka"
-                : ""}</strong
-            ><small
-              >Ostatnia aktywność {formatTimestamp(session.last_seen_at)}</small
-            >
-          </div>
-          <button
-            aria-label={session.current
-              ? "Wyloguj tę przeglądarkę"
-              : `Cofnij dostęp: ${session.device_label}`}
-            title={session.current && (dirty || pending)
-              ? "Zapisz lub odrzuć ustawienia przed wylogowaniem tej przeglądarki."
-              : undefined}
-            onclick={() => revoke(session.id)}
-            disabled={busy ||
-              accessLost ||
-              !!pending ||
-              (session.current && dirty)}
-            >{session.current ? "Wyloguj" : "Cofnij dostęp"}</button
-          >
-        </div>{:else}<p>
-          {loading
-            ? "Ładowanie sesji przeglądarek…"
-            : accessLost
-              ? "Połącz się ponownie, aby zobaczyć sesje przeglądarek."
-              : "Brak aktywnych sesji przeglądarek."}
-        </p>{/each}
-      {#if dirty || pending}<p>
-          Zapisz lub odrzuć ustawienia przed wylogowaniem tej przeglądarki.
-        </p>{/if}
-    </details>
-    <details class="access-section" open={pairings.length > 0}>
-      <summary
-        >Prośby o parowanie{#if pairings.length}
-          · {pairings.length}{/if}</summary
-      >
-      <p>
-        Zatwierdź dopiero po porównaniu kodu z przeglądarką proszącą o dostęp.
-      </p>
-      {#each pairings as item}<div class="item">
-          <div>
-            <strong>{item.device_label}</strong><code>{item.challenge}</code>
-          </div>
-          <div class="actions">
-            <button
-              onclick={() => decide(item, false)}
-              disabled={busy || accessLost || !!pending}>Odrzuć</button
-            ><button
-              onclick={() => decide(item, true)}
-              disabled={busy || accessLost || !!pending}>Zatwierdź</button
-            >
-          </div>
-        </div>{:else}<p>
-          {loading
-            ? "Ładowanie próśb o parowanie…"
-            : accessLost
-              ? "Połącz się ponownie, aby zobaczyć prośby o parowanie."
-              : "Brak oczekujących próśb."}
-        </p>{/each}
-    </details>
-  </div>
-  <footer class="dialog-footer">
-    <p class="save-state" role="status">
-      {info ||
-        (busy
-          ? "Stosowanie zmian…"
-          : pending
-            ? "Wymagane potwierdzenie"
-            : dirty
-              ? userName
-                ? "Wersja robocza nowego użytkownika"
-                : "Niezapisane ustawienia"
-              : loading
-                ? "Ładowanie ustawień…"
-                : baseline
-                  ? "Ustawienia są aktualne"
-                  : "Ustawienia niedostępne")}
-    </p>
-    <div class="actions">
-      {#if dirty || pending}<button type="button" onclick={copyDraft}
-          >Kopiuj wersję roboczą ustawień</button
-        >{/if}
+  >
+    {#snippet actions()}
       <Button
         variant="primary"
         type="submit"
@@ -857,11 +544,554 @@
           conflict ||
           confirmClose}>Zapisz ustawienia</Button
       >
+    {/snippet}
+  </DialogHeader>
+  <div class="settings-shell">
+    <nav class="settings-rail" aria-label="Sekcje ustawień">
+      {#each sections as section (section.id)}<button
+          type="button"
+          class="quiet"
+          aria-current={current === section.id ? "true" : undefined}
+          onclick={() => show(section.id)}>{section.label}</button
+        >{/each}
+    </nav>
+    <!-- Fields name this form, so each section stays a block of its own. -->
+    <form
+      id="workspace-preferences"
+      bind:this={preferencesForm}
+      hidden
+      onsubmit={(e) => {
+        e.preventDefault();
+        void save();
+      }}
+    ></form>
+    <div class="dialog-body" bind:this={body} onscroll={track}>
+      {#if loading}<p role="status">
+          Ładowanie ustawień przestrzeni roboczej…
+        </p>{/if}
+      <SessionNotice
+        lost={accessLost}
+        message="Sesja wygasła. Wersja robocza ustawień została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
+      />
+      {#if error}<div class="notice" role="alert">{error}</div>{/if}
+      <div class="save-state" class:idle={!status && !dirty && !pending}>
+        <p role="status">{status}</p>
+        {#if dirty || pending}<button type="button" onclick={copyDraft}
+            >Kopiuj wersję roboczą ustawień</button
+          >{/if}
+      </div>
+      {#if conflict}<section class="notice">
+          <p role="alert">
+            Ustawienia zmieniły się w innym miejscu, więc tej wersji roboczej
+            nie można już zapisać. Wczytaj aktualne ustawienia: zmienione przez
+            Ciebie pola pozostaną w formularzu do ponownego, świadomego zapisu.
+          </p>
+          <button
+            type="button"
+            onclick={loadCurrent}
+            disabled={busy || accessLost}>Wczytaj aktualne ustawienia</button
+          >
+        </section>{/if}
+      {#if !loading && !baseline && !accessLost}<button onclick={load}
+          >Wczytaj ustawienia ponownie</button
+        >{/if}
+      {#if confirmClose}<div
+          class="notice discard"
+          role="alertdialog"
+          aria-labelledby="settings-discard-question"
+        >
+          <p id="settings-discard-question">
+            {pending
+              ? "Wynik polecenia może nadal być nieznany. Odrzucenie wersji roboczej nie anuluje zapisu na serwerze."
+              : "Odrzucić niezapisane ustawienia?"}
+          </p>
+          <div class="actions">
+            <button onclick={keepEditing} use:focusConfirmation
+              >Kontynuuj edycję</button
+            >
+            <button onclick={onclose}>Odrzuć wersję roboczą ustawień</button>
+          </div>
+        </div>{/if}
+
+      <section id="settings-profile" aria-labelledby="settings-profile-title">
+        <header>
+          <h3 id="settings-profile-title">Profil</h3>
+          <p>
+            Każdy użytkownik ma własne foldery projektów i przestrzeń roboczą.
+            Sparowane przeglądarki mogą przełączać się między zaufanymi
+            użytkownikami.
+          </p>
+        </header>
+        <ul class="people" aria-label="Użytkownicy">
+          {#each users?.items ?? [] as user (user.id)}
+            {@const active = user.id === users?.current_user_id}
+            <li class:active aria-current={active ? "true" : undefined}>
+              <span class="avatar" aria-hidden="true">{initial(user.name)}</span
+              >
+              <span class="person"
+                ><strong>{user.name}</strong>{#if user.is_default}<small
+                    >Domyślny profil hosta</small
+                  >{/if}</span
+              >
+              {#if active}<span class="active-mark">Bieżący użytkownik</span
+                >{:else}<button
+                  type="button"
+                  aria-label={`Przełącz na użytkownika ${user.name}`}
+                  disabled={switchLocked}
+                  onclick={() => switchUser(user.id)}>Przełącz</button
+                >{/if}
+            </li>
+          {/each}
+        </ul>
+        {#if !canSwitchUser}<p>
+            Zakończ otwartą edycję lub oczekującą operację projektu przed zmianą
+            użytkownika.
+          </p>{/if}
+        <form
+          class="row"
+          onsubmit={(event) => {
+            event.preventDefault();
+            void addUser();
+          }}
+        >
+          <label
+            >Nazwa nowego użytkownika<input
+              bind:value={userName}
+              maxlength="120"
+              autocomplete="off"
+              placeholder="Na przykład Tomek"
+              disabled={!users ||
+                preferencesDirty ||
+                busy ||
+                !!pending ||
+                accessLost}
+            /></label
+          >
+          <button
+            type="submit"
+            disabled={!users ||
+              !userName.trim() ||
+              preferencesDirty ||
+              busy ||
+              !!pending ||
+              accessLost}>Dodaj użytkownika</button
+          >
+        </form>
+        {#if pending && commandKind === "user"}<div
+            class="notice"
+            role="status"
+          >
+            <p>Utworzenie użytkownika oczekuje na potwierdzenie.</p>
+            <CommandRecovery
+              {pending}
+              {busy}
+              {accessLost}
+              oncheck={check}
+              onretry={transmit}
+            />
+          </div>{/if}
+      </section>
+
+      <section id="settings-time" aria-labelledby="settings-time-title">
+        <header>
+          <h3 id="settings-time-title">Czas i widok</h3>
+          <p>
+            Daty są zgodne z wybraną strefą czasową. Jej zmiana nie przesuwa
+            zapisanych dat całodniowych.
+          </p>
+        </header>
+        <div class="zone">
+          <TimezoneMap
+            zone={timezone}
+            {now}
+            available={zoneAvailable}
+            disabled={locked}
+            onpick={(zone) => (timezone = zone)}
+          />
+          <div class="zone-field">
+            <label
+              >Strefa czasowa<input
+                form="workspace-preferences"
+                list="settings-zones"
+                bind:value={timezone}
+                placeholder="Europe/Warsaw"
+                autocomplete="off"
+                spellcheck="false"
+                required
+                disabled={locked}
+              /></label
+            >
+            <datalist id="settings-zones"
+              >{#each zones as zone}<option value={zone}
+                ></option>{/each}</datalist
+            >
+            <p class="zone-now" class:unknown={!zoneNow}>
+              {zoneNow || "Nieznana strefa czasowa"}
+            </p>
+          </div>
+        </div>
+        <div class="row">
+          <label
+            >Początek tygodnia<select
+              form="workspace-preferences"
+              aria-label="Początek tygodnia"
+              bind:value={week}
+              disabled={locked}
+              ><option value="monday">Poniedziałek</option><option
+                value="sunday">Niedziela</option
+              ></select
+            ></label
+          ><label
+            >Widok domyślny<select
+              form="workspace-preferences"
+              aria-label="Widok domyślny"
+              bind:value={view}
+              disabled={locked}
+              >{#each workspaceViews as name}<option value={name}
+                  >{viewLabel(name)}</option
+                >{/each}</select
+            ></label
+          >
+        </div>
+      </section>
+
+      <section id="settings-projects" aria-labelledby="settings-projects-title">
+        <header>
+          <h3 id="settings-projects-title">Projekty</h3>
+          <p>Gdzie powstają nowe projekty i czy trafiają na GitHuba.</p>
+        </header>
+        <label
+          >Katalog nowych projektów<select
+            form="workspace-preferences"
+            aria-label="Katalog nowych projektów"
+            bind:value={root}
+            disabled={locked}
+            >{#if !baseline?.preferences.project_root_id}<option value=""
+                >{roots.length === 1
+                  ? `Automatycznie: ${roots[0]?.display_path}`
+                  : "Nie wybrano"}</option
+              >{:else if !roots.some((item) => item.id === baseline?.preferences.project_root_id)}<option
+                value={baseline.preferences.project_root_id}
+                >Katalog nie jest już zatwierdzony</option
+              >{/if}{#each roots as item}<option value={item.id}
+                >{item.label} · {item.display_path}</option
+              >{/each}</select
+          ></label
+        >
+        <p class="field-hint">
+          {roots.length
+            ? "Dodanie projektu tworzy w tym katalogu folder o nazwie projektu."
+            : "Brak zatwierdzonych katalogów. Właściciel hosta dodaje je poleceniem projectctl add-root."}
+        </p>
+        {#if githubHost}<label class="toggle"
+            ><span
+              ><strong>Publikuj nowe projekty na GitHubie</strong><small
+                >Nowy projekt dostaje prywatne repozytorium na koncie hosta. Po
+                wyłączeniu projekty powstają tylko lokalnie; pojedynczy projekt
+                opublikujesz w jego oknie Git.</small
+              ></span
+            ><input
+              form="workspace-preferences"
+              type="checkbox"
+              role="switch"
+              bind:checked={publish}
+              disabled={locked}
+            /></label
+          >{/if}
+      </section>
+
+      {#if agentEnabled}<section
+          id="settings-agent"
+          aria-labelledby="settings-agent-title"
+        >
+          <header>
+            <h3 id="settings-agent-title">Agent</h3>
+            <p>Który agent kodujący odpowiada na wiadomości w czacie Astry.</p>
+          </header>
+          <div class="choices" role="radiogroup" aria-label="Dostawca agenta">
+            {#each providers as provider (provider.value)}<label
+                class="choice"
+                class:chosen={agent === provider.value}
+                ><input
+                  form="workspace-preferences"
+                  type="radio"
+                  name="settings-agent"
+                  value={provider.value}
+                  checked={agent === provider.value}
+                  onchange={() => (agent = provider.value)}
+                  disabled={locked}
+                /><span class="monogram" aria-hidden="true"
+                  >{provider.label[0]}</span
+                ><span
+                  ><strong>{provider.label}</strong><small
+                    >{provider.maker}</small
+                  ></span
+                ></label
+              >{/each}
+          </div>
+        </section>{/if}
+
+      <section id="settings-plugins" aria-labelledby="settings-plugins-title">
+        <header>
+          <h3 id="settings-plugins-title">Wtyczki</h3>
+          <p>
+            Dodatkowe funkcje dostarczane z aplikacją. Włączasz je dla swojego
+            profilu; inni użytkownicy mają własny wybór.
+          </p>
+        </header>
+        {#each plugins as plugin (plugin.id)}
+          <label class="toggle"
+            ><span
+              ><strong>{plugin.name}</strong><small>{plugin.description}</small
+              ></span
+            ><input
+              form="workspace-preferences"
+              type="checkbox"
+              role="switch"
+              checked={pluginIds(enabledPlugins).includes(plugin.id)}
+              onchange={(event) => {
+                enabledPlugins = togglePlugin(
+                  enabledPlugins,
+                  plugin.id,
+                  event.currentTarget.checked,
+                );
+              }}
+              disabled={locked}
+            /></label
+          >
+        {/each}
+        {#if pending && commandKind === "preferences"}<div class="notice">
+            <p>
+              Oczekujące polecenie: czeka na potwierdzenie. Przesłane ustawienia
+              pozostają niezmienione.
+            </p>
+            <CommandRecovery
+              {pending}
+              {busy}
+              {accessLost}
+              oncheck={check}
+              onretry={transmit}
+            />
+          </div>{/if}
+      </section>
+
+      <section id="settings-tags" aria-labelledby="settings-tags-title">
+        <header>
+          <h3 id="settings-tags-title">Tagi</h3>
+          <p>Zmień nazwę lub połącz tagi używane na kartach projektu.</p>
+        </header>
+        <button
+          disabled={dirty || busy || !!pending || accessLost}
+          onclick={ontags}>Zarządzaj tagami</button
+        >
+        {#if dirty || pending}<p class="field-hint">
+            Zapisz lub odrzuć wersję roboczą ustawień przed zarządzaniem tagami.
+          </p>{/if}
+      </section>
+
+      <section
+        id="settings-appearance"
+        aria-labelledby="settings-appearance-title"
+      >
+        <header>
+          <h3 id="settings-appearance-title">Wygląd</h3>
+          <p>Zmiany wyglądu są od razu stosowane w tej przeglądarce.</p>
+        </header>
+        <div class="choices themes" role="radiogroup" aria-label="Motyw">
+          {#each themes as option (option.value)}<label
+              class="choice theme"
+              class:chosen={theme === option.value}
+              ><input
+                type="radio"
+                name="settings-theme"
+                value={option.value}
+                checked={theme === option.value}
+                onchange={() => {
+                  theme = option.value;
+                  applyTheme(theme);
+                }}
+              /><span
+                class="preview"
+                data-theme-preview={option.value}
+                aria-hidden="true"
+                >{#each option.value === "system" ? ["light", "dark"] : [option.value] as scheme}<span
+                    class="scene"
+                    data-scheme={scheme}
+                    ><span class="scene-side"></span><span class="scene-page"
+                      ><span class="scene-title"></span><span class="scene-card"
+                      ></span><span class="scene-card short"></span></span
+                    ></span
+                  >{/each}</span
+              ><strong>{option.label}</strong></label
+            >{/each}
+        </div>
+        <label
+          >Przycisk dodawania na telefonie<select
+            aria-label="Przycisk dodawania na telefonie"
+            bind:value={hand}
+            onchange={() => applyHand(hand)}
+            ><option value="right">Po prawej (dla praworęcznych)</option><option
+              value="left">Po lewej (dla leworęcznych)</option
+            ></select
+          ></label
+        >
+      </section>
+
+      <section id="settings-access" aria-labelledby="settings-access-title">
+        <header>
+          <h3 id="settings-access-title">Dostęp</h3>
+          <p>Przeglądarki, które mogą otwierać tę przestrzeń roboczą.</p>
+        </header>
+        <h4>
+          Prośby o parowanie{#if pairings.length}<span class="count"
+              >{pairings.length}</span
+            >{/if}
+        </h4>
+        {#each pairings as item}<div class="item request">
+            <div>
+              <strong>{item.device_label}</strong><code>{item.challenge}</code>
+            </div>
+            <div class="actions">
+              <button
+                onclick={() => decide(item, false)}
+                disabled={busy || accessLost || !!pending}>Odrzuć</button
+              ><button
+                onclick={() => decide(item, true)}
+                disabled={busy || accessLost || !!pending}>Zatwierdź</button
+              >
+            </div>
+          </div>{:else}<p class="empty">
+            {loading
+              ? "Ładowanie próśb o parowanie…"
+              : accessLost
+                ? "Połącz się ponownie, aby zobaczyć prośby o parowanie."
+                : "Brak oczekujących próśb."}
+          </p>{/each}
+        {#if pairings.length}<p class="field-hint">
+            Zatwierdź dopiero po porównaniu kodu z przeglądarką proszącą o
+            dostęp.
+          </p>{/if}
+        <details class="devices">
+          <summary
+            ><span>Dostęp przeglądarek</span>{#if sessions.length}<span
+                class="count">{sessions.length}</span
+              >{/if}</summary
+          >
+          <p>
+            Cofnij dostęp urządzenia, aby zakończyć jego sesję i zatrzymać
+            kolejne żądania.
+          </p>
+          {#each sessions as session}<div class="item">
+              <div>
+                <strong
+                  >{session.device_label}{session.current
+                    ? " · ta przeglądarka"
+                    : ""}</strong
+                ><small
+                  >Ostatnia aktywność {formatTimestamp(
+                    session.last_seen_at,
+                  )}</small
+                >
+              </div>
+              <button
+                aria-label={session.current
+                  ? "Wyloguj tę przeglądarkę"
+                  : `Cofnij dostęp: ${session.device_label}`}
+                title={session.current && (dirty || pending)
+                  ? "Zapisz lub odrzuć ustawienia przed wylogowaniem tej przeglądarki."
+                  : undefined}
+                onclick={() => revoke(session.id)}
+                disabled={busy ||
+                  accessLost ||
+                  !!pending ||
+                  (session.current && dirty)}
+                >{session.current ? "Wyloguj" : "Cofnij dostęp"}</button
+              >
+            </div>{:else}<p>
+              {loading
+                ? "Ładowanie sesji przeglądarek…"
+                : accessLost
+                  ? "Połącz się ponownie, aby zobaczyć sesje przeglądarek."
+                  : "Brak aktywnych sesji przeglądarek."}
+            </p>{/each}
+          {#if dirty || pending}<p>
+              Zapisz lub odrzuć ustawienia przed wylogowaniem tej przeglądarki.
+            </p>{/if}
+        </details>
+      </section>
     </div>
-  </footer>
+  </div>
 </dialog>
 
 <style>
+  .settings-shell {
+    display: grid;
+    grid-template-columns: var(--settings-rail) minmax(0, 1fr);
+    min-height: 0;
+    flex: 1;
+  }
+  .settings-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-8) var(--space-4) var(--space-8) var(--space-6);
+    border-right: var(--stroke) solid var(--line);
+    background: var(--wash);
+    overflow-y: auto;
+  }
+  .settings-rail button {
+    justify-content: flex-start;
+    min-height: var(--space-14);
+    padding: var(--space-3) var(--space-6);
+    border: 0;
+    border-radius: var(--radius-control);
+    color: var(--muted);
+    font-size: var(--text-base);
+    text-align: left;
+  }
+  .settings-rail button:hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+  .settings-rail button[aria-current="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: var(--weight-medium);
+  }
+  .dialog-body {
+    scroll-padding-top: var(--space-8);
+  }
+  section[id] {
+    padding-block: var(--space-10);
+    border-top: var(--stroke) solid var(--line);
+  }
+  section[id]:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+  }
+  section[id]:last-of-type {
+    padding-bottom: var(--space-4);
+  }
+  section > header {
+    margin-bottom: var(--space-8);
+  }
+  section > header p {
+    margin: var(--space-2) 0 0;
+    max-width: var(--measure);
+  }
+  h3 {
+    margin: 0;
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-tight);
+  }
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+  }
   .row,
   .item {
     display: flex;
@@ -872,23 +1102,24 @@
   .row {
     align-items: flex-end;
   }
-  .row > :global(button) {
-    margin-bottom: var(--space-8);
-  }
-  h3 {
-    margin: 0;
-    font-size: var(--text-lg);
-  }
   label {
     display: block;
-    margin: var(--space-8) 0;
     flex: 1;
     min-width: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--muted);
   }
-  input,
+  section > label,
+  section > .row {
+    margin-top: var(--space-8);
+  }
+  input:not([type="checkbox"], [type="radio"]),
   select {
     width: 100%;
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
+    font-size: var(--text-base);
+    color: var(--ink);
   }
   p,
   small {
@@ -900,11 +1131,300 @@
   code {
     display: block;
   }
+  small {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-normal);
+  }
   .field-hint {
-    margin: calc(-1 * var(--space-4)) 0 0;
+    margin: var(--space-3) 0 0;
+    font-size: var(--text-sm);
+  }
+  .notice {
+    margin: var(--space-8) 0;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+  /* What is unsaved or in flight, said once above the sections. */
+  .save-state {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+    padding: var(--space-4) var(--space-4) var(--space-4) var(--space-6);
+    border-radius: var(--radius-control);
+    background: var(--notice-bg);
+  }
+  .save-state p {
+    margin: 0;
+    color: var(--notice-ink);
+  }
+  .save-state.idle {
+    position: absolute;
+    width: var(--stroke);
+    height: var(--stroke);
+    overflow: hidden;
+    clip-path: inset(50%);
+    padding: 0;
+    margin: 0;
+  }
+  .save-state button {
+    font-size: var(--text-sm);
+  }
+
+  .people {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .people li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-4) var(--space-6);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
+  }
+  .people li.active {
+    border-color: var(--accent-ink);
+    background: var(--accent);
+  }
+  .avatar,
+  .monogram {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--space-14);
+    height: var(--space-14);
+    border-radius: var(--radius-pill);
+    background: var(--soft);
+    color: var(--ink);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+  .active .avatar {
+    background: var(--accent-ink);
+    color: var(--paper);
+  }
+  .person {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .person strong,
+  .toggle strong,
+  .choice strong {
+    display: block;
+    color: var(--ink);
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+  }
+  .active-mark {
+    color: var(--accent-ink);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .people button {
+    font-size: var(--text-sm);
+  }
+
+  .zone {
+    display: grid;
+    gap: var(--space-6);
+  }
+  .zone-field {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-8);
+  }
+  .zone-now {
+    flex: none;
+    margin: 0 0 var(--space-5);
+    color: var(--ink);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+  .zone-now::first-letter {
+    text-transform: uppercase;
+  }
+  .zone-now.unknown {
+    color: var(--danger);
+    font-size: var(--text-base);
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+    margin-top: var(--space-6);
+    padding: var(--space-6);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+  .toggle input {
+    appearance: none;
+    flex: none;
+    position: relative;
+    width: var(--space-14);
+    height: var(--space-10);
+    margin: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--line-strong);
+    cursor: inherit;
+  }
+  .toggle input::after {
+    content: "";
+    position: absolute;
+    inset: var(--space-1) auto var(--space-1) var(--space-1);
+    width: var(--space-9);
+    border-radius: var(--radius-pill);
+    background: var(--paper);
+    box-shadow: var(--shadow-sm);
+  }
+  .toggle input:checked {
+    background: var(--accent-ink);
+  }
+  .toggle input:checked::after {
+    translate: var(--space-8) 0;
+  }
+  .toggle input:disabled {
+    opacity: var(--disabled-opacity);
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(var(--field-min-width), 1fr)
+    );
+    gap: var(--space-6);
+  }
+  .choice {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-6);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+  .choice:hover {
+    border-color: var(--line-strong);
+  }
+  .choice.chosen {
+    border-color: var(--accent-ink);
+    box-shadow: inset 0 0 0 var(--stroke) var(--accent-ink);
+  }
+  .choice input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: inherit;
+  }
+  .choice:has(input:focus-visible) {
+    outline: var(--focus-width) solid var(--accent-ink);
+    outline-offset: var(--focus-offset);
+  }
+  .choice.chosen .monogram {
+    background: var(--accent-ink);
+    color: var(--paper);
+  }
+  .choice.theme {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-4) var(--space-5);
+  }
+  .choice.theme strong {
+    padding-inline: var(--space-2);
+  }
+  /* A small picture of the workspace in each appearance. */
+  .preview {
+    display: flex;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-sm);
+  }
+  .scene {
+    flex: 1;
+    display: flex;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-3);
+    background: var(--bg);
+  }
+  .scene-side {
+    flex: none;
+    width: 22%;
+    border-radius: var(--space-2);
+    background: var(--paper);
+  }
+  .scene-page {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--space-2);
+    background: var(--paper);
+  }
+  .scene-title {
+    width: 45%;
+    height: var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+  }
+  .scene-card {
+    flex: 1;
+    border-radius: var(--space-1);
+    background: var(--accent);
+  }
+  .scene-card.short {
+    width: 70%;
+    background: var(--soft);
+  }
+  /* Half of each: the system decides which is shown. */
+  .preview[data-theme-preview="system"] .scene[data-scheme="dark"] .scene-side {
+    display: none;
+  }
+
+  .count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--space-9);
+    height: var(--space-9);
+    padding-inline: var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--soft);
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  h4 .count {
+    background: var(--notice-bg);
+    color: var(--notice-ink);
+  }
+  .empty {
+    margin: 0;
   }
   .item {
-    padding: var(--space-8) 0;
+    padding: var(--space-6) 0;
     border-top: var(--stroke) solid var(--line);
     font-size: var(--text-base);
   }
@@ -919,69 +1439,74 @@
   .item :global(button) {
     font-size: var(--text-sm);
   }
-  code {
+  .item.request {
     margin-top: var(--space-4);
+    padding: var(--space-6);
+    border: var(--stroke) solid var(--notice-line);
+    border-radius: var(--radius-control);
+    background: var(--notice-bg);
+  }
+  code {
+    margin-top: var(--space-2);
     font-size: var(--text-lg);
     overflow-wrap: anywhere;
   }
-  .notice {
-    margin: var(--space-8) 0;
+  .devices {
+    margin-top: var(--space-8);
   }
-  .plugins {
-    margin: var(--space-8) 0 0;
-    padding: 0;
-    border: 0;
-  }
-  .plugins legend {
-    padding: 0;
-    font-size: var(--text-lg);
-    font-weight: var(--weight-semibold);
-  }
-  .plugin {
+  .devices summary {
     display: flex;
-    align-items: flex-start;
-    gap: var(--space-5);
-    margin-top: var(--space-5);
-  }
-  .plugin input {
-    flex: none;
-    width: auto;
-    margin-top: var(--space-2);
-  }
-  .plugin small {
-    display: block;
-    color: var(--muted);
-    font-size: var(--text-sm);
-  }
-  .appearance,
-  .access-section {
-    border-top: var(--stroke) solid var(--line);
-    padding-top: var(--space-8);
-    margin-top: var(--space-9);
-  }
-  .user-section {
-    border-bottom: var(--stroke) solid var(--line);
-    padding-bottom: var(--space-8);
-    margin-bottom: var(--space-9);
-  }
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-4);
+    min-height: var(--tap-target);
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
   }
-  .save-state {
-    margin: 0;
-    flex: 1;
+  @media (prefers-reduced-motion: no-preference) {
+    .toggle input,
+    .toggle input::after {
+      transition:
+        background-color var(--motion-quick) var(--motion-ease),
+        translate var(--motion-quick) var(--motion-ease);
+    }
+    .choice {
+      transition: border-color var(--motion-quick) var(--motion-ease);
+    }
+  }
+  @media (max-width: 700px) {
+    .settings-shell {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    /* The sections become a strip of their names above the content. */
+    .settings-rail {
+      flex-direction: row;
+      padding: var(--space-3) var(--space-6);
+      border-right: 0;
+      border-bottom: var(--stroke) solid var(--line);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .settings-rail button {
+      flex: none;
+      white-space: nowrap;
+    }
   }
   @media (max-width: 520px) {
-    .row {
+    .row,
+    .zone-field {
       display: block;
+    }
+    .zone-now {
+      margin: var(--space-4) 0 0;
+    }
+    .row > label + label,
+    .row > button {
+      margin-top: var(--space-6);
     }
     .item {
       flex-wrap: wrap;
-    }
-    .save-state {
-      flex-basis: 100%;
     }
   }
 </style>

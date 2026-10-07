@@ -178,10 +178,7 @@
   export function holdView(value: boolean) {
     restoring = value;
   }
-  export function resetColumnScroll(id: string) {
-    viewState.vertical[id] = 0;
-  }
-  /** Reapplies the remembered scroll offsets; `valid` rejects a superseded read. */
+  /** Reapplies the remembered horizontal offset; `valid` rejects a superseded read. */
   export async function restoreView(valid: () => boolean = () => true) {
     await tick();
     if (!valid() || !boardRoot) return;
@@ -221,13 +218,6 @@
         }
         scroll.scrollLeft = horizontal;
       }
-      for (const node of boardRoot.querySelectorAll<HTMLElement>(
-        "[data-kanban-column-cards]",
-      )) {
-        const id = columnId(node);
-        node.scrollTop =
-          column(id)?.firstPage && !query ? (viewState.vertical[id] ?? 0) : 0;
-      }
     }
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => resolve()),
@@ -265,6 +255,26 @@
           node.classList.contains(`astra-column-${item.id}`),
         )
       : undefined;
+  /** The column the pointer is in line with, also below that column's last card. */
+  function columnBelow(x: number, y: number) {
+    const scroll = boardRoot?.querySelector<HTMLElement>(".date-scroll");
+    const area = scroll?.getBoundingClientRect();
+    if (
+      !scroll ||
+      !area ||
+      x < area.left ||
+      x > area.right ||
+      y < area.top ||
+      y > area.bottom
+    )
+      return null;
+    return (
+      [...scroll.querySelectorAll<HTMLElement>(".wx-column")].find((node) => {
+        const bounds = node.getBoundingClientRect();
+        return x >= bounds.left && x <= bounds.right && y >= bounds.top;
+      }) ?? null
+    );
+  }
   let reflow: BoardReflow | null = null;
   // Finishes a drop once the board has rendered the card in its new place.
   let arrive: (() => boolean) | null = null;
@@ -336,7 +346,9 @@
         if (!movable(item)) return null;
         const hit = document.elementFromPoint(x, y);
         const chip = hit?.closest<HTMLElement>("[data-board-column-chip]");
-        const frame = hit?.closest<HTMLElement>(".wx-column");
+        const frame =
+          hit?.closest<HTMLElement>(".wx-column") ??
+          (boardRoot?.contains(hit ?? null) ? columnBelow(x, y) : null);
         // Resting on a column's chip or on a collapsed column brings it into reach.
         if (chip) {
           highlight(chip, "data-board-drop-chip");
@@ -566,6 +578,7 @@
     },
     shift,
     held: () => held,
+    movable,
     gesture,
     busy: () => busy,
     ordered: () => ordered,
@@ -620,18 +633,30 @@
             : result;
         }, null);
         if (closest) visibleColumn = closest.id;
-      } else if (target.matches("[data-kanban-column-cards]")) {
-        if (query) return;
-        const id = columnId(target);
-        if (column(id)?.firstPage) viewState.vertical[id] = target.scrollTop;
       } else return;
       if (query) return;
       window.clearTimeout(saveTimer);
       saveTimer = window.setTimeout(saveView, 150);
     };
     node.addEventListener("scroll", scrolled, true);
+    const sized = new ResizeObserver(fit);
+    const watched = new WeakSet<Element>();
+    const watch = () => {
+      for (const item of node.querySelectorAll(".wx-column")) {
+        if (watched.has(item)) continue;
+        watched.add(item);
+        sized.observe(item);
+      }
+    };
+    const columnsChanged = new MutationObserver(watch);
+    columnsChanged.observe(node, { childList: true, subtree: true });
+    watch();
+    const stopResize = on(window, "resize", fit);
     return {
       destroy() {
+        sized.disconnect();
+        columnsChanged.disconnect();
+        stopResize();
         node.removeEventListener("scroll", scrolled, true);
         window.clearTimeout(saveTimer);
         saveView();
@@ -639,6 +664,22 @@
       },
     };
   }
+  /**
+   * A phone shows one column as a page, so the board is as tall as that column
+   * and the page never scrolls past its last card into a longer neighbour.
+   */
+  function fit() {
+    const scroll = boardRoot?.querySelector<HTMLElement>(".date-scroll");
+    if (!scroll) return;
+    const page = phone()
+      ? scroll.querySelector<HTMLElement>(`.astra-column-${visibleColumn}`)
+      : null;
+    scroll.style.height = page ? `${page.offsetHeight}px` : "";
+  }
+  $effect(() => {
+    void visibleColumn;
+    fit();
+  });
   /** Keeps the chip of the column in view inside its own strip. */
   function current(node: HTMLElement, active: boolean) {
     const reveal = (value: boolean) => {
@@ -659,6 +700,8 @@
     const first = scroll?.querySelector<HTMLElement>(".wx-column");
     const target = scroll?.querySelector<HTMLElement>(`.astra-column-${id}`);
     if (!scroll || !first || !target) return;
+    // A page of the phone board is a whole column, never its collapsed strip.
+    if (phone() && collapsed.get(id)) expand(id);
     visibleColumn = id;
     inset(scroll);
     scroll.scrollTo({
@@ -752,17 +795,24 @@
   .board-column-nav {
     display: none;
   }
-  .astra-board {
-    min-width: 0;
-    height: clamp(
-      var(--board-min-height),
-      var(--board-height),
-      var(--dialog-max-height)
-    );
-  }
+  /* The board is as tall as its longest column; the page scrolls, not a column. */
+  .astra-board,
   .board-theme {
-    height: 100%;
     min-width: 0;
+  }
+  .astra-board .board-theme :global(.wx-board .wx-content) {
+    height: auto;
+    min-height: 0;
+    align-items: flex-start;
+  }
+  .astra-board .board-theme :global(.wx-board .wx-column.wx-column) {
+    height: auto;
+    max-height: none;
+  }
+  .astra-board :global(.wx-column-cards) {
+    flex: none;
+    min-height: var(--board-column-min-height);
+    overflow: visible;
   }
   .astra-board :global(.wx-willow-theme) {
     --wx-font-family: inherit;
@@ -811,6 +861,16 @@
     flex-basis: var(--tap-target);
     min-width: var(--tap-target);
     max-width: var(--tap-target);
+    align-self: stretch;
+    min-height: var(--board-collapsed-min-height);
+  }
+  /* A collapsed column reads downwards from its top, however tall the board. */
+  .astra-board :global(.wx-collapsed .wx-title) {
+    position: static;
+    max-width: none;
+    padding-block: var(--space-2);
+    transform: none;
+    writing-mode: vertical-rl;
   }
   .astra-board :global(.wx-title) {
     font-size: var(--text-base);
@@ -882,8 +942,13 @@
       gap: var(--space-2);
       overflow-x: auto;
       scrollbar-width: none;
-      margin-bottom: var(--space-4);
-      padding-bottom: var(--space-1);
+      /* The strip stays under the header, naming the column in view. */
+      position: sticky;
+      top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+      z-index: var(--layer-raised);
+      margin-bottom: var(--space-2);
+      padding-block: var(--space-3);
+      background: var(--paper);
       touch-action: pan-x;
     }
     .board-column-nav button {
@@ -905,14 +970,6 @@
       color: var(--muted);
       margin-left: var(--space-1);
     }
-    .astra-board {
-      --board-phone-chrome: 340px;
-      height: clamp(
-        var(--board-min-height),
-        calc(100dvh - var(--board-phone-chrome)),
-        var(--dialog-max-height)
-      );
-    }
     /* Columns are pages: a swipe always comes to rest on one. */
     .astra-board :global(.date-scroll) {
       scroll-snap-type: x mandatory;
@@ -920,9 +977,6 @@
     }
     .astra-board :global(.wx-column) {
       scroll-snap-align: start;
-    }
-    .astra-board :global(.wx-column:not(.wx-collapsed) .wx-column-header) {
-      display: none;
     }
     .astra-board :global(.wx-column:not(.wx-collapsed)) {
       flex-basis: calc(100vw - var(--space-20) - var(--space-4));

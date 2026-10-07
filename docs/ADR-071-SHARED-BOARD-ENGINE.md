@@ -68,3 +68,30 @@ refresh arrived, cards dimming on each read, constant-speed edge scrolling, free
 
 Physical-device feel (haptics, iOS momentum) is not covered by Chromium or
 WebKit emulation and remains the owner's check.
+
+## Columns as long as their cards
+
+On 2026-10-07 the owner asked for a board whose page ends with its longest
+list, for every list to carry its name, and for the workspace Board to look
+like the other two. This supersedes the consequence above that columns scroll
+on their own inside the board's height.
+
+- **No column scroll.** A column is as tall as its cards and footer; the board is
+  as tall as its longest column and the page scrolls. The fixed board height and
+  the remembered per-column scroll offset are removed; collapse and the
+  horizontal offset are still remembered. A card held near the top or bottom of
+  the window scrolls the page, and a card held below a short column still
+  targets that column.
+- **One page on a phone.** In the paged narrow layout the board takes the height
+  of the column in view, so the page never runs on into a longer neighbour.
+- **Named columns.** The column heading stays in the narrow layout beside the
+  column strip, which now stays under the header while the page scrolls. The
+  heading also carries the collapse button, which the narrow layout used to hide
+  with it, leaving an opened column impossible to close. Choosing a collapsed
+  column from the strip opens it. A collapsed column reads downwards from its top.
+- **Workspace Board.** `BoardOverview` renders the same `KanbanBoard` with every
+  column locked: cards open, none moves, and each names its project. The
+  `ResourceCard` component it alone used is removed.
+- Content ends exactly the floating action's own height above the end of the
+  page, where it used to leave half as much again. The rule that nothing to
+  read or press lies under that button at the end of a page is unchanged.

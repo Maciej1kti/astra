@@ -428,7 +428,7 @@ await runBrowserSuite(
           name: "Ustawienia przestrzeni roboczej",
           exact: true,
         });
-        const toggle = settings.getByRole("checkbox", {
+        const toggle = settings.getByRole("switch", {
           name: /Publikuj nowe projekty na GitHubie/,
         });
         await expect(toggle).toBeChecked();

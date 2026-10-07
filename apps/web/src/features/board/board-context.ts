@@ -29,6 +29,8 @@ export type BoardContext = {
   shift: (item: Summary, direction: -1 | 1) => void;
   /** The card a drag preview stands in for, until the preview has landed. */
   held: () => string | null;
+  /** Whether the card can leave its place now. */
+  movable: (item: Summary) => boolean;
   busy: () => boolean;
   ordered: () => boolean;
   gesture: (item: Summary) => BoardGestureOptions;

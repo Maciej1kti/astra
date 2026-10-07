@@ -697,7 +697,9 @@ await runBrowserSuite(
         name: "Ustawienia przestrzeni roboczej",
         exact: true,
       });
-      await settings.getByLabel("Motyw", { exact: true }).selectOption("dark");
+      await settings
+        .getByRole("radio", { name: "Ciemny", exact: true })
+        .check();
       await settings
         .getByRole("button", { name: "Zamknij ustawienia", exact: true })
         .click();

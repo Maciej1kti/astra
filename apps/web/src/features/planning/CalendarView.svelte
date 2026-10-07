@@ -519,7 +519,16 @@
   .calendar-region {
     --calendar-plan-bg: var(--plan-bg);
     --calendar-due-bg: var(--notice-bg);
+    /* One line of an item: compact under a pointer, a full target under a finger. */
+    --calendar-chip: var(--calendar-chip-height);
+    --calendar-more: var(--space-9);
     min-width: 0;
+  }
+  @media (pointer: coarse) {
+    .calendar-region {
+      --calendar-chip: var(--space-14);
+      --calendar-more: var(--tap-target);
+    }
   }
   .calendar-surface {
     position: relative;
@@ -563,13 +572,25 @@
   }
   .calendar-surface :global(.ec-main) {
     border: 0;
+    /* The all-day rows arrive after the hours are scrolled to; anchoring would
+       slide the first hours under them. */
+    overflow-anchor: none;
   }
   .calendar-surface :global(.ec-col-head) {
-    padding-block: var(--space-6);
+    padding-block: var(--space-5);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     color: var(--muted);
     background: var(--paper);
+  }
+  .calendar-surface :global(.ec-time-grid .ec-col-head) {
+    color: var(--ink);
+  }
+  /* Hours and the all-day label are a quiet scale beside the plan. */
+  .calendar-surface :global(.ec-sidebar) {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
   }
   .calendar-surface :global(.ec-col-head time),
   .calendar-surface :global(.ec-day-head time) {
@@ -591,10 +612,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--space-11);
-    height: var(--space-11);
+    width: var(--space-10);
+    height: var(--space-10);
     border-radius: var(--radius-pill);
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     font-variant-numeric: tabular-nums;
   }
@@ -612,7 +633,10 @@
     min-height: 0;
   }
   .month :global(.ec-day-head) {
-    padding: var(--space-2);
+    padding: var(--space-2) var(--space-2) var(--space-1);
+  }
+  .month :global(.ec-day.ec-other-month .day-number) {
+    color: var(--muted);
   }
   .month :global(.ec-day-foot) {
     padding: 0 var(--space-2);
@@ -620,9 +644,9 @@
   .month :global(.ec-day-foot a) {
     display: flex;
     width: 100%;
-    min-height: var(--tap-target);
+    min-height: var(--calendar-more);
     align-items: center;
-    justify-content: center;
+    padding-inline: var(--space-3);
     gap: var(--space-1);
     color: var(--muted);
     font-weight: var(--weight-medium);
@@ -663,22 +687,44 @@
   .calendar-surface :global(.ec-event) {
     border-radius: var(--radius-sm);
     box-shadow: none;
-    border-left: var(--space-1) solid var(--success);
-    padding: var(--space-1) var(--space-2);
+    border-left: var(--calendar-rule) solid var(--success);
+    padding: 0 var(--space-3);
   }
   .calendar-surface :global(.ec-event:has(.event)) {
     --calendar-plan-bg: var(--accent);
     border-left-color: var(--accent-ink);
   }
   .calendar-surface :global(.ec-event:has(.due)) {
+    --calendar-plan-bg: var(--calendar-due-bg);
     border-left-color: var(--notice-ink);
+  }
+  .item-kind {
+    color: var(--success);
+  }
+  .event .item-kind {
+    color: var(--accent-ink);
+  }
+  .due .item-kind {
+    color: var(--notice-ink);
+  }
+  .item-kind :global(.ui-icon) {
+    width: var(--space-7);
+    height: var(--space-7);
+  }
+  /* In a month a timed event is a line of the day, not a bar across it. */
+  .month :global(.ec-event:has(.event)) {
+    --calendar-plan-bg: transparent;
+    border-left-color: transparent;
+  }
+  .month :global(.ec-event:has(.event):hover) {
+    --calendar-plan-bg: var(--soft);
   }
   .calendar-surface :global(.ec-event-body) {
     min-width: 0;
     width: 100%;
   }
   .calendar-item {
-    min-height: var(--space-14);
+    min-height: var(--calendar-chip);
     display: flex;
     align-items: center;
     gap: var(--space-4);
@@ -699,7 +745,7 @@
   }
   .calendar-item strong {
     display: block;
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     line-height: var(--leading-body);
     overflow: hidden;
@@ -715,19 +761,16 @@
   /* calendar-layout.ts groups these month shapes by their measured single-line
      title and optional time line. Re-review grouping when this structure changes. */
   .month .calendar-item {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 0;
+    gap: var(--space-3);
   }
-  .month .item-copy {
-    flex: initial;
-    width: 100%;
+  .month .event > .item-time {
+    order: 1;
+    color: var(--accent-ink);
   }
   .month .calendar-item small {
     display: none;
   }
-  .month .calendar-item:not(.event):not(.due) > .item-time,
+  .month .calendar-item:not(.event) > .item-time,
   .calendar-surface :global(.ec-all-day .item-time),
   .calendar-surface :global(.ec-all-day .calendar-item small) {
     display: none;
@@ -755,6 +798,12 @@
   .timed .item-time {
     color: var(--accent-ink);
     font-size: var(--text-xs);
+  }
+  .calendar-item.timed {
+    padding-block: var(--space-1);
+  }
+  .timed strong {
+    font-weight: var(--weight-semibold);
   }
   .timed .item-copy {
     flex: initial;

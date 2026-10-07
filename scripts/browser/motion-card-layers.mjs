@@ -196,7 +196,7 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
     [
       "Workspace board",
       "view=board",
-      ".resource-card",
+      "[data-board-card]",
       ["context", "title", "metadata", "labels"],
     ],
   ]) {

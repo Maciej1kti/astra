@@ -241,19 +241,14 @@ export function boardGesture(node: HTMLElement, initial: BoardGestureOptions) {
         }
       }
     }
-    const column = document
-      .elementFromPoint(x, y)
-      ?.closest<HTMLElement>("[data-kanban-column-cards]");
-    if (column) {
-      const rect = column.getBoundingClientRect();
-      const speed =
-        y < rect.top + EDGE
-          ? -pace(rect.top + EDGE - y, EDGE)
-          : y > rect.bottom - EDGE
-            ? pace(y - (rect.bottom - EDGE), EDGE)
-            : 0;
-      column.scrollTop += speed * elapsed;
-    }
+    // Columns are as long as their cards, so the page follows a held card.
+    const speed =
+      y < EDGE
+        ? -pace(EDGE - y, EDGE)
+        : y > window.innerHeight - EDGE
+          ? pace(y - (window.innerHeight - EDGE), EDGE)
+          : 0;
+    if (speed) window.scrollBy(0, speed * elapsed);
   }
   function mark(target: BoardDrop | null) {
     if (!indicator) return;

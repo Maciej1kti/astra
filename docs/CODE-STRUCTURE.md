@@ -47,7 +47,11 @@ bounded ordinary and archived project pages, with local folder/title filters.
 It renders them with the board feature's `KanbanBoard`, the component the card
 `Board` also uses: one column/card view, one `boardGesture` on the card surface,
 one phone column strip and one browser-local view memory. A host supplies its
-columns and receives a requested move with a `settle` callback. `board-gesture.ts`
+columns and receives a requested move with a `settle` callback. `BoardOverview`
+renders the same component with every column locked, so the workspace Board
+shows all projects' cards without moving any. Columns are as long as their
+cards and the page scrolls; a phone's board takes the height of the column in
+view. `board-gesture.ts`
 owns the pointer, the preview's lift, lean and landing, and edge scrolling;
 `board-reflow.ts` parts the rendered rows by transform and measures from layout
 offsets; `board-flip.ts` plays re-rendered cards as movement. `KanbanBoard` shows

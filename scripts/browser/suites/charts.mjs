@@ -1085,7 +1085,7 @@ await runBrowserSuite(
         exact: true,
       });
       const pluginBox = (name) =>
-        settingsDialog.getByRole("checkbox", { name: new RegExp(`^${name}`) });
+        settingsDialog.getByRole("switch", { name: new RegExp(`^${name}`) });
       await expect(pluginBox("Razem na Wykresie")).toBeChecked();
       await expect(pluginBox("Rozliczenie na Wykresie")).toBeChecked();
       await pluginBox("Rozliczenie na Wykresie").uncheck();

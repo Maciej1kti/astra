@@ -15,14 +15,14 @@ test("board preferences isolate projects and never persist card data or cursors"
     "project-a",
     {
       horizontal: 240,
-      vertical: { review: 180 },
       collapsed: { done: true },
       title: "private",
       cursor: "expired",
     },
     storage,
   );
-  assert.equal(readBoardView("project-a", storage).vertical.review, 180);
+  assert.equal(readBoardView("project-a", storage).horizontal, 240);
+  assert(!("vertical" in readBoardView("project-a", storage)));
   assert.equal(readBoardView("project-a", storage).collapsed.done, true);
   assert.equal(readBoardView("project-b", storage).horizontal, 0);
   assert(![...data.values()][0].includes("private"));
@@ -37,7 +37,6 @@ test("untrusted or unavailable browser storage cannot break the board", () => {
   ]) {
     const result = readBoardView("p", { getItem: () => value });
     assert.equal(result.horizontal, 0);
-    assert.equal(result.vertical.review, 0);
     assert.equal(result.collapsed.done, false);
   }
   const denied = {
@@ -50,7 +49,7 @@ test("untrusted or unavailable browser storage cannot break the board", () => {
   };
   assert.equal(readBoardView("p", denied).horizontal, 0);
   assert.doesNotThrow(() =>
-    writeBoardView("p", { horizontal: 0, vertical: {}, collapsed: {} }, denied),
+    writeBoardView("p", { horizontal: 0, collapsed: {} }, denied),
   );
 });
 

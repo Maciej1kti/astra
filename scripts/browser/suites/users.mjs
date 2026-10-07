@@ -62,11 +62,18 @@ await runBrowserSuite(
         name: "Ustawienia przestrzeni roboczej",
         exact: true,
       });
-      await expect(
-        dialog.getByLabel("Bieżący użytkownik", { exact: true }),
-      ).toBeEnabled();
+      await expect(people(dialog).first()).toBeVisible();
       return dialog;
     }
+    const people = (dialog) =>
+      dialog
+        .getByRole("list", { name: "Użytkownicy", exact: true })
+        .getByRole("listitem");
+    const switchTo = (dialog, label) =>
+      dialog.getByRole("button", {
+        name: `Przełącz na użytkownika ${label}`,
+        exact: true,
+      });
     async function selectedFetch(path, id) {
       return page.evaluate(
         async ({ path, id }) => {
@@ -120,9 +127,12 @@ await runBrowserSuite(
       await ready(retained);
       await check("create-profile", async () => {
         const dialog = await settings();
-        await expect(
-          dialog.getByLabel("Bieżący użytkownik", { exact: true }),
-        ).toHaveValue(owner.id);
+        await expect(people(dialog)).toHaveCount(1);
+        await expect(people(dialog).first()).toHaveAttribute(
+          "aria-current",
+          "true",
+        );
+        await expect(people(dialog).first()).toContainText(owner.name);
         await dialog
           .getByLabel("Nazwa nowego użytkownika", { exact: true })
           .fill(name);
@@ -162,12 +172,8 @@ await runBrowserSuite(
             },
           ),
         ).toBeVisible();
-        await expect(
-          dialog.getByRole("button", {
-            name: "Zmień użytkownika",
-            exact: true,
-          }),
-        ).toBeDisabled();
+        // Nobody can be switched to before the creation is confirmed.
+        await expect(switchTo(dialog, name)).toHaveCount(0);
         await page.unroute("**/api/v1/commands/**");
         await dialog
           .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
@@ -184,14 +190,12 @@ await runBrowserSuite(
         await page.unroute("**/api/v1/users");
         profile = cli("users").items.find((user) => user.name === name);
         assert(!profile.is_default);
-        await expect(
-          dialog
-            .getByLabel("Bieżący użytkownik", { exact: true })
-            .locator("option", { hasText: name }),
-        ).toHaveCount(1);
-        await expect(
-          dialog.getByLabel("Bieżący użytkownik", { exact: true }),
-        ).toHaveValue(profile.id);
+        await expect(people(dialog).filter({ hasText: name })).toHaveCount(1);
+        await expect(switchTo(dialog, name)).toBeEnabled();
+        await expect(people(dialog).first()).toHaveAttribute(
+          "aria-current",
+          "true",
+        );
         const profileCli = (...args) => cli(...args, "--user", profile.id);
         const folder = join(config.temp, "Colleague project");
         await mkdir(folder, { mode: 0o700 });
@@ -240,23 +244,10 @@ await runBrowserSuite(
         });
         const timezone = dialog.getByLabel("Strefa czasowa", { exact: true });
         const original = await timezone.inputValue();
-        await dialog
-          .getByLabel("Bieżący użytkownik", { exact: true })
-          .selectOption(profile.id);
         await timezone.fill(original === "UTC" ? "Europe/Warsaw" : "UTC");
-        await expect(
-          dialog.getByRole("button", {
-            name: "Zmień użytkownika",
-            exact: true,
-          }),
-        ).toBeDisabled();
+        await expect(switchTo(dialog, name)).toBeDisabled();
         await timezone.fill(original);
-        await expect(
-          dialog.getByRole("button", {
-            name: "Zmień użytkownika",
-            exact: true,
-          }),
-        ).toBeEnabled();
+        await expect(switchTo(dialog, name)).toBeEnabled();
         await page.setViewportSize({ width: 320, height: 844 });
         const metrics = await dialog.evaluate((node) => {
           const bounds = node.getBoundingClientRect();
@@ -271,9 +262,7 @@ await runBrowserSuite(
         assert.equal(metrics.scrollWidth, metrics.viewport);
         await screenshot("users-settings-320.png");
         const navigation = page.waitForEvent("load");
-        await dialog
-          .getByRole("button", { name: "Zmień użytkownika", exact: true })
-          .focus();
+        await switchTo(dialog, name).focus();
         await page.keyboard.press("Enter");
         await navigation;
         await ready();
@@ -404,15 +393,7 @@ await runBrowserSuite(
         const title = page.getByPlaceholder("Tytuł karty…", { exact: true });
         await title.fill("Unsubmitted board card title");
         const dialog = await settings();
-        await dialog
-          .getByLabel("Bieżący użytkownik", { exact: true })
-          .selectOption(owner.id);
-        await expect(
-          dialog.getByRole("button", {
-            name: "Zmień użytkownika",
-            exact: true,
-          }),
-        ).toBeDisabled();
+        await expect(switchTo(dialog, owner.name)).toBeDisabled();
         await dialog
           .getByRole("button", { name: "Zamknij ustawienia", exact: true })
           .click();
@@ -423,12 +404,7 @@ await runBrowserSuite(
         await title.fill("");
         await expect(title).toHaveValue("");
         const clean = await settings();
-        await clean
-          .getByLabel("Bieżący użytkownik", { exact: true })
-          .selectOption(owner.id);
-        await expect(
-          clean.getByRole("button", { name: "Zmień użytkownika", exact: true }),
-        ).toBeEnabled();
+        await expect(switchTo(clean, owner.name)).toBeEnabled();
         await clean
           .getByRole("button", { name: "Zamknij ustawienia", exact: true })
           .click();

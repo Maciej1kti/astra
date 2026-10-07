@@ -262,20 +262,17 @@
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .app .resource-card:not(.focus-card),
   .app .update {
     transition:
       transform var(--motion-enter) var(--motion-spring),
       box-shadow var(--motion-enter) ease,
       border-color var(--motion-quick) ease;
   }
-  .app .resource-card:not(.focus-card):hover,
   .app .update:hover {
     transform: translateY(calc(-1 * var(--motion-lift)));
     box-shadow: var(--shadow-floating);
     border-color: var(--line-strong);
   }
-  .app .resource-card:not(.focus-card):active,
   .app .update:active {
     transform: translateY(0) scale(0.99);
   }

@@ -1,6 +1,5 @@
 export type BoardView = {
   horizontal: number;
-  vertical: Record<string, number>;
   collapsed: Record<string, boolean>;
 };
 /** The columns a board may remember, and those it starts with collapsed. */
@@ -23,19 +22,12 @@ function sanitize(value: unknown, shape: BoardViewShape): BoardView {
     value && typeof value === "object"
       ? (value as Record<string, unknown>)
       : {};
-  const vertical =
-    raw.vertical && typeof raw.vertical === "object"
-      ? (raw.vertical as Record<string, unknown>)
-      : {};
   const collapsed =
     raw.collapsed && typeof raw.collapsed === "object"
       ? (raw.collapsed as Record<string, unknown>)
       : {};
   return {
     horizontal: offset(raw.horizontal),
-    vertical: Object.fromEntries(
-      shape.columns.map((status) => [status, offset(vertical[status])]),
-    ),
     collapsed: Object.fromEntries(
       shape.columns.map((status) => [
         status,

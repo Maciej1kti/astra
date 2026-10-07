@@ -102,11 +102,15 @@ await runBrowserSuite(
       return dialog.evaluate((node) => {
         const rect = node.getBoundingClientRect();
         const body = node.querySelector(".dialog-body");
-        const footer = node.querySelector("footer").getBoundingClientRect();
+        // Settings saves from its header and has no footer.
+        const save = [...node.querySelectorAll(".dialog-header button")]
+          .find((button) => button.textContent.trim() === "Zapisz ustawienia")
+          .getBoundingClientRect();
         return {
           viewport: { width: innerWidth, height: innerHeight },
           rect: rect.toJSON(),
-          footer: footer.toJSON(),
+          save: save.toJSON(),
+          footers: node.querySelectorAll("footer").length,
           bodyWidth: body.clientWidth,
           bodyScrollWidth: body.scrollWidth,
         };
@@ -176,8 +180,12 @@ await runBrowserSuite(
           for (const theme of ["light", "dark"]) {
             const dialog = await settings();
             await dialog
-              .getByLabel("Motyw", { exact: true })
-              .selectOption(theme);
+              .getByRole("radiogroup", { name: "Motyw", exact: true })
+              .getByRole("radio", {
+                name: theme === "dark" ? "Ciemny" : "Jasny",
+                exact: true,
+              })
+              .check();
             await dialog
               .getByRole("button", { name: "Zamknij ustawienia", exact: true })
               .click();
@@ -262,7 +270,14 @@ await runBrowserSuite(
             });
             const metrics = await layoutMetrics(dialog);
             assert(metrics.rect.x >= 0 && metrics.rect.right <= width);
-            assert(metrics.footer.bottom <= metrics.viewport.height);
+            assert.equal(metrics.footers, 0);
+            assert(
+              metrics.save.x >= metrics.rect.x &&
+                metrics.save.right <= metrics.rect.right &&
+                metrics.save.y >= 0 &&
+                metrics.save.bottom <= metrics.viewport.height,
+              `Save stays in the header at ${width}px: ${JSON.stringify(metrics)}`,
+            );
             assert.equal(metrics.bodyWidth, metrics.bodyScrollWidth);
             widths.push(metrics);
             await snapshot(`settings-${width}`);

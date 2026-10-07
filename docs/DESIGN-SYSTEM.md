@@ -11,7 +11,7 @@ additional UI framework, styling runtime or component dependency is required.
   colour is written once as `light-dark(light, dark)`; `data-theme` only sets
   `color-scheme`. Do not add a second palette block.
 - `lib/ui/` owns `Button`, `Badge`, `Icon`, `Brand`, `PageHeading`,
-  `SectionHeading`, `EmptyState`, `ResourceCard`, `ResourceMetadata`,
+  `SectionHeading`, `EmptyState`, `ResourceMetadata`,
   `DialogHeader`, `EditableTitle`, `ActionMenu`, `CommandRecovery`,
   `SessionNotice`, `DeferredHost` and `DeferredView`.
   `SectionHeading` supports compact level-three headings, counts and section
@@ -621,7 +621,7 @@ across counters are plugins, built-in modules a profile switches on in
 Settings ([ADR-073](ADR-073-PLUGINS-AND-CHART-TILES.md)). A plugin fills a
 named place, `panel` above the counter list or `summary` below the tiles, and
 derives everything from the selected rows; it has no API access and writes
-nothing. Plugins are listed in Settings as plain checkboxes with a one-line
+nothing. Plugins are listed in Settings as switches with a one-line
 description, and are off until chosen.
 
 With the `chart-settlement` plugin on, `ChartSettlement` is the view's first surface when the selected counters name
@@ -710,6 +710,40 @@ and short bars for recorded zero. Tapping the name/chart opens the full history
 table; rows are rendered only while expanded. Both themes use the shared tokens,
 and interaction/disclosure motion respects reduced motion. Inputs and actions
 retain 44px targets even when the surrounding layout is compact.
+
+## Settings
+
+Settings is one large dialog with no footer. **Zapisz ustawienia** sits in the
+header, as saving does on a card; what is unsaved, in flight or just done is
+said once in a status line above the sections, which is empty and hidden when
+there is nothing to say. A rail names the sections (a strip above the content
+on a narrow screen) and marks the one in view: Profil, Czas i widok, Projekty,
+Agent, Wtyczki, Tagi, Wygląd and Dostęp.
+
+- A choice between a few things that differ in kind is a row of cards holding
+  radio buttons: the people of a host, the agent provider, the appearance. The
+  appearance cards carry a small picture of the workspace; a fragment marked
+  `data-scheme` resolves the one palette for its own scheme, so no colour is
+  written twice.
+- A choice that is on or off is a switch (`role="switch"`) at the end of its
+  row, with the description under its name.
+- `TimezoneMap` draws the world as dots from `timezone-map.ts`, marks the band
+  of hours the chosen zone keeps now and offers the nearest known place under a
+  pointer. It is a shortcut: the field with its list of zones is the control,
+  and a zone the browser does not know is said to be unknown.
+- Preference fields name the one preferences form with `form=`, so each
+  section remains a block of its own for layout and entrance layers.
+
+## Calendar density
+
+A calendar item is one line: `--calendar-chip-height` under a pointer and a
+full touch target under a finger. A month cell therefore shows several items
+before its "+N więcej" link, and a week's all-day rows leave the hours most of
+the grid. In a month a timed event is a line of its day (symbol, title, time)
+without a fill; plans and due dates are filled bars with a rule in their colour.
+`--calendar-grid-height` ends the grid with the window. The hours scale is
+quiet tabular text, and scroll anchoring is off inside the grid so that all-day
+rows arriving after the first scroll do not cover the first hours.
 
 ## Pinned daily controls and calendar selection
 

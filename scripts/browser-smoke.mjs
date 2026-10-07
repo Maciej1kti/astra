@@ -949,28 +949,30 @@ try {
   const dragVersion = cli("--project", folder, "card", "get", typedId).version;
   await page.mouse.move(dragBox.x + 20, dragBox.y + 15);
   await page.mouse.down();
+  // A column is as long as its cards; holding a card at the window's edge scrolls the page.
+  assert.equal(
+    await scrollColumn.evaluate(
+      (node) => node.scrollHeight - node.clientHeight,
+    ),
+    0,
+  );
   await page.mouse.move(
     scrollBox.x + scrollBox.width / 2,
-    scrollBox.y + scrollBox.height - 12,
+    page.viewportSize().height - 12,
     { steps: 8 },
   );
-  await expect
-    .poll(() => scrollColumn.evaluate((node) => node.scrollTop))
-    .toBeGreaterThan(30);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(30);
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect(page.locator("[data-board-drag-preview]")).toHaveCount(0);
-  const stoppedScroll = await scrollColumn.evaluate((node) => node.scrollTop);
+  const stoppedScroll = await page.evaluate(() => scrollY);
   await page.waitForTimeout(100);
-  assert.equal(
-    await scrollColumn.evaluate((node) => node.scrollTop),
-    stoppedScroll,
-  );
+  assert.equal(await page.evaluate(() => scrollY), stoppedScroll);
   assert.equal(
     cli("--project", folder, "card", "get", typedId).version,
     dragVersion,
   );
-  await scrollColumn.evaluate((node) => (node.scrollTop = 0));
+  await page.evaluate(() => scrollTo(0, 0));
   await page
     .getByRole("button", { name: "Następne 50 w Do sprawdzenia", exact: true })
     .click();
@@ -1063,7 +1065,7 @@ try {
     ".astra-column-review [data-kanban-column-cards]",
   );
   await mobileReview.scrollIntoViewIfNeeded();
-  await mobileReview.evaluate((node) => (node.scrollTop = 0));
+  const swipeStart = await mobile.evaluate(() => scrollY);
   const swipeBox = await mobileReview.boundingBox();
   const swipeX = swipeBox.x + swipeBox.width / 2,
     swipeY = Math.min(
@@ -1083,9 +1085,10 @@ try {
     type: "touchEnd",
     touchPoints: [],
   });
+  // The swipe scrolls the page: a column has no scroll of its own.
   await expect
-    .poll(() => mobileReview.evaluate((node) => node.scrollTop))
-    .toBeGreaterThan(10);
+    .poll(() => mobile.evaluate(() => scrollY))
+    .toBeGreaterThan(swipeStart + 10);
   await expect(mobile.locator("[data-board-drag-preview]")).toHaveCount(0);
   await cdp.detach();
 
@@ -1139,7 +1142,7 @@ try {
   );
   await page.unroute(`**/api/v1/projects/${plan.project_id}/cards`);
 
-  // Each project's collapse and first-page scroll survive navigation and reload.
+  // Each project's collapse and horizontal scroll survive navigation and reload.
   // With Cancelled collapsed by default, use a viewport that still overflows after Active is collapsed.
   await page.setViewportSize({ width: 1000, height: 1000 });
   await page
@@ -1148,14 +1151,10 @@ try {
     .click();
   const savedScroll = await page.evaluate(() => {
     const horizontal = document.querySelector(".astra-board .date-scroll");
-    const vertical = document.querySelector(
-      ".astra-column-review [data-kanban-column-cards]",
-    );
     horizontal.scrollLeft = 40;
-    vertical.scrollTop = 240;
-    return { horizontal: horizontal.scrollLeft, vertical: vertical.scrollTop };
+    return { horizontal: horizontal.scrollLeft };
   });
-  assert(savedScroll.horizontal > 0 && savedScroll.vertical > 0);
+  assert(savedScroll.horizontal > 0);
   await page.getByRole("button", { name: "Focus", exact: true }).click();
   await page.getByRole("button", { name: "Tablica", exact: true }).click();
   const assertRestored = async () => {
@@ -1171,13 +1170,6 @@ try {
           .evaluate((node) => node.scrollLeft),
       )
       .toBe(savedScroll.horizontal);
-    await expect
-      .poll(() =>
-        page
-          .locator(".astra-column-review [data-kanban-column-cards]")
-          .evaluate((node) => node.scrollTop),
-      )
-      .toBe(savedScroll.vertical);
   };
   await assertRestored();
   await page
@@ -1417,7 +1409,7 @@ try {
       exact: true,
     })
     .click();
-  await page.getByLabel("Motyw", { exact: true }).selectOption("dark");
+  await page.getByRole("radio", { name: "Ciemny", exact: true }).check();
   assert.equal(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).colorScheme,
@@ -1548,7 +1540,7 @@ try {
     .waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, whole-card drag without controls, immediate drop persistence, same-command retry, keyboard ordering, vertical auto-scroll and cancellation, touch hold-to-drag and normal touch scrolling, SVAR collapse, quick title creation with identical retry, per-project collapse and scroll restoration across navigation and reload, held board conflict, 51-card pagination boundaries, dark/mobile board layout, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
+    "PASS: HTTPS pairing, folder selection and confirmed registration, real file creation, desktop and mobile emulation, concurrent edit conflict, draft preservation, seven views, undo, focus, report read receipts, persisted settings, native external file updates, typed CLI, timeline move, resize conflict, pending command retention, whole-card drag without controls, immediate drop persistence, same-command retry, keyboard ordering, page auto-scroll and cancellation, touch hold-to-drag and normal touch scrolling, SVAR collapse, quick title creation with identical retry, per-project collapse and scroll restoration across navigation and reload, held board conflict, 51-card pagination boundaries, dark/mobile board layout, milestone timeline, aligned calendar weeks, full-text search, SSE during held drag, session revocation with preserved desktop/mobile drafts, settings draft and pending identity retention, on-demand Git, diagnostics, dark appearance and gesture cancellation.",
   );
   console.log(
     "This is Chromium device emulation, not physical iPhone or Safari evidence.",

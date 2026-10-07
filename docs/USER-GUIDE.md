@@ -40,9 +40,10 @@ Neither a report nor a completed checklist automatically changes card status.
 
 ## Choose a user
 
-Open **Ustawienia przestrzeni roboczej → Użytkownik**. Enter a **Nazwa nowego użytkownika** and choose
-**Dodaj użytkownika** to create an empty profile. To use it, select **Bieżący użytkownik** and
-choose **Zmień użytkownika**. The settings button shows the profile used by that tab.
+Open **Ustawienia przestrzeni roboczej → Profil**. Enter a **Nazwa nowego użytkownika** and choose
+**Dodaj użytkownika** to create an empty profile. The section lists every profile, marks the
+one in use as **Bieżący użytkownik** and offers **Przełącz** beside each other one. The settings
+button shows the profile used by that tab.
 Finish or explicitly discard unsaved changes and resolve pending commands before
 switching; the switch is disabled while that work remains.
 
@@ -328,7 +329,9 @@ stages changes until Apply. Partial/invalid ranges remain visible for correction
 
 Timed events have a local start and duration. The workspace timezone controls
 their meaning, regardless of the viewing phone's timezone. Settings hold the
-workspace calendar preferences. Calendar pointer moves and resizes save in the
+workspace calendar preferences under **Czas i widok**: type or pick a zone in
+**Strefa czasowa**, or choose a place on the map; the band of that zone's hours
+and its current time are shown beside it. Calendar pointer moves and resizes save in the
 background on drop. A failed or uncertain save opens recovery controls with the
 original proposal and command; conflicts require a deliberate new edit. Timeline
 date gestures and Calendar keyboard date editing use a proposal form. Escape or

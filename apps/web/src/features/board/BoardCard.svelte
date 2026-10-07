@@ -12,6 +12,8 @@
   const item = $derived(
     board.current(String(card.id)) ?? (card.astra as Summary),
   );
+  // A card of a locked column opens but is never carried.
+  const fixed = $derived(!board.busy() && !board.movable(item));
   const details = $derived(board.details());
   const actions = $derived(board.actions());
   // Stop SVAR's drag listener at the card boundary; the card surface owns the gesture.
@@ -44,6 +46,7 @@
   data-board-card={item.id}
   data-board-status={item.status}
   data-board-held={board.held() === item.id ? "" : undefined}
+  class:fixed
   use:isolate
   use:boardGesture={board.gesture(item)}
 >
@@ -54,12 +57,16 @@
       // A busy board keeps the card focusable; it only declines to open it.
       if (!board.busy()) board.open(item);
     }}
-    aria-keyshortcuts={board.ordered()
-      ? "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
-      : "Alt+ArrowLeft Alt+ArrowRight"}
-    title={board.ordered()
-      ? "Przeciągnij, aby przenieść; kliknij, aby edytować. Alt+strzałki przenoszą kartę."
-      : "Przeciągnij, aby przenieść; kliknij, aby otworzyć. Alt+← lub Alt+→ zmienia kolumnę."}
+    aria-keyshortcuts={fixed
+      ? undefined
+      : board.ordered()
+        ? "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
+        : "Alt+ArrowLeft Alt+ArrowRight"}
+    title={fixed
+      ? "Kliknij, aby otworzyć."
+      : board.ordered()
+        ? "Przeciągnij, aby przenieść; kliknij, aby edytować. Alt+strzałki przenoszą kartę."
+        : "Przeciągnij, aby przenieść; kliknij, aby otworzyć. Alt+← lub Alt+→ zmienia kolumnę."}
     onkeydown={(event) => {
       if (!event.altKey || !event.key.startsWith("Arrow")) return;
       const vertical = event.key === "ArrowUp" || event.key === "ArrowDown";
@@ -89,6 +96,9 @@
     cursor: grab;
     user-select: none;
     -webkit-touch-callout: none;
+  }
+  article.fixed {
+    cursor: pointer;
   }
   .title {
     display: block;

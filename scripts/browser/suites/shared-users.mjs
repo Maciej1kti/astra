@@ -120,10 +120,10 @@ await runBrowserSuite(
           exact: true,
         });
         await settings
-          .getByLabel("Bieżący użytkownik", { exact: true })
-          .selectOption(tomek);
-        await settings
-          .getByRole("button", { name: "Zmień użytkownika", exact: true })
+          .getByRole("button", {
+            name: "Przełącz na użytkownika Tomek",
+            exact: true,
+          })
           .click();
         await ready(tomekPage, "Tomek");
         await ownerPage.reload();

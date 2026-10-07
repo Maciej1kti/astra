@@ -1088,19 +1088,23 @@ await runBrowserSuite(
               name: "Ustawienia przestrzeni roboczej",
               exact: true,
             });
-            const select = dialog.getByLabel("Dostawca agenta", {
-              exact: true,
-            });
-            await expect(select).toBeEnabled();
-            return { dialog, select };
+            const providers = dialog
+              .getByRole("radiogroup", { name: "Dostawca agenta", exact: true })
+              .getByRole("radio");
+            await expect(providers.first()).toBeEnabled();
+            return { dialog, providers };
           };
           let panel = await settings();
-          await expect(panel.select).toHaveValue("claude");
+          await expect(
+            panel.dialog.getByRole("radio", { name: /^Claude Code/ }),
+          ).toBeChecked();
           assert.deepEqual(
-            await panel.select.locator("option").allTextContents(),
-            ["Claude Code", "Codex"],
+            await panel.providers.evaluateAll((nodes) =>
+              nodes.map((node) => node.value),
+            ),
+            ["claude", "codex"],
           );
-          await panel.select.selectOption("codex");
+          await panel.dialog.getByRole("radio", { name: /^Codex/ }).check();
           await panel.dialog
             .getByRole("button", { name: "Zapisz ustawienia" })
             .click();
@@ -1123,8 +1127,12 @@ await runBrowserSuite(
 
           // Put it back so that later checks start from the default.
           panel = await settings();
-          await expect(panel.select).toHaveValue("codex");
-          await panel.select.selectOption("claude");
+          await expect(
+            panel.dialog.getByRole("radio", { name: /^Codex/ }),
+          ).toBeChecked();
+          await panel.dialog
+            .getByRole("radio", { name: /^Claude Code/ })
+            .check();
           await panel.dialog
             .getByRole("button", { name: "Zapisz ustawienia" })
             .click();

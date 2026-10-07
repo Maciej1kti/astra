@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+[Boards, the calendar and Settings were corrected](2026-10-07-boards-calendar-settings.md)
+after the owner's review: columns are as long as their cards and every list is
+named, the workspace Board uses the shared board, calendar items are compact
+and week and day open at 08:00, and Settings has sections, a timezone map and
+no footer. The band below a page's content was reduced, not removed, to keep
+the floating button clear of content; removing it is the owner's decision.
+
 [A project's place can be chosen by clicking](2026-10-07-project-places.md),
 with folders added in the dialog; GitHub publication is a profile setting that
 is on by default; and `projectctl project create` gives the CLI and the in-app

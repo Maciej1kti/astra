@@ -110,18 +110,18 @@ type Scene = {
   cardSelector?: string;
 };
 const sceneItems =
-  ".sectiontitle, .tablehead, .resource-card, .focus-card, .listrow, .update, .empty";
+  ".sectiontitle, .tablehead, .focus-card, .listrow, .update, .empty";
 const cardLayers = [
   {
     name: "context",
     selector:
-      ".focus-card-context, .card-content > small, :scope.listrow > div:first-of-type > small, :scope.update > div > small",
+      ".focus-card-context, :scope[data-board-card] .card-context, :scope.listrow > div:first-of-type > small, :scope.update > div > small",
     delay: 60,
   },
   {
     name: "title",
     selector:
-      ".focus-card-title, .card-title, :scope.listrow > div:first-of-type > strong, :scope.update h3, :scope[data-board-card] h3",
+      ".focus-card-title, :scope.listrow > div:first-of-type > strong, :scope.update h3, :scope[data-board-card] h3",
     delay: 100,
   },
   {

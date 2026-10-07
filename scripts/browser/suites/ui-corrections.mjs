@@ -159,6 +159,83 @@ await runBrowserSuite(
             fullPage: true,
           });
       }
+      // Boards are as long as their cards: the page scrolls, never a column.
+      for (const query of [
+        `view=board&project=${config.projects[0].id}`,
+        "view=board",
+      ]) {
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await page.goto(`${config.origin}/?${query}`);
+        await expect(page.locator("[data-board-card]").first()).toBeVisible();
+        const layout = await page.evaluate(() => ({
+          columns: [...document.querySelectorAll(".wx-column")].map((node) => {
+            const cards = node.querySelector("[data-kanban-column-cards]");
+            const last = [...node.querySelectorAll("[data-board-card]")].at(-1);
+            return {
+              heading: node.querySelector(".wx-title")?.textContent.trim(),
+              inner: cards ? cards.scrollHeight - cards.clientHeight : 0,
+              // The column ends a little below its last card and footer.
+              slack: last
+                ? node.getBoundingClientRect().bottom -
+                  last.getBoundingClientRect().bottom
+                : 0,
+            };
+          }),
+          board: document.querySelector(".astra-board").getBoundingClientRect()
+            .bottom,
+          page: document.documentElement.scrollHeight,
+        }));
+        assert.equal(layout.columns.length, 5, query);
+        assert(
+          layout.columns.every(
+            (column) =>
+              /^\S.* · \d+$/.test(column.heading) &&
+              column.inner === 0 &&
+              column.slack < 120,
+          ),
+          JSON.stringify(layout),
+        );
+        assert(
+          layout.page - (layout.board + (await page.evaluate(() => scrollY))) <
+            160,
+          `Nothing but the page's end follows the board: ${JSON.stringify(layout)}`,
+        );
+      }
+      // A narrow window names each column above its cards, and a column that
+      // was opened there can be closed again.
+      await page.setViewportSize({ width: 680, height: 900 });
+      await page.goto(
+        `${config.origin}/?view=board&project=${config.projects[0].id}`,
+      );
+      await expect(
+        page
+          .locator(".astra-column-planned")
+          .getByRole("heading", { name: /^Zaplanowane · \d+$/ }),
+      ).toBeVisible();
+      await page.locator('[data-board-column-chip="cancelled"]').click();
+      const cancelled = page.locator(".astra-column-cancelled");
+      await expect(
+        cancelled.getByRole("heading", { name: /^Anulowane · \d+$/ }),
+      ).toBeVisible();
+      await expect(
+        cancelled.locator("[data-board-card]").first(),
+      ).toBeVisible();
+      await cancelled
+        .getByRole("button", { name: "Zwiń kolumnę", exact: true })
+        .click();
+      await expect(
+        cancelled.getByRole("button", { name: "Rozwiń kolumnę", exact: true }),
+      ).toBeVisible();
+      await cancelled
+        .getByRole("button", { name: "Rozwiń kolumnę", exact: true })
+        .click();
+      // The page ends with the column in view, not with a longer neighbour.
+      const fitted = await page.evaluate(() => {
+        const scroll = document.querySelector(".astra-board .date-scroll");
+        const column = document.querySelector(".astra-column-cancelled");
+        return [scroll.clientHeight, column.offsetHeight];
+      });
+      assert(Math.abs(fitted[0] - fitted[1]) <= 1, JSON.stringify(fitted));
       assert.deepEqual(errors, []);
     } finally {
       await writeFile(

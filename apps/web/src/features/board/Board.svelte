@@ -156,7 +156,6 @@
           ? "Tablica się zmieniła. Wyświetlono pierwszą stronę aktualnych kolumn."
           : "";
         if (status) {
-          kanban?.resetColumnScroll(status);
           columns = columns.map(
             (column) => resolved.get(column.status) ?? column,
           );

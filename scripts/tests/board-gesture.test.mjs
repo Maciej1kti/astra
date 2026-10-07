@@ -126,6 +126,9 @@ function setup(t) {
     return sequence;
   };
   window.clearTimeout = (id) => timers.delete(id);
+  const scrolled = [];
+  window.innerHeight = 600;
+  window.scrollBy = (_x, y) => scrolled.push(y);
   for (const name of ["planning-gesture-started", "planning-gesture-ended"])
     window.addEventListener(name, () => lifecycle.push(name.slice(17)));
   const body = new El("body");
@@ -191,6 +194,7 @@ function setup(t) {
   });
   const h = {
     window,
+    scrolled,
     root: document.documentElement,
     body,
     node,
@@ -593,38 +597,28 @@ test("a paged board turns one page after a pause at its edge, then rests", (t) =
   assert.deepEqual(pages, [1, 1, -1]);
 });
 
-test("holding the preview near a column edge scrolls the column under the pointer", (t) => {
+test("holding the preview near the top or bottom of the window scrolls the page", (t) => {
   const h = setup(t);
   h.down();
   h.move(300, 300);
   h.frame();
-  assert.equal(h.column.scrollTop, 0);
-  // Column spans y 100..500; another column may be under the pointer.
-  const other = new El("div", { "data-kanban-column-cards": "" }, [
-    new El("article"),
-  ]);
-  other.bounds = h.column.bounds;
+  assert.deepEqual(h.scrolled, []);
+  // The window spans y 0..600; columns are as long as their cards and never scroll.
   for (const [y, speed] of [
-    [100, -1.1],
-    [128, -pace(28)],
-    [156, 0],
+    [0, -1.1],
+    [28, -pace(28)],
+    [56, 0],
     [300, 0],
-    [444, 0],
-    [472, pace(28)],
-    [500, 1.1],
+    [544, 0],
+    [572, pace(28)],
+    [600, 1.1],
   ]) {
-    other.scrollTop = 0;
-    h.over(other.children[0]);
+    h.scrolled.length = 0;
     h.move(300, y);
     h.frame();
-    near(other.scrollTop, speed * 16, `y=${y}`);
+    if (speed) near(h.scrolled[0], speed * 16, `y=${y}`);
+    else assert.deepEqual(h.scrolled, [], `y=${y}`);
   }
-  assert.equal(h.column.scrollTop, 0);
-  other.scrollTop = 0;
-  h.over(new El("main"));
-  h.move(300, 110);
-  h.frame();
-  assert.equal(other.scrollTop, 0);
   assert.equal(h.column.scrollTop, 0);
 });
 

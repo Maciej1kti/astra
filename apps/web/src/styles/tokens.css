@@ -1,5 +1,6 @@
 /* Astra's visual vocabulary. Each colour names its light and dark value once. */
-:root {
+:root,
+[data-scheme] {
   color-scheme: light dark;
   --bg: light-dark(#f2f3f5, #191a1e);
   --paper: light-dark(#ffffff, #24252a);
@@ -102,14 +103,18 @@
   --dialog-card: 800px;
   --dialog-max-height: 900px;
   --dialog-feedback-height: 280px;
+  --settings-rail: 176px;
   --chart-height: 480px;
   --chart-mobile-height: 430px;
-  --calendar-grid-height: clamp(600px, calc(100dvh - 260px), 820px);
+  /* The grid ends with the window: what stands above it is the page's header. */
+  --calendar-grid-height: clamp(560px, calc(100dvh - 330px), 1200px);
+  --calendar-chip-height: 24px;
+  --calendar-rule: 3px;
   --calendar-mobile-grid-height: clamp(600px, calc(100dvh - 180px), 700px);
   --calendar-agenda-height: clamp(400px, calc(100dvh - 240px), 680px);
   --gantt-min-width: 720px;
-  --board-min-height: 360px;
-  --board-height: 68vh;
+  --board-column-min-height: 96px;
+  --board-collapsed-min-height: 240px;
   --board-column-max-width: 440px;
   --drag-opacity: 0.28;
   --disabled-opacity: 0.5;
@@ -150,5 +155,13 @@
   color-scheme: light;
 }
 :root[data-theme="dark"] {
+  color-scheme: dark;
+}
+/* A fragment shown in one appearance whatever the page uses, such as a preview:
+   it declares the vocabulary again so each colour resolves for its own scheme. */
+[data-scheme="light"] {
+  color-scheme: light;
+}
+[data-scheme="dark"] {
   color-scheme: dark;
 }
