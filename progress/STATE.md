@@ -48,6 +48,8 @@ Since 2026-10-07 every plot there draws
 card counter preview keeps its bars. The view now opens with a
 [settlement](2026-10-07-chart-settlement.md) that says who owes whom how much
 from the counters' rates; the rule and the phone layout await the owner.
+Rates are now [stored with each counter](2026-10-07-counter-rates.md) and the
+debt counts every saved date ([ADR-072](../docs/ADR-072-COUNTER-RATES-AND-HISTORY-TOTALS.md)).
 
 The [repository review completion](2026-10-05-review-completion.md) finishes what
 the [first pass](2026-10-05-repository-review-fixes.md) left open. A reviewed
@@ -70,7 +72,7 @@ page does not repeat them. The
 is preserved at its immutable revision. No requirement or acceptance result was
 removed or changed by this consolidation.
 
-- **2026-10-07:** [One board engine and its movement](2026-10-07-shared-board-engine.md); [Chart view: dots joined by lines only](2026-10-07-line-only-charts.md); [Chart settlement and uniform phone cards](2026-10-07-chart-settlement.md).
+- **2026-10-07:** [One board engine and its movement](2026-10-07-shared-board-engine.md); [Chart view: dots joined by lines only](2026-10-07-line-only-charts.md); [Chart settlement and uniform phone cards](2026-10-07-chart-settlement.md); [Counter rates and whole-history totals](2026-10-07-counter-rates.md).
 - **2026-10-06:** [Chart view redesign](2026-10-06-chart-redesign.md); [Chart phone controls and value-only plots](2026-10-06-chart-phone-controls.md); [Phone navigation bar alignment](2026-10-06-phone-dock-alignment.md); [Touched menu actions in WebKit dialogs](2026-10-06-touch-menu-actions.md); [One-step deletion of a pinned card](2026-10-06-pinned-card-deletion.md); [Visual review of the interface](2026-10-06-ui-review.md); [Interface refinement](2026-10-06-ui-refinement.md); [Layered motion restored](2026-10-06-layered-motion-restored.md); [Layered entrances in every view](2026-10-06-motion-everywhere.md); [Layers inside menus, dialogs and disclosures](2026-10-06-inner-layers.md); [In-app agent](2026-10-06-agent-chat.md).
 - **2026-10-05:** [Repository review fixes](2026-10-05-repository-review-fixes.md); [Repository review completion](2026-10-05-review-completion.md).
 - **2026-10-04:** [Definition and API cleanup](2026-10-04-definition-usage-cleanup.md); [Polish browser interface](2026-10-04-polish-ui.md); [Navigation selector correction](2026-10-04-navigation-section-selector.md); [Projects status board consolidation](2026-10-04-projects-status-board.md); [Definition and consumer audit](2026-10-04-definition-usage-audit.md); [Main project status board](2026-10-04-main-project-board.md); [UI component audit](2026-10-04-ui-component-audit.md); [Counter Chart dashboard](2026-10-04-counter-chart.md); [Shared exercise project implementation](2026-10-04-shared-exercise-project.md); [Compact navigation feature](2026-10-04-compact-navigation.md); [Trusted user profiles implementation](2026-10-04-trusted-user-profiles.md); [Folder review](2026-10-04-multi-user-folder-review.md).

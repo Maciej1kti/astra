@@ -3,18 +3,15 @@
     chartDate,
     chartMoney,
     chartSettlement,
-    chartValue,
     type ChartSummaryRow,
   } from "./chart-model";
 
   let {
     rows,
-    from,
     outputUnit,
   }: {
+    /** Selected counters whose totals cover their whole history. */
     rows: ChartSummaryRow[];
-    /** The earliest day the history read reaches. */
-    from: string;
     outputUnit: string;
   } = $props();
 
@@ -22,7 +19,7 @@
   const unit = $derived(outputUnit.trim());
   const first = $derived(
     rows
-      .flatMap((row) => Object.keys(row.source.values))
+      .flatMap((row) => row.source.history?.first_date ?? [])
       .reduce<string | null>(
         (earliest, date) => (!earliest || date < earliest ? date : earliest),
         null,
@@ -35,9 +32,9 @@
     <div class="settlement-heading">
       <h2 id="chart-settlement-heading">Rozliczenie</h2>
       <p data-chart-ledger>
-        {first && first > from
+        {first
           ? `cała historia, od ${chartDate(first, true)}`
-          : "ostatnie 400 dni"}
+          : "cała historia"}
       </p>
     </div>
     {#if settlement.parties.length > 1}
@@ -55,11 +52,6 @@
                 >{chartMoney(debt.amount)}{#if unit}<small>{unit}</small
                   >{/if}</strong
               >
-              {#if debt.level.length}<span class="debt-level"
-                  >Do wyrównania: {debt.level
-                    .map((step) => `${step.activity} ${chartValue(step.count)}`)
-                    .join(" albo ")}</span
-                >{/if}
             </li>
           {/each}
         </ul>
@@ -74,16 +66,13 @@
           </div>
         {/each}
       </dl>
-      <p class="settlement-note">
-        Osoba to ostatnie słowo nazwy licznika. Kto ma mniejszą wartość, płaci
-        różnicę. Liczy się cała historia, niezależnie od zakresu wykresu.
-        {#if settlement.unrated}Liczniki bez stawki ({settlement.unrated}) nie
-          wchodzą do rozliczenia.{/if}
-      </p>
+      {#if settlement.unrated}<p class="settlement-note">
+          Liczniki bez stawki ({settlement.unrated}) nie wchodzą do rozliczenia.
+        </p>{/if}
     {:else}
       <p class="settlement-note">
-        Wpisz stawki w podsumowaniu poniżej, aby policzyć, kto komu wisi. Osoba
-        to ostatnie słowo nazwy licznika.
+        Ustaw stawki w ustawieniach liczników na karcie, aby policzyć, kto komu
+        wisi.
       </p>
     {/if}
   </section>
@@ -131,12 +120,6 @@
   .debt-who {
     font-size: var(--text-lg);
     overflow-wrap: anywhere;
-  }
-  .debt-level {
-    flex-basis: 100%;
-    color: var(--muted);
-    font-size: var(--text-base);
-    font-variant-numeric: tabular-nums;
   }
   .debt-who b {
     font-weight: var(--weight-semibold);

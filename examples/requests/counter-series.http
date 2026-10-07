@@ -1,5 +1,7 @@
 # Use an existing paired session; X-Astra-User selects its trusted profile.
 # Only recorded range dates are returned; saved zero differs from an absent date.
+# Each series also carries its rate, when configured, and history totals over
+# every saved date, whatever the range.
 GET /api/v1/views/counters?from=2026-09-01&to=2026-09-30&limit=100
 Accept-Encoding: gzip
 

@@ -358,3 +358,86 @@ fn daily_focus_sections_include_conditional_counter_previews() {
         }
     }
 }
+
+#[test]
+fn a_counter_rate_is_an_exact_decimal_kept_until_changed_or_cleared() {
+    let env = Environment::new();
+    let engine = env.engine();
+    let project = register(&engine, &env.path());
+    let created = create(&engine, &project, "Bet");
+    let id = created.body["result"]["resource"]["metadata"]["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let mut current = created.body["result"]["resource"].clone();
+    let configure = |current: &mut Value, config: Value| {
+        let reply = patch(
+            &engine,
+            &project,
+            &id,
+            current["version"].as_str().unwrap(),
+            json!({ "configure_counter": config }),
+        );
+        if reply.http_status == 200 {
+            wire::validate("CommandResponse", &reply.body).unwrap();
+            *current = reply.body["result"]["resource"].clone();
+        }
+        reply.http_status
+    };
+    let base = |extra: Value| {
+        let mut config = json!({"name":"Sit-ups","unit":"rep","step":1,"archived":false});
+        for (key, value) in extra.as_object().unwrap() {
+            config[key] = value.clone();
+        }
+        config
+    };
+    assert_eq!(configure(&mut current, base(json!({"rate":"0.25"}))), 200);
+    let counter = current["metadata"]["counters"][0].clone();
+    assert_eq!(counter["rate"], "0.25");
+    let counter_id = counter["id"].clone();
+    // A client that does not know rates must not erase one.
+    assert_eq!(
+        configure(&mut current, base(json!({"id":counter_id,"step":5}))),
+        200
+    );
+    assert_eq!(current["metadata"]["counters"][0]["rate"], "0.25");
+    assert_eq!(current["metadata"]["counters"][0]["step"], 5);
+    assert_eq!(
+        configure(&mut current, base(json!({"id":counter_id,"rate":"1"}))),
+        200
+    );
+    assert_eq!(current["metadata"]["counters"][0]["rate"], "1");
+    for invalid in [
+        json!("1,5"),
+        json!("-1"),
+        json!("01"),
+        json!("1."),
+        json!("0.12345"),
+        json!("1234567890"),
+        json!("1e3"),
+        json!(""),
+        json!(0.25),
+    ] {
+        assert_eq!(
+            configure(&mut current, base(json!({"id":counter_id,"rate":invalid}))),
+            422,
+            "{invalid}"
+        );
+    }
+    assert_eq!(current["metadata"]["counters"][0]["rate"], "1");
+    assert_eq!(
+        configure(&mut current, base(json!({"id":counter_id,"rate":null}))),
+        200
+    );
+    assert!(current["metadata"]["counters"][0].get("rate").is_none());
+    // A new counter created with a null rate stores none.
+    assert_eq!(
+        configure(&mut current, base(json!({"name":"Push-ups","rate":null}))),
+        200
+    );
+    assert!(current["metadata"]["counters"][1].get("rate").is_none());
+    drop(engine);
+    let restarted = env.engine();
+    let source = restarted.get(&project, Kind::Card, &id).unwrap();
+    assert_eq!(source["version"], current["version"]);
+}

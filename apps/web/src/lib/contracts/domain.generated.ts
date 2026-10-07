@@ -235,6 +235,7 @@ export type CardCounters =
       CardCounter,
       CardCounter
     ];
+export type CounterRate = string;
 export type CounterValue = number;
 /**
  * Ograniczone JSON values; poza schema: max depth 12, 10000 nodes, brak niebezpiecznych kluczy prototypu w obiektach JS.
@@ -513,6 +514,7 @@ export interface CardCounter {
   unit: string;
   step: number;
   archived: boolean;
+  rate?: CounterRate;
   values: CounterValues;
 }
 export interface CounterValues {

@@ -21,7 +21,6 @@
     chartRangeDays,
     chartRate,
     chartSeriesKey,
-    chartSharedRates,
     chartStats,
     readChartPreferences,
     writeChartPreferences,
@@ -31,8 +30,6 @@
 
   let {
     series,
-    ledger,
-    ledgerFrom,
     from,
     to,
     today,
@@ -48,8 +45,6 @@
     onloadmore,
   }: {
     series: ChartSeries[];
-    ledger: ChartSeries[];
-    ledgerFrom: string;
     from: string;
     to: string;
     today: string;
@@ -80,7 +75,6 @@
   /** Until a grouping is picked, it follows the length of the range. */
   let bucketChosen = false;
   let cumulative = $state(false);
-  let rates = $state<Record<string, string>>({});
   let outputUnit = $state("PLN");
   let storageMessage = $state("");
   // The shell's phone layout: display controls move below the plot.
@@ -111,7 +105,6 @@
   $effect(() => {
     if (loadedPreferenceKey !== preferenceKey) {
       const preferences = readChartPreferences(preferenceKey);
-      rates = preferences.rates;
       outputUnit = preferences.outputUnit;
       select([]);
       initialized = false;
@@ -134,20 +127,19 @@
     selected.map((source, position) => ({
       source,
       stats: chartStats(source.values, from, to),
-      rate: chartRate(rates[chartSeriesKey(source)]),
+      rate: chartRate(source.rate),
       color: colors[chartSeriesKey(source)] ?? position,
     })),
   );
-  // Debts run over the whole readable history, not the plotted range.
+  // Debts run over each counter's whole history, not the plotted range.
   const ledgerRows = $derived(
-    ledger
-      .filter((item) => selectedKeys.includes(chartSeriesKey(item)))
-      .map((source) => ({
-        source,
-        stats: chartStats(source.values, ledgerFrom, today),
-        rate: chartRate(rates[chartSeriesKey(source)]),
-        color: colors[chartSeriesKey(source)] ?? 0,
-      })),
+    rows.map((row) => ({
+      ...row,
+      stats: {
+        ...row.stats,
+        total: row.source.history?.total ?? row.stats.total,
+      },
+    })),
   );
   const records = $derived(
     rows.reduce((sum, row) => sum + row.stats.recorded, 0),
@@ -182,9 +174,9 @@
     cumulative = value === "running";
   }
   function savePreferences() {
-    storageMessage = writeChartPreferences(preferenceKey, { rates, outputUnit })
+    storageMessage = writeChartPreferences(preferenceKey, { outputUnit })
       ? ""
-      : "Pamięć przeglądarki jest niedostępna. Stawki zostaną zachowane tylko na czas tej wizyty.";
+      : "Pamięć przeglądarki jest niedostępna. Jednostka wynikowa zostanie zachowana tylko na czas tej wizyty.";
   }
 </script>
 
@@ -244,11 +236,7 @@
     </div>{/if}
   {#if notice}<p class="notice">{notice}</p>{/if}
 
-  {#if ledgerRows.length}<ChartSettlement
-      rows={ledgerRows}
-      from={ledgerFrom}
-      {outputUnit}
-    />{/if}
+  {#if ledgerRows.length}<ChartSettlement rows={ledgerRows} {outputUnit} />{/if}
 
   <div class="chart-body">
     <ChartCounterPicker
@@ -334,12 +322,7 @@
     <ChartSummary
       {rows}
       {days}
-      {rates}
       {outputUnit}
-      onrate={(key, value) => {
-        rates = chartSharedRates(rates, series, key, value);
-        savePreferences();
-      }}
       onoutputunit={(value) => {
         outputUnit = value;
         savePreferences();

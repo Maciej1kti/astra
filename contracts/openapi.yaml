@@ -1908,7 +1908,7 @@ paths:
       operationId: getCounterSeries
       tags: [views]
       summary: Read bounded counter histories for Chart
-      description: Read-only snapshot of counter configuration and saved daily totals, with card and project context. from/to are inclusive, with at most 400 calendar dates; only recorded dates in that range are returned, including explicit zero. Counters without values in the range remain discoverable. Completed and cancelled cards retain history. By default archived counters, cards and projects are excluded; include_archived includes them. Unverified sources are omitted with a warning and stale freshness. Cursors bind the project, dates, archive flag, limit and scoped projection revision; a changed scope returns PAGE_STALE. At most 100 series and 400 values per series fit within a 2 MiB serialized response bound. Omitted project_id uses only the current trusted profile's workspace.
+      description: Read-only snapshot of counter configuration and saved daily totals, with card and project context. from/to are inclusive, with at most 400 calendar dates; only recorded dates in that range are returned, including explicit zero. Counters without values in the range remain discoverable. Each series also carries its rate, when one is configured, and history totals over every saved date regardless of the range. Completed and cancelled cards retain history. By default archived counters, cards and projects are excluded; include_archived includes them. Unverified sources are omitted with a warning and stale freshness. Cursors bind the project, dates, archive flag, limit and scoped projection revision; a changed scope returns PAGE_STALE. At most 100 series and 400 values per series fit within a 2 MiB serialized response bound. Omitted project_id uses only the current trusted profile's workspace.
       parameters:
       - $ref: '#/components/parameters/ReadAcceptEncoding'
       - name: project_id
@@ -2965,6 +2965,12 @@ components:
       additionalProperties:
         $ref: '#/components/schemas/CounterValue'
       maxProperties: 3660
+    CounterRate:
+      type: string
+      maxLength: 14
+      pattern: ^(0|[1-9][0-9]{0,8})(\.[0-9]{1,4})?$
+      description: Exact decimal value of one counted unit, in the workspace's
+        chosen money unit. A dot separates at most four decimals.
     CardCounter:
       type: object
       properties:
@@ -2986,6 +2992,8 @@ components:
           maximum: 1000000000
         archived: &counter005
           type: boolean
+        rate:
+          $ref: '#/components/schemas/CounterRate'
         values:
           $ref: '#/components/schemas/CounterValues'
       required:
@@ -3009,6 +3017,10 @@ components:
         unit: *counter003
         step: *counter004
         archived: *counter005
+        rate:
+          oneOf:
+          - $ref: '#/components/schemas/CounterRate'
+          - type: 'null'
       required:
       - name
       - unit
@@ -3017,6 +3029,7 @@ components:
       additionalProperties: false
       description: Omit id to create a counter. Existing IDs update configuration; unit
         cannot change after a daily value is recorded. Archive instead of removing history.
+        An omitted rate keeps the stored one; null removes it.
     CounterRecord:
       type: object
       properties:
@@ -3052,7 +3065,7 @@ components:
       additionalProperties: false
     CounterSeries:
       type: object
-      description: Read-only counter configuration and sparse saved totals observed with its card source version. Missing dates are absent; an explicitly saved zero remains present. The Chart view reads the current card before opening its editor.
+      description: Read-only counter configuration, whole-history totals and sparse saved totals observed with its card source version. Missing dates are absent; an explicitly saved zero remains present. The Chart view reads the current card before opening its editor.
       properties:
         project_id: {$ref: '#/components/schemas/UUID'}
         project_name: {type: string, minLength: 1, maxLength: 240}
@@ -3066,13 +3079,24 @@ components:
         unit: *counter003
         step: *counter004
         archived: *counter005
+        rate: {$ref: '#/components/schemas/CounterRate'}
+        history: {$ref: '#/components/schemas/CounterHistory'}
         availability: {type: string, enum: [ready, stale]}
         values:
           type: object
           propertyNames: {$ref: '#/components/schemas/LocalDate'}
           additionalProperties: {$ref: '#/components/schemas/CounterValue'}
           maxProperties: 400
-      required: [project_id, project_name, project_archived, card_id, card_title, card_archived, version, id, name, unit, step, archived, availability, values]
+      required: [project_id, project_name, project_archived, card_id, card_title, card_archived, version, id, name, unit, step, archived, history, availability, values]
+      additionalProperties: false
+    CounterHistory:
+      type: object
+      description: Totals over every saved date of the counter, whatever range the request names. first_date is absent while nothing is recorded.
+      properties:
+        total: {type: integer, minimum: 0, maximum: 3660000000000}
+        recorded: {type: integer, minimum: 0, maximum: 3660}
+        first_date: {$ref: '#/components/schemas/LocalDate'}
+      required: [total, recorded]
       additionalProperties: false
     CounterSeriesPage:
       type: object

@@ -607,10 +607,12 @@ is no scale choice.
 `ChartSettlement` is the view's first surface when the selected counters name
 at least two people, because who owes whom is the answer the owner opens the
 view for. It states each debt as payer, arrow, receiver and one large amount,
-then every person's value, then the rule in muted text. It follows the
-selection, rates and output unit, reads the whole available history instead of
-the plotted range, says how many repetitions would draw the payer level, and
-stores nothing itself.
+then every person's value, with no explanation of the rule: the owner asked
+for the amount alone. A muted line appears only to say that unrated counters
+were left out, or that rates are missing. It follows the selection, each
+counter's stored rate and whole-history total, and the output unit, not the
+plotted range. The summary shows rates read-only; they are edited in the
+counter's settings on its card.
 
 In a narrow container every summary card has the same grid: name and total,
 rate and value, three quiet statistics, then the difference line, which the

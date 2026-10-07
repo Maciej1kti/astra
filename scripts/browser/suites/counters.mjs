@@ -78,6 +78,19 @@ await runBrowserSuite(
           .getByLabel("Jednostka licznika", { exact: true })
           .fill("reps");
         await section.getByLabel("Krok licznika", { exact: true }).fill("5");
+        if (name === "Sit-ups") {
+          // The rate is stored with the counter, as an exact decimal.
+          const rate = section.getByLabel("Stawka licznika", { exact: true });
+          const save = section.getByRole("button", {
+            name: "Zapisz licznik",
+            exact: true,
+          });
+          await rate.fill("ćwierć");
+          await expect(rate).toHaveAttribute("aria-invalid", "true");
+          await expect(save).toBeDisabled();
+          await rate.fill("0,25");
+          await expect(rate).toHaveAttribute("aria-invalid", "false");
+        }
         await section
           .getByRole("button", { name: "Zapisz licznik", exact: true })
           .click();
@@ -89,6 +102,11 @@ await runBrowserSuite(
           }),
         ).toHaveCount(0);
       }
+      assert.deepEqual(
+        get().metadata.counters.map((counter) => counter.rate),
+        [undefined, "0.25", undefined],
+        "Only the counter given a rate stores one",
+      );
       const first = get().metadata.counters[0];
       const today = await section.getAttribute("data-counter-today");
       await expect(section).not.toContainText("Dzisiaj ·");

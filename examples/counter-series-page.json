@@ -13,6 +13,8 @@
       "unit": "reps",
       "step": 5,
       "archived": false,
+      "rate": "0.25",
+      "history": {"total": 145, "recorded": 9, "first_date": "2026-08-30"},
       "availability": "ready",
       "values": {"2026-09-25": 10, "2026-09-26": 0, "2026-09-28": 20}
     },
@@ -29,6 +31,7 @@
       "unit": "km",
       "step": 1,
       "archived": false,
+      "history": {"total": 0, "recorded": 0},
       "availability": "ready",
       "values": {}
     }

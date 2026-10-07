@@ -119,9 +119,39 @@ fn counter_series_clips_sparse_dates_and_retains_empty_completed_and_archived_hi
     assert_eq!(row["availability"], "ready");
     assert!(row.get("body").is_none());
     assert_eq!(
-        items.iter().find(|item| item["id"] == empty).unwrap()["values"],
-        json!({})
+        row["history"],
+        json!({"total":55,"recorded":4,"first_date":"2026-09-29"}),
+        "History totals count every saved date, not only the requested range"
     );
+    assert!(row.get("rate").is_none());
+    let empty_row = items.iter().find(|item| item["id"] == empty).unwrap();
+    assert_eq!(empty_row["values"], json!({}));
+    assert_eq!(empty_row["history"], json!({"total":0,"recorded":0}));
+    assert_eq!(fs::read(&source_path).unwrap(), before);
+    let source = engine.get(&project, Kind::Card, &card).unwrap();
+    let rated = patch(
+        &engine,
+        &project,
+        &card,
+        source["version"].as_str().unwrap(),
+        json!({"configure_counter":{"id":counter,"name":"Push-ups","unit":"reps","step":5,"archived":false,"rate":"0.25"}}),
+    );
+    assert_eq!(rated.http_status, 200, "{rated:?}");
+    let before = fs::read(&source_path).unwrap();
+    let page = engine
+        .counter_series(None, "2026-10-03", "2026-10-03", false, None, 100)
+        .unwrap();
+    wire::validate("CounterSeriesPage", &page).unwrap();
+    let row = page["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["id"] == counter)
+        .unwrap();
+    assert_eq!(fs::read(&source_path).unwrap(), before);
+    assert_eq!(row["rate"], "0.25");
+    assert_eq!(row["values"], json!({"2026-10-03":30}));
+    assert_eq!(row["history"]["total"], 55);
     assert_eq!(fs::read(&source_path).unwrap(), before);
     let all = engine
         .counter_series(None, "2026-09-30", "2026-10-02", true, None, 100)

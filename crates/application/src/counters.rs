@@ -31,11 +31,24 @@ pub(crate) fn patch(next: &mut Value, payload: &Value) -> Result<(), AppError> {
             for key in ["name", "unit", "step", "archived"] {
                 counter.insert(key.into(), config[key].clone());
             }
+            // An omitted rate keeps the stored one; an explicit null removes it.
+            match config.get("rate") {
+                Some(Value::Null) => {
+                    counter.remove("rate");
+                }
+                Some(rate) => {
+                    counter.insert("rate".into(), rate.clone());
+                }
+                None => {}
+            }
         } else {
             let mut counter = config
                 .as_object()
                 .ok_or(AppError::invariant("validated counter configuration"))?
                 .clone();
+            if counter.get("rate").is_some_and(Value::is_null) {
+                counter.remove("rate");
+            }
             counter.insert("id".into(), json!(Uuid::new_v4().to_string()));
             counter.insert("values".into(), json!({}));
             counters.push(Value::Object(counter));

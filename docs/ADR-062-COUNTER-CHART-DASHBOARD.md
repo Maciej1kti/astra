@@ -33,7 +33,9 @@ profile scoping and authenticated bounded-read compression apply unchanged.
 
 The new `chart` route may be stored as `Preferences.default_view`. Chart's series
 selection, plot modes and rate calculations are browser presentation; they do
-not alter source units or recorded totals. Opening a card still reads its current
+not alter source units or recorded totals. Since
+[ADR-072](ADR-072-COUNTER-RATES-AND-HISTORY-TOTALS.md) the rate itself is
+counter configuration and each series carries whole-history totals. Opening a card still reads its current
 source before editing. Synthetic histories are limited to disposable test projects
 and are never inserted into the owner's counters.
 

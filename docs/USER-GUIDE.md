@@ -14,8 +14,8 @@ settings, status/priority labels, accessibility text, pairing and recovery messa
 remaining phone shortcuts. Focus sections are **W Focus**, **Potrzebuje mojej
 uwagi**, **W toku** and **Wydarzenia**.
 
-Dates, month/day names and displayed numbers use Polish formatting. Chart rates
-accept either a decimal comma or point. Source identifiers, API/CLI values,
+Dates, month/day names and displayed numbers use Polish formatting. A counter's rate
+accepts either a decimal comma or point. Source identifiers, API/CLI values,
 paths, user/profile names and user-written project content retain their meaning
 and spelling. The CLI and contributor documentation remain English. Browser
 language follows the application rather than the device language or a previously
@@ -95,7 +95,7 @@ its **Więcej** entry holds only **Dostosuj nawigację**.
 | Tablica | Arrange cards by status | Manual ordering, drag/drop and keyboard alternatives; a workspace overview and project boards |
 | Kalendarz | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with direct move/resize saves |
 | Oś czasu | Inspect recorded schedules over time | Schedule bars and milestones; API/CLI call this view `gantt` |
-| Wykres | Compare recorded counter histories | Select counters, overlay compatible units, group dates, inspect statistics and convert values with individual rates |
+| Wykres | Compare recorded counter histories | Select counters, overlay compatible units, group dates, inspect statistics, value totals with each counter's rate and see who owes whom |
 | Aktualizacje | Read project/milestone reports | Read receipts, corrections and explicit decision resolutions |
 
 Search and filters do not change source files. Where a view offers another page,
@@ -202,7 +202,9 @@ card patch or undo.
 These labels are not separate authenticated accounts.
 
 Counters record one absolute total per day in the workspace timezone. Give a
-counter a name, unit and step, then scrub horizontally or type a value and confirm
+counter a name, unit and step, and optionally a **Stawka**: the value of one
+unit, with up to four decimals, saved with the counter in the card and used by
+the Chart view. An empty rate keeps the counter out of money calculations. Then scrub horizontally or type a value and confirm
 it. The card editor shows a 14-day trend and saved history; In focus, In motion and Events expose
 compact daily controls for their active counters. Missing history is not a recorded zero. The current-day
 control can start at zero when nothing has been saved.
@@ -222,16 +224,13 @@ selector to inspect one project or all registered projects.
 **Rozliczenie** opens the view when the selected counters name at least two
 people. A person is the last word of a counter's name, so **Pompki Tomek** and
 **Brzuszki Tomek** both belong to Tomek; a one-word name belongs to nobody. A
-person's value is the sum of each of their counters' totals multiplied by its
-rate, over the whole history the view can read (the last 400 days), whatever
-range the plots show. Whoever has the lower value pays the difference, shown
-as **Maciek płaci → Tomek** beside the amount. **Do wyrównania** says how many
-repetitions of any one activity would close the gap, and every person's value
-follows. The rest of the name is the activity, and a rate belongs to it: typing
-a rate for **Pompki Tomek** fills **Pompki Maciek** too, until you give one of
-them its own. A counter without a rate counts for nothing and is mentioned;
-with no rates the panel asks for them. More than two people are settled pair
-by pair.
+person's value is the sum of each of their counters' totals multiplied by that
+counter's rate, over the counter's whole saved history, whatever range the
+plots show. Whoever has the lower value pays the difference, shown as **Maciek
+płaci → Tomek** beside the amount, with every person's value underneath. Rates
+are set in each counter's settings on its card, so every device shows the same
+amount. A counter without a rate counts for nothing and is mentioned; with no
+rates the panel asks for them. More than two people are settled pair by pair.
 
 The plot is the main surface. On a wide screen the **Liczniki** list sits beside
 it; on a tablet or phone it collapses to one row showing how many counters are
@@ -265,14 +264,15 @@ different units get separate plots, each with its own scale.
 **Podsumowanie okresu** lists each selected counter's total, recorded days,
 average and best day; on a narrow screen every counter becomes its own card.
 **Różnica** appears when at least two selected counters share a unit, and
-compares totals with the first of them. To estimate a cost, payment or other
-derived value, enter an individual **Stawka** in that counter's row. For example,
-ten recorded hours at a rate of 100 give 1,000 in the chosen **Jednostka
-wynikowa**. **Razem** adds same-unit totals and the converted values. Only
-counters with a valid rate contribute; zero is a valid rate. Rates value the
-summary only and do not change the plots. Rates and the
-output label are saved in this browser for the selected workspace profile. These
-controls do not change counter units or recorded sources.
+compares totals with the first of them. **Stawka** shows the rate saved
+with the counter; change it in the counter's settings on its card, which the
+counter's name opens. For example, ten recorded hours at a rate of 100 give
+1,000 in the chosen **Jednostka wynikowa**. **Razem** adds same-unit totals and
+the converted values. Only counters with a rate contribute; zero is a valid
+rate. Rates value the summary and the settlement and do not change the plots.
+The output label is saved in this browser for the selected workspace profile.
+Rates typed into this view by an earlier version stayed in the browser and are
+not carried over.
 
 Ranges are limited to 400 days. Counter catalogs are paged; use **Wczytaj więcej liczników** when
 offered to discover further counters, up to 500 loaded entries; narrow the Project

@@ -52,3 +52,9 @@ day and command recovery rules above remain unchanged.
 
 The workspace comparison dashboard and bounded history API are introduced in
 [ADR-062](ADR-062-COUNTER-CHART-DASHBOARD.md).
+
+## Rates — 2026-10-07
+
+[ADR-072](ADR-072-COUNTER-RATES-AND-HISTORY-TOTALS.md) adds an optional exact
+decimal `rate` to a counter and to `configure_counter`. The exclusive
+operations, bounds and recovery rules above are unchanged.

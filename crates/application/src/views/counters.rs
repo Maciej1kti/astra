@@ -1,7 +1,8 @@
 use super::*;
 
 impl Engine {
-    /// Counter configuration and range-limited totals share one projection snapshot.
+    /// Counter configuration, whole-history totals and range-limited daily totals
+    /// share one projection snapshot.
     pub fn counter_series(
         &self,
         project: Option<&str>,
@@ -51,7 +52,14 @@ impl Engine {
                     let values: String = row.get(12)?;
                     let values: Value = serde_json::from_str(&values)
                         .map_err(|_| rusqlite::Error::InvalidQuery)?;
-                    Ok(json!({
+                    let mut history = json!({
+                        "total": row.get::<_, i64>(14)?,
+                        "recorded": row.get::<_, u32>(15)?,
+                    });
+                    if let Some(first) = row.get::<_, Option<String>>(16)? {
+                        history["first_date"] = json!(first);
+                    }
+                    let mut series = json!({
                         "project_id": project_id,
                         "project_name": row.get::<_, String>(1)?,
                         "project_archived": row.get::<_, bool>(2)?,
@@ -64,9 +72,14 @@ impl Engine {
                         "unit": row.get::<_, String>(9)?,
                         "step": row.get::<_, u32>(10)?,
                         "archived": row.get::<_, bool>(11)?,
+                        "history": history,
                         "values": values,
                         "availability": if projection.project_pending(&project_id) { "stale" } else { "ready" },
-                    }))
+                    });
+                    if let Some(rate) = row.get::<_, Option<String>>(13)? {
+                        series["rate"] = json!(rate);
+                    }
+                    Ok(series)
                 },
             )?.collect::<Result<Vec<_>, _>>()?;
             let more = items.len() > limit as usize;

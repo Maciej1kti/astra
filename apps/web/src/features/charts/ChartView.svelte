@@ -29,20 +29,7 @@
   let viewState = $state.raw<ChartDataState>();
   const owner = new ChartData((value) => (viewState = value));
   viewState = owner.state;
-  // The settlement spans the whole history the counter view can read at once,
-  // whatever range the plots show.
-  const ledgerFrom = $derived(daysBefore(today, 399));
-  // eslint-disable-next-line no-useless-assignment -- as above
-  let ledgerState = $state.raw<ChartDataState>();
-  const ledger = new ChartData((value) => (ledgerState = value));
-  ledgerState = ledger.state;
   function refresh() {
-    void ledger.refresh({
-      project,
-      from: ledgerFrom,
-      to: today,
-      includeArchived,
-    });
     return owner.refresh({ project, from, to, includeArchived });
   }
   $effect(() => {
@@ -53,16 +40,11 @@
     void revision;
     untrack(() => void refresh());
   });
-  onDestroy(() => {
-    owner.dispose();
-    ledger.dispose();
-  });
+  onDestroy(() => owner.dispose());
 </script>
 
 <ChartDashboard
   series={viewState!.series}
-  ledger={ledgerState!.series}
-  {ledgerFrom}
   {today}
   {from}
   {to}

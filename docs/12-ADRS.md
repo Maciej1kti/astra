@@ -447,3 +447,11 @@ Projects and the card Board render with the same `KanbanBoard` component, card
 face and move gesture; only their columns and move commands differ. No protocol,
 source shape or command changes. See
 [ADR-071](ADR-071-SHARED-BOARD-ENGINE.md).
+
+## ADR-072 — Counter rates and whole-history totals
+
+A counter may store an exact decimal `rate`, set through `configure_counter`,
+and the counter view returns `history` totals over every saved date beside the
+range-limited values. The Chart settlement uses both, so rates no longer live
+in a browser and the debt is not cut off by the 400-date range. See
+[ADR-072](ADR-072-COUNTER-RATES-AND-HISTORY-TOTALS.md).

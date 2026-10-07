@@ -67,6 +67,7 @@ await runBrowserSuite(
               unit: definition.unit,
               step: 1,
               archived: false,
+              ...(definition.rate ? { rate: definition.rate } : {}),
             },
           },
           card.version,
@@ -130,10 +131,8 @@ await runBrowserSuite(
       dashboard.getByRole("button", { name: new RegExp(`^${group}: `) });
     const option = (name) =>
       dashboard.getByRole("button", { name, exact: true });
-    const rate = (name, cardTitle) =>
-      dashboard.getByLabel(`Stawka dla ${name} · ${cardTitle}`, {
-        exact: true,
-      });
+    // Rates are counter configuration; the summary only shows them.
+    const rate = (name) => statistic(name, "rate");
     /** Every period's legend reading, taken with the keyboard as a reader would. */
     async function plotValues(unit) {
       const slider = panel(unit).getByLabel(`Wskazany okres: ${unit}`, {
@@ -211,6 +210,7 @@ await runBrowserSuite(
           {
             name: "Push-ups",
             unit: "reps",
+            rate: "2.5",
             values: [
               [day(6), 10],
               [day(4), 0],
@@ -240,6 +240,7 @@ await runBrowserSuite(
         {
           name: "Work hours",
           unit: "hours",
+          rate: "100",
           values: [
             [day(6), 2],
             [day(2), 3],
@@ -505,29 +506,16 @@ await runBrowserSuite(
       await expect(chart("reps")).toBeVisible();
       await expect(chart("hours")).toBeVisible();
       await expect(dashboard.getByRole("img")).toHaveCount(2);
-      await rate("Push-ups", "Synthetic training").fill("2.5");
+      await expect(rate("Push-ups")).toHaveText("2,5");
       await expect(statistic("Push-ups", "converted")).toHaveText("150");
-      await rate("Work hours", "Synthetic paid work").fill("100");
+      await expect(rate("Work hours")).toHaveText("100");
       await expect(statistic("Work hours", "converted")).toHaveText("1000");
       await expect(
         dashboard.locator('[data-chart-summary="converted"]'),
       ).toHaveText("1150 PLN");
-      await rate("Work hours", "Synthetic paid work").fill("-1");
-      await expect(rate("Work hours", "Synthetic paid work")).toHaveAttribute(
-        "aria-invalid",
-        "true",
-      );
-      await expect(statistic("Work hours", "converted")).toHaveText("—");
       await expect(
-        dashboard.locator('[data-chart-summary="converted"]'),
-      ).toHaveText("150 PLN");
-      await rate("Work hours", "Synthetic paid work").fill("0");
-      await expect(rate("Work hours", "Synthetic paid work")).toHaveAttribute(
-        "aria-invalid",
-        "false",
-      );
-      await expect(statistic("Work hours", "converted")).toHaveText("0");
-      await rate("Work hours", "Synthetic paid work").fill("100");
+        dashboard.getByRole("textbox", { name: /Stawka/ }),
+      ).toHaveCount(0);
       await dashboard
         .getByLabel("Jednostka wynikowa", { exact: true })
         .fill("EUR");
@@ -542,7 +530,7 @@ await runBrowserSuite(
       await expect(chart("hours")).toBeVisible();
       await screenshot("chart-rates");
       checks.push(
-        "keyboard counter selection, independent unit plots, decimal/zero/invalid rates and combined converted total",
+        "keyboard counter selection, independent unit plots, counter rates read from their cards and combined converted total",
       );
 
       // Dashboard controls leave the durable source versions untouched.
@@ -712,13 +700,8 @@ await runBrowserSuite(
             `The ${field} statistic is not clipped at ${width}px`,
           );
         }
-        await rate(
-          "Work hours",
-          "Synthetic paid work",
-        ).scrollIntoViewIfNeeded();
-        await expect(
-          rate("Work hours", "Synthetic paid work"),
-        ).toBeInViewport();
+        await rate("Work hours").scrollIntoViewIfNeeded();
+        await expect(rate("Work hours")).toBeInViewport();
         await screenshot(`chart-dashboard-${width}`);
         if (width <= 390 && browser.browserType().name() === "chromium") {
           await chart("reps").scrollIntoViewIfNeeded();
@@ -816,7 +799,7 @@ await runBrowserSuite(
         training.card.version,
       );
       await expect(checkbox("Push-ups", "Synthetic training")).toBeChecked();
-      await expect(rate("Push-ups", "Synthetic training")).toHaveValue("2.5");
+      await expect(rate("Push-ups")).toHaveText("2,5");
       await expect(statistic("Push-ups", "converted")).toHaveText("187,5");
       await page.unroute(historyRoute);
       checks.push(
@@ -892,37 +875,45 @@ await runBrowserSuite(
       await expect(page).toHaveURL(/view=chart/);
       await expect(more).toHaveAttribute("aria-current", "page");
       await expect(dashboard).toBeVisible();
-      await expect(rate("Work hours", "Synthetic paid work")).toHaveValue(
-        "100",
-      );
-      await expect(rate("Push-ups", "Synthetic training")).toHaveValue("2.5");
+      await expect(rate("Work hours")).toHaveText("100");
+      await expect(rate("Push-ups")).toHaveText("2,5");
       await expect(
         dashboard.getByLabel("Jednostka wynikowa", { exact: true }),
       ).toHaveValue("EUR");
       await page.reload();
-      await expect(rate("Work hours", "Synthetic paid work")).toHaveValue(
-        "100",
-      );
+      await expect(rate("Work hours")).toHaveText("100");
       await expect(
         dashboard.getByLabel("Jednostka wynikowa", { exact: true }),
       ).toHaveValue("EUR");
       await screenshot("chart-phone-more-and-reload");
       checks.push(
-        "current source opens without edits, phone More keyboard navigation and browser-local rates survive reload",
+        "current source opens without edits, phone More keyboard navigation and the browser-local output unit survives reload",
       );
 
       // People are the last word of a counter's name; the lower value pays.
+      // Rates come from the counters and totals from their whole history.
       await createCard(config.projects[0].id, "Synthetic bet", [
         {
           name: "Pompki Tomek",
           unit: "rep",
+          rate: "1",
           values: [
-            [day(200), 1000],
+            [day(900), 1000],
             [day(1), 300],
           ],
         },
-        { name: "Pompki Maciek", unit: "rep", values: [[day(0), 33]] },
-        { name: "Brzuszki Tomek", unit: "rep", values: [[day(2), 100]] },
+        {
+          name: "Pompki Maciek",
+          unit: "rep",
+          rate: "1",
+          values: [[day(0), 33]],
+        },
+        {
+          name: "Brzuszki Tomek",
+          unit: "rep",
+          rate: "0.25",
+          values: [[day(2), 100]],
+        },
         { name: "Brzuszki Maciek", unit: "rep", values: [[day(0), 15]] },
       ]);
       await page.reload();
@@ -944,14 +935,8 @@ await runBrowserSuite(
       ])
         await checkbox(name, "Synthetic bet").check();
       await picker.click();
-      await expect(settlement.locator("[data-chart-debt]")).toHaveCount(0);
-      await expect(settlement).toContainText("Wpisz stawki");
-      // One rate per activity: typing it for one person fills the other.
-      await rate("Pompki Tomek", "Synthetic bet").fill("1");
-      await expect(rate("Pompki Maciek", "Synthetic bet")).toHaveValue("1");
-      await rate("Brzuszki Maciek", "Synthetic bet").fill("0,25");
-      await expect(rate("Brzuszki Tomek", "Synthetic bet")).toHaveValue("0,25");
-      // The plots show 30 days; the debt counts the recording 200 days ago.
+      // The plots show 30 days; the debt counts a recording 900 days old,
+      // beyond what one range read can return.
       await expect(statistic("Pompki Tomek", "total")).toHaveText("300");
       await expect(settlement.locator("[data-chart-ledger]")).toHaveText(
         /^cała historia, od /,
@@ -959,14 +944,14 @@ await runBrowserSuite(
       const debt = settlement.locator("[data-chart-debt]");
       await expect(debt).toHaveCount(1);
       await expect(debt.locator("b")).toHaveText(["Maciek", "Tomek"]);
-      await expect(debt.locator("strong")).toHaveText("1288,25EUR");
+      await expect(debt.locator("strong")).toHaveText("1292,00EUR");
       await expect(
         settlement.locator('[data-chart-party="Tomek"] dd'),
       ).toHaveText("1325,00 EUR");
-      await expect(debt.locator(".debt-level")).toHaveText(
-        "Do wyrównania: Pompki 1289 albo Brzuszki 5153",
-      );
-      await expect(settlement).not.toContainText("bez stawki");
+      await expect(settlement).toContainText("Liczniki bez stawki (1)");
+      await expect(settlement).not.toContainText("Do wyrównania");
+      await expect(settlement).not.toContainText("Osoba to");
+      await expect(rate("Brzuszki Maciek")).toHaveText("—");
       const settled = await settlement.boundingBox();
       const firstPlot = await dashboard.getByRole("img").first().boundingBox();
       assert.ok(
@@ -1007,7 +992,7 @@ await runBrowserSuite(
       await page.setViewportSize({ width: 1440, height: 1000 });
       await screenshot("chart-settlement-1440");
       checks.push(
-        "settlement over the whole history by last-word person: lower value pays the difference, one rate per activity, repetitions to draw level, uniform phone cards",
+        "settlement over the whole history by last-word person with counter rates: lower value pays the difference, unrated counters excluded, uniform phone cards",
       );
       assert.deepEqual(errors, []);
       assert.deepEqual(await page.evaluate(() => window.chartCsp), []);

@@ -15,6 +15,10 @@ export interface ChartSeries {
   availability?: "ready" | "stale";
   version?: string;
   step?: number;
+  /** Stored value of one unit, as an exact decimal. */
+  rate?: string;
+  /** Totals over every saved date, whatever range `values` covers. */
+  history?: { total: number; recorded: number; first_date?: string };
   values: Record<string, number>;
 }
 export type ChartBucket = "day" | "week" | "month";
@@ -218,39 +222,6 @@ export function chartPerson(name: string): string | null {
   return words.length > 1 ? words.at(-1)! : null;
 }
 
-/** What a counter measures: its name without the person. */
-export function chartActivity(name: string): string | null {
-  const words = name.trim().split(/\s+/);
-  return words.length > 1 ? words.slice(0, -1).join(" ") : null;
-}
-
-/**
- * A rate belongs to an activity, so typing one fills the same activity's other
- * counters while they still hold what the edited counter held before.
- */
-export function chartSharedRates(
-  rates: Record<string, string>,
-  series: ChartSeries[],
-  key: string,
-  value: string,
-): Record<string, string> {
-  const edited = series.find((item) => chartSeriesKey(item) === key);
-  const activity = edited ? chartActivity(edited.name) : null;
-  const before = (rates[key] ?? "").trim();
-  const next = { ...rates, [key]: value };
-  if (activity)
-    for (const item of series) {
-      const other = chartSeriesKey(item);
-      if (
-        other !== key &&
-        chartActivity(item.name) === activity &&
-        (rates[other] ?? "").trim() === before
-      )
-        next[other] = value;
-    }
-  return next;
-}
-
 export interface ChartParty {
   name: string;
   value: number;
@@ -259,8 +230,6 @@ export interface ChartDebt {
   from: string;
   to: string;
   amount: number;
-  /** What the payer would have to record, in any one activity, to draw level. */
-  level: { activity: string; count: number }[];
 }
 export interface ChartSettlement {
   /** People named by the selected counters. */
@@ -277,7 +246,6 @@ export interface ChartSettlement {
 export function chartSettlement(rows: ChartSummaryRow[]): ChartSettlement {
   const names = new Set<string>();
   const values = new Map<string, number>();
-  const activities = new Map<string, Map<string, number>>();
   let unrated = 0;
   for (const row of rows) {
     const person = chartPerson(row.source.name);
@@ -288,10 +256,6 @@ export function chartSettlement(rows: ChartSummaryRow[]): ChartSettlement {
       continue;
     }
     values.set(person, (values.get(person) ?? 0) + row.stats.total * row.rate);
-    if (!activities.has(person)) activities.set(person, new Map());
-    activities
-      .get(person)!
-      .set(chartActivity(row.source.name) ?? row.source.name, row.rate);
   }
   const parties = [...values]
     .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
@@ -300,19 +264,7 @@ export function chartSettlement(rows: ChartSummaryRow[]): ChartSettlement {
   for (const [position, to] of parties.entries())
     for (const from of parties.slice(position + 1)) {
       const amount = Math.round((to.value - from.value) * 100) / 100;
-      if (amount > 0)
-        debts.push({
-          from: from.name,
-          to: to.name,
-          amount,
-          level: [...(activities.get(from.name) ?? [])]
-            .filter(([, rate]) => rate > 0)
-            .map(([activity, rate]) => ({
-              activity,
-              // Cents first, so a float quotient cannot add a repetition.
-              count: Math.ceil(Math.round(amount * 100) / (rate * 100) - 1e-9),
-            })),
-        });
+      if (amount > 0) debts.push({ from: from.name, to: to.name, amount });
     }
   debts.sort((a, b) => b.amount - a.amount);
   return { people: names.size, parties, debts, unrated };
@@ -436,13 +388,13 @@ export function chartLine(
 }
 
 export interface ChartPreferences {
-  rates: Record<string, string>;
   outputUnit: string;
 }
 type StorageReader = Pick<Storage, "getItem">;
 type StorageWriter = Pick<Storage, "setItem">;
 const storageKey = (scope: string) => `astra-counter-charts:v1:${scope}`;
 
+/** Rates once stored here now live on each counter; only the unit remains. */
 export function readChartPreferences(
   scope: string,
   storage?: StorageReader,
@@ -452,20 +404,8 @@ export function readChartPreferences(
       (storage ?? localStorage).getItem(storageKey(scope)) ?? "null",
     );
     if (value && typeof value === "object") {
-      const raw = value as { rates?: unknown; outputUnit?: unknown };
-      const rates = Object.fromEntries(
-        raw.rates && typeof raw.rates === "object" && !Array.isArray(raw.rates)
-          ? Object.entries(raw.rates).filter(
-              ([key, rate]) =>
-                key.length < 200 &&
-                typeof rate === "string" &&
-                rate.length <= 40 &&
-                chartRate(rate) !== null,
-            )
-          : [],
-      );
+      const raw = value as { outputUnit?: unknown };
       return {
-        rates,
         outputUnit:
           typeof raw.outputUnit === "string"
             ? raw.outputUnit.slice(0, 12)
@@ -475,7 +415,7 @@ export function readChartPreferences(
   } catch {
     /* Storage can be disabled; visualization still works. */
   }
-  return { rates: {}, outputUnit: "PLN" };
+  return { outputUnit: "PLN" };
 }
 
 export function writeChartPreferences(

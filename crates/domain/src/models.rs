@@ -178,6 +178,9 @@ pub struct CardCounter {
     pub unit: String,
     pub step: u64,
     pub archived: bool,
+    /// Exact decimal value of one counted unit; absent when none is set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rate: Option<String>,
     pub values: BTreeMap<String, u64>,
 }
 

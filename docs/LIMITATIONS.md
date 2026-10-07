@@ -22,7 +22,7 @@ An implemented feature and a passed release acceptance scenario are different cl
 | Git | Observes HEAD and staged changes excluding `.project`; does not claim unstaged/untracked coverage, auto-commit or auto-fetch |
 | Markdown | Text formatting and deliberate links; no executed HTML, remote image loading or automatic link previews |
 | Attribution | Human/bot labels on comments and reports are declarations, not separate authenticated identities |
-| Counter charts | Inclusive ranges of at most 400 days, 100 series per page, 500 loaded catalog entries and eight selected series per chart; daily source quantities are integers. Rates and display choices are browser-local calculations, not stored monetary transactions |
+| Counter charts | Inclusive ranges of at most 400 days, 100 series per page, 500 loaded catalog entries and eight selected series per chart; daily source quantities are integers. A counter's rate is stored with it as a decimal of at most four places and its whole-history total is read with every series; the money unit and display choices are browser-local, and derived amounts are calculations, not stored monetary transactions |
 | CLI | Bounded single-page reads; no streaming `watch`, automatic pagination or general batch mutation transaction |
 | In-app agent | Off unless the OS owner starts `projectd` with `--agent-dir`; then any paired browser can instruct a local coding agent that runs with the daemon user's full rights and no permission prompts. See [In-app agent](#in-app-agent) |
 

@@ -81,10 +81,24 @@ export function setCounterInput(
     ? next
     : setCounterValue(counter, next, record.date, value);
 }
+/**
+ * The stored form of a typed rate: null when empty, undefined when it is not a
+ * decimal the source accepts. A comma is read as the decimal separator.
+ */
+export function counterRate(
+  text: string | null | undefined,
+): string | null | undefined {
+  const raw = (text ?? "").trim().replace(",", ".");
+  if (!raw) return null;
+  const match = /^(\d{0,9})(?:\.(\d{1,4}))?$/.exec(raw);
+  if (!match || (!match[1] && !match[2])) return undefined;
+  return `${Number(match[1] || 0)}${match[2] ? `.${match[2]}` : ""}`;
+}
 export function validCounterConfiguration(
   config: CounterConfiguration,
 ): boolean {
   return (
+    counterRate(config.rate) !== undefined &&
     !!config.name.trim() &&
     config.name.length <= 80 &&
     !!config.unit.trim() &&

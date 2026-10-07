@@ -201,12 +201,14 @@ export interface ApiContracts {
   CardComment: CardComment;
   CounterValue: number;
   CounterValues: CounterValues;
+  CounterRate: string;
   CardCounter: CardCounter;
   CardCounters: CardCounters;
   CounterConfiguration: CounterConfiguration;
   CounterRecord: CounterRecord;
   DailyCounterSummary: DailyCounterSummary;
   CounterSeries: CounterSeries;
+  CounterHistory: CounterHistory;
   CounterSeriesPage: CounterSeriesPage;
   CardSection: "description" | "checklist" | "counters" | "comments" | "schedule" | "labels";
   CardHiddenSections: CardHiddenSections;
@@ -457,6 +459,7 @@ export interface CardCounter {
   unit: string;
   step: number;
   archived: boolean;
+  rate?: string;
   values: CounterValues;
 }
 export interface CounterConfiguration {
@@ -465,6 +468,7 @@ export interface CounterConfiguration {
   unit: string;
   step: number;
   archived: boolean;
+  rate?: string | null;
 }
 export interface CounterRecord {
   id: string;
@@ -492,10 +496,17 @@ export interface CounterSeries {
   unit: string;
   step: number;
   archived: boolean;
+  rate?: string;
+  history: CounterHistory;
   availability: "ready" | "stale";
   values: {
     [k: string]: number;
   };
+}
+export interface CounterHistory {
+  total: number;
+  recorded: number;
+  first_date?: string;
 }
 export interface CounterSeriesPage {
   /**
@@ -1339,6 +1350,8 @@ export type Evidence = ApiContracts["Evidence"];
 export type Folder = ApiContracts["Folder"];
 
 export type CounterValue = ApiContracts["CounterValue"];
+
+export type CounterRate = ApiContracts["CounterRate"];
 
 export type CardSection = ApiContracts["CardSection"];
 

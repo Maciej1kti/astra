@@ -13,6 +13,7 @@
   } from "../../lib/contracts/api.generated";
   import {
     counterMaximum,
+    counterRate,
     validCounterConfiguration,
     type CounterDrafts,
   } from "./card-counters";
@@ -55,8 +56,9 @@
           unit: counter.unit,
           step: counter.step,
           archived: counter.archived,
+          rate: counter.rate ?? "",
         }
-      : { name: "", unit: "reps", step: 1, archived: false };
+      : { name: "", unit: "reps", step: 1, archived: false, rate: "" };
     await tick();
     configurationName?.focus();
   }
@@ -106,7 +108,23 @@
             {disabled}
           /></label
         >
+        <label
+          >Stawka<input
+            type="text"
+            inputmode="decimal"
+            aria-label="Stawka licznika"
+            aria-invalid={counterRate(draft.configuration.rate) === undefined}
+            maxlength="14"
+            placeholder="np. 0,25"
+            bind:value={draft.configuration.rate}
+            {disabled}
+          /></label
+        >
       </div>
+      <p class="field-hint">
+        Stawka to wartość jednej jednostki w rozliczeniu na Wykresie. Puste pole
+        wyłącza licznik z rozliczenia.
+      </p>
       {#if unitLocked}<p class="field-hint">
           Po zapisaniu wyników jednostki nie można zmienić.
         </p>{/if}
@@ -129,6 +147,7 @@
                   ...draft.configuration,
                   name: draft.configuration.name.trim(),
                   unit: draft.configuration.unit.trim(),
+                  rate: counterRate(draft.configuration.rate) ?? null,
                 },
               });
           }}>Zapisz licznik</button
@@ -238,7 +257,7 @@
   }
   .configuration-fields {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-4);
   }
   label {

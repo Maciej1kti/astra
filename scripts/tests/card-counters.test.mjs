@@ -4,6 +4,7 @@ import {
   counterRecord,
   emptyCounterDrafts,
   countersDirty,
+  counterRate,
   validCounterConfiguration,
   parseCounterInput,
   setCounterInput,
@@ -82,4 +83,36 @@ test("workspace midnight resets the view without deleting history or moving an u
     0,
   );
   assert.equal(counter.values["2026-09-26"], 10);
+});
+
+test("a typed rate becomes an exact stored decimal, null when empty", () => {
+  for (const [text, stored] of [
+    ["", null],
+    ["  ", null],
+    [undefined, null],
+    ["1", "1"],
+    ["0,25", "0.25"],
+    [" 0.25 ", "0.25"],
+    [",5", "0.5"],
+    ["007", "7"],
+    ["1.50", "1.50"],
+    ["999999999.9999", "999999999.9999"],
+  ])
+    assert.equal(counterRate(text), stored, String(text));
+  for (const text of [
+    "-1",
+    "1.",
+    ".",
+    "1,2,3",
+    "0.12345",
+    "1234567890",
+    "1e3",
+    "abc",
+  ])
+    assert.equal(counterRate(text), undefined, text);
+  const config = { name: "Sit-ups", unit: "rep", step: 1, archived: false };
+  assert.equal(validCounterConfiguration({ ...config, rate: "0,25" }), true);
+  assert.equal(validCounterConfiguration({ ...config, rate: "" }), true);
+  assert.equal(validCounterConfiguration(config), true);
+  assert.equal(validCounterConfiguration({ ...config, rate: "x" }), false);
 });

@@ -51,8 +51,13 @@ limits the selected trusted profile's workspace to one project.
 `include_archived=true` includes archived counters, cards and projects.
 Unverified source data is omitted with a warning and stale freshness. The cursor
 binds the dates, scope, archive flag, limit and projection revision; a changed
-identity returns `PAGE_STALE`. Reads preserve source versions and never write
-history. See [ADR-062](ADR-062-COUNTER-CHART-DASHBOARD.md) and the
+identity returns `PAGE_STALE`. Each series also carries the counter's `rate`,
+when one is configured, and `history` with the total, the number of recorded
+dates and the first date over every saved date, independent of `from`/`to`.
+`configure_counter` accepts `rate` as an exact decimal string; omitting it keeps
+the stored rate and `null` removes it
+([ADR-072](ADR-072-COUNTER-RATES-AND-HISTORY-TOTALS.md)). Reads preserve source
+versions and never write history. See [ADR-062](ADR-062-COUNTER-CHART-DASHBOARD.md) and the
 [HTTP example](../examples/requests/counter-series.http).
 
 ## Mutacje

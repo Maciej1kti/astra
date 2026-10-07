@@ -9,8 +9,6 @@ import {
   chartMoney,
   chartPerson,
   chartSettlement,
-  chartSharedRates,
-  chartActivity,
   chartPanels,
   chartPeriods,
   chartPoints,
@@ -272,33 +270,26 @@ test("a rate accepts zero and decimal commas, and rejects everything else", () =
     assert.equal(chartRate(raw), value);
 });
 
-test("rate preferences are profile-scoped, bounded and survive unavailable browser storage", () => {
+test("the output unit is profile-scoped, drops rates stored by older versions and survives unavailable storage", () => {
   const saved = new Map();
   const storage = {
     getItem: (key) => saved.get(key) ?? null,
     setItem: (key, value) => saved.set(key, value),
   };
   assert.deepEqual(readChartPreferences("a", storage), {
-    rates: {},
     outputUnit: "PLN",
   });
   assert.equal(
-    writeChartPreferences(
-      "a",
-      {
-        rates: { "project/card/id": "2.5", bad: "Infinity" },
-        outputUnit: "EUR",
-      },
-      storage,
-    ),
+    writeChartPreferences("a", { outputUnit: "EUR" }, storage),
     true,
   );
-  assert.deepEqual(readChartPreferences("a", storage), {
-    rates: { "project/card/id": "2.5" },
-    outputUnit: "EUR",
-  });
+  assert.deepEqual(readChartPreferences("a", storage), { outputUnit: "EUR" });
+  saved.set(
+    "astra-counter-charts:v1:a",
+    JSON.stringify({ rates: { "project/card/id": "2.5" }, outputUnit: "EUR" }),
+  );
+  assert.deepEqual(readChartPreferences("a", storage), { outputUnit: "EUR" });
   assert.deepEqual(readChartPreferences("b", storage), {
-    rates: {},
     outputUnit: "PLN",
   });
   const unavailable = {
@@ -310,11 +301,10 @@ test("rate preferences are profile-scoped, bounded and survive unavailable brows
     },
   };
   assert.deepEqual(readChartPreferences("a", unavailable), {
-    rates: {},
     outputUnit: "PLN",
   });
   assert.equal(
-    writeChartPreferences("a", { rates: {}, outputUnit: "PLN" }, unavailable),
+    writeChartPreferences("a", { outputUnit: "PLN" }, unavailable),
     false,
   );
 });
@@ -341,12 +331,7 @@ test("a settlement names people by the last word and has the lower value pay the
     { name: "Maciek", value: 0.33 },
   ]);
   assert.deepEqual(settlement.debts, [
-    {
-      from: "Maciek",
-      to: "Tomek",
-      amount: 269.67,
-      level: [{ activity: "Pompki", count: 26967 }],
-    },
+    { from: "Maciek", to: "Tomek", amount: 269.67 },
   ]);
   assert.equal(settlement.people, 2);
   assert.equal(settlement.unrated, 1);
@@ -372,15 +357,7 @@ test("a settlement names people by the last word and has the lower value pay the
     row("Brzuszki Maciek", 30, 0.25),
   ]);
   assert.deepEqual(owner.debts, [
-    {
-      from: "Maciek",
-      to: "Tomek",
-      amount: 19197,
-      level: [
-        { activity: "Pompki", count: 19197 },
-        { activity: "Brzuszki", count: 76788 },
-      ],
-    },
+    { from: "Maciek", to: "Tomek", amount: 19197 },
   ]);
   const unratedOnly = chartSettlement([
     row("Pompki Tomek", 5, null),
@@ -390,32 +367,4 @@ test("a settlement names people by the last word and has the lower value pay the
     [unratedOnly.people, unratedOnly.parties.length, unratedOnly.debts.length],
     [2, 0, 0],
   );
-});
-
-test("a rate typed for one counter fills the same activity until they diverge", () => {
-  assert.equal(chartActivity("Pompki Tomek"), "Pompki");
-  assert.equal(chartActivity("Brzuszki poranne Maciek"), "Brzuszki poranne");
-  assert.equal(chartActivity("Push-ups"), null);
-  const item = (id, name) => ({ project_id: "p", card_id: "c", id, name });
-  const series = [
-    item("1", "Pompki Tomek"),
-    item("2", "Pompki Maciek"),
-    item("3", "Brzuszki Tomek"),
-    item("4", "Push-ups"),
-    item("5", "Squats"),
-  ];
-  let rates = chartSharedRates({}, series, "p/c/1", "1");
-  assert.deepEqual(rates, { "p/c/1": "1", "p/c/2": "1" });
-  rates = chartSharedRates(rates, series, "p/c/1", "1,5");
-  assert.deepEqual(rates, { "p/c/1": "1,5", "p/c/2": "1,5" });
-  rates = chartSharedRates(rates, series, "p/c/2", "2");
-  rates = chartSharedRates({ ...rates, "p/c/1": "9" }, series, "p/c/2", "3");
-  assert.deepEqual(
-    rates,
-    { "p/c/1": "9", "p/c/2": "3" },
-    "A counter given its own rate keeps it",
-  );
-  assert.deepEqual(chartSharedRates({}, series, "p/c/4", "5"), {
-    "p/c/4": "5",
-  });
 });

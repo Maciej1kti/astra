@@ -241,6 +241,8 @@ snapshots. Timeline and calendar show explicitly recorded schedules; dependency
 forecasts are not supported.
 
 Counter reads return at most 100 series per page and at most 400 inclusive dates.
+Every series also carries the counter's stored `rate`, when it has one, and
+`history` totals over all its saved dates.
 Each series includes its card/project names, observed card version, unit and
 archive state. Saved daily totals form a sparse map: an explicit zero is present,
 and an unrecorded date is absent. Counters with no values in the selected range

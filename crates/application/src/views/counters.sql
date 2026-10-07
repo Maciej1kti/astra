@@ -22,5 +22,9 @@ SELECT project_id, project_name, project_archived, card_id, card_title,
     json_extract(counter,'$.unit'), json_extract(counter,'$.step'),
     json_extract(counter,'$.archived'),
     (SELECT json_group_object(key,value) FROM json_each(selected.counter,'$.values')
-        WHERE key>=?2 AND key<=?3)
+        WHERE key>=?2 AND key<=?3),
+    json_extract(counter,'$.rate'),
+    (SELECT COALESCE(SUM(value),0) FROM json_each(selected.counter,'$.values')),
+    (SELECT COUNT(*) FROM json_each(selected.counter,'$.values')),
+    (SELECT MIN(key) FROM json_each(selected.counter,'$.values'))
 FROM selected

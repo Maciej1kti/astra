@@ -43,6 +43,7 @@
         "unit": "reps",
         "step": 5,
         "archived": false,
+        "rate": "0.25",
         "values": {
           "2026-09-25": 10,
           "2026-09-26": 15

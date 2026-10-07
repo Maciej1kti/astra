@@ -11,17 +11,13 @@
   let {
     rows,
     days,
-    rates,
     outputUnit,
-    onrate,
     onoutputunit,
     onopen,
   }: {
     rows: ChartSummaryRow[];
     days: number;
-    rates: Record<string, string>;
     outputUnit: string;
-    onrate: (key: string, value: string) => void;
     onoutputunit: (value: string) => void;
     onopen: (series: ChartSeries) => void;
   } = $props();
@@ -73,7 +69,8 @@
       <h2 id="chart-summary-heading">Podsumowanie okresu</h2>
       <p>
         Średnia liczy dni z zapisem, także z zapisanym zerem. Wartość to suma
-        pomnożona przez stawkę. Stawki zostają w tej przeglądarce.
+        pomnożona przez stawkę licznika. Stawkę zmienisz w ustawieniach licznika
+        na jego karcie; nazwa licznika otwiera kartę.
       </p>
     </div>
     <label
@@ -104,8 +101,6 @@
     </div>
     {#each compared as { row, baseline, alone, difference } (chartSeriesKey(row.source))}
       {@const key = chartSeriesKey(row.source)}
-      {@const raw = rates[key] ?? ""}
-      {@const invalid = raw.trim() !== "" && row.rate === null}
       <div
         class="summary-row"
         role="row"
@@ -173,18 +168,12 @@
             ></span
           >{/if}
         <span role="cell" class="cell-rate"
-          ><span class="cell-label" aria-hidden="true">Stawka</span><input
-            type="text"
-            inputmode="decimal"
-            maxlength="40"
-            value={raw}
-            placeholder="np. 100"
-            aria-label={`Stawka dla ${row.source.name} · ${row.source.card_title}`}
-            aria-invalid={invalid}
-            oninput={(event) => onrate(key, event.currentTarget.value)}
-          /><small class:invalid
-            >{invalid
-              ? "Liczba od 0 do 1 000 000 000"
+          ><span class="cell-label" aria-hidden="true">Stawka</span><span
+            data-chart-stat="rate"
+            >{row.rate === null ? "—" : chartValue(row.rate)}</span
+          ><small
+            >{row.rate === null
+              ? "Ustaw w liczniku"
               : `${valueUnit} za ${row.source.unit || "jednostkę"}`}</small
           ></span
         >
@@ -324,9 +313,6 @@
     font-weight: var(--weight-normal);
     overflow-wrap: anywhere;
   }
-  .summary-row small.invalid {
-    color: var(--danger);
-  }
   .summary-counter {
     display: flex;
     align-items: center;
@@ -344,14 +330,6 @@
     border-radius: var(--radius-sm);
     background: var(--series-color);
     flex-shrink: 0;
-  }
-  .cell-rate input {
-    width: 100%;
-    max-width: var(--field-compact);
-    font-size: var(--text-base);
-  }
-  .cell-rate input[aria-invalid="true"] {
-    border-color: var(--danger);
   }
   /* Narrow: every counter is the same card. Name and total, then rate and
      value, then the quieter statistics in one line. */
@@ -432,13 +410,9 @@
     .cell-difference.blank {
       display: block;
     }
-    .cell-rate input {
-      max-width: none;
-    }
   }
   @media (max-width: 700px) {
-    .summary-heading input,
-    .cell-rate input {
+    .summary-heading input {
       font-size: var(--text-lg);
     }
   }
