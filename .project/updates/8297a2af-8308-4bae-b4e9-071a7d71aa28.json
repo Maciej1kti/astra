@@ -1,0 +1,18 @@
+{
+  "body": "The Agent dialog on a phone, in 590c377 and running in the existing HTTPS app, after the owner's 2026-10-07 report that it looked angular and touched the top bar. The dialog focuses its composer on opening, so the keyboard fit applied at once and squared the corners with no gap at the top. Fitted above the keyboard it now keeps its radius and an 8px gap on every side, clears the safe areas, and its composer is one field with an icon send button.\n\nThe agent suite passes in Chromium and WebKit with a new emulated-keyboard check, as does dialog-components; type check, lint, format and the bundle budget pass, and the initial bundle sits exactly at its budget. The full gate was not run for this contained fix. Keyboard and safe areas were emulated, so the physical iPhone is the owner's to confirm. Evidence: progress/2026-10-07-agent-dialog-phone.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "8297a2af-8308-4bae-b4e9-071a7d71aa28",
+    "kind": "result",
+    "recorded_at": "2026-10-07T15:01:03.330Z",
+    "summary": "Agent dialog stays a rounded card above the phone keyboard",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
