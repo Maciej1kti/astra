@@ -68,6 +68,9 @@ const agentArgs =
   process.env.ASTRA_TRY_AGENT === "1"
     ? ["--agent-dir", join(root, "agent")]
     : [];
+// ASTRA_TRY_GITHUB=1 lets the browser create private GitHub repositories for
+// new projects through the gh this account is signed in to.
+const githubArgs = process.env.ASTRA_TRY_GITHUB === "1" ? ["--github"] : [];
 const child = spawn(
   binary,
   [
@@ -78,6 +81,7 @@ const child = spawn(
     "--port",
     "47831",
     ...agentArgs,
+    ...githubArgs,
   ],
   { stdio: ["ignore", "inherit", "inherit"] },
 );

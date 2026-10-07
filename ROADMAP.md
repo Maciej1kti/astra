@@ -28,6 +28,7 @@ verification is indexed in [current status](progress/STATE.md).
 | Counter analysis | Selected histories, overlays, daily/cumulative grouping, statistics and browser-local rate valuation | [Chart guide](docs/USER-GUIDE.md#compare-counters-in-chart) |
 | Card workflows | Autosave, checklist, tags, comments, daily counters, inclusive plans and timed events | [User guide](docs/USER-GUIDE.md#create-and-edit-cards) |
 | Project context | Folder categories, independent milestones, reports, corrections/resolutions and read receipts | [User guide](docs/USER-GUIDE.md#reports-history-and-deletion) |
+| Projects by name | A typed name creates the project folder in the default approved root and, on a host started with `--github`, a private repository; no step on the host | [ADR-074](docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md), [limitations](docs/LIMITATIONS.md#project-repositories) |
 | In-app agent | Optional Agent dialog backed by a local Claude Code or Codex, enabled by the host's OS owner; full access by the owner's direction | [ADR-070](docs/ADR-070-AGENT-RUNS.md), [limitations](docs/LIMITATIONS.md#in-app-agent) |
 | Maintenance | Diagnostics, Git observation, index rebuild, durable workflows and explicit permanent deletion | [CLI](CLI.md), [operations](ops/README.md) |
 | Distribution tooling | Source build, host archive, user-service generator, package smoke and stopped-copy recovery | [Installation](INSTALL.md), [recovery](ops/RECOVERY.md) |
@@ -73,6 +74,25 @@ remaining audit follow-ups is linked from [STATE.md](progress/STATE.md#outstandi
 See [SCOPE.md](progress/SCOPE.md) and the [ADR index](docs/12-ADRS.md) for the decisions
 and supersession history. Product expansion such as team roles, cloud sync,
 federation, native apps or a plugin system is not automatically part of v1.
+
+## Direction beyond v1
+
+The owner's [2026-10-07 direction](progress/SCOPE.md#product-direction--owner-statement-2026-10-07)
+describes where Astra is heading; none of it is scheduled or part of v1.
+
+- **A hosted, closed system.** Astra is meant to run on a virtual machine on a
+  server and be used entirely remotely, as the owner uses it today. Every
+  workflow must therefore work without access to the host's desktop.
+- **Remote access to one's own company.** The audience is a small business
+  whose owner handles nearly everything and wants the routine work done for
+  them: an interface for the people who build, manage, arrange and move work
+  forward, and an agent that operates it and records information.
+- **The core stays project work.** Projects, the calendar, delivery, and what
+  is to be done laid out in time, with simple resources kept in counters.
+- **Later modules.** A customer base, possibly a CRM, offers and similar
+  business functions are expected to be added around that core. They are named
+  here so that current work does not preclude them; nothing is designed or
+  authorized yet.
 
 ## Propose or pick up work
 

@@ -255,6 +255,17 @@ one command from preparation to a definitive result.
 It retains the original payload, request ID, epoch and expected version during
 uncertainty. A failed status lookup does not prove that the write failed.
 Registration features additionally own their accepted job's polling lifecycle.
+`registration/NewProject.svelte` adds a project by name in three retained steps:
+the folder (one creation ID per dialog), the ordinary registration command, and
+the repository, which a host that does not publish refuses with
+`GITHUB_DISABLED`. A failed step is the one repeated. `host/GitObservation`
+shows the repository state of any project through `lib/api/repository.ts` and
+repeats a publication. The dialog calls the repository operations directly: a
+module shared by both would be one more chunk in the initial bundle's list.
+On the server, `application/src/project_folder.rs` owns folder naming, the
+default root and folder creation; `projectd/src/repository.rs` owns the retained
+creation results and every `git`/`gh` command line
+([ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md)).
 A workflow's command row keeps its acceptance, so the status of a finished tag
 rename or registration is `committed` with no result and no job reference. The
 status check accepts that reply for workflow commands only and returns it as a

@@ -369,6 +369,9 @@ export interface ApiContracts {
   GitObservation: GitObservation;
   NativeFolderInput: NativeFolderInput;
   NativeFolderSelection: NativeFolderSelection;
+  ProjectFolderInput: ProjectFolderInput;
+  ProjectFolder: ProjectFolder;
+  ProjectRepository: ProjectRepository;
   AgentProvider: "claude" | "codex";
   AgentRunState: "running" | "succeeded" | "failed" | "cancelled" | "timed_out";
   AgentRunContext: AgentRunContext;
@@ -599,6 +602,7 @@ export interface Preferences {
      */
     [k: string]: string[];
   };
+  project_root_id?: string;
 }
 export interface Workspace {
   format_version: 1;
@@ -997,6 +1001,7 @@ export interface Bootstrap {
    */
   capabilities: string[];
   agent_enabled: boolean;
+  github_enabled: boolean;
 }
 export interface RegistrationPlanInput {
   root_id: string;
@@ -1295,6 +1300,20 @@ export interface NativeFolderSelection {
   selection_id: string;
   state: "pending" | "selected" | "cancelled" | "failed";
   plan: RegistrationPlan | null;
+  error: string | null;
+}
+export interface ProjectFolderInput {
+  creation_id: string;
+  name: string;
+}
+export interface ProjectFolder {
+  creation_id: string;
+  folder: string;
+  plan: RegistrationPlan;
+}
+export interface ProjectRepository {
+  state: "absent" | "unpushed" | "publishing" | "published" | "failed";
+  url: string | null;
   error: string | null;
 }
 export interface AgentRunContext {

@@ -1,6 +1,10 @@
 //! Helpers shared by the integration tests that run agents.
 use std::{path::PathBuf, process::Command, sync::OnceLock};
 
+/// The fake GitHub CLI; a test copies it beside its own account state.
+#[allow(dead_code, reason = "only the transport tests publish repositories")]
+pub const FAKE_GH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/fake-gh.sh");
+
 /// The fake Claude Code / Codex command line.
 pub const FAKE_AGENT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/fake-agent.sh");
 

@@ -92,16 +92,18 @@ occurs and no parent directory is inferred. CLI plans default to private Git mod
 add `--tracked` to `registration-plan` to prepare sources for tracking instead.
 Keep `.project/.local/` excluded in either mode.
 
-The browser's native folder picker opens on the host desktop. Linux uses XDG
-Desktop Portal (FileChooser v3+) with a GTK/KDE backend, falling back to Zenity;
-the daemon needs access to the desktop user's session bus. On a headless host,
-use local CLI registration or explicitly approve a browser root:
+The browser adds a project by name and opens no dialog on the host. Approve
+the directory in which it may create project folders:
 
 ```sh
 projectctl add-root /absolute/projects --label Projects
 ```
 
-Then select Browse approved folders in Add project. This approval is not needed
+Add project then creates a folder named after the project there; its Add
+existing folder choice registers a folder already below an approved root.
+Starting `projectd` with `--github` additionally publishes each new project to
+a private repository of the GitHub account the host's `gh` is signed in to.
+This approval is not needed
 for explicit local CLI registration.
 
 ## Optional user service

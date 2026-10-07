@@ -195,25 +195,34 @@ page, and a collapsed column opens under it.
 Select Projects in **Ustawienia przestrzeni roboczej → Widok domyślny** and open the app without a
 view query to check the preference.
 
+## Add a project by name
+
+Approve a directory for new projects once on the host, for example
+`target/release/projectctl --socket .manual/state/projectd.sock add-root "$PWD/.manual/projects" --label Projects`
+after creating that directory. Open **Projekty → Dodaj projekt**, type a name
+and choose **Utwórz projekt**. The folder appears inside the approved directory
+under a name derived from the project's, with `-2`, `-3` and so on when that
+name is taken, and the app opens the new project. Nothing opens on the host's
+desktop. With several approved directories, first choose one under
+**Ustawienia → Katalog nowych projektów**.
+
+Started with `ASTRA_TRY_GITHUB=1 npm run try`, the same button also creates a
+private repository in the GitHub account the host's `gh` is signed in to and
+pushes `.project` and `AGENTS.md`. This creates a real repository: use a name
+you are willing to keep or delete on GitHub afterwards. When GitHub cannot be
+reached, the dialog reports that the project works locally and offers **Ponów
+publikację**; the project's **Git** dialog offers the same later.
+
 ## Add an existing project folder
 
-Open **Projekty → Dodaj projekt → Wybierz folder…**. The host's operating-system
-folder dialog opens. Select any repository folder, review the displayed path and
-click **Dodaj projekt**. There is no restriction to a Projects directory. Cancelling
-the system dialog creates no project files. The app opens the selected project's
-board after registration succeeds.
-
-The dialog appears on the computer running projectd. On macOS it uses the system
-folder picker; Linux desktop hosts use XDG Desktop Portal with a FileChooser backend (such as
-xdg-desktop-portal-gtk or KDE); Zenity is a fallback. Run the host in the desktop
-session so it can reach the user session bus. For a remote host without a desktop,
-**Zdalny serwer bez pulpitu? → Przeglądaj zatwierdzone foldery** retains the existing
-owner-approved directory browser as an alternative.
+**Dodaj projekt → Masz już folder z projektem? → Dodaj istniejący folder**
+browses the directories approved on the host and registers a folder that
+already exists there. The browser no longer opens the host's folder dialog
+([ADR-074](docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md)).
 
 Registration adds `.project` planning files and a managed `AGENTS.md` block while
-preserving existing content. The user selects the repository; no file attachments
-or automatic repository discovery are involved.
-
+preserving existing content. The user names the project or selects the folder; no
+file attachments or automatic repository discovery are involved.
 
 ## Gantt and calendar walkthrough
 

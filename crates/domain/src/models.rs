@@ -277,6 +277,9 @@ pub struct Preferences {
     /// Values each Chart summary tile shows, by counter identifier.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chart_tiles: Option<BTreeMap<String, Vec<String>>>,
+    /// The approved root in which the browser creates new project folders.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_root_id: Option<String>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -464,3 +464,12 @@ A plugin is a module shipped with the application that a profile switches on.
 tile shows. The Chart settlement and the Razem totals became plugins; no code
 is loaded from project data or the network. See
 [ADR-073](ADR-073-PLUGINS-AND-CHART-TILES.md).
+
+## ADR-074 — Projects by name and private repositories
+
+Adding a project needs only its name: the server creates the folder in the
+profile's default approved root, with a numeric suffix when the name is taken,
+and plans its registration. A host started with `--github` then creates a
+private GitHub repository through the signed-in `gh` and pushes the planning
+data. Nothing opens a dialog on the host. See
+[ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).

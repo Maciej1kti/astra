@@ -32,8 +32,10 @@ mod encoding;
 mod events;
 mod picker;
 mod read_response;
+mod repository;
 mod serve;
 pub use agent::AgentConfig;
+pub use repository::GithubConfig;
 pub use serve::Limits;
 
 #[derive(Clone)]
@@ -44,6 +46,9 @@ pub struct Service {
     picker: Arc<picker::Picker>,
     /// Present only when the host was started with an agent directory.
     agents: Option<Arc<agent::Agents>>,
+    /// Present only when the host was started with `--github`.
+    github: Option<Arc<repository::Github>>,
+    creations: Arc<repository::Creations>,
     origin: String,
     host: String,
     /// Admission for the peer-verified local socket.
@@ -94,6 +99,8 @@ impl Service {
             user,
             picker: Arc::new(picker::Picker::default()),
             agents: None,
+            github: None,
+            creations: Arc::new(repository::Creations::default()),
             origin: url.origin().ascii_serialization(),
             host,
             slots: Arc::new(Semaphore::new(8)),
@@ -110,6 +117,12 @@ impl Service {
     /// browser. Without this every agent route answers `AGENT_DISABLED`.
     pub fn with_agent(mut self, config: AgentConfig) -> Self {
         self.agents = Some(Arc::new(agent::Agents::new(config)));
+        self
+    }
+    /// Let the browser publish project folders to private GitHub repositories.
+    /// Without this every repository route answers `GITHUB_DISABLED`.
+    pub fn with_github(mut self, config: GithubConfig) -> Self {
+        self.github = Some(Arc::new(repository::Github::new(config)));
         self
     }
     /// Serve the network listener until `shutdown` reports true or its sender
@@ -156,6 +169,11 @@ impl Service {
     }
     pub fn user_engines(&self) -> Result<Vec<(String, Arc<Engine>)>, AppError> {
         self.users.engines()
+    }
+    fn github(&self) -> Result<&Arc<repository::Github>, AppError> {
+        self.github
+            .as_ref()
+            .ok_or_else(|| AppError::reject(404, "GITHUB_DISABLED"))
     }
     /// The agent registry, or `AGENT_DISABLED` when the host has no agent directory.
     fn agents(&self) -> Result<&Arc<agent::Agents>, AppError> {

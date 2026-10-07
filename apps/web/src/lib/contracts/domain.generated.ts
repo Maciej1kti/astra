@@ -618,4 +618,8 @@ export interface Preferences {
       | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug]
       | [Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug, Slug];
   };
+  /**
+   * Approved root in which new project folders are created.
+   */
+  project_root_id?: string;
 }

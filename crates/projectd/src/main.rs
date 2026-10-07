@@ -13,7 +13,7 @@ mod watcher;
 use clap::Parser;
 use project_application::engine::Engine;
 use project_store::filesystem::Directory;
-use projectd::{AgentConfig, Limits, Service};
+use projectd::{AgentConfig, GithubConfig, Limits, Service};
 use std::{
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
     path::PathBuf,
@@ -48,6 +48,50 @@ struct Arguments {
     /// Wall-clock limit of one agent run in seconds (default 600).
     #[arg(long, requires = "agent_dir", value_parser = clap::value_parser!(u64).range(1..=3600))]
     agent_timeout: Option<u64>,
+    /// Let the browser create private GitHub repositories for projects through the signed-in `gh`.
+    #[arg(long)]
+    github: bool,
+    /// GitHub CLI executable; by default `gh` is found on PATH at startup.
+    #[arg(long, requires = "github")]
+    github_gh_bin: Option<PathBuf>,
+    /// Git executable; by default `git` is found on PATH at startup.
+    #[arg(long, requires = "github")]
+    github_git_bin: Option<PathBuf>,
+    /// Prefix of a new repository's remote, followed by `owner/name.git`
+    /// (default https://github.com/); change it for a GitHub Enterprise host.
+    #[arg(long, requires = "github")]
+    github_remote_base: Option<String>,
+}
+
+/// An executable given by option, or the first of that name on PATH.
+fn executable(option: &Option<PathBuf>, name: &str) -> Result<PathBuf, String> {
+    let found = match option {
+        Some(path) => std::fs::canonicalize(path).ok(),
+        None => std::env::var_os("PATH").and_then(|paths| {
+            std::env::split_paths(&paths)
+                .map(|directory| directory.join(name))
+                .find(|candidate| candidate.is_file())
+        }),
+    };
+    found
+        .filter(|path| path.is_absolute() && path.is_file())
+        .ok_or_else(|| format!("Cannot find the {name} executable required by --github"))
+}
+/// How repositories are published, or `None` when the feature is not enabled.
+fn github_config(args: &Arguments) -> Result<Option<GithubConfig>, String> {
+    if !args.github {
+        return Ok(None);
+    }
+    Ok(Some(GithubConfig {
+        gh: executable(&args.github_gh_bin, "gh")?,
+        git: executable(&args.github_git_bin, "git")?,
+        remote_base: match &args.github_remote_base {
+            None => "https://github.com/".into(),
+            Some(base) if base.ends_with('/') && url::Url::parse(base).is_ok() => base.clone(),
+            Some(_) => return Err("--github-remote-base must be a URL ending with /".into()),
+        },
+        timeout: Duration::from_secs(120),
+    }))
 }
 
 /// The agent's configuration, or `None` when the feature is not enabled.
@@ -84,6 +128,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut service = Service::with_restore(engine, &args.public_origin, args.after_restore)?;
     if let Some(config) = agent_config(&args)? {
         service = service.with_agent(config);
+    }
+    if let Some(config) = github_config(&args)? {
+        service = service.with_github(config);
     }
     let socket = args.data_dir.join("projectd.sock");
     if let Ok(metadata) = std::fs::symlink_metadata(&socket) {

@@ -291,7 +291,7 @@ await runBrowserSuite(
 
     await check(
       "C05",
-      "An uncertain native registration guards unload",
+      "An uncertain new-project registration guards unload",
       async (page) => {
         const selected = {
           plan_id: randomUUID(),
@@ -301,16 +301,15 @@ await runBrowserSuite(
           changes: [],
         };
         await page.route(
-          `${config.origin}/api/v1/native-folder-selections`,
+          `${config.origin}/api/v1/project-folders`,
           async (route) => {
             const input = route.request().postDataJSON();
             await route.fulfill({
               status: 200,
               json: {
-                selection_id: input.selection_id,
-                state: "selected",
+                creation_id: input.creation_id,
+                folder: "recovery-native",
                 plan: selected,
-                error: null,
               },
             });
           },
@@ -327,13 +326,13 @@ await runBrowserSuite(
           exact: true,
         });
         await dialog
-          .getByRole("button", { name: "Wybierz folder…", exact: true })
-          .click();
-        await expect(dialog).toContainText(selected.display_path);
+          .getByLabel("Nazwa projektu", { exact: true })
+          .fill("Recovery native");
         assert.equal(await unloadGuarded(page), false);
         await dialog
-          .getByRole("button", { name: "Dodaj projekt", exact: true })
+          .getByRole("button", { name: "Utwórz projekt", exact: true })
           .click();
+        await expect(dialog).toContainText(selected.display_path);
         await expect(dialog).toContainText("Żądanie:");
         await expect(dialog).toContainText(attempts[0]);
         assert.equal(await unloadGuarded(page), true);
@@ -373,13 +372,10 @@ await runBrowserSuite(
           exact: true,
         });
         await native
-          .getByText("Zdalny serwer bez pulpitu?", { exact: true })
+          .getByText("Masz już folder z projektem?", { exact: true })
           .click();
         await native
-          .getByRole("button", {
-            name: "Przeglądaj zatwierdzone foldery",
-            exact: true,
-          })
+          .getByRole("button", { name: "Dodaj istniejący folder", exact: true })
           .click();
         const dialog = page.getByRole("dialog", {
           name: "Dodaj projekt",

@@ -65,6 +65,11 @@ roadmap and limitations accurate without inventing scope or acceptance decisions
   runner a host's OS owner enables with `--agent-dir` ([ADR-070](docs/ADR-070-AGENT-RUNS.md)):
   the daemon starts the owner's coding agent for a chat message from a fixed
   command line, never from request data, and repository content stays untrusted.
+  A host started with `--github` also runs fixed `git` and `gh` command lines to
+  publish a project folder to a private repository
+  ([ADR-074](docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md)).
+- The application is operated remotely. No workflow may depend on a dialog,
+  prompt or click on the host's desktop.
 
 ## Verification and evidence
 

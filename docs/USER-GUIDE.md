@@ -105,7 +105,17 @@ agenda pages hold up to 200 items; its grid/time layouts up to 1,000.
 Open **Projekty** from the sidebar or the phone's navigation bar to see projects in
 their current status columns, including archived projects. Use **Folder** and
 the title filter to narrow the board. Click a project to open its editor, or use
-**Dodaj projekt** to register a folder. Projects is the same board as a
+**Dodaj projekt** to add one: type its name and the host creates the project's
+folder and registers it, with nothing to confirm on the host itself. A name
+that is already used gets a numeric suffix. On a host that publishes
+repositories the same step creates a private GitHub repository and pushes the
+project's planning data; if GitHub cannot be reached the project still works,
+and **Git** in the project's header shows the repository state and repeats the
+publication. **Dodaj istniejący folder** in that dialog registers a folder that
+already exists in a directory approved on the host, and **Ustawienia → Katalog
+nowych projektów** chooses where new folders go when the host approves several
+directories ([installation](../INSTALL.md#create-private-github-repositories-for-new-projects)).
+Projects is the same board as a
 project's cards, with status columns of its own: drag a project card itself to
 another column to save its status (on a touch screen, hold the card first);
 Escape cancels the drag. Alt+Left/Right on a focused card moves it one column over. The card's **Więcej działań** menu offers the same

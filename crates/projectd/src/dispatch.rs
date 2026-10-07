@@ -313,6 +313,20 @@ fn views(route: &Route<'_>) -> Result<Routed, AppError> {
     ))
 }
 /// Project resources, their history, tags and deletion.
+/// The registered folder of a project of the selected profile.
+fn project_folder(
+    engine: &project_application::engine::Engine,
+    project: &str,
+) -> Result<std::path::PathBuf, AppError> {
+    engine
+        .workspace()?
+        .value
+        .projects
+        .iter()
+        .find(|registration| registration.project_id == project)
+        .map(|registration| std::path::PathBuf::from(&registration.path))
+        .ok_or_else(|| AppError::reject(404, "PROJECT_NOT_FOUND"))
+}
 fn projects(route: &Route<'_>) -> Result<Routed, AppError> {
     let engine = &route.service.engine;
     let input = route.input;
@@ -323,6 +337,24 @@ fn projects(route: &Route<'_>) -> Result<Routed, AppError> {
             ("GET", ["api", "v1", "projects", project, "deletion-plan"]) => {
                 parameters(input, &[])?;
                 engine.project_deletion_plan(project)?
+            }
+            ("GET", ["api", "v1", "projects", project, "repository"]) => {
+                let github = route.service.github()?;
+                parameters(input, &[])?;
+                github.state(&project_folder(engine, project)?)?
+            }
+            ("POST", ["api", "v1", "projects", project, "repository"]) => {
+                let github = route.service.github()?;
+                parameters(input, &[])?;
+                if input.body != json!({}) {
+                    return Err(AppError::reject(422, "VALIDATION_FAILED"));
+                }
+                let (started, state) = github.publish(&project_folder(engine, project)?)?;
+                let mut reply = axum::Json(state).into_response();
+                if started {
+                    *reply.status_mut() = axum::http::StatusCode::ACCEPTED;
+                }
+                return Ok(Routed::Reply(reply));
             }
             ("GET", ["api", "v1", "projects", project, "git"]) => {
                 parameters(input, &[])?;
@@ -573,6 +605,16 @@ fn host(route: &Route<'_>) -> Result<Routed, AppError> {
                 parameters(input, &[])?;
                 agents.conversation(&service.user.id, conversation)?
             }
+            ("POST", ["api", "v1", "project-folders"]) => {
+                parameters(input, &[])?;
+                service.creations.create(
+                    &service.users,
+                    service.github.as_deref(),
+                    &service.user.id,
+                    picker_owner,
+                    &input.body,
+                )?
+            }
             ("GET", ["api", "v1", "roots"]) => engine.roots()?,
             ("GET", ["api", "v1", "roots", id, "directories"]) => {
                 let mut relative = String::new();
@@ -608,6 +650,7 @@ fn host(route: &Route<'_>) -> Result<Routed, AppError> {
                     "snapshot_cursor": engine.snapshot_cursor()?,
                     "capabilities": ["projects","cards","milestones","updates","registration","search"],
                     "agent_enabled": service.agents.is_some(),
+                    "github_enabled": service.github.is_some(),
                 })
             }
             ("GET", ["api", "v1", "diagnostics"]) => engine.diagnostics()?,

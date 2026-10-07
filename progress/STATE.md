@@ -7,6 +7,16 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+[Projects are added by name](2026-10-07-project-creation.md): the server
+creates the folder in the profile's default approved root, with a suffix when
+the name is taken, and a host started with `--github` creates a private
+repository and pushes the planning data. No step needs the host's desktop; the
+browser no longer opens its folder dialog. Verified with a scripted GitHub CLI
+and real Git; against GitHub only read-only calls were run, so the first real
+repository is the owner's to create. The owner's wider
+[product direction](SCOPE.md#product-direction--owner-statement-2026-10-07) is
+recorded and not started.
+
 Projects and the card Board now run on [one board engine](2026-10-07-shared-board-engine.md)
 with one card style, and its movement was reviewed and rebuilt: cards part
 around a slot, the preview lands or returns, a move is shown at once and saves

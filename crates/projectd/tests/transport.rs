@@ -1,6 +1,6 @@
 use project_application::engine::Engine;
 use project_store::filesystem::Directory;
-use projectd::{AgentConfig, Limits, Service};
+use projectd::{AgentConfig, GithubConfig, Limits, Service};
 use serde_json::{Value, json};
 use tokio::net::{TcpListener, UnixListener};
 use uuid::Uuid;
@@ -135,7 +135,15 @@ impl Running {
     async fn with_agent(adjust: impl FnOnce(&mut AgentConfig)) -> Self {
         Self::build(Some(adjust)).await
     }
+    /// A host that publishes repositories through a stand-in GitHub CLI whose
+    /// account lives in the test's own `github` directory.
+    async fn with_github() -> Self {
+        Self::build_with(None::<fn(&mut AgentConfig)>, true).await
+    }
     async fn build<F: FnOnce(&mut AgentConfig)>(agent: Option<F>) -> Self {
+        Self::build_with(agent, false).await
+    }
+    async fn build_with<F: FnOnce(&mut AgentConfig)>(agent: Option<F>, github: bool) -> Self {
         let temp = tempfile::tempdir().unwrap();
         let root = Directory::open(&temp.path().canonicalize().unwrap()).unwrap();
         let state = root.child("state", true).unwrap();
@@ -172,6 +180,22 @@ impl Running {
             adjust(&mut config);
             service = service.with_agent(config.clone());
             agent_config = Some(config);
+        }
+        if github {
+            let account = root.child("github", true).unwrap().path().to_owned();
+            let gh = account.join("gh");
+            std::fs::copy(support::FAKE_GH, &gh).unwrap();
+            std::fs::create_dir(account.join("remotes")).unwrap();
+            let git = std::env::split_paths(&std::env::var_os("PATH").unwrap())
+                .map(|directory| directory.join("git"))
+                .find(|candidate| candidate.is_file())
+                .expect("git on PATH");
+            service = service.with_github(GithubConfig {
+                gh,
+                git,
+                remote_base: format!("file://{}/remotes/", account.display()),
+                timeout: std::time::Duration::from_secs(30),
+            });
         }
         let (shutdown, signal) = tokio::sync::watch::channel(false);
         let (browser, local) = (service.clone(), service.clone());
@@ -976,6 +1000,9 @@ mod agent;
 
 #[path = "transport/projects.rs"]
 mod projects;
+
+#[path = "transport/repository.rs"]
+mod repository;
 
 #[tokio::test]
 async fn removed_registration_and_suggestion_routes_return_not_found() {

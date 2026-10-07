@@ -81,83 +81,36 @@ try {
     .getByRole("button", { name: "Przeglądarka została zatwierdzona" })
     .click();
   await page.getByRole("heading", { name: "W Focus" }).waitFor();
-  let pickerRequests = 0;
-  await page.route("**/api/v1/native-folder-selections", (route) => {
-    pickerRequests++;
-    const input = route.request().postDataJSON();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        selection_id: input.selection_id,
-        state: "cancelled",
-        plan: null,
-        error: null,
-      }),
-    });
-  });
+  // A project needs only a name: the server creates its folder in the default root.
+  const homeRoot = join(temp, "New projects");
+  await mkdir(homeRoot);
+  cli("add-root", homeRoot, "--label", "New projects");
   await page.getByRole("button", { name: "Projekty", exact: true }).click();
   await page
     .getByRole("button", { name: "Dodaj projekt", exact: false })
     .click();
-  await page
-    .getByRole("button", { name: "Wybierz folder…", exact: true })
-    .click();
-  await page
-    .getByText(
-      "Anulowano wybór folderu. Pliki projektu nie zostały zmienione.",
-      {
-        exact: true,
-      },
-    )
-    .waitFor();
-  assert.equal(pickerRequests, 1);
-  await page
-    .getByRole("button", { name: "Zamknij dodawanie projektu", exact: true })
-    .click();
-  await expect(page.locator("dialog")).toHaveCount(0);
-  await page.unroute("**/api/v1/native-folder-selections");
-  const nativeFolder = join(temp, "Native selection fixture");
-  await mkdir(nativeFolder);
-  const nativePlan = cli(
-    "registration-plan",
-    nativeFolder,
-    "--name",
-    "Native-selected project",
-  );
-  await page.route("**/api/v1/native-folder-selections", (route) => {
-    const input = route.request().postDataJSON();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        selection_id: input.selection_id,
-        state: "selected",
-        plan: nativePlan,
-        error: null,
-      }),
-    });
+  const creation = page.getByRole("dialog", {
+    name: "Dodaj projekt",
+    exact: true,
   });
-  await page
-    .getByRole("button", { name: "Dodaj projekt", exact: false })
-    .click();
-  await page
-    .getByRole("button", { name: "Wybierz folder…", exact: true })
-    .click();
-  await page.getByText(nativeFolder, { exact: true }).waitFor();
-  await assert.rejects(readFile(join(nativeFolder, ".project/project.json")), {
-    code: "ENOENT",
-  });
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Dodaj projekt", exact: true })
+  await expect(
+    creation.getByRole("button", { name: "Utwórz projekt", exact: true }),
+  ).toBeDisabled();
+  await creation
+    .getByLabel("Nazwa projektu", { exact: true })
+    .fill("Świeży projekt");
+  await creation
+    .getByRole("button", { name: "Utwórz projekt", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
-  assert.match(
-    await readFile(join(nativeFolder, ".project/project.json"), "utf8"),
-    /Native-selected project/,
-  );
-  await page.unroute("**/api/v1/native-folder-selections");
+  const createdProject = JSON.parse(
+    await readFile(
+      join(homeRoot, "swiezy-projekt/.project/project.json"),
+      "utf8",
+    ),
+  ).metadata;
+  assert.equal(createdProject.name, "Świeży projekt");
+  cli("remove-root", cli("get", "/api/v1/roots").items[0].id);
   const pickRoot = join(temp, "Selectable folders");
   const selectedFolder = join(pickRoot, "Chosen project");
   await mkdir(selectedFolder, { recursive: true });
@@ -166,12 +119,9 @@ try {
   await page
     .getByRole("button", { name: "Dodaj projekt", exact: false })
     .click();
-  await page.getByText("Zdalny serwer bez pulpitu?", { exact: true }).click();
+  await page.getByText("Masz już folder z projektem?", { exact: true }).click();
   await page
-    .getByRole("button", {
-      name: "Przeglądaj zatwierdzone foldery",
-      exact: true,
-    })
+    .getByRole("button", { name: "Dodaj istniejący folder", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Otwórz folder: Chosen project", exact: true })
@@ -1232,7 +1182,7 @@ try {
   await assertRestored();
   await page
     .getByLabel("Projekt", { exact: true })
-    .selectOption(nativePlan.project_id);
+    .selectOption(createdProject.id);
   await expect(
     page
       .locator(".astra-column-active")

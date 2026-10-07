@@ -2351,6 +2351,97 @@ paths:
         schema:
           $ref: '#/components/schemas/UUID'
       responses: *id008
+  /api/v1/project-folders:
+    parameters:
+    - $ref: '#/components/parameters/AstraUser'
+    post:
+      operationId: createProjectFolder
+      tags: [registration]
+      summary: Create a new project folder in the default approved root and prepare its registration
+      description: |-
+        Derives a folder name from the project name, creates that folder in the profile's default approved root and returns a registration plan for it. A name that is already used by an entry of the root, or by a repository of the host's GitHub account when the host publishes repositories, receives the first free numeric suffix (name-2, name-3, …). The default root is the project_root_id preference, or the only approved root when the preference is absent. Nothing is registered until the plan is committed with commitRegistration.
+
+        The client generates creation_id, so a repeated POST cannot create a second folder: the same creation_id with the same input returns the first result. Results are kept in memory for ten minutes and belong to the session that started them; after a daemon restart a repeated creation_id creates another folder.
+
+        Errors:
+        - PROJECT_ROOT_NOT_SET (409): no default root is selected and the profile does not have exactly one approved root.
+        - PROJECT_ROOT_NOT_FOUND (409): the selected root is no longer approved.
+        - PROJECT_FOLDER_NAME_EXHAUSTED (409): no free folder name was found within 50 suffixes.
+        - CREATION_ID_REUSED (409): the same creation_id was sent with different input or by another session.
+        - PROJECT_CREATION_LIMIT (429): too many retained creations.
+        - VALIDATION_FAILED (422): the request body does not match ProjectFolderInput.
+      parameters:
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProjectFolderInput'}
+      responses:
+        '200':
+          description: The created folder and its registration plan
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProjectFolder'}
+        '408': {$ref: '#/components/responses/RequestTimeout'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/projects/{project_id}/repository:
+    parameters:
+    - $ref: '#/components/parameters/AstraUser'
+    - $ref: '#/components/parameters/project_id'
+    get:
+      operationId: getProjectRepository
+      tags: [registration]
+      summary: Read whether the project folder is published to a remote repository
+      description: |-
+        Observes the origin remote of the project folder and the publication this daemon started, if any. Errors: GITHUB_DISABLED (404) when the host was not started with --github; PROJECT_NOT_FOUND (404).
+      responses:
+        '200':
+          description: Repository state
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProjectRepository'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+    post:
+      operationId: publishProjectRepository
+      tags: [registration]
+      summary: Create a private GitHub repository for the project folder and push it
+      description: |-
+        Starts a background publication and returns its state at once; poll getProjectRepository until the state is no longer publishing. The daemon initializes Git in the folder when needed, commits .project, AGENTS.md and .gitignore when the repository has no commit, creates a private repository in the GitHub account the host's gh is signed in to, and pushes the current branch. The repository takes the folder's name, or the first free numeric suffix when that name is taken. A folder that already has an origin remote is only pushed. Repeating the request while a publication runs, or after it succeeded, starts nothing. A failed publication can be repeated; its error is kept in memory until the daemon restarts.
+
+        Errors: GITHUB_DISABLED (404) when the host was not started with --github; PROJECT_NOT_FOUND (404); GITHUB_BUSY (429) when four publications already run; VALIDATION_FAILED (422) when the body is not an empty object.
+      parameters:
+      - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, additionalProperties: false}
+      responses:
+        '202':
+          description: A publication was started
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProjectRepository'}
+        '200':
+          description: Nothing was started; the current state is returned
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProjectRepository'}
+        '408': {$ref: '#/components/responses/RequestTimeout'}
+        default:
+          description: Controlled error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
   /api/v1/agent:
     parameters:
     - $ref: '#/components/parameters/AstraUser'
@@ -3447,6 +3538,9 @@ components:
             maxItems: 16
             uniqueItems: true
           maxProperties: 200
+        project_root_id:
+          $ref: '#/components/schemas/UUID'
+          description: Approved root in which new project folders are created.
       required: []
       additionalProperties: false
     Slug:
@@ -4679,6 +4773,9 @@ components:
         agent_enabled:
           type: boolean
           description: True when the host was started with an agent directory.
+        github_enabled:
+          type: boolean
+          description: True when the host was started with --github and publishes project repositories.
       required:
       - user
       - api_version
@@ -4693,6 +4790,7 @@ components:
       - snapshot_cursor
       - capabilities
       - agent_enabled
+      - github_enabled
       additionalProperties: false
     RegistrationPlanInput:
       type: object
@@ -5549,6 +5647,66 @@ components:
           type:
           - string
           - 'null'
+    ProjectFolderInput:
+      type: object
+      additionalProperties: false
+      required:
+      - creation_id
+      - name
+      properties:
+        creation_id:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '\S'
+    ProjectFolder:
+      type: object
+      additionalProperties: false
+      required:
+      - creation_id
+      - folder
+      - plan
+      properties:
+        creation_id:
+          $ref: '#/components/schemas/UUID'
+        folder:
+          type: string
+          description: Name of the created folder inside the default root.
+          minLength: 1
+          maxLength: 64
+        plan:
+          $ref: '#/components/schemas/RegistrationPlan'
+    ProjectRepository:
+      type: object
+      additionalProperties: false
+      required:
+      - state
+      - url
+      - error
+      properties:
+        state:
+          type: string
+          description: absent has no origin remote; unpushed has one that no branch was pushed to.
+          enum:
+          - absent
+          - unpushed
+          - publishing
+          - published
+          - failed
+        url:
+          description: The origin remote without credentials, when there is one.
+          type:
+          - string
+          - 'null'
+          maxLength: 2000
+        error:
+          description: Code of the last failed publication of this daemon run.
+          type:
+          - string
+          - 'null'
+          maxLength: 100
     AgentProvider:
       type: string
       enum:

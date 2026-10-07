@@ -341,3 +341,40 @@ For a host started with the agent option, this supersedes the earlier rule that
 the server has no execute endpoint. It authorizes nothing beyond that; a host
 started without the option keeps the earlier rule. See
 [ADR-070](../docs/ADR-070-AGENT-RUNS.md).
+
+## Projects by name and remote operation — owner direction, 2026-10-07
+
+Choosing Add project and entering a name must create the project's folder
+automatically in the default destination set in Settings, and activate a
+private GitHub repository for it. When the name collides, use a folder name
+that fits. No message that has to be clicked may appear on the local machine:
+the instance is remote, everything must be possible through remote access, and
+processes such as adding a project must run without friction.
+
+In reply to three questions the owner chose: the first commit with `.project`
+and `AGENTS.md` is pushed to the new repository; when GitHub fails the project
+is still created locally and the publication can be repeated; browsing approved
+folders stays for existing folders, and the host's folder dialog leaves the
+interface.
+
+For a host started with the GitHub option this extends the exception made for
+the agent: the server may run fixed `git` and `gh` command lines and reach
+GitHub. It authorizes nothing else. See
+[ADR-074](../docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).
+
+## Product direction — owner statement, 2026-10-07
+
+Recorded as direction, not as scheduled scope; the owner asked that none of it
+be built yet.
+
+Astra is ultimately a construction in which a virtual machine on a server runs
+what is being built here, as a closed system used through remote access. It
+offers an interface prepared for people who build, manage, create, arrange and
+push work forward, which is what exists today, and an agent that steers it and
+adds information. It will later be widened by further modules, for example a
+customer base and perhaps a CRM, and eventually offers and other functions.
+
+It is remote access to one's own company for small businesses whose owner
+handles practically everything and would like it all to get done by itself.
+For now the core is strictly about projects, the calendar and delivery: what is
+to be done, laid out in time, and perhaps some simple resources in counters.

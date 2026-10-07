@@ -27,6 +27,10 @@ A debug-only Rust build is insufficient for that launcher. Use the
 [in-app agent](docs/ADR-070-AGENT-RUNS.md); it needs Claude Code or Codex
 installed and signed in. The agent has the daemon user's full rights, so use it
 with synthetic data.
+`ASTRA_TRY_GITHUB=1 npm run try` adds `--github`, so a project added by name
+gets a real private repository in the account `gh` is signed in to
+([ADR-074](docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md)). The tests never
+reach GitHub: they use `crates/projectd/tests/fixtures/fake-gh.sh`.
 
 For a debug build, keep the same frontend-first order:
 

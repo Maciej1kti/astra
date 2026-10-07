@@ -19,6 +19,10 @@ instruct a local coding agent that runs without permission prompts or a sandbox
 with the daemon user's rights; the option is off by default. See
 [ADR-070](docs/ADR-070-AGENT-RUNS.md) and its
 [limitations](docs/LIMITATIONS.md#in-app-agent).
+Started with `--github`, the daemon also lets paired browsers create private
+repositories in the GitHub account its user is signed in to and push project
+planning data there, using fixed `git` and `gh` command lines; this too is off
+by default. See [ADR-074](docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).
 
 ## Dependency advisories
 

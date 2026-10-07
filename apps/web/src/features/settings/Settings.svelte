@@ -5,6 +5,7 @@
   import Button from "../../lib/ui/Button.svelte";
 
   import type {
+    Root,
     AgentProvider,
     PreferencesResource as Preferences,
     Session,
@@ -78,6 +79,8 @@
   let view = $state("focus");
   let agent = $state<AgentProvider>("claude");
   let enabledPlugins = $state("");
+  let root = $state("");
+  let roots = $state<Root[]>([]);
   let error = $state("");
   let info = $state("");
   let loading = $state(true);
@@ -100,6 +103,7 @@
     view: "widok domyślny",
     agent: "dostawca agenta",
     plugins: "wtyczki",
+    root: "katalog nowych projektów",
   };
   let confirmClose = $state(false);
   let generation = 0;
@@ -111,6 +115,7 @@
         week !== (baseline.preferences.week_start ?? "monday") ||
         view !== (baseline.preferences.default_view ?? "focus") ||
         enabledPlugins !== pluginList(baseline.preferences.plugins) ||
+        root !== (baseline.preferences.project_root_id ?? "") ||
         (agentEnabled &&
           agent !== (baseline.preferences.agent_provider ?? "claude"))),
   );
@@ -147,6 +152,7 @@
             default_view: view,
             ...(agentEnabled ? { agent_provider: agent } : {}),
             plugins: pluginIds(enabledPlugins),
+            ...(root ? { project_root_id: root } : {}),
             expected_version: baseline?.version,
             pending,
             new_user_name: userName,
@@ -174,11 +180,12 @@
     loading = true;
     error = "";
     try {
-      const [p, s, a, u] = await Promise.all([
+      const [p, s, a, u, r] = await Promise.all([
         retained ? null : api<Preferences>("/api/v1/workspace/preferences"),
         api<{ items: Session[] }>("/api/v1/auth/sessions"),
         api<{ items: Pairing[] }>("/api/v1/auth/pairings"),
         api<UserList>("/api/v1/users"),
+        api<{ items: Root[] }>("/api/v1/roots"),
       ]);
       if (generation !== current) return;
       if (p) {
@@ -189,8 +196,10 @@
           view,
           agent,
           plugins: enabledPlugins,
+          root,
         } = settingsDraft(p));
       }
+      roots = r.items;
       sessions = s.items;
       pairings = a.items;
       users = u;
@@ -225,6 +234,7 @@
             default_view: view,
             ...(agentEnabled ? { agent_provider: agent } : {}),
             plugins: pluginIds(enabledPlugins),
+            ...(root ? { project_root_id: root } : {}),
           },
         },
         baseline.version,
@@ -281,7 +291,7 @@
       const rebased = rebaseSettingsDraft(
         settingsDraft(baseline),
         settingsDraft(current),
-        { timezone, week, view, agent, plugins: enabledPlugins },
+        { timezone, week, view, agent, plugins: enabledPlugins, root },
       );
       baseline = current;
       ({
@@ -290,6 +300,7 @@
         view,
         agent,
         plugins: enabledPlugins,
+        root,
       } = rebased.draft);
       operation.acknowledge();
       info = rebased.kept.length
@@ -591,6 +602,30 @@
             ></select
           ></label
         >{/if}
+      <label
+        >Katalog nowych projektów<select
+          aria-label="Katalog nowych projektów"
+          bind:value={root}
+          disabled={!baseline ||
+            busy ||
+            !!pending ||
+            !!userName ||
+            accessLost ||
+            conflict}
+          >{#if !baseline?.preferences.project_root_id}<option value=""
+              >{roots.length === 1
+                ? `Automatycznie: ${roots[0]?.display_path}`
+                : "Nie wybrano"}</option
+            >{/if}{#each roots as item}<option value={item.id}
+              >{item.label} · {item.display_path}</option
+            >{/each}</select
+        ></label
+      >
+      <p class="field-hint">
+        {roots.length
+          ? "Dodanie projektu tworzy w tym katalogu folder o nazwie projektu."
+          : "Brak zatwierdzonych katalogów. Właściciel hosta dodaje je poleceniem projectctl add-root."}
+      </p>
       <fieldset class="plugins">
         <legend>Wtyczki</legend>
         <p class="field-hint">

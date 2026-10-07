@@ -137,6 +137,19 @@ Jeśli plik został committed, lecz indeksowanie zawiodło, nie emituj zwykłego
 
 Build ID i contract version są jawne. Przy niezgodności zapisu UI zachowuje szkic i prosi o bezpieczny reload. Nie odświeżaj automatycznie strony nad wpisywanym tekstem. Stare lazy chunk URL muszą dawać rzeczywisty błąd, nie HTML 200. HTML: no-cache; prywatne API: no-store; hashowane zasoby: immutable. Nie ma service workera w v1.
 
+## Project folders and repositories
+
+`POST /api/v1/project-folders` creates the folder of a new project in the
+profile's default approved root and returns a registration plan; the folder
+name is derived from the project name and receives a numeric suffix when taken.
+The plan is committed with the ordinary registration command.
+`GET`/`POST /api/v1/projects/{project_id}/repository` read and start the
+publication of a project folder to a private repository, on a host started
+with `--github`; bootstrap reports that as `github_enabled`. Neither operation
+is a journaled command: a creation is repeated by its `creation_id`, and a
+publication's result is read from Git. Rules, error codes and limits are in
+[ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).
+
 ## Explicit Gantt schedules
 
 `GET /api/v1/views/gantt` returns bounded rows containing recorded card

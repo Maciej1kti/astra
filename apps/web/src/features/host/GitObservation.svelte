@@ -5,8 +5,15 @@
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
   import { subscribeSession } from "../../lib/api/session-events";
   import { onMount } from "svelte";
-  import { api } from "../../lib/api/api";
+  import { api, apiCode } from "../../lib/api/api";
   import { modal, layerExit } from "../../lib/ui/dialog";
+  import {
+    publishRepository,
+    readRepository,
+    repositoryLink,
+    repositoryStatus,
+  } from "../../lib/api/repository.ts";
+  import type { ProjectRepository } from "../../lib/contracts/api.generated";
 
   let { project, onclose }: { project: string; onclose: () => void } = $props();
   type Observation = {
@@ -38,17 +45,50 @@
       if (current === generation) busy = false;
     }
   }
+  // False once the host answers that it does not publish repositories.
+  let github = $state(true);
+  let repository = $state<ProjectRepository | null>(null);
+  let publishing = $state(false);
+  let repositoryError = $state("");
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  /** Read the repository, or start a publication, and follow it to its end. */
+  async function follow(start: boolean) {
+    const current = generation;
+    publishing = true;
+    repositoryError = "";
+    try {
+      let state = start
+        ? await publishRepository(project)
+        : await readRepository(project, { fresh: true });
+      while (current === generation) {
+        repository = state;
+        if (state.state !== "publishing") break;
+        await new Promise((resolve) => (timer = setTimeout(resolve, 700)));
+        state = await readRepository(project, { fresh: true });
+      }
+    } catch (e) {
+      if (current !== generation) return;
+      if (apiCode(e) === "GITHUB_DISABLED") github = false;
+      else repositoryError = errorMessage(e);
+    } finally {
+      if (current === generation) publishing = false;
+    }
+  }
+  const link = $derived(repositoryLink(repository));
   onMount(() => {
     void load();
+    void follow(false);
     const ended = () => {
       generation++;
       data = null;
       busy = false;
+      publishing = false;
       error = "Sesja wygasła. Połącz się ponownie, aby sprawdzić Git.";
     };
     const unsubscribeSession = subscribeSession({ ended: ended });
     return () => {
       generation++;
+      clearTimeout(timer);
       unsubscribeSession();
     };
   });
@@ -93,6 +133,32 @@
         plików .project.</small
       >
     {/if}
+    {#if github}<section class="repository" aria-labelledby="github-title">
+        <h3 id="github-title">GitHub</h3>
+        {#if repository}<p role="status">
+            {repositoryStatus(repository)}
+            {#if repository.state === "failed"}{serverMessage(
+                repository.error ?? "GITHUB_UNAVAILABLE",
+              )}{/if}
+          </p>
+          {#if link}<p>
+              <a href={link} target="_blank" rel="noopener noreferrer">{link}</a
+              >
+            </p>{:else if repository.url}<p>
+              <code>{repository.url}</code>
+            </p>{/if}
+          {#if repository.state !== "published"}<button
+              onclick={() => follow(true)}
+              disabled={publishing}
+              >{publishing
+                ? "Publikowanie…"
+                : repository.state === "failed"
+                  ? "Ponów publikację"
+                  : "Opublikuj jako prywatne repozytorium"}</button
+            >{/if}
+        {:else if publishing}<p role="status">Sprawdzanie GitHuba…</p>{/if}
+        {#if repositoryError}<p role="alert">{repositoryError}</p>{/if}
+      </section>{/if}
   </div>
 </dialog>
 
@@ -104,6 +170,13 @@
     padding: var(--space-8);
     background: var(--soft);
     border-radius: var(--radius-control);
+  }
+  .repository {
+    margin-top: var(--space-9);
+  }
+  .repository a,
+  .repository code {
+    overflow-wrap: anywhere;
   }
   dd {
     margin: 0;

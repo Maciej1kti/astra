@@ -321,14 +321,20 @@ identify the exact modules and UI conventions to extend.
 
 Repository content and Markdown are untrusted data. Rendering never executes
 document instructions, fetches remote preview resources or runs arbitrary shell
-commands. API access does not grant an arbitrary filesystem browser. Host-native
-selection and approved-root browsing are explicit registration authorities.
+commands. API access does not grant an arbitrary filesystem browser. Approved
+roots are the registration authority for browsers: a browser browses below one,
+or names a new project whose folder the server creates in the profile's default
+root ([ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md)). The host-native
+folder selection remains an API operation that the browser no longer uses.
 
 Pairing authorizes a browser for all trusted profiles, while the local CLI acts
 as the OS owner. Profile selection separates workspaces and is not an access
 control boundary between paired people. Author labels on comments/reports are
 attribution, not verified separate user identities.
 The server has no public shell endpoint, auto-commit, auto-fetch or multi-host merge.
+A host started with `--github` runs fixed `git` and `gh` command lines to give a
+project folder its first commit and a private repository; a request selects
+only the project.
 The one exception to the shell-endpoint rule is the agent runner
 ([ADR-070](ADR-070-AGENT-RUNS.md)), which exists only on a host whose OS owner
 started it with `--agent-dir`; the browser cannot enable it. It starts the

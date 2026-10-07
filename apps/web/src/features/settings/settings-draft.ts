@@ -11,8 +11,17 @@ export type SettingsDraft = {
   agent: AgentProvider;
   /** Enabled plugin identifiers in their one stable spelling. */
   plugins: string;
+  /** Approved root of new project folders; empty while none is selected. */
+  root: string;
 };
-const fields = ["timezone", "week", "view", "agent", "plugins"] as const;
+const fields = [
+  "timezone",
+  "week",
+  "view",
+  "agent",
+  "plugins",
+  "root",
+] as const;
 
 export function settingsDraft(saved: PreferencesResource): SettingsDraft {
   return {
@@ -21,6 +30,7 @@ export function settingsDraft(saved: PreferencesResource): SettingsDraft {
     view: saved.preferences.default_view ?? "focus",
     agent: saved.preferences.agent_provider ?? "claude",
     plugins: pluginList(saved.preferences.plugins),
+    root: saved.preferences.project_root_id ?? "",
   };
 }
 

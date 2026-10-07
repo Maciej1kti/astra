@@ -24,6 +24,7 @@ An implemented feature and a passed release acceptance scenario are different cl
 | Attribution | Human/bot labels on comments and reports are declarations, not separate authenticated identities |
 | Counter charts | Inclusive ranges of at most 400 days, 100 series per page, 500 loaded catalog entries and eight selected series per chart; daily source quantities are integers. A counter's rate is stored with it as a decimal of at most four places and its whole-history total is read with every series; the money unit and display choices are browser-local, and derived amounts are calculations, not stored monetary transactions. Plugins are modules built into the application and switched on per profile; third-party or runtime-loaded plugins are not supported. A profile stores tile choices for at most 200 counters |
 | CLI | Bounded single-page reads; no streaming `watch`, automatic pagination or general batch mutation transaction |
+| Project repositories | Off unless the OS owner starts `projectd` with `--github`; then any paired browser can create private repositories in the host's GitHub account and push planning data. Publication state other than the last failure is read from Git. See [Project repositories](#project-repositories) |
 | In-app agent | Off unless the OS owner starts `projectd` with `--agent-dir`; then any paired browser can instruct a local coding agent that runs with the daemon user's full rights and no permission prompts. See [In-app agent](#in-app-agent) |
 
 Changing these boundaries requires an explicit scope decision. Missing CLI aliases
@@ -156,6 +157,35 @@ workspace's exclusive gate, because pins live in sources and the limit of 100
 is checked against them rather than against the disposable index
 ([ADR-041](ADR-041-SOURCE-BACKED-FOCUS-AND-TAGS.md)). Other requests wait while
 that scan runs.
+
+## Project repositories
+
+Adding a project by name and publishing it
+([ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md)) has these limits:
+
+- **Account.** Repositories are created in the one GitHub account the host's
+  `gh` is signed in to, always private. There is no per-profile account,
+  organization choice or visibility setting.
+- **Content.** The first commit holds `.project`, `AGENTS.md` and an existing
+  `.gitignore` only. Later changes are not committed or pushed by the server;
+  there is still no auto-commit or auto-fetch.
+- **Names.** Folder names are ASCII, derived from the project name; a name
+  written only in another script becomes `projekt`. A repository whose name
+  was taken after the folder was created receives its own suffix and then
+  differs from the folder's.
+- **Memory.** A creation's identity and a failed publication's reason are held
+  in daemon memory. After a restart a repeated creation request makes another
+  folder, and a failed publication reads as not published.
+- **Leftovers.** A creation that is refused after its folder was made can leave
+  an empty folder, and a daemon stopped mid-publication can leave an empty
+  private repository. Deleting a project never deletes its repository.
+- **CLI.** `projectctl` has no dedicated command; use `command` and `get`.
+- **Host dialog.** The browser no longer opens the host's folder dialog. Its
+  API operations remain and still open a dialog on the host's desktop when
+  called.
+- **Verification.** Covered with a scripted GitHub CLI and real Git. Against
+  GitHub itself only the read-only calls were exercised before the owner's
+  first real use.
 
 ## In-app agent
 

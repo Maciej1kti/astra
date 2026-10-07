@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHost, pair, root, writeRuntime } from "./host.mjs";
 import { agentDaemonArgs } from "./agent-host.mjs";
+import { githubDaemonArgs } from "./github-host.mjs";
 import { withBrowser, withHost } from "./runtime.mjs";
 import { seed } from "./fixture.mjs";
 import { artifactManifest } from "./artifacts.mjs";
@@ -52,10 +53,14 @@ const suites = [
   "deletion",
   "focus",
   "agent",
+  "project-creation",
 ];
 
 /** Suites whose daemon needs more than the default command line. */
-const hostOptions = { agent: { daemonArgs: agentDaemonArgs } };
+const hostOptions = {
+  agent: { daemonArgs: agentDaemonArgs },
+  "project-creation": { daemonArgs: githubDaemonArgs },
+};
 
 export async function runSuites(selected = suites) {
   if (!selected.length || selected.some((suite) => !suites.includes(suite)))

@@ -103,6 +103,9 @@ Node.js or Docker; the trial launcher uses Node for its local HTTPS proxy.
   critical-path forecast or automatic scheduling.
 - Only the search index is disposable. Project sources, workspace configuration
   and operational state all need to be preserved.
+- Astra is operated remotely: adding a project needs only its name, and no
+  workflow asks for a click on the host. Creating a private GitHub repository
+  for it is optional and enabled by the host's owner.
 - Built-in backup archives and source migration tooling are deferred. Use the
   documented [stopped-server copy and recovery procedure](ops/RECOVERY.md).
 - Physical iPhone/Safari, Arch/ext4, power-loss and complete release acceptance

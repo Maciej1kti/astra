@@ -284,11 +284,13 @@ def check_api_examples() -> dict:
         "delete.json": "DeleteInput",
         "agent-run.json": "AgentRunInput",
         "agent-provider-preference.json": "PreferencesPatch",
+        "project-folder.json": "ProjectFolderInput",
+        "project-root-preference.json": "PreferencesPatch",
     }
     for filename, definition in bindings.items():
         schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"#/components/schemas/{definition}", "components": OAS["components"]}
         Draft202012Validator(schema, format_checker=FORMAT).validate(load_json(f"examples/requests/{filename}"))
-    for filename, definition in {"users.json": "UserList", "focus-response.json": "FocusResource", "focus-daily-page.json": "SummaryPage", "counter-series-page.json": "CounterSeriesPage", "command-status.json": "CommandStatus", "command-status-rejected.json": "CommandStatus", "deletion-response.json": "CommandResponse", "project-deletion-plan.json": "ProjectDeletionPlan", "attention-page.json": "AttentionPage", "agent-run.json": "AgentRun", "agent-status.json": "AgentStatus"}.items():
+    for filename, definition in {"users.json": "UserList", "focus-response.json": "FocusResource", "focus-daily-page.json": "SummaryPage", "counter-series-page.json": "CounterSeriesPage", "command-status.json": "CommandStatus", "command-status-rejected.json": "CommandStatus", "deletion-response.json": "CommandResponse", "project-deletion-plan.json": "ProjectDeletionPlan", "attention-page.json": "AttentionPage", "agent-run.json": "AgentRun", "agent-status.json": "AgentStatus", "project-repository.json": "ProjectRepository"}.items():
         schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"#/components/schemas/{definition}", "components": OAS["components"]}
         Draft202012Validator(schema, format_checker=FORMAT).validate(load_json(f"examples/{filename}"))
     cli_schema = load_json("contracts/cli-output.schema.json")

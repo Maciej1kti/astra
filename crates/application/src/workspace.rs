@@ -220,6 +220,15 @@ impl Engine {
                     if let Some(tiles) = preferences.chart_tiles {
                         workspace.preferences.chart_tiles = Some(tiles);
                     }
+                    if let Some(root) = preferences.project_root_id {
+                        let roots = self.roots()?;
+                        if !roots["items"].as_array().is_some_and(|roots| {
+                            roots.iter().any(|item| item["id"] == root.as_str())
+                        }) {
+                            return reject(422, "PROJECT_ROOT_NOT_FOUND");
+                        }
+                        workspace.preferences.project_root_id = Some(root);
+                    }
                 }
             }
         }

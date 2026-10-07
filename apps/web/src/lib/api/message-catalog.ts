@@ -138,6 +138,30 @@ export const messages: Record<string, string> = {
   GIT_UNAVAILABLE: "Repozytorium Git jest niedostępne.",
   GIT_BUSY: "Repozytorium Git jest zajęte. Spróbuj ponownie za chwilę.",
   GIT_TIMEOUT: "Upłynął czas sprawdzania repozytorium Git.",
+  PROJECT_ROOT_NOT_SET:
+    "Nie wybrano katalogu nowych projektów. Wskaż go w Ustawieniach.",
+  PROJECT_ROOT_NOT_FOUND:
+    "Katalog nowych projektów nie jest już zatwierdzony. Wybierz inny w Ustawieniach.",
+  PROJECT_FOLDER_NAME_EXHAUSTED:
+    "Nie znaleziono wolnej nazwy folderu. Podaj inną nazwę projektu.",
+  CREATION_ID_REUSED:
+    "To tworzenie projektu zostało już użyte. Zamknij okno i zacznij od nowa.",
+  PROJECT_CREATION_LIMIT:
+    "Zbyt wiele rozpoczętych projektów. Spróbuj ponownie za chwilę.",
+  GITHUB_DISABLED: "Publikowanie na GitHubie nie jest włączone na tym hoście.",
+  GITHUB_UNAVAILABLE:
+    "GitHub jest nieosiągalny z hosta. Projekt działa lokalnie; ponów publikację później.",
+  GITHUB_AUTH_REQUIRED:
+    "Host nie jest zalogowany do GitHuba. Zaloguj gh na hoście i ponów publikację.",
+  GITHUB_CLI_UNAVAILABLE: "Na hoście nie udało się uruchomić polecenia gh.",
+  GITHUB_TIMEOUT: "GitHub nie odpowiedział na czas. Ponów publikację.",
+  GITHUB_CREATE_FAILED: "GitHub odmówił utworzenia repozytorium.",
+  GITHUB_NAME_EXHAUSTED:
+    "Nie znaleziono wolnej nazwy repozytorium na GitHubie.",
+  GITHUB_PUSH_FAILED:
+    "Repozytorium powstało, ale wysłanie plików nie powiodło się. Ponów publikację.",
+  GITHUB_BUSY: "Trwa kilka publikacji naraz. Spróbuj ponownie za chwilę.",
+  GIT_FAILED: "Git na hoście nie wykonał polecenia w folderze projektu.",
   AGENT_DISABLED: "Agent nie jest włączony na tym hoście.",
   AGENT_HOST_RESTARTED: "Host został uruchomiony ponownie.",
   AGENT_RUN_NOT_FOUND: "Host nie zna tej wiadomości.",

@@ -39,6 +39,10 @@ Skrypty, fonty i CSS nie pochodzą z CDN. Obrazy i preview linków z opisów nie
 
 ## Ścieżki i repo
 
+A browser can also name a new project: the server derives the folder name and
+creates it in the profile's default approved root, so the browser still submits
+no path, and a host started with `--github` publishes it with fixed command
+lines ([ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md)).
 Browser registration uses either an approved root plus a validated relative path,
 or the host-native folder selection explicitly requested by the owner (ADR-025).
 The native dialog supplies the path; the browser cannot submit an arbitrary path

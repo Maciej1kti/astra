@@ -70,3 +70,15 @@ twice and a request sent after a daemon restart is refused. The result is an
 The [provider preference](requests/agent-provider-preference.json) is an ordinary
 conditional preferences patch. Runs live in daemon memory only; see
 [ADR-070](../docs/ADR-070-AGENT-RUNS.md).
+
+[Project folder request](requests/project-folder.json) creates the folder of a
+new project in the profile's default approved root and returns a registration
+plan to commit. The client generates `creation_id`, so repeating the request
+does not create a second folder while the daemon runs. The
+[root preference](requests/project-root-preference.json) selects that root with
+an ordinary conditional preferences patch; the sample identifier must be one of
+your own approved roots. On a host started with `--github`, an empty JSON
+object posted to `/api/v1/projects/{project_id}/repository` publishes the
+folder, and reading the same path returns a
+[repository state](project-repository.json). See
+[ADR-074](../docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).

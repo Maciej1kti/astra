@@ -16,6 +16,8 @@ mod diagnostics;
 mod focus;
 mod pending_recovery;
 mod project_deletion;
+mod project_folder;
+pub use project_folder::folder_name;
 mod source_deletion;
 pub use diagnostics::{record_failure, record_worker_failure};
 mod counters;

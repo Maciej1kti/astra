@@ -19,6 +19,7 @@ test("saved preferences map to explicit form values", () => {
     view: "focus",
     agent: "claude",
     plugins: "",
+    root: "",
   });
   assert.deepEqual(
     settingsDraft(
@@ -27,6 +28,7 @@ test("saved preferences map to explicit form values", () => {
         default_view: "list",
         agent_provider: "codex",
         plugins: ["chart-totals", "chart-settlement"],
+        project_root_id: "ae0c14a1-72e7-4b4d-af85-613767a87a8e",
       }),
     ),
     {
@@ -35,6 +37,7 @@ test("saved preferences map to explicit form values", () => {
       view: "list",
       agent: "codex",
       plugins: "chart-settlement,chart-totals",
+      root: "ae0c14a1-72e7-4b4d-af85-613767a87a8e",
     },
   );
 });
@@ -171,6 +174,31 @@ test("the agent provider defaults to claude and follows the same rebase rules", 
     {
       draft: { ...base, week: "sunday", agent: "codex" },
       kept: ["agent"],
+    },
+  );
+});
+
+test("a chosen root of new projects survives a conflict like any other edit", () => {
+  const base = {
+    timezone: "UTC",
+    week: "monday",
+    view: "focus",
+    agent: "claude",
+    root: "",
+  };
+  assert.deepEqual(
+    rebaseSettingsDraft(
+      base,
+      { ...base, week: "sunday" },
+      { ...base, root: "ae0c14a1-72e7-4b4d-af85-613767a87a8e" },
+    ),
+    {
+      draft: {
+        ...base,
+        week: "sunday",
+        root: "ae0c14a1-72e7-4b4d-af85-613767a87a8e",
+      },
+      kept: ["root"],
     },
   );
 });

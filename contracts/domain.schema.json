@@ -768,6 +768,10 @@
             "uniqueItems": true
           },
           "maxProperties": 200
+        },
+        "project_root_id": {
+          "description": "Approved root in which new project folders are created.",
+          "$ref": "#/$defs/UUID"
         }
       },
       "required": [],

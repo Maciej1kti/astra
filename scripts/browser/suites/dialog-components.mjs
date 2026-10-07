@@ -108,11 +108,11 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
         });
         const disclosure = dialog
           .locator("summary")
-          .filter({ hasText: "Zdalny serwer" });
+          .filter({ hasText: "Masz już folder" });
         await expect(disclosure).toBeVisible();
         await disclosure.click();
         const browse = dialog.getByRole("button", {
-          name: "Przeglądaj zatwierdzone foldery",
+          name: "Dodaj istniejący folder",
         });
         await browse.focus();
         await browse.press("Enter");

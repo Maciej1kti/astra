@@ -110,8 +110,8 @@
   const tagsUI = deferredComponent(
     () => import("./features/tags/TagManager.svelte"),
   );
-  const nativeUI = deferredComponent(
-    () => import("./features/registration/NativeProject.svelte"),
+  const newProjectUI = deferredComponent(
+    () => import("./features/registration/NewProject.svelte"),
   );
   const deletionUI = deferredComponent(
     () => import("./features/registration/ProjectDeletion.svelte"),
@@ -162,7 +162,7 @@
           settings ||
           adding ||
           agentOpen ||
-          nativeAdding ||
+          creatingProject ||
           manageTags ||
           gitProject ||
           diagnostics ||
@@ -325,7 +325,7 @@
 
   let manageTags = $state(false);
 
-  let nativeAdding = $state(false);
+  let creatingProject = $state(false);
 
   let gitProject = $state("");
 
@@ -587,7 +587,13 @@
     await refresh(["projects"]).catch(message);
   }
   function addProject() {
-    nativeAdding = true;
+    creatingProject = true;
+  }
+  /** Either add-project dialog registered a project: show it. */
+  function projectAdded(id: string) {
+    creatingProject = false;
+    routing.showProject(id);
+    void refresh().catch(message);
   }
 
   function closeEditor() {
@@ -655,7 +661,7 @@
       projectMove ||
       adding ||
       agentChat.holds ||
-      nativeAdding ||
+      creatingProject ||
       manageTags ||
       projectDeletion ||
       registrationPending ||
@@ -1143,10 +1149,7 @@
 {#if RegistrationBrowser}<RegistrationBrowser
     bind:open={adding}
     onpendingchange={(value) => (registrationPending = value)}
-    onregistered={async (id) => {
-      routing.showProject(id);
-      await refresh().catch(message);
-    }}
+    onregistered={projectAdded}
   />{:else if adding}<DeferredDialog
     title="Dodaj projekt"
     error={registrationUI.error}
@@ -1173,22 +1176,18 @@
     }}
   />{/if}
 
-{#if nativeAdding}<DeferredHost
-    source={nativeUI}
+{#if creatingProject}<DeferredHost
+    source={newProjectUI}
     title="Dodaj projekt"
-    onclose={() => (nativeAdding = false)}
+    onclose={() => (creatingProject = false)}
   >
-    {#snippet children(NativeProject)}<NativeProject
-        onclose={() => (nativeAdding = false)}
+    {#snippet children(NewProject)}<NewProject
+        onclose={() => (creatingProject = false)}
         onbrowse={() => {
-          nativeAdding = false;
+          creatingProject = false;
           adding = true;
         }}
-        onadded={(id) => {
-          nativeAdding = false;
-          routing.showProject(id);
-          void refresh().catch(message);
-        }}
+        onadded={projectAdded}
       />{/snippet}
   </DeferredHost>{/if}
 

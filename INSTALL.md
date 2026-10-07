@@ -192,18 +192,48 @@ The CLI plan defaults to private Git mode (a local exclusion). Add `--tracked`
 to `registration-plan` if you intend to commit the persistent `.project/` sources;
 keep `.project/.local/` excluded. The daemon does not commit files to Git.
 
-The browser can instead use **Projects → Add project**. Its native folder dialog
-opens on the **host**, not on the phone or remote browser. Linux uses XDG Desktop
-Portal (FileChooser v3 or newer), with Zenity as a fallback; it needs the desktop
-user session bus. On a headless host, explicitly approve a browsing root:
+The browser adds projects through **Projekty → Dodaj projekt**, which needs a
+directory you approved on the host. Nothing in that flow opens a dialog on the
+host, so it works from a phone or any remote browser:
 
 ```sh
 projectctl add-root /absolute/projects --label Projects
 ```
 
-Then choose **Browse approved folders** in the browser. Local CLI registration
-does not require an approved browser root. No parent-folder or Git-remote search
-selects a project on your behalf.
+Typing a project name then creates a folder of that name inside the approved
+root and registers it. With several approved roots, choose one under
+**Ustawienia → Katalog nowych projektów**. **Dodaj istniejący folder** in the
+same dialog registers a folder that already exists below an approved root.
+Local CLI registration does not require an approved root. No parent-folder or
+Git-remote search selects a project on your behalf.
+
+### Create private GitHub repositories for new projects
+
+Start `projectd` with `--github` to have each project added by name published
+to a private repository of the GitHub account that `gh` is signed in to on the
+host. Read [ADR-074](docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md) and the
+[limitations](docs/LIMITATIONS.md#project-repositories) first: any paired
+browser can then create repositories in that account.
+
+Prerequisites on the host: Git, and the GitHub CLI signed in for the daemon's
+user with the `repo` scope (`gh auth status`).
+
+```sh
+target/release/projectd \
+  --data-dir "$HOME/.lp" \
+  --public-origin https://YOUR_PRIVATE_HOST \
+  --github
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--github` | Enables publication. The daemon finds `gh` and `git` on its own `PATH` at startup and refuses to start without them |
+| `--github-gh-bin PATH`, `--github-git-bin PATH` | Executables to use instead. Both need `--github` |
+| `--github-remote-base URL` | Prefix of a new repository's remote, default `https://github.com/`; set it for a GitHub Enterprise host. Needs `--github` |
+
+When GitHub cannot be reached the project is still created and works locally;
+repeat the publication from the project's **Git** dialog. The manual launcher
+passes the option with `ASTRA_TRY_GITHUB=1 npm run try`.
 
 ### Enable the in-app agent
 
@@ -316,7 +346,8 @@ automatic uninstaller or general source-format migration tool.
 | Address/socket already in use | Identify the existing host; use its connection or stop it deliberately before starting a replacement |
 | Browser cannot connect or gets Host/Origin errors | Compare the browser origin, proxy Host forwarding and `--public-origin` exactly |
 | The Agent button is missing, or its dialog reports a missing command | The host was started without `--agent-dir`; or the daemon's `PATH` lacks `claude`/`codex` (pass `--agent-claude-bin` / `--agent-codex-bin`) or `projectctl` is not beside `projectd` |
-| Folder picker appears to do nothing remotely | Look at the host desktop or use approved-root browsing / local CLI registration |
+| **Dodaj projekt** reports that no directory of new projects is selected | Approve one with `projectctl add-root`, or choose among several under **Ustawienia → Katalog nowych projektów** |
+| A new project has no GitHub repository | The host was started without `--github`, `gh` is signed out, or GitHub was unreachable; the daemon's stderr holds the failing command's last output. Repeat from the project's **Git** dialog |
 | CLI write times out | Keep its request ID, epoch, payload and version; inspect command status using [safe retries](CLI.md#uncertain-results-and-safe-retries) |
 | Source validation/recovery warning | Inspect `doctor` and the affected source; do not delete operational state or overwrite a conflict |
 
