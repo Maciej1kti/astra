@@ -1,0 +1,18 @@
+{
+  "body": "Settings → Wygląd now offers sets: four light palettes (Astra, Papier, Szałwia, Kreda), four dark palettes (Astra, Atrament, Kakao, Czerń) and four characters (Astra, Miękki, Redakcyjny, Techniczny), chosen separately beside the theme. The system theme switches between the chosen light and dark palette; a character sets corners, shadows and the heading typeface in both schemes. Every choice stays in the browser, as the theme did.\n\nThe owner decided two things when asked: a set changes character as well as colour, and colours and character are chosen separately.\n\nThe sets load on demand. The initial download budget was not raised: it is 81,805 of 81,920 bytes. To get there the chart series colours moved to a stylesheet loaded with the Chart view.\n\nFor the owner to judge on screen: the palettes' hues and names and the four characters are a first proposal. Miękki has a rounded typeface in Safari only.\n\nVerified locally on a release daemon: the full gate, smoke, planning and all 43 Chromium suites, and the new appearance suite also in WebKit. Not checked on a physical phone. Commit 17d9e01, rolled out to the manual instance. Evidence: progress/2026-10-07-appearance-sets.md\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "f65792fc-181b-462d-a7da-c83184f71b30",
+    "kind": "result",
+    "recorded_at": "2026-10-07T19:53:20.026Z",
+    "summary": "Appearance sets: light and dark palettes and a character",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
