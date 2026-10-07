@@ -136,15 +136,17 @@ await runBrowserSuite(
             );
           }
           if (view === "projects") {
-            const tiles = page.locator("[data-project-board-item]");
+            const tiles = page.locator(
+              ".project-status-board [data-board-card]",
+            );
             await expect(tiles.first()).toBeVisible();
-            const titles = await tiles.locator(".card-title").allTextContents();
+            const titles = await tiles.locator("h3").allTextContents();
             const filter = page.getByLabel("Filtruj wczytane tytuły", {
               exact: true,
             });
             await filter.fill(titles[0]);
             await expect
-              .poll(() => tiles.locator(".card-title").allTextContents())
+              .poll(() => tiles.locator("h3").allTextContents())
               .toEqual(
                 titles.filter((title) =>
                   title.toLowerCase().includes(titles[0].toLowerCase()),
@@ -421,7 +423,7 @@ await runBrowserSuite(
       }
       await page.emulateMedia({ reducedMotion: "reduce" });
       await route("projects");
-      await page.locator(".projectopen").first().click();
+      await page.locator(".project-status-board .title").first().click();
       assert.equal(
         await page
           .locator("dialog:modal")
@@ -432,7 +434,7 @@ await runBrowserSuite(
         .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await page.emulateMedia({ reducedMotion: "no-preference" });
-      await page.locator(".projectopen").first().click();
+      await page.locator(".project-status-board .title").first().click();
       await expect(page.locator("dialog:modal")).toHaveCSS(
         "animation-name",
         "astra-dialog",

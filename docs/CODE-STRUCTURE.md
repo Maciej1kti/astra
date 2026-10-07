@@ -44,7 +44,16 @@ Workspace [screens](../apps/web/src/features/workspace/screens) own focus,
 project overview, resource lists, updates and the workspace board overview.
 `ProjectsScreen` groups whole projects by Active, Paused and Archived state using
 bounded ordinary and archived project pages, with local folder/title filters.
-Its handle gesture uses shared cancellation, owns only a preview and passes the observed project summary to
+It renders them with the board feature's `KanbanBoard`, the component the card
+`Board` also uses: one column/card view, one `boardGesture` on the card surface,
+one phone column strip and one browser-local view memory. A host supplies its
+columns and receives a requested move with a `settle` callback. `board-gesture.ts`
+owns the pointer, the preview's lift, lean and landing, and edge scrolling;
+`board-reflow.ts` parts the rendered rows by transform and measures from layout
+offsets; `board-flip.ts` plays re-rendered cards as movement. `KanbanBoard` shows
+a requested move at once and withdraws it when `settle(false)` arrives; `Board` adds paging, quick creation and
+ordered placement, Projects an unordered status move and an actions menu.
+Projects passes the observed project summary to
 `ProjectStateChange`; that application-level component retains the conditional
 state command across view changes, with ordinary conflict and uncertain-result
 recovery. Projects loads no card or report collection. The shared read owner separates

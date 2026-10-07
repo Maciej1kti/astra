@@ -15,4 +15,6 @@ export type MoveProposal = {
   firstPage: boolean;
   lastPage: boolean;
   autoCommit?: boolean;
+  /** Tells the board that showed this move whether it was saved. */
+  onsettled?: (saved: boolean) => void;
 };

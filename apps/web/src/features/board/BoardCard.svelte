@@ -8,8 +8,12 @@
   import ResourceMetadata from "../../lib/ui/ResourceMetadata.svelte";
 
   let { card }: { card: KanbanCard } = $props();
-  const actions = getContext<BoardContext>(BOARD_CONTEXT);
-  const item = $derived(card.astra as Summary);
+  const board = getContext<BoardContext>(BOARD_CONTEXT);
+  const item = $derived(
+    board.current(String(card.id)) ?? (card.astra as Summary),
+  );
+  const details = $derived(board.details());
+  const actions = $derived(board.actions());
   // Stop SVAR's drag listener at the card boundary; the card surface owns the gesture.
   function isolate(node: HTMLElement) {
     const wrapper = node.closest(".wx-card");
@@ -39,44 +43,57 @@
 <article
   data-board-card={item.id}
   data-board-status={item.status}
+  data-board-held={board.held() === item.id ? "" : undefined}
   use:isolate
-  use:boardGesture={actions.gesture(item)}
+  use:boardGesture={board.gesture(item)}
 >
   <button
     class="title"
-    disabled={actions.busy()}
-    onclick={() => actions.open(item)}
-    aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
-    title="Przeciągnij, aby przenieść; kliknij, aby edytować. Alt+↑ lub Alt+↓ zmienia kolejność."
+    aria-disabled={board.busy() ? "true" : undefined}
+    onclick={() => {
+      // A busy board keeps the card focusable; it only declines to open it.
+      if (!board.busy()) board.open(item);
+    }}
+    aria-keyshortcuts={board.ordered()
+      ? "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
+      : "Alt+ArrowLeft Alt+ArrowRight"}
+    title={board.ordered()
+      ? "Przeciągnij, aby przenieść; kliknij, aby edytować. Alt+strzałki przenoszą kartę."
+      : "Przeciągnij, aby przenieść; kliknij, aby otworzyć. Alt+← lub Alt+→ zmienia kolumnę."}
     onkeydown={(event) => {
-      if (
-        event.altKey &&
-        (event.key === "ArrowUp" || event.key === "ArrowDown")
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        actions.reorder(item, event.key === "ArrowUp" ? -1 : 1);
-      }
+      if (!event.altKey || !event.key.startsWith("Arrow")) return;
+      const vertical = event.key === "ArrowUp" || event.key === "ArrowDown";
+      if (vertical && !board.ordered()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const direction =
+        event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1;
+      if (vertical) board.reorder(item, direction);
+      else board.shift(item, direction);
     }}
   >
     <h3>{item.title}</h3>
-    <ResourceMetadata {item} compact />
+    {#if details}{@render details(item)}{:else}<ResourceMetadata
+        {item}
+        compact
+      />{/if}
   </button>
+  {#if actions}<div class="actions">{@render actions(item)}</div>{/if}
 </article>
 
 <style>
   article {
+    display: flex;
+    align-items: flex-start;
     color: var(--ink);
     cursor: grab;
     user-select: none;
     -webkit-touch-callout: none;
   }
-  article:global([data-dragging]) {
-    opacity: var(--drag-opacity);
-  }
   .title {
     display: block;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     min-height: var(--space-20);
     padding: var(--space-7);
     text-align: left;
@@ -94,5 +111,13 @@
     font-size: var(--text-lg);
     margin: 0;
     overflow-wrap: anywhere;
+  }
+  .actions {
+    flex: none;
+    color: var(--muted);
+    cursor: default;
+  }
+  .actions :global(button) {
+    color: inherit;
   }
 </style>

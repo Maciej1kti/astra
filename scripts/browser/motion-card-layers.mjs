@@ -184,7 +184,7 @@ export async function checkCardLayers({ page, config, cli, runtime, settle }) {
     [
       "Projekty",
       "view=projects",
-      "[data-project-board-item]",
+      ".project-status-board [data-board-card]",
       ["title", "metadata"],
     ],
     [

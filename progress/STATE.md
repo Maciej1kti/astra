@@ -1,11 +1,19 @@
 # Current implementation state
 
-Updated 2026-10-06. The application is implemented and under verification;
+Updated 2026-10-07. The application is implemented and under verification;
 full release acceptance remains open. [Scope decisions](SCOPE.md) supersede the
 historical handoff. Use the [release checklist](../delivery/RELEASE-CHECKLIST.md)
 for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ownership.
 
 ## Current work
+
+Projects and the card Board now run on [one board engine](2026-10-07-shared-board-engine.md)
+with one card style, and its movement was reviewed and rebuilt: cards part
+around a slot, the preview lands or returns, a move is shown at once and saves
+without a dialog, phone columns page. Smoke and 40 of 41 Chromium suites pass;
+the remaining suite failure, one unit failure and a 45-byte bundle overage come
+from the add-menu work already on `main`. Touch feel on a physical phone and
+acceptance are the owner's.
 
 The [in-app agent](2026-10-06-agent-chat.md) adds an Agent choice in the floating **+** menu and a chat
 dialog backed by Claude Code or Codex. A host started with `--agent-dir` runs
@@ -58,6 +66,7 @@ page does not repeat them. The
 is preserved at its immutable revision. No requirement or acceptance result was
 removed or changed by this consolidation.
 
+- **2026-10-07:** [One board engine and its movement](2026-10-07-shared-board-engine.md).
 - **2026-10-06:** [Chart view redesign](2026-10-06-chart-redesign.md); [Chart phone controls and value-only plots](2026-10-06-chart-phone-controls.md); [Phone navigation bar alignment](2026-10-06-phone-dock-alignment.md); [Touched menu actions in WebKit dialogs](2026-10-06-touch-menu-actions.md); [One-step deletion of a pinned card](2026-10-06-pinned-card-deletion.md); [Visual review of the interface](2026-10-06-ui-review.md); [Interface refinement](2026-10-06-ui-refinement.md); [Layered motion restored](2026-10-06-layered-motion-restored.md); [Layered entrances in every view](2026-10-06-motion-everywhere.md); [Layers inside menus, dialogs and disclosures](2026-10-06-inner-layers.md); [In-app agent](2026-10-06-agent-chat.md).
 - **2026-10-05:** [Repository review fixes](2026-10-05-repository-review-fixes.md); [Repository review completion](2026-10-05-review-completion.md).
 - **2026-10-04:** [Definition and API cleanup](2026-10-04-definition-usage-cleanup.md); [Polish browser interface](2026-10-04-polish-ui.md); [Navigation selector correction](2026-10-04-navigation-section-selector.md); [Projects status board consolidation](2026-10-04-projects-status-board.md); [Definition and consumer audit](2026-10-04-definition-usage-audit.md); [Main project status board](2026-10-04-main-project-board.md); [UI component audit](2026-10-04-ui-component-audit.md); [Counter Chart dashboard](2026-10-04-counter-chart.md); [Shared exercise project implementation](2026-10-04-shared-exercise-project.md); [Compact navigation feature](2026-10-04-compact-navigation.md); [Trusted user profiles implementation](2026-10-04-trusted-user-profiles.md); [Folder review](2026-10-04-multi-user-folder-review.md).

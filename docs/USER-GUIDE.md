@@ -105,10 +105,14 @@ agenda pages hold up to 200 items; its grid/time layouts up to 1,000.
 Open **Projekty** from the sidebar or the phone's navigation bar to see projects in
 their current status columns, including archived projects. Use **Folder** and
 the title filter to narrow the board. Click a project to open its editor, or use
-**Dodaj projekt** to register a folder. Drag a project's handle to another column
-to save its status; Escape cancels the drag. The project's **Przenieś** menu offers
-the same status changes with keyboard and touch controls. Columns scroll
-horizontally on narrow screens. Project order follows the loaded project list.
+**Dodaj projekt** to register a folder. Projects is the same board as a
+project's cards, with status columns of its own: drag a project card itself to
+another column to save its status (on a touch screen, hold the card first);
+Escape cancels the drag. Alt+Left/Right on a focused card moves it one column over. The card's **Więcej działań** menu offers the same
+status changes with keyboard and touch controls. Columns collapse, scroll on
+their own and, on a phone, are reached from the status strip above the board.
+Project order follows the loaded project list. A project whose status cannot be
+read appears in a separate **Niedostępne** column that takes no moves.
 
 Moves use the displayed project version. A conflict keeps the proposal for
 review; close it and inspect the current project before trying again. An uncertain

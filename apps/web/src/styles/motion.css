@@ -263,7 +263,6 @@
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .app .resource-card:not(.focus-card),
-  .app .projectcard,
   .app .update {
     transition:
       transform var(--motion-enter) var(--motion-spring),
@@ -271,7 +270,6 @@
       border-color var(--motion-quick) ease;
   }
   .app .resource-card:not(.focus-card):hover,
-  .app .projectcard:hover,
   .app .update:hover {
     transform: translateY(calc(-1 * var(--motion-lift)));
     box-shadow: var(--shadow-floating);

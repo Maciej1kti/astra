@@ -89,14 +89,13 @@ await runBrowserSuite(
       name: "Tablica statusów projektów",
       exact: true,
     });
-    const column = (state) => board.locator(`[data-project-state="${state}"]`);
+    const column = (state) => board.locator(`.astra-column-${state}`);
     const tile = (project) =>
-      board.locator(`[data-project-board-item="${project.id}"]`);
-    const handle = (project) =>
-      tile(project).locator("[data-project-board-handle]");
+      board.locator(`[data-board-card="${project.id}"]`);
+    const handle = (project) => tile(project).locator(".title");
     const moveMenu = (project) =>
       tile(project).getByRole("button", {
-        name: `Przenieś ${project.title}`,
+        name: `Więcej działań dla ${project.title}`,
         exact: true,
       });
     const moveDialog = page.getByRole("dialog", {
@@ -120,9 +119,13 @@ await runBrowserSuite(
     }
     async function expectState(project, state) {
       await expect(
-        column(state).locator(`[data-project-board-item="${project.id}"]`),
+        column(state).locator(`[data-board-card="${project.id}"]`),
       ).toBeVisible();
-      assert.equal(cli("get", project.path).metadata.state, state);
+      // The board shows a requested move before its command has been saved.
+      await expect
+        .poll(() => cli("get", project.path).metadata.state)
+        .toBe(state);
+      await expect(board.locator("[data-board-pending]")).toHaveCount(0);
     }
     async function menuMove(project, state, { touch = false } = {}) {
       const trigger = moveMenu(project);
@@ -147,7 +150,7 @@ await runBrowserSuite(
       const destination = await column(state).boundingBox();
       assert(
         source && destination,
-        "Project grip and status column must be rendered",
+        "Project card and status column must be rendered",
       );
       const target = {
         x: destination.x + destination.width / 2,
@@ -159,9 +162,7 @@ await runBrowserSuite(
       );
       await page.mouse.down();
       await page.mouse.move(target.x, target.y, { steps: 12 });
-      await expect(
-        page.locator("[data-project-board-drag-preview]"),
-      ).toBeVisible();
+      await expect(page.locator("[data-board-drag-preview]")).toBeVisible();
       return { source, target };
     }
     async function capture(name) {
@@ -243,13 +244,17 @@ await runBrowserSuite(
       checks.push(
         "legacy Main URLs resolve to the Projects board and select the existing Projects shortcut",
       );
-      await expect(board.locator("[data-project-state] h2")).toHaveText([
-        "Aktywne",
-        "Wstrzymane",
-        "Zarchiwizowane",
+      await expect(board.locator(".wx-column .wx-title")).toHaveText([
+        "Aktywne · 1",
+        "Wstrzymane · 1",
+        "Zarchiwizowane · 1",
       ]);
+      await expect(
+        board.locator(".projectinitial, [data-project-board-handle], .handle"),
+      ).toHaveCount(0);
+      await expect(board.locator(".action-menu > button")).toHaveCount(3);
       for (const project of projects) await expectState(project, project.state);
-      await expect(board.locator("[data-project-board-item]")).toHaveCount(3);
+      await expect(board.locator("[data-board-card]")).toHaveCount(3);
       assert.equal(
         requests.filter(
           ({ method, path, url }) =>
@@ -311,10 +316,10 @@ await runBrowserSuite(
       await expect(tile(projects[1])).toBeVisible();
       await expect(tile(projects[0])).toHaveCount(0);
       await search.fill("missing Projects project");
-      await expect(board.locator("[data-project-board-item]")).toHaveCount(0);
+      await expect(board.locator("[data-board-card]")).toHaveCount(0);
       await search.fill("");
       await folder.selectOption("");
-      await expect(board.locator("[data-project-board-item]")).toHaveCount(3);
+      await expect(board.locator("[data-board-card]")).toHaveCount(3);
       // Search normally debounces transport; Projects already loaded titles stay local.
       await page.waitForTimeout(350);
       assert.equal(
@@ -337,9 +342,7 @@ await runBrowserSuite(
       const readsBeforeOpen = requests.filter(
         ({ method, path }) => method === "GET" && path === freshProject.path,
       ).length;
-      await tile(freshProject)
-        .locator("[data-project-board-open]")
-        .press("Enter");
+      await tile(freshProject).locator(".title").press("Enter");
       await expect(editor.getByLabel("Nazwa", { exact: true })).toHaveValue(
         freshName,
       );
@@ -368,13 +371,11 @@ await runBrowserSuite(
       await beginDrag(moving, "paused");
       await page.keyboard.press("Escape");
       await page.mouse.up();
-      await expect(
-        page.locator("[data-project-board-drag-preview]"),
-      ).toHaveCount(0);
+      await expect(page.locator("[data-board-drag-preview]")).toHaveCount(0);
       await expectState(moving, "active");
       assert.equal(writes.length, writesBeforeCancelled);
       assert.equal(cli("get", moving.path).version, beforeCancelled.version);
-      await tile(moving).locator("[data-project-board-open]").click();
+      await tile(moving).locator(".title").click();
       await expect(editor.getByLabel("Nazwa", { exact: true })).toHaveValue(
         moving.title,
       );
@@ -392,6 +393,24 @@ await runBrowserSuite(
       await idle();
       checks.push(
         "pointer status movement uses observed version and Escape performs no write",
+      );
+
+      const beforeKeys = cli("get", moving.path);
+      await handle(moving).focus();
+      await page.keyboard.press("Alt+ArrowRight");
+      await expectState(moving, "archived");
+      expectWrite(moving, "archived", beforeKeys.version);
+      await expect(moveDialog).toHaveCount(0);
+      await idle();
+      await expect(handle(moving)).toBeFocused();
+      const afterKeys = cli("get", moving.path);
+      await page.keyboard.press("Alt+ArrowLeft");
+      await expectState(moving, "paused");
+      expectWrite(moving, "paused", afterKeys.version);
+      await idle();
+      await expect(handle(moving)).toBeFocused();
+      checks.push(
+        "Alt+Left/Right moves a focused project one column over and keeps its focus",
       );
 
       const beforeKeyboard = cli("get", projects[1].path);
@@ -586,7 +605,7 @@ await runBrowserSuite(
           `Projects has no page overflow at ${width}px`,
         );
         const targets = await board
-          .locator("[data-project-board-handle], .action-menu > button")
+          .locator(".action-menu > button")
           .evaluateAll((buttons) =>
             buttons.map((button) => ({
               width: button.getBoundingClientRect().width,
@@ -637,24 +656,22 @@ await runBrowserSuite(
         const beforeTouchDrag = cli("get", uncertain.path);
         const writesBeforeTouchCancel = writes.length;
         await touch("touchStart", start);
+        await page.waitForTimeout(350);
         for (let step = 1; step <= 10; step++)
           await touch("touchMove", {
             x: start.x + ((end.x - start.x) * step) / 10,
             y: start.y + ((end.y - start.y) * step) / 10,
           });
-        await expect(
-          page.locator("[data-project-board-drag-preview]"),
-        ).toBeVisible();
+        await expect(page.locator("[data-board-drag-preview]")).toBeVisible();
         await touch("touchCancel");
-        await expect(
-          page.locator("[data-project-board-drag-preview]"),
-        ).toHaveCount(0);
+        await expect(page.locator("[data-board-drag-preview]")).toHaveCount(0);
         assert.equal(writes.length, writesBeforeTouchCancel);
         assert.equal(
           cli("get", uncertain.path).version,
           beforeTouchDrag.version,
         );
         await touch("touchStart", start);
+        await page.waitForTimeout(350);
         for (let step = 1; step <= 10; step++)
           await touch("touchMove", {
             x: start.x + ((end.x - start.x) * step) / 10,

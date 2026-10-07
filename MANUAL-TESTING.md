@@ -180,10 +180,18 @@ scripts/cargo-local build --workspace --release --locked
 Open **Projekty** from the sidebar or the phone's navigation bar. In a synthetic
 workspace, give projects Active, Paused and Archived statuses and check that
 each appears in its matching column. Filter by folder and title, then open a
-project and verify its current fields. Drag its handle to a different column;
-reload to check the saved status. Escape cancels a held drag. The project's
-**Przenieś** menu supports keyboard and touch changes. On a phone, scroll the
-columns horizontally and check that the page itself stays within the viewport.
+project and verify its current fields. Drag the project card to a different
+column; reload to check the saved status. Escape cancels a held drag. The card's
+**Więcej działań** menu supports keyboard and touch changes. On a phone, hold a
+card to lift it, use the status strip to change columns and check that the page
+itself stays within the viewport.
+
+On either board, check how a move feels: the other cards part around a dashed
+slot, the released card flies into it and stays there without a dialog or a
+jump, and Escape sends it home. Alt+arrows on a focused card move it and keep
+the focus on it. On a phone, a sideways swipe that starts on a card turns one
+column; holding a lifted card at the screen edge or on a column chip turns the
+page, and a collapsed column opens under it.
 Select Projects in **Ustawienia przestrzeni roboczej → Widok domyślny** and open the app without a
 view query to check the preference.
 

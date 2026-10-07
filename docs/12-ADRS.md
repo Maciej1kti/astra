@@ -440,3 +440,10 @@ only the final answer. Runs are started and polled with a client-chosen run ID
 and the daemon's boot ID; conversations live in memory. This supersedes, for such
 a host, the rule that the server has no execute endpoint. See
 [ADR-070](ADR-070-AGENT-RUNS.md).
+
+## ADR-071 — One board engine
+
+Projects and the card Board render with the same `KanbanBoard` component, card
+face and move gesture; only their columns and move commands differ. No protocol,
+source shape or command changes. See
+[ADR-071](ADR-071-SHARED-BOARD-ENGINE.md).

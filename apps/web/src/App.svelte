@@ -303,7 +303,25 @@
 
   let dateDraft = $state<DateProposal | null>(null);
   let moveDraft = $state<MoveProposal | null>(null);
-  let projectMove = $state<{ item: Summary; state: ProjectState } | null>(null);
+  let projectMove = $state<{
+    item: Summary;
+    state: ProjectState;
+    settle: (saved: boolean) => void;
+  } | null>(null);
+  /** Closes a project move, unless a later one replaced it. */
+  function settleProject(proposal: typeof projectMove, saved: boolean) {
+    if (!proposal || projectMove !== proposal) return;
+    const { settle } = proposal;
+    projectMove = null;
+    settle(saved);
+    if (saved) void refresh(["projects"]).catch(message);
+  }
+  /** Closes a card move and tells the board that showed it how it ended. */
+  function settleMove(saved: boolean) {
+    const proposal = moveDraft;
+    moveDraft = null;
+    proposal?.onsettled?.(saved);
+  }
 
   let manageTags = $state(false);
 
@@ -857,8 +875,9 @@
                     {addProject}
                     onremove={deleteProject}
                     disabled={!!projectMove || !!editor || !connected}
-                    onmove={(item, state) => {
-                      if (!projectMove) projectMove = { item, state };
+                    onmove={(item, state, settle) => {
+                      if (projectMove) settle(false);
+                      else projectMove = { item, state, settle };
                     }}
                   />{/snippet}
               </DeferredView>
@@ -1007,13 +1026,13 @@
 {#if moveDraft}{@const proposal = moveDraft}<DeferredHost
     source={moveUI}
     title="Przenieś kartę"
-    onclose={() => (moveDraft = null)}
+    onclose={() => settleMove(false)}
   >
     {#snippet children(MoveChange)}{#key proposal}<MoveChange
           {...proposal}
-          onclose={() => (moveDraft = null)}
+          onclose={() => settleMove(false)}
           onsaved={() => {
-            moveDraft = null;
+            settleMove(true);
             void refresh().catch(message);
           }}
         />{/key}{/snippet}
@@ -1021,20 +1040,13 @@
 {#if projectMove}{@const proposal = projectMove}<DeferredHost
     source={projectMoveUI}
     title="Przenieś projekt"
-    onclose={() => {
-      if (projectMove === proposal) projectMove = null;
-    }}
+    onclose={() => settleProject(proposal, false)}
   >
     {#snippet children(ProjectStateChange)}{#key proposal}<ProjectStateChange
-          {...proposal}
-          onclose={() => {
-            if (projectMove === proposal) projectMove = null;
-          }}
-          onsaved={() => {
-            if (projectMove !== proposal) return;
-            projectMove = null;
-            void refresh(["projects"]).catch(message);
-          }}
+          item={proposal.item}
+          state={proposal.state}
+          onclose={() => settleProject(proposal, false)}
+          onsaved={() => settleProject(proposal, true)}
         />{/key}{/snippet}
   </DeferredHost>{/if}
 {#if gitProject}<DeferredHost

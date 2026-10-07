@@ -321,11 +321,9 @@ await runBrowserSuite(
             .getByRole("button", { name: "Projekty", exact: true })
             .click();
         else await page.goto(`${config.origin}/?view=projects`);
-        const tile = page.locator(
-          `[data-project-board-item="${candidate.id}"]`,
-        );
+        const tile = page.locator(`[data-board-card="${candidate.id}"]`);
         const trigger = tile.getByRole("button", {
-          name: `Przenieś ${candidate.title}`,
+          name: `Więcej działań dla ${candidate.title}`,
           exact: true,
         });
         await trigger.focus();

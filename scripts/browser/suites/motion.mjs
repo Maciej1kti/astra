@@ -447,12 +447,14 @@ await runBrowserSuite(async (fixture) => {
         document.documentElement.style.setProperty(token, " ");
     });
     await nav.getByRole("button", { name: "Projekty", exact: true }).click();
-    await expect(page.locator(".projectcard").first()).toBeVisible();
+    await expect(
+      page.locator(".project-status-board .wx-card").first(),
+    ).toBeVisible();
     await settle();
     assert.deepEqual(errors, [], "A missing curve must not raise an error");
     assert.equal(
       await page
-        .locator(".projectcard")
+        .locator(".project-status-board .wx-card")
         .first()
         .evaluate((node) => getComputedStyle(node).opacity),
       "1",

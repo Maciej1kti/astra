@@ -142,12 +142,16 @@ Board, date and counter gestures.
 Board's all-project overview stacks populated statuses vertically.
 Within a project, a small status strip jumps between horizontally scrolling
 columns and opens on the first column with cards when no position was saved.
-Both boards and Projects share one look: soft panels with `--radius-panel`,
-cards with `--radius-card`. A project column adds cards from its footer; the
+The project board and Projects are one component, `KanbanBoard`: soft panels with
+`--radius-panel`, cards with `--radius-card`, one card face (a title, then
+metadata) and one move gesture on the card surface, without a handle or
+initials. Columns share spare width up to `--board-column-max-width`. A card
+move marks a line between cards; a project status move, which has no order,
+outlines the whole destination column. A project column adds cards from its footer; the
 widget's header add button is hidden, and on phones the strip replaces the
 column header. Timeline keeps its scale and selection controls in one row.
-Projects retains a separate actions menu for deletion, which remains a
-deliberate action in that menu.
+A Projects card keeps one quiet actions menu in its corner for status moves and
+deletion, which remains a deliberate action in that menu.
 
 CSS media-query breakpoints and structural proportions are layout rules, not
 theme values. `lib/ui/planning-metrics.ts` centralizes numeric dimensions required
@@ -304,6 +308,21 @@ not cancel its new owner. Preview elements are inert, hide from assistive
 technology and use shared drag-layer tokens. Shared overlay positioning accounts
 for the current origin and scale of transformed native dialogs/popovers, keeping
 the preview and insertion line aligned during their entrance.
+
+A board move is felt at every step. A touched card sinks during the 250 ms hold
+that lifts it; a mouse lifts it after 5 px. The preview grows by 3 %, leans up to
+4° into its travel and levels when it rests. The held card's place closes, the
+other cards part around a dashed slot of its size where it would land, and the
+destination column deepens to `--hover`. Released, the preview flies into the
+slot (240 ms) while the card is already rendered there; cancelled or released
+nowhere, it flies home. Cards re-rendered for any other reason glide from where
+they were, and a card arriving in a column rises into it. Near an edge the board
+scrolls faster the closer the pointer is (up to 1.1 px/ms); on a phone, where
+columns are snap pages, a pause at the edge or on a column's chip turns one page
+instead, and a collapsed column opens under a held card. A move saves without a
+dialog; a dialog appears only when the outcome needs a decision, and a save
+slower than `--motion-enter` shows a small status. `prefers-reduced-motion`
+keeps the slot and the outcome and drops the tilt, growth, flights and glides.
 
 Board keeps its two-axis status/column targeting, counters keep horizontal intent
 and Timeline dates keep date-unit resizing. Native Calendar gestures remain

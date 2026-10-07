@@ -7,7 +7,9 @@ The owner decided that the whole-project status board replaces the former
 Projects overview. It keeps the Projects name, icon and canonical `projects`
 route; Main no longer has a separate navigation entry, default-view choice,
 screen or icon. The eight canonical workspace views are Focus, Projects, Board,
-Calendar, Timeline, Chart, List and Updates. The card Board remains independent.
+Calendar, Timeline, Chart, List and Updates. The card Board remains a separate
+view; since [ADR-071](ADR-071-SHARED-BOARD-ENGINE.md) both render with one
+board component.
 
 Projects groups whole projects into Active, Paused and Archived, with local
 folder/title filters and the existing source-opening and conditional state

@@ -81,7 +81,8 @@ ASTRA_TEST_PROFILE=release ASTRA_TEST_BROWSER=webkit node scripts/browser/regres
 
 The `projects` suite checks the whole-project status board, all three project states,
 local folder/title filters, fresh editor opening, keyboard status moves and
-pointer cancellation. It covers conditional conflicts and unchanged retries after
+pointer cancellation on the board engine it shares with card boards, without
+handles or initials on its cards. It covers conditional conflicts and unchanged retries after
 a lost response, persisted status/default-view choices, legacy Main routes/local
 navigation and narrow touch controls. Projects retains its name and icon; no
 separate Main shortcut or default-view option remains.

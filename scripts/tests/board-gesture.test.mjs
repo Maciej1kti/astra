@@ -71,6 +71,9 @@ class El extends EventTarget {
   setPointerCapture(id) {
     this.captured.add(id);
   }
+  hasAttribute(name) {
+    return this.attributes.has(name);
+  }
   hasPointerCapture(id) {
     return this.captured.has(id);
   }
@@ -129,6 +132,7 @@ function setup(t) {
   globalThis.window = window;
   globalThis.document = {
     body,
+    documentElement: new El("html"),
     createElement: (tag) => new El(tag),
     elementFromPoint: () => hit,
   };
@@ -163,7 +167,7 @@ function setup(t) {
   board.bounds = box(100, 0, 400, 600);
 
   let disabled = false,
-    drop = { left: 300, top: 120, width: 180, label: "Doing" };
+    drop = { left: 300, top: 120, width: 180, height: 80, key: "doing:0" };
   const targets = [],
     commits = [];
   const options = {
@@ -187,6 +191,7 @@ function setup(t) {
   });
   const h = {
     window,
+    root: document.documentElement,
     body,
     node,
     title,
@@ -264,6 +269,12 @@ test("a mouse drag lifts an inert anonymous preview once it travels five pixels"
   assert.equal(ghost.style.position, "fixed");
   assert.equal(ghost.style.pointerEvents, "none");
   assert.equal(ghost.style.width, "240px");
+  // The preview starts exactly over the card and is moved by transform only.
+  assert.equal(
+    ghost.style.transform,
+    "translate3d(100px, 200px, 0) rotate(0.00deg) scale(1.0000)",
+  );
+  assert.equal(h.root.attributes.has("data-board-dragging"), true);
   assert.equal(indicator.attributes.has("data-board-drop-indicator"), true);
   assert.equal(indicator.attributes.get("aria-hidden"), "true");
   assert.equal(indicator.style.pointerEvents, "none");
@@ -280,21 +291,62 @@ test("each frame keeps the preview under the grip and marks the proposed slot", 
   const [ghost, indicator] = h.body.children;
   h.frame();
   assert.deepEqual(h.targets, [[400, 300]]);
-  assert.equal(ghost.style.left, "350px");
-  assert.equal(ghost.style.top, "280px");
+  assert.match(ghost.style.transform, /^translate3d\(350px, 280px, 0\) /);
   assert.equal(ghost.style.cursor, "grabbing");
   assert.equal(indicator.style.display, "block");
   assert.equal(indicator.style.left, "300px");
-  assert.equal(indicator.style.top, "118px");
+  assert.equal(indicator.style.top, "120px");
   assert.equal(indicator.style.width, "180px");
+  assert.equal(indicator.style.height, "80px");
+  assert.equal(indicator.style.transition, "none");
   h.dropAt(null);
   h.move(410, 320);
   h.frame();
-  assert.equal(ghost.style.left, "360px");
-  assert.equal(ghost.style.top, "300px");
+  assert.match(ghost.style.transform, /^translate3d\(360px, 300px, 0\) /);
   assert.equal(ghost.style.cursor, "no-drop");
   assert.equal(indicator.style.display, "none");
   assert.equal(h.frames.size, 1);
+});
+
+test("the preview grows as it lifts, leans into its travel and straightens at rest", (t) => {
+  const h = setup(t);
+  const shape = () => {
+    const [, turn, scale] = h.body.children[0].style.transform.match(
+      /rotate\((-?[\d.]+)deg\) scale\(([\d.]+)\)/,
+    );
+    return { turn: Number(turn), scale: Number(scale) };
+  };
+  h.down();
+  h.move(160, 220);
+  h.frame(1000);
+  assert.equal(shape().scale, 1);
+  h.move(200, 220);
+  h.frame(1016);
+  assert(shape().turn > 0, "travel to the right leans the preview clockwise");
+  assert(shape().scale > 1 && shape().scale < 1.03);
+  for (let time = 1032; time < 1600; time += 16) h.frame(time);
+  assert.equal(shape().scale, 1.03);
+  assert(Math.abs(shape().turn) < 0.01, "a resting preview is level");
+  h.move(120, 220);
+  h.frame(1616);
+  assert(shape().turn < 0, "travel to the left leans it the other way");
+  assert(shape().turn >= -4, "the lean is bounded");
+});
+
+test("the slot marker glides to a new place and otherwise follows scrolling exactly", (t) => {
+  const h = setup(t);
+  h.down();
+  h.move(400, 300);
+  const [, indicator] = h.body.children;
+  h.frame();
+  h.dropAt({ left: 300, top: 90, width: 180, height: 80, key: "doing:0" });
+  h.frame();
+  assert.equal(indicator.style.top, "90px");
+  assert.equal(indicator.style.transition, "none");
+  h.dropAt({ left: 300, top: 260, width: 180, height: 80, key: "doing:3" });
+  h.frame();
+  assert.equal(indicator.style.top, "260px");
+  assert.match(indicator.style.transition, /top 160ms/);
 });
 
 test("a drop on a slot commits once, after the preview and capture are gone", (t) => {
@@ -306,7 +358,8 @@ test("a drop on a slot commits once, after the preview and capture are gone", (t
   assert.deepEqual(h.targets.at(-1), [420, 310]);
   assert.deepEqual(h.commits, [
     {
-      overlays: 0,
+      // The preview outlives the pointer until it has come to rest.
+      overlays: 1,
       captured: 0,
       dragging: false,
       lifecycle: ["started", "ended"],
@@ -425,6 +478,7 @@ for (const pointerType of ["touch", "pen"]) {
       [...h.timers.values()].map(({ delay }) => delay),
       [250],
     );
+    assert.equal(h.node.attributes.get("data-pressing"), "true");
     assert.equal(h.move(156, 225.2).defaultPrevented, false);
     assert.deepEqual(h.body.children, []);
     assert.equal(h.node.captured.size, 0);
@@ -434,7 +488,8 @@ for (const pointerType of ["touch", "pen"]) {
     assert.equal(h.frames.size, 1);
     assert.equal(h.move(400, 300).defaultPrevented, true);
     h.frame();
-    assert.equal(h.body.children[0].style.left, "350px");
+    assert.match(h.body.children[0].style.transform, /^translate3d\(350px, /);
+    assert.equal(h.node.attributes.has("data-pressing"), false);
     h.up({ clientX: 400, clientY: 300 });
     assert.equal(h.commits.length, 1);
     h.clean();
@@ -469,38 +524,73 @@ test("a touch released before the hold is an ordinary tap", (t) => {
   assert.equal(click.defaultPrevented, false);
 });
 
-test("holding the preview near a horizontal board edge scrolls the board at a bounded pace", (t) => {
+// Auto-scroll: nothing where a 56px band begins, 1.1px/ms at the edge and beyond.
+const pace = (depth) => Math.min(1, Math.max(0, depth / 56)) ** 2 * 1.1;
+const near = (actual, expected, message) =>
+  assert(
+    Math.abs(actual - expected) < 1e-9,
+    message ?? `${actual} != ${expected}`,
+  );
+
+test("holding the preview near a horizontal board edge scrolls the board faster the closer it is", (t) => {
   const h = setup(t);
-  const near = (actual, expected) =>
-    assert(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
   h.down();
-  // Board spans x 100..500; the bands reach 24px outside and 36px inside.
+  // Board spans x 100..500.
   h.move(110, 300);
   h.frame(1000);
-  near(h.board.scrollLeft, -7.2);
+  near(h.board.scrollLeft, -pace(46) * 16);
   h.frame(1010);
-  near(h.board.scrollLeft, -11.7);
+  near(h.board.scrollLeft, -pace(46) * 26);
+  // A stalled frame never jumps further than 32ms would.
   h.frame(5000);
-  near(h.board.scrollLeft, -26.1);
+  near(h.board.scrollLeft, -pace(46) * 58);
   let time = 5000;
-  for (const [x, y, direction] of [
-    [76, 300, -1],
-    [75, 300, 0],
-    [135, 300, -1],
-    [136, 300, 0],
+  for (const [x, y, speed] of [
+    [60, 300, -1.1],
+    [100, 300, -1.1],
+    [128, 300, -pace(28)],
+    [155, 300, -pace(1)],
+    [156, 300, 0],
     [300, 300, 0],
-    [464, 300, 0],
-    [465, 300, 1],
-    [524, 300, 1],
-    [525, 300, 0],
+    [444, 300, 0],
+    [472, 300, pace(28)],
+    [500, 300, 1.1],
     [110, 601, 0],
     [490, -1, 0],
   ]) {
     h.board.scrollLeft = 0;
     h.move(x, y);
     h.frame((time += 16));
-    near(h.board.scrollLeft, direction * 7.2);
+    near(h.board.scrollLeft, speed * 16, `x=${x} y=${y}`);
   }
+});
+
+test("a paged board turns one page after a pause at its edge, then rests", (t) => {
+  const h = setup(t);
+  const pages = [];
+  h.options.paged = () => true;
+  h.options.page = (direction) => pages.push(direction);
+  h.down();
+  // Board spans x 100..500; the page bands are 32px.
+  h.move(480, 300);
+  h.frame(1000);
+  h.frame(1300);
+  assert.deepEqual(pages, [], "a passing preview turns nothing");
+  h.frame(1380);
+  assert.deepEqual(pages, [1]);
+  assert.equal(h.board.scrollLeft, 0, "a paged board is never crept along");
+  h.frame(1800);
+  assert.deepEqual(pages, [1], "the next page waits for the board to rest");
+  h.frame(2040);
+  assert.deepEqual(pages, [1, 1]);
+  h.move(300, 300);
+  h.frame(2100);
+  h.move(120, 300);
+  h.frame(2700);
+  h.frame(3000);
+  assert.deepEqual(pages, [1, 1], "each edge needs its own pause");
+  h.frame(3080);
+  assert.deepEqual(pages, [1, 1, -1]);
 });
 
 test("holding the preview near a column edge scrolls the column under the pointer", (t) => {
@@ -509,29 +599,32 @@ test("holding the preview near a column edge scrolls the column under the pointe
   h.move(300, 300);
   h.frame();
   assert.equal(h.column.scrollTop, 0);
-  // Column spans y 100..500 with 36px bands; another column may be under the pointer.
+  // Column spans y 100..500; another column may be under the pointer.
   const other = new El("div", { "data-kanban-column-cards": "" }, [
     new El("article"),
   ]);
   other.bounds = h.column.bounds;
-  for (const [y, direction] of [
-    [135, -1],
-    [136, 0],
+  for (const [y, speed] of [
+    [100, -1.1],
+    [128, -pace(28)],
+    [156, 0],
     [300, 0],
-    [464, 0],
-    [465, 1],
+    [444, 0],
+    [472, pace(28)],
+    [500, 1.1],
   ]) {
     other.scrollTop = 0;
     h.over(other.children[0]);
     h.move(300, y);
     h.frame();
-    assert(Math.abs(other.scrollTop - direction * 7.2) < 1e-9, `y=${y}`);
+    near(other.scrollTop, speed * 16, `y=${y}`);
   }
   assert.equal(h.column.scrollTop, 0);
+  other.scrollTop = 0;
   h.over(new El("main"));
   h.move(300, 110);
   h.frame();
-  assert(Math.abs(other.scrollTop - 7.2) < 1e-9);
+  assert.equal(other.scrollTop, 0);
   assert.equal(h.column.scrollTop, 0);
 });
 
@@ -671,4 +764,91 @@ test("a destroyed card cancels its drag and stops listening", (t) => {
   const dragstart = new Event("dragstart", { cancelable: true });
   h.node.dispatchEvent(dragstart);
   assert.equal(dragstart.defaultPrevented, false);
+});
+
+test("a destination without an order is outlined as a whole", (t) => {
+  const h = setup(t);
+  h.dropAt({
+    left: 300,
+    top: 40,
+    width: 280,
+    height: 500,
+    key: "paused",
+    area: true,
+  });
+  h.down();
+  h.move(400, 300);
+  const [, indicator] = h.body.children;
+  h.frame();
+  assert.equal(indicator.style.display, "block");
+  assert.equal(indicator.style.top, "40px");
+  assert.equal(indicator.style.height, "500px");
+  assert.equal(indicator.style.background, "transparent");
+  assert.equal(indicator.style.borderRadius, "var(--radius-panel)");
+});
+
+test("a released preview flies to the place the board gives it before it is removed", async (t) => {
+  const h = setup(t);
+  const order = [];
+  let finish;
+  h.options.lift = () => order.push("lift");
+  h.options.landed = () => order.push("landed");
+  h.options.commit = () => {
+    order.push("commit");
+    return Promise.resolve({ left: 320, top: 140, width: 240, height: 80 });
+  };
+  h.down();
+  h.move(400, 300);
+  const [ghost] = h.body.children;
+  const flights = [];
+  ghost.animate = (frames, timing) => {
+    flights.push({ frames, timing });
+    return { finished: new Promise((resolve) => (finish = resolve)) };
+  };
+  h.frame();
+  h.up({ clientX: 400, clientY: 300 });
+  assert.deepEqual(order, ["lift", "commit"]);
+  assert.equal(h.node.captured.size, 0);
+  assert.deepEqual(h.body.children, [ghost], "only the slot marker is gone");
+  await Promise.resolve();
+  assert.equal(flights.length, 1);
+  assert.equal(
+    flights[0].frames[1].transform,
+    "translate3d(320px, 140px, 0) rotate(0.00deg) scale(1.0000)",
+  );
+  assert.deepEqual(h.body.children, [ghost]);
+  // A new drag may begin while the last preview is still landing.
+  h.down();
+  h.move(400, 300);
+  assert.equal(h.body.children.length, 3);
+  h.up({ clientX: 400, clientY: 300 });
+  finish();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(order, [
+    "lift",
+    "commit",
+    "lift",
+    "commit",
+    "landed",
+    "landed",
+  ]);
+  h.clean();
+});
+
+test("a cancelled drag returns its preview to the place the board names", (t) => {
+  const h = setup(t);
+  const order = [];
+  h.options.abort = () => (order.push("abort"), null);
+  h.options.landed = () => order.push("landed");
+  h.down();
+  h.move(400, 300);
+  h.dropAt(null);
+  h.up();
+  assert.deepEqual(order, ["abort", "landed"]);
+  assert.equal(h.commits.length, 0);
+  h.clean();
+  // A press that never lifted has nothing to return.
+  h.down();
+  h.up();
+  assert.deepEqual(order, ["abort", "landed"]);
 });

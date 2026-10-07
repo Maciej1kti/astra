@@ -96,7 +96,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await page.keyboard.press(
       browser.browserType().name() === "webkit" ? "Alt+Tab" : "Tab",
     );
-    await expect(deletion).toBeFocused();
+    await expect(panel.getByRole("button").first()).toBeFocused();
     await screenshot("project-menu-short");
     await dismiss(projectActions, panel);
     checks.push(

@@ -81,7 +81,6 @@
   --icon-small: 16px;
   --tap-target: 44px;
   --control-height: 44px;
-  --avatar-size: 44px;
   --sidebar-compact: 192px;
   --agenda-min-height: 400px;
   --suggestions-height: 180px;
@@ -111,6 +110,7 @@
   --gantt-min-width: 720px;
   --board-min-height: 360px;
   --board-height: 68vh;
+  --board-column-max-width: 440px;
   --drag-opacity: 0.28;
   --disabled-opacity: 0.5;
   --pending-opacity: 0.6;

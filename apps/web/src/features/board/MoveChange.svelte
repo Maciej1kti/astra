@@ -48,6 +48,7 @@
   function close() {
     if (!busy && !pending) onclose();
   }
+  const quiet = untrack(() => autoCommit);
   onMount(() => {
     if (autoCommit) void save();
   });
@@ -101,82 +102,100 @@
   }
 </script>
 
-<dialog
-  class="app-dialog dialog-small"
-  use:modal={{ onclose: close }}
-  out:layerExit|global
-  aria-label="Przenieś kartę"
->
-  <DialogHeader
-    title="Przenieś kartę"
-    onclose={close}
-    disabled={busy || !!pending}
-    closeLabel="Zamknij przenoszenie karty"
-  />
-  <div class="dialog-body">
-    <p><strong>{item.title}</strong> → {resourceLabel(status)}</p>
-    <label
-      >Pozycja<select
-        aria-label="Pozycja"
-        bind:value={before}
-        disabled={busy || !!pending || conflict}
-      >
-        <option value="" disabled={!lastPage && status === item.status}
-          >Koniec kolumny</option
+<!-- A move made on the board is already shown there: it saves without a dialog,
+     which appears only when the outcome needs a decision. -->
+{#if !quiet || error || accessLost || conflict}<dialog
+    class="app-dialog dialog-small"
+    use:modal={{ onclose: close }}
+    out:layerExit|global
+    aria-label="Przenieś kartę"
+  >
+    <DialogHeader
+      title="Przenieś kartę"
+      onclose={close}
+      disabled={busy || !!pending}
+      closeLabel="Zamknij przenoszenie karty"
+    />
+    <div class="dialog-body">
+      <p><strong>{item.title}</strong> → {resourceLabel(status)}</p>
+      <label
+        >Pozycja<select
+          aria-label="Pozycja"
+          bind:value={before}
+          disabled={busy || !!pending || conflict}
         >
-        {#each neighbors as neighbor, index}
-          <option value={neighbor.id} disabled={index === 0 && !firstPage}
-            >Przed {neighbor.title}</option
+          <option value="" disabled={!lastPage && status === item.status}
+            >Koniec kolumny</option
           >
-        {/each}
-      </select></label
-    >
-    <SessionNotice
-      lost={accessLost}
-      message="Sesja wygasła. Ta propozycja została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
-    />
-    {#if error}<p role="alert">{error}</p>{/if}
-    {#if info}<p role="status">{info}</p>{/if}{#if conflict}<p>
-        Karta lub jej sąsiedzi się zmienili. Zamknij tę propozycję i sprawdź
-        aktualną tablicę.
-      </p>{/if}
-    <CommandRecovery
-      {pending}
-      {busy}
-      {accessLost}
-      oncheck={check}
-      onretry={transmit}
-    />
-    {#if error || pending || accessLost}<button
-        type="button"
-        onclick={copyDraft}>Kopiuj wersję roboczą</button
-      >{/if}
-    {#if accessLost && pending}<details>
-        <summary>Zamknij bez rozstrzygnięcia</summary>
-        <p>
-          Najpierw skopiuj identyfikator żądania i propozycję. Operacja mogła
-          już zostać zapisana.
-        </p>
-        <button type="button" onclick={onclose}>Odrzuć tę propozycję</button>
-      </details>{/if}
-  </div>
-  <footer class="dialog-footer">
-    <button class="quiet" onclick={close} disabled={busy || !!pending}
-      >Anuluj</button
-    ><Button
-      variant="primary"
-      onclick={save}
-      disabled={busy ||
-        !!pending ||
-        conflict ||
-        accessLost ||
-        (!before && !lastPage && status === item.status)}
-      >Potwierdź przeniesienie</Button
-    >
-  </footer>
-</dialog>
+          {#each neighbors as neighbor, index}
+            <option value={neighbor.id} disabled={index === 0 && !firstPage}
+              >Przed {neighbor.title}</option
+            >
+          {/each}
+        </select></label
+      >
+      <SessionNotice
+        lost={accessLost}
+        message="Sesja wygasła. Ta propozycja została zachowana; połącz przeglądarkę ponownie, aby ją dokończyć."
+      />
+      {#if error}<p role="alert">{error}</p>{/if}
+      {#if info}<p role="status">{info}</p>{/if}{#if conflict}<p>
+          Karta lub jej sąsiedzi się zmienili. Zamknij tę propozycję i sprawdź
+          aktualną tablicę.
+        </p>{/if}
+      <CommandRecovery
+        {pending}
+        {busy}
+        {accessLost}
+        oncheck={check}
+        onretry={transmit}
+      />
+      {#if error || pending || accessLost}<button
+          type="button"
+          onclick={copyDraft}>Kopiuj wersję roboczą</button
+        >{/if}
+      {#if accessLost && pending}<details>
+          <summary>Zamknij bez rozstrzygnięcia</summary>
+          <p>
+            Najpierw skopiuj identyfikator żądania i propozycję. Operacja mogła
+            już zostać zapisana.
+          </p>
+          <button type="button" onclick={onclose}>Odrzuć tę propozycję</button>
+        </details>{/if}
+    </div>
+    <footer class="dialog-footer">
+      <button class="quiet" onclick={close} disabled={busy || !!pending}
+        >Anuluj</button
+      ><Button
+        variant="primary"
+        onclick={save}
+        disabled={busy ||
+          !!pending ||
+          conflict ||
+          accessLost ||
+          (!before && !lastPage && status === item.status)}
+        >Potwierdź przeniesienie</Button
+      >
+    </footer>
+  </dialog>{:else}<p class="move-save-status" role="status">
+    Zapisywanie przeniesienia…
+  </p>{/if}
 
 <style>
+  /* Only a save slow enough to wonder about says that it is still running. */
+  .move-save-status {
+    position: fixed;
+    inset: auto var(--space-10) var(--space-10) auto;
+    z-index: var(--layer-floating);
+    padding: var(--space-4) var(--space-6);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--paper);
+    box-shadow: var(--shadow-sm);
+    font-size: var(--text-sm);
+    animation: astra-fade var(--motion-quick) var(--motion-ease)
+      var(--motion-enter) both;
+  }
   label {
     display: grid;
     gap: var(--space-4);
