@@ -95,15 +95,12 @@
   --dialog-max-height: 900px;
   --dialog-feedback-height: 280px;
   --settings-rail: 176px;
-  --chart-height: 480px;
-  --chart-mobile-height: 430px;
   /* The grid ends with the window: what stands above it is the page's header. */
   --calendar-grid-height: clamp(560px, calc(100dvh - 330px), 1200px);
   --calendar-chip-height: 24px;
   --calendar-rule: 3px;
   --calendar-mobile-grid-height: clamp(600px, calc(100dvh - 180px), 700px);
   --calendar-agenda-height: clamp(400px, calc(100dvh - 240px), 680px);
-  --gantt-min-width: 720px;
   --board-column-min-height: 96px;
   --board-collapsed-min-height: 240px;
   --board-column-max-width: 440px;

@@ -1,39 +1,57 @@
 <script lang="ts">
-  import { revealScene } from "../../lib/ui/motion";
-  import { controlsLayers, revealLayers } from "../../lib/ui/motion-layers";
-  import { groupLayers } from "./calendar-motion";
+  import { onMount, tick, untrack } from "svelte";
+  import { flip } from "svelte/animate";
+  import { revealLayers } from "../../lib/ui/motion-layers";
+  import { groupLayers, timelineLayers } from "./calendar-motion";
   import { errorMessage } from "../../lib/api/messages.ts";
-  import WidgetLocale from "../../lib/ui/WidgetLocale.svelte";
-  import { resourceLabel } from "../../lib/resources/resource-presentation";
-  import { formatCivilDate, formatCivilRange } from "../../lib/ui/locale";
-  import { timelineMetrics as metrics } from "../../lib/ui/planning-metrics";
-  import { onMount, setContext, untrack, tick } from "svelte";
+  import Icon from "../../lib/ui/Icon.svelte";
   import {
-    Gantt,
-    Willow,
-    type IApi,
-    type IColumnConfig,
-    type IConfig,
-  } from "@svar-ui/svelte-gantt";
+    countedDatedItems,
+    formatCivilRange,
+    uiLocale,
+  } from "../../lib/ui/locale";
+  import { dayDistance, isCivilDate } from "../../lib/ui/calendar-dates";
+  import { timelineMetrics as metrics } from "../../lib/ui/planning-metrics";
   import { resourcePath, type Summary } from "../../lib/api/api";
-  import { shiftedSchedule, shiftDate } from "./dates";
+  import { shiftedSchedule } from "./dates";
   import type { GanttPage } from "./planning";
-  import { widgetDate } from "./widget-dates";
   import type { DateProposal } from "./proposals";
-  import { GANTT_CONTEXT, type GanttContext } from "./gantt-context";
+  import type { DateOperation } from "./date-gesture";
+  import TimelineBar from "./TimelineBar.svelte";
   import TimelineRow from "./TimelineRow.svelte";
+  import TimelineToolbar from "./TimelineToolbar.svelte";
+  import { timelineItems, type TimelineItem } from "./timeline-items";
+  import {
+    arrivedDates,
+    chooseDates,
+    settleDates,
+    shownDates,
+    type DateProposalStep,
+    type PendingDates,
+  } from "./timeline-pending";
+  import {
+    axisDate,
+    axisSpan,
+    calendarSegments,
+    dayOffset,
+    monthLength,
+    shiftMonth,
+    timelineAxis,
+    timelineScales,
+    weekSegments,
+    weekday,
+    type TimelineScale,
+  } from "./timeline-scale";
   import {
     orderedTimelineRows,
     readTimelineOrder,
     writeTimelineOrder,
     moveTimelineRow,
   } from "./timeline-order";
-  import GanttTask from "./GanttTask.svelte";
   import { cursorPage } from "../../lib/api/pagination";
   import { getGantt } from "../../lib/api/planning";
   import { PlanningRead } from "./planning-read";
   import { projectionNotice } from "../../lib/api/projection-state";
-  import { ganttTasks } from "./gantt-tasks";
 
   let {
     project,
@@ -41,19 +59,36 @@
     revision,
     writePending,
     search,
+    weekStart,
+    today,
     open,
     onpropose,
     oncreate,
+    onmonth,
   }: {
     project: string;
     month: string;
     revision: number;
     writePending: boolean;
     search: string;
+    weekStart: string;
+    today: string;
     open: (row: Summary) => void;
     onpropose: (p: DateProposal) => void;
     oncreate: (s: { start: string; end: string }) => void;
+    onmonth: (month: string) => void;
   } = $props();
+
+  const scaleKey = "astra-timeline-scale:v1";
+  function storedScale(): TimelineScale {
+    try {
+      const value = localStorage.getItem(scaleKey);
+      return timelineScales.find((scale) => scale === value) ?? "days";
+    } catch {
+      return "days";
+    }
+  }
+
   let data = $state.raw<GanttPage | null>(null);
   let loading = $state(false);
   let error = $state("");
@@ -62,133 +97,158 @@
   let gesture = $state(false);
   let rowOrder = $state<string[]>([]);
   let orderNotice = $state("");
-  let scale = $state("days");
-  let selection = $state("");
+  let scale = $state<TimelineScale>(storedScale());
   let history = $state<(string | null)[]>([null]);
-  let chartWidth = $state(1000);
-  let widgetApi = $state.raw<IApi | null>(null);
+  let width = $state(1000);
+  let scroller = $state<HTMLDivElement>();
   let chartRoot = $state<HTMLDivElement>();
-  let lastNavigation = "";
+  /** The first visible day, as whole days from the axis start. */
+  let leftDay = $state(0);
+  /** Dates bars show before their saved rows arrive, by row. */
+  let pending = $state<Record<string, PendingDates>>({});
+  /** Date changes waiting for their turn to be saved. */
+  let outbox = $state<({ row: Summary } & DateProposalStep)[]>([]);
+  /** Date changes this view has proposed and not yet heard the outcome of. */
+  let saving = $state(0);
+  /** The change a pointer or the keyboard is making right now. */
+  let change = $state<{
+    id: string;
+    operation: DateOperation;
+    days: number;
+    keys: boolean;
+    version: string;
+  } | null>(null);
+  let draft = $state<{ anchor: string; day: string; held: boolean } | null>(
+    null,
+  );
+  let trayOpen = $state(false);
+  let trayOverflows = $state(false);
+  let tray = $state<HTMLDivElement>();
   let loadedProject: string | null = null;
+  let placed = "";
+  let anchored: { start: string; unit: number; lead: number } | null = null;
+  let nudgeTimer = 0;
+  let draftDropped = false;
+  let scrollFrame = 0;
+  let scrollPosition = 0;
+
   const readScope = $derived(`${project}:${revision}`);
   const reads = new PlanningRead((value) => {
     loading = value;
   });
+  const compact = $derived(width < metrics.compactWidth);
+  const unit = $derived((compact ? metrics.compactUnit : metrics.unit)[scale]);
+  const label = $derived(compact ? metrics.compactLabel : metrics.label);
   const filtered = $derived(
     (data?.rows ?? []).filter((r) =>
       r.title.toLowerCase().includes(search.toLowerCase()),
     ),
   );
-  const cards = $derived(filtered.filter((r) => r.type === "card"));
-  const selected = $derived(data?.rows.find((r) => r.id === selection));
-  const baseTasks = $derived(
-    ganttTasks(orderedTimelineRows(filtered, rowOrder)),
+  const unscheduled = $derived(
+    filtered.filter((r) => r.type === "card" && !r.schedule && !r.event),
   );
-  const scales = $derived<NonNullable<IConfig["scales"]>>(
-    scale === "days"
-      ? [
-          { unit: "month", step: 1, format: "%F %Y" },
-          { unit: "day", step: 1, format: "%j" },
-        ]
-      : scale === "weeks"
-        ? [
-            { unit: "month", step: 1, format: "%F %Y" },
-            { unit: "week", step: 1, format: "%d %M" },
-          ]
-        : [
-            { unit: "year", step: 1, format: "%Y" },
-            { unit: "month", step: 1, format: "%F" },
-          ],
+  const items = $derived(
+    timelineItems(orderedTimelineRows(filtered, rowOrder)).map((item) => {
+      const shown =
+        item.kind === "plan" ? shownDates(pending[item.row.id]) : null;
+      return shown ? { ...item, start: shown.start, end: shown.end } : item;
+    }),
   );
-  const columns = $derived<IColumnConfig[]>(
-    chartWidth < metrics.compactWidth
-      ? [
-          {
-            id: "text",
-            header: "Element",
-            cell: TimelineRow,
-            width: metrics.compactGrid,
-          },
-        ]
-      : [
-          {
-            id: "text",
-            header: "Element",
-            cell: TimelineRow,
-            width: metrics.grid,
-          },
-          {
-            id: "plannedStart",
-            header: "Początek",
-            width: metrics.startColumn,
-          },
-          { id: "plannedEnd", header: "Koniec", width: metrics.endColumn },
-        ],
-  );
-  const axisStart = $derived(
-    widgetDate(
-      shiftDate(
-        [
-          `${month}-01`,
-          ...baseTasks
-            .map((t) => t.plannedStart ?? t.astra.due?.date)
-            .filter((value): value is string => !!value),
-        ].reduce((earliest, day) => (day < earliest ? day : earliest)),
-        -2,
-      ),
+  const visibleDays = $derived(Math.max(1, Math.ceil((width - label) / unit)));
+  const axis = $derived(
+    timelineAxis(
+      month,
+      items.flatMap((item) => [item.start, item.end]),
+      visibleDays + 1,
     ),
   );
-  const axisEnd = $derived(
-    widgetDate(
-      shiftDate(
-        [
-          `${month}-28`,
-          ...filtered.flatMap((row) => (row.due ? [row.due.date] : [])),
-          ...baseTasks
-            .map((t) => t.plannedEnd ?? t.astra.due?.date)
-            .filter((value): value is string => !!value),
-        ].reduce((latest, day) => (day > latest ? day : latest)),
-        7,
-      ),
-    ),
+  const rightDay = $derived(leftDay + visibleDays);
+  const months = $derived(calendarSegments(axis, "month"));
+  const years = $derived(calendarSegments(axis, "year"));
+  const weeks = $derived(
+    scale === "weeks" ? weekSegments(axis, weekStart === "sunday" ? 6 : 0) : [],
   );
-  const tasks = $derived([
-    ...baseTasks,
-    {
-      id: "astra-create-row",
-      text: "",
-      type: "task",
-      start: axisStart,
-      end: axisEnd,
-      astraCreate: true,
-      astraCreateDate: `${month}-01`,
-    },
-  ]);
-  const editable = () => (!loading || gesture) && !error && !writePending;
-  setContext<GanttContext>(GANTT_CONTEXT, {
-    order: () => baseTasks.map((task) => String(task.id)),
-    reorder: reorderRow,
-    create: (date) => oncreate({ start: date, end: date }),
-    open: (row) => open(row),
-    editable,
-    gesture: (active) => {
-      gesture = active;
-      reads.pause(active);
-    },
-    propose: (row, days, operation) => {
-      if (!row.schedule || row.availability !== "ready") return;
-      selection = row.id;
-      try {
-        onpropose({
-          path: resourcePath(row),
-          version: row.version,
-          schedule: shiftedSchedule(row.schedule, days, operation),
-        });
-      } catch (e) {
-        error = errorMessage(e);
-      }
-    },
+  const dayCells = $derived.by(() => {
+    if (scale !== "days") return [];
+    const first = Math.max(0, Math.floor(leftDay / 7) * 7 - metrics.overscan);
+    const last = Math.min(
+      axis.days - 1,
+      first + visibleDays + 7 + 2 * metrics.overscan,
+    );
+    return Array.from({ length: Math.max(0, last - first + 1) }, (_, index) => {
+      const date = axisDate(axis, first + index);
+      return { date, offset: first + index, weekday: weekday(date) };
+    });
   });
+  const todayOffset = $derived(
+    isCivilDate(today) ? dayOffset(axis, today) : -1,
+  );
+  const todayShown = $derived(todayOffset >= 0 && todayOffset < axis.days);
+  /**
+   * Days between the left edge and the day the toolbar names the month of.
+   * Today opens at the same distance, so both always agree.
+   */
+  const lead = $derived(
+    Math.min(Math.floor(visibleDays * metrics.todayLead), metrics.leadDays),
+  );
+  const visibleMonth = $derived(axisDate(axis, leftDay + lead).slice(0, 7));
+  const changed = $derived.by(() => {
+    if (!change) return null;
+    const item = items.find((entry) => entry.row.id === change!.id);
+    if (!item) return null;
+    try {
+      return {
+        id: item.row.id,
+        keys: change.keys,
+        ...shiftedSchedule(item, change.days, change.operation),
+      };
+    } catch {
+      return null;
+    }
+  });
+  const changedSpan = $derived(
+    changed ? axisSpan(axis, changed.start, changed.end) : null,
+  );
+  const draftRange = $derived(
+    draft
+      ? draft.anchor < draft.day
+        ? { start: draft.anchor, end: draft.day }
+        : { start: draft.day, end: draft.anchor }
+      : null,
+  );
+
+  const monthTitle = new Intl.DateTimeFormat(uiLocale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const monthShort = new Intl.DateTimeFormat(uiLocale, {
+    month: "short",
+    timeZone: "UTC",
+  });
+  const weekdayShort = new Intl.DateTimeFormat(uiLocale, {
+    weekday: "short",
+    timeZone: "UTC",
+  });
+  const utc = (date: string) => new Date(`${date}T12:00:00Z`);
+  const px = (value: number) => `${value}px`;
+  const reducedMotion = () =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const editable = () => (!loading || gesture) && !error && !writePending;
+  /** A plan whose dates a gesture may change, even while an earlier change is saved. */
+  const interactive = (item: TimelineItem) =>
+    item.kind === "plan" && item.row.availability === "ready" && !error;
+
+  /** A bar leaves a hair between itself and its days' edges. */
+  function barBox(span: { offset: number; span: number }) {
+    const gap = unit >= metrics.unit.weeks ? metrics.barGap : 0;
+    return {
+      left: span.offset * unit + gap,
+      width: Math.max(metrics.barMin, span.span * unit - 2 * gap),
+    };
+  }
+
   $effect(() => {
     void readScope;
     untrack(() => {
@@ -199,15 +259,19 @@
         rowOrder = readTimelineOrder(nextProject);
         orderNotice = "";
         data = null;
-        selection = "";
         pageNotice = "";
+        pending = {};
+        outbox = [];
+        change = null;
+        placed = "";
       }
       void load(history.at(-1) ?? null);
     });
   });
   onMount(() => () => {
     reads.dispose();
-    widgetApi = null;
+    window.clearTimeout(nudgeTimer);
+    cancelAnimationFrame(scrollFrame);
   });
   async function load(cursor: string | null) {
     const scope = project;
@@ -226,15 +290,122 @@
         }
         data = result.value;
         freshness = result.value ? projectionNotice(result.value) : "";
+        // A row that arrived saved, or changed elsewhere, shows what was read.
+        const versions = new Map(
+          (result.value?.rows ?? []).map((row) => [row.id, row.version]),
+        );
+        for (const [id, entry] of Object.entries(pending))
+          if (!arrivedDates(entry, versions.get(id))) delete pending[id];
       },
       failed: (cause) => {
         error = errorMessage(cause);
       },
     });
   }
+
+  /** Records what a step decided for a row and lines up what it proposes. */
+  function advance(
+    row: Summary,
+    step: { entry?: PendingDates; propose?: DateProposalStep },
+  ) {
+    if (step.entry) pending[row.id] = step.entry;
+    else delete pending[row.id];
+    if (step.propose) outbox.push({ row, ...step.propose });
+  }
+  /**
+   * A finished gesture names the dates its row should have. The bar shows them
+   * at once and they are saved without a dialog, against the version the
+   * gesture observed.
+   */
+  function commit(
+    item: TimelineItem,
+    operation: DateOperation,
+    days: number,
+    version = item.row.version,
+  ) {
+    if (!interactive(item) || !days) return;
+    try {
+      const { start, end } = shiftedSchedule(item, days, operation);
+      if (start !== item.start || end !== item.end)
+        advance(
+          item.row,
+          chooseDates(pending[item.row.id], version, { start, end }),
+        );
+    } catch (cause) {
+      error = errorMessage(cause);
+    }
+  }
+  // One date change is saved at a time; the others wait in the order chosen.
+  $effect(() => {
+    if (!outbox.length || saving || writePending) return;
+    untrack(() => {
+      const { row, version, dates } = outbox.shift()!;
+      saving++;
+      onpropose({
+        path: resourcePath(row),
+        version,
+        schedule: dates,
+        title: row.title,
+        autoCommit: true,
+        onsettled: (saved, produced) => {
+          saving--;
+          // A refused change is never forced: the bar returns to the saved days.
+          advance(row, settleDates(pending[row.id], saved, produced));
+          // The saved row may have been read before this answer came.
+          const read = data?.rows.find((entry) => entry.id === row.id);
+          if (!arrivedDates(pending[row.id], read?.version))
+            delete pending[row.id];
+        },
+      });
+    });
+  });
+  function preview(
+    item: TimelineItem,
+    operation: DateOperation,
+    days: number | null,
+  ) {
+    if (days === null) {
+      if (change?.id === item.row.id && !change.keys) change = null;
+    } else
+      change = {
+        id: item.row.id,
+        operation,
+        days,
+        keys: false,
+        version: item.row.version,
+      };
+  }
+  /** Keyboard steps move the bar at once and are saved together when they rest. */
+  function nudge(item: TimelineItem, operation: DateOperation, days: number) {
+    if (!interactive(item)) return;
+    const same =
+      change?.keys &&
+      change.id === item.row.id &&
+      change.operation === operation;
+    if (change?.keys && !same) settleNudge();
+    change = {
+      id: item.row.id,
+      operation,
+      days: (same ? change!.days : 0) + days,
+      keys: true,
+      // The steps build on the row as it was when the first one was taken.
+      version: same ? change!.version : item.row.version,
+    };
+    window.clearTimeout(nudgeTimer);
+    nudgeTimer = window.setTimeout(settleNudge, metrics.nudgeRest);
+  }
+  function settleNudge() {
+    window.clearTimeout(nudgeTimer);
+    const steps = change;
+    if (!steps?.keys) return;
+    const item = items.find((entry) => entry.row.id === steps.id);
+    change = null;
+    if (item) commit(item, steps.operation, steps.days, steps.version);
+  }
+
   function reorderRow(id: string, destination: number) {
     if (!editable()) return;
-    const order = baseTasks.map((task) => String(task.id));
+    const order = items.map((item) => item.row.id);
     const moved = moveTimelineRow(order, id, destination);
     const visible = new Set(order);
     const retained = rowOrder.filter((key) => !visible.has(key));
@@ -244,81 +415,164 @@
       : "Przeglądarka nie mogła zapisać kolejności na osi czasu.";
     void tick().then(() =>
       chartRoot
-        ?.querySelector<HTMLButtonElement>(`[data-timeline-row="${id}"] button`)
+        ?.querySelector<HTMLButtonElement>(
+          `[data-timeline-row="${id}"] .row-grip`,
+        )
         ?.focus({ preventScroll: true }),
     );
   }
-  function selectCard(id: string) {
-    selection = id;
-    const task = tasks.find((item) => item.id === id);
-    if (!task || !widgetApi) return;
-    void widgetApi.exec("select-task", { id });
-    void widgetApi.exec("scroll-chart", {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the widget returns nothing for a task it has not laid out, whatever its types say
-      left: Math.max(0, Number(widgetApi.getTask(id)?.$x ?? 0) - metrics.day),
-      top: tasks.indexOf(task) * metrics.row,
+
+  function syncScroll() {
+    scrollFrame = 0;
+    if (!scroller) return;
+    scrollPosition = scroller.scrollLeft;
+    leftDay = Math.floor(scrollPosition / unit);
+  }
+  function scrolled() {
+    if (scroller) scrollPosition = scroller.scrollLeft;
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(syncScroll);
+  }
+  function scrollToDay(offset: number, lead: number, smooth: boolean) {
+    scroller?.scrollTo({
+      left: Math.max(0, offset * unit - lead),
+      behavior: smooth && !reducedMotion() ? "smooth" : "auto",
     });
   }
-  $effect(() => {
-    const widget = widgetApi;
-    const key = `${project}:${month}:${scale}:${chartWidth < metrics.compactWidth}`;
-    const task =
-      baseTasks.find((t) =>
-        (t.plannedStart ?? t.astra.due?.date ?? "").startsWith(month),
-      ) ?? baseTasks[0];
-    if (!widget || !task || key === lastNavigation) return;
-    lastNavigation = key;
-    void tick()
-      .then(
-        () =>
-          new Promise<void>((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-          ),
-      )
-      .then(() => {
-        if (widget === widgetApi && key === lastNavigation)
-          void widget.exec("scroll-chart", {
-            left: Math.max(
-              0,
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the widget returns nothing for a task it has not laid out, whatever its types say
-              Number(widget.getTask(task.id!)?.$x ?? 0) - metrics.day,
-            ),
-          });
-      });
-  });
-  function init(widget: IApi) {
-    widgetApi = widget;
-    void tick().then(() => {
-      if (widget !== widgetApi) return;
-      const chart = chartRoot?.querySelector<HTMLElement>(".wx-chart");
-      // SVAR's queued scroll callback reads a cleared DOM reference after teardown.
-      // This target-local capture guard is collected with the detached chart.
-      chart?.addEventListener(
-        "scroll",
-        (event) => {
-          if (!chart.isConnected || widget !== widgetApi)
-            event.stopImmediatePropagation();
-        },
-        true,
-      );
-    });
-    widget.on(
-      "select-task",
-      (ev: { id: string | number }) => (selection = String(ev.id)),
+  /**
+   * The current month opens on today and another month on its first plan, so
+   * a narrow screen does not open on empty days.
+   */
+  function place(target: string, smooth: boolean) {
+    if (todayShown && today.startsWith(target))
+      return scrollToDay(todayOffset - lead, 0, smooth);
+    const opening = dayOffset(axis, `${target}-01`);
+    const first = items
+      .map((item) => item.start)
+      .filter((start) => start.startsWith(target))
+      .sort()[0];
+    // A month that fits the view whole starts at its first day.
+    scrollToDay(
+      first && monthLength(target) > visibleDays
+        ? Math.max(opening, dayOffset(axis, first) - 1)
+        : opening,
+      0,
+      smooth,
     );
-    // The widget is a renderer; Astra's accessible handles and forms own all writes.
-    for (const action of [
-      "add-task",
-      "delete-task",
-      "update-task",
-      "move-task",
-      "indent-task",
-      "copy-task",
-      "undo",
-      "redo",
-      "set-display-mode",
-    ])
-      widget.intercept(action, () => false);
+  }
+  async function showMonth(target: string) {
+    placed = `${project}:${target}`;
+    if (target !== month) onmonth(target);
+    await tick();
+    place(target, true);
+  }
+  async function showDate(date: string) {
+    if (!isCivilDate(date)) return;
+    const target = date.slice(0, 7);
+    placed = `${project}:${target}`;
+    if (target !== month) onmonth(target);
+    await tick();
+    scrollToDay(dayOffset(axis, date), unit, true);
+  }
+  function changeScale(next: TimelineScale) {
+    scale = next;
+    try {
+      localStorage.setItem(scaleKey, next);
+    } catch {
+      /* The scale then lasts for this visit only. */
+    }
+  }
+  // The axis grows with the plan and the scale changes its width: either way
+  // the day the toolbar names stays where it is, so changing the scale and
+  // back returns to the same days. The position comes from the last scroll,
+  // because a narrower axis has already clamped the element's own.
+  $effect(() => {
+    const next = { start: axis.start, unit, lead };
+    untrack(() => {
+      if (
+        scroller &&
+        anchored &&
+        (anchored.start !== next.start || anchored.unit !== next.unit)
+      ) {
+        scroller.scrollLeft =
+          (scrollPosition / anchored.unit +
+            anchored.lead +
+            dayDistance(next.start, anchored.start) -
+            next.lead) *
+          next.unit;
+        syncScroll();
+      }
+      anchored = next;
+    });
+  });
+  // A month chosen elsewhere, such as the address or a first visit.
+  $effect(() => {
+    const key = `${project}:${month}`;
+    if (!data || !scroller) return;
+    untrack(() => {
+      if (key === placed) return;
+      placed = key;
+      place(month, false);
+      syncScroll();
+    });
+  });
+  $effect(() => {
+    void unscheduled.length;
+    void width;
+    if (tray) trayOverflows = tray.scrollHeight > tray.clientHeight + 1;
+  });
+
+  const single = (day: string) => ({ anchor: day, day, held: false });
+  /** Where the keyboard starts choosing a day: today, when it is in view. */
+  const keyboardDay = () =>
+    todayShown && todayOffset >= leftDay && todayOffset <= rightDay
+      ? today
+      : axisDate(axis, leftDay + 1);
+  function draftDay(event: MouseEvent & { currentTarget: HTMLElement }) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return axisDate(axis, (event.clientX - bounds.left) / unit);
+  }
+  function pressDraft(event: PointerEvent & { currentTarget: HTMLElement }) {
+    // A finger scrolls the axis; its tap still creates a card on that day.
+    if (event.button !== 0 || event.pointerType === "touch") return;
+    draftDropped = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    draft = { ...single(draftDay(event)), held: true };
+  }
+  function moveDraft(event: PointerEvent & { currentTarget: HTMLElement }) {
+    if (event.pointerType === "touch") return;
+    const day = draftDay(event);
+    if (draft?.held) draft.day = day;
+    else draft = single(day);
+  }
+  function keyDraft(event: KeyboardEvent) {
+    if (event.key === "Escape" && draft?.held) {
+      draftDropped = true;
+      draft = null;
+    }
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    draft = single(
+      axisDate(
+        axis,
+        dayOffset(axis, draft?.day ?? keyboardDay()) +
+          (event.key === "ArrowLeft" ? -1 : 1),
+      ),
+    );
+  }
+  function createFromDraft(event: MouseEvent & { currentTarget: HTMLElement }) {
+    const dropped = draftDropped;
+    draftDropped = false;
+    const chosen =
+      event.detail === 0
+        ? single(draft?.day ?? keyboardDay())
+        : (draft ?? single(draftDay(event)));
+    draft = null;
+    if (dropped || !editable()) return;
+    oncreate(
+      chosen.anchor < chosen.day
+        ? { start: chosen.anchor, end: chosen.day }
+        : { start: chosen.day, end: chosen.anchor },
+    );
   }
 </script>
 
@@ -335,114 +589,306 @@
       >
     </p>{/if}
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
-  {#if loading}<p role="status">Ładowanie osi czasu…</p>{/if}
+  {#if loading && !data}<p role="status">Ładowanie osi czasu…</p>{/if}
   {#if pageNotice}<p class="hint" role="status">{pageNotice}</p>{/if}
-  <div
-    class="selection-bar"
-    aria-label="Wybór na osi czasu"
-    use:revealLayers={controlsLayers}
-  >
-    <select class="scale" aria-label="Skala osi czasu" bind:value={scale}
-      ><option value="days">Dni</option><option value="weeks">Tygodnie</option
-      ><option value="months">Miesiące</option></select
+  {#if unscheduled.length}
+    <section
+      class="unscheduled"
+      aria-label="Karty bez harmonogramu"
+      use:revealLayers={{
+        ready: !!data,
+        key: project,
+        layers: groupLayers,
+      }}
     >
-    <label>
-      <span class="sr">Wybrany element</span><select
-        aria-label="Wybrana karta"
-        value={selection}
-        onchange={(event) => selectCard(event.currentTarget.value)}
-      >
-        <option value="">Wybierz element</option>
-        {#each filtered as row}<option value={row.id}>{row.title}</option
+      <h3>
+        Bez harmonogramu <span class="count">{unscheduled.length}</span>
+      </h3>
+      <div class="cards" class:open={trayOpen} bind:this={tray}>
+        {#each unscheduled as row (row.id)}<button
+            title="Otwórz kartę i ustaw daty"
+            onclick={() => open(row)}>{row.title}</button
           >{/each}
-      </select>
-    </label>
-    <button disabled={!selected} onclick={() => selected && open(selected)}
-      >Otwórz element</button
-    >
-    {#if selected?.schedule}<button
-        onclick={() =>
-          onpropose({
-            path: resourcePath(selected),
-            version: selected.version,
-            schedule: selected.schedule,
-          })}>Edytuj zaplanowane daty</button
-      >{/if}
-    {#if selected}<div class="selected-summary" aria-live="polite">
-        <strong>{selected.title}</strong>
-        <span
-          >{selected.type === "milestone"
-            ? "Kamień milowy"
-            : selected.status
-              ? resourceLabel(selected.status)
-              : "Karta"}
-          {selected.schedule
-            ? ` · ${formatCivilRange(selected.schedule.start, selected.schedule.end)}`
-            : "· Brak zapisanego planu"}
-          {selected.due
-            ? ` · Termin: ${formatCivilDate(selected.due.date)}`
-            : ""}
-        </span>
-      </div>{/if}
-  </div>
-  <div
-    use:revealScene={{
-      ready: !loading && !!data,
-      key: `${project}:${month}:${scale}`,
-      selector: ":scope > .chart",
-      distance: "0px",
-    }}
-    class="astra-gantt"
-    aria-label="Wykres Gantta projektu"
-  >
-    <WidgetLocale>
-      <Willow fonts={false} />
-      <div
-        class="chart wx-theme wx-willow-theme"
-        class:compact={chartWidth < metrics.compactWidth}
-        bind:clientWidth={chartWidth}
-        bind:this={chartRoot}
-      >
-        <Gantt
-          {tasks}
-          {scales}
-          {columns}
-          {init}
-          taskTemplate={GanttTask}
-          readonly={true}
-          cellWidth={scale === "days"
-            ? chartWidth < metrics.compactWidth
-              ? metrics.compactDay
-              : metrics.day
-            : scale === "weeks"
-              ? metrics.week
-              : metrics.month}
-          cellHeight={metrics.row}
-          scaleHeight={metrics.scale}
-          gridWidth={chartWidth < metrics.compactWidth
-            ? metrics.compactGrid
-            : metrics.grid}
-          start={axisStart}
-          end={axisEnd}
-        />
       </div>
-    </WidgetLocale>
-  </div>
-  <section
+      {#if trayOverflows || trayOpen}<button
+          class="quiet more"
+          aria-expanded={trayOpen}
+          onclick={() => (trayOpen = !trayOpen)}
+          >{trayOpen ? "Pokaż mniej" : "Pokaż wszystkie"}</button
+        >{/if}
+    </section>
+  {/if}
+  <TimelineToolbar
+    month={visibleMonth}
+    title={monthTitle.format(utc(`${visibleMonth}-01`))}
+    {scale}
+    {today}
+    navigate={(delta) => void showMonth(shiftMonth(visibleMonth, delta))}
+    showToday={() => void showMonth(today.slice(0, 7))}
+    {showDate}
+    {changeScale}
+  />
+  <div
+    class="astra-gantt"
+    class:compact
+    role="group"
+    aria-label="Oś czasu projektu"
+    data-scale={scale}
+    bind:this={chartRoot}
+    style:--timeline-unit={px(unit)}
+    style:--timeline-label={px(label)}
+    style:--timeline-phase={px(-weekday(axis.start) * unit)}
+    style:--timeline-week-phase={px(
+      -((weekday(axis.start) - (weekStart === "sunday" ? 6 : 0) + 7) % 7) *
+        unit,
+    )}
     use:revealLayers={{
-      ready: !loading && !!data,
-      key: `${project}:${month}`,
-      layers: groupLayers,
+      ready: !!data,
+      key: project,
+      layers: timelineLayers,
     }}
   >
-    <h3>Karty bez harmonogramu</h3>
-    <div class="unscheduled">
-      {#each cards.filter((r) => !r.schedule && !r.event) as row}<button
-          title="Ustaw zaplanowane daty"
-          onclick={() => open(row)}>{row.title}</button
-        >{:else}<p>Brak kart bez harmonogramu na tej stronie.</p>{/each}
+    <div
+      class="scroller"
+      data-timeline-scroll
+      data-timeline-lead={label}
+      data-axis-start={axis.start}
+      bind:this={scroller}
+      bind:clientWidth={width}
+      onscroll={scrolled}
+    >
+      <div class="canvas" style:width={px(label + axis.days * unit)}>
+        <div class="timeline-head">
+          <div class="corner">
+            {items.length ? countedDatedItems(items.length) : "Oś czasu"}
+          </div>
+          <div class="axis" aria-hidden="true">
+            <div class="tier spans">
+              {#each scale === "months" ? years : months as segment (segment.start)}
+                <div
+                  class="segment"
+                  style:left={px(segment.offset * unit)}
+                  style:width={px(segment.span * unit)}
+                >
+                  <span
+                    >{scale === "months"
+                      ? segment.start.slice(0, 4)
+                      : monthTitle.format(utc(segment.start))}</span
+                  >
+                </div>
+              {/each}
+            </div>
+            <div class="tier ticks">
+              {#if changedSpan}
+                <span
+                  class="range"
+                  style:left={px(changedSpan.offset * unit)}
+                  style:width={px(changedSpan.span * unit)}
+                ></span>
+              {/if}
+              {#if scale === "days"}
+                {#each dayCells as cell (cell.date)}
+                  <div
+                    class="tick day"
+                    class:weekend={cell.weekday > 4}
+                    class:today={cell.date === today}
+                    data-day={cell.date}
+                    style:left={px(cell.offset * unit)}
+                  >
+                    <span class="weekday"
+                      >{weekdayShort
+                        .format(utc(cell.date))
+                        .replace(".", "")}</span
+                    >
+                    <span class="number">{Number(cell.date.slice(8))}</span>
+                  </div>
+                {/each}
+              {:else if scale === "weeks"}
+                {#each weeks as segment (segment.start)}
+                  <div
+                    class="tick"
+                    data-day={segment.start}
+                    style:left={px(segment.offset * unit)}
+                    style:width={px(segment.span * unit)}
+                  >
+                    {#if segment.span > 3}<span class="number"
+                        >{formatCivilRange(
+                          segment.start,
+                          axisDate(axis, segment.offset + segment.span - 1),
+                          Number(segment.start.slice(0, 4)),
+                        )}</span
+                      >{/if}
+                  </div>
+                {/each}
+              {:else}
+                {#each months as segment (segment.start)}
+                  <div
+                    class="tick"
+                    data-day={segment.start}
+                    style:left={px(segment.offset * unit)}
+                    style:width={px(segment.span * unit)}
+                  >
+                    {#if segment.span > 14}<span class="number"
+                        >{monthShort.format(utc(segment.start))}</span
+                      >{/if}
+                  </div>
+                {/each}
+              {/if}
+              {#if todayShown && scale !== "days"}
+                <span
+                  class="today-mark"
+                  style:left={px((todayOffset + 0.5) * unit)}
+                ></span>
+              {/if}
+            </div>
+          </div>
+        </div>
+        <div class="timeline-body">
+          <div class="backdrop" aria-hidden="true">
+            {#each scale === "months" ? years : months as segment (segment.start)}
+              <span class="boundary" style:left={px(segment.offset * unit)}
+              ></span>
+            {/each}
+            {#if todayShown}
+              <span
+                class="today-line"
+                style:left={px((todayOffset + 0.5) * unit)}
+              ></span>
+            {/if}
+          </div>
+          {#each items as item (item.row.id)}
+            {@const moving = changed?.id === item.row.id ? changed : null}
+            {@const shown = moving?.keys ? moving : item}
+            {@const span = axisSpan(axis, shown.start, shown.end)}
+            {@const from = dayOffset(axis, shown.start)}
+            {@const to = dayOffset(axis, shown.end)}
+            <div
+              class="timeline-row"
+              animate:flip={{ duration: reducedMotion() ? 0 : metrics.reorder }}
+            >
+              <TimelineRow
+                id={item.row.id}
+                title={item.row.title}
+                {editable}
+                order={() => items.map((entry) => entry.row.id)}
+                gesture={(active) => {
+                  gesture = active;
+                  reads.pause(active);
+                }}
+                reorder={reorderRow}
+                onopen={() => open(item.row)}
+              />
+              <div class="track">
+                {#if to < leftDay}
+                  <button
+                    class="jump earlier"
+                    tabindex="-1"
+                    aria-label={`Pokaż na osi: ${item.row.title}`}
+                    title={`${item.row.title} · ${formatCivilRange(shown.start, shown.end)}`}
+                    onclick={() => void showDate(shown.start)}
+                    ><Icon name="chevronLeft" small /></button
+                  >
+                {/if}
+                {#if moving && !moving.keys && changedSpan}
+                  {@const slot = barBox(changedSpan)}
+                  <span
+                    class="slot"
+                    style:left={px(slot.left)}
+                    style:width={px(slot.width)}
+                  ></span>
+                {/if}
+                {#if span}
+                  {@const box = barBox(span)}
+                  <TimelineBar
+                    item={{ ...item, start: shown.start, end: shown.end }}
+                    left={box.left}
+                    width={box.width}
+                    {unit}
+                    movable={() => interactive(item)}
+                    preview={moving}
+                    onopen={() => open(item.row)}
+                    onpreview={(operation, days) =>
+                      preview(item, operation, days)}
+                    oncommit={(operation, days) =>
+                      commit(item, operation, days)}
+                    onnudge={(operation, days) => nudge(item, operation, days)}
+                    onnudgeend={settleNudge}
+                    ongesture={(active) => {
+                      gesture = active;
+                      reads.pause(active);
+                    }}
+                  />
+                {/if}
+                {#if from > rightDay}
+                  <button
+                    class="jump later"
+                    tabindex="-1"
+                    aria-label={`Pokaż na osi: ${item.row.title}`}
+                    title={`${item.row.title} · ${formatCivilRange(shown.start, shown.end)}`}
+                    onclick={() => void showDate(shown.start)}
+                    ><Icon name="chevronRight" small /></button
+                  >
+                {/if}
+              </div>
+            </div>
+          {/each}
+          <div class="timeline-row create">
+            <div class="row-label create-label">
+              <button
+                class="quiet"
+                title="Nowa karta z datą: dziś, gdy jest widoczne, albo pierwszy widoczny dzień"
+                onclick={() => {
+                  // Not disabled while a save passes, so it does not flicker.
+                  const day = keyboardDay();
+                  if (editable()) oncreate({ start: day, end: day });
+                }}><Icon name="plus" small /><span>Nowa karta</span></button
+              >
+            </div>
+            <div class="track">
+              <button
+                class="create-track"
+                aria-label="Utwórz kartę na osi czasu"
+                title="Kliknij dzień albo przeciągnij po kilku, aby utworzyć kartę · strzałki i Enter"
+                onpointerdown={pressDraft}
+                onpointermove={moveDraft}
+                onpointerleave={() => {
+                  if (!draft?.held) draft = null;
+                }}
+                onpointercancel={() => (draft = null)}
+                onfocus={(event) => {
+                  if (event.currentTarget.matches(":focus-visible"))
+                    draft ??= single(keyboardDay());
+                }}
+                onblur={() => (draft = null)}
+                onkeydown={keyDraft}
+                onclick={createFromDraft}
+              ></button>
+              {#if draftRange}
+                {@const span = axisSpan(axis, draftRange.start, draftRange.end)}
+                {#if span}
+                  {@const box = barBox(span)}
+                  <span
+                    class="ghost"
+                    data-start={draftRange.start}
+                    data-end={draftRange.end}
+                    style:left={px(box.left)}
+                    style:width={px(box.width)}
+                  >
+                    <span
+                      >{formatCivilRange(
+                        draftRange.start,
+                        draftRange.end,
+                      )}</span
+                    >
+                  </span>
+                {/if}
+              {/if}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </section>
+  </div>
   {#if data?.page.next_cursor || history.length > 1}<nav
       aria-label="Strony osi czasu"
     >
@@ -465,50 +911,14 @@
 {/if}
 
 <style>
-  strong {
-    font-size: var(--text-lg);
-  }
-  .selection-bar,
   nav {
     display: flex;
     gap: var(--space-4);
     align-items: center;
     flex-wrap: wrap;
     margin: var(--space-6) 0;
-  }
-  .selection-bar label {
-    flex: 1 1 var(--field-width);
-  }
-  .selection-bar label select {
-    max-width: 100%;
-    width: 100%;
-  }
-  .selection-bar > :global(button),
-  .unscheduled > :global(button) {
-    font-size: var(--text-base);
-  }
-  .selected-summary {
-    flex-basis: 100%;
-    display: grid;
-    gap: var(--space-2);
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .selected-summary span {
-    font-size: var(--text-sm);
     color: var(--muted);
-    line-height: var(--leading-body);
-  }
-  label {
-    display: grid;
-    gap: var(--space-3);
-    max-width: 100%;
-    min-width: 0;
     font-size: var(--text-sm);
-  }
-  select {
-    max-width: var(--field-max-width);
-    min-height: var(--tap-target);
   }
   .hint,
   .notice {
@@ -519,70 +929,434 @@
     border-left: var(--space-2) solid var(--notice-ink);
     padding: var(--space-4) var(--space-6);
   }
-  .chart {
-    height: var(--chart-height);
-    min-width: 0;
-    overflow-x: auto;
-  }
-  /* SVAR 2.7.2 compact chart mode assumes a writable action column.
-     Keep its read-only renderer above that breakpoint inside a scroll viewport. */
-  .chart :global(.wx-gantt) {
-    min-width: var(--gantt-min-width);
-  }
-  .compact :global(.wx-resizer) {
-    visibility: hidden;
-  }
-  .compact :global(.wx-toggle-placeholder) {
-    display: none;
-  }
-  .compact :global(.wx-cell .wx-text) {
-    white-space: normal;
-    overflow: hidden;
-    display: -webkit-box;
-    line-clamp: 2;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-  .astra-gantt {
-    border: var(--stroke) solid var(--line);
-    border-radius: var(--radius-control);
-    overflow: hidden;
-  }
-  .astra-gantt :global(.wx-willow-theme) {
-    --wx-font-family: inherit;
-    --wx-color-font: var(--ink);
-    --wx-color-secondary-font: var(--muted);
-    --wx-background: var(--paper);
-    --wx-background-alt: var(--paper);
-    --wx-gantt-border: var(--stroke) solid var(--line);
-    --wx-gantt-border-color: var(--line);
-    --wx-gantt-select-color: var(--wash);
-    --wx-gantt-task-color: var(--paper);
-    --wx-gantt-task-font-color: var(--ink);
-    --wx-gantt-task-fill-color: transparent;
-    --wx-gantt-holiday-background: var(--wash);
-    --wx-grid-body-row-background: var(--paper);
-  }
-  .astra-gantt :global(.weekend) {
-    background: var(--wash);
-  }
-  .astra-gantt :global(.wx-bar .wx-content) {
-    overflow: visible;
-  }
+
+  /* Cards waiting for dates stand above the axis they will be placed on. */
   .unscheduled {
-    display: flex;
-    gap: var(--space-4);
-    flex-wrap: wrap;
+    --tray-rows: 2;
+    --tray-chip: var(--space-12);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-4) var(--space-6);
+    margin-bottom: var(--space-9);
   }
-  section h3 {
-    margin-top: var(--space-10);
+  .unscheduled h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--tray-chip);
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+  }
+  .count {
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    min-width: 0;
+    max-height: calc(
+      var(--tray-rows) * var(--tray-chip) + (var(--tray-rows) - 1) *
+        var(--space-3)
+    );
+    overflow: hidden;
+  }
+  .cards.open {
+    max-height: none;
+  }
+  .cards button {
+    max-width: 100%;
+    min-height: var(--tray-chip);
+    padding: 0 var(--space-6);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .more {
+    min-height: var(--tray-chip);
+    padding: 0 var(--space-4);
+    color: var(--muted);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+
+  .astra-gantt {
+    --timeline-row: var(--tap-target);
+    --timeline-bar-inset: var(--space-4);
+    --timeline-edge: var(--space-6);
+    --timeline-edge-coarse: var(--space-9);
+    --timeline-edge-share: 34%;
+    --timeline-grip-held: 0.6;
+    --timeline-diamond: var(--space-6);
+    --timeline-diamond-hit: var(--space-11);
+    --timeline-diamond-hover: 1.18;
+    --timeline-beside: var(--field-width);
+    --timeline-head-top: var(--space-11);
+    --timeline-head-bottom: var(--space-14);
+    --timeline-height: clamp(
+      calc(var(--timeline-row) * 6),
+      calc(100dvh - var(--space-20) * 6),
+      calc(var(--timeline-row) * 28)
+    );
+    --timeline-weekend: color-mix(in srgb, var(--ink) 3.5%, var(--paper));
+    --timeline-rule: color-mix(in srgb, var(--line) 55%, transparent);
+    --timeline-today: var(--accent-ink);
+    --timeline-layer-label: calc(var(--layer-raised) + 1);
+    --timeline-layer-head: calc(var(--layer-raised) + 2);
+    --timeline-layer-corner: calc(var(--layer-raised) + 3);
+    --timeline-ghost: 0.7;
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    overflow: hidden;
+  }
+  .scroller {
+    max-height: var(--timeline-height);
+    overflow: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .canvas {
+    position: relative;
+    min-width: 100%;
+  }
+
+  .timeline-head {
+    position: sticky;
+    top: 0;
+    z-index: var(--timeline-layer-head);
+    display: flex;
+    height: calc(var(--timeline-head-top) + var(--timeline-head-bottom));
+    border-bottom: var(--stroke) solid var(--line);
+    background: var(--paper);
+  }
+  .corner,
+  .timeline-row :global(.row-label) {
+    position: sticky;
+    left: 0;
+    flex: 0 0 var(--timeline-label);
+    width: var(--timeline-label);
+    border-right: var(--stroke) solid var(--line);
+    background: var(--paper);
+  }
+  .corner {
+    z-index: var(--timeline-layer-corner);
+    display: flex;
+    align-items: flex-end;
+    padding: var(--space-5) var(--space-8);
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .axis {
+    position: relative;
+    flex: 1;
+  }
+  .tier {
+    position: absolute;
+    left: 0;
+    right: 0;
+  }
+  .spans {
+    top: 0;
+    height: var(--timeline-head-top);
+  }
+  .ticks {
+    top: var(--timeline-head-top);
+    height: var(--timeline-head-bottom);
+  }
+  .segment {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: var(--stroke) solid var(--line);
+  }
+  .segment span {
+    position: sticky;
+    left: calc(var(--timeline-label) + var(--space-6));
+    display: inline-block;
+    padding: var(--space-4) var(--space-6) 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+  }
+  .tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    width: var(--timeline-unit);
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-tight);
+    white-space: nowrap;
+  }
+  .tick:not(.day) {
+    align-items: flex-start;
+    padding-left: var(--space-4);
+    border-left: var(--stroke) solid var(--timeline-rule);
+  }
+  .weekday {
+    font-size: var(--text-xs);
+  }
+  .number {
+    color: var(--ink);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+  .tick:not(.day) .number {
+    color: var(--muted);
+  }
+  [data-scale="days"] .ticks {
+    background-image: linear-gradient(
+      to right,
+      transparent calc(var(--timeline-unit) * 5),
+      var(--timeline-weekend) calc(var(--timeline-unit) * 5)
+    );
+    background-size: calc(var(--timeline-unit) * 7) 100%;
+    background-position: var(--timeline-phase) 0;
+  }
+  .tick.weekend .number {
+    color: var(--muted);
+  }
+  .tick.today .weekday {
+    color: var(--timeline-today);
+    font-weight: var(--weight-semibold);
+  }
+  .tick.today .number {
+    min-width: var(--space-10);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--timeline-today);
+    color: var(--paper);
+    text-align: center;
+  }
+  .today-mark {
+    position: absolute;
+    bottom: calc(var(--space-2) * -1);
+    width: var(--space-4);
+    height: var(--space-4);
+    margin-left: calc(var(--space-2) * -1);
+    border-radius: var(--radius-pill);
+    background: var(--timeline-today);
+  }
+  /* The days a held bar would take, marked on the axis itself. */
+  .range {
+    position: absolute;
+    top: var(--space-2);
+    bottom: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+  }
+
+  .timeline-body {
+    position: relative;
+  }
+  .backdrop {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--timeline-label);
+    right: 0;
+    pointer-events: none;
+  }
+  [data-scale="days"] .backdrop {
+    background-image:
+      linear-gradient(
+        to right,
+        var(--timeline-rule) var(--stroke),
+        transparent var(--stroke)
+      ),
+      linear-gradient(
+        to right,
+        transparent calc(var(--timeline-unit) * 5),
+        var(--timeline-weekend) calc(var(--timeline-unit) * 5)
+      );
+    background-size:
+      var(--timeline-unit) 100%,
+      calc(var(--timeline-unit) * 7) 100%;
+    background-position:
+      0 0,
+      var(--timeline-phase) 0;
+  }
+  [data-scale="weeks"] .backdrop {
+    background-image:
+      linear-gradient(
+        to right,
+        var(--timeline-rule) var(--stroke),
+        transparent var(--stroke)
+      ),
+      linear-gradient(
+        to right,
+        transparent calc(var(--timeline-unit) * 5),
+        var(--timeline-weekend) calc(var(--timeline-unit) * 5)
+      );
+    background-size: calc(var(--timeline-unit) * 7) 100%;
+    background-position:
+      var(--timeline-week-phase) 0,
+      var(--timeline-phase) 0;
+  }
+  .boundary {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--stroke);
+    background: var(--line);
+  }
+  .today-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--stroke);
+    background: var(--timeline-today);
+  }
+
+  .timeline-row {
+    display: flex;
+    height: var(--timeline-row);
+    border-bottom: var(--stroke) solid var(--timeline-rule);
+  }
+  .timeline-row :global(.row-label) {
+    z-index: var(--timeline-layer-label);
+  }
+  .track {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    transition: background var(--motion-quick) var(--motion-ease);
+  }
+  .timeline-row:hover .track,
+  .timeline-row:focus-within .track {
+    background: color-mix(in srgb, var(--ink) 2.5%, transparent);
+  }
+  .slot {
+    position: absolute;
+    top: var(--timeline-bar-inset);
+    bottom: var(--timeline-bar-inset);
+    border: var(--stroke) dashed var(--accent-ink);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--accent) 60%, transparent);
+    pointer-events: none;
+  }
+  /* A plan outside the visible days leaves a way to reach it. */
+  .jump {
+    position: sticky;
+    display: grid;
+    place-items: center;
+    width: var(--space-10);
+    min-height: 0;
+    height: var(--space-10);
+    padding: 0;
+    border-color: transparent;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--line-strong);
+  }
+  .jump:hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+  .jump.earlier {
+    left: calc(var(--timeline-label) + var(--space-3));
+  }
+  .jump.later {
+    right: var(--space-3);
+    margin-left: auto;
+  }
+
+  .timeline-row.create {
+    border-bottom: 0;
+  }
+  .create-label button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: var(--timeline-row);
+    padding: 0 var(--space-8);
+    border-radius: 0;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    text-align: left;
+  }
+  .create-label button:hover {
+    color: var(--ink);
+  }
+  .create-track {
+    position: absolute;
+    inset: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    cursor: copy;
+  }
+  .create-track:hover {
+    background: transparent;
+  }
+  .create-track:focus-visible {
+    outline-offset: calc(var(--focus-width) * -1);
+  }
+  .ghost {
+    position: absolute;
+    top: var(--timeline-bar-inset);
+    bottom: var(--timeline-bar-inset);
+    display: flex;
+    align-items: center;
+    border: var(--stroke) dashed var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    opacity: var(--timeline-ghost);
+    pointer-events: none;
+  }
+  .ghost span {
+    padding-inline: var(--space-4);
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+  }
+
+  .compact .corner {
+    padding-inline: var(--space-5);
+  }
+  .compact .create-label button {
+    padding-inline: var(--space-5);
   }
   @media (max-width: 700px) {
-    .chart {
-      height: var(--chart-mobile-height);
+    .astra-gantt {
+      --timeline-height: clamp(
+        calc(var(--timeline-row) * 6),
+        calc(100dvh - var(--space-20) * 4),
+        calc(var(--timeline-row) * 20)
+      );
     }
-    .selection-bar label {
-      flex-basis: calc(100% - var(--field-min-width));
+    .unscheduled {
+      --tray-rows: 1;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .unscheduled .cards {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .cards button {
+      font-size: var(--text-base);
     }
   }
 </style>

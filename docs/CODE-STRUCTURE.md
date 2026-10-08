@@ -75,7 +75,7 @@ restoration. A successful source read transfers its loaded editor target; view
 navigation does not cancel context already owned by a mounted editor.
 
 Shared `lib/ui/locale.ts` owns the fixed Polish locale and count forms.
-`WidgetLocale` supplies native Board/Timeline translations without changing
+`WidgetLocale` supplies the native Board translations without changing
 resource identifiers. `lib/resources/state-presentation.ts` owns operational
 labels used by deferred administrative screens. `lib/api/messages.ts` translates
 server codes and local JSON input mistakes at presentation boundaries; its
@@ -173,6 +173,18 @@ Calendar pointer proposals use `DateChange` automatic submission. Only failures
 show the recovery dialog; command identity and version semantics are unchanged.
 Native Calendar gesture completion republishes canonical event snapshots so
 widget mutation cannot leave a retained month projection hidden.
+Timeline is rendered by Astra itself ([ADR-075](ADR-075-TIMELINE-RENDERER.md)):
+`GanttView` owns reads, the axis, scrolling and the toolbar state;
+`timeline-scale.ts` is the day arithmetic (axis range, month/week segments,
+weekdays) and `timeline-items.ts` maps saved rows to plans, events and
+milestones, both free of the DOM. `TimelineBar` draws one bar and
+`date-gesture.ts` moves or resizes it by the pixel, reporting whole days and
+writing nothing itself. A finished gesture goes through `timeline-pending.ts`,
+which decides what a row shows before its saved row arrives and which version
+a change is proposed against: the one the gesture observed, or the one this
+browser's own preceding save produced, never one that merely arrived with a
+later read. The proposal is `DateChange` automatic submission, one at a time,
+as for Calendar. `TimelineToolbar` holds the month title, navigation and scale.
 `timeline-order.ts` owns project-scoped browser presentation order; `TimelineRow`
 and `timeline-row-gesture.ts` own accessible row grips and cancelled previews.
 The final Timeline row creates an ordinary dated card draft.
@@ -391,9 +403,9 @@ The calendar adapter retains event identity only for its displayed page and
 compares every version/projection field after each ordinary read. Identical pages
 avoid another widget normalization/layout pass; changed metadata, editability,
 order and membership still publish. This does not cache source-read authority.
-Typed widget adapters convert inclusive
-domain dates into vendor events/tasks without modifying
-source rows. Gantt gesture activity is passed through its instance context.
+The typed Calendar adapter converts inclusive
+domain dates into vendor events without modifying
+source rows. Timeline keeps inclusive civil dates throughout and has no vendor form.
 
 `CalendarToolbar` composes the shared buttons, icons and date disclosure. It emits
 navigation callbacks; `CalendarView` retains route integration,

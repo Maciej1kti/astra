@@ -225,8 +225,21 @@ The events suite covers event autosave, conversion to/from date plans, hourly
 calendar movement, duration edits, slot creation, mobile layout and browser
 timezone independence.
 
+The `timeline` suite covers the Timeline bars through the real daemon: a bar
+that follows the pointer between days, shows the dates it would get and saves
+one command on release without a dialog; both ends resizing down to one day;
+Escape; a click that opens the card from the bar and from its title; keyboard
+steps saved as one change, including steps taken during an earlier save; a save
+refused after a competing CLI edit, which keeps its proposal in the dialog and
+returns the bar; cards without dates above the axis; month navigation, the
+jump to a plan out of view and scale changes that keep the same days; and, in
+Chromium, a touch swipe that scrolls and a hold that moves. It also requires
+that the buttons inside a bar draw no box of their own and that a resting bar
+has no drop shadow.
+
 The `ui-corrections` suite checks Timeline pointer/keyboard row ordering and
-per-project browser persistence, exact blank-row dated creation, narrow layout,
+per-project browser persistence, dated creation from the final row by a click
+on a day, a pressed range of days and the keyboard, narrow layout,
 Chromium touch input and workspace header corners.
 
 The `calendar-popup` suite checks complete month-popup membership and current
@@ -386,8 +399,8 @@ deferred-module failure recovery, and exercises pending pairing reload when the
 concurrent unauthorized preference read cancels bootstrap. Timing measurements
 remain separate from these controlled behavioral checks.
 After ordinary CLI edits, Calendar uses its loaded-title filter to expose a
-possibly hidden current item and checks its DOM source version. Gantt uses its
-selection control for virtualized rows. Neither assertion requires every loaded
+possibly hidden current item and checks its DOM source version. Gantt reads the
+refreshed title from the card's bar. Neither assertion requires every loaded
 item to stay mounted in the main view.
 
 The `calendar-pages` suite adds 205 scheduled cards to its disposable source

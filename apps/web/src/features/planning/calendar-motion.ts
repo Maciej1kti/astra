@@ -43,3 +43,24 @@ export const groupLayers = [
     stagger: 32,
   },
 ] as const;
+
+/**
+ * Timeline: the surface, its axis, the row titles and then the bars. Opacity
+ * only, so the geometry gestures measure is never in motion.
+ */
+export const timelineLayers = [
+  { selector: ":scope > .scroller", role: "content", delay: 0 },
+  {
+    selector: ".timeline-head .segment, .timeline-head .tick",
+    role: "heading",
+    delay: 100,
+    soften: false,
+  },
+  { selector: ".row-label", role: "detail", delay: 160, stagger: 36 },
+  {
+    selector: ".timeline-bar, .timeline-milestone",
+    role: "content",
+    delay: 240,
+    stagger: 48,
+  },
+] as const;

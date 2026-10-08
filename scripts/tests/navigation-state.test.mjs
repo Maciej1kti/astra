@@ -160,8 +160,7 @@ test("route owner preserves exact filters and calendar navigation", () => {
   });
   assert.equal(routing.current.status, "review");
   assert.equal(routing.current.label, " QA, exact ");
-  routing.changeFilters({ month: "2026-12" });
-  routing.changeMonth(1);
+  routing.changeFilters({ month: "2027-01" });
   assert.equal(routing.current.month, "2027-01");
   routing.navigateCalendar("2027-01-08", "week");
   assert.equal(routing.current.calendarLayout, "week");

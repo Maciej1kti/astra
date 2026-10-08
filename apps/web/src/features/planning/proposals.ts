@@ -6,6 +6,11 @@ export type DateProposal = {
   event?: import("../../lib/contracts/domain.generated").TimedEvent;
   title?: string;
   autoCommit?: boolean;
+  /**
+   * Tells the view that showed these dates whether they were saved, and the
+   * version the save produced.
+   */
+  onsettled?: (saved: boolean, version?: string) => void;
 };
 export type MoveProposal = {
   item: Summary;

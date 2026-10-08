@@ -1,16 +1,31 @@
-/** Pixel dimensions required by the planning widgets' public APIs. */
+/**
+ * Pixel dimensions the timeline needs as numbers: it places days, bars and
+ * gesture previews by arithmetic, and hands the same values to its styles.
+ */
 export const timelineMetrics = {
+  /** Width of one day at each scale. */
+  unit: { days: 40, weeks: 16, months: 4 },
+  compactUnit: { days: 36, weeks: 14, months: 4 },
+  /** The fixed column of row titles. */
+  label: 248,
+  compactLabel: 132,
+  /** Below this container width the compact dimensions apply. */
   compactWidth: 650,
-  compactGrid: 170,
-  grid: 230,
-  startColumn: 100,
-  endColumn: 110,
-  day: 48,
-  compactDay: 144,
-  week: 140,
-  month: 160,
-  row: 60,
-  scale: 32,
+  /** A bar at least this wide carries its title inside. */
+  titleInside: 88,
+  /** Space between a bar and the edges of its days, and its least width. */
+  barGap: 2,
+  barMin: 6,
+  /** Days kept rendered on each side of the visible ones. */
+  overscan: 21,
+  /** Share of the visible days that precede today when the axis opens on it. */
+  todayLead: 0.3,
+  /** The most days that may precede it, however many are visible. */
+  leadDays: 14,
+  /** Milliseconds: keyboard steps rest this long before they are saved. */
+  nudgeRest: 600,
+  /** Milliseconds a row takes to reach its new place in the order. */
+  reorder: 260,
 } as const;
 export const compactCalendarQuery = "(max-width: 700px)";
 export const calendarMetrics = { compactHourColumn: 100 } as const;

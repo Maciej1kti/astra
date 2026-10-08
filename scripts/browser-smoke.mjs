@@ -4,6 +4,13 @@ import {
   setCalendarDate,
   expectCalendarDate,
 } from "./browser/calendar-controls.mjs";
+import {
+  dragTimelineBar,
+  showTimelineDate,
+  timelineBar,
+  timelineCard,
+  timelineEdge,
+} from "./browser/timeline.mjs";
 import { chromium, devices, expect } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHost } from "./browser/host.mjs";
@@ -384,12 +391,9 @@ try {
     .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
   await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
-  await page.getByLabel("Miesiąc", { exact: true }).fill("2026-09");
-  const moveHandle = page.getByRole("button", {
-    name: "Przenieś plan: External editor update",
-    exact: true,
-  });
-  await moveHandle.waitFor();
+  await showTimelineDate(page, "2026-09-01");
+  const bar = timelineBar(page, "External editor update");
+  await bar.waitFor();
   const beforeGesture = cli("get", path);
   for (const cancellation of [
     "escape",
@@ -397,20 +401,10 @@ try {
     "orientationchange",
     "second-pointer",
   ]) {
-    const bounds = await hitbox(moveHandle);
-    await page.mouse.move(
-      bounds.x + bounds.width / 2,
-      bounds.y + bounds.height / 2,
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-      bounds.x + bounds.width / 2 + 48,
-      bounds.y + bounds.height / 2,
-      { steps: 4 },
-    );
+    await dragTimelineBar(page, bar, 1, { release: false });
     if (cancellation === "escape") await page.keyboard.press("Escape");
     else if (cancellation === "pointercancel")
-      await moveHandle.dispatchEvent("pointercancel", { pointerId: 1 });
+      await bar.dispatchEvent("pointercancel", { pointerId: 1 });
     else if (cancellation === "orientationchange")
       await page.evaluate(() =>
         window.dispatchEvent(new Event("orientationchange")),
@@ -426,14 +420,7 @@ try {
     assert.equal(cli("get", path).version, beforeGesture.version);
   }
   const concurrentGesture = join(temp, "during-gesture.json");
-  const held = await hitbox(moveHandle);
-  await page.mouse.move(held.x + held.width / 2, held.y + held.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(
-    held.x + held.width / 2 + 48,
-    held.y + held.height / 2,
-    { steps: 4 },
-  );
+  await dragTimelineBar(page, bar, 1, { release: false });
   await writeFile(
     concurrentGesture,
     JSON.stringify({ set: { title: "During held gesture" } }),
@@ -449,18 +436,22 @@ try {
   );
   await page.waitForTimeout(700);
   assert.equal(
-    await moveHandle.count(),
+    await bar.count(),
     1,
     "Incoming SSE must not replace the held gesture baseline",
   );
+  // A drop saves at once. This one observed the version before the competing
+  // edit, so it is refused and only then does a dialog appear.
   await page.mouse.up();
-  await page
-    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
-    .click();
   await page
     .getByText("Aktualny zapisany harmonogram:", { exact: false })
     .waitFor();
   await page.getByRole("button", { name: "Anuluj", exact: true }).click();
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  assert.deepEqual(
+    cli("get", path).metadata.schedule,
+    beforeGesture.metadata.schedule,
+  );
   let busyReads = 0;
   await page.route("**/api/v1/views/gantt?*", async (route) => {
     if (busyReads++ === 0)
@@ -490,65 +481,26 @@ try {
     "--if-version",
     cli("get", path).version,
   );
-  await moveHandle.waitFor();
+  await bar.waitFor();
   assert(busyReads >= 2);
   await page.unroute("**/api/v1/views/gantt?*");
-  const bounds = await hitbox(moveHandle);
-  await page.mouse.move(
-    bounds.x + bounds.width / 2,
-    bounds.y + bounds.height / 2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(
-    bounds.x + bounds.width / 2 + 48,
-    bounds.y + bounds.height / 2,
-    { steps: 4 },
-  );
-  await page.mouse.up();
-  await page.getByRole("dialog", { name: "Zmień zaplanowane daty" }).waitFor();
-  assert.equal(
-    await page.getByLabel("Zaplanowany początek", { exact: true }).inputValue(),
-    "2026-09-08",
-  );
-  assert.equal(
-    await page.getByLabel("Zaplanowany koniec", { exact: true }).inputValue(),
-    "2026-09-13",
-  );
-  await page
-    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
-    .click();
+  // Moving a bar saves its dates with no dialog and no further step.
+  await dragTimelineBar(page, bar, 1);
+  await expect
+    .poll(() => cli("get", path).metadata.schedule)
+    .toEqual({ start: "2026-09-08", end: "2026-09-13" });
+  await expect(
+    timelineCard(page, "External editor update"),
+  ).toHaveAccessibleName(/, 8–13 wrz$/);
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.deepEqual(cli("get", path).metadata.due, beforeGesture.metadata.due);
-  assert.equal(cli("get", path).metadata.schedule.start, "2026-09-08");
   await page.screenshot({
     path: join(evidenceDir, "desktop-timeline.png"),
     fullPage: true,
   });
 
-  const resize = page.getByRole("button", {
-    name: "Zmień koniec: External editor update",
-    exact: true,
-  });
-  const resizeBounds = await hitbox(resize);
-  await page.mouse.move(
-    resizeBounds.x + resizeBounds.width / 2,
-    resizeBounds.y + resizeBounds.height / 2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(
-    resizeBounds.x + resizeBounds.width / 2 + 48,
-    resizeBounds.y + resizeBounds.height / 2,
-    { steps: 4 },
-  );
-  await page.mouse.up();
-  assert.equal(
-    await page.getByLabel("Zaplanowany początek", { exact: true }).inputValue(),
-    "2026-09-08",
-  );
-  assert.equal(
-    await page.getByLabel("Zaplanowany koniec", { exact: true }).inputValue(),
-    "2026-09-14",
-  );
+  // A resize held across a competing edit is refused with its dates retained.
+  await dragTimelineBar(page, bar, 1, { edge: "end", release: false });
   const conflictingPatch = join(temp, "date-conflict.json");
   await writeFile(
     conflictingPatch,
@@ -563,33 +515,30 @@ try {
     "--if-version",
     cli("get", path).version,
   );
-  await page
-    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
-    .click();
+  await page.mouse.up();
   await page
     .getByText("Aktualny zapisany harmonogram:", { exact: false })
     .waitFor();
+  assert.equal(
+    await page.getByLabel("Zaplanowany początek", { exact: true }).inputValue(),
+    "2026-09-08",
+  );
   assert.equal(
     await page.getByLabel("Zaplanowany koniec", { exact: true }).inputValue(),
     "2026-09-14",
   );
   assert.equal(cli("get", path).metadata.schedule.end, "2026-09-13");
   await page.getByRole("button", { name: "Anuluj", exact: true }).click();
+  // The page behind a closing dialog takes no input until it has gone.
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
 
+  const competingEnd = timelineEdge(page, "Competing timeline edit", "end");
   try {
-    await page
-      .getByRole("button", {
-        name: "Przenieś plan: Competing timeline edit",
-        exact: true,
-      })
-      .click();
+    await competingEnd.waitFor();
   } catch (error) {
     console.error(await page.locator("body").innerText(), errors);
     throw error;
   }
-  await page
-    .getByLabel("Zaplanowany koniec", { exact: true })
-    .fill("2026-09-14");
   await page.route(`**${path}`, async (route) => {
     if (route.request().method() === "PATCH")
       await route.fulfill({
@@ -603,12 +552,12 @@ try {
       });
     else await route.continue();
   });
-  await page
-    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
-    .click();
+  // A keyboard step on the end of the bar is saved at once as well.
+  await competingEnd.focus();
+  await page.keyboard.press("Alt+ArrowRight");
   await page
     .getByText("Stan polecenia: Przygotowane.", { exact: false })
-    .waitFor({ timeout: 2000 });
+    .waitFor({ timeout: 4000 });
   assert.equal(cli("get", path).metadata.schedule.end, "2026-09-13");
   await page.unroute(`**${path}`);
   await page
@@ -1342,12 +1291,7 @@ try {
     page.getByLabel("Dependency forecast", { exact: true }),
   ).toHaveCount(0);
   await expect(page.getByLabel("Predecessor", { exact: true })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", {
-      name: "Przenieś plan: Scheduled follow-up",
-      exact: true,
-    }),
-  ).toBeEnabled();
+  await expect(timelineCard(page, "Scheduled follow-up")).toBeVisible();
   await page.screenshot({
     path: join(evidenceDir, "gantt-recorded-schedule.png"),
     fullPage: true,
@@ -1460,16 +1404,23 @@ try {
   await mobile
     .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
-  await mobile.getByLabel("Miesiąc", { exact: true }).fill("2026-09");
-  await mobile
-    .getByRole("button", {
-      name: "Przenieś plan: Competing timeline edit",
-      exact: true,
-    })
-    .click();
-  await mobile
-    .getByLabel("Zaplanowany koniec", { exact: true })
-    .fill("2026-09-16");
+  await showTimelineDate(mobile, "2026-09-01");
+  // Two keyboard steps extend the plan; their save never gets an answer, so
+  // the change is still pending when the session is revoked below.
+  await mobile.route(`**${path}`, (route) =>
+    route.request().method() === "PATCH"
+      ? new Promise(() => {})
+      : route.continue(),
+  );
+  const mobileEnd = timelineEdge(mobile, "Competing timeline edit", "end");
+  await mobileEnd.focus();
+  await mobile.keyboard.down("Alt");
+  await mobile.keyboard.press("ArrowRight");
+  await mobile.keyboard.press("ArrowRight");
+  await mobile.keyboard.up("Alt");
+  await expect(
+    timelineCard(mobile, "Competing timeline edit"),
+  ).toHaveAccessibleName(/, 8–16 wrz$/);
   const settingsPage = await context.newPage();
   await settingsPage.goto(origin);
   await settingsPage

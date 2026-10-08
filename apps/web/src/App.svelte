@@ -308,6 +308,12 @@
     settle(saved);
     if (saved) void refresh(["projects"]).catch(message);
   }
+  /** Closes a date change and tells the view that showed it how it ended. */
+  function settleDates(saved: boolean, version?: string) {
+    const proposal = dateDraft;
+    dateDraft = null;
+    proposal?.onsettled?.(saved, version);
+  }
   /** Closes a card move and tells the board that showed it how it ended. */
   function settleMove(saved: boolean) {
     const proposal = moveDraft;
@@ -814,7 +820,6 @@
         {#if routing.current.view !== "chart"}<WorkspaceFilters
             route={routing.current}
             onchange={routing.changeFilters}
-            changeMonth={routing.changeMonth}
           />{/if}
         {#key routing.current.view}<div
             class="view-content"
@@ -915,11 +920,13 @@
                 workspaceToday={today}
                 workspaceTimezone={session.timezone}
                 onCalendarNavigate={routing.navigateCalendar}
+                onmonth={(month) => routing.changeFilters({ month })}
                 search={routing.current.search}
                 {open}
                 writePending={!!dateDraft}
                 onpropose={(proposal) => {
-                  if (!dateDraft) dateDraft = proposal;
+                  if (dateDraft) proposal.onsettled?.(false);
+                  else dateDraft = proposal;
                 }}
                 oncreate={(initial) => create("card", initial)}
               />
@@ -1010,13 +1017,13 @@
 {#if dateDraft}{@const proposal = dateDraft}<DeferredHost
     source={dateUI}
     title="Zmień daty"
-    onclose={() => (dateDraft = null)}
+    onclose={() => settleDates(false)}
   >
     {#snippet children(DateChange)}{#key proposal}<DateChange
           {...proposal}
-          onclose={() => (dateDraft = null)}
-          onsaved={() => {
-            dateDraft = null;
+          onclose={() => settleDates(false)}
+          onsaved={(version) => {
+            settleDates(true, version);
             void refresh().catch(message);
           }}
         />{/key}{/snippet}

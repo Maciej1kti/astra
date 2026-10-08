@@ -52,7 +52,7 @@ class Node extends EventTarget {
   closest(selector) {
     return selector === ".astra-gantt"
       ? this.viewport
-      : selector === ".wx-row"
+      : selector === "[data-timeline-row]"
         ? this.row
         : null;
   }

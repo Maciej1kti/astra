@@ -44,8 +44,9 @@ and `danger` for destructive actions. The primary action is flat: one fill, no
 gradient or shadow. Cancel is the quiet action in every dialog footer. Icons
 come from `lib/ui/icons.ts`; each icon is decorative and its control supplies
 the accessible name. Do not use a text glyph (an arrow, cross or plus
-character) as an icon: previous/next and resize handles use the chevron pair,
-and disclosures share the marker drawn in `styles/base.css`. Badges use
+character) as an icon: previous/next controls use the chevron pair,
+and disclosures share the marker drawn in `styles/base.css`. The ends of a
+[Timeline](#timeline) bar are hit areas with a drawn grip, not icons. Badges use
 semantic state/priority attributes, rather than view-specific colors.
 
 Type uses six sizes (`--text-xs` 11, `--text-sm` 12, `--text-base` 14,
@@ -226,13 +227,15 @@ initials. Columns share spare width up to `--board-column-max-width`. A card
 move marks a line between cards; a project status move, which has no order,
 outlines the whole destination column. A project column adds cards from its footer; the
 widget's header add button is hidden, and on phones the strip replaces the
-column header. Timeline keeps its scale and selection controls in one row.
+column header. Timeline has one toolbar (the month in view, Today, month arrows
+and the scale) and no selection controls; the page filter carries no month field.
 A Projects card keeps one quiet actions menu in its corner for status moves and
 deletion, which remains a deliberate action in that menu.
 
 CSS media-query breakpoints and structural proportions are layout rules, not
-theme values. `lib/ui/planning-metrics.ts` centralizes numeric dimensions required
-by the timeline widget API. Gesture positions are measured from the DOM; they
+theme values. `lib/ui/planning-metrics.ts` centralizes the pixel dimensions the
+timeline computes with (day widths, the title column) and hands to its styles
+as custom properties. Gesture positions are measured from the DOM; they
 must not be replaced by fixed design coordinates.
 
 ## Review
@@ -450,8 +453,9 @@ The month overflow popup separately reveals its surface, header and event group
 at 0/100/220 ms. Agenda groups start at 180 ms; an empty period uses the same
 content entrance. Day and week layouts stage their all-day and timed groups
 without moving either group.
-Calendar and Timeline retain native event rendering and gesture geometry.
-Do not add per-event animations or DOM observers to dense planning widgets.
+Calendar retains native event rendering and gesture geometry. Timeline draws
+its own rows; its surface, axis, titles and bars enter by opacity alone.
+Do not add per-event animations or DOM observers to dense planning views.
 
 Native dialogs enter over 760 ms from a 12px offset and 0.992 scale, with a 360 ms
 backdrop. The dialog's opacity takes 80% of its duration to emerge gently.
@@ -532,7 +536,7 @@ in its first frames or while a parent is still invisible.
 | Loaded Focus, Projects, List, Updates and workspace Board | `revealScene` on the view; visible card roles follow their surface                                                                                                                                                                     |
 | Project Board                                             | Feature-owned scene with `cardSelector`; columns and inner card groups retain native drag geometry                                                                                                                                     |
 | Calendar                                                  | `calendar-motion.ts` supplies `revealLayers` with current-page readiness and project/date/widget-view keys; popup layers stay in `CalendarView`                                                                                        |
-| Timeline                                                  | Feature-owned `revealScene` on the native chart with zero travel                                                                                                                                                                       |
+| Timeline                                                   | `timelineLayers` (`features/planning/calendar-motion.ts`), ready with the first page and keyed by project: the surface, the axis header, row titles, then bars; opacity only, and a new month, scale or refresh replays nothing        |
 | Page headings, dialogs, menus, suggestions and toolbars   | `revealLayers` with explicit local selectors and opening keys                                                                                                                                                                          |
 | Chart                                                     | `chartLayers` (`features/charts/chart-motion.ts`) on the dashboard, ready after the first read and keyed by the project preference key: controls, the counter list and its rows, plot surfaces and headings, the note and summary rows |
 | Plot marks and readout                                    | `plotLayers` on each plot, keyed by what is plotted (series, grouping, totals and range): the legend values, then the `.plot-marks` group rising from the baseline                                                                     |
@@ -820,6 +824,47 @@ without a fill; plans and due dates are filled bars with a rule in their colour.
 `--calendar-grid-height` ends the grid with the window. The hours scale is
 quiet tabular text, and scroll anchoring is off inside the grid so that all-day
 rows arriving after the first scroll do not cover the first hours.
+
+## Timeline
+
+Timeline is Astra's own view (`features/planning/GanttView.svelte`), not a
+widget: one horizontally scrolling surface with a fixed header and a fixed
+column of row titles, sized by `planning-metrics.ts` and `--timeline-*`
+properties on its root. See [ADR-075](ADR-075-TIMELINE-RENDERER.md).
+
+- **Axis.** Two header tiers: months over days, months over weeks, or years
+  over months. A month's name stays in view while its days scroll. On the day
+  and week scales Saturdays and Sundays are shaded through the header and all
+  rows, drawn as one repeating background rather than an element per day. Today
+  is an accent pill on its day and a one-stroke line through the rows.
+- **Rows.** `--tap-target` high, one item per row, separated by a faint rule.
+  The title column holds a grip (visible on hover, always on touch) and the
+  title, which opens the card. The last row creates a card on the day, or the
+  range of days, chosen in it.
+- **Bars.** One element with one fill and a rule in the tone of the card's
+  status: neutral for planned, accent for active and timed events, the review
+  and done tones of `Badge`, struck through for cancelled. A bar has no border
+  and no shadow at rest; the buttons inside it draw no box of their own. A
+  title longer than its bar runs on beside it, since a row holds nothing else.
+  A milestone is a diamond with its title beside it.
+- **Gestures.** A bar follows the pointer by the pixel and lifts with
+  `--shadow-floating` while held. The dates it would get stand beside its two
+  ends, the same days are marked on the header, and a dashed slot shows where it
+  will land; released, it glides onto its days (240 ms, `--motion-spring`). The
+  ends resize from hit areas that show a grip under the pointer. A release
+  saves at once, and Escape or any cancellation glides the bar home. A touch
+  must hold for 250 ms first, so a swipe always scrolls. Keyboard steps
+  (Alt+Left/Right, Shift for a week) move the bar immediately and are saved as
+  one change when Alt is released or the keys rest.
+- **Out of view.** A plan outside the visible days leaves a quiet chevron at
+  that edge of its row; the toolbar names the month in view and changing the
+  scale keeps the same days in view.
+- **Above the axis.** Cards without dates are pills under "Bez harmonogramu",
+  two rows at most (one on phones) with "Pokaż wszystkie" for the rest. The
+  section is absent when there are none.
+- **Narrow screens.** Below `compactWidth` the title column narrows to two-line
+  titles and days to `compactUnit`; the view opens on the first plan of the
+  month rather than on empty days.
 
 ## Pinned daily controls and calendar selection
 

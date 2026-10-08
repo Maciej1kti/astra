@@ -1,9 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  exclusiveSchedule,
-  inclusiveSchedule,
-} from "../../apps/web/src/features/planning/planning.ts";
+import { inclusiveSchedule } from "../../apps/web/src/features/planning/planning.ts";
+import { shiftDate } from "../../apps/web/src/features/planning/dates.ts";
 import {
   widgetDate,
   dateOnly,
@@ -26,7 +24,11 @@ test("widget boundaries round-trip inclusive dates in different client timezones
         { start: "2028-02-28", end: "2028-02-29" },
         { start: "2026-12-31", end: "2027-01-01" },
       ]) {
-        const widget = exclusiveSchedule(schedule);
+        // The calendar widget's own form: local dates with an exclusive end.
+        const widget = {
+          start: widgetDate(schedule.start),
+          end: widgetDate(shiftDate(schedule.end, 1)),
+        };
         assert.deepEqual(
           inclusiveSchedule(widget.start, widget.end),
           schedule,

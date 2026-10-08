@@ -8,11 +8,9 @@
   let {
     route,
     onchange,
-    changeMonth,
   }: {
     route: Readonly<WorkspaceRoute>;
     onchange: (patch: Partial<RouteFilters>) => void;
-    changeMonth: (delta: number) => void;
   } = $props();
   const statuses = ["planned", "active", "review", "done", "cancelled"];
   const id = $props.id();
@@ -81,22 +79,6 @@
             onchange({ unreadOnly: event.currentTarget.checked })}
         /> Tylko nieprzeczytane</label
       >
-    {/if}
-    {#if route.view === "gantt"}
-      <div class="month">
-        <button onclick={() => changeMonth(-1)} aria-label="Poprzedni miesiąc"
-          ><Icon name="chevronLeft" small /></button
-        >
-        <input
-          type="month"
-          aria-label="Miesiąc"
-          value={route.month}
-          onchange={(event) => onchange({ month: event.currentTarget.value })}
-        />
-        <button onclick={() => changeMonth(1)} aria-label="Następny miesiąc"
-          ><Icon name="chevronRight" small /></button
-        >
-      </div>
     {/if}
   </div>
   {#if route.view === "list"}

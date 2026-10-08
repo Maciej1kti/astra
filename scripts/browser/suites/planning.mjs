@@ -109,8 +109,7 @@ await runBrowserSuite(
         calendarLayout: document.querySelector(
           '[aria-label="Układ kalendarza"]',
         )?.value,
-        selectedTitle: document.querySelector(".selected-summary strong")
-          ?.textContent,
+        timelineBars: document.querySelectorAll(".timeline-bar").length,
       }));
       // Playwright's WebKit screenshot preparation injects an inline "body {}"
       // stylesheet. Keep CSP assertions strict and collect only metrics there.

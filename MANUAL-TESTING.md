@@ -228,17 +228,23 @@ file attachments or automatic repository discovery are involved.
 
 Use a sample project and three cards named Design, Build and Review. Set their
 inclusive schedules to September 7–9, September 8–10 and September 9–10, 2026.
-In **Oś czasu**, choose September 2026, then:
+In **Oś czasu**, open the month title, go to a date in September 2026, then:
 
 1. Inspect the recorded schedule bars. With only these three cards, the latest
-   recorded end date is September 10.
-2. Drag a bar or either edge and confirm the date proposal. Escape during a
-   gesture cancels it. Alt+Left/Right on a focused handle changes one day;
-   adding Shift changes a week. Open the selected card for full editing.
+   recorded end date is September 10. Saturdays and Sundays are shaded in the
+   day scale; switch to **Tygodnie** and **Miesiące** and back.
+2. Drag a bar, then each of its ends. The bar must follow the pointer between
+   days, show the dates it would get, and save on release with no dialog.
+   Escape during a gesture cancels it. Alt+Left/Right on a focused bar or end
+   changes one day; adding Shift changes a week. Click a bar and check that the
+   card opens, not a date dialog.
 3. Drag a row by its grip, try Alt+Up/Down, then reload to verify the browser
-   remembers the project order. Click a date in the final empty row and check
-   the new card draft has that date. The header Add card action remains.
-4. Change the card's Start and End fields, wait for Saved, then reload and check
+   remembers the project order. Click a day in the final row and check
+   the new card draft has that date; press on one day and release on another
+   for a range. The header Add card action remains.
+4. Leave a card without dates and check that it is listed above the axis under
+   **Bez harmonogramu** and opens as a card.
+5. Change the card's Start and End fields, wait for Saved, then reload and check
    that the same inclusive range appears. There are no dependency connectors,
    forecast controls or separate card deadline/review markers.
 
@@ -256,8 +262,10 @@ focus; Shift changes that move to a week. Normal text-entry shortcuts are kept.
 Date-only plans keep whole-day dates. Timed events appear in hourly calendar
 views; their local start time follows the workspace timezone.
 
-Repeat an edit in two browser tabs to inspect conflict handling. Keep an uncertain
+Repeat an edit in two browser tabs to inspect conflict handling: a bar moved
+in a tab that has not yet seen the other tab's change must return to its saved
+days and show the conflict. Keep an uncertain
 proposal open and use **Ponów to samo polecenie** or check its status; do not submit
 an independent replacement without knowing the first outcome. On a narrow
-screen, pan inside the timeline and use the selected-card controls as an editing
-alternative. Record physical-device findings separately from browser emulation.
+screen, swipe to pan the timeline, hold a bar briefly to move it and open the
+card for exact dates. Record physical-device findings separately from browser emulation.

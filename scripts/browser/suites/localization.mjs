@@ -144,8 +144,19 @@ await runBrowserSuite(
           );
         }
         if (view === "gantt") {
-          await expect(page.locator(".wx-gantt")).toBeVisible();
-          await expect(page.locator(".wx-gantt")).toContainText("październik");
+          const timeline = page.locator(".astra-gantt");
+          await expect(timeline).toBeVisible();
+          await expect(timeline).toContainText("październik");
+          // Weekdays and the toolbar are Polish under an English browser too.
+          await expect(timeline.locator(".tick.day").first()).toHaveText(
+            /^(pon|wt|śr|czw|pt|sob|niedz)\s*\d+$/,
+          );
+          await expect(
+            page.getByRole("group", { name: "Skala osi czasu" }),
+          ).toHaveText("DniTygodnieMiesiące");
+          await expect(timeline).not.toContainText(
+            /Mon|Tue|Wed|Thu|Fri|Sat|Sun|October|September/,
+          );
         }
         if (view === "board") {
           await expect(

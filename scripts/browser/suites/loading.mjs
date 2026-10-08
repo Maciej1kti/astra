@@ -313,12 +313,9 @@ await runBrowserSuite(async (suite) => {
             entry.locator("xpath=ancestor::article[1]"),
           ).toHaveAttribute("data-source-version", committed.version);
         } else if (view === "gantt") {
-          await planningPage
-            .getByLabel("Wybrana karta", { exact: true })
-            .selectOption(id);
           await expect(
-            planningPage.locator(".selected-summary strong"),
-          ).toHaveText(title);
+            planningPage.locator(`.timeline-bar[data-card-id="${id}"]`),
+          ).toContainText(title);
         } else {
           await expect(
             planningPage.locator(selector).filter({ hasText: title }).first(),

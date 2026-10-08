@@ -22,7 +22,7 @@ type Snapshot = {
   row: HTMLElement;
 };
 
-/** Native Gantt row geometry stays here; cancellation and snapshots are shared. */
+/** Timeline row geometry stays here; cancellation and snapshots are shared. */
 export function timelineRowGesture(node: HTMLElement, initial: Options) {
   let options = initial;
   let preview: HTMLElement | null = null;
@@ -46,13 +46,14 @@ export function timelineRowGesture(node: HTMLElement, initial: Options) {
     );
     if (indicator) {
       indicator.hidden = false;
+      // The line crosses the whole visible chart, not only the title column.
       positionReorderOverlay(
         indicator,
-        rect.left,
+        bounds.left,
         rect.top +
           (index - pointer.snapshot.index) * rect.height +
           (index > pointer.snapshot.index ? rect.height : 0),
-        rect.width,
+        bounds.width,
       );
     }
     return index;
@@ -72,7 +73,7 @@ export function timelineRowGesture(node: HTMLElement, initial: Options) {
           id: options.id,
           index,
           order: [...order],
-          row: node.closest<HTMLElement>(".wx-row") ?? node,
+          row: node.closest<HTMLElement>("[data-timeline-row]") ?? node,
         };
       },
       valid: (snapshot) =>
@@ -88,7 +89,14 @@ export function timelineRowGesture(node: HTMLElement, initial: Options) {
           position: "fixed",
           pointerEvents: "none",
           zIndex: "var(--layer-drag-preview)",
-          padding: "var(--space-6)",
+          display: "flex",
+          alignItems: "center",
+          height: `${bounds.height}px`,
+          padding: "0 var(--space-8)",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
+          fontSize: "var(--text-base)",
           background: "var(--paper)",
           border: "var(--stroke) solid var(--line)",
           borderRadius: "var(--radius-control)",

@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { calendarEventProjection } from "../../apps/web/src/features/planning/calendar-events.ts";
-import { ganttTasks } from "../../apps/web/src/features/planning/gantt-tasks.ts";
-import { dateOnly } from "../../apps/web/src/features/planning/widget-dates.ts";
+import { timelineItems } from "../../apps/web/src/features/planning/timeline-items.ts";
 
 test("calendar conversion keeps inclusive source dates and only allows ready schedule edits", () => {
   const schedule = {
@@ -26,7 +25,7 @@ test("calendar conversion keeps inclusive source dates and only allows ready sch
   assert.deepEqual(calendarEventProjection()([schedule], "missing", true), []);
 });
 
-test("Gantt tasks use saved schedules and milestone due dates", () => {
+test("Timeline items use saved schedules and milestone due dates", () => {
   const card = {
     id: "c",
     type: "card",
@@ -39,15 +38,17 @@ test("Gantt tasks use saved schedules and milestone due dates", () => {
     title: "Ship",
     due: { date: "2026-09-05" },
   };
-  const tasks = ganttTasks([card, milestone]);
-  assert.equal(dateOnly(tasks[0].start), "2026-09-01");
-  assert.equal(dateOnly(tasks[0].end), "2026-09-03");
-  assert.equal(dateOnly(tasks[1].start), "2026-09-05");
-  assert.equal(tasks[1].duration, 0);
-  assert.equal(card.schedule.start, "2026-09-01");
-  assert.equal(dateOnly(ganttTasks([card])[0].start), "2026-09-01");
+  const items = timelineItems([card, milestone]);
   assert.deepEqual(
-    ganttTasks([{ id: "u", type: "card", title: "Undated" }]),
+    items.map(({ kind, start, end }) => ({ kind, start, end })),
+    [
+      { kind: "plan", start: "2026-09-01", end: "2026-09-02" },
+      { kind: "milestone", start: "2026-09-05", end: "2026-09-05" },
+    ],
+  );
+  assert.equal(items[0].row, card, "the saved row travels unchanged");
+  assert.deepEqual(
+    timelineItems([{ id: "u", type: "card", title: "Undated" }]),
     [],
   );
 });
@@ -80,10 +81,13 @@ test("timed events retain clock fields and occupy only intersected calendar days
   assert.equal(calendar.start, event.start);
   assert.equal(calendar.end, "2026-10-01T01:00");
   assert.equal(calendar.durationEditable, true);
-  const [task] = ganttTasks([{ id: "e", type: "card", title: "Event", event }]);
-  assert.equal(dateOnly(task.start), "2026-09-30");
-  assert.equal(dateOnly(task.end), "2026-10-02");
-  assert.equal(task.astra.schedule, undefined);
+  const [item] = timelineItems([
+    { id: "e", type: "card", title: "Event", event },
+  ]);
+  assert.deepEqual(
+    { kind: item.kind, start: item.start, end: item.end },
+    { kind: "event", start: "2026-09-30", end: "2026-10-01" },
+  );
   assert.deepEqual(
     eventFromDates(new Date(2026, 8, 30, 23, 30), new Date(2026, 9, 1, 1, 0)),
     event,

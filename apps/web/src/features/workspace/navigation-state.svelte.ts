@@ -167,14 +167,6 @@ export function navigationState<Loaded = Resource>(
     startDraft() {
       invalidateResourceRead();
     },
-    changeMonth: (delta: number) => {
-      const [year = NaN, month = NaN] = current.month.split("-").map(Number);
-      changeFilters({
-        month: new Date(Date.UTC(year, month - 1 + delta, 1))
-          .toISOString()
-          .slice(0, 7),
-      });
-    },
     navigateCalendar: (
       calendarDate: string,
       calendarLayout: WorkspaceRoute["calendarLayout"],

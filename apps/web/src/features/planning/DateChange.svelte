@@ -40,7 +40,8 @@
     title?: string;
     autoCommit?: boolean;
     onclose: () => void;
-    onsaved: () => void;
+    /** Receives the version the saved change produced. */
+    onsaved: (version?: string) => void;
   } = $props();
   let start = $state(
     untrack(() => event?.start.slice(0, 10) ?? schedule?.start ?? ""),
@@ -89,9 +90,16 @@
     error = "";
     info = "";
     try {
-      if (action === "status") await operation.confirm();
-      else await operation.commit();
-      onsaved();
+      const reply =
+        action === "status"
+          ? await operation.confirm()
+          : await operation.commit();
+      const resource = reply.result.resource;
+      onsaved(
+        resource && "version" in resource
+          ? resource.version
+          : reply.result.version,
+      );
     } catch (cause) {
       error = commandErrorMessage(cause);
       if (isRejectedConflict(operation.phase, cause)) {

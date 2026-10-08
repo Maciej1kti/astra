@@ -18,6 +18,7 @@
     workspaceToday,
     workspaceTimezone,
     onCalendarNavigate,
+    onmonth,
     search,
     open,
     onpropose,
@@ -34,6 +35,7 @@
     workspaceToday: string;
     workspaceTimezone: string;
     onCalendarNavigate: (date: string, layout: CalendarLayout) => void;
+    onmonth: (month: string) => void;
     search: string;
     open: (row: Pick<Summary, "id" | "type" | "project_id">) => void;
     onpropose: (proposal: DateProposal) => void;
@@ -90,9 +92,12 @@
     {month}
     {revision}
     {writePending}
+    {weekStart}
+    today={workspaceToday}
     {search}
     {open}
     {onpropose}
+    {onmonth}
     oncreate={(schedule) => oncreate({ schedule })}
   />
 {:else if !error}<p role="status">Ładowanie widoku planowania…</p>{/if}

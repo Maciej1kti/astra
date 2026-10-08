@@ -1,5 +1,6 @@
 /** Real rejected commands, optionally losing their replies before status recovery. */
 import { runBrowserSuite } from "../runtime.mjs";
+import { timelineCardById } from "../timeline.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
@@ -325,22 +326,12 @@ await runBrowserSuite(
       const card = await create(`Outcome dates ${lost ? "lost" : "direct"}`);
       const path = `${base}/cards/${card.metadata.id}`;
       await open(page, "gantt", card);
-      await page
-        .getByLabel("Wybrana karta", { exact: true })
-        .selectOption(card.metadata.id);
-      await page
-        .getByRole("button", { name: "Edytuj zaplanowane daty", exact: true })
-        .click();
+      const bar = timelineCardById(page, card.metadata.id);
+      await expect(bar).toBeVisible();
       const dialog = page.getByRole("dialog", {
         name: "Zmień zaplanowane daty",
         exact: true,
       });
-      await dialog
-        .getByLabel("Zaplanowany początek", { exact: true })
-        .fill("2026-09-10");
-      await dialog
-        .getByLabel("Zaplanowany koniec", { exact: true })
-        .fill("2026-09-12");
       const rejected = await rejectCommand(page, {
         path,
         method: "PATCH",
@@ -355,9 +346,14 @@ await runBrowserSuite(
             card.version,
           ),
       });
-      await dialog
-        .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
-        .click();
+      // Two keyboard steps move the plan and are saved as one change, without
+      // a dialog. The dialog appears only because that save was refused.
+      await bar.focus();
+      await page.keyboard.down("Alt");
+      await page.keyboard.press("ArrowRight");
+      await page.keyboard.press("ArrowRight");
+      await page.keyboard.up("Alt");
+      await expect(dialog).toBeVisible();
       await rejected.recover(dialog);
       if (unavailable)
         // The appended sentence must not run into the rejection message.
@@ -373,7 +369,7 @@ await runBrowserSuite(
       ).toHaveValue("2026-09-10");
       await expect(
         dialog.getByLabel("Zaplanowany koniec", { exact: true }),
-      ).toHaveValue("2026-09-12");
+      ).toHaveValue("2026-09-11");
       await expect(
         dialog.getByRole("button", {
           name: "Zapisz zaplanowane daty",
@@ -386,7 +382,7 @@ await runBrowserSuite(
       );
       assert.equal(rejected.attempts[0].version, `"${card.version}"`);
       assert.deepEqual(rejected.attempts[0].payload, {
-        set: { schedule: { start: "2026-09-10", end: "2026-09-12" } },
+        set: { schedule: { start: "2026-09-10", end: "2026-09-11" } },
       });
       return { attempts: rejected.attempts, draftPreserved: true };
     }

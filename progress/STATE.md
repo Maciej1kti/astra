@@ -7,6 +7,14 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+[Oś czasu was rebuilt](2026-10-08-timeline-redesign.md) on the owner's
+direction: Astra draws it itself instead of the SVAR Gantt widget, the
+selection bar is gone, cards without dates stand above the axis, weekends are
+shaded, a bar opens its card, and a move or stretch is saved on release with no
+dialog unless the save needs a decision
+([ADR-075](../docs/ADR-075-TIMELINE-RENDERER.md)). Verified in Chromium and
+WebKit; not on a physical phone, and its look awaits the owner's judgement.
+
 Appearance now offers [sets](2026-10-07-appearance-sets.md): four light
 palettes, four dark palettes and four characters (corners, shadows and heading
 typeface), chosen separately in Settings beside the theme, and since

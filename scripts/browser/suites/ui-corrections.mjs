@@ -30,11 +30,9 @@ await runBrowserSuite(
       page
         .locator("[data-timeline-row]")
         .evaluateAll((elements) =>
-          elements
-            .map((el) => el.dataset.timelineRow)
-            .filter((id) => id !== "astra-create-row"),
+          elements.map((el) => el.dataset.timelineRow),
         );
-    const grip = (id) => page.locator(`[data-timeline-row="${id}"] button`);
+    const grip = (id) => page.locator(`[data-timeline-row="${id}"] .row-grip`);
     async function drag(id, target, cancel = false) {
       const source = await grip(id).boundingBox();
       const destination = await grip(target).boundingBox();
@@ -79,26 +77,60 @@ await runBrowserSuite(
         name: "Utwórz kartę na osi czasu",
       });
       await expect(empty).toBeVisible();
-      const bar = await empty.boundingBox();
-      // The displayed axis starts two days before the earliest September 1 anchor.
-      await empty.click({ position: { x: 48 * 6 + 24, y: bar.height / 2 } });
+      // The day comes from where the pointer is on the axis, whatever the scale.
+      const day = await page.locator('[data-day="2026-09-10"]').boundingBox();
+      const track = await empty.boundingBox();
+      assert(day && track);
+      await page.mouse.click(day.x + day.width / 2, track.y + track.height / 2);
       const dialog = page.getByRole("dialog", { name: "Utwórz element" });
       await expect(dialog).toBeVisible();
       await expect(dialog.getByLabel("Początek", { exact: true })).toHaveValue(
-        "2026-09-05",
+        "2026-09-10",
       );
       await expect(dialog.getByLabel("Koniec", { exact: true })).toHaveValue(
-        "2026-09-05",
+        "2026-09-10",
       );
       await page
         .getByRole("button", { name: "Zamknij edytor", exact: true })
         .click();
       await expect(page.locator("dialog[open]")).toHaveCount(0);
+      // Pressing on one day and releasing on another plans the whole range.
+      const last = await page.locator('[data-day="2026-09-14"]').boundingBox();
+      await page.mouse.move(day.x + day.width / 2, track.y + track.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        last.x + last.width / 2,
+        track.y + track.height / 2,
+        { steps: 5 },
+      );
+      const ghost = page.locator(".astra-gantt .ghost");
+      await expect(ghost).toHaveAttribute("data-start", "2026-09-10");
+      await expect(ghost).toHaveAttribute("data-end", "2026-09-14");
+      await page.mouse.up();
+      await expect(dialog.getByLabel("Początek", { exact: true })).toHaveValue(
+        "2026-09-10",
+      );
+      await expect(dialog.getByLabel("Koniec", { exact: true })).toHaveValue(
+        "2026-09-14",
+      );
+      await page
+        .getByRole("button", { name: "Zamknij edytor", exact: true })
+        .click();
+      await expect(page.locator("dialog[open]")).toHaveCount(0);
+      // The keyboard walks the days and Enter plans the one it stands on.
       await empty.focus();
       await empty.press("ArrowRight");
+      const first = await ghost.getAttribute("data-start");
+      await empty.press("ArrowRight");
+      const second = await ghost.getAttribute("data-start");
+      assert.equal(
+        Date.parse(second) - Date.parse(first),
+        86400000,
+        "An arrow moves the proposed day by one",
+      );
       await empty.press("Enter");
       await expect(dialog.getByLabel("Początek", { exact: true })).toHaveValue(
-        "2026-09-02",
+        second,
       );
       await page
         .getByRole("button", { name: "Zamknij edytor", exact: true })

@@ -1,6 +1,11 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
 import { annotateFailure } from "./browser/annotations.mjs";
 import { setCalendarDate } from "./browser/calendar-controls.mjs";
+import {
+  showTimelineDate,
+  timelineCard,
+  timelineEdge,
+} from "./browser/timeline.mjs";
 import { chromium, expect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createHost } from "./browser/host.mjs";
@@ -123,13 +128,8 @@ try {
   await page
     .getByLabel("Projekt", { exact: true })
     .selectOption(plan.project_id);
-  await page.getByLabel("Miesiąc", { exact: true }).fill("2026-09");
-  await page
-    .getByRole("button", {
-      name: "Przenieś plan: Build the field guide",
-      exact: true,
-    })
-    .waitFor();
+  await showTimelineDate(page, "2026-09-01");
+  await timelineCard(page, "Build the field guide").waitFor();
   await page.screenshot({
     path: join(evidenceDir, "gantt-project.png"),
     fullPage: true,
@@ -155,33 +155,28 @@ try {
       });
     return route.continue();
   });
-  await page
-    .getByLabel("Wybrana karta", { exact: true })
-    .selectOption(review.id);
-  await page
-    .getByRole("button", { name: "Edytuj zaplanowane daty", exact: true })
-    .click();
-  await page
-    .getByLabel("Zaplanowany koniec", { exact: true })
-    .fill("2026-09-11");
-  await page
-    .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
-    .click();
+  // One keyboard step on the end of the bar is saved at once. Its reply is
+  // refused, so the dialog appears with the same command ready to repeat.
+  await timelineEdge(page, "Review and publish", "end").focus();
+  await page.keyboard.press("Alt+ArrowRight");
+  await expect(
+    page.getByLabel("Zaplanowany koniec", { exact: true }),
+  ).toHaveValue("2026-09-11");
   await page
     .getByRole("button", { name: "Ponów to samo polecenie", exact: true })
     .click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
-  assert.equal(scheduleRequests.length, 2);
+  await expect.poll(() => scheduleRequests.length).toBe(2);
   for (const header of ["x-request-id", "x-command-epoch", "if-match"])
     assert.equal(
       scheduleRequests[0].headers[header],
       scheduleRequests[1].headers[header],
     );
   assert.deepEqual(scheduleRequests[0].payload, scheduleRequests[1].payload);
-  assert.deepEqual(cli("get", reviewPath).metadata.schedule, {
-    start: "2026-09-09",
-    end: "2026-09-11",
-  });
+  // The repeated command is answered after its dialog has stepped aside.
+  await expect
+    .poll(() => cli("get", reviewPath).metadata.schedule)
+    .toEqual({ start: "2026-09-09", end: "2026-09-11" });
   await page.unroute(`**${reviewPath}`);
   await expect(
     page.getByLabel("Dependency forecast", { exact: true }),
@@ -385,12 +380,7 @@ try {
     fullPage: true,
   });
   await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
-  await page
-    .getByRole("button", {
-      name: "Przenieś plan: Build the field guide",
-      exact: true,
-    })
-    .waitFor();
+  await timelineCard(page, "Build the field guide").waitFor();
   await page.screenshot({
     path: join(evidenceDir, "gantt-dark.png"),
     fullPage: true,
@@ -398,16 +388,11 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect
     .poll(async () =>
-      page
-        .getByRole("button", {
-          name: "Przenieś plan: Design the field guide",
-          exact: true,
-        })
-        .evaluate((element) => {
-          const task = element.getBoundingClientRect();
-          const viewport = element.closest(".chart").getBoundingClientRect();
-          return task.right > viewport.left && task.left < viewport.right;
-        }),
+      timelineCard(page, "Design the field guide").evaluate((element) => {
+        const task = element.getBoundingClientRect();
+        const viewport = element.closest(".scroller").getBoundingClientRect();
+        return task.right > viewport.left && task.left < viewport.right;
+      }),
     )
     .toBe(true);
   await page.evaluate(() => {
@@ -440,7 +425,7 @@ try {
     console.error(await activePage.locator("body").innerText());
     console.error(
       await activePage
-        .locator(".chart,.wx-gantt,.wx-chart,.wx-bar")
+        .locator(".astra-gantt,.scroller,.timeline-bar")
         .evaluateAll((elements) =>
           elements.map((element) => ({
             class: element.className,

@@ -43,6 +43,7 @@ const suites = [
   "accessibility",
   "responsive",
   "planning",
+  "timeline",
   "ui-corrections",
   "calendar-pages",
   "calendar-layout",

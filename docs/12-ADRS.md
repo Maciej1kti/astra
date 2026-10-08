@@ -473,3 +473,12 @@ and plans its registration. A host started with `--github` then creates a
 private GitHub repository through the signed-in `gh` and pushes the planning
 data. Nothing opens a dialog on the host. See
 [ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).
+
+## ADR-075 — Timeline drawn by Astra
+
+Timeline no longer renders through SVAR Gantt: Astra draws the axis, rows and
+bars itself, and a move or resize is saved on release without a confirmation
+dialog. A change is proposed against the version the gesture observed, or the
+one this browser's own preceding save produced, never a refetched one, so
+conflicts still surface. No protocol or command change. See
+[ADR-075](ADR-075-TIMELINE-RENDERER.md).

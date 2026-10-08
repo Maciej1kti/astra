@@ -188,25 +188,79 @@ export async function verifyPlanningFixes(
 
   if (timelineUrl && timelineCardId && timelineCardTitle) {
     await page.goto(timelineUrl);
-    await page
-      .getByLabel("Wybrana karta", { exact: true })
-      .selectOption(timelineCardId);
-    const summary = page.locator(".selected-summary");
-    await expect(summary).toContainText(timelineCardTitle);
-    const initial = await summary.boundingBox();
-    await page.locator(".chart").evaluate((el) => {
-      el.scrollLeft = el.scrollWidth;
+    const chart = page.locator(".astra-gantt");
+    const scroller = chart.locator(".scroller");
+    const bar = chart.locator(
+      `.timeline-bar[data-card-id="${timelineCardId}"]`,
+    );
+    await expect(bar).toContainText(timelineCardTitle);
+    // The selection bar is gone: a bar is the card, and the view has one toolbar.
+    await expect(page.getByLabel("Wybrana karta")).toHaveCount(0);
+    for (const name of ["Otwórz element", "Edytuj zaplanowane daty"])
+      await expect(page.getByRole("button", { name, exact: true })).toHaveCount(
+        0,
+      );
+    await expect(page.getByLabel("Miesiąc", { exact: true })).toHaveCount(0);
+    // Cards waiting for dates stand above the axis.
+    const tray = page.getByRole("region", { name: "Karty bez harmonogramu" });
+    await expect(tray.getByRole("button").first()).toBeVisible();
+    expect((await tray.boundingBox()).y).toBeLessThan(
+      (await chart.boundingBox()).y,
+    );
+    // Saturdays and Sundays are marked on the day scale, and only they are.
+    await expect(chart.locator('[data-day="2026-09-12"]')).toHaveClass(
+      /weekend/,
+    );
+    await expect(chart.locator('[data-day="2026-09-13"]')).toHaveClass(
+      /weekend/,
+    );
+    await expect(chart.locator('[data-day="2026-09-14"]')).not.toHaveClass(
+      /weekend/,
+    );
+    // Titles stay where they are while the days scroll under them.
+    const label = chart.locator(`[data-timeline-row="${timelineCardId}"]`);
+    const initial = await label.boundingBox();
+    const scrolled = await scroller.evaluate((element) => {
+      element.scrollLeft += 400;
+      return element.scrollLeft;
     });
-    await expect(summary).toContainText(timelineCardTitle);
-    const shifted = await summary.boundingBox();
+    expect(scrolled).toBeGreaterThan(0);
+    const shifted = await label.boundingBox();
     expect(shifted.x).toBe(initial.x);
     expect(shifted.width).toBe(initial.width);
-    await expect(
-      page.getByRole("button", { name: "Otwórz element", exact: true }),
-    ).toBeEnabled();
-    await onCheckpoint("mobile-390-timeline-selection", page);
+    const page_ = await page.evaluate(() => ({
+      width: innerWidth,
+      scroll: document.documentElement.scrollWidth,
+    }));
+    expect(page_.scroll).toBeLessThanOrEqual(page_.width);
+    await onCheckpoint("mobile-390-timeline", page);
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await onCheckpoint("desktop-timeline-selection", page);
+    await page.goto(timelineUrl);
+    await expect(bar).toBeVisible();
+    await onCheckpoint("desktop-timeline", page);
+    // A bar opens its card, not a dialog about dates.
+    await bar.getByRole("button", { name: /^Karta: / }).click();
+    const editor = page.getByRole("dialog", { name: "Edytuj element" });
+    await expect(editor).toBeVisible();
+    await expect(editor.getByLabel("Tytuł", { exact: true })).toHaveValue(
+      timelineCardTitle,
+    );
+    await page
+      .getByRole("button", { name: "Zamknij edytor", exact: true })
+      .click();
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    for (const [scale, tick] of [
+      ["Tygodnie", "2026-09-07"],
+      ["Miesiące", "2026-09-01"],
+      ["Dni", "2026-09-07"],
+    ]) {
+      await page.getByRole("button", { name: scale, exact: true }).click();
+      await expect(
+        page.getByRole("button", { name: scale, exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+      await expect(chart.locator(`[data-day="${tick}"]`)).toBeVisible();
+      await expect(bar).toBeVisible();
+    }
   }
 
   return {
@@ -219,7 +273,7 @@ export async function verifyPlanningFixes(
     mobileMonthFitsSevenDays: true,
     dateDisclosureKeyboard: true,
     readableMobileWeekColumns: true,
-    timelineSelection: Boolean(
+    timelineWithoutSelectionBar: Boolean(
       timelineUrl && timelineCardId && timelineCardTitle,
     ),
   };

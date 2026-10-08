@@ -5,13 +5,7 @@ export type {
   GanttPage,
 } from "../../lib/contracts/api.generated";
 import type { CalendarItem } from "../../lib/contracts/api.generated";
-import { dateOnly, widgetDate } from "./widget-dates.ts";
-export function exclusiveSchedule(schedule: { start: string; end: string }) {
-  return {
-    start: widgetDate(schedule.start),
-    end: widgetDate(shiftDate(schedule.end, 1)),
-  };
-}
+import { dateOnly } from "./widget-dates.ts";
 export function inclusiveSchedule(start: Date, end: Date) {
   const result = { start: dateOnly(start), end: shiftDate(dateOnly(end), -1) };
   if (result.start > result.end)

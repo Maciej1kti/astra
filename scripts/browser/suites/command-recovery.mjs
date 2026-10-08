@@ -1,5 +1,6 @@
 /** Unload guards, settings conflicts and recovery feedback shared by command dialogs. */
 import { runBrowserSuite } from "../runtime.mjs";
+import { timelineCardById } from "../timeline.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -150,23 +151,16 @@ await runBrowserSuite(
           "PATCH",
         );
         await visit(page, { view: "gantt", project, month: "2026-09" });
-        await page
-          .getByLabel("Wybrana karta", { exact: true })
-          .selectOption(card.metadata.id);
-        await page
-          .getByRole("button", { name: "Edytuj zaplanowane daty", exact: true })
-          .click();
+        const bar = timelineCardById(page, card.metadata.id);
+        await expect(bar).toBeVisible();
         const dialog = page.getByRole("dialog", {
           name: "Zmień zaplanowane daty",
           exact: true,
         });
-        await dialog
-          .getByLabel("Zaplanowany koniec", { exact: true })
-          .fill("2026-09-12");
         assert.equal(await unloadGuarded(page), false);
-        await dialog
-          .getByRole("button", { name: "Zapisz zaplanowane daty", exact: true })
-          .click();
+        // A keyboard step saves at once; its lost reply brings the dialog.
+        await bar.focus();
+        await page.keyboard.press("Alt+ArrowRight");
         await expect(dialog).toContainText("Żądanie:");
         assert.equal(await unloadGuarded(page), true);
         await dialog

@@ -95,7 +95,7 @@ its **Więcej** entry holds only **Dostosuj nawigację**.
 | Lista | Find and filter resources | Bounded pages, search/filter controls and access to resource editors |
 | Tablica | Arrange cards by status | Manual ordering, drag/drop and keyboard alternatives; a workspace overview and project boards |
 | Kalendarz | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with direct move/resize saves |
-| Oś czasu | Inspect recorded schedules over time | Schedule bars and milestones; API/CLI call this view `gantt` |
+| Oś czasu | See and change recorded schedules over time | Bars you move and stretch by day, week or month scale, milestones, and the cards still without dates above the axis; API/CLI call this view `gantt` |
 | Wykres | Compare recorded counter histories | Select counters, overlay compatible units, group dates, inspect statistics, value totals with each counter's rate and see who owes whom |
 | Aktualizacje | Read project/milestone reports | Read receipts, corrections and explicit decision resolutions |
 
@@ -359,10 +359,31 @@ workspace calendar preferences under **Czas i widok**: type or pick a zone in
 and its current time are shown beside it. Calendar pointer moves and resizes save in the
 background on drop. A failed or uncertain save opens recovery controls with the
 original proposal and command; conflicts require a deliberate new edit. Timeline
-date gestures and Calendar keyboard date editing use a proposal form. Escape or
+bars save the same way, with no confirmation step; Calendar keyboard date
+editing uses a proposal form. Escape or
 a cancelled gesture makes no source change. Controls
 also provide keyboard editing, described in the Calendar shortcuts disclosure
 and [manual walkthrough](../MANUAL-TESTING.md#gantt-and-calendar-walkthrough).
+
+In **Oś czasu** each planned card is one bar on its own row. Drag the bar to
+move the plan, or drag either end to make it longer or shorter: the bar follows
+the pointer, the dates it would get are shown beside it and on the day header,
+and letting go saves them. Nothing asks for confirmation; a dialog appears only
+when the save was refused or its outcome is unknown, and a refused change puts
+the bar back on its saved days. Click a bar, or its title in the left column, to
+open the card. With the keyboard, Alt+Left/Right moves a focused bar by a day
+(Shift: a week) and the same keys on a focused end change that end; the steps
+are saved together when you release Alt. On a touch screen a swipe scrolls the
+days and a short hold picks a bar up.
+
+The toolbar names the month in view. **Dzisiaj** returns to today, the arrows
+move a month, the title opens a date field, and **Dni**, **Tygodnie** and
+**Miesiące** change the scale, which the browser remembers. Saturdays and
+Sundays are shaded and a line marks today. A plan outside the visible days
+leaves a small arrow at the edge of its row that scrolls to it. Cards without
+dates are listed above the axis as **Bez harmonogramu**; choosing one opens the
+card so you can give it dates. The last row creates a card: click a day, or
+press on one day and release on another to plan the whole range.
 
 Timeline shows what has been recorded. It does not calculate dependencies, critical
 paths or automatically shift other cards. Cards have no separate deadline/review

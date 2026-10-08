@@ -36,7 +36,8 @@ await runBrowserSuite(
           page.locator(".astra-board .add-card").first(),
         ).toBeEnabled();
       if (view === "calendar") await page.locator(".ec").waitFor();
-      if (view === "gantt") await page.locator(".wx-gantt").waitFor();
+      if (view === "gantt")
+        await page.locator(".astra-gantt .timeline-head").waitFor();
       await settle(page.locator(".view-content"));
     };
     try {
