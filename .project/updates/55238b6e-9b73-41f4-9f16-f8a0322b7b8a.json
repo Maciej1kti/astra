@@ -1,0 +1,18 @@
+{
+  "body": "Oś czasu was rebuilt on the owner's direction of 2026-10-08.\n\nWhat is different on screen: the selection bar (choose an element, open it, edit planned dates) and the month field are gone; one toolbar holds the month in view, Dzisiaj, month arrows and the scale (Dni, Tygodnie, Miesiące). Cards without dates stand above the axis as \"Bez harmonogramu\". Weekends are shaded and a line marks today. A bar opens its card on a click. Dragging a bar or one of its ends follows the pointer between days, shows the dates it would get, and saves them on release; no dialog appears unless the save was refused or its outcome is unknown. Rows are still reordered by the grip in the title column.\n\nThe view is now drawn by Astra instead of the SVAR Gantt widget, which is removed from the dependencies (ADR-075). No protocol or command change: a date change is the same conditional write, proposed against the version the gesture observed, so a card changed elsewhere still ends in a conflict and the bar returns to its saved days.\n\nFor the owner to judge on screen: the status tones of bars, sizes and motion are a proposal. Known limits: an accidental drop is saved and there is no undo; a card without dates cannot yet be dragged onto a day; Calendar keyboard date editing still opens the date form; timed events and milestones open from the Timeline but are not moved there.\n\nVerified locally on the real daemon: the full gate, the new timeline browser suite and every suite that reaches Timeline, in Chromium, with WebKit for the timeline, ui-corrections, planning and localization suites. Touch was exercised in Chromium's emulation only, not on a physical phone. Evidence: progress/2026-10-08-timeline-redesign.md\n\nCommit 8fceabd, rolled out to the manual instance and checked there with the real projects.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "55238b6e-9b73-41f4-9f16-f8a0322b7b8a",
+    "kind": "result",
+    "recorded_at": "2026-10-08T08:44:20.771Z",
+    "summary": "Timeline rebuilt: fluent bars saved on release",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
