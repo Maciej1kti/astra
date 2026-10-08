@@ -1,0 +1,18 @@
+{
+  "body": "Settings → Wygląd has a fifth choice, Odstępy: Astra (the default), Zwarte and Przestronne, chosen apart from the theme, palettes and character and kept in the browser like them.\n\nA spacing changes the scale of gaps and padding only: three quarters of the default for Zwarte, one and a quarter for Przestronne. Buttons and other touch targets keep 44px. On a phone Przestronne grows by half as much, because at 320px the full scale left too little room for card titles. The check that marks a selected card moved to the corner of its miniature, so long option names no longer break.\n\nFor the owner to judge on screen: the two scales are a first proposal. Timeline row and Calendar hour heights do not follow the spacing; they come from the planning widgets.\n\nVerified locally on a release daemon: the full gate, the appearance suite in Chromium and WebKit with every view in both new spacings at 1440 and 320px, and the Chromium suites that open Settings. The other suites were not rerun. Not checked on a physical phone. Commit 2506218, rolled out to the manual instance. Evidence: progress/2026-10-08-appearance-spacing.md\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "e9421f7d-6ece-47a6-b90a-ec8a496521bf",
+    "kind": "result",
+    "recorded_at": "2026-10-08T07:46:15.159Z",
+    "summary": "Spacing as an appearance choice",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
