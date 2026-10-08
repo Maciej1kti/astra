@@ -1,0 +1,18 @@
+{
+  "body": "After the Timeline rebuild the owner asked that every element be a component of the current style, change with every appearance and layout choice in Settings, and that all views draw from one pool.\n\nWhat changed on screen: Calendar and Timeline now have the same toolbar, and the Calendar layout (Dzień, Tydzień, Miesiąc, Agenda) is the same segmented control as the Timeline scale and the Chart's range and grouping, instead of a select. A Timeline bar looks like the same card in Calendar: green with the calendar symbol for a plan, blue with the clock for a timed event, amber with the flag for a milestone's date, at the same height. The status colours I had proposed for bars are gone, because Calendar has none and the two views have to match. Cards without dates stand under an ordinary section heading as ordinary buttons.\n\nWhat it means for Settings: the Timeline declares no colour, corner or typeface of its own, so palettes and characters change it with the rest, and a spacing changes the room around a bar and a header label, never the bar or the text. A browser check now compares a bar and a row with what the shared tokens resolve to, in the default set and under another character, palette and spacing.\n\nFor the owner to judge: the Calendar layout control changed form; on a phone in the month layout its list/grid switch now sits on its own short row. Status is not shown on a bar; showing it in both planning views would need a contract change.\n\nNot done: the other views (Focus, Board, List, Projects, Updates, Settings) were not audited for elements drawn outside the shared pool. A first count found no hard-coded colour in any component and about 120 native buttons beside the shared Button.\n\nVerified locally on the real daemon: the full gate, the complete Chromium run, and WebKit for the timeline, planning, calendar, events, charts, localization and appearance suites. Not on a physical phone. Commit c4da3a7, rolled out to the manual instance. Evidence: progress/2026-10-08-timeline-shared-system.md\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "348357da-eaa7-49ab-b3cb-486fa6b1d365",
+    "kind": "result",
+    "recorded_at": "2026-10-08T09:26:08.062Z",
+    "summary": "Timeline on the shared system: one toolbar, one segmented control, Calendar tokens",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
