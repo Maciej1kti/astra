@@ -325,6 +325,85 @@
     0 0 0 var(--stroke) var(--line-strong), 0 16px 48px var(--shade-dialog);
 }
 
+/* Spacing: every step of the scale, chosen apart from colours and character.
+   The three smallest steps draw details and stay; the rest set the rhythm of
+   gaps, padding and the small things sized from them. Touch targets and
+   control heights are not spacing and keep their 44px. */
+:root,
+[data-density="astra"] {
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 20px;
+  --space-10: 24px;
+  --space-11: 28px;
+  --space-12: 32px;
+  --space-14: 40px;
+  --space-16: 48px;
+  --space-20: 64px;
+}
+/* Three quarters of the default rhythm. */
+[data-density="compact"] {
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 6px;
+  --space-5: 8px;
+  --space-6: 9px;
+  --space-7: 10px;
+  --space-8: 12px;
+  --space-9: 15px;
+  --space-10: 18px;
+  --space-11: 21px;
+  --space-12: 24px;
+  --space-14: 30px;
+  --space-16: 36px;
+  --space-20: 48px;
+}
+/* One and a quarter times the default rhythm. */
+[data-density="roomy"] {
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 15px;
+  --space-7: 18px;
+  --space-8: 20px;
+  --space-9: 25px;
+  --space-10: 30px;
+  --space-11: 35px;
+  --space-12: 40px;
+  --space-14: 50px;
+  --space-16: 60px;
+  --space-20: 80px;
+}
+/* A phone has less room to give, so the roomy rhythm grows by half as much. */
+@media (max-width: 700px) {
+  [data-density="roomy"] {
+    --space-1: 2px;
+    --space-2: 4px;
+    --space-3: 6px;
+    --space-4: 9px;
+    --space-5: 11px;
+    --space-6: 13px;
+    --space-7: 16px;
+    --space-8: 18px;
+    --space-9: 22px;
+    --space-10: 27px;
+    --space-11: 31px;
+    --space-12: 36px;
+    --space-14: 45px;
+    --space-16: 54px;
+    --space-20: 72px;
+  }
+}
+
 /* Headings and titles take the character's display face. */
 h1,
 h2,

@@ -157,6 +157,10 @@ saved to the workspace, so each device keeps its own look.
   where the device has one), **Redakcyjny** (serif headings, nearly flat) and
   **Techniczny** (square corners, fixed-width headings, outlines instead of
   resting shadows).
+- **Odstępy** sets how much room the interface leaves between and inside its
+  parts: **Astra**, **Zwarte** (tighter, more on one screen) and
+  **Przestronne** (looser; on a phone the difference is smaller). Buttons and
+  other touch targets keep their size in all three.
 
 Every change applies at once. **Kreda** and **Czerń** are the highest-contrast
 palettes; **Czerń** uses true black for OLED screens. Typefaces come from the

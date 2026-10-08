@@ -7,6 +7,7 @@
     applyTheme,
     character,
     darkPalette,
+    density,
     lightPalette,
     readHand,
     readTheme,
@@ -24,6 +25,7 @@
   let light = $state(lightPalette.read());
   let dark = $state(darkPalette.read());
   let shape = $state(character.read());
+  let spacing = $state(density.read());
 
   // Only one palette is on screen at a time; the other waits for its scheme.
   const systemDark = matchMedia("(prefers-color-scheme: dark)");
@@ -76,6 +78,14 @@
     </span>
   </span>
 {/snippet}
+<!-- data-density redeclares the spacing scale: rows of a list in its rhythm. -->
+{#snippet spacingPreview(id: string)}
+  <span class="preview rhythm" data-density={id} aria-hidden="true">
+    {#each [0, 1, 2, 3] as row (row)}
+      <span class="rhythm-row"><span class="rhythm-line"></span></span>
+    {/each}
+  </span>
+{/snippet}
 
 <div class="appearance-settings">
   <ChoiceTiles
@@ -111,6 +121,14 @@
     value={shape}
     onselect={(id) => character.apply((shape = id))}
     preview={shapePreview}
+  />
+  <ChoiceTiles
+    label="Odstępy"
+    name="appearance-density"
+    options={density.options}
+    value={spacing}
+    onselect={(id) => density.apply((spacing = id))}
+    preview={spacingPreview}
   />
   <label
     >Przycisk dodawania na telefonie<select
@@ -218,6 +236,31 @@
     height: var(--space-9);
     border-radius: var(--radius-sm);
     background: var(--primary);
+  }
+
+  .rhythm {
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-6);
+    background: var(--bg);
+  }
+  .rhythm-row {
+    flex: none;
+    padding: var(--space-4) var(--space-5);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+  }
+  .rhythm-line {
+    display: block;
+    width: 50%;
+    height: var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+  }
+  .rhythm-row:nth-child(even) .rhythm-line {
+    width: 70%;
+    background: var(--muted);
   }
 
   label {

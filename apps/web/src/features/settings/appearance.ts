@@ -9,9 +9,10 @@ export const choiceKeys = {
   light: "astra-light:v1",
   dark: "astra-dark:v1",
   character: "astra-character:v1",
+  density: "astra-density:v1",
 } as const;
 export type Choice = keyof typeof choiceKeys;
-/** The parts of a set: one palette for each scheme, and a character. */
+/** The parts of a set: one palette for each scheme, a character and a spacing. */
 export type SetPart = Exclude<Choice, "theme" | "hand">;
 
 export function storedChoice(choice: Choice) {
@@ -35,7 +36,7 @@ function show(choice: Choice) {
 export function restoreAppearance() {
   show("theme");
   show("hand");
-  const parts: SetPart[] = ["light", "dark", "character"];
+  const parts: SetPart[] = ["light", "dark", "character", "density"];
   return parts.filter((part) => (show(part) ?? "astra") !== "astra").length
     ? import("../../styles/appearance-sets.css")
     : Promise.resolve();

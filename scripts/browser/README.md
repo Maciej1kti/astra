@@ -84,7 +84,10 @@ and the character as labelled radio groups. Every palette must paint the page
 and the dialog with the colours its block declares; a palette chosen for the
 scheme that is not shown must repaint nothing; the system theme must switch
 between the two chosen palettes; each character must set its corners and
-heading typeface without changing a colour. It also covers arrow-key
+heading typeface without changing a colour; each spacing must set the scale
+while control heights, corners and colours stay, and every view must fit
+without sideways scrolling in the compact and roomy spacing at 1440 and 320px.
+It also covers arrow-key
 selection, persistence across a reload with the stored set in place before the
 application renders, the sets stylesheet being requested only when a choice or
 Settings needs it, 44px targets without sideways scrolling at 390 and 320px,

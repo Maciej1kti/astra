@@ -41,10 +41,17 @@ function byAttribute(text, attribute) {
   return found;
 }
 
-const sets = css("appearance-sets.css");
+const everySet = css("appearance-sets.css");
+/** Blocks that apply at one width only, apart from the unconditional ones. */
+const conditional = /@media\s*\(([^)]*)\)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g;
+const sets = everySet.replace(conditional, "");
+const narrow = Object.fromEntries(
+  [...everySet.matchAll(conditional)].map(([, query, body]) => [query, body]),
+);
 const light = byAttribute(sets, "data-light");
 const dark = byAttribute(sets, "data-dark");
 const characters = byAttribute(sets, "data-character");
+const densities = byAttribute(sets, "data-density");
 /** The block for the page and for a fragment shown in one scheme. */
 const rootOnly = (text) =>
   blocks(text).find(
@@ -72,12 +79,16 @@ Object.defineProperty(globalThis, "document", {
   configurable: true,
   value: { documentElement: globals.root },
 });
-// Node has no stylesheets; count the requests for one instead.
+// Node has no stylesheets; count the requests for one instead. Resolution
+// runs for every import, also once the empty module is cached.
 let stylesheets = 0;
 registerHooks({
+  resolve(specifier, context, next) {
+    if (specifier.endsWith(".css")) stylesheets++;
+    return next(specifier, context);
+  },
   load(url, context, next) {
     if (!url.endsWith(".css")) return next(url, context);
-    stylesheets++;
     return { format: "module", source: "", shortCircuit: true };
   },
 });
@@ -92,7 +103,13 @@ test("the menu and the stylesheets list the same palettes and characters", () =>
   assert.deepEqual([...light.keys()], ids(appearance.lightPalette.options));
   assert.deepEqual([...dark.keys()], ids(appearance.darkPalette.options));
   assert.deepEqual([...characters.keys()], ids(appearance.character.options));
-  for (const [name, map] of Object.entries({ light, dark, characters }))
+  assert.deepEqual([...densities.keys()], ids(appearance.density.options));
+  for (const [name, map] of Object.entries({
+    light,
+    dark,
+    characters,
+    densities,
+  }))
     assert.ok(
       [...map.values()][0].selectors.includes(":root"),
       `the first of ${name} is the default`,
@@ -101,6 +118,7 @@ test("the menu and the stylesheets list the same palettes and characters", () =>
     appearance.lightPalette,
     appearance.darkPalette,
     appearance.character,
+    appearance.density,
   ])
     for (const { label } of group.options) assert.ok(label.trim());
 });
@@ -110,6 +128,7 @@ test("every palette and character names the complete set of values", () => {
     ["--light-", light],
     ["--dark-", dark],
     ["--", characters],
+    ["--space-", densities],
   ]) {
     const [first, ...rest] = [...map.entries()];
     const expected = Object.keys(first[1].values);
@@ -164,6 +183,38 @@ test("the first load carries the default set by value", () => {
       value.replace(/var\((--shade-[a-z]+)\)/g, (_, shade) => pairing[shade]),
       name,
     );
+  }
+  for (const [name, value] of Object.entries(densities.get("astra").values))
+    assert.equal(tokens[name], value, name);
+});
+
+test("every spacing keeps its steps in ascending order", () => {
+  // On a phone the roomy scale lies between the default and its full size.
+  assert.deepEqual(Object.keys(narrow), ["max-width: 700px"]);
+  const phone = byAttribute(narrow["max-width: 700px"], "data-density");
+  assert.deepEqual([...phone.keys()], ["roomy"]);
+  const sizes = (block) =>
+    Object.values(block.values).map((value) => Number.parseInt(value, 10));
+  assert.deepEqual(
+    Object.keys(phone.get("roomy").values),
+    Object.keys(densities.get("roomy").values),
+  );
+  sizes(phone.get("roomy")).forEach((size, step) => {
+    assert.ok(size >= sizes(densities.get("astra"))[step], `step ${step}`);
+    assert.ok(size <= sizes(densities.get("roomy"))[step], `step ${step}`);
+  });
+  for (const [id, { values }] of [...densities, ...phone]) {
+    const steps = Object.values(values).map((value) => {
+      assert.match(value, /^\d+px$/, id);
+      return Number.parseInt(value, 10);
+    });
+    assert.deepEqual(
+      steps,
+      steps.toSorted((a, b) => a - b),
+      id,
+    );
+    // The smallest steps draw details such as hairline gaps, not rhythm.
+    assert.deepEqual(steps.slice(0, 3), [2, 4, 6], id);
   }
 });
 
@@ -266,6 +317,14 @@ test("only a stored set other than the default asks for the stylesheet", async (
   await appearance.restoreAppearance();
   assert.equal(globals.root.dataset.dark, "cocoa");
   assert.equal(stylesheets, 1);
+
+  // Spacing alone is enough to need the sets.
+  globals.storage.clear();
+  appearance.density.apply("compact");
+  globals.root.dataset = {};
+  await appearance.restoreAppearance();
+  assert.deepEqual({ ...globals.root.dataset }, { density: "compact" });
+  assert.equal(stylesheets, 2);
 });
 
 test("appearance applies without browser storage", async () => {

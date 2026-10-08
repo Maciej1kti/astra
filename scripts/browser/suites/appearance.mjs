@@ -146,6 +146,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
         ["Kolory jasne", ["Astra", "Papier", "Szałwia", "Kreda"], "astra"],
         ["Kolory ciemne", ["Astra", "Atrament", "Kakao", "Czerń"], "astra"],
         ["Charakter", ["Astra", "Miękki", "Redakcyjny", "Techniczny"], "astra"],
+        ["Odstępy", ["Astra", "Zwarte", "Przestronne"], "astra"],
       ],
     );
     assert.deepEqual(await inUse(), ["appearance-light"]);
@@ -253,6 +254,46 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     );
     checks.push("Each character sets its corners and heading typeface");
 
+    // Spacing changes the rhythm of gaps and padding, and nothing else.
+    const rhythm = () =>
+      dialog.evaluate((element) => {
+        const body = getComputedStyle(element.querySelector(".dialog-body"));
+        const control = getComputedStyle(
+          element.querySelector("#settings-tags button"),
+        );
+        return {
+          padding: body.paddingTop,
+          step: getComputedStyle(document.documentElement)
+            .getPropertyValue("--space-8")
+            .trim(),
+          control: control.minHeight,
+          corner: control.borderTopLeftRadius,
+          background: getComputedStyle(element).backgroundColor,
+        };
+      });
+    const rhythms = {};
+    for (const name of ["Astra", "Zwarte", "Przestronne"]) {
+      await choose("Odstępy", name);
+      rhythms[name] = await rhythm();
+      await capture(`settings-spacing-${(await rootState()).density}`);
+    }
+    assert.deepEqual(
+      Object.values(rhythms).map(({ padding, step }) => [padding, step]),
+      [
+        ["24px", "16px"],
+        ["18px", "12px"],
+        ["30px", "20px"],
+      ],
+    );
+    for (const key of ["control", "corner", "background"])
+      assert.equal(
+        new Set(Object.values(rhythms).map((value) => value[key])).size,
+        1,
+        `spacing changed the ${key}`,
+      );
+    assert.equal(rhythms.Astra.control, "44px");
+    checks.push("Each spacing sets the scale and leaves controls and colours");
+
     // Arrow keys move within one group; the choices survive a reload.
     await group("Charakter")
       .getByRole("radio", { name: "Techniczny", exact: true })
@@ -276,8 +317,14 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await expect(page.locator(".view-content")).toBeVisible();
     const restored = await rootState();
     assert.deepEqual(
-      [restored.theme, restored.light, restored.dark, restored.character],
-      ["system", "paper", "ink", "editorial"],
+      [
+        restored.theme,
+        restored.light,
+        restored.dark,
+        restored.character,
+        restored.density,
+      ],
+      ["system", "paper", "ink", "editorial", "roomy"],
     );
     assert.equal(restored.background, declared("light", "paper", "bg"));
     // The stored set was in place before the application rendered anything.
@@ -334,9 +381,52 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     await capture("focus-chalk-technical-390");
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.emulateMedia({ colorScheme: "light" });
+    checks.push("Views and planning widgets render in non-default sets");
+
+    // Every view in both other spacings, at desktop and the narrowest phone.
+    await page.evaluate(() => {
+      document.documentElement.dataset.light = "astra";
+      document.documentElement.dataset.character = "astra";
+    });
+    for (const spacing of ["compact", "roomy"]) {
+      await page.evaluate(
+        (spacing) => (document.documentElement.dataset.density = spacing),
+        spacing,
+      );
+      for (const width of [1440, 320]) {
+        await page.setViewportSize({
+          width,
+          height: width === 1440 ? 1000 : 760,
+        });
+        for (const [view, query, ready] of [
+          ["focus", "view=focus", ".view-content"],
+          ["projects", "view=projects", ".view-content"],
+          ["board", `view=board&project=${project}`, ".astra-board .wx-card"],
+          ["calendar", `view=calendar&project=${project}`, ".ec"],
+          ["gantt", `view=gantt&project=${project}`, "[data-timeline-row]"],
+          ["list", `view=list&project=${project}`, ".listrow"],
+          ["chart", `view=chart&project=${project}`, ".view-content"],
+        ]) {
+          await page.evaluate((query) => {
+            history.pushState({}, "", `/?${query}`);
+            dispatchEvent(new PopStateEvent("popstate"));
+          }, query);
+          await expect(page.locator(ready).first()).toBeVisible();
+          assert.equal(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth - innerWidth,
+            ),
+            0,
+            `${view} overflows in ${spacing} at ${width}`,
+          );
+          await capture(`${view}-${spacing}-${width}`);
+        }
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${config.origin}/?view=focus`);
     await expect(page.locator(".view-content")).toBeVisible();
-    checks.push("Views and planning widgets render in non-default sets");
+    checks.push("Every view fits in the compact and roomy spacing");
 
     // Phones: tiles keep a touch target, and nothing scrolls sideways.
     for (const width of [390, 320]) {
@@ -362,7 +452,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
       });
       assert.equal(layout.overflow, 0, `dialog overflow at ${width}`);
       assert.equal(layout.page, 0, `page overflow at ${width}`);
-      assert.equal(layout.count, 15);
+      assert.equal(layout.count, 18);
       assert.ok(layout.smallest >= 44, `target ${layout.smallest} at ${width}`);
       await group("Kolory ciemne").scrollIntoViewIfNeeded();
       await capture(`settings-phone-${width}`);

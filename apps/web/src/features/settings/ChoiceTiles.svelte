@@ -40,10 +40,8 @@
           onchange={() => onselect(option.id)}
         />
         {@render preview(option.id)}
-        <span class="tile-name"
-          >{option.label}<span class="tick"><Icon name="check" small /></span
-          ></span
-        >
+        <span class="tick"><Icon name="check" small /></span>
+        <span class="tile-name">{option.label}</span>
       </label>
     {/each}
   </div>
@@ -111,10 +109,6 @@
     outline-offset: var(--focus-offset);
   }
   .tile-name {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
     min-width: 0;
     padding-inline: var(--space-2);
     color: var(--ink);
@@ -122,10 +116,19 @@
     font-weight: var(--weight-medium);
     overflow-wrap: anywhere;
   }
-  /* The selection is marked by more than the outline's colour. */
+  /* The selection is marked by more than the outline's colour: a badge on
+     the miniature's corner, which leaves the whole row to the name. */
   .tick {
-    display: flex;
-    color: var(--accent-ink);
+    position: absolute;
+    top: var(--space-6);
+    right: var(--space-6);
+    display: grid;
+    place-items: center;
+    width: var(--icon-size);
+    height: var(--icon-size);
+    border-radius: var(--radius-pill);
+    background: var(--accent-ink);
+    color: var(--paper);
     visibility: hidden;
   }
   .tile:has(input:checked) .tick {

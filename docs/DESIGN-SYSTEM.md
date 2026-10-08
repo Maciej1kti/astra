@@ -64,18 +64,19 @@ card's status automatically.
 
 ## Appearance sets
 
-**Ustawienia → Wygląd** holds four browser-local choices: the theme (system,
-light or dark), one light palette, one dark palette and a character. The theme
-decides which palette shows; with the system theme the device switches between
-the two chosen palettes, still in CSS alone. Palettes set colours only. The
-character sets corners, shadows and typefaces only, and is the same in both
-schemes.
+**Ustawienia → Wygląd** holds five browser-local choices: the theme (system,
+light or dark), one light palette, one dark palette, a character and a spacing.
+The theme decides which palette shows; with the system theme the device
+switches between the two chosen palettes, still in CSS alone. Palettes set
+colours only. The character sets corners, shadows and typefaces only, and the
+spacing sets the `--space-*` scale only; both are the same in both schemes.
 
 | Part | Options (first is the default) | Attribute, storage key |
 | --- | --- | --- |
 | Light palette | Astra, Papier (`paper`), Szałwia (`sage`), Kreda (`chalk`) | `data-light`, `astra-light:v1` |
 | Dark palette | Astra, Atrament (`ink`), Kakao (`cocoa`), Czerń (`black`) | `data-dark`, `astra-dark:v1` |
 | Character | Astra, Miękki (`soft`), Redakcyjny (`editorial`), Techniczny (`technical`) | `data-character`, `astra-character:v1` |
+| Spacing | Astra, Zwarte (`compact`), Przestronne (`roomy`) | `data-density`, `astra-density:v1` |
 
 `styles/appearance-sets.css` holds one block for every option. A palette names
 each colour of its scheme once as `--light-*` or `--dark-*`, and the sheet pairs
@@ -87,6 +88,16 @@ Redakcyjny (serif) and Techniczny (fixed width). Typefaces are ones the device
 already has: nothing is fetched, and a missing face falls back along its stack.
 `--radius-pill` belongs to no character, so badges and round buttons keep their
 shape.
+
+A spacing redeclares every `--space-*` step: Zwarte is three quarters of the
+default rhythm and Przestronne one and a quarter. The three smallest steps (2,
+4 and 6px) draw details such as hairline gaps and stay as they are. Up to 700px
+wide Przestronne grows by half as much, because a phone has less room to give.
+`--tap-target` and `--control-height` are not spacing and keep their 44px in
+every option; so do layout dimensions such as the sidebar width. Small things
+sized from a spacing step, and the motion distances defined from one, follow
+the scale. This is why a component takes a gap or padding from `--space-*` and
+a size that must not change from a named property of its own.
 
 The first load does not carry this sheet. `tokens.css` holds the default set by
 value, and `restoreAppearance` in `features/settings/appearance.ts` requests the
@@ -118,6 +129,9 @@ scheme, in `tokens.css` and in the sets sheet alike. The theme cards therefore
 show the two palettes that are chosen, and a palette card adds `data-light` or
 `data-dark` to show its own. A character card carries `data-character` and
 draws a heading and a button with that character's corners, shadow and face.
+A spacing card carries `data-density` and draws the rows of a list in its
+rhythm. The check that marks the selection sits on the miniature's corner, so
+the whole row below is left to the option's name.
 The palette group whose scheme is on screen is marked **W użyciu**, because
 choosing a palette for the other scheme changes nothing visible until the
 scheme changes.

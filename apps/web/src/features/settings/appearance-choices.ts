@@ -66,3 +66,9 @@ export const character = part("character", [
   { id: "editorial", label: "Redakcyjny" },
   { id: "technical", label: "Techniczny" },
 ]);
+/** How much room the interface leaves between and inside its parts. */
+export const density = part("density", [
+  { id: "astra", label: "Astra" },
+  { id: "compact", label: "Zwarte" },
+  { id: "roomy", label: "Przestronne" },
+]);
