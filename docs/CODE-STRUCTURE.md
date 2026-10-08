@@ -109,7 +109,7 @@ choice as a conditional command. `plugins/chart-plugins.ts` defines the plugin
 interface and lists the built-in Chart plugins, each in its own folder with its
 logic beside its component (`plugins/settlement`, `plugins/totals`);
 `lib/plugins/registry.ts` holds the names Settings shows;
-`ChartSegments` is their shared segmented control and `ChartMenu` its phone
+`lib/ui/Segments` is their segmented control, shared with the planning views, and `ChartMenu` its phone
 form. The Chart component loads on
 demand and uses the named counter endpoint in `lib/api/counters.ts`.
 
@@ -184,7 +184,8 @@ which decides what a row shows before its saved row arrives and which version
 a change is proposed against: the one the gesture observed, or the one this
 browser's own preceding save produced, never one that merely arrived with a
 later read. The proposal is `DateChange` automatic submission, one at a time,
-as for Calendar. `TimelineToolbar` holds the month title, navigation and scale.
+as for Calendar. `TimelineToolbar` and `CalendarToolbar` are thin: both render
+`lib/ui/PeriodToolbar` and pass their scale or layout as `lib/ui/Segments`.
 `timeline-order.ts` owns project-scoped browser presentation order; `TimelineRow`
 and `timeline-row-gesture.ts` own accessible row grips and cancelled previews.
 The final Timeline row creates an ordinary dated card draft.

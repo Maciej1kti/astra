@@ -643,16 +643,12 @@ await runBrowserSuite(
         await page.setViewportSize({ width, height: 1000 });
         await expect(chart("reps")).toBeVisible();
         const phone = width <= 700;
-        await expect(dashboard.locator(".chart-segments")).toHaveCount(
-          phone ? 0 : 3,
-        );
+        await expect(dashboard.locator(".segments")).toHaveCount(phone ? 0 : 3);
         await expect(dashboard.locator(".chart-menu")).toHaveCount(
           phone ? 3 : 0,
         );
         const compactTargets = await dashboard
-          .locator(
-            ".chart-segments button, .chart-menu > .action-menu > button",
-          )
+          .locator(".segments button, .chart-menu > .action-menu > button")
           .evaluateAll((buttons) =>
             buttons.map((button) => {
               const box = button.getBoundingClientRect();

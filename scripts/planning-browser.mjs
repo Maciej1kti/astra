@@ -1,6 +1,9 @@
 /** Real HTTPS browser -> daemon -> filesystem smoke test. No authentication bypass. */
 import { annotateFailure } from "./browser/annotations.mjs";
-import { setCalendarDate } from "./browser/calendar-controls.mjs";
+import {
+  setCalendarDate,
+  setCalendarLayout,
+} from "./browser/calendar-controls.mjs";
 import {
   showTimelineDate,
   timelineCard,
@@ -184,9 +187,7 @@ try {
   await expect(page.getByLabel("Predecessor", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Kalendarz", exact: true }).click();
   await setCalendarDate(page, "2026-09-07");
-  await page
-    .getByLabel("Układ kalendarza", { exact: true })
-    .selectOption("week");
+  await setCalendarLayout(page, "week");
   const locator = () =>
     page.getByRole("button", {
       name: "Zaplanowana praca: Design the field guide",
@@ -352,18 +353,14 @@ try {
   });
   if (await discardSelection.isVisible()) await discardSelection.click();
   await selectedDraft.waitFor({ state: "hidden" });
-  await page
-    .getByLabel("Układ kalendarza", { exact: true })
-    .selectOption("day");
+  await setCalendarLayout(page, "day");
   await setCalendarDate(page, "2026-09-09");
   await locator().waitFor();
   await page.screenshot({
     path: join(evidenceDir, "calendar-day.png"),
     fullPage: true,
   });
-  await page
-    .getByLabel("Układ kalendarza", { exact: true })
-    .selectOption("agenda");
+  await setCalendarLayout(page, "agenda");
   await locator().first().waitFor();
   await page.screenshot({
     path: join(evidenceDir, "calendar-agenda.png"),
@@ -372,9 +369,7 @@ try {
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "dark";
   });
-  await page
-    .getByLabel("Układ kalendarza", { exact: true })
-    .selectOption("month");
+  await setCalendarLayout(page, "month");
   await page.screenshot({
     path: join(evidenceDir, "calendar-dark.png"),
     fullPage: true,

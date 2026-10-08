@@ -1,4 +1,5 @@
 /** Calendar layers follow current data without replacing native event geometry. */
+import { setCalendarLayout } from "../calendar-controls.mjs";
 import assert from "node:assert/strict";
 import { expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
@@ -191,9 +192,7 @@ await runBrowserSuite(
       await inspectPopup("desktop-popup");
       for (const mode of ["week", "day", "agenda"]) {
         const before = await count();
-        await page
-          .getByLabel("Układ kalendarza", { exact: true })
-          .selectOption(mode);
+        await setCalendarLayout(page, mode);
         await inspect(mode, before, mode === "agenda");
       }
       const beforeProject = await count();
@@ -256,9 +255,7 @@ await runBrowserSuite(
       await expect(page.locator("dialog[open]")).toHaveCount(0);
       await page.setViewportSize({ width: 390, height: 844 });
       let before = await count();
-      await page
-        .getByLabel("Układ kalendarza", { exact: true })
-        .selectOption("month");
+      await setCalendarLayout(page, "month");
       await inspect("mobile-month-agenda", before, true);
       await page.locator(".calendar-item:visible").first().tap();
       await expect(editor).toBeVisible();
@@ -274,9 +271,7 @@ await runBrowserSuite(
       await inspectPopup("mobile-popup", true);
       for (const mode of ["week", "day", "agenda"]) {
         const before = await count();
-        await page
-          .getByLabel("Układ kalendarza", { exact: true })
-          .selectOption(mode);
+        await setCalendarLayout(page, mode);
         await inspect(`mobile-${mode}`, before, mode === "agenda");
       }
       const beforePeriod = await count();
@@ -286,9 +281,7 @@ await runBrowserSuite(
       await inspect("mobile-next-period", beforePeriod, true);
       const previous = await count();
       await page.emulateMedia({ reducedMotion: "reduce" });
-      await page
-        .getByLabel("Układ kalendarza", { exact: true })
-        .selectOption("week");
+      await setCalendarLayout(page, "week");
       await expect(surface).toHaveAttribute("aria-busy", "false");
       await settle();
       assert.equal(

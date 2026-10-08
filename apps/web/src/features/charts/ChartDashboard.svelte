@@ -11,7 +11,7 @@
   import ChartMenu from "./ChartMenu.svelte";
   import ChartPlot from "./ChartPlot.svelte";
   import ChartRange from "./ChartRange.svelte";
-  import ChartSegments from "./ChartSegments.svelte";
+  import Segments from "../../lib/ui/Segments.svelte";
   import { enabledChartPlugins } from "./plugins/chart-plugins";
   import ChartSummary from "./ChartSummary.svelte";
   import {
@@ -211,13 +211,13 @@
 
   {#if !phone}
     <div class="chart-options">
-      <ChartSegments
+      <Segments
         label="Grupuj według"
         options={buckets}
         value={bucket}
         onselect={chooseBucket}
       />
-      <ChartSegments
+      <Segments
         label="Sumy na wykresie"
         options={totals}
         value={cumulative ? "running" : "period"}
@@ -449,6 +449,11 @@
   }
   :global(.chart-dashboard .series-color-7) {
     --series-color: var(--series-8);
+  }
+  @container chart (max-width: 400px) {
+    .chart-dashboard :global(.segments) {
+      --segments-inline: var(--space-2);
+    }
   }
   @container chart (max-width: 620px) {
     .chart-dashboard :global(.heading) {

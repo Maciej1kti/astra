@@ -13,6 +13,8 @@ export const timelineMetrics = {
   compactWidth: 650,
   /** A bar at least this wide carries its title inside. */
   titleInside: 88,
+  /** A narrower bar has no room for the symbol of its kind either. */
+  iconInside: 24,
   /** Space between a bar and the edges of its days, and its least width. */
   barGap: 2,
   barMin: 6,

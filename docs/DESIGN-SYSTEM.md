@@ -15,8 +15,15 @@ additional UI framework, styling runtime or component dependency is required.
   `styles/series.css`, loaded with that view.
 - `lib/ui/` owns `Button`, `Badge`, `Icon`, `Brand`, `PageHeading`,
   `SectionHeading`, `EmptyState`, `ResourceMetadata`,
-  `DialogHeader`, `EditableTitle`, `ActionMenu`, `CommandRecovery`,
+  `DialogHeader`, `EditableTitle`, `ActionMenu`, `Segments`,
+  `PeriodToolbar`, `CommandRecovery`,
   `SessionNotice`, `DeferredHost` and `DeferredView`.
+  `Segments` is the one control for a choice among a few things that are all
+  in view (a Chart's range and grouping, the Calendar layout, the Timeline
+  scale); an option may be an icon whose label names it. `PeriodToolbar` is
+  the toolbar of a view laid out over time: the period title with its date
+  field, Today, previous and next, then the view's own controls. Calendar and
+  Timeline both use it. A view does not draw its own version of either.
   `SectionHeading` supports compact level-three headings, counts and section
   actions; `ActionMenu` can show a text label beside its status icon.
   `Button` is `type="button"` unless a form's submit control says otherwise.
@@ -227,8 +234,10 @@ initials. Columns share spare width up to `--board-column-max-width`. A card
 move marks a line between cards; a project status move, which has no order,
 outlines the whole destination column. A project column adds cards from its footer; the
 widget's header add button is hidden, and on phones the strip replaces the
-column header. Timeline has one toolbar (the month in view, Today, month arrows
-and the scale) and no selection controls; the page filter carries no month field.
+column header. Calendar and Timeline share one toolbar, `PeriodToolbar`: the
+period in view, Today, previous and next, then the layout or the scale as
+`Segments`. Timeline has no selection controls and the page filter carries no
+month field.
 A Projects card keeps one quiet actions menu in its corner for status moves and
 deletion, which remains a deliberate action in that menu.
 
@@ -829,39 +838,55 @@ rows arriving after the first scroll do not cover the first hours.
 
 Timeline is Astra's own view (`features/planning/GanttView.svelte`), not a
 widget: one horizontally scrolling surface with a fixed header and a fixed
-column of row titles, sized by `planning-metrics.ts` and `--timeline-*`
-properties on its root. See [ADR-075](ADR-075-TIMELINE-RENDERER.md).
+column of row titles. See [ADR-075](ADR-075-TIMELINE-RENDERER.md). It is built
+from the shared pool, so every appearance choice changes it with the rest:
 
+- **Toolbar.** `PeriodToolbar` with a `Segments` control for the scale, the
+  same component and controls as Calendar. The period title takes the
+  character's display face.
+- **Planned time looks as it does in Calendar.** A bar is one filled line with
+  a rule and a symbol in the colour of its kind: `--plan-bg` and `--success`
+  with the calendar symbol for a plan, `--accent` and `--accent-ink` with the
+  clock for a timed event, `--notice-bg` and `--notice-ink` with the flag for a
+  milestone's date. It is `--calendar-chip-height` high under a pointer and
+  `--space-14` under a finger, with `--calendar-rule` and `--radius-sm`, the
+  same tokens a Calendar item uses. Status has no colour here because it has
+  none in Calendar; the two views must change together. A bar has no shadow at
+  rest and the buttons inside it draw no box of their own. A title longer than
+  its bar runs on beside it, since a row holds nothing else.
+- **Sizes.** A row is the bar plus `--space-5` above and below, so Zwarte
+  tightens the rows and Przestronne opens them while the bar keeps its height.
+  Header tiers are the height of their text plus spacing. Day widths and the
+  title column are numbers in `planning-metrics.ts`, handed to the styles as
+  `--timeline-unit` and `--timeline-label`, because bars are placed by
+  arithmetic. Corners, shadows and typefaces come from the character and every
+  colour from the palette; the view declares no colour of its own.
 - **Axis.** Two header tiers: months over days, months over weeks, or years
   over months. A month's name stays in view while its days scroll. On the day
-  and week scales Saturdays and Sundays are shaded through the header and all
-  rows, drawn as one repeating background rather than an element per day. Today
-  is an accent pill on its day and a one-stroke line through the rows.
-- **Rows.** `--tap-target` high, one item per row, separated by a faint rule.
-  The title column holds a grip (visible on hover, always on touch) and the
-  title, which opens the card. The last row creates a card on the day, or the
-  range of days, chosen in it.
-- **Bars.** One element with one fill and a rule in the tone of the card's
-  status: neutral for planned, accent for active and timed events, the review
-  and done tones of `Badge`, struck through for cancelled. A bar has no border
-  and no shadow at rest; the buttons inside it draw no box of their own. A
-  title longer than its bar runs on beside it, since a row holds nothing else.
-  A milestone is a diamond with its title beside it.
+  and week scales Saturdays and Sundays are shaded with `--wash`, as in
+  Calendar, drawn as one repeating background rather than an element per day.
+  Today is an accent pill on its day and a one-stroke line through the rows.
+- **Rows.** One item per row, separated by a faint rule. The title column holds
+  a grip (visible on hover, always on touch) and the title, which opens the
+  card. The last row creates a card on the day, or the range of days, chosen
+  in it.
 - **Gestures.** A bar follows the pointer by the pixel and lifts with
   `--shadow-floating` while held. The dates it would get stand beside its two
   ends, the same days are marked on the header, and a dashed slot shows where it
   will land; released, it glides onto its days (240 ms, `--motion-spring`). The
-  ends resize from hit areas that show a grip under the pointer. A release
-  saves at once, and Escape or any cancellation glides the bar home. A touch
-  must hold for 250 ms first, so a swipe always scrolls. Keyboard steps
-  (Alt+Left/Right, Shift for a week) move the bar immediately and are saved as
-  one change when Alt is released or the keys rest.
+  ends resize; the end shows a grip under the pointer and the start has its
+  rule. A release saves at once, and Escape or any cancellation glides the bar
+  home. A touch must hold for 250 ms first, so a swipe always scrolls. Keyboard
+  steps (Alt+Left/Right, Shift for a week) move the bar immediately and are
+  saved as one change when Alt is released or the keys rest. A focused end
+  rings the whole bar and marks that end.
 - **Out of view.** A plan outside the visible days leaves a quiet chevron at
   that edge of its row; the toolbar names the month in view and changing the
   scale keeps the same days in view.
-- **Above the axis.** Cards without dates are pills under "Bez harmonogramu",
-  two rows at most (one on phones) with "Pokaż wszystkie" for the rest. The
-  section is absent when there are none.
+- **Above the axis.** Cards without dates stand under a compact
+  `SectionHeading` with their count, each a `Button` that opens the card, two
+  rows at most (one on phones) with "Pokaż wszystkie" as the heading's action.
+  The section is absent when there are none.
 - **Narrow screens.** Below `compactWidth` the title column narrows to two-line
   titles and days to `compactUnit`; the view opens on the first plan of the
   month rather than on empty days.

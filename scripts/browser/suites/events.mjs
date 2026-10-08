@@ -1,5 +1,5 @@
 /** Timed event persistence and civil clocks through the real paired application. */
-import { setCalendarDate } from "../calendar-controls.mjs";
+import { setCalendarDate, setCalendarLayout } from "../calendar-controls.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
@@ -66,7 +66,7 @@ await runBrowserSuite(
       await route({});
       await setCalendarDate(page, "2026-09-30");
 
-      await page.getByLabel("Układ kalendarza").selectOption("week");
+      await setCalendarLayout(page, "week");
       const event = page
         .locator(`[data-calendar-item="${id}:card_event"]`)
         .first();
@@ -106,7 +106,7 @@ await runBrowserSuite(
       });
       await setCalendarDate(page, "2026-10-01");
 
-      await page.getByLabel("Układ kalendarza").selectOption("day");
+      await setCalendarLayout(page, "day");
       await expect(event).toContainText("30 min");
       await expect(async () => {
         await event.scrollIntoViewIfNeeded();

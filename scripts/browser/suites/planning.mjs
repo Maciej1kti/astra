@@ -107,8 +107,8 @@ await runBrowserSuite(
         calendarEvents: document.querySelectorAll("[data-calendar-item]")
           .length,
         calendarLayout: document.querySelector(
-          '[aria-label="Układ kalendarza"]',
-        )?.value,
+          '[aria-label="Układ kalendarza"] [aria-pressed="true"]',
+        )?.textContent,
         timelineBars: document.querySelectorAll(".timeline-bar").length,
       }));
       // Playwright's WebKit screenshot preparation injects an inline "body {}"

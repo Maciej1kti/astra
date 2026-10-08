@@ -22,7 +22,7 @@
   );
 </script>
 
-<!-- The phone form of ChartSegments: one choice shown, the rest in a menu. -->
+<!-- The phone form of Segments: one choice shown, the rest in a menu. -->
 <div class="chart-menu">
   <ActionMenu
     label={`${label}: ${current}`}

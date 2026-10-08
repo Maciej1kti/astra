@@ -85,12 +85,7 @@ await runBrowserSuite(
         assert.equal(background, "rgba(0, 0, 0, 0)");
         assert.equal(shadow, "none");
       }
-      assert(
-        hovered.shadow
-          .split(/,(?![^(]*\))/)
-          .every((layer) => layer.includes("inset")),
-        `A resting bar has no drop shadow: ${hovered.shadow}`,
-      );
+      assert.equal(hovered.shadow, "none", "A resting bar has no shadow");
       await shot("timeline-hover");
 
       // The bar follows the pointer between days and shows the dates it would save.
@@ -295,6 +290,95 @@ await runBrowserSuite(
       ).toHaveAttribute("aria-pressed", "true");
       await page.getByRole("button", { name: "Dni", exact: true }).click();
       await noDialog();
+
+      // One system: the view is built from the shared toolbar, segments,
+      // heading and buttons, and a bar is drawn from the same tokens as a
+      // Calendar item. Whatever the tokens resolve to is what the bar shows.
+      await page.mouse.move(5, 5);
+      const resolved = () =>
+        page.evaluate(() => {
+          const chart = document.querySelector(".astra-gantt");
+          const probe = (declaration) => {
+            const element = document.createElement("div");
+            element.style.cssText = `position:absolute;${declaration}`;
+            chart.append(element);
+            const style = getComputedStyle(element);
+            const value = {
+              fill: style.backgroundColor,
+              height: style.height,
+              radius: style.borderTopLeftRadius,
+            };
+            element.remove();
+            return value;
+          };
+          const bar = document.querySelector(
+            ".timeline-bar[data-kind='plan']:not(:hover):not(:focus-within)",
+          );
+          const style = getComputedStyle(bar);
+          return {
+            bar: {
+              fill: style.backgroundColor,
+              rule: style.borderLeftColor,
+              height: style.height,
+              radius: style.borderTopLeftRadius,
+            },
+            tokens: {
+              fill: probe("background:var(--plan-bg)").fill,
+              rule: probe("background:var(--success)").fill,
+              height: probe("height:var(--calendar-chip-height)").height,
+              radius: probe("border-radius:var(--radius-sm)").radius,
+            },
+            row: document.querySelector(".timeline-row").getBoundingClientRect()
+              .height,
+            rowToken: parseFloat(
+              probe(
+                "height:calc(var(--calendar-chip-height) + 2 * var(--space-5))",
+              ).height,
+            ),
+            root: { ...document.documentElement.dataset },
+          };
+        });
+      // WebKit leaves nothing focused after a click, so there may be no focus.
+      await page.evaluate(() => document.activeElement?.blur?.());
+      const standard = await resolved();
+      assert.deepEqual(standard.bar, standard.tokens);
+      assert.equal(standard.row, standard.rowToken);
+      const toolbar = page.locator(".period-toolbar");
+      await expect(toolbar).toHaveCount(1);
+      await expect(toolbar.locator(".segments").getByRole("button")).toHaveText(
+        ["Dni", "Tygodnie", "Miesiące"],
+      );
+      await expect(tray.locator(".sectiontitle h3")).toHaveText(
+        "Bez harmonogramu",
+      );
+      await expect(tray.locator(".cards > .ui-button").first()).toBeVisible();
+      // Another character, palette and spacing change the bar with the rest.
+      await page.evaluate(() => {
+        localStorage.setItem("astra-character:v1", "technical");
+        localStorage.setItem("astra-light:v1", "chalk");
+        localStorage.setItem("astra-density:v1", "roomy");
+      });
+      await page.reload();
+      await expect(bar).toBeVisible();
+      const restyled = await resolved();
+      assert.equal(restyled.root.character, "technical");
+      assert.equal(restyled.root.density, "roomy");
+      assert.deepEqual(restyled.bar, restyled.tokens);
+      assert.equal(restyled.row, restyled.rowToken);
+      assert.notEqual(restyled.bar.radius, standard.bar.radius);
+      assert(restyled.row > standard.row, "Roomy spacing gives rows more room");
+      assert.equal(
+        restyled.bar.height,
+        standard.bar.height,
+        "A bar keeps its height in every spacing",
+      );
+      await shot("timeline-technical-chalk-roomy");
+      await page.evaluate(() => {
+        for (const part of ["character", "light", "density"])
+          localStorage.removeItem(`astra-${part}:v1`);
+      });
+      await page.reload();
+      await expect(bar).toBeVisible();
 
       // Touch: a swipe scrolls the days, and only a hold picks a bar up.
       if (chromium) {

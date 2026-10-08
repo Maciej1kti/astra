@@ -34,7 +34,12 @@ export const metaLayers = [
 
 /** A titled group of small items below a view, such as unscheduled cards. */
 export const groupLayers = [
-  { selector: ":scope > h3", role: "heading", delay: 60, distance: "4px" },
+  {
+    selector: ":scope > h3, :scope > .sectiontitle",
+    role: "heading",
+    delay: 60,
+    distance: "4px",
+  },
   {
     selector:
       ":scope > * > button, :scope > * > p, :scope > p, :scope > details",
@@ -58,7 +63,7 @@ export const timelineLayers = [
   },
   { selector: ".row-label", role: "detail", delay: 160, stagger: 36 },
   {
-    selector: ".timeline-bar, .timeline-milestone",
+    selector: ".timeline-bar",
     role: "content",
     delay: 240,
     stagger: 48,

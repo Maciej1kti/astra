@@ -235,7 +235,12 @@ returns the bar; cards without dates above the axis; month navigation, the
 jump to a plan out of view and scale changes that keep the same days; and, in
 Chromium, a touch swipe that scrolls and a hold that moves. It also requires
 that the buttons inside a bar draw no box of their own and that a resting bar
-has no drop shadow.
+has no shadow. A resting bar must equal what the shared tokens resolve to
+(fill, rule, height, corner) and a row the bar plus spacing, in the default
+set and again with another character, palette and spacing, and the view must
+use the shared `PeriodToolbar`, `Segments`, `SectionHeading` and `Button`.
+Calendar scenarios choose a layout through `setCalendarLayout` in
+`calendar-controls.mjs`, since the layout is a segmented control.
 
 The `ui-corrections` suite checks Timeline pointer/keyboard row ordering and
 per-project browser persistence, dated creation from the final row by a click

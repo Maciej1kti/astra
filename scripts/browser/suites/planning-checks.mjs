@@ -2,7 +2,12 @@
  * The fixture month must contain enough overlapping events to produce overflow.
  * Run after the implementation batch, alongside the existing gesture suite.
  */
-import { setCalendarDate, expectCalendarDate } from "../calendar-controls.mjs";
+import {
+  setCalendarDate,
+  expectCalendarDate,
+  expectCalendarLayout,
+  setCalendarLayout,
+} from "../calendar-controls.mjs";
 import { expect } from "@playwright/test";
 
 export async function verifyPlanningFixes(
@@ -19,7 +24,6 @@ export async function verifyPlanningFixes(
 ) {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(calendarUrl);
-  const layout = page.getByLabel("Układ kalendarza");
   const dateToggle = page.getByRole("button", {
     name: "Wybierz datę kalendarza",
     exact: true,
@@ -30,7 +34,7 @@ export async function verifyPlanningFixes(
   await expect(page.getByLabel("Przejdź do daty")).toHaveCount(0);
   await expect(dateToggle).toBeFocused();
   await setCalendarDate(page, fixtureDate);
-  await layout.selectOption("month");
+  await setCalendarLayout(page, "month");
   await expect(
     page.getByText("Ładowanie kalendarza…", { exact: true }),
   ).toHaveCount(0);
@@ -68,17 +72,17 @@ export async function verifyPlanningFixes(
   await expect(calendar.getByRole("dialog")).toHaveCount(0);
 
   await setCalendarDate(page, "2026-10-13");
-  await layout.selectOption("week");
+  await setCalendarLayout(page, "week");
   const sharedUrl = page.url();
   await page.reload();
   await expectCalendarDate(page, "2026-10-13");
-  await expect(layout).toHaveValue("week");
+  await expectCalendarLayout(page, "week");
   await expect(page).toHaveURL(sharedUrl);
   await page.getByRole("button", { name: "Następny okres kalendarza" }).click();
   await expectCalendarDate(page, "2026-10-20");
   await page.goBack();
   await expectCalendarDate(page, "2026-10-13");
-  await expect(layout).toHaveValue("week");
+  await expectCalendarLayout(page, "week");
   await page.goForward();
   await expectCalendarDate(page, "2026-10-20");
   await page.getByRole("button", { name: "Dzisiaj", exact: true }).click();
@@ -91,10 +95,10 @@ export async function verifyPlanningFixes(
   await onCheckpoint("desktop-calendar-workspace-today", page);
 
   await setCalendarDate(page, fixtureDate);
-  await layout.selectOption("month");
+  await setCalendarLayout(page, "month");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("button", { name: "Agenda", exact: true }),
+    page.getByRole("button", { name: "Agenda miesiąca", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(calendar.locator(".ec-list.ec-month-view")).toBeVisible();
   await expect
@@ -163,8 +167,10 @@ export async function verifyPlanningFixes(
     await entry.click({ trial: true });
     await popup.getByRole("button", { name: /zamknij/i }).click();
   }
-  await page.getByRole("button", { name: "Agenda", exact: true }).click();
-  await layout.selectOption("week");
+  await page
+    .getByRole("button", { name: "Agenda miesiąca", exact: true })
+    .click();
+  await setCalendarLayout(page, "week");
   await expect
     .poll(() =>
       calendar
@@ -184,7 +190,7 @@ export async function verifyPlanningFixes(
   await expect(
     calendar.locator(".ec-header .ec-col-head").last(),
   ).toBeInViewport({ ratio: 0.99 });
-  await layout.selectOption("month");
+  await setCalendarLayout(page, "month");
 
   if (timelineUrl && timelineCardId && timelineCardTitle) {
     await page.goto(timelineUrl);

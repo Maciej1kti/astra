@@ -188,7 +188,7 @@
     .add-choice,
     .action-menu > button,
     .topbar button,
-    .calendar-toolbar button,
+    .period-toolbar button,
     .schedule-calendar-dialog button,
     .board-column-nav button,
     .app > aside nav button
@@ -208,7 +208,7 @@
       .add-choice,
       .action-menu > button,
       .topbar button,
-      .calendar-toolbar button,
+      .period-toolbar button,
       .schedule-calendar-dialog button,
       .board-column-nav button,
       .app > aside nav button

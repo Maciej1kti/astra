@@ -3,6 +3,8 @@ import { annotateFailure } from "./browser/annotations.mjs";
 import {
   setCalendarDate,
   expectCalendarDate,
+  expectCalendarLayout,
+  setCalendarLayout,
 } from "./browser/calendar-controls.mjs";
 import {
   dragTimelineBar,
@@ -1240,18 +1242,14 @@ try {
     })
     .waitFor();
   await page.getByRole("button", { name: "Kalendarz", exact: true }).click();
-  await page
-    .getByLabel("Układ kalendarza", { exact: true })
-    .selectOption("week");
+  await setCalendarLayout(page, "week");
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(7);
   await expectCalendarDate(
     page,
     (await page.locator(".topbar .date").getAttribute("datetime")).trim(),
   );
   await setCalendarDate(page, "2026-09-08");
-  await page
-    .getByLabel("Układ kalendarza", { exact: true })
-    .selectOption("day");
+  await setCalendarLayout(page, "day");
   await expect(page.locator(".ec-body .ec-day")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Następny okres kalendarza", exact: true })
@@ -1261,9 +1259,7 @@ try {
     .getByRole("button", { name: "Poprzedni okres kalendarza", exact: true })
     .focus();
   await page.keyboard.press("Alt+2");
-  await expect(
-    page.getByLabel("Układ kalendarza", { exact: true }),
-  ).toHaveValue("week");
+  await expectCalendarLayout(page, "week");
   await page.getByRole("button", { name: "Dodaj kartę", exact: true }).click();
   await expect(page.getByLabel("Początek", { exact: true })).toHaveValue(
     "2026-09-09",
@@ -1298,9 +1294,7 @@ try {
   });
   await page.getByRole("button", { name: "Kalendarz", exact: true }).click();
   await setCalendarDate(page, "2026-09-09");
-  await page
-    .getByLabel("Układ kalendarza", { exact: true })
-    .selectOption("week");
+  await setCalendarLayout(page, "week");
   const calendarCard = page.getByRole("button", {
     name: "Zaplanowana praca: Scheduled follow-up",
     exact: true,
@@ -1320,9 +1314,7 @@ try {
     path: join(evidenceDir, "calendar-week.png"),
     fullPage: true,
   });
-  await page
-    .getByLabel("Układ kalendarza", { exact: true })
-    .selectOption("month");
+  await setCalendarLayout(page, "month");
   await page.getByRole("button", { name: "Lista", exact: true }).click();
   await page.getByLabel("Szukaj w treści", { exact: true }).fill("untrusted");
   await page.getByText("Competing timeline edit", { exact: true }).waitFor();

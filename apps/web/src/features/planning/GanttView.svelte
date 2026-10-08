@@ -4,7 +4,9 @@
   import { revealLayers } from "../../lib/ui/motion-layers";
   import { groupLayers, timelineLayers } from "./calendar-motion";
   import { errorMessage } from "../../lib/api/messages.ts";
+  import Button from "../../lib/ui/Button.svelte";
   import Icon from "../../lib/ui/Icon.svelte";
+  import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import {
     countedDatedItems,
     formatCivilRange,
@@ -581,11 +583,11 @@
   {#if orderNotice}<p role="status">{orderNotice}</p>{/if}
   {#if error}<p>
       <span role="alert">{error}</span>
-      <button
+      <Button
         onclick={() => {
           history = [null];
           void load(null);
-        }}>Wczytaj oś czasu ponownie</button
+        }}>Wczytaj oś czasu ponownie</Button
       >
     </p>{/if}
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
@@ -601,21 +603,28 @@
         layers: groupLayers,
       }}
     >
-      <h3>
-        Bez harmonogramu <span class="count">{unscheduled.length}</span>
-      </h3>
+      <SectionHeading
+        title="Bez harmonogramu"
+        level={3}
+        count={unscheduled.length}
+        countLabel={`Kart bez harmonogramu: ${unscheduled.length}`}
+      >
+        {#snippet actions()}
+          {#if trayOverflows || trayOpen}<Button
+              variant="quiet"
+              aria-expanded={trayOpen}
+              onclick={() => (trayOpen = !trayOpen)}
+              >{trayOpen ? "Pokaż mniej" : "Pokaż wszystkie"}</Button
+            >{/if}
+        {/snippet}
+      </SectionHeading>
       <div class="cards" class:open={trayOpen} bind:this={tray}>
-        {#each unscheduled as row (row.id)}<button
+        {#each unscheduled as row (row.id)}<Button
+            class="waiting"
             title="Otwórz kartę i ustaw daty"
-            onclick={() => open(row)}>{row.title}</button
+            onclick={() => open(row)}><span>{row.title}</span></Button
           >{/each}
       </div>
-      {#if trayOverflows || trayOpen}<button
-          class="quiet more"
-          aria-expanded={trayOpen}
-          onclick={() => (trayOpen = !trayOpen)}
-          >{trayOpen ? "Pokaż mniej" : "Pokaż wszystkie"}</button
-        >{/if}
     </section>
   {/if}
   <TimelineToolbar
@@ -780,13 +789,14 @@
               />
               <div class="track">
                 {#if to < leftDay}
-                  <button
+                  <Button
+                    variant="quiet"
                     class="jump earlier"
-                    tabindex="-1"
+                    tabindex={-1}
                     aria-label={`Pokaż na osi: ${item.row.title}`}
                     title={`${item.row.title} · ${formatCivilRange(shown.start, shown.end)}`}
                     onclick={() => void showDate(shown.start)}
-                    ><Icon name="chevronLeft" small /></button
+                    ><Icon name="chevronLeft" small /></Button
                   >
                 {/if}
                 {#if moving && !moving.keys && changedSpan}
@@ -820,13 +830,14 @@
                   />
                 {/if}
                 {#if from > rightDay}
-                  <button
+                  <Button
+                    variant="quiet"
                     class="jump later"
-                    tabindex="-1"
+                    tabindex={-1}
                     aria-label={`Pokaż na osi: ${item.row.title}`}
                     title={`${item.row.title} · ${formatCivilRange(shown.start, shown.end)}`}
                     onclick={() => void showDate(shown.start)}
-                    ><Icon name="chevronRight" small /></button
+                    ><Icon name="chevronRight" small /></Button
                   >
                 {/if}
               </div>
@@ -834,14 +845,14 @@
           {/each}
           <div class="timeline-row create">
             <div class="row-label create-label">
-              <button
-                class="quiet"
+              <Button
+                variant="quiet"
                 title="Nowa karta z datą: dziś, gdy jest widoczne, albo pierwszy widoczny dzień"
                 onclick={() => {
                   // Not disabled while a save passes, so it does not flicker.
                   const day = keyboardDay();
                   if (editable()) oncreate({ start: day, end: day });
-                }}><Icon name="plus" small /><span>Nowa karta</span></button
+                }}><Icon name="plus" small /><span>Nowa karta</span></Button
               >
             </div>
             <div class="track">
@@ -892,20 +903,20 @@
   {#if data?.page.next_cursor || history.length > 1}<nav
       aria-label="Strony osi czasu"
     >
-      <button
+      <Button
         disabled={loading || history.length === 1}
         onclick={() => {
           history = history.slice(0, -1);
           void load(history.at(-1) ?? null);
-        }}>Poprzednia strona</button
+        }}>Poprzednia strona</Button
       ><span>Strona {history.length} · sumy projektu obejmują inne strony</span
-      ><button
+      ><Button
         disabled={loading || !data?.page.next_cursor}
         onclick={() => {
           const cursor = data!.page.next_cursor;
           history = [...history, cursor];
           void load(cursor);
-        }}>Następna strona elementów z datą</button
+        }}>Następna strona elementów z datą</Button
       >
     </nav>{/if}
 {/if}
@@ -933,29 +944,12 @@
   /* Cards waiting for dates stand above the axis they will be placed on. */
   .unscheduled {
     --tray-rows: 2;
+    /* One card of the tray: compact under a pointer, a full target under a finger. */
     --tray-chip: var(--space-12);
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
-    gap: var(--space-4) var(--space-6);
     margin-bottom: var(--space-9);
   }
-  .unscheduled h3 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    min-height: var(--tray-chip);
-    margin: 0;
-    color: var(--muted);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    white-space: nowrap;
-  }
-  .count {
-    padding: 0 var(--space-3);
-    border-radius: var(--radius-pill);
-    background: var(--soft);
-    font-variant-numeric: tabular-nums;
+  .unscheduled :global(.sectiontitle) {
+    margin-top: 0;
   }
   .cards {
     display: flex;
@@ -971,43 +965,41 @@
   .cards.open {
     max-height: none;
   }
-  .cards button {
+  .cards :global(.waiting) {
     max-width: 100%;
     min-height: var(--tray-chip);
-    padding: 0 var(--space-6);
-    border-radius: var(--radius-pill);
+    padding-block: 0;
     font-size: var(--text-sm);
+    font-weight: var(--weight-normal);
+  }
+  .cards :global(.waiting span) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .more {
-    min-height: var(--tray-chip);
-    padding: 0 var(--space-4);
-    color: var(--muted);
-    font-size: var(--text-sm);
-    white-space: nowrap;
-  }
 
   .astra-gantt {
-    --timeline-row: var(--tap-target);
-    --timeline-bar-inset: var(--space-4);
+    /* A bar is as high as a Calendar item; a row gives it room on both sides. */
+    --timeline-bar: var(--calendar-chip-height);
+    --timeline-bar-inset: var(--space-5);
+    --timeline-row: calc(var(--timeline-bar) + 2 * var(--timeline-bar-inset));
     --timeline-edge: var(--space-6);
     --timeline-edge-coarse: var(--space-9);
     --timeline-edge-share: 34%;
     --timeline-grip-held: 0.6;
-    --timeline-diamond: var(--space-6);
-    --timeline-diamond-hit: var(--space-11);
-    --timeline-diamond-hover: 1.18;
     --timeline-beside: var(--field-width);
-    --timeline-head-top: var(--space-11);
-    --timeline-head-bottom: var(--space-14);
+    /* Header tiers hold text of a fixed size; only the room around it follows
+       the spacing. */
+    --timeline-head-top: calc(var(--text-sm) + var(--space-8));
+    --timeline-head-bottom: calc(
+      var(--text-xs) + var(--text-sm) + var(--space-8)
+    );
     --timeline-height: clamp(
       calc(var(--timeline-row) * 6),
-      calc(100dvh - var(--space-20) * 6),
+      calc(100dvh - var(--space-20) * 7),
       calc(var(--timeline-row) * 28)
     );
-    --timeline-weekend: color-mix(in srgb, var(--ink) 3.5%, var(--paper));
+    --timeline-weekend: var(--wash);
     --timeline-rule: color-mix(in srgb, var(--line) 55%, transparent);
     --timeline-today: var(--accent-ink);
     --timeline-layer-label: calc(var(--layer-raised) + 1);
@@ -1077,13 +1069,15 @@
     position: absolute;
     top: 0;
     bottom: 0;
+    display: flex;
+    align-items: center;
     border-left: var(--stroke) solid var(--line);
   }
   .segment span {
     position: sticky;
     left: calc(var(--timeline-label) + var(--space-6));
-    display: inline-block;
-    padding: var(--space-4) var(--space-6) 0;
+    padding-inline: var(--space-6);
+    line-height: var(--leading-tight);
     font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
     white-space: nowrap;
@@ -1254,27 +1248,22 @@
     pointer-events: none;
   }
   /* A plan outside the visible days leaves a way to reach it. */
-  .jump {
+  .track :global(.jump) {
     position: sticky;
-    display: grid;
-    place-items: center;
     width: var(--space-10);
     min-height: 0;
     height: var(--space-10);
     padding: 0;
-    border-color: transparent;
     border-radius: var(--radius-pill);
-    background: transparent;
     color: var(--line-strong);
   }
-  .jump:hover {
-    background: var(--hover);
+  .track :global(.jump:hover) {
     color: var(--ink);
   }
-  .jump.earlier {
+  .track :global(.jump.earlier) {
     left: calc(var(--timeline-label) + var(--space-3));
   }
-  .jump.later {
+  .track :global(.jump.later) {
     right: var(--space-3);
     margin-left: auto;
   }
@@ -1282,9 +1271,8 @@
   .timeline-row.create {
     border-bottom: 0;
   }
-  .create-label button {
-    display: flex;
-    align-items: center;
+  .create-label :global(button) {
+    justify-content: flex-start;
     gap: var(--space-3);
     width: 100%;
     min-height: var(--timeline-row);
@@ -1292,9 +1280,9 @@
     border-radius: 0;
     color: var(--muted);
     font-size: var(--text-sm);
-    text-align: left;
+    font-weight: var(--weight-normal);
   }
-  .create-label button:hover {
+  .create-label :global(button:hover) {
     color: var(--ink);
   }
   .create-track {
@@ -1336,8 +1324,16 @@
   .compact .corner {
     padding-inline: var(--space-5);
   }
-  .compact .create-label button {
+  .compact .create-label :global(button) {
     padding-inline: var(--space-5);
+  }
+  @media (pointer: coarse) {
+    .astra-gantt {
+      --timeline-bar: var(--space-14);
+    }
+    .unscheduled {
+      --tray-chip: var(--tap-target);
+    }
   }
   @media (max-width: 700px) {
     .astra-gantt {
@@ -1349,13 +1345,8 @@
     }
     .unscheduled {
       --tray-rows: 1;
-      grid-template-columns: minmax(0, 1fr) auto;
     }
-    .unscheduled .cards {
-      grid-column: 1 / -1;
-      grid-row: 2;
-    }
-    .cards button {
+    .cards :global(.waiting) {
       font-size: var(--text-base);
     }
   }

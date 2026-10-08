@@ -3,7 +3,7 @@
   import Button from "../../lib/ui/Button.svelte";
   import { calendarShift } from "../../lib/ui/calendar-grid";
   import ChartMenu from "./ChartMenu.svelte";
-  import ChartSegments from "./ChartSegments.svelte";
+  import Segments from "../../lib/ui/Segments.svelte";
   import { chartRangeDays } from "./chart-model";
 
   let {
@@ -82,7 +82,7 @@
     </div>
   {:else}
     <div class="range-presets">
-      <ChartSegments
+      <Segments
         label="Zakres dat"
         options={presets}
         value={preset}
@@ -97,7 +97,7 @@
             custom = !custom;
           }}>Własny</button
         >
-      </ChartSegments>
+      </Segments>
     </div>
   {/if}
   {#if custom}

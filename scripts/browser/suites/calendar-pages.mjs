@@ -134,7 +134,9 @@ await runBrowserSuite(async ({ config, cli, newContext, evidence }) => {
     ).toHaveCount(0);
 
     const agendaRead = responseFor(200);
-    await page.getByRole("button", { name: "Agenda", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Agenda miesiąca", exact: true })
+      .click();
     assert.deepEqual((await agendaPage(await agendaRead)).items, first.items);
     assert.deepEqual(errors, []);
   } finally {

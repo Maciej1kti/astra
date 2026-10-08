@@ -6,6 +6,7 @@
     formatCivilRange,
   } from "../../lib/ui/locale";
   import { resourceLabel } from "../../lib/resources/resource-presentation";
+  import Icon from "../../lib/ui/Icon.svelte";
   import { timelineMetrics as metrics } from "../../lib/ui/planning-metrics";
   import { dateGesture, type DateOperation } from "./date-gesture";
   import type { TimelineItem } from "./timeline-items";
@@ -46,6 +47,14 @@
   const range = $derived(formatCivilRange(item.start, item.end));
   // A short bar cannot hold its title, so the title stands beside it.
   const beside = $derived(width < metrics.titleInside);
+  // The same symbols as Calendar: a clock, a flag and a calendar page.
+  const icon = $derived(
+    item.kind === "event"
+      ? "planned"
+      : item.kind === "milestone"
+        ? "flag"
+        : "calendar",
+  );
   const title = $derived(
     item.kind === "event"
       ? `${row.event!.start.slice(11)} ${row.title}`
@@ -56,9 +65,11 @@
       row.title,
       item.kind === "event"
         ? "Wydarzenie"
-        : row.status
-          ? resourceLabel(row.status)
-          : "",
+        : item.kind === "milestone"
+          ? "Termin"
+          : row.status
+            ? resourceLabel(row.status)
+            : "",
       range,
     ]
       .filter(Boolean)
@@ -83,99 +94,93 @@
   }
 </script>
 
-{#if item.kind === "milestone"}
+<div
+  class="timeline-bar"
+  class:beside
+  class:slim={width < metrics.iconInside}
+  data-kind={item.kind}
+  data-card-id={row.id}
+  data-movable={plan ? "" : undefined}
+  data-previewing={preview ? "" : undefined}
+  style:left={`${left}px`}
+  style:width={`${width}px`}
+  use:dateGesture={{
+    unit: () => unit,
+    span: () => days,
+    disabled: () => !plan || !movable(),
+    active: ongesture,
+    preview: onpreview,
+    commit: oncommit,
+  }}
+>
   <button
-    class="timeline-milestone"
-    style:left={`${left + width / 2}px`}
-    data-card-id={row.id}
-    aria-label={`Termin kamienia milowego: ${row.title}`}
-    title={`${row.title} · ${range}`}
-    onclick={onopen}
-  >
-    <span class="diamond" aria-hidden="true"></span>
-    <span class="beside-title">{row.title}</span>
-  </button>
-{:else}
-  <div
-    class="timeline-bar"
-    class:beside
-    data-kind={item.kind}
-    data-status={row.status}
-    data-card-id={row.id}
-    data-movable={plan ? "" : undefined}
-    data-previewing={preview ? "" : undefined}
-    style:left={`${left}px`}
-    style:width={`${width}px`}
-    use:dateGesture={{
-      unit: () => unit,
-      span: () => days,
-      disabled: () => !plan || !movable(),
-      active: ongesture,
-      preview: onpreview,
-      commit: oncommit,
-    }}
-  >
-    <button
-      class="bar-body"
-      aria-label={item.kind === "event"
-        ? `Wydarzenie: ${row.title}`
+    class="bar-body"
+    aria-label={item.kind === "event"
+      ? `Wydarzenie: ${row.title}`
+      : item.kind === "milestone"
+        ? `Termin kamienia milowego: ${row.title}`
         : `Karta: ${row.title}, ${range}`}
-      aria-keyshortcuts={plan ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
-      title={plan ? `${hint} · przeciągnij, aby przenieść · Alt+←/→` : hint}
-      onclick={onopen}
-      onkeydown={(event) => keyboard(event, "move")}
+    aria-keyshortcuts={plan ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
+    title={plan ? `${hint} · przeciągnij, aby przenieść · Alt+←/→` : hint}
+    onclick={onopen}
+    onkeydown={(event) => keyboard(event, "move")}
+    onkeyup={keyup}
+    onblur={onnudgeend}
+  >
+    <span class="bar-copy"
+      ><span class="item-kind" aria-hidden="true"
+        ><Icon name={icon} small /></span
+      >{#if !beside}<span class="inside-title">{title}</span>{/if}</span
+    >
+    {#if beside}<span class="beside-title">{title}</span>{/if}
+  </button>
+  {#if plan}
+    <button
+      class="edge start"
+      data-edge="start"
+      aria-label={`Zmień początek: ${row.title}`}
+      aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+      title="Przeciągnij, aby zmienić początek · Alt+←/→"
+      onkeydown={(event) => keyboard(event, "start")}
       onkeyup={keyup}
       onblur={onnudgeend}
+    ></button>
+    <button
+      class="edge end"
+      data-edge="end"
+      aria-label={`Zmień koniec: ${row.title}`}
+      aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+      title="Przeciągnij, aby zmienić koniec · Alt+←/→"
+      onkeydown={(event) => keyboard(event, "end")}
+      onkeyup={keyup}
+      onblur={onnudgeend}
+    ></button>
+  {/if}
+  {#if preview}
+    <span class="flank before" aria-hidden="true"
+      >{formatCivilDate(preview.start)}</span
     >
-      <span class={beside ? "beside-title" : "inside-title"}>{title}</span>
-    </button>
-    {#if plan}
-      <button
-        class="edge start"
-        data-edge="start"
-        aria-label={`Zmień początek: ${row.title}`}
-        aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
-        title="Przeciągnij, aby zmienić początek · Alt+←/→"
-        onkeydown={(event) => keyboard(event, "start")}
-        onkeyup={keyup}
-        onblur={onnudgeend}
-      ></button>
-      <button
-        class="edge end"
-        data-edge="end"
-        aria-label={`Zmień koniec: ${row.title}`}
-        aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
-        title="Przeciągnij, aby zmienić koniec · Alt+←/→"
-        onkeydown={(event) => keyboard(event, "end")}
-        onkeyup={keyup}
-        onblur={onnudgeend}
-      ></button>
-    {/if}
-    {#if preview}
-      <span class="flank before" aria-hidden="true"
-        >{formatCivilDate(preview.start)}</span
-      >
-      <span class="flank after" aria-hidden="true"
-        >{formatCivilDate(preview.end)} · {countedDays(
-          dayDistance(preview.start, preview.end) + 1,
-        )}</span
-      >
-    {/if}
-  </div>
-{/if}
+    <span class="flank after" aria-hidden="true"
+      >{formatCivilDate(preview.end)} · {countedDays(
+        dayDistance(preview.start, preview.end) + 1,
+      )}</span
+    >
+  {/if}
+</div>
 
 <style>
+  /* Planned time is drawn as in Calendar: one filled line with a rule and a
+     symbol in the colour of its kind, as high as a Calendar item. */
   .timeline-bar {
-    --tone: color-mix(in srgb, var(--ink) 9%, var(--paper));
-    --tone-hover: color-mix(in srgb, var(--ink) 13%, var(--paper));
-    --rule: var(--line-strong);
+    --fill: var(--plan-bg);
+    --rule: var(--success);
     position: absolute;
     top: var(--timeline-bar-inset);
-    bottom: var(--timeline-bar-inset);
+    height: var(--timeline-bar);
     display: flex;
+    border-left: var(--calendar-rule) solid var(--rule);
     border-radius: var(--radius-sm);
-    background: var(--tone);
-    box-shadow: inset var(--calendar-rule) 0 0 var(--rule);
+    background: var(--fill);
     color: var(--ink);
     user-select: none;
     -webkit-user-select: none;
@@ -187,44 +192,26 @@
       background var(--motion-quick) var(--motion-ease),
       box-shadow var(--motion-quick) var(--motion-ease);
   }
-  .timeline-bar[data-status="active"],
   .timeline-bar[data-kind="event"] {
-    --tone: var(--accent);
-    --tone-hover: color-mix(in srgb, var(--accent-ink) 10%, var(--accent));
+    --fill: var(--accent);
     --rule: var(--accent-ink);
   }
-  .timeline-bar[data-status="review"] {
-    --tone: var(--review-bg);
-    --tone-hover: color-mix(in srgb, var(--ink) 6%, var(--review-bg));
-    --rule: color-mix(in srgb, var(--ink) 45%, var(--review-bg));
-  }
-  .timeline-bar[data-status="done"] {
-    --tone: var(--plan-bg);
-    --tone-hover: color-mix(in srgb, var(--success) 10%, var(--plan-bg));
-    --rule: var(--success);
-  }
-  .timeline-bar[data-status="cancelled"] {
-    --tone: color-mix(in srgb, var(--ink) 5%, var(--paper));
-    --rule: var(--line);
-    color: var(--muted);
-  }
-  .timeline-bar[data-status="cancelled"] .bar-body {
-    text-decoration: line-through;
+  .timeline-bar[data-kind="milestone"] {
+    --fill: var(--notice-bg);
+    --rule: var(--notice-ink);
   }
   .timeline-bar[data-movable] {
     cursor: grab;
     touch-action: pan-x pan-y;
   }
   .timeline-bar:hover,
-  .timeline-bar:focus-within {
-    background: var(--tone-hover);
+  .timeline-bar:focus-within,
+  .timeline-bar:global([data-dragging]) {
+    background: color-mix(in srgb, var(--rule) 12%, var(--fill));
   }
   .timeline-bar:global([data-dragging]) {
     z-index: var(--layer-raised);
-    background: var(--tone-hover);
-    box-shadow:
-      inset var(--calendar-rule) 0 0 var(--rule),
-      var(--shadow-floating);
+    box-shadow: var(--shadow-floating);
     cursor: grabbing;
     transition: none;
   }
@@ -251,47 +238,61 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    padding-inline: calc(var(--calendar-rule) + var(--space-5)) var(--space-4);
+    padding: 0 var(--space-3);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
-    line-height: var(--leading-tight);
+    line-height: var(--leading-body);
     text-align: left;
     white-space: nowrap;
   }
   .timeline-bar:not([data-movable]) .bar-body {
     cursor: pointer;
   }
-  .inside-title {
+  .bar-copy {
     /* A long bar keeps its title in view while its start is scrolled away. */
     position: sticky;
-    left: calc(var(--timeline-label) + var(--space-5));
+    left: calc(var(--timeline-label) + var(--space-4));
+    display: flex;
+    align-items: center;
     flex-shrink: 0;
     /* A row holds one bar, so a title longer than its bar runs on past it. */
     max-width: max(100%, var(--timeline-beside));
+  }
+  .item-kind {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-right: var(--space-2);
+    color: var(--rule);
+  }
+  .item-kind :global(.ui-icon) {
+    width: var(--space-7);
+    height: var(--space-7);
+  }
+  /* Too narrow even for its symbol, as a single day is on the month scale. */
+  .slim .bar-body {
+    padding: 0;
+  }
+  .slim .item-kind {
+    display: none;
+  }
+  .inside-title,
+  .beside-title {
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .beside-title {
     position: absolute;
-    left: calc(100% + var(--space-4));
+    left: calc(100% + var(--space-3));
     top: 50%;
     translate: 0 -50%;
     max-width: var(--timeline-beside);
-    overflow: hidden;
-    text-overflow: ellipsis;
     color: var(--ink);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    white-space: nowrap;
-  }
-  .timeline-bar[data-status="cancelled"] .beside-title {
-    color: var(--muted);
   }
   .timeline-bar[data-previewing] .beside-title {
     visibility: hidden;
   }
   /* The dates a gesture would save stand where a long title would run on. */
-  .timeline-bar[data-previewing] .inside-title {
+  .timeline-bar[data-previewing] .bar-copy {
     flex-shrink: 1;
     min-width: 0;
     max-width: 100%;
@@ -305,42 +306,51 @@
     cursor: ew-resize;
   }
   .edge.start {
-    left: 0;
+    left: calc(var(--calendar-rule) * -1);
   }
   .edge.end {
     right: 0;
   }
-  /* A grip appears where the pointer can take hold of an end. */
+  /* A grip appears where the pointer can take hold of an end. The start has
+     its rule for that. */
   .edge::after {
     content: "";
     position: absolute;
     top: 25%;
     bottom: 25%;
-    left: 50%;
+    right: var(--space-2);
     width: var(--calendar-rule);
-    margin-left: calc(var(--calendar-rule) / -2);
     border-radius: var(--radius-pill);
     background: var(--ink);
     opacity: 0;
     transition: opacity var(--motion-quick) var(--motion-ease);
   }
   .edge.start::after {
-    left: calc(var(--calendar-rule) + var(--space-2));
-    margin-left: 0;
+    right: auto;
+    left: 0;
   }
-  .edge.end::after {
-    left: auto;
-    right: var(--space-2);
-  }
-  .edge:hover::after,
-  .edge:focus-visible::after,
-  .timeline-bar:global([data-dragging="start"]) .edge.start::after,
+  .edge.end:hover::after,
   .timeline-bar:global([data-dragging="end"]) .edge.end::after {
     opacity: var(--timeline-grip-held);
   }
-  button:focus-visible {
+  .bar-body:focus-visible {
     outline: var(--focus-width) solid var(--accent-ink);
     outline-offset: var(--focus-width);
+  }
+  /* A focused end rings the whole bar and marks which end the keys will move;
+     a ring around the end alone would cross the title. */
+  .edge:focus-visible {
+    outline: none;
+  }
+  .timeline-bar:has(.edge:focus-visible) {
+    outline: var(--focus-width) solid var(--accent-ink);
+    outline-offset: var(--focus-width);
+  }
+  .edge:focus-visible::after {
+    top: 0;
+    bottom: 0;
+    background: var(--accent-ink);
+    opacity: 1;
   }
 
   .flank {
@@ -359,34 +369,10 @@
     pointer-events: none;
   }
   .flank.before {
-    right: calc(100% + var(--space-3));
+    right: calc(100% + var(--calendar-rule) + var(--space-3));
   }
   .flank.after {
     left: calc(100% + var(--space-3));
-  }
-
-  .timeline-milestone {
-    position: absolute;
-    top: var(--timeline-bar-inset);
-    bottom: var(--timeline-bar-inset);
-    width: var(--timeline-diamond-hit);
-    margin-left: calc(var(--timeline-diamond-hit) / -2);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    scroll-margin-inline: calc(var(--timeline-label) + var(--space-8))
-      var(--space-8);
-  }
-  .diamond {
-    width: var(--timeline-diamond);
-    height: var(--timeline-diamond);
-    border-radius: var(--space-1);
-    background: var(--notice-ink);
-    rotate: 45deg;
-    transition: scale var(--motion-quick) var(--motion-spring);
-  }
-  .timeline-milestone:hover .diamond {
-    scale: var(--timeline-diamond-hover);
   }
 
   @media (pointer: coarse) {

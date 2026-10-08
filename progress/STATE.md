@@ -12,8 +12,13 @@ direction: Astra draws it itself instead of the SVAR Gantt widget, the
 selection bar is gone, cards without dates stand above the axis, weekends are
 shaded, a bar opens its card, and a move or stretch is saved on release with no
 dialog unless the save needs a decision
-([ADR-075](../docs/ADR-075-TIMELINE-RENDERER.md)). Verified in Chromium and
+([ADR-075](../docs/ADR-075-TIMELINE-RENDERER.md)). It was then
+[moved onto the shared system](2026-10-08-timeline-shared-system.md): Calendar
+and Timeline use one toolbar, Chart, Calendar and Timeline one segmented
+control, and a bar is drawn from the tokens of a Calendar item, so palettes,
+characters and spacings change it with the rest. Verified in Chromium and
 WebKit; not on a physical phone, and its look awaits the owner's judgement.
+The other views have not been audited for elements outside the shared pool.
 
 Appearance now offers [sets](2026-10-07-appearance-sets.md): four light
 palettes, four dark palettes and four characters (corners, shadows and heading
