@@ -391,3 +391,16 @@ a project with a list of cards, the agent must do it the same way as the
 interface, with the folder, the `.project` data and Git, and the same must be
 available from the Astra CLI. See
 [ADR-074](../docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).
+
+## iOS app and widgets — owner direction, 2026-10-09
+
+The owner has an Apple developer account and asked for Astra as an iOS app on
+TestFlight, with widgets added to it. Asked which widgets the first version
+should have, the owner chose Focus, counters with a +1 button, today's calendar
+and an agent with dictation. Asked how dictation should end, the owner chose
+that the text always waits for a Send button.
+
+The owner also directed that the work on the build machine be done without
+them, with windows opened only for passwords and similar entries. Signing,
+the App Store Connect record, the upload and a host certificate that iOS
+accepts are not done yet. See [ADR-076](../docs/ADR-076-IOS-APP-AND-WIDGETS.md).

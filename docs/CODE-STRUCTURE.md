@@ -766,3 +766,26 @@ entry points and selection commands are in the
 
 See [current evidence](../progress/STATE.md) and the
 [contribution guide](../CONTRIBUTING.md) for verification and change conventions.
+
+## iOS app
+
+`apps/ios` is a client of the same HTTP API ([ADR-076](ADR-076-IOS-APP-AND-WIDGETS.md)).
+It owns no domain rules: the server validates and decides every command.
+
+- `AstraKit/` is a Swift package without UI. It owns the host address, the
+  requests a browser would send, the response models the app reads, widget rows,
+  links, the agent client and the counter step with its stored command and
+  recovery. Its tests run on macOS with `scripts/ios/test-kit.sh`; a change to a
+  rule there starts with a test.
+- `Shared/` is compiled into both targets: the app group, the session's
+  keychain item, the stored counter commands and the colour assets.
+- `App/` is the shell: host setup, the web view with the session copy, links
+  and the dictation sheet.
+- `Widgets/` holds the four widgets, their timeline providers and the counter's
+  intent.
+- `UITests/` drives the app, and SpringBoard for the widgets, in a simulator
+  against the scratch host from `scripts/ios/`.
+
+`project.yml` is the source of the Xcode project; the project file, the
+`Info.plist` files and the entitlements are generated and ignored. See the
+[build guide](../scripts/ios/README.md).

@@ -1,11 +1,23 @@
 # Current implementation state
 
-Updated 2026-10-08. The application is implemented and under verification;
+Updated 2026-10-09. The application is implemented and under verification;
 full release acceptance remains open. [Scope decisions](SCOPE.md) supersede the
 historical handoff. Use the [release checklist](../delivery/RELEASE-CHECKLIST.md)
 for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ownership.
 
 ## Current work
+
+An [iOS app with widgets](2026-10-09-ios-app-widgets.md) was started on the
+owner's direction: a native shell around the host's own web interface, four
+widgets (Focus, Dziś, Licznik with a step button, Agent) and dictation to the
+agent that sends only on a tap ([ADR-076](../docs/ADR-076-IOS-APP-AND-WIDGETS.md)).
+No server change was needed. It builds for a device and passed its checks in a
+simulator against a real daemon, including pairing and a counter step from the
+home screen. It is not signed or uploaded, has not run on a phone, and cannot
+reach the owner's host until that host presents a certificate iOS accepts. In
+the windowless simulator a screenshot of the counter widget showed the total
+from before the last tap although the widget's value and the server agreed;
+the cause is not established.
 
 [Oś czasu was rebuilt](2026-10-08-timeline-redesign.md) on the owner's
 direction: Astra draws it itself instead of the SVAR Gantt widget, the
