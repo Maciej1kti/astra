@@ -1,0 +1,18 @@
+{
+  "body": "The iOS app is on TestFlight for internal testing: build 202610091344 was signed, uploaded with no errors and processed by Apple. An internal group with access to all builds exists, with the account holder as tester.\n\nWhat changed to get there: Xcode's automatic signing refused the App Store Connect key that Apple's public API accepts, for two keys, and the reason is not known. Signing now uses only the public API, with a certificate and profiles created by a script, and nothing on the desktop. The app and its widgets share the paired session through a keychain group instead of an app group, re-checked in a simulator: pairing, dictation, a Focus widget with the host's data and a counter tap that raised the host's total from 0 to 5.\n\nStill open: nothing has run on a physical iPhone. The installed app cannot reach the owner's host until the host is switched to the certificate issued for its Tailscale name; the certificate is ready and the switch awaits the owner's word, because browsers and the bar widget then have to be paired or re-addressed once.\n\nDetails: docs/ADR-076-IOS-APP-AND-WIDGETS.md and progress/2026-10-09-ios-app-widgets.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "711330f8-3328-4112-9834-bce73aaa6e06",
+    "kind": "result",
+    "recorded_at": "2026-10-09T13:48:12.309Z",
+    "summary": "iOS app uploaded to TestFlight for internal testing; the host switch awaits a decision",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
