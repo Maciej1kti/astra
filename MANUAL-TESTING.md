@@ -42,6 +42,21 @@ each device. Pair the phone separately using its displayed challenge and
 `npm run pair:try -- "CHALLENGE_FROM_BROWSER"`. Both devices must be connected to
 the same tailnet. No Tailscale Serve setting is required.
 
+The iOS app and its widgets refuse a self-signed certificate, and Safari warns
+about it. With HTTPS certificates enabled in the tailnet, add the host's
+Tailscale name and the launcher serves the certificate Tailscale issues for it,
+which devices trust without a warning:
+
+```sh
+ASTRA_TRY_TAILSCALE_IP="$(tailscale ip -4)" \
+ASTRA_TRY_TAILSCALE_NAME="<host>.<tailnet>.ts.net" npm run try
+```
+
+The address then is `https://<host>.<tailnet>.ts.net:47832` and the IP address
+stops working: the daemon accepts one origin, so every browser pairs again
+under the new one. The launcher asks Tailscale for the certificate at each
+start, which also renews it.
+
 The launcher remembers the sample in `.manual/state/sample-seeded`. Removing its
 registration or physically deleting its `.project` directory does not create a
 new sample on restart. Existing sample metadata is also recognized when upgrading

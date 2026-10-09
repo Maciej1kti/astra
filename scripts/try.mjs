@@ -21,6 +21,26 @@ if (remote) {
       "ASTRA_TRY_TAILSCALE_IP must match this host's Tailscale IPv4 address",
     );
 }
+// ASTRA_TRY_TAILSCALE_NAME serves the host under its tailnet name with the
+// certificate Tailscale issues for it. Phones and the iOS app trust that
+// certificate; they refuse the self-signed one made below.
+const tailscaleName = process.env.ASTRA_TRY_TAILSCALE_NAME ?? "";
+if (tailscaleName) {
+  if (!remote)
+    throw new Error(
+      "ASTRA_TRY_TAILSCALE_NAME needs ASTRA_TRY_TAILSCALE_IP as well",
+    );
+  const status = JSON.parse(
+    execFileSync("tailscale", ["status", "--json"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }),
+  );
+  if (!(status.CertDomains ?? []).includes(tailscaleName))
+    throw new Error(
+      "ASTRA_TRY_TAILSCALE_NAME must be a name Tailscale issues certificates for on this host",
+    );
+}
 const data = join(root, ".manual", "state"),
   project = join(root, ".manual", "Sample project");
 await mkdir(data, { recursive: true, mode: 0o700 });
@@ -34,8 +54,29 @@ try {
     "Build first: npm run build && scripts/cargo-local build --workspace --release",
   );
 }
-const cert = join(data, remote ? `cert-${bindHost}.pem` : "cert.pem"),
-  key = join(data, remote ? `key-${bindHost}.pem` : "key.pem");
+const issued = join(data, "tailscale-tls");
+const cert = tailscaleName
+    ? join(issued, `${tailscaleName}.crt`)
+    : join(data, remote ? `cert-${bindHost}.pem` : "cert.pem"),
+  key = tailscaleName
+    ? join(issued, `${tailscaleName}.key`)
+    : join(data, remote ? `key-${bindHost}.pem` : "key.pem");
+if (tailscaleName) {
+  await mkdir(issued, { recursive: true, mode: 0o700 });
+  try {
+    // Tailscale returns its cached certificate and renews it near expiry.
+    execFileSync(
+      "tailscale",
+      ["cert", "--cert-file", cert, "--key-file", key, tailscaleName],
+      { stdio: "ignore", timeout: 120000 },
+    );
+  } catch (error) {
+    // Without the network an earlier certificate is still worth serving.
+    await access(cert).catch(() => {
+      throw new Error(`tailscale cert failed: ${error.message}`);
+    });
+  }
+}
 try {
   await access(cert);
 } catch {
@@ -61,7 +102,7 @@ try {
     { stdio: "ignore" },
   );
 }
-const origin = `https://${remote ? bindHost : "localhost"}:47832`,
+const origin = `https://${tailscaleName || (remote ? bindHost : "localhost")}:47832`,
   socket = join(data, "projectd.sock");
 // ASTRA_TRY_AGENT=1 enables the in-app agent with the repository's agent/ directory.
 const agentArgs =
@@ -149,7 +190,7 @@ try {
   await seedSampleProject(cli, project, join(data, "sample-seeded"));
   proxy.listen(47832, bindHost, () => {
     console.log(
-      `\nOpen ${origin}\nAccept the local test certificate warning, then request browser access.\nIn another terminal, list and approve the displayed matching challenge:\n`,
+      `\nOpen ${origin}\n${tailscaleName ? "Request browser access." : "Accept the local test certificate warning, then request browser access."}\nIn another terminal, list and approve the displayed matching challenge:\n`,
     );
     console.log('npm run pair:try -- "CHALLENGE_FROM_BROWSER"');
     console.log(

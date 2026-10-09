@@ -14,9 +14,10 @@ agent that sends only on a tap ([ADR-076](../docs/ADR-076-IOS-APP-AND-WIDGETS.md
 No server change was needed. It builds for a device and passed its checks in a
 simulator against a real daemon, including pairing and a counter step from the
 home screen. A first build was signed and uploaded to TestFlight for internal
-testing. It has not run on a phone, and cannot reach the owner's host until
-that host is switched to the certificate issued for its Tailscale name, which
-is ready and awaits the owner's word. In
+testing. On the owner's word the manual instance was switched to its
+Tailscale name and the certificate issued for it; the app reached its pairing
+page from a simulator with the system's trust alone. Nothing has run on a
+physical phone yet, and browsers have to pair again under the new address. In
 the windowless simulator a screenshot of the counter widget showed the total
 from before the last tap although the widget's value and the server agreed;
 the cause is not established.
