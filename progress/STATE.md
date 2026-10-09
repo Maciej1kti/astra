@@ -13,8 +13,10 @@ widgets (Focus, Dziś, Licznik with a step button, Agent) and dictation to the
 agent that sends only on a tap ([ADR-076](../docs/ADR-076-IOS-APP-AND-WIDGETS.md)).
 No server change was needed. It builds for a device and passed its checks in a
 simulator against a real daemon, including pairing and a counter step from the
-home screen. It is not signed or uploaded, has not run on a phone, and cannot
-reach the owner's host until that host presents a certificate iOS accepts. In
+home screen. A first build was signed and uploaded to TestFlight for internal
+testing. It has not run on a phone, and cannot reach the owner's host until
+that host is switched to the certificate issued for its Tailscale name, which
+is ready and awaits the owner's word. In
 the windowless simulator a screenshot of the counter widget showed the total
 from before the last tap although the widget's value and the server agreed;
 the cause is not established.

@@ -486,7 +486,7 @@ conflicts still surface. No protocol or command change. See
 ## ADR-076 — iOS app and home-screen widgets
 
 A native shell shows the host's own web interface and shares its paired session
-with widgets through the app group's keychain. Native code sends the browser's
+with widgets through a shared keychain group. Native code sends the browser's
 requests, so no protocol change is involved. A counter widget saves one step per
 tap as a stored, conditional command that is never retried over a conflict. See
 [ADR-076](ADR-076-IOS-APP-AND-WIDGETS.md).

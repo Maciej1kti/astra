@@ -777,8 +777,9 @@ It owns no domain rules: the server validates and decides every command.
   links, the agent client and the counter step with its stored command and
   recovery. Its tests run on macOS with `scripts/ios/test-kit.sh`; a change to a
   rule there starts with a test.
-- `Shared/` is compiled into both targets: the app group, the session's
-  keychain item, the stored counter commands and the colour assets.
+- `Shared/` is compiled into both targets: the session's item in the shared
+  keychain group, each process's own defaults, the stored counter commands and
+  the colour assets.
 - `App/` is the shell: host setup, the web view with the session copy, links
   and the dictation sheet.
 - `Widgets/` holds the four widgets, their timeline providers and the counter's
