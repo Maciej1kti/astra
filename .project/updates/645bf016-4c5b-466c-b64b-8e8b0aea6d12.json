@@ -1,0 +1,18 @@
+{
+  "body": "The owner asked for Astra as an iOS app on TestFlight with widgets, and chose Focus, counters with a +1 button, today's calendar and an agent with dictation that sends only on a Send button.\n\nWhat exists: an app that shows the host's own web interface, four home-screen widgets (Focus, Dziś, Licznik with a step button, Agent) and a dictation sheet. The server was not changed and the running instance was not restarted.\n\nChecked on the build machine with Xcode 27 and an iOS 27 simulator against a real test daemon: pairing through the host's page, the workspace, dictation opened from a link, all four widgets showing the host's data, and a tap on the counter widget raising the host's total from 10 to 15. 66 logic tests pass, 7 of them against the daemon. The app also builds as an unsigned release for a device.\n\nNot done: signing, the App Store Connect record and the TestFlight upload need the owner's team, an API key and an app record. Nothing has run on a physical iPhone, and speech recognition was not exercised because the build machine has no microphone.\n\nBlocking for the phone: iOS refuses the certificate the owner's host uses today, even when it is installed as trusted. The host needs a certificate iOS accepts, for example one issued for its Tailscale name. That certificate also expires on 2026-10-23.\n\nUnexplained: in the windowless simulator, screenshots of the counter widget showed the total from before the last tap although the widget's value and the host agreed. It needs a look on a device.\n\nDetails: docs/ADR-076-IOS-APP-AND-WIDGETS.md and progress/2026-10-09-ios-app-widgets.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "645bf016-4c5b-466c-b64b-8e8b0aea6d12",
+    "kind": "result",
+    "recorded_at": "2026-10-09T13:08:17.015Z",
+    "summary": "iOS app with four widgets built and checked in a simulator; not yet on TestFlight",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}
