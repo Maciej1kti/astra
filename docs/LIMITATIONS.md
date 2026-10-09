@@ -54,6 +54,7 @@ it does not provide a migration tool for arbitrary existing data.
 | Playwright WebKit | Targeted macOS suites have evidence; some suite/harness limits are recorded in dated reports |
 | Physical iPhone / Safari | Full device acceptance remains open; phone viewport emulation and desktop WebKit are not substitutes |
 | iOS app and widgets | Built, exercised in an iOS 27 simulator against a real daemon and uploaded to TestFlight for internal testing; never run on a physical iPhone, and for iPhone only. It needs a host certificate that iOS trusts: the manual launcher's self-signed certificate is refused even when installed as trusted, so start the launcher with `ASTRA_TRY_TAILSCALE_NAME`. Widgets act as the host's default profile, refresh on the system's budget rather than live, and speech recognition was not exercised with a microphone. See [ADR-076](ADR-076-IOS-APP-AND-WIDGETS.md) |
+| Mac app | Builds, signs for development and passed its check on the build machine: the host's page in a window, the menu bar item and the dictation panel. Not distributed, never paired, and its widgets were never placed on a desktop. The dictation shortcut is fixed to Control-Option-Space. See [ADR-077](ADR-077-MAC-APP.md) |
 | Other architectures/browsers | No blanket compatibility or support claim; a new target needs its own build and behavioral evidence |
 | Browser age | Colours use CSS `light-dark()` and menus use native popovers, so the interface needs Chrome/Edge 123, Firefox 120 or Safari 17.5 and later; an older browser shows unstyled colours |
 

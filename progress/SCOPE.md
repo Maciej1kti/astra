@@ -404,3 +404,11 @@ The owner also directed that the work on the build machine be done without
 them, with windows opened only for passwords and similar entries. Signing,
 the App Store Connect record, the upload and a host certificate that iOS
 accepts are not done yet. See [ADR-076](../docs/ADR-076-IOS-APP-AND-WIDGETS.md).
+
+## Mac app — owner direction, 2026-10-09
+
+After the first TestFlight build the owner asked what a Mac app would take.
+Offered three routes, the owner chose a native macOS target in the same
+project, and named its uses: widgets on the desktop, Astra as its own window
+in the Dock, and dictation from the menu bar. How the Mac app is distributed
+was not decided. See [ADR-077](../docs/ADR-077-MAC-APP.md).

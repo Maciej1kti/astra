@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+A [Mac app](2026-10-09-mac-app.md) was added to the iOS project on the owner's
+direction: the host's web interface in a window, the same four widgets, and
+dictation in a panel opened from the menu bar or Control-Option-Space
+([ADR-077](../docs/ADR-077-MAC-APP.md)). It builds, is signed for development
+and passed its check on the build machine. It is not distributed, was never
+paired, and its widgets were not seen on a desktop.
+
 An [iOS app with widgets](2026-10-09-ios-app-widgets.md) was started on the
 owner's direction: a native shell around the host's own web interface, four
 widgets (Focus, Dziś, Licznik with a step button, Agent) and dictation to the

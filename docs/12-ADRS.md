@@ -490,3 +490,10 @@ with widgets through a shared keychain group. Native code sends the browser's
 requests, so no protocol change is involved. A counter widget saves one step per
 tap as a stored, conditional command that is never retried over a conflict. See
 [ADR-076](ADR-076-IOS-APP-AND-WIDGETS.md).
+
+## ADR-077 — Mac app from the iOS project
+
+A native macOS target shares the iOS app's code and bundle identifier: the
+host's web interface in a window, desktop widgets, and dictation in a panel
+opened from the menu bar or a system-wide shortcut. See
+[ADR-077](ADR-077-MAC-APP.md).

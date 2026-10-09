@@ -786,6 +786,10 @@ It owns no domain rules: the server validates and decides every command.
   intent.
 - `UITests/` drives the app, and SpringBoard for the widgets, in a simulator
   against the scratch host from `scripts/ios/`.
+- `Mac/` is what only the Mac app has ([ADR-077](ADR-077-MAC-APP.md)): the menu
+  bar item, the system-wide shortcut and the dictation panel. The Mac targets
+  compile `App/`, `Shared/` and `Widgets/` as well, so a change there is a
+  change to both systems; `MacUITests/` drives the Mac app on the desktop.
 
 `project.yml` is the source of the Xcode project; the project file, the
 `Info.plist` files and the entitlements are generated and ignored. See the
