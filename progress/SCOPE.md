@@ -403,7 +403,8 @@ that the text always waits for a Send button.
 The owner also directed that the work on the build machine be done without
 them, with windows opened only for passwords and similar entries. Signing,
 the App Store Connect record, the upload and a host certificate that iOS
-accepts are not done yet. See [ADR-076](../docs/ADR-076-IOS-APP-AND-WIDGETS.md).
+accepts are not done yet. ADR-076 records the design; since 2026-10-10 it is
+kept in the private repository of the apps.
 
 ## Mac app — owner direction, 2026-10-09
 
@@ -411,7 +412,18 @@ After the first TestFlight build the owner asked what a Mac app would take.
 Offered three routes, the owner chose a native macOS target in the same
 project, and named its uses: widgets on the desktop, Astra as its own window
 in the Dock, and dictation from the menu bar. How the Mac app is distributed
-was not decided. See [ADR-077](../docs/ADR-077-MAC-APP.md).
+was not decided. ADR-077 records the design; since 2026-10-10 it is kept in
+the private repository of the apps.
+
+## Apps are closed source — owner direction, 2026-10-10
+
+The owner said that the server and the web interface are open source, and that
+the iOS and Mac apps will not be, and asked for the repository to be arranged
+so that the apps are closed source. Their code, build scripts and decision
+records moved to a private repository and are ignored here. Whether the
+commits that published them between 2026-10-09 and 2026-10-10 are also removed
+from this repository's history is the owner's to decide. The project license
+remains deferred.
 
 ## Settings save themselves — owner direction, 2026-10-10
 

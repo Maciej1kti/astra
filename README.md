@@ -130,6 +130,8 @@ between product boundaries, unfinished work and unverified behavior.
 ## Licensing and contributions
 
 The owner will select the project license before a supported open-source release.
+That covers the server, the command-line client and the web interface in this
+repository. The iOS and Mac apps are closed source and are not part of it.
 Dependency licenses do not select Astra's project license. Generated host archives
 include third-party notices; no supported release or security-support period is
 declared yet. [Contributions](CONTRIBUTING.md), issue reports and documentation

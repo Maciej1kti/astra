@@ -13,6 +13,12 @@ handoff. Built-in backup archives/restore tooling and source-file migration
 frameworks are deferred beyond v1; all other outstanding requirements remain.
 Preserve unresolved requirements during documentation cleanup.
 
+The server, the command-line client and the web interface are public here. The
+iOS and Mac apps are closed source by the owner's 2026-10-10 direction and live
+in a private repository. Never add their code, build scripts, decision records
+or excerpts of them to this repository, its reports or its issues; this
+repository may say that the apps exist and what they do.
+
 New code, comments, documentation and commits are English. Browser UI text is
 Polish, with Focus retaining its name, following the owner's 2026-10-04 direction. Communication
 with the owner may be Polish. Retained Polish requirement chapters are historical

@@ -42,7 +42,7 @@ that matches your task; historical requirements are indexed separately below.
 | [CLI output](../contracts/cli-output.schema.json) | Stable machine-readable CLI envelopes |
 | [Local IPC](../contracts/local-ipc.json) | Host-local administrative transport contract |
 | [Examples](../examples/README.md) | Validated synthetic documents and protocol vectors |
-| [Architecture decisions](12-ADRS.md) | Rationale and invariants; later decisions can supersede earlier ones, such as [ADR-070](ADR-070-AGENT-RUNS.md) for the optional in-app agent, [ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md) for projects added by name [ADR-075](ADR-075-TIMELINE-RENDERER.md) for the Timeline drawn by Astra [ADR-076](ADR-076-IOS-APP-AND-WIDGETS.md) for the iOS app and widgets [ADR-077](ADR-077-MAC-APP.md) for the Mac app [ADR-078](ADR-078-SETTINGS-AUTOSAVE.md) for Settings that save themselves and [ADR-079](ADR-079-GOAL-COMMENTS-AND-SPAN.md) for goal comments and the derived date span |
+| [Architecture decisions](12-ADRS.md) | Rationale and invariants; later decisions can supersede earlier ones, such as [ADR-070](ADR-070-AGENT-RUNS.md) for the optional in-app agent, [ADR-074](ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md) for projects added by name [ADR-075](ADR-075-TIMELINE-RENDERER.md) for the Timeline drawn by Astra [ADR-078](ADR-078-SETTINGS-AUTOSAVE.md) for Settings that save themselves and [ADR-079](ADR-079-GOAL-COMMENTS-AND-SPAN.md) for goal comments and the derived date span |
 | [Owner scope decisions](../progress/SCOPE.md) | Explicit scope overrides, deferrals and removals |
 
 Generated schema representations and TypeScript types are checked for drift by

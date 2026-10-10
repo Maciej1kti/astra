@@ -488,15 +488,16 @@ conflicts still surface. No protocol or command change. See
 A native shell shows the host's own web interface and shares its paired session
 with widgets through a shared keychain group. Native code sends the browser's
 requests, so no protocol change is involved. A counter widget saves one step per
-tap as a stored, conditional command that is never retried over a conflict. See
-[ADR-076](ADR-076-IOS-APP-AND-WIDGETS.md).
+tap as a stored, conditional command that is never retried over a conflict. The
+app is closed source since 2026-10-10; the full record is kept with its code in
+the private repository of the apps.
 
 ## ADR-077 — Mac app from the iOS project
 
 A native macOS target shares the iOS app's code and bundle identifier: the
 host's web interface in a window, desktop widgets, and dictation in a panel
-opened from the menu bar or a system-wide shortcut. See
-[ADR-077](ADR-077-MAC-APP.md).
+opened from the menu bar or a system-wide shortcut. The full record is kept
+with the app's code in the private repository of the apps.
 
 ## ADR-078 — Settings save themselves
 

@@ -36,17 +36,24 @@ showed the part below the header at zero height, and its zero flex basis was
 replaced by a content-sized one. Whether that phone now shows Settings is the
 tester's to confirm.
 
+The iOS and Mac apps are [closed source](2026-10-10-closed-source-apps.md)
+since the owner's 2026-10-10 direction: their code, build scripts and decision
+records moved with their history to a private repository, and this repository
+ignores their folders. Their unit tests and scratch host pass from the new
+place. The commits that published them here remain in this repository's
+history until the owner decides otherwise.
+
 A [Mac app](2026-10-09-mac-app.md) was added to the iOS project on the owner's
 direction: the host's web interface in a window, the same four widgets, and
 dictation in a panel opened from the menu bar or Control-Option-Space
-([ADR-077](../docs/ADR-077-MAC-APP.md)). It builds, is signed for development
+(ADR-077). It builds, is signed for development
 and passed its check on the build machine. It is not distributed, was never
 paired, and its widgets were not seen on a desktop.
 
 An [iOS app with widgets](2026-10-09-ios-app-widgets.md) was started on the
 owner's direction: a native shell around the host's own web interface, four
 widgets (Focus, Dziś, Licznik with a step button, Agent) and dictation to the
-agent that sends only on a tap ([ADR-076](../docs/ADR-076-IOS-APP-AND-WIDGETS.md)).
+agent that sends only on a tap (ADR-076).
 No server change was needed. It builds for a device and passed its checks in a
 simulator against a real daemon, including pairing and a counter step from the
 home screen. A first build was signed and uploaded to TestFlight for internal

@@ -16,5 +16,10 @@ __pycache__/
 # Reproducible browser output is uploaded by CI; keep concise progress evidence in Git.
 test-results/
 
+# The iOS and Mac apps are closed source and live in a private repository
+# (progress/SCOPE.md, 2026-10-10). Their folders must not return here.
+/apps/ios/
+/scripts/ios/
+
 # Agent worktrees created by local tooling
 .claude/worktrees/

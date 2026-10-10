@@ -790,30 +790,22 @@ entry points and selection commands are in the
 See [current evidence](../progress/STATE.md) and the
 [contribution guide](../CONTRIBUTING.md) for verification and change conventions.
 
-## iOS app
+## iOS and Mac apps
 
-`apps/ios` is a client of the same HTTP API ([ADR-076](ADR-076-IOS-APP-AND-WIDGETS.md)).
-It owns no domain rules: the server validates and decides every command.
+The iOS and Mac apps are closed source by the owner's
+[2026-10-10 direction](../progress/SCOPE.md#apps-are-closed-source--owner-direction-2026-10-10).
+Their code, build scripts and decision records (ADR-076, ADR-077) are in a
+private repository; `/apps/ios/` and `/scripts/ios/` are ignored here so that
+they cannot return by accident.
 
-- `AstraKit/` is a Swift package without UI. It owns the host address, the
-  requests a browser would send, the response models the app reads, widget rows,
-  links, the agent client and the counter step with its stored command and
-  recovery. Its tests run on macOS with `scripts/ios/test-kit.sh`; a change to a
-  rule there starts with a test.
-- `Shared/` is compiled into both targets: the session's item in the shared
-  keychain group, each process's own defaults, the stored counter commands and
-  the colour assets.
-- `App/` is the shell: host setup, the web view with the session copy, links
-  and the dictation sheet.
-- `Widgets/` holds the four widgets, their timeline providers and the counter's
-  intent.
-- `UITests/` drives the app, and SpringBoard for the widgets, in a simulator
-  against the scratch host from `scripts/ios/`.
-- `Mac/` is what only the Mac app has ([ADR-077](ADR-077-MAC-APP.md)): the menu
-  bar item, the system-wide shortcut and the dictation panel. The Mac targets
-  compile `App/`, `Shared/` and `Widgets/` as well, so a change there is a
-  change to both systems; `MacUITests/` drives the Mac app on the desktop.
+The apps are clients of the same HTTP API and own no domain rules: the server
+validates and decides every command, and no endpoint or schema exists for them
+alone. Their checks read these files of this repository, so a change to one of
+them can break a check that no gate here runs:
 
-`project.yml` is the source of the Xcode project; the project file, the
-`Info.plist` files and the entitlements are generated and ignored. See the
-[build guide](../scripts/ios/README.md).
+- `examples/requests/headers.json` and `examples/requests/agent-run.json`, the
+  contract examples their client is tested against;
+- `scripts/browser/host.mjs` (`createHost`) and `scripts/browser/fixture.mjs`
+  (`seed`), which their scratch host starts and fills;
+- the pairing page's Polish labels and the workspace header, which their
+  pairing helper and interface tests look for.

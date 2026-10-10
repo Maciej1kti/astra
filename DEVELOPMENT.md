@@ -122,11 +122,13 @@ See [browser suites](scripts/browser/README.md) for coverage and additional knob
 Desktop WebKit and viewport emulation do not establish physical iPhone/Safari
 acceptance. Artifacts go to ignored `test-results/browser/` by default.
 
-## iOS app
+## iOS and Mac apps
 
-The iOS app and its widgets build with Xcode and are not part of `scripts/check.py`.
-Run `scripts/ios/test-kit.sh` after a change under `apps/ios/AstraKit`, and see
-the [iOS build guide](scripts/ios/README.md) for the simulator checks.
+The iOS and Mac apps are closed source. Their code, build scripts and decision
+records are in a private repository, not in this one, and no check here builds
+them. They use this repository as a client would; see
+[what they rely on](docs/CODE-STRUCTURE.md#ios-and-mac-apps) before changing
+those files.
 
 ## Packaging and CI
 
