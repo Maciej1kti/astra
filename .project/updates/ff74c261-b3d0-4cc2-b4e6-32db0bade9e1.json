@@ -1,0 +1,18 @@
+{
+  "body": "Settings now work as the card does: every change saves by itself, and the header shows \"Zapisano\" in the same small indicator as on a card. The large \"Zapisz ustawienia\" button is gone, and the dialog stays open after a save.\n\nWhat stays deliberate: if the settings changed somewhere else, the fields lock and the current settings have to be loaded by hand; the edits kept through that are saved only with their own button. A save whose result is unknown offers the status check and the identical retry. Adding a user is still its own button.\n\nChecked: all 44 browser test suites and the smoke test pass, with the conflict and lost-reply cases rewritten for the new flow, and the header was looked at in the iPhone app on a simulator. The host is updated, so phones and browsers have it after reopening Settings.\n\nNot checked: a physical phone.\n\nDetails: docs/ADR-078-SETTINGS-AUTOSAVE.md and progress/2026-10-10-settings-autosave.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "ff74c261-b3d0-4cc2-b4e6-32db0bade9e1",
+    "kind": "result",
+    "recorded_at": "2026-10-10T10:11:31.043Z",
+    "summary": "Settings save every change by themselves; the header shows Zapisano instead of a Save button",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

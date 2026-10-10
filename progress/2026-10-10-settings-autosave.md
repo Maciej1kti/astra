@@ -63,3 +63,12 @@ macOS 27.0.1, Node 24.11, Chromium through Playwright, daemon from
 - The Rust part of the gate (`scripts/check.py`): no Rust changed, and the debug
   build cache it needs was removed on 2026-10-09 to make room for Xcode.
 - WebKit through Playwright; the suites ran in Chromium.
+
+## Rollout
+
+The release daemon was rebuilt with the final frontend and the owner's manual
+instance restarted with its settings unchanged. Instance ID, command epoch,
+both profiles, 15 projects, 18 sessions and the stored preferences were
+identical before and after; `/healthz` answers 200 and `/api/v1/bootstrap` 401
+without a session at the Tailscale address, and all 82 served files equal the
+build.
