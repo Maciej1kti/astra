@@ -53,6 +53,23 @@ The owner asked for one folder holding three repositories
   Earlier versions of the code structure and development guides still describe
   the apps' folders in prose.
 
+## Planning data
+
+- On the owner's direction `.project/` moved to the folder that holds the three
+  repositories, which became a fourth, private repository with the 156 commits
+  that touched those files. This repository no longer tracks `.project/` and
+  ignores it; its agent and contributor guides point to the workspace instead.
+- The manual instance was stopped for about one second while the files moved,
+  and its registration of the project was moved to that folder with the
+  `relocate` operation (job done in two steps). Identity, command epoch, both
+  profiles, all 18 sessions, the 15 projects and their availability and the
+  project's card list were the same before and after; the stored workspace
+  file differs only in that project's path.
+- Not done: the cards and reports are still in this repository's history, and
+  six links in five earlier reports still point at report files there. The
+  owner asked for their removal; the rewrite was prepared (358 commits become
+  314) but not pushed.
+
 ## Checks
 
 - In the new repository: six parser tests and three launch-helper tests pass.

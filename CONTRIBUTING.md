@@ -48,8 +48,9 @@ Follow [Installation](INSTALL.md) for the pinned Node, Rust and Python versions,
 then [Development](DEVELOPMENT.md) for the edit/test loop. Build the frontend before
 the daemon because `projectd` embeds its assets. Use synthetic projects for tests;
 keep private user projects, credentials and runtime state out of this repository.
-Astra's own persistent `.project/` planning sources are intentionally tracked;
-`.project/.local/`, `.manual/`, dependencies and build output remain excluded.
+Astra's own `.project/` planning sources are kept in the owner's private
+workspace repository, not here; `/.project/`, `.manual/`, dependencies and
+build output are excluded.
 
 ## Where changes belong
 
@@ -141,9 +142,11 @@ documentation edit cannot silently drop acceptance requirements or mark them pas
 
 ## Project coordination data
 
-Read `.project/README.md` and the relevant project context through `projectctl`
-with the exact repository folder. Persistent `.project/` sources are project
-outcomes and milestones, not detailed implementation plans or agent transcripts.
+Astra's own planning data is kept outside this repository, in the owner's
+private workspace. With access to it, read the relevant project context through
+`projectctl` with the exact project folder the owner selects. Those sources are
+project outcomes and milestones, not detailed implementation plans or agent
+transcripts.
 Append a concise report after a meaningful result, blocker or decision request.
 Use the server and observed versions for writes; do not edit planning JSON directly
 because a server is unavailable. A clone with no available host can still be used

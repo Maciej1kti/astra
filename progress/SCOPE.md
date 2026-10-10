@@ -433,6 +433,13 @@ the apps, and for the Omarchy widget, which is open source as well and gets a
 repository of its own. The owner also asked for the commits that published the
 apps to be removed from this repository's history.
 
+## Planning data in a private workspace — owner direction, 2026-10-10
+
+Asked whether Astra's own cards and reports should stay in this public
+repository, the owner chose to move `.project/` to the folder that holds the
+three repositories, to make that folder a private repository, and to remove the
+cards and reports from this repository's history as well.
+
 ## Settings save themselves — owner direction, 2026-10-10
 
 While the Settings dialog was being fixed for the phone, the owner asked that

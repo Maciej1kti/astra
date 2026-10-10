@@ -21,5 +21,9 @@ test-results/
 /apps/ios/
 /scripts/ios/
 
+# Astra's own planning data lives in the owner's private workspace repository
+# (progress/SCOPE.md, 2026-10-10). It must not return here.
+/.project/
+
 # Agent worktrees created by local tooling
 .claude/worktrees/
