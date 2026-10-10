@@ -578,6 +578,10 @@ export interface ProjectRegistration {
   project_id: UUID;
   path: string;
   added_at: Instant;
+  /**
+   * @maxItems 64
+   */
+  members?: string[];
 }
 export interface FocusRef {
   project_id: UUID;

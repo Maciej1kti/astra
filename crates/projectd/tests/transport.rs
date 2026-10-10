@@ -805,6 +805,56 @@ async fn registration_mutation_preconditions_and_replay_over_unix() {
     assert_eq!(plan["kind"], "index_rebuild");
     let applied=app.local("POST","/local/v1/maintenance/jobs").json(&json!({"plan_id":plan["plan_id"],"request_id":Uuid::now_v7().to_string(),"command_epoch":epoch})).send().await.unwrap();
     assert_eq!(applied.status(), 202);
+    // A declared member folder selects the project by its own exact path.
+    let member = format!("{}/member", app.project);
+    std::fs::create_dir(&member).unwrap();
+    let preferences: Value = app
+        .local("GET", "/api/v1/workspace/preferences")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let plan: Value = app
+        .local("POST", "/local/v1/maintenance/plans")
+        .json(
+            &json!({"operation":"add_member","project_id":project,"relative_path":"member",
+            "expected_workspace_version":preferences["version"]}),
+        )
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(plan["kind"], "add_member", "{plan}");
+    let applied = app
+        .local("POST", "/local/v1/maintenance/jobs")
+        .json(&json!({"plan_id":plan["plan_id"],"request_id":Uuid::now_v7().to_string(),"command_epoch":epoch}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(applied.status(), 202);
+    let resolved: Value = app
+        .local("POST", "/local/v1/projects/resolve")
+        .json(&json!({"absolute_path":member}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(resolved, json!({"project_id":project}));
+    assert_eq!(
+        app.local("POST", "/local/v1/projects/resolve")
+            .json(&json!({"absolute_path":format!("{member}/child")}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        404
+    );
     for path in [
         "/api/v1/views/list?type=unknown",
         "/api/v1/views/list?type=card&type=update",

@@ -6738,6 +6738,16 @@
           },
           "added_at": {
             "$ref": "#/components/schemas/Instant"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "maxItems": 64,
+            "uniqueItems": true
           }
         },
         "required": [

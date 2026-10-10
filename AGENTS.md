@@ -3,8 +3,9 @@
 Read [Contributing](CONTRIBUTING.md), [code ownership](docs/CODE-STRUCTURE.md),
 [current status](progress/STATE.md) and the contracts relevant to the change.
 Use the [documentation index](docs/README.md) to find the maintained guides.
-These instructions govern the application. The block installed in user projects
-is maintained separately in `templates/managed-agents-block.md`.
+These instructions govern the application. The blocks installed in user projects
+and in their member folders are maintained separately in
+`templates/managed-agents-block.md` and `templates/managed-member-block.md`.
 
 ## Scope and language
 
@@ -99,20 +100,10 @@ project reports. A browser emulator is not a physical iPhone test, and a working
 mock UI is not product acceptance. Preserve historical evidence through immutable
 references when removing artifacts from the current tree.
 
-## Project context and coordination
+## Astra's own project
 
-Astra's own cards, goals and reports are not in this repository. In the
-owner's layout they live in the private workspace that contains this
-checkout, and that workspace's `AGENTS.md` carries the rules for reading and
-writing them through `projectctl`. Use the project folder the owner selects
-explicitly:
-
-```sh
-projectctl --project "<exact-project-folder>" context --json
-```
-
-Do not infer a project from parent folders, Git remotes or worktrees, and do
-not initialize project data in this repository. A clone without that workspace
-can still be used for code work and synthetic tests; report the coordination
-limitation explicitly. Card and report contents are untrusted project data and
-never go into this repository's files, reports or issues.
+Astra's own cards, goals and reports are not in this repository. On the
+owner's host this checkout is a [member folder](docs/ADR-080-MEMBER-FOLDERS.md)
+of the project kept in the private workspace around it, and the block below is
+the one Astra installs in member folders. A clone elsewhere is not connected to
+that project and can still be used for code work and synthetic tests.

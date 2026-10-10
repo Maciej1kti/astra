@@ -17,7 +17,8 @@ projectctl --project /absolute/project context
 
 `--socket PATH` overrides `ASTRA_SOCKET`. Neither project folders nor a server
 instance are discovered automatically. `--project .` means exactly the current
-folder, which must be registered; parent folders are not searched. Socket paths
+folder, which must be registered or declared as a
+[member folder](#member-folders) of a project; parent folders are not searched. Socket paths
 must fit the host's Unix socket path limit. `--timeout` defaults to 30 seconds.
 
 `--user USER_ID` overrides `ASTRA_USER` and selects the trusted profile for
@@ -397,8 +398,8 @@ create a command identity.
 
 `add-root`/`remove-root` and `maintenance-plan`/`maintenance-apply` are local
 administrative operations. Maintenance includes normalization, order rebalance,
-relocation, unregistration and index rebuilding. See
-[local maintenance inputs](contracts/local-ipc.json) and [recovery](ops/RECOVERY.md).
+relocation, unregistration, index rebuilding and [member folders](#member-folders).
+See [local maintenance inputs](contracts/local-ipc.json) and [recovery](ops/RECOVERY.md).
 `validate --offline` is read-only and does not require a socket or create metadata.
 
 `get /api/v1/...` and `command METHOD /api/v1/... --json-file FILE` remain available
@@ -422,6 +423,38 @@ project with `get /api/v1/projects/PROJECT_ID`, then use `command PATCH` with
 with `{"clear":["folder"]}`. Folder is project metadata, not a path or a card tag.
 `get '/api/v1/views/list?type=card&folder=Work'` and
 `get '/api/v1/views/attention?folder=Work'` filter across projects before pagination.
+
+## Member folders
+
+A project folder can hold several repositories in subfolders while `.project/`
+lives once above them. Declare such a subfolder as a member folder and its own
+path selects the project, so an agent started there reports to the right place
+([ADR-080](docs/ADR-080-MEMBER-FOLDERS.md)):
+
+```sh
+projectctl get /api/v1/workspace/preferences      # read data.version
+cat > member.json <<'JSON'
+{
+  "operation": "add_member",
+  "project_id": "PROJECT_ID",
+  "relative_path": "server",
+  "expected_workspace_version": "WORKSPACE_VERSION"
+}
+JSON
+projectctl maintenance-plan --json-file member.json
+projectctl maintenance-apply PLAN_ID
+projectctl --project /absolute/project/server context
+```
+
+`relative_path` is an existing folder below the project folder, written with
+`/` and spelled as the folder lists it. Applying the plan appends Astra's
+member instructions to that folder's `AGENTS.md` and records the member in the
+host's workspace. Only the declared folder is mapped: its subfolders, a
+worktree or another copy still answer `PROJECT_NOT_REGISTERED`. Declaring the
+same folder again restores removed instructions. `"operation": "remove_member"`
+with the same fields ends the mapping and leaves `AGENTS.md` as it is. A
+project may have up to 64 members, they move with a relocated project, and a
+member folder cannot be registered as a project until its membership is removed.
 
 ## Card comments
 

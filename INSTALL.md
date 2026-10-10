@@ -188,6 +188,9 @@ and a managed block in `AGENTS.md`, preserving existing content. Review the plan
 Git treatment of `.project/`; source tracking versus local exclusion is explicit.
 An accepted registration may return exit 9 because the job is still pending;
 check that job instead of submitting a second registration.
+When the project folder holds repositories in subfolders, declare each as a
+[member folder](CLI.md#member-folders) so that agents started there address
+this project.
 The CLI plan defaults to private Git mode (a local exclusion). Add `--tracked`
 to `registration-plan` if you intend to commit the persistent `.project/` sources;
 keep `.project/.local/` excluded. The daemon does not commit files to Git.

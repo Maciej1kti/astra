@@ -4,10 +4,11 @@ use crate::{
     AppError, Reply,
     engine::{Engine, lock_store},
     instant, now_millis,
+    registration::{MEMBER_MARKER, PROJECT_MARKER},
     source::{collection, pretty},
     workflow::{Plan, PlanLocation, Step, Workflows},
 };
-use project_domain::validate_document;
+use project_domain::{models::ProjectRegistration, validate_document, validate_workspace};
 use project_store::{
     document::{self, Kind},
     filesystem::Directory,
@@ -42,6 +43,16 @@ pub enum Maintenance {
     IndexRebuild {
         project_id: String,
     },
+    AddMember {
+        project_id: String,
+        relative_path: String,
+        expected_workspace_version: String,
+    },
+    RemoveMember {
+        project_id: String,
+        relative_path: String,
+        expected_workspace_version: String,
+    },
 }
 impl Engine {
     pub fn maintenance_plan(&self, input: &Value) -> Result<Value, AppError> {
@@ -58,6 +69,8 @@ impl Engine {
             | Maintenance::Rebalance { project_id, .. }
             | Maintenance::Unregister { project_id, .. }
             | Maintenance::Relocate { project_id, .. }
+            | Maintenance::AddMember { project_id, .. }
+            | Maintenance::RemoveMember { project_id, .. }
             | Maintenance::IndexRebuild { project_id } => project_id.clone(),
         };
         let registration = workspace
@@ -73,6 +86,7 @@ impl Engine {
         let mut steps = Vec::new();
         let mut collection_guard = None;
         let mut warnings = Vec::new();
+        let mut member = None;
         let kind = match request {
             Maintenance::Normalize {
                 kind,
@@ -180,7 +194,7 @@ impl Engine {
                     &["workspace.json"],
                     pretty(&workspace),
                 )?);
-                warnings.push(json!({"code":"FILES_RETAINED","message":"Unregistering leaves project files and its AGENTS instructions on disk."}));
+                warnings.push(json!({"code":"FILES_RETAINED","message":"Unregistering leaves project files and the AGENTS instructions of the project and its member folders on disk."}));
                 "unregister"
             }
             Maintenance::Relocate {
@@ -200,6 +214,7 @@ impl Engine {
                 {
                     return Err(AppError::reject(409, "PATH_ALREADY_REGISTERED"));
                 }
+                Self::ensure_not_member(&workspace, &new_absolute_path)?;
                 // A preview only reads. It takes no lease, creates nothing at
                 // the new path and keeps the registered folder's store open.
                 let directory = Directory::open(Path::new(&new_absolute_path))?;
@@ -229,6 +244,119 @@ impl Engine {
                 "relocate"
             }
             Maintenance::IndexRebuild { .. } => "index_rebuild",
+            Maintenance::AddMember {
+                relative_path,
+                expected_workspace_version,
+                ..
+            } => {
+                if workspace_version != expected_workspace_version {
+                    return Err(AppError::reject(412, "VERSION_CONFLICT"));
+                }
+                if !ProjectRegistration::valid_member(&relative_path) {
+                    return Err(AppError::reject(422, "MEMBER_PATH_INVALID"));
+                }
+                let absolute = format!("{old_path}/{relative_path}");
+                if workspace.projects.iter().any(|p| p.path == absolute) {
+                    return Err(AppError::reject(409, "PATH_ALREADY_REGISTERED"));
+                }
+                if workspace
+                    .projects
+                    .iter()
+                    .any(|p| p.project_id != project && p.selects(&absolute))
+                {
+                    return Err(AppError::reject(409, "PATH_IS_MEMBER"));
+                }
+                // A preview only reads. Every component is opened without
+                // following links and must be spelled as the folder lists it,
+                // because selection later compares exact paths.
+                let mut directory = Directory::open(Path::new(&old_path))?;
+                for part in relative_path.split('/') {
+                    if !directory.names()?.iter().any(|name| name == part) {
+                        return Err(AppError::reject(404, "MEMBER_FOLDER_NOT_FOUND"));
+                    }
+                    directory = directory.child(part, false)?;
+                }
+                let names = directory.names()?;
+                if names
+                    .iter()
+                    .any(|name| name.eq_ignore_ascii_case(".project"))
+                {
+                    return Err(AppError::reject(409, "MEMBER_IS_PROJECT"));
+                }
+                if names
+                    .iter()
+                    .any(|name| name.eq_ignore_ascii_case("agents.md") && name != "AGENTS.md")
+                {
+                    return Err(AppError::reject(409, "AGENTS_CASE_CONFLICT"));
+                }
+                let block = include_str!("../../../templates/managed-member-block.md");
+                let agents = match directory.read("AGENTS.md")? {
+                    Some(bytes) => {
+                        let text = std::str::from_utf8(&bytes)
+                            .map_err(|_| AppError::reject(409, "AGENTS_INVALID_UTF8"))?;
+                        if text.contains(PROJECT_MARKER)
+                            || (text.contains(MEMBER_MARKER) && !text.contains(block))
+                        {
+                            return Err(AppError::reject(409, "MANAGED_BLOCK_CONFLICT"));
+                        }
+                        let declared = text.contains(MEMBER_MARKER);
+                        let mut bytes = bytes;
+                        if !declared {
+                            bytes.extend_from_slice(b"\n\n");
+                            bytes.extend_from_slice(block.as_bytes());
+                        }
+                        bytes
+                    }
+                    None => block.as_bytes().to_vec(),
+                };
+                steps.push(Step::plan(&directory, &["AGENTS.md"], agents)?);
+                let registration = workspace
+                    .projects
+                    .iter_mut()
+                    .find(|p| p.project_id == project)
+                    .ok_or(AppError::invariant("member project registration"))?;
+                // Declaring a member again only restores its instructions.
+                if !registration.members.contains(&relative_path) {
+                    registration.members.push(relative_path.clone());
+                }
+                validate_workspace(json!(workspace))
+                    .map_err(|_| AppError::reject(422, "WORKSPACE_LIMIT"))?;
+                steps.push(Step::plan(
+                    &self.journal.directory,
+                    &["workspace.json"],
+                    pretty(&workspace),
+                )?);
+                member = Some(relative_path);
+                "add_member"
+            }
+            Maintenance::RemoveMember {
+                relative_path,
+                expected_workspace_version,
+                ..
+            } => {
+                if workspace_version != expected_workspace_version {
+                    return Err(AppError::reject(412, "VERSION_CONFLICT"));
+                }
+                let members = &mut workspace
+                    .projects
+                    .iter_mut()
+                    .find(|p| p.project_id == project)
+                    .ok_or(AppError::invariant("member project registration"))?
+                    .members;
+                let declared = members.len();
+                members.retain(|member| member != &relative_path);
+                if members.len() == declared {
+                    return Err(AppError::reject(404, "MEMBER_NOT_DECLARED"));
+                }
+                steps.push(Step::plan(
+                    &self.journal.directory,
+                    &["workspace.json"],
+                    pretty(&workspace),
+                )?);
+                warnings.push(json!({"code":"FILES_RETAINED","message":"Removing a member folder leaves its AGENTS instructions on disk."}));
+                member = Some(relative_path);
+                "remove_member"
+            }
         };
         if steps
             .iter()
@@ -240,7 +368,7 @@ impl Engine {
         }
         let id = Uuid::new_v4().to_string();
         let expires = now_millis() + 300_000;
-        let presentation = json!({
+        let mut presentation = json!({
             "plan_id": id,
             "kind": kind,
             "project_id": project,
@@ -248,6 +376,9 @@ impl Engine {
             "warnings": warnings,
             "expires_at": instant(expires),
         });
+        if let Some(member) = member {
+            presentation["relative_path"] = json!(member);
+        }
         let plan = Plan {
             id,
             kind: WorkflowKind::parse(kind)?,

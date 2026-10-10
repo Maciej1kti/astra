@@ -263,6 +263,31 @@ pub struct ProjectRegistration {
     pub project_id: String,
     pub path: String,
     pub added_at: String,
+    /// Folders below `path` that select this project by their own exact path.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub members: Vec<String>,
+}
+
+impl ProjectRegistration {
+    /// A member is a `/`-separated path below the project folder in the exact
+    /// spelling the host compares. It never leaves the folder or names its data.
+    pub fn valid_member(path: &str) -> bool {
+        !path.contains('\0')
+            && path.split('/').all(|part| {
+                !part.is_empty()
+                    && part != "."
+                    && part != ".."
+                    && !part.eq_ignore_ascii_case(".project")
+            })
+    }
+    /// The project whose folder or declared member folder is exactly `path`.
+    pub fn selects(&self, path: &str) -> bool {
+        self.path == path
+            || path
+                .strip_prefix(self.path.as_str())
+                .and_then(|rest| rest.strip_prefix('/'))
+                .is_some_and(|rest| self.members.iter().any(|member| member == rest))
+    }
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

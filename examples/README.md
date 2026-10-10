@@ -90,3 +90,9 @@ folder, and reading the same path returns a
 `/api/v1/roots/{root_id}/directories` adds an empty folder below an approved
 root. See
 [ADR-074](../docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md).
+
+A [member folder input](requests/member-folder.json) is the maintenance plan
+that declares a folder below a project; `remove_member` takes the same fields.
+The [resolve examples](requests/local-project-resolve.http) show that the
+declared folder then selects the project by its own path. See
+[ADR-080](../docs/ADR-080-MEMBER-FOLDERS.md).

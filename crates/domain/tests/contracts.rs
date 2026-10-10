@@ -328,6 +328,43 @@ fn structured_card_content_preserves_identity_order_and_explicit_status() {
 }
 
 #[test]
+fn workspace_member_folders_round_trip_within_their_bounds() {
+    let mut workspace = read("examples/workspace.json");
+    workspace["projects"][0]["members"] = json!(["server", "apps/ios", ".config", "a..b"]);
+    assert_eq!(
+        serde_json::to_value(validate_workspace(workspace.clone()).unwrap().get()).unwrap(),
+        workspace
+    );
+    // A registration without members keeps the bytes it always had.
+    workspace["projects"][0]["members"] = json!([]);
+    let stored = serde_json::to_value(validate_workspace(workspace.clone()).unwrap().get());
+    assert!(stored.unwrap()["projects"][0].get("members").is_none());
+    let many: Vec<String> = (0..65).map(|n| format!("folder-{n}")).collect();
+    for invalid in [
+        json!([""]),
+        json!(["/absolute"]),
+        json!(["trailing/"]),
+        json!(["a//b"]),
+        json!(["."]),
+        json!([".."]),
+        json!(["a/../b"]),
+        json!([".project"]),
+        json!(["a/.PROJECT"]),
+        json!(["nul\u{0}"]),
+        json!(["twice", "twice"]),
+        json!(["x".repeat(1025)]),
+        json!([7]),
+        json!("server"),
+        json!(many),
+    ] {
+        workspace["projects"][0]["members"] = invalid.clone();
+        assert!(validate_workspace(workspace.clone()).is_err(), "{invalid}");
+    }
+    workspace["projects"][0]["members"] = json!(many[..64]);
+    assert!(validate_workspace(workspace).is_ok());
+}
+
+#[test]
 fn workspace_default_views_round_trip_and_reject_unknown_names() {
     let mut workspace = read("examples/workspace.json");
     for view in [

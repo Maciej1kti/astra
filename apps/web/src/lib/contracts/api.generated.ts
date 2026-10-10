@@ -596,6 +596,10 @@ export interface ProjectRegistration {
   project_id: string;
   path: string;
   added_at: string;
+  /**
+   * @maxItems 64
+   */
+  members?: string[];
 }
 export interface Preferences {
   week_start?: "monday" | "sunday";

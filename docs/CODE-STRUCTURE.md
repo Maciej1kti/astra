@@ -747,6 +747,15 @@ It derives the target from the current workspace; startup reconciliation handles
 restart. IndexRebuild still requires its refresh before durable job completion.
 See [ADR-033](ADR-033-AUDIT-OWNERSHIP-AND-RECOVERY.md) for these boundaries.
 
+[Member folders](ADR-080-MEMBER-FOLDERS.md) are entries on a project's
+registration. `ProjectRegistration::selects` in the
+[domain model](../crates/domain/src/models.rs) is the one place that matches a
+path to a project. The [maintenance planner](../crates/application/src/maintenance.rs)
+declares and removes members and writes
+[their instructions](../templates/managed-member-block.md);
+[registration](../crates/application/src/registration.rs) and relocation refuse
+the path of a declared member.
+
 ## Checks and fixtures
 
 Run `.venv-check/bin/python scripts/check.py`, then

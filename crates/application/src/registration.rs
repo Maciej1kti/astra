@@ -18,6 +18,9 @@ use serde_json::{Value, json};
 use std::path::Path;
 use uuid::Uuid;
 
+pub(crate) const PROJECT_MARKER: &str = "<!-- local-projects:begin";
+pub(crate) const MEMBER_MARKER: &str = "<!-- local-projects-member:begin";
+
 impl Engine {
     pub fn registration_plan(
         &self,
@@ -67,8 +70,8 @@ impl Engine {
                 .map_err(|_| AppError::reject(422, "INVALID_PROJECT_NAME"))?;
             (id, document::serialize(&parsed)?)
         };
-        let registrations = &mut workspace.projects;
-        if let Some(existing) = registrations
+        if let Some(existing) = workspace
+            .projects
             .iter()
             .find(|r| r.project_id == id || r.path == path)
         {
@@ -76,10 +79,12 @@ impl Engine {
                 return Err(AppError::reject(409, "REGISTRATION_ID_PATH_CONFLICT"));
             }
         } else {
-            registrations.push(ProjectRegistration {
+            Self::ensure_not_member(&workspace, path)?;
+            workspace.projects.push(ProjectRegistration {
                 project_id: id.clone(),
                 path: path.into(),
                 added_at: instant(now),
+                members: Vec::new(),
             });
         }
         validate_workspace(json!(workspace))
@@ -92,15 +97,23 @@ impl Engine {
             return Err(AppError::reject(409, "AGENTS_CASE_CONFLICT"));
         }
         let block = include_str!("../../../templates/managed-agents-block.md");
+        let member = include_str!("../../../templates/managed-member-block.md");
         let agents = match root.read("AGENTS.md")? {
             Some(bytes) => {
                 let text = std::str::from_utf8(&bytes)
                     .map_err(|_| AppError::reject(409, "AGENTS_INVALID_UTF8"))?;
-                if text.contains("<!-- local-projects:begin") {
-                    if !text.contains(block) {
+                if text.contains(PROJECT_MARKER) {
+                    if !text.contains(block) || text.contains(MEMBER_MARKER) {
                         return Err(AppError::reject(409, "MANAGED_BLOCK_CONFLICT"));
                     }
                     bytes
+                } else if text.contains(MEMBER_MARKER) {
+                    // A former member folder becomes a project of its own: its
+                    // unedited member block gives way to the project block.
+                    if text.matches(MEMBER_MARKER).count() != 1 || !text.contains(member) {
+                        return Err(AppError::reject(409, "MANAGED_BLOCK_CONFLICT"));
+                    }
+                    text.replacen(member, block, 1).into_bytes()
                 } else {
                     let mut bytes = bytes;
                     bytes.extend_from_slice(b"\n\n");

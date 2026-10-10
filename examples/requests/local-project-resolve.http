@@ -4,3 +4,10 @@ Host: localhost
 Content-Type: application/json
 
 {"absolute_path":"/home/owner/work/field-notes"}
+
+### A declared member folder answers with the same project
+POST /local/v1/projects/resolve HTTP/1.1
+Host: localhost
+Content-Type: application/json
+
+{"absolute_path":"/home/owner/work/field-notes/server"}

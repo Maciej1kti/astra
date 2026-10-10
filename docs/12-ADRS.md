@@ -511,3 +511,10 @@ The browser calls projects "Cele" (goals) while identifiers stay `project`.
 Projects get source-owned comments that mirror card comments, and project
 summaries carry a derived read-only date `span` from their cards. See
 [ADR-079](ADR-079-GOAL-COMMENTS-AND-SPAN.md).
+
+## ADR-080 — Member folders select their project
+
+The owner declares a subfolder of a registered project as a member folder. Its
+own exact path then selects the project in `projectctl`, and the host writes
+path-free instructions into the member's `AGENTS.md`. Nothing is inferred from
+parent folders. See [ADR-080](ADR-080-MEMBER-FOLDERS.md).

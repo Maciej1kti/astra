@@ -352,12 +352,30 @@ SET value=excluded.value",
             value: workspace,
             version: _,
         } = self.workspace()?;
+        // A registered folder wins over a declared member folder of the same
+        // path. Neither is ever inferred from a parent or child folder.
         workspace
             .projects
             .iter()
             .find(|r| r.path == path)
+            .or_else(|| workspace.projects.iter().find(|r| r.selects(path)))
             .map(|r| r.project_id.clone())
             .ok_or_else(|| AppError::reject(404, "PROJECT_NOT_REGISTERED"))
+    }
+    /// A folder declared as another project's member keeps selecting that
+    /// project until the membership is removed.
+    pub(crate) fn ensure_not_member(
+        workspace: &project_domain::models::Workspace,
+        path: &str,
+    ) -> Result<(), AppError> {
+        if workspace
+            .projects
+            .iter()
+            .any(|r| r.path != path && r.selects(path))
+        {
+            return Err(AppError::reject(409, "PATH_IS_MEMBER"));
+        }
+        Ok(())
     }
 
     pub fn get(&self, project_id: &str, kind: Kind, id: &str) -> Result<Value, AppError> {

@@ -65,6 +65,17 @@ pub fn validate_workspace(mut value: Value) -> Result<Validated<Workspace>, Doma
     {
         *view = Value::String("projects".into());
     }
+    let members = value["projects"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|registration| registration["members"].as_array())
+        .flatten();
+    for member in members {
+        if !models::ProjectRegistration::valid_member(text(member)?) {
+            return Err(DomainError::Invalid("member folder path"));
+        }
+    }
     decode(value)
 }
 

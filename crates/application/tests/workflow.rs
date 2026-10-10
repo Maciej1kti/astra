@@ -17,6 +17,8 @@ fn existing_workflow_records_keep_their_wire_shape_and_command_digest() {
         "unregister",
         "relocate",
         "index_rebuild",
+        "add_member",
+        "remove_member",
     ] {
         let record = json!({
             "id": "plan", "kind": kind, "project_id": "project", "expires_at": 100,

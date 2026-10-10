@@ -115,6 +115,8 @@ export const messages: Record<string, string> = {
   MANAGED_BLOCK_CONFLICT:
     "Zarządzany blok AGENTS.md wymaga sprawdzenia przed rejestracją.",
   PATH_ALREADY_REGISTERED: "Ten folder jest już zarejestrowany.",
+  PATH_IS_MEMBER:
+    "Ten folder jest podfolderem innego celu. Usuń to powiązanie, aby zarejestrować go osobno.",
   FOLDER_UNAVAILABLE: "Folder jest niedostępny na serwerze.",
   ROOT_NOT_FOUND: "Nie znaleziono zatwierdzonego katalogu.",
   ROOT_CHANGED: "Zatwierdzony katalog się zmienił. Wybierz go ponownie.",

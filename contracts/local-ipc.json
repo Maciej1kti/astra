@@ -61,7 +61,7 @@
       "method": "POST",
       "path": "/local/v1/maintenance/plans",
       "input": {
-        "operation": "normalize|rebalance|relocate|unregister|index_rebuild",
+        "operation": "normalize|rebalance|relocate|unregister|index_rebuild|add_member|remove_member",
         "fields": "strict flattened variant in maintenance_parameters"
       },
       "output": {
@@ -91,7 +91,7 @@
       "method": "POST",
       "path": "/local/v1/projects/resolve",
       "input": {
-        "absolute_path": "exact absolute registered path"
+        "absolute_path": "exact absolute path of a registered project folder or of one of its declared member folders"
       },
       "output": {
         "project_id": "UUID"
@@ -148,10 +148,21 @@
     },
     "index_rebuild": {
       "project_id": "UUID"
+    },
+    "add_member": {
+      "project_id": "UUID",
+      "relative_path": "existing folder below the project folder, '/'-separated, in its listed spelling",
+      "expected_workspace_version": "Version"
+    },
+    "remove_member": {
+      "project_id": "UUID",
+      "relative_path": "declared member path",
+      "expected_workspace_version": "Version"
     }
   },
   "notes": [
     "Plan is no destructive action. Commit rechecks preconditions.",
+    "A member folder selects its project only by its own exact path. Resolution never walks to a parent or child folder. See ADR-080.",
     "Maintenance API is internal, not offered to unauthenticated loopback or remote browser.",
     "Schema variants must be implemented as strict tagged unions, not unrestricted maps.",
     "Built-in backup/restore archives and source-file migrations are deferred by the owner on 2026-09-05.",

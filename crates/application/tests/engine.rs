@@ -180,6 +180,8 @@ mod context;
 
 #[path = "engine/maintenance.rs"]
 mod maintenance;
+#[path = "engine/members.rs"]
+mod members;
 
 #[path = "engine/git.rs"]
 mod git;

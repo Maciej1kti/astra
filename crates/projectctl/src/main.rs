@@ -83,6 +83,11 @@ enum Action {
         action: recovery::Action,
     },
     /// Prepare a local maintenance operation from a strict JSON input file.
+    ///
+    /// The file names one operation and its fields: normalize, rebalance,
+    /// relocate, unregister, index_rebuild, add_member or remove_member.
+    /// add_member declares a folder below a project, by its relative_path,
+    /// whose own path then selects that project with --project.
     MaintenancePlan {
         #[arg(long)]
         json_file: PathBuf,

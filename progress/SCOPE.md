@@ -440,6 +440,17 @@ repository, the owner chose to move `.project/` to the folder that holds the
 three repositories, to make that folder a private repository, and to remove the
 cards and reports from this repository's history as well.
 
+## Member folders — owner direction, 2026-10-10
+
+With `.project/` kept in the folder above the three repositories, the owner
+pointed out that an agent working in one of them does not know to report to
+that folder, and asked for a systemic answer that also serves later projects
+laid out the same way: planning data in a parent folder, agents started in
+subfolders. Offered explicit member folders registered in Astra, with
+`projectctl --project .` resolving from a member folder and Astra writing a
+path-free block into each member's `AGENTS.md`, the owner chose that option.
+Decision record: [ADR-080](../docs/ADR-080-MEMBER-FOLDERS.md).
+
 ## Settings save themselves — owner direction, 2026-10-10
 
 While the Settings dialog was being fixed for the phone, the owner asked that

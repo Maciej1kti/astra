@@ -13,7 +13,7 @@ An implemented feature and a passed release acceptance scenario are different cl
 | Profile projects | Personal registration, approved roots, preferences, Focus order and report read state; profiles in one host can share a folder's source data and counter values. Shared deletion/relocation requires unregistering other profiles first; command history remains per profile |
 | Connectivity | Browser writes require the host; no offline mutation queue or disconnected editing/sync |
 | Hosting | User process on loopback behind an owner-managed private HTTPS proxy; no hosted service or automatic network setup |
-| Project selection | Exact explicit folders; no discovery through parents, Git remotes or worktrees |
+| Project selection | Exact explicit folders: a registered project folder or a [member folder](ADR-080-MEMBER-FOLDERS.md) declared below it. No discovery through parents, Git remotes or worktrees; a worktree of a member folder is not mapped. Members are declared through CLI maintenance only, not in the browser |
 | Multiple hosts | Independent instances; no federation, shared cross-host Focus or automatic merges |
 | Filesystems | Local files with guarded paths and one cooperating writer; network shares and actively synchronized multi-writer folders are not a supported durability mode |
 | Planning | Recorded date ranges/events and milestones; no dependencies, critical path, automatic rescheduling or working-day calendar. A project (a goal in the browser) has no dates of its own: its range is derived on each read from its non-archived cards and cannot be set; milestones do not widen it ([ADR-079](ADR-079-GOAL-COMMENTS-AND-SPAN.md)) |
