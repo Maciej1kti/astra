@@ -36,7 +36,7 @@ struct Arguments {
     /// Trusted user profile UUID. Overrides ASTRA_USER; omitted selects Owner.
     #[arg(long, global = true)]
     user: Option<String>,
-    /// Exact registered project folder; never searches parent folders.
+    /// Exact registered project folder or declared member folder; never searches parent folders.
     #[arg(long, global = true)]
     project: Option<PathBuf>,
     #[arg(long, global=true, default_value_t=30, value_parser=clap::value_parser!(u64).range(1..=300))]

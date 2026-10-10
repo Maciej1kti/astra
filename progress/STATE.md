@@ -36,6 +36,13 @@ showed the part below the header at zero height, and its zero flex basis was
 replaced by a content-sized one. Whether that phone now shows Settings is the
 tester's to confirm.
 
+A project can name [member folders](2026-10-10-member-folders.md) since the
+owner's 2026-10-10 direction: a declared subfolder selects the project by its
+own path and carries Astra's instructions in its `AGENTS.md`, so an agent
+started in a repository below the planning data reports to the right project.
+The full local gate passed, the manual instance runs the build, and the three
+repositories are declared as members of Astra's own project.
+
 Astra is developed in [three repositories](2026-10-10-three-repositories.md)
 since the owner's 2026-10-10 direction: this one for the server, the
 command-line client and the web interface, a private one for the apps, and a
