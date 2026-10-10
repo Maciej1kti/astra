@@ -33,7 +33,7 @@ the coverage limits linked above.
 
 Runtime and build dependencies differ: an installed daemon embeds the frontend
 and uses bundled SQLite. Node is needed for building and the trial proxy, Python
-for validation/installation and the optional Omarchy integration. Neither Node
+for validation/installation. Neither Node
 nor Python serves ordinary requests in an installed daemon.
 
 ## Clone and build

@@ -297,7 +297,6 @@ are in `crates/projectd/src/agent*`; the browser side is
   |-- scripts/               full gate, generators, browser tests, packaging
   |-- tests/                 fault matrix and contract test vectors
   |-- ops/                   installer, service templates, recovery guide
-  |-- integrations/omarchy/  optional Linux desktop integration
   |-- docs/                  maintained guides, design, ADRs, retained requirements
   |-- delivery/              requirement/acceptance IDs and release checklist
   |-- progress/              concise dated evidence and scope decisions

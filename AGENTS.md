@@ -13,9 +13,10 @@ handoff. Built-in backup archives/restore tooling and source-file migration
 frameworks are deferred beyond v1; all other outstanding requirements remain.
 Preserve unresolved requirements during documentation cleanup.
 
+Astra is developed in three repositories by the owner's 2026-10-10 direction.
 The server, the command-line client and the web interface are public here. The
-iOS and Mac apps are closed source by the owner's 2026-10-10 direction and live
-in a private repository. Never add their code, build scripts, decision records
+Omarchy widget is public in https://github.com/Maciej1kti/astra-omarchy. The
+iOS and Mac apps are closed source and live in a private repository. Never add their code, build scripts, decision records
 or excerpts of them to this repository, its reports or its issues; this
 repository may say that the apps exist and what they do.
 

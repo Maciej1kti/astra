@@ -15,7 +15,7 @@ host, with more hosts added by pasting and one host visible at a time.
   does not verify the certificate and sends no credentials.
 - The local socket, the `projectctl focus-preview` call and the Focus rows are
   gone from the widget. The CLI command and ADR-057 are unchanged.
-- The [integration guide](../integrations/omarchy/README.md) describes the
+- The [integration guide](https://github.com/Maciej1kti/astra-omarchy#readme) describes the
   address forms, install, limits and IPC.
 
 ## Checks

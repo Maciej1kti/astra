@@ -425,6 +425,14 @@ commits that published them between 2026-10-09 and 2026-10-10 are also removed
 from this repository's history is the owner's to decide. The project license
 remains deferred.
 
+## Three repositories — owner direction, 2026-10-10
+
+After the apps left this repository the owner asked for a sensible split: one
+folder holding three repositories, for the server with the web interface, for
+the apps, and for the Omarchy widget, which is open source as well and gets a
+repository of its own. The owner also asked for the commits that published the
+apps to be removed from this repository's history.
+
 ## Settings save themselves — owner direction, 2026-10-10
 
 While the Settings dialog was being fixed for the phone, the owner asked that

@@ -17,7 +17,6 @@ STEPS = [
     [sys.executable, "scripts/check_package.py", "--skip-manifest"],
     [sys.executable, "-m", "openapi_spec_validator", "contracts/openapi.yaml"],
     [sys.executable, "-m", "unittest", "discover", "-s", "scripts/tests"],
-    [sys.executable, "-m", "unittest", "discover", "-s", "integrations/omarchy", "-p", "test_*.py"],
     ["node", "--test", *[str(path.relative_to(ROOT)) for path in sorted((ROOT / "scripts/tests").glob("*.test.mjs"))]],
     ["npm", "run", "check"],
     ["node", "scripts/check-boundaries.mjs"],

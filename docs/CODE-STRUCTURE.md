@@ -531,8 +531,8 @@ See the [CLI guide](../CLI.md) and [ADR-032B](ADR-032B-EXPLICIT-CLI-OPERATIONS.m
 rows. It uses the CLI's checked Unix transport with a smaller
 response/time budget; only reference-only hosts read card details. Unverified rows
 remain unavailable. The Omarchy widget stopped consuming it on 2026-10-07: it now
-lists Astra hosts, with host parsing in `integrations/omarchy/astra.focus/hosts.js`
-and the separate window activation helper still in Python.
+lists Astra hosts. Since 2026-10-10 it is developed in
+[its own repository](https://github.com/Maciej1kti/astra-omarchy).
 See [ADR-057](ADR-057-FOCUS-WIDGET-READER.md).
 
 [Engine](../crates/application/src/engine.rs) owns storage handles and application

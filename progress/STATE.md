@@ -36,6 +36,11 @@ showed the part below the header at zero height, and its zero flex basis was
 replaced by a content-sized one. Whether that phone now shows Settings is the
 tester's to confirm.
 
+Astra is developed in [three repositories](2026-10-10-three-repositories.md)
+since the owner's 2026-10-10 direction: this one for the server, the
+command-line client and the web interface, a private one for the apps, and a
+public one for the [Omarchy widget](https://github.com/Maciej1kti/astra-omarchy).
+
 The iOS and Mac apps are [closed source](2026-10-10-closed-source-apps.md)
 since the owner's 2026-10-10 direction: their code, build scripts and decision
 records moved with their history to a private repository, and this repository
