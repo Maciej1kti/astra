@@ -98,3 +98,8 @@ and the card editor still starts at the status bar's edge.
 This is not demonstrated on the engine that failed. The tester's iOS version is
 unknown to me and no older runtime is installed, so the cause is inferred from
 the photo and the code. The tester reopening Settings is the proof.
+
+The host was rebuilt and restarted with this change: data identical before and
+after (15 projects, 18 sessions), all 82 served files equal the build, and the
+served stylesheet carries the content-sized rule (`flex: auto` after
+minification).
