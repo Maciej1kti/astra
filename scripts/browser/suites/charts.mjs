@@ -4,6 +4,10 @@ import { expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { runBrowserSuite } from "../runtime.mjs";
+import {
+  closeSettings,
+  saveSettings,
+} from "../../settings-dialog-regression.mjs";
 
 await runBrowserSuite(
   async ({ config, cli, runtime, evidence, newContext, browser }) => {
@@ -1084,12 +1088,11 @@ await runBrowserSuite(
         settingsDialog.getByRole("switch", { name: new RegExp(`^${name}`) });
       await expect(pluginBox("Razem na Wykresie")).toBeChecked();
       await expect(pluginBox("Rozliczenie na Wykresie")).toBeChecked();
-      await pluginBox("Rozliczenie na Wykresie").uncheck();
+      await saveSettings(page, settingsDialog, () =>
+        pluginBox("Rozliczenie na Wykresie").uncheck(),
+      );
       await screenshot("chart-plugin-settings");
-      await settingsDialog
-        .getByRole("button", { name: "Zapisz ustawienia", exact: true })
-        .click();
-      await expect(settingsDialog).toHaveCount(0);
+      await closeSettings(settingsDialog);
       await expect(dashboard).toBeVisible();
       assert.deepEqual(cli("get", preferencesPath).preferences.plugins, [
         "chart-totals",

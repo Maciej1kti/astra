@@ -377,7 +377,8 @@ await runBrowserSuite(
         const timezone = dialog.getByLabel("Strefa czasowa", { exact: true });
         await expect(timezone).toBeEnabled();
         const original = await timezone.inputValue();
-        await timezone.fill(original === "UTC" ? "Europe/Warsaw" : "UTC");
+        // A finished choice saves itself; an unfinished zone name is a draft.
+        await timezone.fill("Europe/Wars");
         await page.keyboard.press("Escape");
         const confirmation = dialog.getByRole("alertdialog", {
           name: "Odrzucić niezapisane ustawienia?",

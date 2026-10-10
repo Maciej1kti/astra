@@ -102,9 +102,9 @@ await runBrowserSuite(
       return dialog.evaluate((node) => {
         const rect = node.getBoundingClientRect();
         const body = node.querySelector(".dialog-body");
-        // Settings saves from its header and has no footer.
-        const save = [...node.querySelectorAll(".dialog-header button")]
-          .find((button) => button.textContent.trim() === "Zapisz ustawienia")
+        // Settings shows its save state in the header and has no footer.
+        const save = node
+          .querySelector('.dialog-header [data-testid="autosave-status"]')
           .getBoundingClientRect();
         return {
           viewport: { width: innerWidth, height: innerHeight },
@@ -284,7 +284,6 @@ await runBrowserSuite(
           }
           const timezone = dialog.getByLabel("Strefa czasowa", { exact: true });
           const original = await timezone.inputValue();
-          await timezone.fill(original === "UTC" ? "Europe/Warsaw" : "UTC");
           const requests = [];
           const pattern = "**/api/v1/workspace/preferences";
           await page.route(pattern, async (route) => {
@@ -302,10 +301,14 @@ await runBrowserSuite(
               body: JSON.stringify({ error: { code: "SERVER_BUSY" } }),
             });
           });
-          await timezone.press("Control+Enter");
+          // The change is the save: no button starts it.
+          await timezone.fill(original === "UTC" ? "Europe/Warsaw" : "UTC");
           await dialog
             .getByText("Oczekujące polecenie:", { exact: false })
             .waitFor();
+          await expect(dialog.getByTestId("autosave-status")).toHaveText(
+            "Niezapisane",
+          );
           await checkSettingsPendingFields(dialog);
           await dialog
             .getByRole("button", {

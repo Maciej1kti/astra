@@ -2,7 +2,6 @@
   import { errorMessage } from "../../lib/api/messages.ts";
   import { formatTimestamp } from "../../lib/resources/resource-presentation";
   import DialogHeader from "../../lib/ui/DialogHeader.svelte";
-  import Button from "../../lib/ui/Button.svelte";
 
   import type {
     Root,
@@ -19,13 +18,15 @@
     sessionAccess,
     unloadGuard,
   } from "../../lib/api/command-operation.svelte";
-  import { rebaseSettingsDraft, settingsDraft } from "./settings-draft";
   import {
-    pluginIds,
-    pluginList,
-    plugins,
-    togglePlugin,
-  } from "../../lib/plugins/registry";
+    rebaseSettingsDraft,
+    settingsDraft,
+    settingsSnapshot,
+    type SettingsDraft,
+  } from "./settings-draft";
+  import { settingsAutosave, settingsSaveLabel } from "./settings-autosave";
+  import type { AutosaveState } from "../editor/editor-autosave";
+  import { pluginIds, plugins, togglePlugin } from "../../lib/plugins/registry";
   import { onMount, tick } from "svelte";
   import AppearanceSettings from "./AppearanceSettings.svelte";
   import { modal, layerExit } from "../../lib/ui/dialog";
@@ -42,13 +43,13 @@
       users = null;
       loading = false;
       // Without a draft nothing is retained; pairing needs no dialog below it.
-      if (!dirty && !pending) onclose();
+      if (!dirty && !pending && !autosave.hasWork) onclose();
     },
     restored: () => void load(),
   });
   const accessLost = $derived(access.lost);
   const operation = commandOperation(() => !access.lost);
-  unloadGuard(() => dirty || !!pending);
+  unloadGuard(() => dirty || !!pending || autosave.hasWork);
 
   let {
     onclose,
@@ -80,18 +81,51 @@
   let info = $state("");
   let loading = $state(true);
   let working = $state(false);
-  let pending = $derived(operation.pending);
+  // Adding a user is an explicit command with its own lifecycle. Preferences
+  // save themselves (ADR-078) and only hold a command after a failure.
+  const userPending = $derived(operation.pending);
+  let saveState = $state<AutosaveState>({
+    phase: "idle",
+    pending: null,
+    queued: false,
+    error: null,
+  });
+  const conflict = $derived(saveState.phase === "conflict");
+  const uncertain = $derived(saveState.phase === "uncertain");
+  const rejected = $derived(saveState.phase === "rejected");
+  const preferencesPending = $derived(
+    conflict || uncertain ? saveState.pending : null,
+  );
+  /** Why the last save is not done; the engine keeps it with the command. */
+  const saveError = $derived(
+    saveState.error &&
+      ["uncertain", "rejected", "not-saved"].includes(saveState.phase)
+      ? errorMessage(saveState.error)
+      : "",
+  );
+  let pending = $derived(userPending ?? preferencesPending);
   const busy = $derived(working || operation.busy);
   let sessions = $state<Session[]>([]);
   let pairings = $state<Pairing[]>([]);
   let users = $state<UserList | null>(null);
   let selectedUser = $state("");
   let userName = $state("");
-  let commandKind = $state<"preferences" | "user">("preferences");
-  // A rejected conflict keeps the draft visible but never resubmits it as is.
-  const conflict = $derived(
-    operation.conflict && commandKind === "preferences",
-  );
+  /** Edits kept through a conflict wait for a deliberate save. */
+  let held = $state<(keyof typeof labels)[]>([]);
+  /** Something was saved in this opening, so the workspace reloads on close. */
+  let savedHere = false;
+  const scope = () => ({ agent: agentEnabled, github: githubHost });
+  const autosave = settingsAutosave({
+    scope,
+    createPending: (payload, version) =>
+      command("/api/v1/workspace/preferences", "PATCH", payload, version),
+    allowed: () => !access.lost,
+    onchange: (state) => (saveState = state),
+    oncommitted: (saved) => {
+      baseline = saved;
+      savedHere = true;
+    },
+  });
   const labels = {
     timezone: "strefa czasowa",
     week: "początek tygodnia",
@@ -103,43 +137,64 @@
   };
   let confirmClose = $state(false);
   let generation = 0;
-  let preferencesForm: HTMLFormElement;
   let closeTrigger: HTMLElement | null = null;
+  function currentDraft(): SettingsDraft {
+    return {
+      timezone,
+      week,
+      view,
+      agent,
+      plugins: enabledPlugins,
+      root,
+      publish,
+    };
+  }
+  /** The draft differs from the saved settings in something that can be saved. */
   let preferencesDirty = $derived(
     !!baseline &&
-      (timezone !== baseline.timezone ||
-        week !== (baseline.preferences.week_start ?? "monday") ||
-        view !== (baseline.preferences.default_view ?? "focus") ||
-        enabledPlugins !== pluginList(baseline.preferences.plugins) ||
-        root !== (baseline.preferences.project_root_id ?? "") ||
-        (githubHost &&
-          publish !== (baseline.preferences.publish_repositories ?? true)) ||
-        (agentEnabled &&
-          agent !== (baseline.preferences.agent_provider ?? "claude"))),
+      settingsSnapshot(baseline, currentDraft(), scope()) !==
+        settingsSnapshot(baseline, settingsDraft(baseline), scope()),
   );
   const dirty = $derived(preferencesDirty || !!userName);
   /** A preference field is editable only while its draft can still be saved. */
   const locked = $derived(
-    !baseline || busy || !!pending || !!userName || accessLost || conflict,
+    !baseline ||
+      busy ||
+      !!userPending ||
+      !!userName ||
+      accessLost ||
+      conflict ||
+      uncertain,
+  );
+  const saving = $derived(
+    saveState.queued ||
+      saveState.phase === "submitting" ||
+      saveState.phase === "checking",
   );
   const switchLocked = $derived(
-    !users || !canSwitchUser || dirty || busy || !!pending || accessLost,
+    !users ||
+      !canSwitchUser ||
+      dirty ||
+      busy ||
+      saving ||
+      !!pending ||
+      accessLost,
   );
   const status = $derived(
     info ||
       (busy
         ? "Stosowanie zmian…"
-        : pending
+        : pending && !conflict
           ? "Wymagane potwierdzenie"
-          : dirty
-            ? userName
-              ? "Wersja robocza nowego użytkownika"
-              : "Niezapisane ustawienia"
-            : loading
-              ? "Ładowanie ustawień…"
-              : baseline
-                ? ""
-                : "Ustawienia niedostępne"),
+          : userName
+            ? "Wersja robocza nowego użytkownika"
+            : conflict || rejected || held.length
+              ? "Niezapisane ustawienia"
+              : loading
+                ? "Ładowanie ustawień…"
+                : baseline
+                  ? ""
+                  : "Ustawienia niedostępne"),
   );
 
   const zones = knownZones();
@@ -147,6 +202,62 @@
   // Without a list of zones the browser still accepts the ones it knows.
   const zoneAvailable = (zone: string) =>
     zoneSet.size ? zoneSet.has(zone) : zoneOffset(zone, new Date()) !== null;
+  /**
+   * A zone can be sent once the browser can resolve its name; the server
+   * decides whether it accepts it. The picker's list is narrower: Chrome, for
+   * one, leaves "UTC" out of it.
+   */
+  const zoneNamed = (zone: string) => zoneOffset(zone, new Date()) !== null;
+  /** An unfinished zone name, or edits kept after a conflict, are not being saved. */
+  const waiting = $derived(
+    preferencesDirty && (held.length > 0 || !zoneNamed(timezone)),
+  );
+  const saveLabel = $derived(
+    settingsSaveLabel({
+      loaded: !!baseline,
+      phase: waiting && !saving ? "not-saved" : saveState.phase,
+      queued: saveState.queued,
+      dirty: preferencesDirty,
+      accessLost,
+    }),
+  );
+  /**
+   * Every change of a preference is saved at once, as in the card editor. A
+   * zone name still being typed waits until it names a zone.
+   */
+  async function changed() {
+    await tick();
+    if (!baseline || locked || !zoneNamed(timezone)) return;
+    const draft = currentDraft();
+    const saved = autosave.source ?? baseline;
+    const snapshot = settingsSnapshot(saved, draft, scope());
+    if (
+      !autosave.hasWork &&
+      snapshot === settingsSnapshot(saved, settingsDraft(saved), scope())
+    )
+      return;
+    held = [];
+    error = "";
+    info = "";
+    // A failure is published as the save state and shown from there.
+    await autosave.enqueue(draft, snapshot).catch(() => {});
+  }
+  /** Typed text waits 400 ms, as in the card editor; leaving the field does not. */
+  let zoneTimer: number | undefined;
+  function zoneTyped() {
+    window.clearTimeout(zoneTimer);
+    zoneTimer = window.setTimeout(() => void changed(), 400);
+  }
+  function zoneCommitted() {
+    window.clearTimeout(zoneTimer);
+    return changed();
+  }
+  function retrySave() {
+    void autosave.retry().catch(() => {});
+  }
+  function checkSave() {
+    void autosave.check().catch(() => {});
+  }
   let now = $state(new Date());
   const zoneNow = $derived.by(() => {
     const offset = zoneOffset(timezone, now);
@@ -200,12 +311,19 @@
   ];
   const initial = (name: string) =>
     (name.trim()[0] ?? "?").toLocaleUpperCase("pl");
-  function close() {
+  /** The workspace reads its settings again when any were saved here. */
+  function finish() {
+    if (savedHere) onsaved();
+    else onclose();
+  }
+  async function close() {
     if (busy) return;
-    if (dirty || pending) {
-      closeTrigger = document.activeElement as HTMLElement | null;
-      confirmClose = true;
-    } else onclose();
+    closeTrigger = document.activeElement as HTMLElement | null;
+    // As in the card editor, a save still on its way finishes before closing.
+    await zoneCommitted();
+    await autosave.flush().catch(() => {});
+    if (dirty || pending || autosave.hasWork) confirmClose = true;
+    else finish();
   }
   function focusConfirmation(node: HTMLButtonElement) {
     node.focus();
@@ -214,13 +332,6 @@
     confirmClose = false;
     await tick();
     if (closeTrigger?.isConnected) closeTrigger.focus();
-  }
-  function keydown(event: KeyboardEvent) {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      if (!confirmClose && preferencesDirty && !busy && !pending && !accessLost)
-        preferencesForm.requestSubmit();
-    }
   }
   async function copyDraft() {
     try {
@@ -256,11 +367,12 @@
     return () => {
       generation++;
       window.clearInterval(tick);
+      window.clearTimeout(zoneTimer);
     };
   });
   async function load() {
     // A retained draft keeps its baseline; only the access lists are read again.
-    const retained = dirty || !!pending || conflict;
+    const retained = dirty || !!pending || autosave.hasWork;
     const current = ++generation;
     loading = true;
     error = "";
@@ -276,6 +388,7 @@
       if (generation !== current) return;
       if (p) {
         baseline = p;
+        autosave.reset(p);
         ({
           timezone,
           week,
@@ -298,41 +411,6 @@
       if (generation === current) loading = false;
     }
   }
-  async function save() {
-    if (
-      !baseline ||
-      !preferencesDirty ||
-      userName ||
-      busy ||
-      accessLost ||
-      pending ||
-      conflict
-    )
-      return;
-    commandKind = "preferences";
-    operation.prepare(
-      command(
-        "/api/v1/workspace/preferences",
-        "PATCH",
-        {
-          timezone,
-          locale: "pl",
-          preferences: {
-            week_start: week,
-            default_view: view,
-            ...(agentEnabled ? { agent_provider: agent } : {}),
-            plugins: pluginIds(enabledPlugins),
-            ...(root && root !== baseline.preferences.project_root_id
-              ? { project_root_id: root }
-              : {}),
-            ...(githubHost ? { publish_repositories: publish } : {}),
-          },
-        },
-        baseline.version,
-      ),
-    );
-    await transmit();
-  }
   async function transmit() {
     await runCommand("submit");
   }
@@ -341,26 +419,24 @@
   }
   /** Both continuations keep the original request ID, epoch and payload. */
   async function runCommand(action: "submit" | "status") {
-    if (!pending || busy || accessLost) return;
+    if (!userPending || busy || accessLost) return;
     error = "";
     info = "";
     try {
-      const submitted = pending;
+      const submitted = userPending;
       if (action === "status") await operation.confirm();
       else await operation.commit();
-      if (commandKind === "user") {
-        userName = "";
-        info =
-          "Dodano użytkownika. Przełącz się na jego przestrzeń roboczą, gdy wszystko będzie gotowe.";
-        users = await api<UserList>(
-          "/api/v1/users",
-          "GET",
-          undefined,
-          {},
-          { fresh: true },
-        );
-        selectedUser = (submitted.payload as { id: string }).id;
-      } else onsaved();
+      userName = "";
+      info =
+        "Dodano użytkownika. Przełącz się na jego przestrzeń roboczą, gdy wszystko będzie gotowe.";
+      users = await api<UserList>(
+        "/api/v1/users",
+        "GET",
+        undefined,
+        {},
+        { fresh: true },
+      );
+      selectedUser = (submitted.payload as { id: string }).id;
     } catch (cause) {
       error = errorMessage(cause);
     }
@@ -382,17 +458,11 @@
       const rebased = rebaseSettingsDraft(
         settingsDraft(baseline),
         settingsDraft(current),
-        {
-          timezone,
-          week,
-          view,
-          agent,
-          plugins: enabledPlugins,
-          root,
-          publish,
-        },
+        currentDraft(),
       );
       baseline = current;
+      // Reading is the deliberate step; nothing is written by it.
+      autosave.reset(current);
       ({
         timezone,
         week,
@@ -402,9 +472,9 @@
         root,
         publish,
       } = rebased.draft);
-      operation.acknowledge();
+      held = rebased.kept;
       info = rebased.kept.length
-        ? `Wczytano aktualne ustawienia. Twoje zmiany (${rebased.kept.map((field) => labels[field]).join(", ")}) pozostały w formularzu; zapisz je ponownie, jeśli nadal są potrzebne.`
+        ? `Wczytano aktualne ustawienia. Twoje zmiany (${rebased.kept.map((field) => labels[field]).join(", ")}) pozostały w formularzu i nie są jeszcze zapisane.`
         : "Wczytano aktualne ustawienia.";
     } catch (cause) {
       // The conflict stays recorded, so the stale draft remains locked.
@@ -425,7 +495,6 @@
       accessLost
     )
       return;
-    commandKind = "user";
     operation.prepare(
       command(
         "/api/v1/users",
@@ -503,32 +572,24 @@
 
 <dialog
   class="app-dialog dialog-large settings-dialog"
-  use:modal={{ onclose: close }}
+  use:modal={{ onclose: () => void close() }}
   out:layerExit|global
   aria-label="Ustawienia przestrzeni roboczej"
-  onkeydown={keydown}
 >
   <DialogHeader
     title="Ustawienia"
-    onclose={close}
+    onclose={() => void close()}
     disabled={busy}
     closeLabel="Zamknij ustawienia"
   >
     {#snippet actions()}
-      <Button
-        variant="primary"
-        type="submit"
-        form="workspace-preferences"
-        aria-keyshortcuts="Control+Enter Meta+Enter"
-        disabled={!baseline ||
-          !preferencesDirty ||
-          !!userName ||
-          busy ||
-          !!pending ||
-          accessLost ||
-          conflict ||
-          confirmClose}>Zapisz ustawienia</Button
-      >
+      {#if saveLabel}<span
+          class="save-indicator"
+          class:saved={saveLabel === "Zapisano"}
+          class:unsaved={saveLabel === "Niezapisane"}
+          data-testid="autosave-status"
+          role="status">{saveLabel}</span
+        >{/if}
     {/snippet}
   </DialogHeader>
   <div class="settings-shell">
@@ -543,12 +604,8 @@
     <!-- Fields name this form, so each section stays a block of its own. -->
     <form
       id="workspace-preferences"
-      bind:this={preferencesForm}
       hidden
-      onsubmit={(e) => {
-        e.preventDefault();
-        void save();
-      }}
+      onsubmit={(e) => e.preventDefault()}
     ></form>
     <div class="dialog-body" bind:this={body} onscroll={track}>
       {#if loading}<p role="status">
@@ -567,9 +624,9 @@
       </div>
       {#if conflict}<section class="notice">
           <p role="alert">
-            Ustawienia zmieniły się w innym miejscu, więc tej wersji roboczej
-            nie można już zapisać. Wczytaj aktualne ustawienia: zmienione przez
-            Ciebie pola pozostaną w formularzu do ponownego, świadomego zapisu.
+            Ustawienia zmieniły się w innym miejscu, więc Twoja ostatnia zmiana
+            nie została zapisana. Wczytaj aktualne ustawienia: zmienione przez
+            Ciebie pola pozostaną w formularzu i zapiszesz je świadomie.
           </p>
           <button
             type="button"
@@ -577,6 +634,12 @@
             disabled={busy || accessLost}>Wczytaj aktualne ustawienia</button
           >
         </section>{/if}
+      {#if held.length && preferencesDirty && !conflict}<section class="notice">
+          <button type="button" onclick={changed} disabled={locked}
+            >Zapisz zachowane zmiany</button
+          >
+        </section>{/if}
+      {#if saveError}<div class="notice" role="alert">{saveError}</div>{/if}
       {#if !loading && !baseline && !accessLost}<button onclick={load}
           >Wczytaj ustawienia ponownie</button
         >{/if}
@@ -594,7 +657,7 @@
             <button onclick={keepEditing} use:focusConfirmation
               >Kontynuuj edycję</button
             >
-            <button onclick={onclose}>Odrzuć wersję roboczą ustawień</button>
+            <button onclick={finish}>Odrzuć wersję roboczą ustawień</button>
           </div>
         </div>{/if}
 
@@ -662,13 +725,10 @@
               accessLost}>Dodaj użytkownika</button
           >
         </form>
-        {#if pending && commandKind === "user"}<div
-            class="notice"
-            role="status"
-          >
+        {#if userPending}<div class="notice" role="status">
             <p>Utworzenie użytkownika oczekuje na potwierdzenie.</p>
             <CommandRecovery
-              {pending}
+              pending={userPending}
               {busy}
               {accessLost}
               oncheck={check}
@@ -691,7 +751,10 @@
             {now}
             available={zoneAvailable}
             disabled={locked}
-            onpick={(zone) => (timezone = zone)}
+            onpick={(zone) => {
+              timezone = zone;
+              void changed();
+            }}
           />
           <div class="zone-field">
             <label
@@ -699,6 +762,8 @@
                 form="workspace-preferences"
                 list="settings-zones"
                 bind:value={timezone}
+                oninput={zoneTyped}
+                onchange={zoneCommitted}
                 placeholder="Europe/Warsaw"
                 autocomplete="off"
                 spellcheck="false"
@@ -721,6 +786,7 @@
               form="workspace-preferences"
               aria-label="Początek tygodnia"
               bind:value={week}
+              onchange={changed}
               disabled={locked}
               ><option value="monday">Poniedziałek</option><option
                 value="sunday">Niedziela</option
@@ -731,6 +797,7 @@
               form="workspace-preferences"
               aria-label="Widok domyślny"
               bind:value={view}
+              onchange={changed}
               disabled={locked}
               >{#each workspaceViews as name}<option value={name}
                   >{viewLabel(name)}</option
@@ -750,6 +817,7 @@
             form="workspace-preferences"
             aria-label="Katalog nowych projektów"
             bind:value={root}
+            onchange={changed}
             disabled={locked}
             >{#if !baseline?.preferences.project_root_id}<option value=""
                 >{roots.length === 1
@@ -780,6 +848,7 @@
               type="checkbox"
               role="switch"
               bind:checked={publish}
+              onchange={changed}
               disabled={locked}
             /></label
           >{/if}
@@ -803,7 +872,10 @@
                   name="settings-agent"
                   value={provider.value}
                   checked={agent === provider.value}
-                  onchange={() => (agent = provider.value)}
+                  onchange={() => {
+                    agent = provider.value;
+                    void changed();
+                  }}
                   disabled={locked}
                 /><span class="monogram" aria-hidden="true"
                   >{provider.label[0]}</span
@@ -840,22 +912,23 @@
                   plugin.id,
                   event.currentTarget.checked,
                 );
+                void changed();
               }}
               disabled={locked}
             /></label
           >
         {/each}
-        {#if pending && commandKind === "preferences"}<div class="notice">
+        {#if uncertain && preferencesPending}<div class="notice">
             <p>
               Oczekujące polecenie: czeka na potwierdzenie. Przesłane ustawienia
               pozostają niezmienione.
             </p>
             <CommandRecovery
-              {pending}
+              pending={preferencesPending}
               {busy}
               {accessLost}
-              oncheck={check}
-              onretry={transmit}
+              oncheck={checkSave}
+              onretry={retrySave}
             />
           </div>{/if}
       </section>

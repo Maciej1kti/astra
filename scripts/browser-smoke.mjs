@@ -360,10 +360,18 @@ try {
       exact: true,
     })
     .click();
+  // Settings save each change by themselves and stay open until closed.
   await page.getByLabel("Strefa czasowa", { exact: true }).fill("UTC");
   await page.getByLabel("Widok domyślny", { exact: true }).selectOption("list");
+  await expect
+    .poll(() => {
+      const stored = cli("get", "/api/v1/workspace/preferences");
+      return [stored.timezone, stored.preferences.default_view];
+    })
+    .toEqual(["UTC", "list"]);
+  await expect(page.getByTestId("autosave-status")).toHaveText("Zapisano");
   await page
-    .getByRole("button", { name: "Zapisz ustawienia", exact: true })
+    .getByRole("button", { name: "Zamknij ustawienia", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   // Saving preferences retains the current explicit route. A clean entry uses the default.
@@ -1421,9 +1429,6 @@ try {
       exact: true,
     })
     .click();
-  await settingsPage
-    .getByLabel("Strefa czasowa", { exact: true })
-    .fill("Europe/Warsaw");
   await settingsPage.route("**/api/v1/workspace/preferences", (route) =>
     route.request().method() === "PATCH"
       ? route.fulfill({
@@ -1433,9 +1438,10 @@ try {
         })
       : route.continue(),
   );
+  // The change is the save; its reply is lost to the route above.
   await settingsPage
-    .getByRole("button", { name: "Zapisz ustawienia", exact: true })
-    .click();
+    .getByLabel("Strefa czasowa", { exact: true })
+    .fill("Europe/Warsaw");
   await settingsPage
     .getByText("Oczekujące polecenie:", { exact: false })
     .waitFor();

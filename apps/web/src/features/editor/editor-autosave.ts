@@ -1,6 +1,6 @@
 import { CommandController } from "../../lib/api/command-controller.ts";
 import { isRejectedConflict } from "../../lib/api/command-result.ts";
-import type { CommandReply, Pending, Resource } from "../../lib/api/api.ts";
+import type { CommandReply, Pending } from "../../lib/api/api.ts";
 import type {
   CommandResponse,
   CommandStatus,
@@ -25,7 +25,7 @@ export type AutosaveState = {
 
 type Draft<D> = { draft: D; snapshot: string };
 
-type AutosaveOptions<D, R extends Resource> = {
+type AutosaveOptions<D, R> = {
   source: R | null;
   buildPayload: (source: R | null, draft: D) => unknown;
   createPending: (source: R | null, payload: unknown) => Pending;
@@ -54,7 +54,7 @@ function immutable<T>(value: T): T {
  * behind that command. A rejection leaves recovery explicit and never starts
  * a replacement request automatically.
  */
-export class EditorAutosave<D, R extends Resource> {
+export class EditorAutosave<D, R> {
   private readonly options: AutosaveOptions<D, R>;
   private readonly operation: CommandController;
   private sourceValue: R | null;

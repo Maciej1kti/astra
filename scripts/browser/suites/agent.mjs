@@ -5,6 +5,10 @@
  */
 import { addTrigger, holdAndChoose } from "../add-menu.mjs";
 import { runBrowserSuite } from "../runtime.mjs";
+import {
+  closeSettings,
+  saveSettings,
+} from "../../settings-dialog-regression.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
@@ -1105,10 +1109,10 @@ await runBrowserSuite(
             ),
             ["claude", "codex"],
           );
-          await panel.dialog.getByRole("radio", { name: /^Codex/ }).check();
-          await panel.dialog
-            .getByRole("button", { name: "Zapisz ustawienia" })
-            .click();
+          await saveSettings(page, panel.dialog, () =>
+            panel.dialog.getByRole("radio", { name: /^Codex/ }).check(),
+          );
+          await closeSettings(panel.dialog);
           await expect(nativeDialogs).toHaveCount(0);
 
           // The conversation that began with Claude keeps its provider.
@@ -1131,12 +1135,10 @@ await runBrowserSuite(
           await expect(
             panel.dialog.getByRole("radio", { name: /^Codex/ }),
           ).toBeChecked();
-          await panel.dialog
-            .getByRole("radio", { name: /^Claude Code/ })
-            .check();
-          await panel.dialog
-            .getByRole("button", { name: "Zapisz ustawienia" })
-            .click();
+          await saveSettings(page, panel.dialog, () =>
+            panel.dialog.getByRole("radio", { name: /^Claude Code/ }).check(),
+          );
+          await closeSettings(panel.dialog);
           await expect(nativeDialogs).toHaveCount(0);
           const back = await open();
           await back

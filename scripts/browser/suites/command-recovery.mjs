@@ -1,5 +1,6 @@
 /** Unload guards, settings conflicts and recovery feedback shared by command dialogs. */
 import { runBrowserSuite } from "../runtime.mjs";
+import { closeSettings } from "../../settings-dialog-regression.mjs";
 import { timelineCardById } from "../timeline.mjs";
 import { expect } from "@playwright/test";
 import assert from "node:assert/strict";
@@ -430,8 +431,9 @@ await runBrowserSuite(
         });
         const timezone = dialog.getByLabel("Strefa czasowa", { exact: true });
         const week = dialog.getByLabel("Początek tygodnia", { exact: true });
-        const save = dialog.getByRole("button", {
-          name: "Zapisz ustawienia",
+        const status = dialog.getByTestId("autosave-status");
+        const saveKept = dialog.getByRole("button", {
+          name: "Zapisz zachowane zmiany",
           exact: true,
         });
         await expect(timezone).toBeEnabled();
@@ -440,22 +442,25 @@ await runBrowserSuite(
           (original.preferences.week_start ?? "monday") === "monday"
             ? "sunday"
             : "monday";
-        await timezone.fill(mine);
+        // Someone else saves first; this dialog still holds the older version.
         const competing = await mutate(
           "PATCH",
           preferencesPath,
           { preferences: { week_start: theirs } },
           original.version,
         );
-        await save.click();
+        // The change saves itself and meets the conflict.
+        await timezone.fill(mine);
         const reload = dialog.getByRole("button", {
           name: "Wczytaj aktualne ustawienia",
           exact: true,
         });
         await expect(reload).toBeVisible();
-        await expect(save).toBeDisabled();
+        await expect(status).toHaveText("Niezapisane");
         await expect(timezone).toHaveValue(mine);
-        await timezone.press("Control+Enter");
+        // Fields are locked, so nothing can start another save over the conflict.
+        await expect(timezone).toBeDisabled();
+        await expect(week).toBeDisabled();
         assert.equal(requests.length, 1, "A conflict must not be resubmitted");
         assert.equal(requests[0].version, `"${original.version}"`);
         assert.equal(cli("get", preferencesPath).timezone, original.timezone);
@@ -465,10 +470,14 @@ await runBrowserSuite(
         // Untouched fields follow the saved state; the edited one stays visible.
         await expect(week).toHaveValue(theirs);
         await expect(timezone).toHaveValue(mine);
-        await expect(save).toBeEnabled();
+        // The kept edit is not saved by loading; saving it is a separate act.
+        await expect(status).toHaveText("Niezapisane");
+        await expect(saveKept).toBeEnabled();
         assert.equal(requests.length, 1, "Loading must not write");
-        await save.click();
-        await expect(dialog).toHaveCount(0);
+        await saveKept.click();
+        await expect(status).toHaveText("Zapisano");
+        await expect(saveKept).toHaveCount(0);
+        await closeSettings(dialog);
         assert.equal(requests.length, 2);
         assert.notEqual(requests[1].requestId, requests[0].requestId);
         assert.equal(requests[1].version, `"${competing.version}"`);
@@ -694,16 +703,18 @@ await runBrowserSuite(
         const timezone = dialog.getByLabel("Strefa czasowa", { exact: true });
         await expect(timezone).toBeEnabled();
         await timezone.fill(mine);
-        await dialog
-          .getByRole("button", { name: "Zapisz ustawienia", exact: true })
-          .click();
         await expect(dialog).toContainText("Oczekujące polecenie:");
         const status = await checkUncertain(page, dialog, exchange);
         await expect(timezone).toBeDisabled();
         await expect(timezone).toHaveValue(mine);
         exchange.failLookup = false;
         await status.click();
-        await expect(dialog).toHaveCount(0);
+        // A confirmed save leaves Settings open, saved and editable again.
+        await expect(dialog.getByTestId("autosave-status")).toHaveText(
+          "Zapisano",
+        );
+        await expect(timezone).toBeEnabled();
+        await closeSettings(dialog);
         assert.equal(exchange.writes.length, 1, "A check must not resend");
         assert.equal(exchange.lookups.length, 2);
         for (const lookup of exchange.lookups)

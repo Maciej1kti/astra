@@ -497,3 +497,9 @@ A native macOS target shares the iOS app's code and bundle identifier: the
 host's web interface in a window, desktop widgets, and dictation in a panel
 opened from the menu bar or a system-wide shortcut. See
 [ADR-077](ADR-077-MAC-APP.md).
+
+## ADR-078 — Settings save themselves
+
+Workspace preferences save on every change through the card editor's autosave
+engine, and the header shows its state instead of a Save button. Conflicts and
+unknown outcomes stay explicit. See [ADR-078](ADR-078-SETTINGS-AUTOSAVE.md).

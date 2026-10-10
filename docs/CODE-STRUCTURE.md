@@ -306,10 +306,14 @@ identical retry, and `lib/ui/SessionNotice.svelte` the session-loss notice.
 Success feedback such as a copied draft uses a status region, never the alert
 slot that carries errors.
 
-Settings records a rejected preferences conflict and locks its form. Loading
-the current settings is an explicit read: `settings-draft.ts` keeps the fields
-the user edited and lets untouched fields follow the saved state, so a second
-save cannot revert another change. Settings and the tag manager render the same
+Settings save each preference change through the editor's autosave engine
+([ADR-078](ADR-078-SETTINGS-AUTOSAVE.md)): `settings-autosave.ts` wires the
+engine and names the header's state, and `settings-draft.ts` builds the payload
+and the settings an acknowledged save leaves behind. Both are plain modules with
+unit tests. A conflict locks the form. Loading the current settings is an
+explicit read: `settings-draft.ts` keeps the fields the user edited and lets
+untouched fields follow the saved state, so a later save cannot revert another
+change, and those kept fields wait for a deliberate save. Settings and the tag manager render the same
 `CommandRecovery` as the other dialogs, with both continuations.
 
 [Editor targets](../apps/web/src/features/editor/editor-target.ts) bind the

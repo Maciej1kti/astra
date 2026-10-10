@@ -810,10 +810,13 @@ retain 44px targets even when the surrounding layout is compact.
 
 ## Settings
 
-Settings is one large dialog with no footer. **Zapisz ustawienia** sits in the
-header, as saving does on a card; what is unsaved, in flight or just done is
-said once in a status line above the sections, which is empty and hidden when
-there is nothing to say. A rail names the sections (a strip above the content
+Settings is one large dialog with no footer and no Save button: every change
+saves itself, as on a card ([ADR-078](ADR-078-SETTINGS-AUTOSAVE.md)). The header
+carries the card's save indicator, `save-indicator` from the shared dialog
+styles, reading **Zapisywanie…**, **Zapisano** or **Niezapisane**. What needs
+the owner, such as a conflict or a command awaiting confirmation, is said in a
+status line above the sections, which is empty and hidden when there is nothing
+to say. A rail names the sections (a strip above the content
 on a narrow screen) and marks the one in view: Profil, Czas i widok, Projekty,
 Agent, Wtyczki, Tagi, Wygląd and Dostęp.
 

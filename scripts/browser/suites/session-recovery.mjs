@@ -344,8 +344,9 @@ await runBrowserSuite(
         });
         const timezone = settings.getByLabel("Strefa czasowa", { exact: true });
         await expect(timezone).toBeEnabled();
-        const draft =
-          (await timezone.inputValue()) === "UTC" ? "Europe/Warsaw" : "UTC";
+        // Settings save a finished choice at once; a zone name still being
+        // typed is the draft that a lost session has to keep.
+        const draft = "Europe/Wars";
         await timezone.fill(draft);
         await page.evaluate(() => {
           window.openedModals = [];

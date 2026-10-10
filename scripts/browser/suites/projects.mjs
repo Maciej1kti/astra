@@ -4,6 +4,10 @@ import { expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { runBrowserSuite } from "../runtime.mjs";
+import {
+  closeSettings,
+  saveSettings,
+} from "../../settings-dialog-regression.mjs";
 
 await runBrowserSuite(
   async ({ config, cli, runtime, evidence, newContext, browser }) => {
@@ -724,11 +728,10 @@ await runBrowserSuite(
       await expect(defaultView.locator('option[value="projects"]')).toHaveText(
         "Projekty",
       );
-      await defaultView.selectOption("projects");
-      await settings
-        .getByRole("button", { name: "Zapisz ustawienia", exact: true })
-        .click();
-      await expect(settings).toHaveCount(0);
+      await saveSettings(page, settings, () =>
+        defaultView.selectOption("projects"),
+      );
+      await closeSettings(settings);
       await idle();
       await page.goto(config.origin);
       await expect(board).toBeVisible();

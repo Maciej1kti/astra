@@ -356,7 +356,8 @@ Timed events have a local start and duration. The workspace timezone controls
 their meaning, regardless of the viewing phone's timezone. Settings hold the
 workspace calendar preferences under **Czas i widok**: type or pick a zone in
 **Strefa czasowa**, or choose a place on the map; the band of that zone's hours
-and its current time are shown beside it. Calendar pointer moves and resizes save in the
+and its current time are shown beside it. Settings have no Save button: each
+change is saved at once and the dialog's header says **Zapisano**. Calendar pointer moves and resizes save in the
 background on drop. A failed or uncertain save opens recovery controls with the
 original proposal and command; conflicts require a deliberate new edit. Timeline
 bars save the same way, with no confirmation step; Calendar keyboard date
@@ -514,7 +515,7 @@ they do not restrict it.
 | Another edit changed the resource | Open **Aktualna zapisana wersja** to compare its fields with your intent (**Kopiuj aktualną wersję** copies its source), then deliberately prepare a new edit |
 | Response lost / command pending | Check status or retry the same command; retain its request ID, epoch, payload and original version. Settings, new users and tag renames offer both, like every other dialog |
 | Session expired/revoked | Pair again in the panel shown above your open work, then follow the command's recovery state |
-| Settings changed elsewhere | Load the current settings, review your retained changes and save them again deliberately |
+| Settings changed elsewhere | Load the current settings, review your retained changes and press **Zapisz zachowane zmiany** if you still want them |
 | Host offline | Restore the host connection; writes do not fall back to local files |
 | Source/recovery diagnostic | Inspect the host diagnostics before changing data |
 

@@ -412,3 +412,10 @@ Offered three routes, the owner chose a native macOS target in the same
 project, and named its uses: widgets on the desktop, Astra as its own window
 in the Dock, and dictation from the menu bar. How the Mac app is distributed
 was not decided. See [ADR-077](../docs/ADR-077-MAC-APP.md).
+
+## Settings save themselves — owner direction, 2026-10-10
+
+While the Settings dialog was being fixed for the phone, the owner asked that
+its Save button go: Settings should work as the card does, where every edit
+saves and the header then says "Zapisano", not with a large button in the
+header. See [ADR-078](../docs/ADR-078-SETTINGS-AUTOSAVE.md).

@@ -2,7 +2,7 @@ import type {
   AgentProvider,
   PreferencesResource,
 } from "../../lib/contracts/api.generated";
-import { pluginList } from "../../lib/plugins/registry.ts";
+import { pluginIds, pluginList } from "../../lib/plugins/registry.ts";
 
 export type SettingsDraft = {
   timezone: string;
@@ -56,4 +56,65 @@ export function rebaseSettingsDraft(
     draft: rebased,
     kept: fields.filter((field) => rebased[field] !== current[field]),
   };
+}
+
+/** What this host offers: a field it does not show is never sent. */
+export type SettingsScope = { agent: boolean; github: boolean };
+
+export type SettingsPayload = {
+  timezone: string;
+  locale: "pl";
+  preferences: PreferencesResource["preferences"];
+};
+
+/** The PATCH body of a draft, against the settings it was last saved as. */
+export function settingsPayload(
+  saved: PreferencesResource,
+  draft: SettingsDraft,
+  scope: SettingsScope,
+): SettingsPayload {
+  return {
+    timezone: draft.timezone,
+    locale: "pl",
+    preferences: {
+      week_start: draft.week as "monday" | "sunday",
+      default_view: draft.view as never,
+      ...(scope.agent ? { agent_provider: draft.agent } : {}),
+      plugins: pluginIds(draft.plugins),
+      // A folder choice can be changed but not cleared.
+      ...(draft.root && draft.root !== saved.preferences.project_root_id
+        ? { project_root_id: draft.root }
+        : {}),
+      ...(scope.github ? { publish_repositories: draft.publish } : {}),
+    },
+  };
+}
+
+/**
+ * The settings after the server acknowledged `payload` as `version`. The reply
+ * names only the version, and reading the settings again could bring in someone
+ * else's later change, which the next save would then overwrite unseen. The
+ * next save is therefore conditional on exactly this version.
+ */
+export function acknowledgedSettings(
+  saved: PreferencesResource,
+  payload: SettingsPayload,
+  version: string,
+): PreferencesResource {
+  return {
+    ...saved,
+    timezone: payload.timezone,
+    locale: payload.locale,
+    preferences: { ...saved.preferences, ...payload.preferences },
+    version,
+  };
+}
+
+/** Two drafts with one snapshot would be saved as the same command. */
+export function settingsSnapshot(
+  saved: PreferencesResource,
+  draft: SettingsDraft,
+  scope: SettingsScope,
+) {
+  return JSON.stringify(settingsPayload(saved, draft, scope));
 }

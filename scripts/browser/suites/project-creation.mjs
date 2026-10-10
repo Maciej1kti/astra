@@ -315,9 +315,6 @@ await runBrowserSuite(
         ]);
         await select.selectOption(otherRoot.id);
         await snapshot(page, "P05-settings.png");
-        await settings
-          .getByRole("button", { name: "Zapisz ustawienia", exact: true })
-          .click();
         await expect
           .poll(
             () =>
@@ -442,9 +439,6 @@ await runBrowserSuite(
         );
         await select.selectOption(homeRoot.id);
         await snapshot(page, "P08-settings.png");
-        await settings
-          .getByRole("button", { name: "Zapisz ustawienia", exact: true })
-          .click();
         await expect
           .poll(
             () =>

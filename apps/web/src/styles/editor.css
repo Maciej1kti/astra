@@ -329,19 +329,6 @@
   color: var(--accent-ink);
   background: var(--accent);
 }
-.editor .save-indicator {
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
-  background: var(--soft);
-}
-.editor .save-indicator.saved {
-  color: var(--success);
-  background: var(--plan-bg);
-}
-.editor .save-indicator.unsaved {
-  color: var(--danger);
-  background: var(--danger-bg);
-}
 .editor .dialog-header-messages .row {
   flex-wrap: wrap;
   justify-content: flex-start;

@@ -7,6 +7,13 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+[Settings save themselves](2026-10-10-settings-autosave.md) since the owner's
+2026-10-10 direction: every preference change is saved at once through the
+card editor's autosave engine, the header shows **Zapisano** instead of a Save
+button, and the dialog stays open ([ADR-078](../docs/ADR-078-SETTINGS-AUTOSAVE.md)).
+Conflicts and unknown outcomes stay explicit. All 44 browser suites and the
+smoke test pass; the Rust part of the gate was not run, as no Rust changed.
+
 The first report from the phones was [fixed](2026-10-10-dialog-safe-area.md):
 in the iOS app every shared dialog, Settings among them, opened under the
 status bar. The shared dialog rule now starts below the top safe area. A second
