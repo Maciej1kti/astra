@@ -9,6 +9,9 @@ accordingly ([scope](SCOPE.md#apps-are-closed-source--owner-direction-2026-10-10
 - `apps/ios`, `scripts/ios` and the full texts of ADR-076 and ADR-077 moved to
   a private repository with the eight commits that touched them. Anonymous
   requests for that repository are answered with 404.
+- The reports of the [first iOS build](2026-10-09-ios-app-widgets.md) and the
+  [first Mac build](2026-10-09-mac-app.md) described signing and the project
+  layout. Their full texts moved as well; a short notice stays here.
 - This repository no longer tracks those paths and ignores `/apps/ios/` and
   `/scripts/ios/`. `AGENTS.md` forbids bringing the apps' code or records back.
   The summaries of both decisions stay in [the ADR list](../docs/12-ADRS.md).
@@ -32,8 +35,8 @@ accordingly ([scope](SCOPE.md#apps-are-closed-source--owner-direction-2026-10-10
 ## Not done
 
 - The apps were public in this repository from 2026-10-09 to 2026-10-10, and
-  the commits that added them are still in its history, so their code as of
-  those commits can still be read here. The repository had no forks, stars or
+  the commits that added them are still in its history, so their code and
+  both reports as of those commits can still be read here. The repository had no forks, stars or
   watchers when the apps were removed. Removing those commits rewrites the
   history of `main` and is the owner's decision.
 - No Xcode build, simulator run or upload was repeated from the private
