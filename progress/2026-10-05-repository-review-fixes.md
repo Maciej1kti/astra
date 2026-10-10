@@ -97,8 +97,8 @@ resource versions, three pins, preferences, roots and both certificate files.
 All 65 served assets match the local build over the existing certificate, the
 CSP header is present, an unauthenticated bootstrap returns `401` and `doctor`
 reports no warnings or source issues. The
-[project result](../.project/updates/acc78827-c729-4d1f-af76-34a5c1275dc1.json) and
-the [decision request](../.project/updates/5e09c0e3-0475-4ffb-813b-5e625ad00afe.json)
+[project result](https://github.com/Maciej1kti/astra/blob/498b3a1eac6acabe399e0c49fb8849da24cf6350/.project/updates/acc78827-c729-4d1f-af76-34a5c1275dc1.json) and
+the [decision request](https://github.com/Maciej1kti/astra/blob/498b3a1eac6acabe399e0c49fb8849da24cf6350/.project/updates/5e09c0e3-0475-4ffb-813b-5e625ad00afe.json)
 for `needs_review` were appended through the selected CLI project and read back.
 
 ## Limits

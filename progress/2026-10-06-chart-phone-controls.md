@@ -78,5 +78,5 @@ first plot at 287px, and the page position unchanged (458px) after choosing
 three segmented controls are above the plots. No alert, page error, server
 error, overflow or write request was recorded, and the session was revoked,
 leaving the 13 earlier sessions. The
-[project result](../.project/updates/150a9840-0a6b-4869-a599-ed280330f785.json)
+[project result](https://github.com/Maciej1kti/astra/blob/498b3a1eac6acabe399e0c49fb8849da24cf6350/.project/updates/150a9840-0a6b-4869-a599-ed280330f785.json)
 was appended and read back through the ordinary CLI.
