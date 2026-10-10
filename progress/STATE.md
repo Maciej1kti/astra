@@ -18,7 +18,10 @@ The first report from the phones was [fixed](2026-10-10-dialog-safe-area.md):
 in the iOS app every shared dialog, Settings among them, opened under the
 status bar. The shared dialog rule now starts below the top safe area. A second
 reported symptom, Settings showing only their header on one iPhone 13 mini,
-was not reproduced.
+could not be reproduced on the installed iOS 27 runtime; a photo of that phone
+showed the part below the header at zero height, and its zero flex basis was
+replaced by a content-sized one. Whether that phone now shows Settings is the
+tester's to confirm.
 
 A [Mac app](2026-10-09-mac-app.md) was added to the iOS project on the owner's
 direction: the host's web interface in a window, the same four widgets, and

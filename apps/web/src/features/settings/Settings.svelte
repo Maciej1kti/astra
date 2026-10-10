@@ -1049,7 +1049,10 @@
     display: grid;
     grid-template-columns: var(--settings-rail) minmax(0, 1fr);
     min-height: 0;
-    flex: 1;
+    /* Sized from its content and shrunk to the dialog's limit. A zero basis
+       (`flex: 1`) is taken literally by some WebKit versions when the dialog
+       has no fixed height, and then only the header is shown. */
+    flex: 1 1 auto;
   }
   .settings-rail {
     display: flex;

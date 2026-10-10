@@ -69,3 +69,32 @@ iPhone build 202610100921 was uploaded to TestFlight and is in internal
 testing. It is not needed for this fix; it carries the native changes made
 since the first build, among them the check for an input device before
 dictation starts.
+
+## The second symptom, later the same day
+
+The owner sent a photo of the tester's iPhone 13 mini: the Settings dialog was
+as tall as its header and centred on the screen, with neither the strip of
+sections nor any content. So everything below the header had zero height.
+
+That part, `.settings-shell`, was the only dialog content with `flex: 1` in a
+dialog whose height is a maximum and not fixed. `flex: 1` sets a flex basis of
+`0%`. Current engines size a percentage basis from content when the container's
+height is not definite, which is why the iOS 27 simulator and Chromium showed
+the content; a WebKit version that takes the zero literally gives the shell no
+height, and the dialog's `overflow: hidden` hides what is left. The other
+dialogs either have a fixed height or put `dialog-body`, which is content-sized,
+directly under the header.
+
+Change: `.settings-shell` is `flex: 1 1 auto`. The `dialogs` browser suite now
+fails if that basis is not `auto` or if the shell or the body has no height;
+it was seen failing with `'0%' !== 'auto'` before the change.
+
+Checks after the change: `dialogs`, `responsive`, `ui-corrections`,
+`accessibility`, `appearance`, `command-recovery`, `session-recovery` and
+`users` pass. On erased iPhone 13 mini simulators the Settings dialog has the
+same geometry as before the change (header at 67 pt, first section at 189 pt)
+and the card editor still starts at the status bar's edge.
+
+This is not demonstrated on the engine that failed. The tester's iOS version is
+unknown to me and no older runtime is installed, so the cause is inferred from
+the photo and the code. The tester reopening Settings is the proof.

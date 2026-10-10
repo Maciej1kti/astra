@@ -276,6 +276,13 @@ page runs under the status bar. A dialog that fills the screen and pads its own
 header, as the card editor does on a phone, sets `inset-block-start: 0`; any
 other dialog needs no rule of its own for this.
 
+A dialog has a maximum height, not a fixed one, so whatever sits below its
+header must take its size from its content and shrink: `flex: 1 1 auto` with
+`min-height: 0`, never `flex: 1`. The zero basis of `flex: 1` is sized from
+content by current engines, but some WebKit versions take it literally when
+the container's height is not fixed, and the dialog then shows only its header.
+`dialog-body` directly under the header already behaves this way.
+
 A dialog that submits a command renders `CommandRecovery` for the request ID,
 status check and identical retry, and `SessionNotice` for session loss. Errors
 use `role="alert"`; confirmations such as a copied draft use `role="status"`.

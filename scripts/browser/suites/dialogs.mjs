@@ -111,6 +111,14 @@ await runBrowserSuite(
           rect: rect.toJSON(),
           save: save.toJSON(),
           footers: node.querySelectorAll("footer").length,
+          // Everything below the header. Its size must come from its content:
+          // a zero flex basis collapses it on WebKit versions that do not
+          // size a percentage basis from content when the dialog's height is
+          // not fixed, leaving only the header (seen on an iPhone 13 mini).
+          shellBasis: getComputedStyle(node.querySelector(".settings-shell"))
+            .flexBasis,
+          shellHeight: node.querySelector(".settings-shell").clientHeight,
+          bodyHeight: body.clientHeight,
           bodyWidth: body.clientWidth,
           bodyScrollWidth: body.scrollWidth,
         };
@@ -279,6 +287,12 @@ await runBrowserSuite(
               `Save stays in the header at ${width}px: ${JSON.stringify(metrics)}`,
             );
             assert.equal(metrics.bodyWidth, metrics.bodyScrollWidth);
+            assert.equal(
+              metrics.shellBasis,
+              "auto",
+              "Settings below the header are sized from their content",
+            );
+            assert(metrics.shellHeight > 0 && metrics.bodyHeight > 0);
             widths.push(metrics);
             await snapshot(`settings-${width}`);
           }
