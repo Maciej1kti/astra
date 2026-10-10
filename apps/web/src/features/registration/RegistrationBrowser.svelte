@@ -186,17 +186,17 @@
     use:modal={{ onclose: close }}
     out:layerExit|global
     class="app-dialog modal"
-    aria-label="Dodaj projekt"
+    aria-label="Dodaj cel"
   >
     <DialogHeader
-      title="Dodaj projekt"
+      title="Dodaj cel"
       onclose={close}
       disabled={busy}
       closeLabel="Zamknij"
     />
     <div class="dialog-body">
       <p>
-        Wybierz folder projektu na tym serwerze. Pliki pozostaną w tym folderze.
+        Wybierz folder celu na tym serwerze. Pliki pozostaną w tym folderze.
       </p>
       {#if !roots.length}<p>
           Nie zatwierdzono jeszcze żadnych katalogów. Na serwerze uruchom:
@@ -205,7 +205,7 @@
           >projectctl --socket /path/to/projectd.sock add-root /absolute/path
           --label "Projekty"</code
         >{:else}<label
-          >Foldery projektów<select
+          >Foldery celów<select
             bind:value={root}
             disabled={!!registrationPending || busy}
             onchange={() => browse("")}
@@ -250,7 +250,7 @@
             >Więcej folderów</button
           >{/if}
         <label
-          >Nazwa projektu<input
+          >Nazwa celu<input
             bind:value={projectName}
             disabled={!!registrationPending || busy}
             oninput={() => (plan = null)}
@@ -262,13 +262,13 @@
             disabled={!!registrationPending || busy}
             bind:checked={tracked}
             onchange={() => (plan = null)}
-          /> Śledź pliki .project w repozytorium Git projektu</label
+          /> Śledź pliki .project w repozytorium Git celu</label
         >{#if plan}<section class="notice">
             <strong>Wybrany folder</strong>
             <p class="breadcrumb">{plan.display_path}</p>
             <p>
-              Dodaj pliki planowania w .project i instrukcje projektu w
-              AGENTS.md. Istniejąca zawartość zostaje zachowana.
+              Dodaj pliki planowania w .project i instrukcje celu w AGENTS.md.
+              Istniejąca zawartość zostaje zachowana.
             </p>
             {#each plan.warnings as warning}<p>
                 {serverMessage(warning.code)}
@@ -287,7 +287,7 @@
               ? "Sprawdź rejestrację"
               : registrationPending
                 ? "Ponów tę samą rejestrację"
-                : "Dodaj wybrany projekt"}</Button
+                : "Dodaj wybrany cel"}</Button
           >{#if registrationPending}<p>
               Żądanie: {registrationPending.requestId}
             </p>{/if}{:else}<Button

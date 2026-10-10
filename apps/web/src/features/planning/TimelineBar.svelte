@@ -53,7 +53,9 @@
       ? "planned"
       : item.kind === "milestone"
         ? "flag"
-        : "calendar",
+        : item.kind === "goal"
+          ? "projects"
+          : "calendar",
   );
   const title = $derived(
     item.kind === "event"
@@ -67,9 +69,11 @@
         ? "Wydarzenie"
         : item.kind === "milestone"
           ? "Termin"
-          : row.status
-            ? resourceLabel(row.status)
-            : "",
+          : item.kind === "goal"
+            ? "Cel"
+            : row.status
+              ? resourceLabel(row.status)
+              : "",
       range,
     ]
       .filter(Boolean)
@@ -119,7 +123,9 @@
       ? `Wydarzenie: ${row.title}`
       : item.kind === "milestone"
         ? `Termin kamienia milowego: ${row.title}`
-        : `Karta: ${row.title}, ${range}`}
+        : item.kind === "goal"
+          ? `Cel: ${row.title}, ${range}`
+          : `Karta: ${row.title}, ${range}`}
     aria-keyshortcuts={plan ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
     title={plan ? `${hint} · przeciągnij, aby przenieść · Alt+←/→` : hint}
     onclick={onopen}

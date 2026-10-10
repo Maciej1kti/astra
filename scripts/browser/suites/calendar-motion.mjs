@@ -197,14 +197,14 @@ await runBrowserSuite(
       }
       const beforeProject = await count();
       await page
-        .getByLabel("Projekt", { exact: true })
+        .getByLabel("Cel", { exact: true })
         .selectOption(config.projects[2].id);
       await expect(
         page.getByText("Brak elementów z datą w tym okresie.", { exact: true }),
       ).toBeVisible();
       await inspect("empty-project", beforeProject, true);
       await page
-        .getByLabel("Projekt", { exact: true })
+        .getByLabel("Cel", { exact: true })
         .selectOption(config.projects[0].id);
       await expect(page.locator(".calendar-item").first()).toBeAttached();
       await settle();

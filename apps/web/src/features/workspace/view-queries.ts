@@ -105,13 +105,16 @@ export function affectedSections(
     return needed;
   }
   const kind = event.target.type;
+  // A goal's span follows its cards' dates in the views that show it.
+  const span =
+    kind === "card" && ["projects", "calendar", "gantt"].includes(query.view);
   if (
     query.project &&
     !["projects", "focus"].includes(query.view) &&
     event.project_id &&
     event.project_id !== query.project
   )
-    return kind === "project" ? ["projects"] : [];
+    return kind === "project" || span ? ["projects"] : [];
   const changed: Section[] =
     kind === "card"
       ? ["focus", "attention", "card", "event", "planning", "chart"]
@@ -130,7 +133,9 @@ export function affectedSections(
                 "chart",
               ]
             : needed;
-  return needed.filter((section) => changed.includes(section));
+  return needed.filter(
+    (section) => changed.includes(section) || (span && section === "projects"),
+  );
 }
 export function invalidatesTags(event: Invalidation) {
   return (

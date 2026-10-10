@@ -36,5 +36,5 @@
 {:else}<EmptyState>
     {route.archived
       ? "Brak zarchiwizowanych kart pasujących do wyboru. Wyczyść filtry, aby zobaczyć więcej zarchiwizowanych kart."
-      : "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry."}
+      : "Brak kart pasujących do wyboru. Wybierz inny cel lub wyczyść filtry."}
   </EmptyState>{/if}

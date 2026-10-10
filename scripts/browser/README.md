@@ -221,6 +221,13 @@ The comments suite covers human/browser and bot/CLI attribution, source history,
 Markdown rendering, unsent draft protection, comment counts and editor access
 from every card view, mobile layout, response-loss retries and concurrent conflicts.
 
+The goals suite covers the renamed navigation, a goal's dates on the Goals board
+and their change after a card's dates are written elsewhere, the card-shaped
+goal editor without work sections, human and bot comments in the goal's source,
+an ordinary edit that keeps them, and the goal scope of Calendar and Timeline:
+goals only, opened by pointer or keyboard, never moved or created, kept in the
+address across history, and all of it within a phone's width.
+
 The events suite covers event autosave, conversion to/from date plans, hourly
 calendar movement, duration edits, slot creation, mobile layout and browser
 timezone independence.

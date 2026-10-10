@@ -278,7 +278,7 @@ fn patch_document(
                 .ok_or(AppError::invariant("validated undo history entry ID"))?,
             current,
         )?;
-        if command.target.kind == Kind::Card
+        if matches!(command.target.kind, Kind::Card | Kind::Project)
             && next["metadata"]["comments"] != previous.value()["metadata"]["comments"]
         {
             return Err(AppError::reject(409, "UNDO_COMMENT_NOT_SUPPORTED"));
@@ -299,7 +299,7 @@ fn patch_document(
             .entry("comments")
             .or_insert_with(|| json!([]))
             .as_array_mut()
-            .ok_or(AppError::invariant("validated card comments"))?;
+            .ok_or(AppError::invariant("validated comments"))?;
         comments.push(json!({
             "id": Uuid::new_v4().to_string(),
             "author": comment["author"],

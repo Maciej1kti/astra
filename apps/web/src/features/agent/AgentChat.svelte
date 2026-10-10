@@ -191,8 +191,8 @@
             <strong>Co mam zrobić?</strong>
             <p>
               Napisz zwykłym zdaniem, na przykład „zrobiłem 10 pompek” albo
-              „dodaj komentarz do karty o fakturze”. Agent sam znajdzie projekt
-              i kartę.
+              „dodaj komentarz do karty o fakturze”. Agent sam znajdzie cel i
+              kartę.
             </p>
           </div>
         {:else}

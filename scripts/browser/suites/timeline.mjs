@@ -346,7 +346,7 @@ await runBrowserSuite(
       const toolbar = page.locator(".period-toolbar");
       await expect(toolbar).toHaveCount(1);
       await expect(toolbar.locator(".segments").getByRole("button")).toHaveText(
-        ["Dni", "Tygodnie", "Miesiące"],
+        ["Dni", "Tygodnie", "Miesiące", "Karty", "Cele"],
       );
       await expect(tray.locator(".sectiontitle h3")).toHaveText(
         "Bez harmonogramu",

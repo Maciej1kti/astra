@@ -271,6 +271,13 @@
           "not": {
             "pattern": "[\\r\\n]"
           }
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardComment"
+          },
+          "maxItems": 200
         }
       },
       "required": [

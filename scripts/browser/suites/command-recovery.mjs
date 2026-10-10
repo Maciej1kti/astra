@@ -189,7 +189,7 @@ await runBrowserSuite(
           .click();
         await page.getByRole("button", { name: "Zarządzaj tagami" }).click();
         const manager = page.getByRole("dialog", {
-          name: "Zarządzaj tagami projektu",
+          name: "Zarządzaj tagami celu",
         });
         await manager
           .getByRole("listitem")
@@ -200,7 +200,7 @@ await runBrowserSuite(
         await manager.getByRole("button", { name: "Podgląd zmian" }).click();
         assert.equal(await unloadGuarded(page), false);
         await manager
-          .getByRole("button", { name: "Zmień nazwę w tym projekcie" })
+          .getByRole("button", { name: "Zmień nazwę w obrębie celu" })
           .click();
         await expect(manager).toContainText("Identyfikator polecenia:");
         await expect(manager).toContainText(attempts[0]);
@@ -232,7 +232,7 @@ await runBrowserSuite(
           .click();
         await page.getByRole("button", { name: "Zarządzaj tagami" }).click();
         const manager = page.getByRole("dialog", {
-          name: "Zarządzaj tagami projektu",
+          name: "Zarządzaj tagami celu",
         });
         await manager
           .getByRole("listitem")
@@ -261,7 +261,7 @@ await runBrowserSuite(
         );
         const before = refreshes;
         await manager
-          .getByRole("button", { name: "Zmień nazwę w tym projekcie" })
+          .getByRole("button", { name: "Zmień nazwę w obrębie celu" })
           .click();
         await expect
           .poll(
@@ -319,17 +319,17 @@ await runBrowserSuite(
           "POST",
         );
         await visit(page, { view: "projects" });
-        await page.getByRole("button", { name: "Dodaj projekt" }).click();
+        await page.getByRole("button", { name: "Dodaj cel" }).click();
         const dialog = page.getByRole("dialog", {
-          name: "Dodaj projekt",
+          name: "Dodaj cel",
           exact: true,
         });
         await dialog
-          .getByLabel("Nazwa projektu", { exact: true })
+          .getByLabel("Nazwa celu", { exact: true })
           .fill("Recovery native");
         assert.equal(await unloadGuarded(page), false);
         await dialog
-          .getByRole("button", { name: "Utwórz projekt", exact: true })
+          .getByRole("button", { name: "Utwórz cel", exact: true })
           .click();
         await expect(dialog).toContainText(selected.display_path);
         await expect(dialog).toContainText("Żądanie:");
@@ -363,19 +363,19 @@ await runBrowserSuite(
           "POST",
         );
         await visit(page, { view: "projects" });
-        await page.getByRole("button", { name: "Dodaj projekt" }).click();
+        await page.getByRole("button", { name: "Dodaj cel" }).click();
         const native = page.getByRole("dialog", {
-          name: "Dodaj projekt",
+          name: "Dodaj cel",
           exact: true,
         });
         await native
-          .getByText("Masz już folder z projektem?", { exact: true })
+          .getByText("Masz już folder z celem?", { exact: true })
           .click();
         await native
           .getByRole("button", { name: "Dodaj istniejący folder", exact: true })
           .click();
         const dialog = page.getByRole("dialog", {
-          name: "Dodaj projekt",
+          name: "Dodaj cel",
           exact: true,
         });
         await dialog
@@ -386,7 +386,7 @@ await runBrowserSuite(
           .click();
         assert.equal(await unloadGuarded(page), false);
         await dialog
-          .getByRole("button", { name: "Dodaj wybrany projekt", exact: true })
+          .getByRole("button", { name: "Dodaj wybrany cel", exact: true })
           .click();
         await expect(dialog).toContainText("Żądanie:");
         await expect(dialog).toContainText(attempts[0]);
@@ -749,7 +749,7 @@ await runBrowserSuite(
           .click();
         await page.getByRole("button", { name: "Zarządzaj tagami" }).click();
         const manager = page.getByRole("dialog", {
-          name: "Zarządzaj tagami projektu",
+          name: "Zarządzaj tagami celu",
         });
         await manager
           .getByRole("listitem")
@@ -759,7 +759,7 @@ await runBrowserSuite(
         await manager.getByLabel("Tag docelowy").fill(target);
         await manager.getByRole("button", { name: "Podgląd zmian" }).click();
         await manager
-          .getByRole("button", { name: "Zmień nazwę w tym projekcie" })
+          .getByRole("button", { name: "Zmień nazwę w obrębie celu" })
           .click();
         await expect.poll(() => exchange.writes.length).toBe(1);
         const status = await checkUncertain(page, manager, exchange);

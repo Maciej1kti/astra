@@ -16,7 +16,7 @@ const labels: Record<string, string> = {
   due_soon: "Zbliżający się termin",
   unread_report: "Nieprzeczytany raport",
   review_card: "Karta do sprawdzenia",
-  project: "Projekt",
+  project: "Cel",
   card: "Karta",
   milestone: "Kamień milowy",
   update: "Aktualizacja",
@@ -57,14 +57,15 @@ export function resourceDates(item: Summary): ResourceDateBadge[] {
       start: item.due.date,
     });
   }
-  if (item.schedule) {
+  // A goal has no dates of its own: it spans those of its cards.
+  const goal = item.type === "project";
+  const plan = goal ? item.span : item.schedule;
+  if (plan) {
     dates.push({
       kind: "plan",
-      label: "Plan",
-      start: item.schedule.start,
-      ...(item.schedule.end !== item.schedule.start
-        ? { end: item.schedule.end }
-        : {}),
+      label: goal ? "Daty kart" : "Plan",
+      start: plan.start,
+      ...(plan.end !== plan.start ? { end: plan.end } : {}),
     });
   }
   if (item.event)

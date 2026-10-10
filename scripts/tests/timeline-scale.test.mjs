@@ -138,6 +138,14 @@ test("only rows with recorded dates take a place on the axis", () => {
     }),
     row({ id: "milestone", type: "milestone", due: { date: "2026-09-11" } }),
     row({ id: "open-milestone", type: "milestone" }),
+    row({
+      id: "goal",
+      type: "project",
+      span: { start: "2026-09-01", end: "2026-10-20" },
+      // A goal is placed by its cards' span, never by a schedule of its own.
+      schedule: { start: "2026-01-01", end: "2026-01-02" },
+    }),
+    row({ id: "undated-goal", type: "project" }),
   ]);
   assert.deepEqual(
     items.map((item) => [item.row.id, item.kind, item.start, item.end]),
@@ -145,6 +153,7 @@ test("only rows with recorded dates take a place on the axis", () => {
       ["plan", "plan", "2026-09-07", "2026-09-09"],
       ["event", "event", "2026-09-10", "2026-09-11"],
       ["milestone", "milestone", "2026-09-11", "2026-09-11"],
+      ["goal", "goal", "2026-09-01", "2026-10-20"],
     ],
   );
 });

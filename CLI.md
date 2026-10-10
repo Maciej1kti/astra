@@ -441,6 +441,21 @@ which lives in `comments` in the card's `.json` metadata. Comments cannot be
 replaced by `card set` or removed by undo. See [ADR-045](docs/ADR-045-CARD-COMMENTS.md)
 for limits and conflict handling.
 
+### Project comments
+
+A project takes the same comment. Read the project (`get /api/v1/projects/PROJECT_ID`
+or `context`) for its observed version, then:
+
+```sh
+projectctl project comment PROJECT_ID --body-file comment.md --author "Owner" --author-kind human --if-version VERSION
+projectctl project comment PROJECT_ID --body-file comment.md --author "Codex" --author-kind agent --if-version VERSION
+```
+
+The project is named by its ID, like `project delete`, so `--project` is not used.
+Flags, retry identity and limits are those of card comments; the history lives in
+`comments` in `project.json`. See
+[ADR-079](docs/ADR-079-GOAL-COMMENTS-AND-SPAN.md).
+
 ## Daily card counters
 
 Use the observed card version for each counter operation. Definitions and dated

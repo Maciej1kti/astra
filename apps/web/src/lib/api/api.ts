@@ -359,9 +359,7 @@ export async function all<T = Summary>(
     cursor = value.next_cursor ?? value.page?.next_cursor ?? null;
     if (!cursor) return items;
   }
-  throw new Error(
-    "Wynik jest zbyt duży. Zawęź projekt lub filtr wyszukiwania.",
-  );
+  throw new Error("Wynik jest zbyt duży. Zawęź cel lub filtr wyszukiwania.");
 }
 export function resourcePath(
   item: Pick<Summary, "type" | "id" | "project_id">,

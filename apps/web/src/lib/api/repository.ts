@@ -47,11 +47,11 @@ export function repositoryLink(state: ProjectRepository | null) {
 /** What the owner reads about a repository state, in Polish. */
 export function repositoryStatus(state: ProjectRepository) {
   const labels: Record<ProjectRepository["state"], string> = {
-    absent: "Projekt nie ma jeszcze repozytorium na GitHubie.",
+    absent: "Cel nie ma jeszcze repozytorium na GitHubie.",
     unpushed: "Repozytorium jest podpięte, ale nic do niego nie wysłano.",
     publishing: "Tworzenie prywatnego repozytorium na GitHubie…",
-    published: "Projekt jest opublikowany w zdalnym repozytorium.",
-    failed: "Nie udało się opublikować projektu na GitHubie.",
+    published: "Cel jest opublikowany w zdalnym repozytorium.",
+    failed: "Nie udało się opublikować celu na GitHubie.",
   };
   return labels[state.state];
 }

@@ -17,6 +17,11 @@ show both human and bot comments retained in a card. The matching
 [append request](requests/card-comment.json) uses a versioned CardPatch; see the
 [HTTP example](requests/card-comment.http).
 
+A project accepts the same comment through [ProjectPatch](requests/project-comment.json),
+see the [HTTP example](requests/project-comment.http) and
+[ADR-079](../docs/ADR-079-GOAL-COMMENTS-AND-SPAN.md). Project summaries also carry a
+derived read-only `span`, which is never part of a request.
+
 `card-counters.json` shows source-owned daily totals; `requests/card-counter.http`
 shows conditional configuration and recording. See [ADR-049](../docs/ADR-049-DAILY-CARD-COUNTERS.md).
 

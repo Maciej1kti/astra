@@ -81,7 +81,7 @@ await runBrowserSuite(
     try {
       for (const [view, label] of [
         ["focus", "Focus"],
-        ["projects", "Projekty"],
+        ["projects", "Cele"],
         ["board", "Tablica"],
         ["calendar", "Kalendarz"],
         ["gantt", "Oś czasu"],
@@ -241,7 +241,7 @@ await runBrowserSuite(
           .locator("option"),
       ).toHaveText([
         "Focus",
-        "Projekty",
+        "Cele",
         "Tablica",
         "Kalendarz",
         "Oś czasu",

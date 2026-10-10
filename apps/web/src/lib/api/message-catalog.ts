@@ -14,25 +14,24 @@ export const messages: Record<string, string> = {
     "Ten użytkownik jest niedostępny. Otwórz domyślnego użytkownika, aby kontynuować.",
   USER_LIMIT_REACHED: "Osiągnięto limit użytkowników tego serwera.",
   PROJECT_SHARED:
-    "Ten projekt jest współdzielony. Wyrejestruj go u pozostałych użytkowników przed usunięciem lub przeniesieniem.",
+    "Ten cel jest współdzielony. Wyrejestruj go u pozostałych użytkowników przed usunięciem lub przeniesieniem.",
   SERVER_BUSY: "Serwer jest zajęty. Spróbuj ponownie za chwilę.",
   REQUEST_TIMEOUT:
     "Upłynął czas żądania. Sprawdź wynik pierwotnego polecenia przed ponowieniem zapisu.",
   RESOURCE_NOT_FOUND: "Nie znaleziono elementu.",
-  PROJECT_UNAVAILABLE:
-    "Projekt jest niedostępny. Sprawdź jego folder na serwerze.",
-  PROJECT_ARCHIVED: "Projekt jest zarchiwizowany. Przywróć go przed edycją.",
+  PROJECT_UNAVAILABLE: "Cel jest niedostępny. Sprawdź jego folder na serwerze.",
+  PROJECT_ARCHIVED: "Cel jest zarchiwizowany. Przywróć go przed edycją.",
   PROJECT_TREE_CHANGED:
-    "Pliki projektu się zmieniły. Sprawdź aktualny podgląd przed ponowieniem.",
-  PROJECT_DELETION_PENDING: "Usunięcie projektu oczekuje na rozstrzygnięcie.",
+    "Pliki celu się zmieniły. Sprawdź aktualny podgląd przed ponowieniem.",
+  PROJECT_DELETION_PENDING: "Usunięcie celu oczekuje na rozstrzygnięcie.",
   PROJECT_CONTAINS_SERVER_STATE:
-    "Folder projektu zawiera stan serwera i nie może zostać usunięty.",
+    "Folder celu zawiera stan serwera i nie może zostać usunięty.",
   PROJECT_CONTAINS_REGISTERED_PROJECT:
-    "Ten folder zawiera inny zarejestrowany projekt.",
-  PROJECT_NOT_REGISTERED: "Projekt nie jest zarejestrowany.",
-  PROJECT_DOCUMENT_MISSING: "Brakuje pliku źródłowego projektu.",
-  PROJECT_DOCUMENT_INVALID: "Plik źródłowy projektu jest nieprawidłowy.",
-  PROJECT_RECOVERY_REQUIRED: "Projekt wymaga odzyskania. Sprawdź diagnostykę.",
+    "Ten folder zawiera inny zarejestrowany cel.",
+  PROJECT_NOT_REGISTERED: "Cel nie jest zarejestrowany.",
+  PROJECT_DOCUMENT_MISSING: "Brakuje pliku źródłowego celu.",
+  PROJECT_DOCUMENT_INVALID: "Plik źródłowy celu jest nieprawidłowy.",
+  PROJECT_RECOVERY_REQUIRED: "Cel wymaga odzyskania. Sprawdź diagnostykę.",
   REGISTRATION_RECOVERY_REQUIRED:
     "Rejestracja wymaga odzyskania. Sprawdź diagnostykę.",
   RECOVERY_REQUIRED: "Stan wymaga odzyskania. Sprawdź diagnostykę.",
@@ -48,7 +47,7 @@ export const messages: Record<string, string> = {
   SOURCE_DIAGNOSTICS:
     "Niektóre pliki źródłowe wymagają sprawdzenia. Otwórz diagnostykę.",
   PROJECTION_RECONCILING:
-    "Serwer odświeża dane projektów. Wyniki mogą być chwilowo niekompletne.",
+    "Serwer odświeża dane celów. Wyniki mogą być chwilowo niekompletne.",
   PROJECTION_DEGRADED:
     "Niektóre dane są niedostępne. Sprawdź diagnostykę źródeł.",
   FOCUS_TARGET_ARCHIVED:
@@ -61,8 +60,7 @@ export const messages: Record<string, string> = {
   CLOCK_ROLLBACK:
     "Zegar serwera cofnął się. Popraw czas przed kolejnym zapisem; wyniki znanych poleceń pozostają dostępne.",
   FOCUS_INCOMPLETE: "Niektóre przypięte karty są niedostępne.",
-  FOCUS_SOURCE_LIMIT:
-    "Osiągnięto limit odczytu kart Focus. Zawęź wybór projektów.",
+  FOCUS_SOURCE_LIMIT: "Osiągnięto limit odczytu kart Focus. Zawęź wybór celów.",
   FOCUS_LIMIT: "Osiągnięto limit przypiętych kart.",
   FOCUS_REFERENCE_CHANGED:
     "Przypięta karta się zmieniła. Sprawdź aktualny Focus.",
@@ -111,7 +109,7 @@ export const messages: Record<string, string> = {
   TAG_NOT_FOUND: "Nie znaleziono tagu.",
   TAG_RENAME_TOO_LARGE:
     "Zmiana nazwy obejmuje zbyt wiele kart. Zawęź operację.",
-  TAG_SOURCE_LIMIT: "Osiągnięto limit odczytu tagów. Zawęź wybór projektu.",
+  TAG_SOURCE_LIMIT: "Osiągnięto limit odczytu tagów. Zawęź wybór celu.",
   TAG_SUGGESTIONS_STALE: "Podpowiedzi tagów mogą być nieaktualne.",
   FILES_RETAINED: "Istniejące pliki zostały zachowane.",
   MANAGED_BLOCK_CONFLICT:
@@ -140,18 +138,18 @@ export const messages: Record<string, string> = {
   GIT_TIMEOUT: "Upłynął czas sprawdzania repozytorium Git.",
   DIRECTORY_EXISTS: "Folder o tej nazwie już istnieje w tym miejscu.",
   PROJECT_ROOT_NOT_SET:
-    "Nie wybrano katalogu nowych projektów. Wskaż go w Ustawieniach.",
+    "Nie wybrano katalogu nowych celów. Wskaż go w Ustawieniach.",
   PROJECT_ROOT_NOT_FOUND:
-    "Katalog nowych projektów nie jest już zatwierdzony. Wybierz inny w Ustawieniach.",
+    "Katalog nowych celów nie jest już zatwierdzony. Wybierz inny w Ustawieniach.",
   PROJECT_FOLDER_NAME_EXHAUSTED:
-    "Nie znaleziono wolnej nazwy folderu. Podaj inną nazwę projektu.",
+    "Nie znaleziono wolnej nazwy folderu. Podaj inną nazwę celu.",
   CREATION_ID_REUSED:
-    "To tworzenie projektu zostało już użyte. Zamknij okno i zacznij od nowa.",
+    "To tworzenie celu zostało już użyte. Zamknij okno i zacznij od nowa.",
   PROJECT_CREATION_LIMIT:
-    "Zbyt wiele rozpoczętych projektów. Spróbuj ponownie za chwilę.",
+    "Zbyt wiele rozpoczętych celów. Spróbuj ponownie za chwilę.",
   GITHUB_DISABLED: "Publikowanie na GitHubie nie jest włączone na tym hoście.",
   GITHUB_UNAVAILABLE:
-    "GitHub jest nieosiągalny z hosta. Projekt działa lokalnie; ponów publikację później.",
+    "GitHub jest nieosiągalny z hosta. Cel działa lokalnie; ponów publikację później.",
   GITHUB_AUTH_REQUIRED:
     "Host nie jest zalogowany do GitHuba. Zaloguj gh na hoście i ponów publikację.",
   GITHUB_CLI_UNAVAILABLE: "Na hoście nie udało się uruchomić polecenia gh.",
@@ -162,7 +160,7 @@ export const messages: Record<string, string> = {
   GITHUB_PUSH_FAILED:
     "Repozytorium powstało, ale wysłanie plików nie powiodło się. Ponów publikację.",
   GITHUB_BUSY: "Trwa kilka publikacji naraz. Spróbuj ponownie za chwilę.",
-  GIT_FAILED: "Git na hoście nie wykonał polecenia w folderze projektu.",
+  GIT_FAILED: "Git na hoście nie wykonał polecenia w folderze celu.",
   AGENT_DISABLED: "Agent nie jest włączony na tym hoście.",
   AGENT_HOST_RESTARTED: "Host został uruchomiony ponownie.",
   AGENT_RUN_NOT_FOUND: "Host nie zna tej wiadomości.",

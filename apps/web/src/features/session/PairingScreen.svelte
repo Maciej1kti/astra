@@ -114,8 +114,7 @@
     <Brand />
     <h1>Jaśniejszy obraz<br />kolejnych kroków.</h1>
     <p class="lead">
-      Projekty, decyzje i postępy.<br />Połączone z folderami, których już
-      używasz.
+      Cele, decyzje i postępy.<br />Połączone z folderami, których już używasz.
     </p>
     {@render pairbox()}
   </main>

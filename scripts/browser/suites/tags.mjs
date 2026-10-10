@@ -19,7 +19,7 @@ await runBrowserSuite(
     page.setDefaultTimeout(15000);
     page.on("pageerror", (error) => errors.push(error.message));
     const manager = () =>
-      page.getByRole("dialog", { name: "Zarządzaj tagami projektu" });
+      page.getByRole("dialog", { name: "Zarządzaj tagami celu" });
     const get = (id) => cli("get", `${base}/cards/${id}`);
     const catalog = (id = project) => cli("get", `/api/v1/projects/${id}/tags`);
     const unique = (name) => `${name} ${Date.now().toString(36)}`;
@@ -41,11 +41,11 @@ await runBrowserSuite(
         .getByRole("button", { name: "Ustawienia przestrzeni roboczej" })
         .click();
       await page.getByRole("button", { name: "Zarządzaj tagami" }).click();
+      await expect(manager().getByLabel("Cel", { exact: true })).toHaveValue(
+        projectId,
+      );
       await expect(
-        manager().getByLabel("Projekt", { exact: true }),
-      ).toHaveValue(projectId);
-      await expect(
-        manager().getByRole("list", { name: "Tagi projektu" }),
+        manager().getByRole("list", { name: "Tagi celu" }),
       ).toBeVisible();
     }
     async function close() {
@@ -116,7 +116,7 @@ await runBrowserSuite(
             80,
           );
           await open();
-          const list = manager().getByRole("list", { name: "Tagi projektu" });
+          const list = manager().getByRole("list", { name: "Tagi celu" });
           await expect(
             list.getByRole("listitem").filter({ hasText: name }),
           ).toContainText("80 kart");
@@ -127,7 +127,7 @@ await runBrowserSuite(
           await writeFile(path, JSON.stringify(source));
           const observed = get(ids[0]);
           await manager()
-            .getByRole("button", { name: "Odśwież tagi projektu" })
+            .getByRole("button", { name: "Odśwież tagi celu" })
             .click();
           await expect(
             list.getByRole("listitem").filter({ hasText: name }),
@@ -224,7 +224,7 @@ await runBrowserSuite(
             manager().getByRole("heading", { name: "Zmiana obejmie 2 karty" }),
           ).toBeVisible();
           await manager()
-            .getByRole("button", { name: "Zmień nazwę w tym projekcie" })
+            .getByRole("button", { name: "Zmień nazwę w obrębie celu" })
             .click();
           await expect(
             manager().getByRole("button", {
@@ -268,7 +268,7 @@ await runBrowserSuite(
             before.version,
           );
           await manager()
-            .getByRole("button", { name: "Zmień nazwę w tym projekcie" })
+            .getByRole("button", { name: "Zmień nazwę w obrębie celu" })
             .click();
           await expect(manager().getByRole("alert")).toContainText(
             "Podgląd operacji jest nieaktualny.",

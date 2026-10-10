@@ -31,7 +31,7 @@ const labels = new Map<string, string>([
   ["schema_version", "Wersja schematu"],
   ["kind", "Rodzaj"],
   ["author", "Autor"],
-  ["target", "Cel"],
+  ["target", "Dotyczy"],
   ["recorded_at", "Zapisano"],
   ["observed_at", "Zaobserwowano"],
 ]);

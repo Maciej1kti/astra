@@ -205,7 +205,7 @@ await runBrowserSuite(async (fixture) => {
     );
     checks.push("bounded readiness cascade; refresh retains the scene");
 
-    await select("Projekty");
+    await select("Cele");
     await settle();
     const selection = await at150ms(".navigation-indicator");
     assert(
@@ -366,7 +366,7 @@ await runBrowserSuite(async (fixture) => {
 
     // Switch preferences while animations are active; no delayed cascade may return.
     await nav
-      .getByRole("button", { name: "Projekty", exact: true })
+      .getByRole("button", { name: "Cele", exact: true })
       .evaluate((node) => node.click());
     await page.emulateMedia({ reducedMotion: "reduce" });
     await indicatorMatches();
@@ -404,7 +404,7 @@ await runBrowserSuite(async (fixture) => {
 
     for (const width of [1024, 768, 390, 320]) {
       await page.setViewportSize({ width, height: width < 700 ? 844 : 1000 });
-      await select("Projekty");
+      await select("Cele");
       await indicatorMatches();
       await select("Aktualizacje");
       await indicatorMatches();
@@ -426,7 +426,7 @@ await runBrowserSuite(async (fixture) => {
       await expect(page.locator("dialog")).toHaveCount(0);
     }
     await page.emulateMedia({ colorScheme: "dark" });
-    await select("Projekty");
+    await select("Cele");
     await indicatorMatches();
     await screenshot("dark-mobile-projects");
     checks.push(
@@ -446,7 +446,7 @@ await runBrowserSuite(async (fixture) => {
       for (const token of ["--motion-emerge", "--motion-spring"])
         document.documentElement.style.setProperty(token, " ");
     });
-    await nav.getByRole("button", { name: "Projekty", exact: true }).click();
+    await nav.getByRole("button", { name: "Cele", exact: true }).click();
     await expect(
       page.locator(".project-status-board .wx-card").first(),
     ).toBeVisible();

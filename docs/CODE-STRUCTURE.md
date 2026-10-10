@@ -364,6 +364,13 @@ mounted controls and explicit drafts. The preference reader upgrades the former
 grouped order into that single list. Visibility is the source-owned card field
 `hidden_sections`, edited through ordinary autosave; see
 [ADR-056](ADR-056-CARD-SECTION-VISIBILITY.md).
+A project (a goal in the UI) uses the card's dialog class, header and section
+wrappers: its name, a status menu and the read-only span of its cards' dates in
+the header, then Description, Comments and Folder in the order the browser keeps
+for a card's sections. `CardComments` serves both; a goal's comment is an
+`append_comment` project patch sent after pending autosaves have settled, as a
+card's is. The span is passed in from the project summary and is never part of
+the draft.
 `card-schedule.ts` derives relative schedule summaries using the workspace
 calendar; `CardPlanningFields` owns the disclosure, whose initial creation state
 does not change when the card is first acknowledged. `ScheduleCalendar` stages a
@@ -411,6 +418,18 @@ order and membership still publish. This does not cache source-read authority.
 The typed Calendar adapter converts inclusive
 domain dates into vendor events without modifying
 source rows. Timeline keeps inclusive civil dates throughout and has no vendor form.
+
+Both views lay out one of two scopes, held by the route as `scope` and chosen
+with the shared `Segments` in their toolbars
+([ADR-079](ADR-079-GOAL-COMMENTS-AND-SPAN.md)). **Karty** is the dated-card read
+described above. **Cele** reads nothing: it draws the project summaries the
+application already holds, each over its derived `span`, whatever project the
+header has selected. `planning.ts` turns those summaries into `project_span`
+items for the Calendar adapter and `timeline-items.ts` into `goal` items for the
+Timeline; neither kind is editable, so no gesture, shortcut or creation control
+can propose a date for a goal. Because a span follows its cards,
+`view-queries.ts` reloads the project list after a card write in Projects,
+Calendar and Timeline.
 
 `CalendarToolbar` composes the shared buttons, icons and date disclosure. It emits
 navigation callbacks; `CalendarView` retains route integration,

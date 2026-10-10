@@ -33,7 +33,7 @@
   } = $props();
   const id = $props.id();
   const folder = $derived(kind === "folder");
-  const catalogLabel = $derived(folder ? "foldery" : "tagi projektu");
+  const catalogLabel = $derived(folder ? "foldery" : "tagi celu");
   let input = $state<HTMLInputElement>();
   let expanded = $state(false);
   let pointerOutside = false;
@@ -72,7 +72,7 @@
         catalogError = `Niektóre ${catalogLabel} są niedostępne. Wyświetlono dostępne podpowiedzi.`;
     } catch (error) {
       if (current === generation && !isAbortError(error))
-        catalogError = `${folder ? "Foldery" : "Tagi projektu"} nie mogły zostać wczytane.`;
+        catalogError = `${folder ? "Foldery" : "Tagi celu"} nie mogły zostać wczytane.`;
     } finally {
       if (current === generation) catalogLoading = false;
     }
@@ -177,7 +177,7 @@
     labels = labels.filter((item) => item !== label);
     error = "";
     announcement = folder
-      ? `Usunięto folder ${label} z tego projektu.`
+      ? `Usunięto folder ${label} z tego celu.`
       : `Usunięto tag ${label} z tej karty.`;
     input?.focus();
   }
@@ -211,7 +211,7 @@
   }
 </script>
 
-<section class="tags" aria-label={folder ? "Folder projektu" : "Tagi karty"}>
+<section class="tags" aria-label={folder ? "Folder celu" : "Tagi karty"}>
   {#if folder}<div class="heading">
       <label for={`${id}-input`}>Folder</label><span>{labels.length}/1</span>
     </div>{:else}
@@ -237,7 +237,7 @@
       {/each}
     </ul>
   {:else}<p class="empty">
-      {folder ? "Ten projekt nie ma folderu." : "Ta karta nie ma tagów."}
+      {folder ? "Ten cel nie ma folderu." : "Ta karta nie ma tagów."}
     </p>{/if}
   <div class="input-row">
     <input
@@ -288,7 +288,7 @@
     >
   </div>
   {#if folder}<p id={`${id}-hint`} class="hint">
-      Enter ustawia folder. Jeden folder na projekt.
+      Enter ustawia folder. Jeden folder na cel.
     </p>{/if}
   {#if error}<p
       id={`${id}-error`}

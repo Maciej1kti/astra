@@ -38,7 +38,7 @@ await runBrowserSuite(
       name: "Panel liczników",
       exact: true,
     });
-    const project = page.getByLabel("Projekt", { exact: true });
+    const project = page.getByLabel("Cel", { exact: true });
     const commandFile = join(runtime, "chart-command.json");
     const mutate = async (method, path, payload, version) => {
       await writeFile(commandFile, JSON.stringify(payload), { mode: 0o600 });

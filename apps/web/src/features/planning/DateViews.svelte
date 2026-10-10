@@ -2,29 +2,17 @@
   import type { Summary } from "../../lib/api/api";
   import type { CardCreate } from "../../lib/contracts/api.generated";
   import type { DateProposal } from "./proposals";
-  import type { CalendarLayout } from "./planning-navigation";
+  import type { CalendarLayout, PlanningScope } from "./planning-navigation";
   import { loadCalendarView, loadGanttView } from "./planning-components";
   import { reloadAfterPreloadFailure } from "../../lib/ui/preload-recovery";
 
-  let {
-    project,
-    month,
-    view,
-    revision,
-    writePending,
-    weekStart,
-    calendarDate,
-    calendarLayout,
-    workspaceToday,
-    workspaceTimezone,
-    onCalendarNavigate,
-    onmonth,
-    search,
-    open,
-    onpropose,
-    oncreate,
-  }: {
+  // Both views take what they need from one set of props.
+  let props: {
     project: string;
+    /** Goals with the span of their cards' dates; the goal scope draws these. */
+    goals: Summary[];
+    scope: PlanningScope;
+    onscope: (scope: PlanningScope) => void;
     month: string;
     view: "calendar" | "gantt";
     revision: number;
@@ -49,20 +37,20 @@
   );
   let error = $state("");
   async function loadView() {
-    const requestedView = view;
+    const requestedView = props.view;
     error = "";
     try {
       if (requestedView === "calendar")
         CalendarView = (await loadCalendarView()).default;
       else GanttView = (await loadGanttView()).default;
     } catch {
-      if (view === requestedView)
+      if (props.view === requestedView)
         error =
           "Nie udało się wczytać widoku planowania. Spróbuj ponownie lub odśwież aplikację.";
     }
   }
   $effect(() => {
-    void view;
+    void props.view;
     void loadView();
   });
 </script>
@@ -72,32 +60,10 @@
     <button onclick={loadView}>Ponów ładowanie widoku planowania</button>
     <button onclick={reloadAfterPreloadFailure}>Odśwież aplikację</button>
   </p>{/if}
-{#if view === "calendar" && CalendarView}<CalendarView
-    {project}
-    {calendarDate}
-    {calendarLayout}
-    {workspaceToday}
-    {workspaceTimezone}
-    {onCalendarNavigate}
-    {revision}
-    {writePending}
-    {weekStart}
-    {search}
-    {open}
-    {onpropose}
-    {oncreate}
-  />
-{:else if view === "gantt" && GanttView}<GanttView
-    {project}
-    {month}
-    {revision}
-    {writePending}
-    {weekStart}
-    today={workspaceToday}
-    {search}
-    {open}
-    {onpropose}
-    {onmonth}
-    oncreate={(schedule) => oncreate({ schedule })}
+{#if props.view === "calendar" && CalendarView}<CalendarView {...props} />
+{:else if props.view === "gantt" && GanttView}<GanttView
+    {...props}
+    today={props.workspaceToday}
+    oncreate={(schedule) => props.oncreate({ schedule })}
   />
 {:else if !error}<p role="status">Ładowanie widoku planowania…</p>{/if}

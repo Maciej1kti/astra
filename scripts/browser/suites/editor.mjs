@@ -546,7 +546,7 @@ export async function runEditorChecks({
       );
       await expect(
         page.getByText(
-          "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry.",
+          "Brak kart pasujących do wyboru. Wybierz inny cel lub wyczyść filtry.",
           { exact: true },
         ),
       ).toBeVisible();
@@ -661,7 +661,7 @@ export async function runEditorChecks({
       await page.getByLabel("Filtr tagu", { exact: true }).fill("QA");
       await expect(
         page.getByText(
-          "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry.",
+          "Brak kart pasujących do wyboru. Wybierz inny cel lub wyczyść filtry.",
           { exact: true },
         ),
       ).toBeVisible();
@@ -751,11 +751,11 @@ export async function runEditorChecks({
             ).toHaveAttribute("aria-current", "page");
           } else {
             await page
-              .getByLabel("Projekt", { exact: true })
+              .getByLabel("Cel", { exact: true })
               .selectOption(otherProject);
-            await expect(
-              page.getByLabel("Projekt", { exact: true }),
-            ).toHaveValue(otherProject);
+            await expect(page.getByLabel("Cel", { exact: true })).toHaveValue(
+              otherProject,
+            );
           }
           const responseReceived = page.waitForResponse(
             (response) =>
@@ -779,9 +779,9 @@ export async function runEditorChecks({
               page.getByRole("button", { name: "Tablica", exact: true }),
             ).toHaveAttribute("aria-current", "page");
           else
-            await expect(
-              page.getByLabel("Projekt", { exact: true }),
-            ).toHaveValue(otherProject);
+            await expect(page.getByLabel("Cel", { exact: true })).toHaveValue(
+              otherProject,
+            );
           assert.equal(new URL(page.url()).searchParams.has("resource"), false);
           assert.equal(
             await page.evaluate(() => window.delayedSourceTransports),

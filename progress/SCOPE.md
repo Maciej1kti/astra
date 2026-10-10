@@ -419,3 +419,16 @@ While the Settings dialog was being fixed for the phone, the owner asked that
 its Save button go: Settings should work as the card does, where every edit
 saves and the header then says "Zapisano", not with a large button in the
 header. See [ADR-078](../docs/ADR-078-SETTINGS-AUTOSAVE.md).
+
+## Goals — owner direction, 2026-10-10
+
+The owner directed that, for now, only the web interface is worked on; the iOS
+and Mac apps follow once it is polished. In that interface projects are called
+**Cele** (goals). Asked how far the rename reaches, the owner chose everywhere
+in the interface, leaving only the `.project` folder name. The dialog a goal
+opens is to be built like a card's, with the same structure, sections, styles
+and components: description and comments, but no counters, dates or
+checklists. A goal shows a date taken from its cards, the earliest and the
+latest date on any of them. Goals are to appear on the Calendar as a view
+separate from cards, and the Timeline is to have the same two sub-views. See
+[ADR-079](../docs/ADR-079-GOAL-COMMENTS-AND-SPAN.md).

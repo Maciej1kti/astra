@@ -285,7 +285,7 @@
             {series.length
               ? "Zaznacz liczniki na liście, aby zobaczyć ich historię i statystyki."
               : loading
-                ? "Czytam zapisaną historię z wybranego projektu."
+                ? "Czytam zapisaną historię z wybranego celu."
                 : "Dodaj licznik do karty i zapisz wynik. Jego dzienna historia pojawi się tutaj."}
           </p></EmptyState
         >{/if}

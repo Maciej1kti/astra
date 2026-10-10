@@ -70,9 +70,7 @@ await runBrowserSuite(
       await page
         .getByRole("button", { name: `Więcej działań dla ${title}` })
         .click();
-      await page
-        .getByRole("button", { name: "Usuń projekt", exact: true })
-        .click();
+      await page.getByRole("button", { name: "Usuń cel", exact: true }).click();
     }
     function editor(page) {
       return page.getByRole("dialog", { name: "Edytuj element", exact: true });
@@ -791,19 +789,19 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Usuń projekt",
+            name: "Usuń cel",
             exact: true,
           });
           await expect(dialog).toContainText(candidate.title);
           await expect(dialog).toContainText(".project");
           await expect(
             dialog.getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             }),
           ).toBeEnabled();
           await dialog
-            .getByRole("button", { name: "Zachowaj projekt", exact: true })
+            .getByRole("button", { name: "Zachowaj cel", exact: true })
             .click();
           await expect(dialog).toBeHidden();
           assert.equal(await exists(join(candidate.folder, ".project")), true);
@@ -832,12 +830,12 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Usuń projekt",
+            name: "Usuń cel",
             exact: true,
           });
           await dialog
             .getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             })
             .click();
@@ -900,12 +898,12 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Usuń projekt",
+            name: "Usuń cel",
             exact: true,
           });
           await dialog
             .getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             })
             .waitFor();
@@ -915,7 +913,7 @@ await runBrowserSuite(
           );
           await dialog
             .getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             })
             .click();
@@ -930,7 +928,7 @@ await runBrowserSuite(
           ).toBeVisible();
           await expect(
             dialog.getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             }),
           ).toBeDisabled();
@@ -942,12 +940,12 @@ await runBrowserSuite(
             .click();
           await expect(
             dialog.getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             }),
           ).toBeEnabled();
           await dialog
-            .getByRole("button", { name: "Zachowaj projekt", exact: true })
+            .getByRole("button", { name: "Zachowaj cel", exact: true })
             .click();
           assert.equal(await exists(join(candidate.folder, ".project")), true);
           return { project: candidate.id, newPreviewRequired: true };
@@ -963,12 +961,12 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Usuń projekt",
+            name: "Usuń cel",
             exact: true,
           });
           await dialog
             .getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             })
             .waitFor();
@@ -983,7 +981,7 @@ await runBrowserSuite(
           });
           await dialog
             .getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             })
             .click();
@@ -1010,13 +1008,13 @@ await runBrowserSuite(
             .click();
           await expect(
             dialog.getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             }),
           ).toBeEnabled();
           await page.unroute(projectPath);
           await dialog
-            .getByRole("button", { name: "Zachowaj projekt", exact: true })
+            .getByRole("button", { name: "Zachowaj cel", exact: true })
             .click();
           return { project: candidate.id, statusConflictRequiresPreview: true };
         },
@@ -1049,18 +1047,18 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Usuń projekt",
+            name: "Usuń cel",
             exact: true,
           });
           await expect(
             dialog.getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             }),
           ).toBeEnabled();
           await dialog
             .getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             })
             .click();
@@ -1106,18 +1104,18 @@ await runBrowserSuite(
           await route(page, "projects", candidate.id);
           await openProjectDeletion(page, candidate.title);
           const dialog = page.getByRole("dialog", {
-            name: "Usuń projekt",
+            name: "Usuń cel",
             exact: true,
           });
           await expect(
             dialog.getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             }),
           ).toBeEnabled();
           await dialog
             .getByRole("button", {
-              name: "Trwale usuń projekt",
+              name: "Trwale usuń cel",
               exact: true,
             })
             .click();
@@ -1127,9 +1125,7 @@ await runBrowserSuite(
               url.searchParams.get("view") === "projects" &&
               !url.searchParams.get("project"),
           );
-          await expect(page.locator(".empty")).toContainText(
-            "Zacznij od projektu",
-          );
+          await expect(page.locator(".empty")).toContainText("Zacznij od celu");
           assert.equal(await exists(join(candidate.folder, ".project")), false);
           assert.equal(await exists(candidate.folder), true);
           return {

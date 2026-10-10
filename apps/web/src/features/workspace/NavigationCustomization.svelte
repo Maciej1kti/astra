@@ -83,7 +83,7 @@
       variant="quiet"
       onclick={() => {
         onsave(defaultNavigationLayout());
-        announcement = "Przywrócono domyślną nawigację: Focus i Projekty.";
+        announcement = "Przywrócono domyślną nawigację: Focus i Cele.";
       }}>Przywróć nawigację</Button
     >
   {/if}

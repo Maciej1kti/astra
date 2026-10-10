@@ -102,6 +102,8 @@ impl Indexed {
                         .filter(|c| c["archived"] != true)
                         .count())
             );
+        }
+        if matches!(self.kind.as_str(), "card" | "project") {
             out["comment_count"] = json!(
                 m.get("comments")
                     .and_then(Value::as_array)

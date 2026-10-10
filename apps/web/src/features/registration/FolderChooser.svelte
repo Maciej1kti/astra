@@ -93,7 +93,7 @@
   });
 </script>
 
-<section class="chooser" aria-label="Miejsce projektu">
+<section class="chooser" aria-label="Miejsce celu">
   {#if roots.length > 1}<label
       >Katalog<select
         aria-label="Katalog"
@@ -120,7 +120,7 @@
         onclick={() => browse(directory.relative_path)}
         ><Icon name="projects" small />
         <span class="directory-name"
-          >{directory.name}{directory.registered ? " · projekt" : ""}</span
+          >{directory.name}{directory.registered ? " · cel" : ""}</span
         >
         <Icon name="arrow" small /></Button
       >{:else}{#if ready}<p>Brak podfolderów.</p>{/if}{/each}

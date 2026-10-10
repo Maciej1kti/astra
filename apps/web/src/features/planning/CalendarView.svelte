@@ -2,7 +2,7 @@
   import { revealLayers } from "../../lib/ui/motion-layers";
   import { calendarLayers, metaLayers } from "./calendar-motion";
   import { errorMessage } from "../../lib/api/messages.ts";
-  import { countedDatedItems } from "../../lib/ui/locale.ts";
+  import { countedDatedItems, formatCivilRange } from "../../lib/ui/locale.ts";
   import type { CardCreate } from "../../lib/contracts/api.generated";
   import { eventFromDates } from "../../lib/resources/timed-event.ts";
   import {
@@ -30,6 +30,7 @@
   import {
     calendarTarget,
     calendarLabel,
+    goalItems,
     inclusiveSchedule,
     type CalendarItem,
   } from "./planning";
@@ -44,10 +45,14 @@
     calendarWidgetView,
     navigateCalendar,
     type CalendarLayout,
+    type PlanningScope,
   } from "./planning-navigation";
 
   let {
     project,
+    goals,
+    scope,
+    onscope,
     calendarDate,
     calendarLayout,
     workspaceToday,
@@ -62,6 +67,9 @@
     oncreate,
   }: {
     project: string;
+    goals: Summary[];
+    scope: PlanningScope;
+    onscope: (scope: PlanningScope) => void;
     calendarDate: string;
     calendarLayout: CalendarLayout;
     workspaceToday: string;
@@ -76,6 +84,8 @@
     oncreate: (initial: Partial<CardCreate>) => void;
   } = $props();
   const mode = $derived(calendarLayout);
+  // Goals come with the workspace's goal list; only cards are read per period.
+  const goalScope = $derived(scope === "goals");
   const date = $derived(calendarDate);
   let compact = $state(window.matchMedia(compactCalendarQuery).matches);
   let mobileMonthGrid = $state(false);
@@ -87,7 +97,8 @@
   // Agenda repeats each multi-day item on every occupied day. Keep its page
   // bounded like other lists; the grid retains its broader period overview.
   const pageSize = $derived(monthAgenda || mode === "agenda" ? 200 : 1000);
-  let items = $state.raw<CalendarItem[]>([]);
+  let cardItems = $state.raw<CalendarItem[]>([]);
+  const items = $derived(goalScope ? goalItems(goals) : cardItems);
   let range = $state({
     start: untrack(() => calendarDate),
     end: untrack(() => calendarDate),
@@ -106,10 +117,12 @@
     `${project}:${range.start}:${range.end}:${pageSize}`,
   );
   // Route publication can rerun prop getters without changing this query.
-  const readScope = $derived(`${queryScope}:${revision}`);
+  const readScope = $derived(`${scope}:${queryScope}:${revision}`);
   // A background read keeps the displayed, versioned projection interactive.
   // Scope changes still disable old events until their own page arrives.
-  const ready = $derived(loadedScope === queryScope && !error && !writePending);
+  const ready = $derived(
+    goalScope || (loadedScope === queryScope && !error && !writePending),
+  );
   const reads = new PlanningRead((value) => {
     loading = value;
   });
@@ -143,7 +156,7 @@
       if (next.start !== range.start || next.end !== range.end) range = next;
     },
     dateClick: (info) => {
-      if (project && !cancelled)
+      if (project && !goalScope && !cancelled)
         oncreate(
           info.allDay
             ? {
@@ -156,7 +169,7 @@
         );
     },
     select: (info) => {
-      if (project && !cancelled) {
+      if (project && !goalScope && !cancelled) {
         oncreate(
           info.allDay
             ? { schedule: inclusiveSchedule(info.start, info.end) }
@@ -198,7 +211,7 @@
           : "auto",
     dayMaxEvents: monthGrid,
     firstDay: weekStart === "sunday" ? 0 : 1,
-    selectable: !!project && ready,
+    selectable: !!project && !goalScope && ready,
     events,
   });
   $effect(() => {
@@ -219,6 +232,17 @@
     untrack(() => void load(false));
   });
   async function load(more: boolean) {
+    if (goalScope) {
+      // A card read still under way would publish into the goal view.
+      void reads.run({
+        key: "goals",
+        read: () => Promise.resolve(),
+        apply: () => {},
+        failed: () => {},
+      });
+      error = freshness = pageNotice = "";
+      return;
+    }
     const key = queryScope;
     const scope = {
       project,
@@ -234,7 +258,7 @@
       read: (signal) =>
         cursorPage((page) => getCalendar(scope, page, { signal }), target),
       apply: (result) => {
-        items = result.value.items;
+        cardItems = result.value.items;
         loadedScope = key;
         cursor = result.value.page.next_cursor;
         pageStart = result.reset ? null : target;
@@ -365,6 +389,8 @@
     {today}
     {changeDate}
     {changeLayout}
+    {scope}
+    changeScope={onscope}
     changeMonthGrid={(grid) => (mobileMonthGrid = grid)}
   />
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
@@ -377,7 +403,7 @@
     class="calendar-surface"
     use:revealLayers={{
       ready: ready && !loading,
-      key: `${project}:${date}:${widgetView}`,
+      key: `${scope}:${project}:${date}:${widgetView}`,
       layers: calendarLayers,
     }}
     aria-busy={loading}
@@ -423,6 +449,7 @@
               class:event={!!item.event}
               class:short={!!item.event && item.event.duration_minutes <= 30}
               class:due={item.kind.endsWith("due")}
+              class:goal={item.kind === "project_span"}
               title={`${calendarLabel(item)}: ${item.title}`}
               data-calendar-item={item.item_id}
               use:eventAccess={item}
@@ -432,7 +459,11 @@
                   ? item.event.start.slice(11)
                   : item.kind.endsWith("due")
                     ? "Termin"
-                    : "Cały dzień"}{#if item.event}<span class="time-duration">
+                    : item.kind === "project_span"
+                      ? "Cel"
+                      : "Cały dzień"}{#if item.event}<span
+                    class="time-duration"
+                  >
                     · {item.event.duration_minutes} min</span
                   >{/if}</span
               >
@@ -444,7 +475,9 @@
                         ? "planned"
                         : item.kind.endsWith("due")
                           ? "flag"
-                          : "calendar"}
+                          : item.kind === "project_span"
+                            ? "projects"
+                            : "calendar"}
                       small
                     /></span
                   >{item.title}</strong
@@ -454,9 +487,11 @@
                     ? `${item.event.duration_minutes} min`
                     : item.kind.endsWith("due")
                       ? "Termin"
-                      : item.start !== item.end
-                        ? "Plan wielodniowy"
-                        : "Zaplanowana praca"}</small
+                      : item.kind === "project_span"
+                        ? formatCivilRange(item.start, item.end)
+                        : item.start !== item.end
+                          ? "Plan wielodniowy"
+                          : "Zaplanowana praca"}</small
                 >
               </div>
             </div>
@@ -468,39 +503,52 @@
     class="view-meta"
     use:revealLayers={{
       ready: ready && !loading,
-      key: project,
+      key: `${scope}:${project}`,
       layers: metaLayers,
     }}
   >
-    <p class="legend">
-      <span><Icon name="planned" small />Wydarzenie</span><span
-        ><Icon name="calendar" small />Plan</span
-      ><span><Icon name="flag" small />Termin</span>
-    </p>
-    <details class="help">
-      <summary>Skróty i edycja kalendarza</summary>
-      <p>
-        Godziny wydarzeń według strefy {workspaceTimezone}. Wybierz godzinę w
-        widoku dnia lub tygodnia, aby utworzyć wydarzenie. Karty z samą datą
-        pozostają w wierszu całodniowym.
+    {#if goalScope}
+      <p class="legend">
+        <span><Icon name="projects" small />Cel</span>
       </p>
-      <p>
-        Przeciągnij zaplanowaną pracę, aby ją przenieść; przeciągnij krawędź,
-        aby zmienić czas trwania. Na ekranie dotykowym przytrzymaj plan, aby go
-        wybrać. Kliknij dzień lub zaznacz zakres, aby utworzyć kartę. Enter
-        otwiera zaznaczony element. Alt+←/→ przesuwa plan o dzień; Shift zmienia
-        tydzień. Poza planem Alt+←/→ zmienia okres, Alt+T otwiera dzisiaj, a
-        Alt+1/2/3/4 wybiera dzień/tydzień/miesiąc/agendę. Escape anuluje gest.
+      <p class="hint goal-hint">
+        Cel trwa od najwcześniejszej do najpóźniejszej daty na swoich kartach.
+        Zmienia się razem z nimi; tutaj otwiera się go kliknięciem lub Enterem.
+        {#if !items.length}Żaden cel nie ma jeszcze kart z datą.{/if}
       </p>
-    </details>
+    {:else}
+      <p class="legend">
+        <span><Icon name="planned" small />Wydarzenie</span><span
+          ><Icon name="calendar" small />Plan</span
+        ><span><Icon name="flag" small />Termin</span>
+      </p>
+      <details class="help">
+        <summary>Skróty i edycja kalendarza</summary>
+        <p>
+          Godziny wydarzeń według strefy {workspaceTimezone}. Wybierz godzinę w
+          widoku dnia lub tygodnia, aby utworzyć wydarzenie. Karty z samą datą
+          pozostają w wierszu całodniowym.
+        </p>
+        <p>
+          Przeciągnij zaplanowaną pracę, aby ją przenieść; przeciągnij krawędź,
+          aby zmienić czas trwania. Na ekranie dotykowym przytrzymaj plan, aby
+          go wybrać. Kliknij dzień lub zaznacz zakres, aby utworzyć kartę. Enter
+          otwiera zaznaczony element. Alt+←/→ przesuwa plan o dzień; Shift
+          zmienia tydzień. Poza planem Alt+←/→ zmienia okres, Alt+T otwiera
+          dzisiaj, a Alt+1/2/3/4 wybiera dzień/tydzień/miesiąc/agendę. Escape
+          anuluje gest.
+        </p>
+      </details>
+    {/if}
   </div>
-  {#if cursor || paged}<p class="hint">
+  {#if !goalScope && (cursor || paged)}<p class="hint">
       Wyświetlono {countedDatedItems(items.length)} z datą na tej stronie.
     </p>{/if}
-  {#if cursor}<button disabled={loading} onclick={() => load(true)}
-      >Następna strona elementów z datą</button
+  {#if cursor && !goalScope}<button
+      disabled={loading}
+      onclick={() => load(true)}>Następna strona elementów z datą</button
     >{/if}
-  {#if paged}<button
+  {#if paged && !goalScope}<button
       disabled={loading}
       onclick={() => {
         pageStart = null;

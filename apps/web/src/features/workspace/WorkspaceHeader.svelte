@@ -55,7 +55,7 @@
       : today;
   });
   const projectName = $derived(
-    projects.find((item) => item.id === project)?.title ?? "Wszystkie projekty",
+    projects.find((item) => item.id === project)?.title ?? "Wszystkie cele",
   );
 </script>
 
@@ -77,17 +77,17 @@
   {:else if selectable}
     <select
       class="workspace-project"
-      aria-label="Projekt"
+      aria-label="Cel"
       title={projectName}
       value={project}
       onchange={(event) => onprojectchange(event.currentTarget.value)}
     >
-      <option value="">Wszystkie projekty</option>
+      <option value="">Wszystkie cele</option>
       {#each projects as item}<option value={item.id}>{item.title}</option
         >{/each}
     </select>
   {:else}
-    <span class="workspace-label">Wszystkie projekty</span>
+    <span class="workspace-label">Wszystkie cele</span>
   {/if}
   <div class="workspace-actions">
     <div class="desktop-workspace-actions">

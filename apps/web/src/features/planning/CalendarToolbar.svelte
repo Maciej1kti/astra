@@ -1,28 +1,36 @@
 <script lang="ts">
   import PeriodToolbar from "../../lib/ui/PeriodToolbar.svelte";
   import Segments from "../../lib/ui/Segments.svelte";
-  import type { CalendarLayout } from "./planning-navigation";
+  import {
+    planningScopes,
+    type CalendarLayout,
+    type PlanningScope,
+  } from "./planning-navigation";
   import { widgetDate } from "./widget-dates";
 
   let {
     date,
     mode,
+    scope,
     compact,
     monthGrid,
     navigate,
     today,
     changeDate,
     changeLayout,
+    changeScope,
     changeMonthGrid,
   }: {
     date: string;
     mode: CalendarLayout;
+    scope: PlanningScope;
     compact: boolean;
     monthGrid: boolean;
     navigate: (delta: number) => void;
     today: () => void;
     changeDate: (input: HTMLInputElement) => void;
     changeLayout: (mode: CalendarLayout) => void;
+    changeScope: (scope: PlanningScope) => void;
     changeMonthGrid: (grid: boolean) => void;
   } = $props();
   const monthFormat = new Intl.DateTimeFormat("pl-PL", {
@@ -53,6 +61,12 @@
     options={layouts}
     value={mode}
     onselect={changeLayout}
+  />
+  <Segments
+    label="Zakres kalendarza"
+    options={planningScopes}
+    value={scope}
+    onselect={changeScope}
   />
   {#if compact && mode === "month"}
     <Segments

@@ -90,7 +90,7 @@ await runBrowserSuite(
       );
     });
     const board = page.getByRole("region", {
-      name: "Tablica statusów projektów",
+      name: "Tablica statusów celów",
       exact: true,
     });
     const column = (state) => board.locator(`.astra-column-${state}`);
@@ -103,7 +103,7 @@ await runBrowserSuite(
         exact: true,
       });
     const moveDialog = page.getByRole("dialog", {
-      name: "Przenieś projekt",
+      name: "Przenieś cel",
       exact: true,
     });
     const editor = page.getByRole("dialog", {
@@ -111,7 +111,9 @@ await runBrowserSuite(
       exact: true,
     });
     async function idle() {
-      await expect.poll(() => activeReads.size).toBe(0);
+      await expect
+        .poll(() => [...activeReads].map((request) => request.url()))
+        .toEqual([]);
     }
     async function openProjects(view = "projects") {
       await page.goto(`${config.origin}/?view=${view}`);
@@ -230,7 +232,7 @@ await runBrowserSuite(
             name: "Widoki przestrzeni roboczej",
             exact: true,
           })
-          .getByRole("button", { name: "Projekty", exact: true }),
+          .getByRole("button", { name: "Cele", exact: true }),
       ).toHaveAttribute("aria-current", "page");
       await expect(
         page.getByRole("button", { name: "Main", exact: true }),
@@ -240,7 +242,7 @@ await runBrowserSuite(
           name: "Widoki przestrzeni roboczej",
           exact: true,
         })
-        .getByRole("button", { name: "Projekty", exact: true });
+        .getByRole("button", { name: "Cele", exact: true });
       await expect(projectShortcut.locator("svg path")).toHaveAttribute(
         "d",
         "M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z",
@@ -294,7 +296,7 @@ await runBrowserSuite(
           .locator('option[value="Projekty archive"]'),
       ).toHaveCount(0);
       await navigation
-        .getByRole("button", { name: "Projekty", exact: true })
+        .getByRole("button", { name: "Cele", exact: true })
         .click();
       for (const project of projects) await expectState(project, project.state);
       await idle();
@@ -454,7 +456,7 @@ await runBrowserSuite(
       const writesBeforeConflict = writes.length;
       await menuMove(conflicted, "active");
       await expect(moveDialog).toBeVisible();
-      await expect(moveDialog).toContainText("Projekt się zmienił.");
+      await expect(moveDialog).toContainText("Cel się zmienił.");
       assert.equal(interceptionError, undefined);
       assert.equal(writes.length, writesBeforeConflict + 1);
       assert.equal(conflictAttempt.version, `"${observed.version}"`);
@@ -462,7 +464,7 @@ await runBrowserSuite(
       assert.equal(cli("get", conflicted.path).metadata.state, "paused");
       await moveDialog
         .getByRole("button", {
-          name: "Zamknij przenoszenie projektu",
+          name: "Zamknij przenoszenie celu",
           exact: true,
         })
         .click();
@@ -726,7 +728,7 @@ await runBrowserSuite(
       });
       await expect(defaultView.locator('option[value="main"]')).toHaveCount(0);
       await expect(defaultView.locator('option[value="projects"]')).toHaveText(
-        "Projekty",
+        "Cele",
       );
       await saveSettings(page, settings, () =>
         defaultView.selectOption("projects"),

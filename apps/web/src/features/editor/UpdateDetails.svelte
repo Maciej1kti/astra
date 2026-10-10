@@ -48,7 +48,7 @@
         </dd>
       </div>{/if}
     <div>
-      <dt>Cel</dt>
+      <dt>Dotyczy</dt>
       <dd>
         {resourceLabel(metadata.target.type)} · {metadata.target.type ===
           "project" &&

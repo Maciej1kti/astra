@@ -964,6 +964,45 @@ fn card_comments_translate_declared_authors_and_keep_version_preconditions() {
 }
 
 #[test]
+fn project_comments_target_the_explicit_project_with_declared_authors_and_a_version() {
+    for kind in ["human", "agent"] {
+        let host = Host::new(vec![conflict()]);
+        let mut command = host.command();
+        command.args([
+            "project",
+            "comment",
+            PROJECT,
+            "--body-file",
+            "-",
+            "--author",
+            "Codex",
+            "--author-kind",
+            kind,
+            "--if-version",
+            VERSION,
+            "--request-id",
+            REQUEST,
+            "--epoch",
+            EPOCH,
+        ]);
+        let output = invoke(&mut command, Some(b"A Markdown **comment**\n"));
+        let requests = host.finish();
+        assert_eq!(output.status.code(), Some(5));
+        assert_eq!(parsed(&output)["error"]["code"], "VERSION_CONFLICT");
+        assert_eq!(requests.len(), 1, "No project resolution or version fetch");
+        assert_eq!(requests[0].method, "PATCH");
+        assert_eq!(requests[0].path, format!("/api/v1/projects/{PROJECT}"));
+        assert_eq!(
+            requests[0].body,
+            json!({"append_comment":{"body":"A Markdown **comment**\n","author":{"kind":kind,"label":"Codex"}}})
+        );
+        assert_eq!(requests[0].headers["if-match"], format!("\"{VERSION}\""));
+        assert_eq!(requests[0].headers["x-request-id"], REQUEST);
+        assert_eq!(requests[0].headers["x-command-epoch"], EPOCH);
+    }
+}
+
+#[test]
 fn named_project_tag_rename_accepts_a_workflow_and_retains_retry_identity() {
     let accepted =
         json!({"api_version":"1", "request_id":REQUEST, "status":"running", "job_id":RESOURCE});

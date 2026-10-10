@@ -35,6 +35,7 @@ const suites = [
   "card-calendar",
   "focus-controls",
   "comments",
+  "goals",
   "counters",
   "charts",
   "autosave",

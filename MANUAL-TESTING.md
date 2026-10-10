@@ -65,7 +65,7 @@ its folder through the normal registration flow.
 
 ## A useful first pass
 
-On a phone, check the compact **Focus → Projekty → Więcej** bar. Open More to reach
+On a phone, check the compact **Focus → Cele → Więcej** bar. Open More to reach
 Calendar, Timeline, List, Board, Chart and Updates. In **Dostosuj nawigację**, move
 views earlier/later and toggle their eyes, then reload to check this browser's
 layout. Hide every shortcut and recover through More or Reset navigation. Select
@@ -192,7 +192,7 @@ scripts/cargo-local build --workspace --release --locked
 
 ## Arrange projects in Projects
 
-Open **Projekty** from the sidebar or the phone's navigation bar. In a synthetic
+Open **Cele** from the sidebar or the phone's navigation bar. In a synthetic
 workspace, give projects Active, Paused and Archived statuses and check that
 each appears in its matching column. Filter by folder and title, then open a
 project and verify its current fields. Drag the project card to a different
@@ -214,12 +214,12 @@ view query to check the preference.
 
 Approve a directory for new projects once on the host, for example
 `target/release/projectctl --socket .manual/state/projectd.sock add-root "$PWD/.manual/projects" --label Projects`
-after creating that directory. Open **Projekty → Dodaj projekt**, type a name
-and choose **Utwórz projekt**. The folder appears inside the approved directory
+after creating that directory. Open **Cele → Dodaj cel**, type a name
+and choose **Utwórz cel**. The folder appears inside the approved directory
 under a name derived from the project's, with `-2`, `-3` and so on when that
 name is taken, and the app opens the new project. Nothing opens on the host's
 desktop. With several approved directories, first choose one under
-**Ustawienia → Katalog nowych projektów**.
+**Ustawienia → Katalog nowych celów**.
 
 Started with `ASTRA_TRY_GITHUB=1 npm run try`, the same button also creates a
 private repository in the GitHub account the host's `gh` is signed in to and
@@ -230,7 +230,7 @@ publikację**; the project's **Git** dialog offers the same later.
 
 ## Add an existing project folder
 
-**Dodaj projekt → Masz już folder z projektem? → Dodaj istniejący folder**
+**Dodaj cel → Masz już folder z celem? → Dodaj istniejący folder**
 browses the directories approved on the host and registers a folder that
 already exists there. The browser no longer opens the host's folder dialog
 ([ADR-074](docs/ADR-074-PROJECT-CREATION-AND-REPOSITORIES.md)).

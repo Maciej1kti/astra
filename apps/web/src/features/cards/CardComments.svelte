@@ -11,17 +11,23 @@
     body = $bindable(),
     disabled,
     saved,
+    goal = false,
     onadd,
   }: {
     comments: CardComment[];
     body: string;
     disabled: boolean;
     saved: boolean;
+    /** The conversation of a goal; a card's is the default. */
+    goal?: boolean;
     onadd: () => void;
   } = $props();
 </script>
 
-<section class="card-comments" aria-label="Komentarze karty">
+<section
+  class="card-comments"
+  aria-label={goal ? "Komentarze celu" : "Komentarze karty"}
+>
   <SectionHeading
     title="Komentarze"
     level={3}
@@ -47,7 +53,7 @@
     </div>
   </div>
   {#if comments.length >= 200}<p class="field-hint">
-      Osiągnięto limit 200 komentarzy na tej karcie.
+      Osiągnięto limit 200 komentarzy {goal ? "tego celu" : "na tej karcie"}.
     </p>{/if}
   {#if comments.length}
     <ol class="comment-history" aria-label="Historia komentarzy">

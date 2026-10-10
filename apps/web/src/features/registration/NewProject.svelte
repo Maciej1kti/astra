@@ -73,9 +73,9 @@
     !busy
       ? ""
       : !created
-        ? "Tworzenie folderu projektu…"
+        ? "Tworzenie folderu celu…"
         : !registered
-          ? "Zapisywanie danych projektu…"
+          ? "Zapisywanie danych celu…"
           : "Kończenie…",
   );
 
@@ -223,13 +223,13 @@
   class="app-dialog"
   use:modal={{ onclose: close }}
   out:layerExit|global
-  aria-label="Dodaj projekt"
+  aria-label="Dodaj cel"
 >
   <DialogHeader
-    title="Dodaj projekt"
+    title="Dodaj cel"
     onclose={close}
     disabled={busy}
-    closeLabel="Zamknij dodawanie projektu"
+    closeLabel="Zamknij dodawanie celu"
   />
   <form
     class="dialog-body"
@@ -239,11 +239,11 @@
     }}
   >
     <p>
-      Podaj nazwę. Folder projektu powstanie sam; publikowanie na GitHubie
-      włączasz w Ustawieniach.
+      Podaj nazwę. Folder celu powstanie sam; publikowanie na GitHubie włączasz
+      w Ustawieniach.
     </p>
     <label
-      >Nazwa projektu <input
+      >Nazwa celu <input
         bind:value={name}
         maxlength="120"
         autocomplete="off"
@@ -279,8 +279,7 @@
           oncancel={() => (choosing = false)}
         />{/if}
       {#if !placeLabel && roots.length}<p>
-          Wskaż miejsce projektu albo ustaw katalog nowych projektów w
-          Ustawieniach.
+          Wskaż miejsce celu albo ustaw katalog nowych celów w Ustawieniach.
         </p>{/if}{/if}
     {#if !registered || !repository || repository.state !== "failed"}
       <Button
@@ -295,16 +294,16 @@
               ? "Ponów tę samą rejestrację"
               : started
                 ? "Ponów"
-                : "Utwórz projekt"}</Button
+                : "Utwórz cel"}</Button
       >
     {/if}
     {#if registered && repository?.state === "failed"}<section
         class="notice"
         role="status"
       >
-        <strong>Projekt jest gotowy do pracy lokalnie</strong>
+        <strong>Cel jest gotowy do pracy lokalnie</strong>
         <p>
-          Nie udało się opublikować projektu na GitHubie.
+          Nie udało się opublikować celu na GitHubie.
           {serverMessage(repository.error ?? "GITHUB_UNAVAILABLE")}
         </p>
         <div class="actions">
@@ -312,10 +311,10 @@
             >{busy ? step : "Ponów publikację"}</Button
           >
           <button type="button" onclick={close} disabled={busy}
-            >Otwórz projekt</button
+            >Otwórz cel</button
           >
         </div>
-        <p>Publikację można też ponowić później w oknie Git projektu.</p>
+        <p>Publikację można też ponowić później w oknie Git celu.</p>
       </section>{/if}
     {#if pending}<p>Żądanie: {pending.requestId}</p>
       <button type="button" onclick={copy}>Kopiuj szczegóły rejestracji</button
@@ -340,7 +339,7 @@
         ><button type="button" onclick={onclose}>Zamknij rejestrację</button>
       </section>{/if}
     <details>
-      <summary>Masz już folder z projektem?</summary>
+      <summary>Masz już folder z celem?</summary>
       <p>Możesz dodać istniejący folder z zatwierdzonych katalogów serwera.</p>
       <button type="button" onclick={onbrowse} disabled={busy || started}
         >Dodaj istniejący folder</button

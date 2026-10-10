@@ -94,22 +94,20 @@ try {
   const homeRoot = join(temp, "New projects");
   await mkdir(homeRoot);
   cli("add-root", homeRoot, "--label", "New projects");
-  await page.getByRole("button", { name: "Projekty", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Dodaj projekt", exact: false })
-    .click();
+  await page.getByRole("button", { name: "Cele", exact: true }).click();
+  await page.getByRole("button", { name: "Dodaj cel", exact: false }).click();
   const creation = page.getByRole("dialog", {
-    name: "Dodaj projekt",
+    name: "Dodaj cel",
     exact: true,
   });
   await expect(
-    creation.getByRole("button", { name: "Utwórz projekt", exact: true }),
+    creation.getByRole("button", { name: "Utwórz cel", exact: true }),
   ).toBeDisabled();
   await creation
-    .getByLabel("Nazwa projektu", { exact: true })
+    .getByLabel("Nazwa celu", { exact: true })
     .fill("Świeży projekt");
   await creation
-    .getByRole("button", { name: "Utwórz projekt", exact: true })
+    .getByRole("button", { name: "Utwórz cel", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   const createdProject = JSON.parse(
@@ -124,11 +122,9 @@ try {
   const selectedFolder = join(pickRoot, "Chosen project");
   await mkdir(selectedFolder, { recursive: true });
   cli("add-root", pickRoot, "--label", "Test projects");
-  await page.getByRole("button", { name: "Projekty", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Dodaj projekt", exact: false })
-    .click();
-  await page.getByText("Masz już folder z projektem?", { exact: true }).click();
+  await page.getByRole("button", { name: "Cele", exact: true }).click();
+  await page.getByRole("button", { name: "Dodaj cel", exact: false }).click();
+  await page.getByText("Masz już folder z celem?", { exact: true }).click();
   await page
     .getByRole("button", { name: "Dodaj istniejący folder", exact: true })
     .click();
@@ -138,7 +134,7 @@ try {
   const registration = page.locator("dialog:modal:not([inert])");
   await expect(registration).toHaveCount(1);
   await registration
-    .getByLabel("Nazwa projektu", { exact: true })
+    .getByLabel("Nazwa celu", { exact: true })
     .fill("Chosen in browser");
   await page
     .getByRole("button", { name: "Wybierz ten folder", exact: true })
@@ -151,7 +147,7 @@ try {
     },
   );
   await page
-    .getByRole("button", { name: "Dodaj wybrany projekt", exact: true })
+    .getByRole("button", { name: "Dodaj wybrany cel", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   assert.equal(
@@ -162,9 +158,7 @@ try {
     await readFile(join(selectedFolder, ".project/project.json"), "utf8"),
     /Chosen in browser/,
   );
-  await page
-    .getByLabel("Projekt", { exact: true })
-    .selectOption(plan.project_id);
+  await page.getByLabel("Cel", { exact: true }).selectOption(plan.project_id);
   await page.getByRole("button", { name: "Dodaj kartę", exact: true }).click();
   await page.getByLabel("Tytuł", { exact: true }).fill("Ship the field guide");
   await page.getByLabel("Początek", { exact: true }).fill("2026-09-07");
@@ -310,7 +304,7 @@ try {
     "Oś czasu",
     "Lista",
     "Aktualizacje",
-    "Projekty",
+    "Cele",
   ]) {
     await page.getByRole("button", { name: view, exact: true }).click();
   }
@@ -397,9 +391,7 @@ try {
     .getByText("External editor update", { exact: true })
     .waitFor({ timeout: 10000 });
   assert.equal(cli("get", path).metadata.title, "External editor update");
-  await page
-    .getByLabel("Projekt", { exact: true })
-    .selectOption(plan.project_id);
+  await page.getByLabel("Cel", { exact: true }).selectOption(plan.project_id);
   await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
   await showTimelineDate(page, "2026-09-01");
   const bar = timelineBar(page, "External editor update");
@@ -987,9 +979,7 @@ try {
 
   // Touch starts with a hold; an immediate swipe must remain normal scrolling.
   await selectMobileView("Tablica");
-  await mobile
-    .getByLabel("Projekt", { exact: true })
-    .selectOption(plan.project_id);
+  await mobile.getByLabel("Cel", { exact: true }).selectOption(plan.project_id);
   const mobileSource = mobile.locator(`[data-board-card="${typedId}"] .title`);
   const mobileTarget = mobile.locator(
     `[data-board-card="${cards[0].id}"] .title`,
@@ -1131,17 +1121,13 @@ try {
       .toBe(savedScroll.horizontal);
   };
   await assertRestored();
-  await page
-    .getByLabel("Projekt", { exact: true })
-    .selectOption(createdProject.id);
+  await page.getByLabel("Cel", { exact: true }).selectOption(createdProject.id);
   await expect(
     page
       .locator(".astra-column-active")
       .getByRole("button", { name: "Zwiń kolumnę", exact: true }),
   ).toBeVisible();
-  await page
-    .getByLabel("Projekt", { exact: true })
-    .selectOption(plan.project_id);
+  await page.getByLabel("Cel", { exact: true }).selectOption(plan.project_id);
   await assertRestored();
   await page.reload();
   await assertRestored();
@@ -1401,9 +1387,7 @@ try {
     .fill("Queued revocation autosave");
   await expect.poll(() => revocationAutosaveStarted).toBe(1);
   await selectMobileView("Oś czasu");
-  await mobile
-    .getByLabel("Projekt", { exact: true })
-    .selectOption(plan.project_id);
+  await mobile.getByLabel("Cel", { exact: true }).selectOption(plan.project_id);
   await showTimelineDate(mobile, "2026-09-01");
   // Two keyboard steps extend the plan; their save never gets an answer, so
   // the change is still pending when the session is revoked below.

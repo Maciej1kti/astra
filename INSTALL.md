@@ -192,7 +192,7 @@ The CLI plan defaults to private Git mode (a local exclusion). Add `--tracked`
 to `registration-plan` if you intend to commit the persistent `.project/` sources;
 keep `.project/.local/` excluded. The daemon does not commit files to Git.
 
-The browser adds projects through **Projekty → Dodaj projekt**, which needs a
+The browser adds projects through **Cele → Dodaj cel**, which needs a
 directory you approved on the host. Nothing in that flow opens a dialog on the
 host, so it works from a phone or any remote browser:
 
@@ -202,7 +202,7 @@ projectctl add-root /absolute/projects --label Projects
 
 Typing a project name then creates a folder of that name inside the approved
 root and registers it. With several approved roots, choose one under
-**Ustawienia → Katalog nowych projektów**. **Dodaj istniejący folder** in the
+**Ustawienia → Katalog nowych celów**. **Dodaj istniejący folder** in the
 same dialog registers a folder that already exists below an approved root.
 Local CLI registration does not require an approved root. No parent-folder or
 Git-remote search selects a project on your behalf.
@@ -232,7 +232,7 @@ target/release/projectd \
 | `--github-remote-base URL` | Prefix of a new repository's remote, default `https://github.com/`; set it for a GitHub Enterprise host. Needs `--github` |
 
 Each profile can turn publication off under **Ustawienia → Publikuj nowe
-projekty na GitHubie**; it is on unless switched off.
+cele na GitHubie**; it is on unless switched off.
 When GitHub cannot be reached the project is still created and works locally;
 repeat the publication from the project's **Git** dialog. The manual launcher
 passes the option with `ASTRA_TRY_GITHUB=1 npm run try`.
@@ -348,7 +348,7 @@ automatic uninstaller or general source-format migration tool.
 | Address/socket already in use | Identify the existing host; use its connection or stop it deliberately before starting a replacement |
 | Browser cannot connect or gets Host/Origin errors | Compare the browser origin, proxy Host forwarding and `--public-origin` exactly |
 | The Agent button is missing, or its dialog reports a missing command | The host was started without `--agent-dir`; or the daemon's `PATH` lacks `claude`/`codex` (pass `--agent-claude-bin` / `--agent-codex-bin`) or `projectctl` is not beside `projectd` |
-| **Dodaj projekt** reports that no directory of new projects is selected | Approve one with `projectctl add-root`, or choose among several under **Ustawienia → Katalog nowych projektów** |
+| **Dodaj cel** reports that no directory of new projects is selected | Approve one with `projectctl add-root`, or choose among several under **Ustawienia → Katalog nowych celów** |
 | A new project has no GitHub repository | The host was started without `--github`, `gh` is signed out, or GitHub was unreachable; the daemon's stderr holds the failing command's last output. Repeat from the project's **Git** dialog |
 | CLI write times out | Keep its request ID, epoch, payload and version; inspect command status using [safe retries](CLI.md#uncertain-results-and-safe-retries) |
 | Source validation/recovery warning | Inspect `doctor` and the affected source; do not delete operational state or overwrite a conflict |

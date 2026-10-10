@@ -526,21 +526,19 @@ await runBrowserSuite(
           await routeFocus(page, { folder: "Work", project: otherProject.id });
           await expect(focusCard(page, pinned.metadata.id)).toBeVisible();
           await expect(focusCard(page, otherPinned.metadata.id)).toBeVisible();
-          await expect(page.getByLabel("Projekt", { exact: true })).toHaveCount(
-            0,
-          );
+          await expect(page.getByLabel("Cel", { exact: true })).toHaveCount(0);
           await page.reload();
           await expect(page.getByLabel("Folder", { exact: true })).toHaveValue(
             "Work",
           );
           await holdAndChoose(page, "card");
           const chooser = page.getByRole("dialog", {
-            name: "Wybierz projekt dla karty",
+            name: "Wybierz cel dla karty",
           });
           await expect(chooser).toBeVisible();
           await expect(chooser.getByRole("option")).toHaveCount(3);
           await chooser
-            .getByLabel("Projekt", { exact: true })
+            .getByLabel("Cel", { exact: true })
             .selectOption(project.id);
           await chooser
             .getByRole("button", { name: "Kontynuuj", exact: true })

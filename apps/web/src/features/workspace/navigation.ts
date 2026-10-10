@@ -1,5 +1,8 @@
 import { isUuid } from "../../lib/api/uuid.ts";
-import type { CalendarLayout } from "../planning/planning-navigation.ts";
+import type {
+  CalendarLayout,
+  PlanningScope,
+} from "../planning/planning-navigation.ts";
 import { isCalendarDate } from "../planning/widget-dates.ts";
 
 export const workspaceViews = [
@@ -21,7 +24,7 @@ export function canonicalView(value: unknown): View | undefined {
 export function viewLabel(view: View): string {
   return {
     focus: "Focus",
-    projects: "Projekty",
+    projects: "Cele",
     board: "Tablica",
     calendar: "Kalendarz",
     gantt: "Oś czasu",
@@ -43,6 +46,7 @@ export type WorkspaceRoute = {
   month: string;
   calendarDate: string;
   calendarLayout: CalendarLayout;
+  planningScope: PlanningScope;
   resource?: { project: string; type: string; id: string };
 };
 const validId = (value: string | null): value is string => isUuid(value, 4);
@@ -90,6 +94,7 @@ export function readRoute(
     )
       ? (params.get("layout") as CalendarLayout)
       : "month",
+    planningScope: params.get("scope") === "goals" ? "goals" : "cards",
     ...(resourceProject &&
     validId(id) &&
     ["project", "card", "milestone", "update"].includes(type)
@@ -117,6 +122,8 @@ export function writeRoute(state: WorkspaceRoute): URLSearchParams {
     params.set("date", state.calendarDate);
     params.set("layout", state.calendarLayout);
   }
+  // Kept with every view, as the search is, so the choice outlives a detour.
+  if (state.planningScope === "goals") params.set("scope", "goals");
   if (state.resource) {
     params.set("resource_project", state.resource.project);
     params.set("type", state.resource.type);

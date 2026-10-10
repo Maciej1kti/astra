@@ -243,6 +243,9 @@ export interface ApiContracts {
         clear?: "folder"[];
       }
     | {
+        append_comment: CardCommentInput;
+      }
+    | {
         undo: {
           history_entry_id: string;
         };
@@ -430,12 +433,22 @@ export interface Warning {
 }
 export interface ProjectMetadata {
   folder?: string;
+  /**
+   * @maxItems 200
+   */
+  comments?: CardComment[];
   id: string;
   created_at: string;
   updated_at: string;
   schema_version: 1;
   name: string;
   state: "active" | "paused" | "archived";
+}
+export interface CardComment {
+  id: string;
+  author: Author;
+  recorded_at: string;
+  body: string;
 }
 export interface AcceptanceItem {
   id: string;
@@ -448,12 +461,6 @@ export interface AcceptanceProgress {
 }
 export interface CardCommentInput {
   author: Author;
-  body: string;
-}
-export interface CardComment {
-  id: string;
-  author: Author;
-  recorded_at: string;
   body: string;
 }
 export interface CounterValues {
@@ -764,6 +771,10 @@ export interface Summary {
   status?: string;
   priority?: "normal" | "high";
   schedule?: Schedule;
+  span?: {
+    start: string;
+    end: string;
+  };
   due?: Due;
   archived?: boolean;
   position?: string;

@@ -671,7 +671,7 @@ export async function runAutosaveChecks({
       await page.off("request", onRemoteImageRequest);
       // The rendered text is content; its labelled button is the keyboard control.
       const editDescription = dialog().getByRole("button", {
-        name: "Edytuj opis: Projekt",
+        name: "Edytuj opis: Cel",
         exact: true,
       });
       await expect(editDescription).toBeEnabled();
@@ -694,9 +694,13 @@ export async function runAutosaveChecks({
       await expect(dialog()).toBeVisible();
       await expect(renderedBox).toBeVisible();
       assert.equal(projectWrites(), 2);
+      // A goal's status is the card editor's status menu.
       await dialog()
-        .getByLabel("Status", { exact: true })
-        .selectOption("paused");
+        .getByRole("button", { name: "Status: Aktywne", exact: true })
+        .click();
+      await dialog()
+        .getByRole("button", { name: "Wstrzymane", exact: true })
+        .click();
       await waitForWrite(projectPath, "PATCH", 3);
       await waitForSaved(
         projectPath,
@@ -706,8 +710,11 @@ export async function runAutosaveChecks({
       assert.equal(projectWrites(), 3);
       await expect(dialog()).toBeVisible();
       await dialog()
-        .getByLabel("Status", { exact: true })
-        .selectOption("active");
+        .getByRole("button", { name: "Status: Wstrzymane", exact: true })
+        .click();
+      await dialog()
+        .getByRole("button", { name: "Aktywne", exact: true })
+        .click();
       await waitForWrite(projectPath, "PATCH", 4);
       await waitForSaved(
         projectPath,
@@ -790,15 +797,9 @@ export async function runAutosaveChecks({
           mobile.documentWidth <= mobile.viewportWidth + 1,
           JSON.stringify(mobile),
         );
-        assert(mobile.left >= 8, JSON.stringify(mobile));
-        assert(
-          mobile.right <= mobile.viewportWidth - 8,
-          JSON.stringify(mobile),
-        );
-        assert(
-          mobile.width <= mobile.viewportWidth - 16,
-          JSON.stringify(mobile),
-        );
+        // A goal opens like a card, which fills a phone edge to edge.
+        assert(mobile.left >= 0, JSON.stringify(mobile));
+        assert(mobile.right <= mobile.viewportWidth, JSON.stringify(mobile));
         await page.screenshot({
           path: join(evidenceDir, "AS09-mobile-390.png"),
           fullPage: true,

@@ -36,7 +36,7 @@ export function serverMessage(code = "", status?: number): string {
   if (code.startsWith("INVALID_"))
     return "Wprowadzone dane są nieprawidłowe. Sprawdź pola formularza.";
   if (code.startsWith("PROJECT_TREE_"))
-    return "Folder projektu nie spełnia wymagań tej operacji. Sprawdź diagnostykę.";
+    return "Folder celu nie spełnia wymagań tej operacji. Sprawdź diagnostykę.";
   if (code.startsWith("GIT_"))
     return "Nie udało się sprawdzić repozytorium Git.";
   if (code.endsWith("_LIMIT") || code.endsWith("_TOO_LARGE"))

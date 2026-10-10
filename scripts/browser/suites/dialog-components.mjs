@@ -99,11 +99,11 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
       "Project registration replacement restores the original trigger",
       async () => {
         await expect(nativeDialogs).toHaveCount(0);
-        const trigger = page.getByRole("button", { name: /Dodaj projekt/ });
+        const trigger = page.getByRole("button", { name: /Dodaj cel/ });
         await trigger.focus();
         await trigger.press("Enter");
         const dialog = page.getByRole("dialog", {
-          name: "Dodaj projekt",
+          name: "Dodaj cel",
           exact: true,
         });
         const disclosure = dialog
@@ -117,7 +117,7 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
         await browse.focus();
         await browse.press("Enter");
         await expect(
-          dialog.getByText("Wybierz folder projektu na tym serwerze.", {
+          dialog.getByText("Wybierz folder celu na tym serwerze.", {
             exact: false,
           }),
         ).toBeVisible();
@@ -150,10 +150,10 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
         await tagsTrigger.focus();
         await tagsTrigger.press("Enter");
         const tags = page.getByRole("dialog", {
-          name: "Zarządzaj tagami projektu",
+          name: "Zarządzaj tagami celu",
           exact: true,
         });
-        await expect(tags.getByLabel("Projekt", { exact: true })).toBeEnabled();
+        await expect(tags.getByLabel("Cel", { exact: true })).toBeEnabled();
         await snapshot("nested-tags-phone");
         await page.keyboard.press("Escape");
         await expect(tags).toHaveCount(0);
@@ -188,7 +188,7 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
           await page.setViewportSize(viewport);
           await openChooser();
           const dialog = page.getByRole("dialog", {
-            name: "Wybierz projekt dla karty",
+            name: "Wybierz cel dla karty",
             exact: true,
           });
           await expect(dialog).toBeVisible();
@@ -221,11 +221,11 @@ await runBrowserSuite(async ({ config, evidence, browser, newContext }) => {
         }
         await openChooser();
         const chooser = page.getByRole("dialog", {
-          name: "Wybierz projekt dla karty",
+          name: "Wybierz cel dla karty",
           exact: true,
         });
         await chooser
-          .getByLabel("Projekt", { exact: true })
+          .getByLabel("Cel", { exact: true })
           .selectOption(config.projects[0].id);
         const continueButton = chooser.getByRole("button", {
           name: "Kontynuuj",

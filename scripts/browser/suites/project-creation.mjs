@@ -61,21 +61,20 @@ await runBrowserSuite(
       );
     }
     const dialogOf = (page) =>
-      page.getByRole("dialog", { name: "Dodaj projekt", exact: true });
+      page.getByRole("dialog", { name: "Dodaj cel", exact: true });
     async function open(page) {
       await visit(page);
       await page
-        .getByRole("button", { name: "Dodaj projekt", exact: false })
+        .getByRole("button", { name: "Dodaj cel", exact: false })
         .first()
         .click();
       const dialog = dialogOf(page);
       await expect(dialog).toBeVisible();
       return dialog;
     }
-    const nameOf = (dialog) =>
-      dialog.getByLabel("Nazwa projektu", { exact: true });
+    const nameOf = (dialog) => dialog.getByLabel("Nazwa celu", { exact: true });
     const createOf = (dialog) =>
-      dialog.getByRole("button", { name: "Utwórz projekt", exact: true });
+      dialog.getByRole("button", { name: "Utwórz cel", exact: true });
     /** A screenshot of settled layers: entrances have finished. */
     async function snapshot(page, name) {
       if (webkit) return;
@@ -168,7 +167,7 @@ await runBrowserSuite(
           exact: true,
         });
         await expect(git).toContainText(
-          "Projekt jest opublikowany w zdalnym repozytorium.",
+          "Cel jest opublikowany w zdalnym repozytorium.",
         );
         await expect(git).toContainText("octo/remont-kuchni-zoltej.git");
         await expect(
@@ -213,9 +212,7 @@ await runBrowserSuite(
         const dialog = await open(page);
         await nameOf(dialog).fill("Bez sieci");
         await createOf(dialog).click();
-        await expect(dialog).toContainText(
-          "Projekt jest gotowy do pracy lokalnie",
-        );
+        await expect(dialog).toContainText("Cel jest gotowy do pracy lokalnie");
         await expect(dialog).toContainText("GitHub jest nieosiągalny z hosta");
         assert(await exists(join(home, "bez-sieci/.project/project.json")));
         assert(!(await exists(join(account, "remotes/octo/bez-sieci.git"))));
@@ -250,7 +247,7 @@ await runBrowserSuite(
           "Host nie jest zalogowany do GitHuba",
         );
         await dialog
-          .getByRole("button", { name: "Otwórz projekt", exact: true })
+          .getByRole("button", { name: "Otwórz cel", exact: true })
           .click();
         await expect(page.locator("dialog[open]")).toHaveCount(0);
         await expect(page).toHaveURL(/project=/);
@@ -261,13 +258,13 @@ await runBrowserSuite(
           exact: true,
         });
         await expect(git).toContainText(
-          "Nie udało się opublikować projektu na GitHubie.",
+          "Nie udało się opublikować celu na GitHubie.",
         );
         await git
           .getByRole("button", { name: "Ponów publikację", exact: true })
           .click();
         await expect(git).toContainText(
-          "Projekt jest opublikowany w zdalnym repozytorium.",
+          "Cel jest opublikowany w zdalnym repozytorium.",
         );
         assert(pushedFiles("pozniej").includes("AGENTS.md"));
         return { publishedLater: true };
@@ -289,7 +286,7 @@ await runBrowserSuite(
         assert.equal((await readdir(other)).length, 0);
         await dialog
           .getByRole("button", {
-            name: "Zamknij dodawanie projektu",
+            name: "Zamknij dodawanie celu",
             exact: true,
           })
           .click();
@@ -304,7 +301,7 @@ await runBrowserSuite(
           name: "Ustawienia przestrzeni roboczej",
           exact: true,
         });
-        const select = settings.getByLabel("Katalog nowych projektów", {
+        const select = settings.getByLabel("Katalog nowych celów", {
           exact: true,
         });
         await expect(select).toBeEnabled();
@@ -350,7 +347,7 @@ await runBrowserSuite(
           .getByRole("button", { name: "Zmień miejsce…", exact: true })
           .click();
         const chooser = dialog.getByRole("region", {
-          name: "Miejsce projektu",
+          name: "Miejsce celu",
           exact: true,
         });
         await chooser
@@ -426,12 +423,12 @@ await runBrowserSuite(
           exact: true,
         });
         const toggle = settings.getByRole("switch", {
-          name: /Publikuj nowe projekty na GitHubie/,
+          name: /Publikuj nowe cele na GitHubie/,
         });
         await expect(toggle).toBeChecked();
         await toggle.uncheck();
         // The root saved in P05 was revoked on the host; name an approved one.
-        const select = settings.getByLabel("Katalog nowych projektów", {
+        const select = settings.getByLabel("Katalog nowych celów", {
           exact: true,
         });
         await expect(select.locator("option").first()).toHaveText(
@@ -474,7 +471,7 @@ await runBrowserSuite(
           })
           .click();
         await expect(git).toContainText(
-          "Projekt jest opublikowany w zdalnym repozytorium.",
+          "Cel jest opublikowany w zdalnym repozytorium.",
         );
         assert.equal(
           cli("get", `/api/v1/projects/${project}/repository`).state,
@@ -562,13 +559,13 @@ await runBrowserSuite(
         assert(submit.height >= 40, `tap target ${submit.height}`);
         await snapshot(page, "P06-phone.png");
         await dialog
-          .getByText("Masz już folder z projektem?", { exact: true })
+          .getByText("Masz już folder z celem?", { exact: true })
           .tap();
         await dialog
           .getByRole("button", { name: "Dodaj istniejący folder", exact: true })
           .tap();
         await expect(
-          dialogOf(page).getByText("Wybierz folder projektu na tym serwerze.", {
+          dialogOf(page).getByText("Wybierz folder celu na tym serwerze.", {
             exact: false,
           }),
         ).toBeVisible();

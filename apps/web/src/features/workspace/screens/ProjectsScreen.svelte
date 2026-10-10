@@ -4,6 +4,7 @@
   import ActionMenu from "../../../lib/ui/ActionMenu.svelte";
   import Badge from "../../../lib/ui/Badge.svelte";
   import EmptyState from "../../../lib/ui/EmptyState.svelte";
+  import ResourceMetadata from "../../../lib/ui/ResourceMetadata.svelte";
   import KanbanBoard from "../../board/KanbanBoard.svelte";
   import type { KanbanColumn } from "../../board/board-context";
   import type { BoardViewShape } from "../../board/board-view";
@@ -100,7 +101,7 @@
       item.status === state ||
       !currentProjectSnapshot(item, visibleProjects)
     ) {
-      announcement = "Status projektu bez zmian.";
+      announcement = "Status celu bez zmian.";
       return settle(false);
     }
     announcement = `Przenoszenie ${item.title} do ${projectStateLabels[state]}.`;
@@ -123,6 +124,7 @@
       {/if}
     </span>
   {/if}
+  <ResourceMetadata {item} compact />
 {/snippet}
 
 {#snippet actions(item: Summary)}
@@ -150,7 +152,7 @@
         onclick={() => {
           close();
           onremove(item);
-        }}>Usuń projekt</button
+        }}>Usuń cel</button
       >
     {/snippet}
   </ActionMenu>
@@ -161,29 +163,29 @@
   {#if !visibleProjects.length}
     <EmptyState
       title={projects.length
-        ? "Brak projektów pasujących do wyboru."
-        : "Zacznij od projektu."}
+        ? "Brak celów pasujących do wyboru."
+        : "Zacznij od celu."}
     >
       <p>
         {projects.length
           ? "Wybierz inny folder lub wyczyść filtr tytułu."
-          : "Dodaj projekt z zatwierdzonego katalogu, aby rozpocząć."}
+          : "Dodaj cel z zatwierdzonego katalogu, aby rozpocząć."}
       </p>
       {#if !projects.length}<button onclick={addProject}
-          >Dodaj pierwszy projekt</button
+          >Dodaj pierwszy cel</button
         >{/if}
     </EmptyState>
   {/if}
   {#if hasUnavailable}
     <p class="projects-help">
-      Projekty w kolumnie Niedostępne nie mają dostępnego statusu. Otwórz
-      projekt, aby sprawdzić jego źródło.
+      Cele w kolumnie Niedostępne nie mają dostępnego statusu. Otwórz cel, aby
+      sprawdzić jego źródło.
     </p>
   {/if}
   <div
     class="project-status-board"
     role="region"
-    aria-label="Tablica statusów projektów"
+    aria-label="Tablica statusów celów"
   >
     <KanbanBoard
       bind:this={kanban}

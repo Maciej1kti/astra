@@ -200,11 +200,11 @@
   class="app-dialog dialog-large"
   use:modal={{ onclose: close }}
   out:layerExit|global
-  aria-label="Zarządzaj tagami projektu"
+  aria-label="Zarządzaj tagami celu"
 >
   <DialogHeader
-    title="Tagi projektu"
-    description="Zmień nazwę lub połącz tagi używane w projekcie."
+    title="Tagi celu"
+    description="Zmień nazwę lub połącz tagi używane na kartach celu."
     onclose={close}
     disabled={!canClose}
     closeLabel="Zamknij zarządzanie tagami"
@@ -212,8 +212,8 @@
     {#snippet actions()}
       <button
         class="quiet icon-button"
-        aria-label="Odśwież tagi projektu"
-        title="Odśwież tagi projektu"
+        aria-label="Odśwież tagi celu"
+        title="Odśwież tagi celu"
         disabled={busy || !!pending || !!job}
         onclick={() => void load()}><Icon name="refresh" small /></button
       >
@@ -225,7 +225,7 @@
       message="Sesja wygasła. To polecenie zostało zachowane; połącz przeglądarkę ponownie, aby je sprawdzić."
     />
     {#if error}<p class="notice" role="alert">{error}</p>{/if}
-    <label for="tag-manager-project">Projekt</label>
+    <label for="tag-manager-project">Cel</label>
     <select
       id="tag-manager-project"
       bind:value={project}
@@ -241,7 +241,7 @@
           Nie udało się odczytać niektórych plików kart. Zmiana nazwy jest
           niedostępna do czasu ich naprawy.
         </p>{/if}
-      <ul class="tag-list" aria-label="Tagi projektu">
+      <ul class="tag-list" aria-label="Tagi celu">
         {#each catalog.tags as tag}<li>
             <strong>{tag.name}</strong>
             <small>{counted(tag.usage, "karta", "karty", "kart")}</small>
@@ -308,7 +308,7 @@
           <Button
             variant="primary"
             disabled={busy || !!pending || !!job || accessLost}
-            onclick={() => void apply()}>Zmień nazwę w tym projekcie</Button
+            onclick={() => void apply()}>Zmień nazwę w obrębie celu</Button
           >
         </section>
       {/if}

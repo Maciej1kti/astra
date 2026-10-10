@@ -20,6 +20,7 @@ export type RouteFilters = Pick<
   | "label"
   | "unreadOnly"
   | "month"
+  | "planningScope"
 >;
 type NavigationHooks<Loaded> = {
   today: () => string;

@@ -38,6 +38,7 @@ export type CardFields = {
 export type ProjectFields = {
   folder: string;
   folderDraft: string;
+  commentDraft: string;
   status: "active" | "paused" | "archived";
 };
 export type MilestoneFields = {
@@ -119,6 +120,7 @@ export function createEditorDraft(
           status: m.state,
           folder: m.folder ?? "",
           folderDraft: "",
+          commentDraft: "",
         },
       };
     }
@@ -172,13 +174,17 @@ export function autosaveSnapshot(draft: EditorDraft): string {
   return JSON.stringify(value);
 }
 /**
- * A card draft rebuilt from an acknowledged source keeps what was typed but
- * never submitted. These entries belong to the editor, not to the source.
+ * A draft rebuilt from an acknowledged source keeps what was typed but never
+ * submitted. These entries belong to the editor, not to the source.
  */
 export function carryUnsubmittedEntries(
   next: EditorDraft,
   previous: EditorDraft,
 ) {
+  if (next.type === "project" && previous.type === "project") {
+    next.fields.folderDraft = previous.fields.folderDraft;
+    next.fields.commentDraft = previous.fields.commentDraft;
+  }
   if (next.type !== "card" || previous.type !== "card") return;
   next.fields.tagDraft = previous.fields.tagDraft;
   next.fields.acceptanceDraft = previous.fields.acceptanceDraft;

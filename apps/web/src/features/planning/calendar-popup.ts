@@ -1,4 +1,4 @@
-import type { CalendarItem } from "../../lib/contracts/api.generated";
+import type { CalendarItem } from "./planning.ts";
 
 interface PopupEvent {
   title: string;
@@ -31,7 +31,9 @@ export function calendarPopupEligible(
   const item = event.extendedProps?.astra;
   return !!(
     item &&
-    ["card_schedule", "card_event", "milestone_due"].includes(item.kind) &&
+    ["card_schedule", "card_event", "milestone_due", "project_span"].includes(
+      item.kind,
+    ) &&
     item.title.trim() &&
     event.title === item.title &&
     event.allDay === !item.event &&

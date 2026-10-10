@@ -126,19 +126,19 @@
   use:modal={{ onclose: close }}
   out:layerExit|global
   class="app-dialog project-deletion"
-  aria-label="Usuń projekt"
+  aria-label="Usuń cel"
 >
   <DialogHeader
     title={`Usuń „${project.title}”?`}
     onclose={close}
     disabled={busy || !!pending}
-    closeLabel="Zamknij usuwanie projektu"
+    closeLabel="Zamknij usuwanie celu"
   />
   <div class="dialog-body">
     <p>
-      Spowoduje to trwałe usunięcie folderu projektu <code>.project</code> wraz z
-      kartami, kamieniami milowymi i raportami. Pliki w innych częściach repozytorium
-      zostaną zachowane. Przywrócenie nie jest możliwe.
+      Spowoduje to trwałe usunięcie folderu celu <code>.project</code> wraz z kartami,
+      kamieniami milowymi i raportami. Pliki w innych częściach repozytorium zostaną
+      zachowane. Przywrócenie nie jest możliwe.
     </p>
     {#if loading}<p role="status">Wczytywanie podglądu usunięcia…</p>{/if}
     {#if plan && !conflict}<section
@@ -183,14 +183,12 @@
     {#if info}<p class="notice" role="status">{info}</p>{/if}
   </div>
   <footer class="dialog-footer">
-    <button onclick={close} disabled={busy || !!pending}
-      >Zachowaj projekt</button
-    >
+    <button onclick={close} disabled={busy || !!pending}>Zachowaj cel</button>
     <Button
       variant="danger"
       onclick={() => void remove()}
       disabled={!plan || loading || busy || !!pending || accessLost || conflict}
-      >Trwale usuń projekt</Button
+      >Trwale usuń cel</Button
     >
   </footer>
 </dialog>

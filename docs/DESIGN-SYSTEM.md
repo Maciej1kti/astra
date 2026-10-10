@@ -339,7 +339,7 @@ button into the document; recovery controls appear when the draft needs them.
 `.floating-actions` in `App.svelte` is the one fixed container at the lower right
 (above the phone navigation dock), shown in every view. It holds one large **+**
 (`AddMenu`). Pressing it opens a menu upward while the pointer stays down: slide
-onto **Agent** (only when the host enables the agent), **Karta** or **Projekt**
+onto **Agent** (only when the host enables the agent), **Karta** or **Cel**
 and release there to choose; releasing anywhere else folds the menu back. A quick
 tap released on the button keeps the menu open, and keyboard users open it with
 Enter or Space, move with Tab and choose with Enter; Escape folds it. **Karta**
@@ -824,7 +824,7 @@ styles, reading **Zapisywanie…**, **Zapisano** or **Niezapisane**. What needs
 the owner, such as a conflict or a command awaiting confirmation, is said in a
 status line above the sections, which is empty and hidden when there is nothing
 to say. A rail names the sections (a strip above the content
-on a narrow screen) and marks the one in view: Profil, Czas i widok, Projekty,
+on a narrow screen) and marks the one in view: Profil, Czas i widok, Cele,
 Agent, Wtyczki, Tagi, Wygląd and Dostęp.
 
 - A choice between a few things that differ in kind is a row of cards holding

@@ -55,7 +55,7 @@
 {/snippet}
 
 <p role="status" class="board-overview-hint">
-  Wybierz projekt powyżej, aby przenosić karty.
+  Wybierz cel powyżej, aby przenosić karty.
 </p>
 <KanbanBoard
   bind:this={kanban}

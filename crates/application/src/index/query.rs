@@ -9,14 +9,14 @@ impl Index {
         max: u32,
     ) -> Result<(Vec<Indexed>, Value), AppError> {
         self.query_projection(kind, query, max)
-            .map(|(rows, page, _)| (rows, page))
+            .map(|(rows, page, _, _)| (rows, page))
     }
     pub(super) fn query_projection(
         &self,
         kind: Option<&str>,
         query: &Query,
         max: u32,
-    ) -> Result<(Vec<Indexed>, Value, Vec<Value>), AppError> {
+    ) -> Result<(Vec<Indexed>, Value, Vec<Value>, GoalSpans), AppError> {
         if query.priority.as_deref().is_some_and(|priority| {
             serde_json::from_value::<project_domain::models::Priority>(json!(priority)).is_err()
         }) {
@@ -171,6 +171,8 @@ LIMIT ? OFFSET ?",
         let projection = ProjectionStatus::read(&db, query.project.as_deref())?;
         projection.mark_rows(&mut rows);
         let stale = projection.freshness == "stale" || rows.iter().any(|r| r.validity != "valid");
+        // Read under the same guard as the page, so a span never outruns its project row.
+        let spans = project_spans(&db, &rows)?;
         Ok((
             rows,
             json!({
@@ -180,13 +182,22 @@ LIMIT ? OFFSET ?",
                 "freshness": if stale{"stale"}else{"index_snapshot"},
             }),
             projection.warnings,
+            spans,
         ))
     }
     pub fn summary_page(&self, kind: Option<&str>, query: &Query) -> Result<Value, AppError> {
-        let (rows, page, warnings) = self.query_projection(kind, query, 200)?;
-        Ok(
-            json!({"items":rows.iter().map(Indexed::summary).collect::<Vec<_>>(),"page":page,"warnings":warnings}),
-        )
+        let (rows, page, warnings, spans) = self.query_projection(kind, query, 200)?;
+        let items = rows
+            .iter()
+            .map(|row| {
+                let mut summary = row.summary();
+                if let Some((start, end)) = spans.get(&row.id).filter(|_| row.kind == "project") {
+                    summary["span"] = json!({"start": start, "end": end});
+                }
+                summary
+            })
+            .collect::<Vec<_>>();
+        Ok(json!({"items":items,"page":page,"warnings":warnings}))
     }
     pub(crate) fn issues(&self) -> Result<Vec<Value>, AppError> {
         let db = self
@@ -218,4 +229,51 @@ LIMIT 100",
             .map_err(|_| AppError::LockPoisoned("database connection"))?
             .query_row("SELECT count(*) FROM projection_issues", [], |r| r.get(0))?)
     }
+}
+
+/// Project ID to the earliest start and latest end of its dated cards.
+type GoalSpans = BTreeMap<String, (String, String)>;
+
+/// Derived, never stored: one aggregate over the page's project rows. The date
+/// expressions are the card ones in `views/calendar.sql`; archived cards and
+/// milestones do not contribute, and a card of any status does.
+fn project_spans(db: &Connection, rows: &[Indexed]) -> Result<GoalSpans, AppError> {
+    let projects: Vec<&str> = rows
+        .iter()
+        .filter(|row| row.kind == "project")
+        .map(|row| row.id.as_str())
+        .collect();
+    if projects.is_empty() {
+        return Ok(GoalSpans::new());
+    }
+    let projects = serde_json::to_string(&projects)
+        .map_err(|source| AppError::stored("project span ids", source))?;
+    let mut statement = db.prepare(
+        "SELECT project_id,
+    MIN(first_day),
+    MAX(last_day)
+FROM (SELECT project_id,
+    json_extract(metadata_json,'$.schedule.start') first_day,
+    json_extract(metadata_json,'$.schedule.end') last_day
+FROM documents
+WHERE entity_type='card'
+AND project_id IN (SELECT value FROM json_each(?1))
+AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0
+UNION ALL SELECT project_id,
+    substr(json_extract(metadata_json,'$.event.start'),1,10),
+    date(json_extract(metadata_json,'$.event.start'),'+' || json_extract(metadata_json,'$.event.duration_minutes') || ' minutes','-1 second')
+FROM documents
+WHERE entity_type='card'
+AND project_id IN (SELECT value FROM json_each(?1))
+AND COALESCE(json_extract(metadata_json,'$.archived'),0)=0
+AND json_type(metadata_json,'$.event')='object')
+WHERE first_day IS NOT NULL
+AND last_day IS NOT NULL
+GROUP BY project_id",
+    )?;
+    Ok(statement
+        .query_map([projects], |row| {
+            Ok((row.get(0)?, (row.get(1)?, row.get(2)?)))
+        })?
+        .collect::<Result<_, _>>()?)
 }

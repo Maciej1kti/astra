@@ -21,7 +21,7 @@
   const choices = $derived<{ id: AddChoice; label: string }[]>([
     ...(agent ? [{ id: "agent" as const, label: "Agent" }] : []),
     { id: "card", label: "Karta" },
-    { id: "project", label: "Projekt" },
+    { id: "project", label: "Cel" },
   ]);
   // A press shorter than this, released on the button, leaves the menu open.
   const tapMs = 300;

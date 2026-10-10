@@ -531,7 +531,7 @@
       project = candidates[0]?.id ?? "";
     }
     if (!project) {
-      error = "Wybierz projekt przed utworzeniem elementu.";
+      error = "Wybierz cel przed utworzeniem elementu.";
       return;
     }
     routing.startDraft();
@@ -794,7 +794,7 @@
                       })
                   : () => create(primaryResource(routing.current.view))}
               ><Icon name="plus" small />{projectOverview
-                ? "Dodaj projekt"
+                ? "Dodaj cel"
                 : routing.current.view === "updates"
                   ? "Dodaj aktualizację"
                   : "Dodaj kartę"}</Button
@@ -867,8 +867,8 @@
             {:else if routing.current.view === "projects"}
               <DeferredView
                 source={projectsUI}
-                loading="Ładowanie projektów…"
-                retry="Ponów ładowanie projektów"
+                loading="Ładowanie celów…"
+                retry="Ponów ładowanie celów"
                 quiet
               >
                 {#snippet children(ProjectsScreen)}<ProjectsScreen
@@ -911,6 +911,10 @@
               </DeferredView>
             {:else if routing.current.view === "calendar" || routing.current.view === "gantt"}<DateViews
                 project={routing.current.project}
+                goals={projects}
+                scope={routing.current.planningScope}
+                onscope={(planningScope) =>
+                  routing.changeFilters({ planningScope })}
                 month={routing.current.month}
                 view={routing.current.view}
                 revision={viewRevision}
@@ -1044,7 +1048,7 @@
   </DeferredHost>{/if}
 {#if projectMove}{@const proposal = projectMove}<DeferredHost
     source={projectMoveUI}
-    title="Przenieś projekt"
+    title="Przenieś cel"
     onclose={() => settleProject(proposal, false)}
   >
     {#snippet children(ProjectStateChange)}{#key proposal}<ProjectStateChange
@@ -1096,7 +1100,7 @@
   </DeferredHost>{/if}
 {#if manageTags}<DeferredHost
     source={tagsUI}
-    title="Tagi projektu"
+    title="Tagi celu"
     onclose={() => (manageTags = false)}
   >
     {#snippet children(TagManager)}<TagManager
@@ -1117,6 +1121,7 @@
           workspaceTimezone={session.timezone}
           userName={boot?.user?.name ?? "Właściciel"}
           {weekStart}
+          span={projects.find((item) => item.id === editorTarget.project)?.span}
           target={editorTarget}
           bind:this={editorInstance}
           onclose={closeEditor}
@@ -1135,7 +1140,7 @@
   </DeferredHost>{/if}
 {#if projectDeletion}{@const project = projectDeletion}<DeferredHost
     source={deletionUI}
-    title="Usuń projekt"
+    title="Usuń cel"
     onclose={() => (projectDeletion = null)}
   >
     {#snippet children(ProjectDeletion)}<ProjectDeletion
@@ -1150,7 +1155,7 @@
     onpendingchange={(value) => (registrationPending = value)}
     onregistered={projectAdded}
   />{:else if adding}<DeferredDialog
-    title="Dodaj projekt"
+    title="Dodaj cel"
     error={registrationUI.error}
     retry={registrationUI.load}
     onclose={() => {
@@ -1177,7 +1182,7 @@
 
 {#if creatingProject}<DeferredHost
     source={newProjectUI}
-    title="Dodaj projekt"
+    title="Dodaj cel"
     onclose={() => (creatingProject = false)}
   >
     {#snippet children(NewProject)}<NewProject

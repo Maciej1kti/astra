@@ -1,5 +1,5 @@
 import type { Calendar } from "@event-calendar/core";
-import type { CalendarItem } from "../../lib/contracts/api.generated";
+import type { CalendarItem } from "./planning.ts";
 import { eventEnd } from "../../lib/resources/timed-event.ts";
 import { shiftDate } from "./dates.ts";
 
@@ -85,10 +85,9 @@ export function calendarEventProjection() {
         !sameItem(event.extendedProps!.astra as CalendarItem, item)
       ) {
         // Keep an owned snapshot; later caller mutations cannot change its identity.
-        const snapshot = {
-          ...item,
-          ...(item.event ? { event: { ...item.event } } : {}),
-        };
+        const snapshot: CalendarItem = item.event
+          ? { ...item, event: { ...item.event } }
+          : { ...item };
         event = calendarEvent(snapshot, editable);
       }
       next.set(id, event);

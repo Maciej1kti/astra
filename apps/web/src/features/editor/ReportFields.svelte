@@ -10,14 +10,17 @@
 <fieldset disabled={locked}>
   <legend>Szczegóły raportu</legend>
   <label
-    >Typ celu<select bind:value={fields.targetType}
-      ><option value="project">Projekt</option><option value="milestone"
+    >Typ obiektu<select bind:value={fields.targetType}
+      ><option value="project">Cel</option><option value="milestone"
         >Kamień milowy</option
       ></select
     ></label
   >
   {#if fields.targetType !== "project"}<label
-      >Identyfikator celu<input bind:value={fields.targetId} required /></label
+      >Identyfikator obiektu<input
+        bind:value={fields.targetId}
+        required
+      /></label
     >{/if}
   {#if fields.kind === "resolution"}<label
       >Identyfikatory rozstrzygniętych raportów, rozdzielone przecinkami<input

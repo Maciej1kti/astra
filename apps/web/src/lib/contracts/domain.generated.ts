@@ -318,6 +318,21 @@ export interface ProjectMetadata {
   name: string;
   state: "active" | "paused" | "archived";
   folder?: string;
+  /**
+   * @maxItems 200
+   */
+  comments?: CardComment[];
+}
+export interface CardComment {
+  id: UUID;
+  author: Author;
+  recorded_at: Instant;
+  body: string;
+}
+export interface Author {
+  kind: "human" | "agent";
+  label: string;
+  session_id?: string;
 }
 export interface CardDocument {
   type: "card";
@@ -497,17 +512,6 @@ export interface AcceptanceItem {
 export interface TimedEvent {
   start: LocalDateTime;
   duration_minutes: number;
-}
-export interface CardComment {
-  id: UUID;
-  author: Author;
-  recorded_at: Instant;
-  body: string;
-}
-export interface Author {
-  kind: "human" | "agent";
-  label: string;
-  session_id?: string;
 }
 export interface CardCounter {
   id: UUID;

@@ -7,8 +7,7 @@ export type OpenResource = (
 
 export function projectLabel(projects: Summary[], id: string): string {
   return (
-    projects.find((project) => project.id === id)?.title ??
-    "Niedostępny projekt"
+    projects.find((project) => project.id === id)?.title ?? "Niedostępny cel"
   );
 }
 

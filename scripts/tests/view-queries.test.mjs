@@ -51,7 +51,7 @@ test("Projects loads projects only and keeps folder/title filtering local", asyn
       project: "other",
     }),
   );
-  for (const type of ["card", "update", "milestone"])
+  for (const type of ["update", "milestone"])
     assert.deepEqual(
       affectedSections(
         { kind: "changed", project_id: "other", target: { type } },
@@ -59,12 +59,38 @@ test("Projects loads projects only and keeps folder/title filtering local", asyn
       ),
       [],
     );
+  // A goal's span is derived from its cards, so their writes reload goals.
+  for (const type of ["card", "project"])
+    assert.deepEqual(
+      affectedSections(
+        { kind: "changed", project_id: "other", target: { type } },
+        projects,
+      ),
+      ["projects"],
+    );
+  for (const view of ["calendar", "gantt"]) {
+    const planning = { ...query, view, project: "p" };
+    assert.deepEqual(
+      affectedSections(
+        { kind: "changed", project_id: "p", target: { type: "card" } },
+        planning,
+      ),
+      ["projects", "planning"],
+    );
+    assert.deepEqual(
+      affectedSections(
+        { kind: "changed", project_id: "other", target: { type: "card" } },
+        planning,
+      ),
+      ["projects"],
+    );
+  }
   assert.deepEqual(
     affectedSections(
-      { kind: "changed", project_id: "other", target: { type: "project" } },
-      projects,
+      { kind: "changed", project_id: "other", target: { type: "card" } },
+      { ...query, view: "list", project: "p" },
     ),
-    ["projects"],
+    [],
   );
   const previous = globalThis.fetch;
   const calls = [];

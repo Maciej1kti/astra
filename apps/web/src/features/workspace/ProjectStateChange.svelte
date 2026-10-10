@@ -77,20 +77,20 @@
 </script>
 
 {#if !error && !accessLost}<p class="project-save-status" role="status">
-    Zapisywanie statusu projektu…
+    Zapisywanie statusu celu…
   </p>{/if}
 {#if error || accessLost}
   <dialog
     class="app-dialog dialog-small"
-    aria-label="Przenieś projekt"
+    aria-label="Przenieś cel"
     use:modal={{ onclose: closeWhenResolved }}
     out:layerExit|global
   >
     <DialogHeader
-      title="Przenieś projekt"
+      title="Przenieś cel"
       {onclose}
       disabled={busy || !!pending}
-      closeLabel="Zamknij przenoszenie projektu"
+      closeLabel="Zamknij przenoszenie celu"
     />
     <div class="dialog-body">
       <p><strong>{item.title}</strong> → {resourceLabel(nextState)}</p>
@@ -101,8 +101,8 @@
       {#if error}<p role="alert">{error}</p>{/if}
       {#if info}<p role="status">{info}</p>{/if}
       {#if conflict}<p>
-          Projekt się zmienił. Zamknij tę propozycję i sprawdź aktualny projekt
-          przed ponownym przeniesieniem.
+          Cel się zmienił. Zamknij tę propozycję i sprawdź aktualny cel przed
+          ponownym przeniesieniem.
         </p>{/if}
       <CommandRecovery
         {pending}

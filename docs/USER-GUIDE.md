@@ -9,7 +9,7 @@ and [the roadmap](../ROADMAP.md) separates those from planned release work.
 
 The browser interface is Polish on every device, including menus, dialogs,
 settings, status/priority labels, accessibility text, pairing and recovery messages.
-**Focus** keeps its name. Navigation uses **Projekty**, **Tablica**, **Wykres**,
+**Focus** keeps its name. Navigation uses **Cele** (the UI calls projects goals), **Tablica**, **Wykres**,
 **Kalendarz**, **Oś czasu**, **Lista** and **Aktualizacje**; **Więcej** opens the
 remaining phone shortcuts. Focus sections are **W Focus**, **Potrzebuje mojej
 uwagi**, **W toku** and **Wydarzenia**.
@@ -76,7 +76,7 @@ other's folders. See [limitations](LIMITATIONS.md#product-boundaries).
 
 ## Choose a view
 
-On phones, the bottom bar starts with **Focus**, **Projekty** and **Więcej** (three
+On phones, the bottom bar starts with **Focus**, **Cele** and **Więcej** (three
 dots). More opens the other views. Open **Więcej → Dostosuj nawigację** to move
 any view by its six-dot handle and toggle its eye to show or hide it on the bar.
 A focused handle also accepts ArrowUp/Down or Home/End, just like the card section
@@ -91,11 +91,11 @@ its **Więcej** entry holds only **Dostosuj nawigację**.
 | View | Use it for | Key behavior |
 | --- | --- | --- |
 | Focus | Today's work and items needing attention | Ordered pins, attention, current plans and today's events; folder-category filtering |
-| Projekty | Arrange and manage whole projects | Active, Paused and Archived columns, folder/title filters, status moves and project actions |
+| Cele | Arrange and manage whole projects (goals) | Active, Paused and Archived columns, folder/title filters, status moves, project actions and each goal's dates taken from its cards |
 | Lista | Find and filter resources | Bounded pages, search/filter controls and access to resource editors |
 | Tablica | Arrange cards by status | Manual ordering, drag/drop and keyboard alternatives; a workspace overview and project boards |
-| Kalendarz | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with direct move/resize saves |
-| Oś czasu | See and change recorded schedules over time | Bars you move and stretch by day, week or month scale, milestones, and the cards still without dates above the axis; API/CLI call this view `gantt` |
+| Kalendarz | See dates in day, week, month or agenda form | Date plans, timed events and milestone markers, with direct move/resize saves; **Karty** or **Cele** chooses what is laid out |
+| Oś czasu | See and change recorded schedules over time | Bars you move and stretch by day, week or month scale, milestones, and the cards still without dates above the axis; **Cele** shows every goal on one axis; API/CLI call this view `gantt` |
 | Wykres | Compare recorded counter histories | Select counters, overlay compatible units, group dates, inspect statistics, value totals with each counter's rate and see who owes whom |
 | Aktualizacje | Read project/milestone reports | Read receipts, corrections and explicit decision resolutions |
 
@@ -103,10 +103,10 @@ Search and filters do not change source files. Where a view offers another page,
 use its paging controls: a displayed page is not the entire dataset. Calendar
 agenda pages hold up to 200 items; its grid/time layouts up to 1,000.
 
-Open **Projekty** from the sidebar or the phone's navigation bar to see projects in
+Open **Cele** from the sidebar or the phone's navigation bar to see projects in
 their current status columns, including archived projects. Use **Folder** and
 the title filter to narrow the board. Click a project to open its editor, or use
-**Dodaj projekt** to add one: type its name and the host creates the project's
+**Dodaj cel** to add one: type its name and the host creates the project's
 folder and registers it, with nothing to confirm on the host itself. A name
 that is already used gets a numeric suffix. On a host that publishes
 repositories the same step creates a private GitHub repository and pushes the
@@ -115,13 +115,13 @@ and **Git** in the project's header shows the repository state and repeats the
 publication. The dialog shows the **Miejsce** the folder goes to; **Zmień
 miejsce…** opens a folder list where you enter folders, add one with **Nowy
 folder** and confirm with **Wybierz ten folder**, all inside the directories
-approved on the host. **Ustawienia → Publikuj nowe projekty na GitHubie** turns
+approved on the host. **Ustawienia → Publikuj nowe cele na GitHubie** turns
 the repository step off or on for your profile; it is on by default, and with
 it off a project stays local until you publish it from its **Git** dialog. The
 agent creates projects the same way when asked in the chat.
 **Dodaj istniejący folder** in that dialog registers a folder that
 already exists in a directory approved on the host, and **Ustawienia → Katalog
-nowych projektów** chooses where new folders go when the host approves several
+nowych celów** chooses where new folders go when the host approves several
 directories ([installation](../INSTALL.md#create-private-github-repositories-for-new-projects)).
 Projects is the same board as a
 project's cards, with status columns of its own: drag a project card itself to
@@ -138,7 +138,7 @@ result retains **Sprawdź stan** and **Ponów to samo polecenie**. Projects can 
 as the default view in Workspace settings. The separate Main shortcut and former
 project grid are removed. Older Main links and saved defaults open Projects;
 existing navigation entries merge into one Projects shortcut.
-Use a project's **Więcej działań → Usuń projekt** for the existing deletion preview
+Use a project's **Więcej działań → Usuń cel** for the existing deletion preview
 and explicit confirmation.
 
 ### Appearance
@@ -235,13 +235,23 @@ If its confirmation is lost, **Sprawdź stan** reports whether the rename has
 finished and **Ponów to samo polecenie** continues the same job.
 A project's Folder category is a separate value used to group projects in Focus.
 
+A goal opens in the same dialog as a card and is built the same way: its name,
+status and dates in the header, then **Opis**, **Komentarze** and **Folder** in
+the order you gave a card's sections. It has no checklist, counters or schedule
+of its own. Its dates are read-only: a goal lasts from the earliest to the
+latest date on any of its cards that is not archived, counting date plans and
+timed events, and shows **Brak dat na kartach** until one of them has a date.
+The same range is on the goal's card in **Cele**, with the number of comments.
+Comments on a goal work as they do [on a card](#comments-and-daily-counters)
+and are saved in the goal's own source file.
+
 ### Comments and daily counters
 
 Post a comment explicitly after writing it. Browser comments use human attribution
 with the selected profile's name; new reports also start with that name. CLI/API
 callers can label human or bot authors. Existing attribution stays unchanged.
 Comments stay in the card's source history and cannot be rewritten by an ordinary
-card patch or undo.
+card patch or undo. A goal has the same kind of conversation in its own source.
 These labels are not separate authenticated accounts.
 
 Counters record one absolute total per day in the workspace timezone. Give a
@@ -385,6 +395,16 @@ leaves a small arrow at the edge of its row that scrolls to it. Cards without
 dates are listed above the axis as **Bez harmonogramu**; choosing one opens the
 card so you can give it dates. The last row creates a card: click a day, or
 press on one day and release on another to plan the whole range.
+
+**Karty** and **Cele** in the toolbar of **Kalendarz** and **Oś czasu** choose
+what is laid out over time; the address keeps the choice. **Cele** draws every
+goal that is not archived over the days its cards cover, whichever goal the
+header has selected, and reads nothing but the goal list. A goal cannot be
+dragged, stretched or created there, because its dates are its cards': click it
+or press Enter to open it, and change a card's dates to move it. In **Oś czasu**
+goals whose cards have no dates are listed above the axis as **Bez dat na
+kartach**, rows can still be reordered, and without a selected goal **Karty**
+asks you to choose one while **Cele** needs none.
 
 Timeline shows what has been recorded. It does not calculate dependencies, critical
 paths or automatically shift other cards. Cards have no separate deadline/review

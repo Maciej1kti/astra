@@ -42,7 +42,7 @@ writes never fall back to them or initialize over a nonempty legacy project.
 
 | Obiekt | Pola wymagane w poprawnym pliku | Opcjonalne |
 |---|---|---|
-| Project | schema_version, id, name, state, created_at, updated_at | folder |
+| Project | schema_version, id, name, state, created_at, updated_at | folder, comments |
 | Card | id, title, status, priority, position, archived, created_at, updated_at | schedule or event, labels, acceptance, comments |
 | Milestone | id, title, status, position, archived, created_at, updated_at | due, x-* |
 | Update | id, kind, target, summary, author, recorded_at | observed_at, supersedes, resolves, evidence, x-* |
@@ -58,6 +58,17 @@ Normal clients append with `CardPatch.append_comment`, using the observed card
 version. Set/clear and undo cannot rewrite this history. List summaries expose
 `comment_count`; full resources and bounded agent context provide the entries.
 See [ADR-045](ADR-045-CARD-COMMENTS.md) for validation, limits and replay rules.
+
+### Project comments
+
+A project may carry the same ordered `comments` history in `project.json`
+(at most 200 entries; entries as for cards). Normal clients append with
+`ProjectPatch.append_comment` using the observed project version; set/clear and
+undo preserve it, and a file without the key stays valid and is not rewritten.
+Project summaries expose `comment_count`. A project Summary also carries a
+derived, read-only `span` (earliest start and latest end of its non-archived
+cards' schedule and timed event dates); it is never stored in `project.json`.
+See [ADR-079](ADR-079-GOAL-COMMENTS-AND-SPAN.md).
 
 ### Structured card content
 

@@ -186,7 +186,7 @@ await runBrowserSuite(
         dialog.getByRole("option", { name: "frontend", exact: true }),
       ).toBeVisible();
       await expect(
-        dialog.getByText("Ładowanie tagi projektu…", { exact: true }),
+        dialog.getByText("Ładowanie tagi celu…", { exact: true }),
       ).toHaveCount(0);
       assert.equal(
         requests.filter((path) => path === `${base}/tags`).length,

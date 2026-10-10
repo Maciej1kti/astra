@@ -1,4 +1,4 @@
-import type { CalendarItem } from "../../lib/contracts/api.generated";
+import type { CalendarItem } from "./planning.ts";
 
 interface MonthChunk {
   gridRow: number;
@@ -28,7 +28,12 @@ export function monthChunkSamples<C extends MonthChunk>(chunks: C[]) {
     const item = event.extendedProps.astra;
     if (
       !item ||
-      !["card_schedule", "card_event", "milestone_due"].includes(item.kind) ||
+      ![
+        "card_schedule",
+        "card_event",
+        "milestone_due",
+        "project_span",
+      ].includes(item.kind) ||
       !item.title.trim() ||
       event.title !== item.title ||
       event.allDay !== !item.event ||

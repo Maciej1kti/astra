@@ -128,9 +128,7 @@ try {
     "2026-09-10",
   );
   await page.getByRole("button", { name: "Oś czasu", exact: true }).click();
-  await page
-    .getByLabel("Projekt", { exact: true })
-    .selectOption(plan.project_id);
+  await page.getByLabel("Cel", { exact: true }).selectOption(plan.project_id);
   await showTimelineDate(page, "2026-09-01");
   await timelineCard(page, "Build the field guide").waitFor();
   await page.screenshot({

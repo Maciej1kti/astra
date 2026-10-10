@@ -70,9 +70,19 @@ LIMIT 200",
             }
             Ok((Value::Object(counts), candidates))
         })?;
+        let mut project_entry = entry(&document, 1024);
+        // The project entry is always sent, so a long comment history must not
+        // crowd out the collections: past a quarter of the budget it becomes a next read.
+        let comments_deferred = encoded_len(&project_entry) > max_bytes / 4
+            && project_entry
+                .as_object_mut()
+                .is_some_and(|entry| entry.remove("comments").is_some());
+        if comments_deferred {
+            project_entry["truncated"] = json!(true);
+        }
         let mut out = json!({
             "api_version": "1",
-            "project": entry(&document,1024),
+            "project": project_entry,
             "cards": [],
             "milestones": [],
             "updates": [],
@@ -112,6 +122,9 @@ LIMIT 200",
             increment(&mut out, "focus", &mut encoded_bytes);
         }
         let mut omitted = Vec::new();
+        if comments_deferred {
+            omitted.push(json!({"type":"project","id":project}));
+        }
         let mut collection_kind = None;
         let mut collection = None;
         for (kind, field, id) in candidates {

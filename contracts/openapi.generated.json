@@ -5848,6 +5848,14 @@
           "folder": {
             "$ref": "#/components/schemas/Folder"
           },
+          "comments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CardComment"
+            },
+            "maxItems": 200,
+            "description": "Ordered source-owned comment history, appended through append_comment. Absent until the first comment."
+          },
           "id": {
             "$ref": "#/components/schemas/UUID"
           },
@@ -7059,6 +7067,18 @@
           {
             "type": "object",
             "properties": {
+              "append_comment": {
+                "$ref": "#/components/schemas/CardCommentInput"
+              }
+            },
+            "required": [
+              "append_comment"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
               "undo": {
                 "type": "object",
                 "properties": {
@@ -7869,7 +7889,7 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 200,
-            "description": "Number of comments in the card source; comment bodies require a resource read."
+            "description": "Number of comments in the card or project source; comment bodies require a resource read."
           },
           "event": {
             "$ref": "#/components/schemas/TimedEvent"
@@ -7914,6 +7934,23 @@
           },
           "schedule": {
             "$ref": "#/components/schemas/Schedule"
+          },
+          "span": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "$ref": "#/components/schemas/LocalDate"
+              },
+              "end": {
+                "$ref": "#/components/schemas/LocalDate"
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ],
+            "additionalProperties": false,
+            "description": "Derived and read-only; present only for type=project. The earliest start and latest end over the project's non-archived cards' schedule and timed event dates, in any card status. Milestones do not contribute. Absent when no such card has a date. Never accepted by any write."
           },
           "due": {
             "$ref": "#/components/schemas/Due"

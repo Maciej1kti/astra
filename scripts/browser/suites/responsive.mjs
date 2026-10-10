@@ -76,11 +76,11 @@ await runBrowserSuite(
             "Workspace header must precede every view, including Focus",
           );
           await expect(
-            page.locator("main").getByLabel("Projekt", { exact: true }),
+            page.locator("main").getByLabel("Cel", { exact: true }),
           ).toHaveCount(0);
           {
             const folderScope = ["focus", "projects"].includes(view);
-            const filterLabel = folderScope ? "Folder" : "Projekt";
+            const filterLabel = folderScope ? "Folder" : "Cel";
             const picker = header.getByLabel(filterLabel, { exact: true });
             await expect(
               page.getByLabel(filterLabel, { exact: true }),
@@ -156,7 +156,7 @@ await runBrowserSuite(
             await filter.fill("No matching project title");
             await expect(tiles).toHaveCount(0);
             await expect(
-              page.getByText("Brak projektów pasujących do wyboru.", {
+              page.getByText("Brak celów pasujących do wyboru.", {
                 exact: true,
               }),
             ).toBeVisible();
@@ -213,7 +213,7 @@ await runBrowserSuite(
       await route("list", { project: "" });
       const picker = page
         .locator("header.topbar")
-        .getByLabel("Projekt", { exact: true });
+        .getByLabel("Cel", { exact: true });
       await expect(page.locator(".listrow").first()).toBeVisible();
       await picker.selectOption(config.projects[2].id);
       await expect(page).toHaveURL(
@@ -221,7 +221,7 @@ await runBrowserSuite(
       );
       await expect(
         page.getByText(
-          "Brak kart pasujących do wyboru. Wybierz inny projekt lub wyczyść filtry.",
+          "Brak kart pasujących do wyboru. Wybierz inny cel lub wyczyść filtry.",
           { exact: true },
         ),
       ).toBeVisible();

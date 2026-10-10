@@ -460,3 +460,54 @@ fn card_comments_validate_authors_unique_ids_and_content() {
     value["metadata"]["comments"][0]["author"]["kind"] = json!("agent");
     assert!(validate_document(value).is_ok());
 }
+
+#[test]
+fn project_comments_are_optional_lossless_and_validated_like_card_comments() {
+    let original = read("examples/project.json");
+    // A project written before comments existed stays valid and serializes unchanged.
+    let decoded = validate_document(original.clone()).unwrap();
+    assert_eq!(serde_json::to_value(decoded.get()).unwrap(), original);
+    assert!(original["metadata"].get("comments").is_none());
+
+    let comment = json!({"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","author":{"kind":"agent","label":"Codex","session_id":"s1"},"recorded_at":"2026-10-10T12:00:00Z","body":"**A comment**\n\nWith Markdown."});
+    let mut value = original.clone();
+    value["metadata"]["comments"] = json!([comment.clone()]);
+    let decoded = validate_document(value.clone()).unwrap();
+    assert_eq!(serde_json::to_value(decoded.get()).unwrap(), value);
+    assert_eq!(value["body"], original["body"]);
+
+    for invalid in [json!(""), json!("   "), json!("x".repeat(4001))] {
+        let mut bad = value.clone();
+        bad["metadata"]["comments"][0]["body"] = invalid;
+        assert!(validate_document(bad).is_err());
+    }
+    let mut bad = value.clone();
+    bad["metadata"]["comments"][0]["author"]["label"] = json!(" ");
+    assert!(validate_document(bad).is_err());
+    let mut bad = value.clone();
+    bad["metadata"]["comments"] = json!([comment.clone(), comment.clone()]);
+    assert!(validate_document(bad).is_err());
+    let mut bad = value.clone();
+    bad["metadata"]["comments"][0]["x-note"] = json!(true);
+    assert!(validate_document(bad).is_err());
+    let many = |count: usize| {
+        (0..count)
+            .map(|index| {
+                let mut entry = comment.clone();
+                entry["id"] = json!(format!("{index:08x}-aaaa-4aaa-8aaa-aaaaaaaaaaaa"));
+                entry["body"] = json!("ok");
+                entry
+            })
+            .collect::<Vec<_>>()
+    };
+    let mut limit = original.clone();
+    limit["metadata"]["comments"] = json!(many(200));
+    assert!(validate_document(limit).is_ok());
+    let mut over = original.clone();
+    over["metadata"]["comments"] = json!(many(201));
+    assert!(validate_document(over).is_err());
+    // The derived span is not part of the stored source.
+    let mut bad = original;
+    bad["metadata"]["span"] = json!({"start":"2026-10-01","end":"2026-10-02"});
+    assert!(validate_document(bad).is_err());
+}

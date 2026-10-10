@@ -489,11 +489,9 @@ await runBrowserSuite(
             .getByRole("button", { name: "Zarządzaj tagami", exact: true })
             .click();
           const tags = page.getByRole("dialog", {
-            name: "Zarządzaj tagami projektu",
+            name: "Zarządzaj tagami celu",
           });
-          await expect(
-            tags.getByLabel("Projekt", { exact: true }),
-          ).toBeEnabled();
+          await expect(tags.getByLabel("Cel", { exact: true })).toBeEnabled();
           await page.keyboard.press("Escape");
           await expect(tags).toHaveCount(0);
           await expect(
@@ -543,9 +541,7 @@ await runBrowserSuite(
           await expect(
             page.getByRole("button", { name: "Poproś o dostęp" }),
           ).toBeVisible();
-          await expect(page.getByLabel("Projekt", { exact: true })).toHaveCount(
-            0,
-          );
+          await expect(page.getByLabel("Cel", { exact: true })).toHaveCount(0);
           await snapshot("mobile-signed-out");
           return {
             mobileMenuSignOut: true,

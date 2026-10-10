@@ -318,7 +318,7 @@ await runBrowserSuite(
         if (continued)
           await page
             .getByRole("navigation", { name: "Widoki przestrzeni roboczej" })
-            .getByRole("button", { name: "Projekty", exact: true })
+            .getByRole("button", { name: "Cele", exact: true })
             .click();
         else await page.goto(`${config.origin}/?view=projects`);
         const tile = page.locator(`[data-board-card="${candidate.id}"]`);
@@ -360,7 +360,7 @@ await runBrowserSuite(
         revokeAll();
         await sessionLost(page);
         const dialog = page.getByRole("dialog", {
-          name: "Przenieś projekt",
+          name: "Przenieś cel",
           exact: true,
         });
         await expect(dialog).toBeVisible();
@@ -369,7 +369,7 @@ await runBrowserSuite(
         assert.equal(opened.at(-1), layer, JSON.stringify(opened));
         // With its screen loaded, pairing opens first and is raised again.
         if (continued) {
-          assert.deepEqual(opened, [layer, "Przenieś projekt", layer]);
+          assert.deepEqual(opened, [layer, "Przenieś cel", layer]);
           await expect(requestAccess(page)).toBeFocused();
         }
         release();

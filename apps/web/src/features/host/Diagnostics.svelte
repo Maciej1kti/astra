@@ -101,11 +101,11 @@
       </p>
       {#if data.issues.length}<h3>Problemy ze źródłami · pierwsze 100</h3>
         {#each data.issues as issue}<p>
-            <code>{issue.path}</code><br />{issue.code} · Projekt {issue.project_id}
+            <code>{issue.path}</code><br />{issue.code} · Cel {issue.project_id}
           </p>{/each}{/if}
       {#if data.jobs.length}<h3>Nierozstrzygnięte zadania · pierwsze 50</h3>
         {#each data.jobs as job}<p>
-            <code>{job.id}</code> · {stateLabel(job.state)}<br />Projekt {job.project_id}
+            <code>{job.id}</code> · {stateLabel(job.state)}<br />Cel {job.project_id}
           </p>{/each}{/if}
       <small
         >Instancja: {data.instance_id ??

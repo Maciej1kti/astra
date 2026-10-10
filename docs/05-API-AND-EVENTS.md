@@ -113,6 +113,19 @@ have a card schedule or milestone due date. Marker kinds are `card_schedule` and
 schedule updates its recorded schedule. Gantt exposes explicit schedule rows;
 it has no dependency edges or forecast projection.
 
+## Project summaries: comments and span
+
+`PATCH /api/v1/projects/{project_id}` accepts `{ "append_comment": { author, body } }`
+as a variant separate from `set`/`clear` and `undo`, with the same conditional
+write, request ID, epoch and replay rules as other patches and the limits of
+card comments. A project Summary carries `comment_count` and, when any of its
+non-archived cards has a `schedule` or timed `event`, a derived read-only
+`span: { start, end }`. The span is computed per page from the index, is
+present for both `archived=false` and `archived=true` project lists and for
+search hits that are projects, is never accepted by a write and does not change
+the project `version`. See [ADR-079](ADR-079-GOAL-COMMENTS-AND-SPAN.md) and the
+[request example](../examples/requests/project-comment.http).
+
 ## SSE bez zgubionej zmiany
 
 Ordinary request admission is bounded, including body receipt. A body that is not

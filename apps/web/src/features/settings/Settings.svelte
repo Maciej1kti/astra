@@ -132,7 +132,7 @@
     view: "widok domyślny",
     agent: "dostawca agenta",
     plugins: "wtyczki",
-    root: "katalog nowych projektów",
+    root: "katalog nowych celów",
     publish: "publikowanie na GitHubie",
   };
   let confirmClose = $state(false);
@@ -273,7 +273,7 @@
   const sections = $derived([
     { id: "settings-profile", label: "Profil" },
     { id: "settings-time", label: "Czas i widok" },
-    { id: "settings-projects", label: "Projekty" },
+    { id: "settings-projects", label: "Cele" },
     ...(agentEnabled ? [{ id: "settings-agent", label: "Agent" }] : []),
     { id: "settings-plugins", label: "Wtyczki" },
     { id: "settings-tags", label: "Tagi" },
@@ -665,7 +665,7 @@
         <header>
           <h3 id="settings-profile-title">Profil</h3>
           <p>
-            Każdy użytkownik ma własne foldery projektów i przestrzeń roboczą.
+            Każdy użytkownik ma własne foldery celów i przestrzeń roboczą.
             Sparowane przeglądarki mogą przełączać się między zaufanymi
             użytkownikami.
           </p>
@@ -692,7 +692,7 @@
           {/each}
         </ul>
         {#if !canSwitchUser}<p>
-            Zakończ otwartą edycję lub oczekującą operację projektu przed zmianą
+            Zakończ otwartą edycję lub oczekującą operację celu przed zmianą
             użytkownika.
           </p>{/if}
         <form
@@ -809,13 +809,13 @@
 
       <section id="settings-projects" aria-labelledby="settings-projects-title">
         <header>
-          <h3 id="settings-projects-title">Projekty</h3>
-          <p>Gdzie powstają nowe projekty i czy trafiają na GitHuba.</p>
+          <h3 id="settings-projects-title">Cele</h3>
+          <p>Gdzie powstają nowe cele i czy trafiają na GitHuba.</p>
         </header>
         <label
-          >Katalog nowych projektów<select
+          >Katalog nowych celów<select
             form="workspace-preferences"
-            aria-label="Katalog nowych projektów"
+            aria-label="Katalog nowych celów"
             bind:value={root}
             onchange={changed}
             disabled={locked}
@@ -833,14 +833,14 @@
         >
         <p class="field-hint">
           {roots.length
-            ? "Dodanie projektu tworzy w tym katalogu folder o nazwie projektu."
+            ? "Dodanie celu tworzy w tym katalogu folder o nazwie celu."
             : "Brak zatwierdzonych katalogów. Właściciel hosta dodaje je poleceniem projectctl add-root."}
         </p>
         {#if githubHost}<label class="toggle"
             ><span
-              ><strong>Publikuj nowe projekty na GitHubie</strong><small
-                >Nowy projekt dostaje prywatne repozytorium na koncie hosta. Po
-                wyłączeniu projekty powstają tylko lokalnie; pojedynczy projekt
+              ><strong>Publikuj nowe cele na GitHubie</strong><small
+                >Nowy cel dostaje prywatne repozytorium na koncie hosta. Po
+                wyłączeniu cele powstają tylko lokalnie; pojedynczy cel
                 opublikujesz w jego oknie Git.</small
               ></span
             ><input
@@ -936,7 +936,7 @@
       <section id="settings-tags" aria-labelledby="settings-tags-title">
         <header>
           <h3 id="settings-tags-title">Tagi</h3>
-          <p>Zmień nazwę lub połącz tagi używane na kartach projektu.</p>
+          <p>Zmień nazwę lub połącz tagi używane na kartach celu.</p>
         </header>
         <button
           disabled={dirty || busy || !!pending || accessLost}

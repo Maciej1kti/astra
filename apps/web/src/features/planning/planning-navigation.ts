@@ -2,6 +2,12 @@ import { shiftDate } from "./dates.ts";
 import { dateOnly, isCalendarDate, widgetDate } from "./widget-dates.ts";
 
 export type CalendarLayout = "day" | "week" | "month" | "agenda";
+/** What Calendar and Timeline lay out over time: dated cards, or whole goals. */
+export type PlanningScope = "cards" | "goals";
+export const planningScopes: { value: PlanningScope; label: string }[] = [
+  { value: "cards", label: "Karty" },
+  { value: "goals", label: "Cele" },
+];
 
 export function navigateCalendar(
   date: string,

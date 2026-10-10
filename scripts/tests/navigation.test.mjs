@@ -99,6 +99,35 @@ test("calendar deep links retain day and layout through reload and browser histo
   assert.deepEqual(readRoute(writeRoute(route), today), route);
 });
 
+test("the goal scope of Calendar and Timeline is part of the address", () => {
+  for (const view of ["calendar", "gantt"]) {
+    const route = readRoute(
+      new URLSearchParams(`view=${view}&scope=goals`),
+      today,
+    );
+    assert.equal(route.planningScope, "goals");
+    assert.equal(writeRoute(route).get("scope"), "goals");
+    assert.equal(readRoute(writeRoute(route), today).planningScope, "goals");
+    // Cards are the default and leave existing links as they were.
+    assert.equal(
+      writeRoute({ ...route, planningScope: "cards" }).has("scope"),
+      false,
+    );
+  }
+  assert.equal(
+    readRoute(new URLSearchParams("view=calendar&scope=other"), today)
+      .planningScope,
+    "cards",
+  );
+  // Another view keeps the choice for the way back to Calendar or Timeline.
+  assert.equal(
+    writeRoute(
+      readRoute(new URLSearchParams("view=board&scope=goals"), today),
+    ).get("scope"),
+    "goals",
+  );
+});
+
 test("legacy month links and invalid dates resolve deterministically", () => {
   assert.equal(
     readRoute(new URLSearchParams("view=calendar&month=2026-10"), today)

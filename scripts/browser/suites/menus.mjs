@@ -75,7 +75,7 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
     let panel = await open(projectActions);
     await settledBounds(panel);
     const deletion = panel.getByRole("button", {
-      name: "Usuń projekt",
+      name: "Usuń cel",
       exact: true,
     });
     await expect(deletion).toBeVisible();
@@ -103,17 +103,15 @@ await runBrowserSuite(async ({ config, evidence, newContext, browser }) => {
       "lower-edge project menus flip, receive input and preserve Tab/Escape focus",
     );
     panel = await open(projectActions);
-    await panel
-      .getByRole("button", { name: "Usuń projekt", exact: true })
-      .click();
+    await panel.getByRole("button", { name: "Usuń cel", exact: true }).click();
     const confirmation = page.getByRole("dialog", {
-      name: "Usuń projekt",
+      name: "Usuń cel",
       exact: true,
     });
     await expect(confirmation).toBeVisible();
     await expect(
       confirmation.getByRole("button", {
-        name: "Trwale usuń projekt",
+        name: "Trwale usuń cel",
         exact: true,
       }),
     ).toBeEnabled();

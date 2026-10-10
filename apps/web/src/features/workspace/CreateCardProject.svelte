@@ -19,13 +19,9 @@
   class="app-dialog dialog-small"
   use:modal={{ onclose }}
   out:layerExit|global
-  aria-label="Wybierz projekt dla karty"
+  aria-label="Wybierz cel dla karty"
 >
-  <DialogHeader
-    title="Dodaj kartę"
-    {onclose}
-    closeLabel="Zamknij wybór projektu"
-  />
+  <DialogHeader title="Dodaj kartę" {onclose} closeLabel="Zamknij wybór celu" />
   <form
     class="dialog-form"
     onsubmit={(event) => {
@@ -35,8 +31,8 @@
   >
     <div class="dialog-body">
       <label
-        >Projekt<select aria-label="Projekt" bind:value={project} required
-          ><option value="" disabled>Wybierz projekt</option
+        >Cel<select aria-label="Cel" bind:value={project} required
+          ><option value="" disabled>Wybierz cel</option
           >{#each projects as item}<option value={item.id}>{item.title}</option
             >{/each}</select
         ></label

@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { inclusiveSchedule } from "../../apps/web/src/features/planning/planning.ts";
+import {
+  calendarLabel,
+  calendarTarget,
+  goalItems,
+  inclusiveSchedule,
+} from "../../apps/web/src/features/planning/planning.ts";
+import { calendarEventProjection } from "../../apps/web/src/features/planning/calendar-events.ts";
+import { keyboardDateProposal } from "../../apps/web/src/features/planning/calendar-keyboard.ts";
 import { shiftDate } from "../../apps/web/src/features/planning/dates.ts";
 import {
   widgetDate,
@@ -47,4 +54,55 @@ test("empty or reversed widget ranges never become a persisted schedule", () => 
     inclusiveSchedule(widgetDate("2026-09-08"), widgetDate("2026-09-08")),
   );
   assert.throws(() => dateOnly(new Date(NaN)));
+});
+
+test("goals with dated cards become read-only Calendar items that open the goal", () => {
+  const goal = (extra) => ({
+    type: "project",
+    project_id: extra.id,
+    title: extra.id,
+    version: "v1",
+    ...extra,
+  });
+  const items = goalItems([
+    goal({ id: "dated", span: { start: "2026-09-28", end: "2026-11-03" } }),
+    goal({ id: "undated" }),
+    // Only a goal's derived span places it; a card is not a goal.
+    {
+      ...goal({ id: "card", span: { start: "2026-09-01", end: "2026-09-02" } }),
+      type: "card",
+    },
+  ]);
+  assert.deepEqual(items, [
+    {
+      item_id: "goal:dated",
+      kind: "project_span",
+      project_id: "dated",
+      resource_id: "dated",
+      version: "v1",
+      title: "dated",
+      start: "2026-09-28",
+      end: "2026-11-03",
+    },
+  ]);
+  assert.deepEqual(calendarTarget(items[0]), {
+    id: "dated",
+    project_id: "dated",
+    type: "project",
+  });
+  assert.equal(calendarLabel(items[0]), "Cel");
+  // The widget's end is exclusive; nothing about a goal can be dragged.
+  const [event] = calendarEventProjection()(items, "", true);
+  assert.equal(event.allDay, true);
+  assert.equal(event.end, "2026-11-04");
+  assert.equal(event.editable, false);
+  assert.equal(event.startEditable, false);
+  assert.equal(event.durationEditable, false);
+  assert.equal(
+    keyboardDateProposal(
+      { key: "ArrowRight", altKey: true, shiftKey: false },
+      items[0],
+    ),
+    null,
+  );
 });

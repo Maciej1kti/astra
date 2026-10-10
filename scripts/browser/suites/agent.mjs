@@ -149,7 +149,7 @@ await runBrowserSuite(
         .waitFor();
       await expect(
         target.getByText(
-          /^(Ładowanie danych…|Ładowanie widoku planowania…|Ładowanie tablicy…|Ładowanie kalendarza…|Ładowanie osi czasu…|Ładowanie wykresu…|Ładowanie projektów…|Ładowanie listy…|Ładowanie aktualizacji…)$/,
+          /^(Ładowanie danych…|Ładowanie widoku planowania…|Ładowanie tablicy…|Ładowanie kalendarza…|Ładowanie osi czasu…|Ładowanie wykresu…|Ładowanie celów…|Ładowanie listy…|Ładowanie aktualizacji…)$/,
         ),
       ).toHaveCount(0);
       if (view === "board")
@@ -499,7 +499,7 @@ await runBrowserSuite(
           ).toBeVisible();
           await expect(
             dialog.getByText(
-              "Napisz zwykłym zdaniem, na przykład „zrobiłem 10 pompek” albo „dodaj komentarz do karty o fakturze”. Agent sam znajdzie projekt i kartę.",
+              "Napisz zwykłym zdaniem, na przykład „zrobiłem 10 pompek” albo „dodaj komentarz do karty o fakturze”. Agent sam znajdzie cel i kartę.",
               { exact: true },
             ),
           ).toBeVisible();

@@ -15,6 +15,7 @@
   } from "../../lib/api/resources";
   import type {
     CardPatch,
+    ProjectPatch,
     HistoryEntry,
     CommandResponse,
   } from "../../lib/contracts/api.generated";
@@ -57,6 +58,7 @@
   import { editTarget, type EditorTarget } from "./editor-target";
 
   import { resourceLabel } from "../../lib/resources/resource-presentation";
+  import { formatCivilRange } from "../../lib/ui/locale";
   import { modal, layerExit } from "../../lib/ui/dialog";
   import { api, command, type Resource, type Pending } from "../../lib/api/api";
   import { cardDeletion } from "./card-deletion.svelte";
@@ -98,6 +100,7 @@
     workspaceTimezone = "UTC",
     weekStart = "monday",
     userName = "Właściciel",
+    span,
     onclose,
     onsaved,
     onautosaved,
@@ -110,6 +113,8 @@
     workspaceTimezone?: string;
     weekStart?: string;
     userName?: string;
+    /** The days the cards of this target's goal cover; a goal's header shows them. */
+    span?: { start: string; end: string };
     onclose: () => void;
     onsaved: () => void;
     onautosaved?: (resource: Resource) => void;
@@ -134,6 +139,12 @@
     cardLayout.filter(
       (section) =>
         draft.type !== "card" || !draft.fields.hiddenSections.includes(section),
+    ),
+  );
+  // A goal has a card's shape without its work: no checklist, counters or dates.
+  const goalSections = $derived(
+    cardLayout.filter((section) =>
+      ["description", "comments", "labels"].includes(section),
     ),
   );
   // Only the first Labels catalog read consumes this opening request.
@@ -262,7 +273,7 @@
   }
   const unfinishedEntry = $derived(
     draft.type === "project"
-      ? !!draft.fields.folderDraft.trim()
+      ? !!draft.fields.folderDraft.trim() || !!draft.fields.commentDraft.trim()
       : draft.type === "card" &&
           (!!draft.fields.tagDraft.trim() ||
             !!draft.fields.commentDraft.trim() ||
@@ -432,29 +443,30 @@
     await transmit();
   }
   async function addComment() {
-    if (draft.type !== "card" || locked || conflict || !resource) return;
+    if (draft.type !== "card" && draft.type !== "project") return;
+    if (locked || conflict || !resource) return;
     if (!draft.fields.commentDraft.trim()) return;
     commentFlushing = true;
     try {
       await autosave.flush();
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a conflict can be recorded while the flush above is awaited
       if (autosave.hasWork || persistedDirty || conflict || accessLost) return;
+      const comment = {
+        append_comment: {
+          body: draft.fields.commentDraft,
+          author: { kind: "human" as const, label: userName },
+        },
+      };
       prepare(
         { kind: "comment" },
-        patchCard(
-          project,
-          resource.metadata.id,
-          {
-            append_comment: {
-              body: draft.fields.commentDraft,
-              author: {
-                kind: "human",
-                label: userName,
-              },
-            },
-          },
-          resource.version,
-        ),
+        draft.type === "card"
+          ? patchCard(project, resource.metadata.id, comment, resource.version)
+          : command(
+              path(),
+              "PATCH",
+              comment satisfies ProjectPatch,
+              resource.version,
+            ),
       );
       await transmit();
     } catch (cause) {
@@ -520,7 +532,7 @@
     "done",
     "cancelled",
   ] as const;
-  const projectStatuses = ["active", "paused", "archived"];
+  const projectStatuses = ["active", "paused", "archived"] as const;
   function path() {
     const root = `/api/v1/projects/${project}`;
     return draft.type === "project"
@@ -615,6 +627,19 @@
     }
   }
   function completeCommand(submitted: EditorIntent, reply: CommandResponse) {
+    if (submitted.kind === "comment" && draft.type === "project") {
+      const next = reply.result.resource;
+      if (!next || !("type" in next) || next.type !== "project")
+        throw new Error("Nie zwrócono zapisanego celu.");
+      currentResource = next;
+      draft.source = next;
+      draft.fields.commentDraft = "";
+      autosave.reset(next);
+      onautosaved?.(next);
+      statusMessage = "Dodano komentarz.";
+      onchanged?.();
+      return;
+    }
     if (submitted.kind === "comment" || submitted.kind === "counter") {
       const next = reply.result.resource;
       if (
@@ -670,11 +695,10 @@
 <dialog
   use:modal={{ onclose: close }}
   out:layerExit|global
-  class="app-dialog editor"
-  class:dialog-large={draft.type !== "project"}
+  class="app-dialog editor dialog-large"
   class:resource-editor={draft.type === "project" || draft.type === "card"}
   class:project-editor={draft.type === "project"}
-  class:card-editor={draft.type === "card"}
+  class:card-editor={draft.type === "card" || draft.type === "project"}
   aria-label={readonly
     ? "Szczegóły aktualizacji"
     : resource
@@ -762,6 +786,54 @@
           </div>
           {@render savedIndicator()}
         </div>
+      {:else if draft.type === "project"}
+        <div class="card-heading">
+          <EditableTitle
+            bind:value={draft.common.title}
+            label="Nazwa"
+            placeholder="Nazwa celu"
+            maxlength={120}
+            disabled={locked}
+            onfinish={finishTextEdit}
+          />
+        </div>
+        <div class="card-header-toolbar">
+          <div class="card-state-actions">
+            <ActionMenu
+              label={`Status: ${resourceLabel(draft.fields.status)}`}
+              text={resourceLabel(draft.fields.status)}
+              icon={draft.fields.status}
+              align="start"
+              disabled={locked}
+            >
+              {#snippet children(closeStatus)}
+                {#each projectStatuses as status}
+                  <button
+                    type="button"
+                    class="quiet status-option"
+                    aria-pressed={draft.type === "project" &&
+                      draft.fields.status === status}
+                    onclick={() => {
+                      if (draft.type === "project")
+                        draft.fields.status = status;
+                      closeStatus();
+                    }}><Icon name={status} />{resourceLabel(status)}</button
+                  >
+                {/each}
+              {/snippet}
+            </ActionMenu>
+            <span
+              class="goal-span"
+              data-testid="goal-span"
+              title="Od najwcześniejszej do najpóźniejszej daty na kartach tego celu"
+              ><Icon name="calendar" small />{#if span}<time
+                  datetime={span.start}
+                  >{formatCivilRange(span.start, span.end)}</time
+                >{:else}<span>Brak dat na kartach</span>{/if}</span
+            >
+          </div>
+          {@render savedIndicator()}
+        </div>
       {/if}
     {/snippet}
     {#snippet editorMessages()}
@@ -793,7 +865,9 @@
       />
     {/snippet}
     <DialogHeader
-      content={draft.type === "card" ? cardHeaderContent : undefined}
+      content={draft.type === "card" || draft.type === "project"
+        ? cardHeaderContent
+        : undefined}
       messages={editorMessages}
       onclose={close}
       closeLabel="Zamknij edytor"
@@ -812,22 +886,15 @@
               >{projectName || "Karta"}</span
             >
           </div>
+        {:else if draft.type === "project"}
+          <div class="editor-context">
+            <Icon name="projects" small />
+            <span class="card-project-name">Cel</span>
+          </div>
         {:else}
           <div class="editor-context">
-            <Icon
-              name={draft.type === "project"
-                ? "projects"
-                : draft.type === "update"
-                  ? "updates"
-                  : "board"}
-              small
-            />
-            <span
-              >{projectName ||
-                (draft.type === "project"
-                  ? "Projekt"
-                  : resourceLabel(draft.type))}</span
-            >
+            <Icon name={draft.type === "update" ? "updates" : "board"} small />
+            <span>{projectName || resourceLabel(draft.type)}</span>
             {#if projectName}<span class="context-separator">/</span><span
                 class="context-kind">{resourceLabel(draft.type)}</span
               >{/if}
@@ -852,7 +919,7 @@
                 disabled={locked}
               /> Zarchiwizowane</label
             >
-            <p class="menu-hint">Zarchiwizowane karty pozostają w projekcie.</p>
+            <p class="menu-hint">Zarchiwizowane karty zostają w swoim celu.</p>
             <button
               type="button"
               class="quiet destructive-action"
@@ -861,7 +928,7 @@
               >Usuń kartę</button
             >
           </ActionMenu>
-        {:else if draft.type !== "card"}{@render savedIndicator()}{/if}
+        {:else if draft.type !== "card" && draft.type !== "project"}{@render savedIndicator()}{/if}
       {/snippet}
     </DialogHeader>
     <form
@@ -894,24 +961,14 @@
               disabled={locked}>Rozstrzygnij decyzję</Button
             >{/if}
         </div>
-      {:else if draft.type !== "card"}
+      {:else if draft.type !== "card" && draft.type !== "project"}
         <EditableTitle
           bind:value={draft.common.title}
-          label={draft.type === "project"
-            ? "Nazwa"
-            : draft.type === "update"
-              ? "Podsumowanie"
-              : "Tytuł"}
-          placeholder={draft.type === "project"
-            ? "Nazwa projektu"
-            : draft.type === "update"
-              ? "Napisz podsumowanie…"
-              : "Tytuł kamienia milowego"}
-          maxlength={draft.type === "project"
-            ? 120
-            : draft.type === "update"
-              ? 500
-              : 240}
+          label={draft.type === "update" ? "Podsumowanie" : "Tytuł"}
+          placeholder={draft.type === "update"
+            ? "Napisz podsumowanie…"
+            : "Tytuł kamienia milowego"}
+          maxlength={draft.type === "update" ? 500 : 240}
           disabled={locked}
           focus={!resource && !autoCreate}
           onfinish={finishTextEdit}
@@ -1014,31 +1071,46 @@
           {/each}
         </div>
       {:else if draft.type === "project"}
-        <div class="editor-properties">
-          <label
-            >Status<select
-              aria-label="Status"
-              bind:value={draft.fields.status}
-              disabled={locked}
-              >{#each projectStatuses as item}<option value={item}
-                  >{resourceLabel(item)}</option
-                >{/each}</select
-            ></label
-          >
+        <div class="card-body-grid">
+          {#each goalSections as section, index (section)}
+            <div
+              class="card-section"
+              class:card-section-following={index > 0}
+              data-card-section={section === "labels" ? "folder" : section}
+              data-card-visible="true"
+            >
+              <div class="card-section-content">
+                {#if section === "description"}
+                  <ResourceDescription
+                    type="project"
+                    bind:body={draft.common.body}
+                    bind:editing={descriptionEditing}
+                    disabled={locked}
+                    closeButton={descriptionCloseButton}
+                    onfinish={finishTextEdit}
+                  />
+                {:else if section === "comments"}
+                  <CardComments
+                    goal
+                    comments={resource?.type === "project"
+                      ? (resource.metadata.comments ?? [])
+                      : []}
+                    bind:body={draft.fields.commentDraft}
+                    disabled={locked || !!conflict}
+                    saved={!!resource}
+                    onadd={addComment}
+                  />
+                {:else}
+                  <FolderPicker
+                    bind:value={draft.fields.folder}
+                    bind:draft={draft.fields.folderDraft}
+                    disabled={locked}
+                  />
+                {/if}
+              </div>
+            </div>
+          {/each}
         </div>
-        <FolderPicker
-          bind:value={draft.fields.folder}
-          bind:draft={draft.fields.folderDraft}
-          disabled={locked}
-        />
-        <ResourceDescription
-          type="project"
-          bind:body={draft.common.body}
-          bind:editing={descriptionEditing}
-          disabled={locked}
-          closeButton={descriptionCloseButton}
-          onfinish={finishTextEdit}
-        />
       {:else}
         <RecordForm
           bind:draft

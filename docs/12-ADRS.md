@@ -503,3 +503,10 @@ opened from the menu bar or a system-wide shortcut. See
 Workspace preferences save on every change through the card editor's autosave
 engine, and the header shows its state instead of a Save button. Conflicts and
 unknown outcomes stay explicit. See [ADR-078](ADR-078-SETTINGS-AUTOSAVE.md).
+
+## ADR-079 — Goals: project comments and a derived date span
+
+The browser calls projects "Cele" (goals) while identifiers stay `project`.
+Projects get source-owned comments that mirror card comments, and project
+summaries carry a derived read-only date `span` from their cards. See
+[ADR-079](ADR-079-GOAL-COMMENTS-AND-SPAN.md).

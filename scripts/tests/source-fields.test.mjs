@@ -85,7 +85,7 @@ test("events, due dates and report fields are readable", () => {
   assert.equal(value("Wydarzenie"), "8 września 2026, 10:05 · 90 min");
   assert.equal(value("Rodzaj"), "Potrzebna decyzja");
   assert.equal(value("Autor"), "Build bot");
-  assert.equal(value("Cel"), "Projekt · p-1");
+  assert.equal(value("Dotyczy"), "Cel · p-1");
   assert.equal(value("Opis"), "—");
 });
 

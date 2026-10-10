@@ -147,7 +147,7 @@
         open={() => open(item)}
       />{:else}<EmptyState>
         {route.project || route.search
-          ? "Brak przypiętych kart pasujących do wyboru. Zmień projekt lub wyczyść filtr tytułu."
+          ? "Brak przypiętych kart pasujących do wyboru. Zmień cel lub wyczyść filtr tytułu."
           : "Brak przypiętych kart. Otwórz kartę i przypnij ją, aby zachować ją tutaj."}
       </EmptyState>{/each}
   </div>

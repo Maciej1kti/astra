@@ -5,6 +5,7 @@ use crate::transport::{self, Error, Outcome, Request, checked};
 use clap::{Args, Subcommand};
 use reqwest::Client;
 use serde_json::{Value, json};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 #[derive(Args)]
@@ -40,6 +41,21 @@ pub enum Action {
     /// host and profile publish, its private repository. The same server
     /// operations as the browser's Add project.
     Create(Create),
+    /// Append a Markdown comment to the project with a declared human or bot author.
+    Comment {
+        project_id: String,
+        /// Markdown file with the comment; use - to read stdin.
+        #[arg(long)]
+        body_file: PathBuf,
+        #[arg(long)]
+        author: String,
+        #[arg(long, value_parser = ["human", "agent"])]
+        author_kind: String,
+        #[arg(long)]
+        if_version: String,
+        #[command(flatten)]
+        identity: Identity,
+    },
     /// Preview the bounded `.project` tree and return its deletion version.
     DeletionPlan { project_id: String },
     /// Permanently remove `.project`; retain the printed request identity for retries.
@@ -56,6 +72,25 @@ impl Action {
     pub fn prepare(self) -> Result<Request, Error> {
         match self {
             Self::Create(_) => Err("project create runs several requests".into()),
+            Self::Comment {
+                project_id,
+                body_file,
+                author,
+                author_kind,
+                if_version,
+                identity,
+            } => {
+                crate::uuid4(&project_id)?;
+                Ok(Request::command(
+                    "PATCH",
+                    format!("/api/v1/projects/{project_id}"),
+                    Some(
+                        json!({"append_comment":{"body":crate::input::body(Some(&body_file))?,"author":{"kind":author_kind,"label":author}}}),
+                    ),
+                )
+                .version(Some(if_version))
+                .retry(identity.request_id, identity.epoch))
+            }
             Self::DeletionPlan { project_id } => {
                 crate::uuid4(&project_id)?;
                 Ok(Request::read(format!(

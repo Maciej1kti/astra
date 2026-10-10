@@ -8,6 +8,7 @@
   import Icon from "../../lib/ui/Icon.svelte";
   import SectionHeading from "../../lib/ui/SectionHeading.svelte";
   import {
+    counted,
     countedDatedItems,
     formatCivilRange,
     uiLocale,
@@ -54,9 +55,14 @@
   import { getGantt } from "../../lib/api/planning";
   import { PlanningRead } from "./planning-read";
   import { projectionNotice } from "../../lib/api/projection-state";
+  import Segments from "../../lib/ui/Segments.svelte";
+  import { planningScopes, type PlanningScope } from "./planning-navigation";
 
   let {
     project,
+    goals,
+    scope,
+    onscope,
     month,
     revision,
     writePending,
@@ -69,6 +75,9 @@
     onmonth,
   }: {
     project: string;
+    goals: Summary[];
+    scope: PlanningScope;
+    onscope: (scope: PlanningScope) => void;
     month: string;
     revision: number;
     writePending: boolean;
@@ -134,7 +143,12 @@
   let scrollFrame = 0;
   let scrollPosition = 0;
 
-  const readScope = $derived(`${project}:${revision}`);
+  // Goals come with the workspace's goal list; only a goal's cards are read.
+  const goalScope = $derived(scope === "goals");
+  /** What the row order, the opening position and the entrance belong to. */
+  const scopeKey = $derived(goalScope ? "@goals" : project);
+  const drawn = $derived(goalScope || !!data);
+  const readScope = $derived(`${scopeKey}:${revision}`);
   const reads = new PlanningRead((value) => {
     loading = value;
   });
@@ -142,12 +156,16 @@
   const unit = $derived((compact ? metrics.compactUnit : metrics.unit)[scale]);
   const label = $derived(compact ? metrics.compactLabel : metrics.label);
   const filtered = $derived(
-    (data?.rows ?? []).filter((r) =>
+    (goalScope ? goals : (data?.rows ?? [])).filter((r) =>
       r.title.toLowerCase().includes(search.toLowerCase()),
     ),
   );
   const unscheduled = $derived(
-    filtered.filter((r) => r.type === "card" && !r.schedule && !r.event),
+    filtered.filter((r) =>
+      r.type === "project"
+        ? !r.span
+        : r.type === "card" && !r.schedule && !r.event,
+    ),
   );
   const items = $derived(
     timelineItems(orderedTimelineRows(filtered, rowOrder)).map((item) => {
@@ -254,7 +272,7 @@
   $effect(() => {
     void readScope;
     untrack(() => {
-      const nextProject = project;
+      const nextProject = scopeKey;
       if (loadedProject !== nextProject) {
         loadedProject = nextProject;
         history = [null];
@@ -267,7 +285,7 @@
         change = null;
         placed = "";
       }
-      void load(history.at(-1) ?? null);
+      void load(goalScope ? null : (history.at(-1) ?? null));
     });
   });
   onMount(() => () => {
@@ -276,7 +294,8 @@
     cancelAnimationFrame(scrollFrame);
   });
   async function load(cursor: string | null) {
-    const scope = project;
+    // In the goal scope this read is empty and ends one still under way.
+    const scope = goalScope ? "" : project;
     error = "";
     await reads.run<{ value: GanttPage | null; reset: boolean }>({
       key: `${scope}:${cursor ?? ""}`,
@@ -412,7 +431,7 @@
     const visible = new Set(order);
     const retained = rowOrder.filter((key) => !visible.has(key));
     rowOrder = [...moved, ...retained];
-    orderNotice = writeTimelineOrder(project, rowOrder)
+    orderNotice = writeTimelineOrder(scopeKey, rowOrder)
       ? ""
       : "Przeglądarka nie mogła zapisać kolejności na osi czasu.";
     void tick().then(() =>
@@ -462,7 +481,7 @@
     );
   }
   async function showMonth(target: string) {
-    placed = `${project}:${target}`;
+    placed = `${scopeKey}:${target}`;
     if (target !== month) onmonth(target);
     await tick();
     place(target, true);
@@ -470,7 +489,7 @@
   async function showDate(date: string) {
     if (!isCivilDate(date)) return;
     const target = date.slice(0, 7);
-    placed = `${project}:${target}`;
+    placed = `${scopeKey}:${target}`;
     if (target !== month) onmonth(target);
     await tick();
     scrollToDay(dayOffset(axis, date), unit, true);
@@ -508,8 +527,8 @@
   });
   // A month chosen elsewhere, such as the address or a first visit.
   $effect(() => {
-    const key = `${project}:${month}`;
-    if (!data || !scroller) return;
+    const key = `${scopeKey}:${month}`;
+    if (!drawn || !scroller) return;
     untrack(() => {
       if (key === placed) return;
       placed = key;
@@ -578,7 +597,19 @@
   }
 </script>
 
-{#if !project}<p>Wybierz projekt, aby zobaczyć jego zaplanowane daty.</p>
+{#if !project && !goalScope}
+  <div class="scope-only">
+    <Segments
+      label="Zakres osi czasu"
+      options={planningScopes}
+      value={scope}
+      onselect={onscope}
+    />
+  </div>
+  <p>
+    Wybierz cel, aby zobaczyć daty jego kart, albo pokaż wszystkie cele na
+    jednej osi.
+  </p>
 {:else}
   {#if orderNotice}<p role="status">{orderNotice}</p>{/if}
   {#if error}<p>
@@ -591,23 +622,25 @@
       >
     </p>{/if}
   {#if freshness}<p role="status" class="notice">{freshness}</p>{/if}
-  {#if loading && !data}<p role="status">Ładowanie osi czasu…</p>{/if}
+  {#if loading && !drawn}<p role="status">Ładowanie osi czasu…</p>{/if}
   {#if pageNotice}<p class="hint" role="status">{pageNotice}</p>{/if}
   {#if unscheduled.length}
     <section
       class="unscheduled"
-      aria-label="Karty bez harmonogramu"
+      aria-label={goalScope ? "Cele bez dat" : "Karty bez harmonogramu"}
       use:revealLayers={{
-        ready: !!data,
-        key: project,
+        ready: drawn,
+        key: scopeKey,
         layers: groupLayers,
       }}
     >
       <SectionHeading
-        title="Bez harmonogramu"
+        title={goalScope ? "Bez dat na kartach" : "Bez harmonogramu"}
         level={3}
         count={unscheduled.length}
-        countLabel={`Kart bez harmonogramu: ${unscheduled.length}`}
+        countLabel={goalScope
+          ? `Celów bez dat: ${unscheduled.length}`
+          : `Kart bez harmonogramu: ${unscheduled.length}`}
       >
         {#snippet actions()}
           {#if trayOverflows || trayOpen}<Button
@@ -621,7 +654,9 @@
       <div class="cards" class:open={trayOpen} bind:this={tray}>
         {#each unscheduled as row (row.id)}<Button
             class="waiting"
-            title="Otwórz kartę i ustaw daty"
+            title={goalScope
+              ? "Otwórz cel; daty bierze ze swoich kart"
+              : "Otwórz kartę i ustaw daty"}
             onclick={() => open(row)}><span>{row.title}</span></Button
           >{/each}
       </div>
@@ -636,12 +671,15 @@
     showToday={() => void showMonth(today.slice(0, 7))}
     {showDate}
     {changeScale}
+    {scope}
+    changeScope={onscope}
   />
   <div
     class="astra-gantt"
     class:compact
     role="group"
-    aria-label="Oś czasu projektu"
+    aria-label={goalScope ? "Oś czasu celów" : "Oś czasu celu"}
+    data-scope={scope}
     data-scale={scale}
     bind:this={chartRoot}
     style:--timeline-unit={px(unit)}
@@ -652,8 +690,8 @@
         unit,
     )}
     use:revealLayers={{
-      ready: !!data,
-      key: project,
+      ready: drawn,
+      key: scopeKey,
       layers: timelineLayers,
     }}
   >
@@ -669,7 +707,11 @@
       <div class="canvas" style:width={px(label + axis.days * unit)}>
         <div class="timeline-head">
           <div class="corner">
-            {items.length ? countedDatedItems(items.length) : "Oś czasu"}
+            {!items.length
+              ? "Oś czasu"
+              : goalScope
+                ? counted(items.length, "cel", "cele", "celów")
+                : countedDatedItems(items.length)}
           </div>
           <div class="axis" aria-hidden="true">
             <div class="tier spans">
@@ -843,64 +885,68 @@
               </div>
             </div>
           {/each}
-          <div class="timeline-row create">
-            <div class="row-label create-label">
-              <Button
-                variant="quiet"
-                title="Nowa karta z datą: dziś, gdy jest widoczne, albo pierwszy widoczny dzień"
-                onclick={() => {
-                  // Not disabled while a save passes, so it does not flicker.
-                  const day = keyboardDay();
-                  if (editable()) oncreate({ start: day, end: day });
-                }}><Icon name="plus" small /><span>Nowa karta</span></Button
-              >
-            </div>
-            <div class="track">
-              <button
-                class="create-track"
-                aria-label="Utwórz kartę na osi czasu"
-                title="Kliknij dzień albo przeciągnij po kilku, aby utworzyć kartę · strzałki i Enter"
-                onpointerdown={pressDraft}
-                onpointermove={moveDraft}
-                onpointerleave={() => {
-                  if (!draft?.held) draft = null;
-                }}
-                onpointercancel={() => (draft = null)}
-                onfocus={(event) => {
-                  if (event.currentTarget.matches(":focus-visible"))
-                    draft ??= single(keyboardDay());
-                }}
-                onblur={() => (draft = null)}
-                onkeydown={keyDraft}
-                onclick={createFromDraft}
-              ></button>
-              {#if draftRange}
-                {@const span = axisSpan(axis, draftRange.start, draftRange.end)}
-                {#if span}
-                  {@const box = barBox(span)}
-                  <span
-                    class="ghost"
-                    data-start={draftRange.start}
-                    data-end={draftRange.end}
-                    style:left={px(box.left)}
-                    style:width={px(box.width)}
-                  >
+          {#if !goalScope}<div class="timeline-row create">
+              <div class="row-label create-label">
+                <Button
+                  variant="quiet"
+                  title="Nowa karta z datą: dziś, gdy jest widoczne, albo pierwszy widoczny dzień"
+                  onclick={() => {
+                    // Not disabled while a save passes, so it does not flicker.
+                    const day = keyboardDay();
+                    if (editable()) oncreate({ start: day, end: day });
+                  }}><Icon name="plus" small /><span>Nowa karta</span></Button
+                >
+              </div>
+              <div class="track">
+                <button
+                  class="create-track"
+                  aria-label="Utwórz kartę na osi czasu"
+                  title="Kliknij dzień albo przeciągnij po kilku, aby utworzyć kartę · strzałki i Enter"
+                  onpointerdown={pressDraft}
+                  onpointermove={moveDraft}
+                  onpointerleave={() => {
+                    if (!draft?.held) draft = null;
+                  }}
+                  onpointercancel={() => (draft = null)}
+                  onfocus={(event) => {
+                    if (event.currentTarget.matches(":focus-visible"))
+                      draft ??= single(keyboardDay());
+                  }}
+                  onblur={() => (draft = null)}
+                  onkeydown={keyDraft}
+                  onclick={createFromDraft}
+                ></button>
+                {#if draftRange}
+                  {@const span = axisSpan(
+                    axis,
+                    draftRange.start,
+                    draftRange.end,
+                  )}
+                  {#if span}
+                    {@const box = barBox(span)}
                     <span
-                      >{formatCivilRange(
-                        draftRange.start,
-                        draftRange.end,
-                      )}</span
+                      class="ghost"
+                      data-start={draftRange.start}
+                      data-end={draftRange.end}
+                      style:left={px(box.left)}
+                      style:width={px(box.width)}
                     >
-                  </span>
+                      <span
+                        >{formatCivilRange(
+                          draftRange.start,
+                          draftRange.end,
+                        )}</span
+                      >
+                    </span>
+                  {/if}
                 {/if}
-              {/if}
-            </div>
-          </div>
+              </div>
+            </div>{/if}
         </div>
       </div>
     </div>
   </div>
-  {#if data?.page.next_cursor || history.length > 1}<nav
+  {#if !goalScope && (data?.page.next_cursor || history.length > 1)}<nav
       aria-label="Strony osi czasu"
     >
       <Button
@@ -909,7 +955,7 @@
           history = history.slice(0, -1);
           void load(history.at(-1) ?? null);
         }}>Poprzednia strona</Button
-      ><span>Strona {history.length} · sumy projektu obejmują inne strony</span
+      ><span>Strona {history.length} · sumy celu obejmują inne strony</span
       ><Button
         disabled={loading || !data?.page.next_cursor}
         onclick={() => {
@@ -922,6 +968,10 @@
 {/if}
 
 <style>
+  .scope-only {
+    display: flex;
+    margin-bottom: var(--space-8);
+  }
   nav {
     display: flex;
     gap: var(--space-4);

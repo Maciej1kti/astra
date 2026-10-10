@@ -1,11 +1,24 @@
 # Current implementation state
 
-Updated 2026-10-09. The application is implemented and under verification;
+Updated 2026-10-10. The application is implemented and under verification;
 full release acceptance remains open. [Scope decisions](SCOPE.md) supersede the
 historical handoff. Use the [release checklist](../delivery/RELEASE-CHECKLIST.md)
 for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ownership.
 
 ## Current work
+
+The browser calls projects [goals](2026-10-10-goals.md) since the owner's
+2026-10-10 direction, which limits the current round to the web interface. A
+goal opens in a dialog built like a card's, with description, comments and
+folder; it shows the range of its cards' dates, which the server derives on
+each read, and Calendar and Timeline have a **Karty | Cele** switch whose goal
+side is read-only ([ADR-079](../docs/ADR-079-GOAL-COMMENTS-AND-SPAN.md)).
+Project comments are a protocol addition with a CLI command. The Rust gate, the web
+checks and the browser scripts pass; of the 45 regression suites 42 passed in
+the full run, two were updated for the new design, and `projects` failed once
+on an unfinished read that 19 later runs did not show. The
+iOS and Mac apps were not touched; their interface tests still look for
+**Projekty**. The look awaits the owner's judgement.
 
 [Settings save themselves](2026-10-10-settings-autosave.md) since the owner's
 2026-10-10 direction: every preference change is saved at once through the

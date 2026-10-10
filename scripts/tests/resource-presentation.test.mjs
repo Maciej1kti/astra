@@ -43,3 +43,36 @@ test("card summaries do not present retired due or review dates", () => {
     [],
   );
 });
+
+test("a goal shows the span of its cards' dates, not dates of its own", () => {
+  assert.deepEqual(
+    resourceDates({
+      type: "project",
+      span: { start: "2026-09-28", end: "2026-11-03" },
+    }),
+    [
+      {
+        kind: "plan",
+        label: "Daty kart",
+        start: "2026-09-28",
+        end: "2026-11-03",
+      },
+    ],
+  );
+  assert.deepEqual(
+    resourceDates({
+      type: "project",
+      span: { start: "2026-09-28", end: "2026-09-28" },
+    }),
+    [{ kind: "plan", label: "Daty kart", start: "2026-09-28" }],
+  );
+  assert.deepEqual(resourceDates({ type: "project" }), []);
+  // A span reported on anything but a goal is not presented as its plan.
+  assert.deepEqual(
+    resourceDates({
+      type: "card",
+      span: { start: "2026-09-28", end: "2026-11-03" },
+    }),
+    [],
+  );
+});

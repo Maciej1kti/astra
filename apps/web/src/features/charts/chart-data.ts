@@ -131,7 +131,7 @@ export class ChartData {
           projectionNotice(page),
           ...page.warnings.map((warning) => serverMessage(warning.code)),
           capped
-            ? "Lista jest ograniczona do 500 liczników. Wybierz projekt, aby zawęzić wyniki."
+            ? "Lista jest ograniczona do 500 liczników. Wybierz cel, aby zawęzić wyniki."
             : "",
         ].filter(Boolean);
         this.kept = false;
