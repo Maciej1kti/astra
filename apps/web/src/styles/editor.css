@@ -612,6 +612,8 @@
     --card-padding: var(--space-8);
     width: 100%;
     max-width: 100%;
+    /* Full screen: its header pads itself past the status bar. */
+    inset-block-start: 0;
     height: 100dvh;
     max-height: 100dvh;
     border: 0;

@@ -269,6 +269,13 @@ Dialog content scrolls vertically, with horizontal gestures contained and long
 text, code and table cells wrapping. Pinch zoom remains available. The document
 behind a modal is locked until it closes.
 
+A dialog is placed against the screen, not against the page, so the shared
+`app-dialog` rule itself starts below `env(safe-area-inset-top)` and takes that
+inset out of its height. In a browser tab the inset is zero; in the iOS app the
+page runs under the status bar. A dialog that fills the screen and pads its own
+header, as the card editor does on a phone, sets `inset-block-start: 0`; any
+other dialog needs no rule of its own for this.
+
 A dialog that submits a command renders `CommandRecovery` for the request ID,
 status check and identical retry, and `SessionNotice` for session loss. Errors
 use `role="alert"`; confirmations such as a copied draft use `role="status"`.

@@ -7,6 +7,12 @@ for remaining acceptance, and [code structure](../docs/CODE-STRUCTURE.md) for ow
 
 ## Current work
 
+The first report from the phones was [fixed](2026-10-10-dialog-safe-area.md):
+in the iOS app every shared dialog, Settings among them, opened under the
+status bar. The shared dialog rule now starts below the top safe area. A second
+reported symptom, Settings showing only their header on one iPhone 13 mini,
+was not reproduced.
+
 A [Mac app](2026-10-09-mac-app.md) was added to the iOS project on the owner's
 direction: the host's web interface in a window, the same four widgets, and
 dictation in a panel opened from the menu bar or Control-Option-Space

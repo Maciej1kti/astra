@@ -5,9 +5,18 @@ body:has(dialog[open]) {
 }
 .app-dialog {
   --dialog-width: var(--dialog-medium);
+  /* Zero in a browser tab. A page shown edge to edge, as in the iOS app, runs
+     under the status bar, and a dialog is placed against the screen, not the
+     page, so it has to keep clear by itself. */
+  --dialog-top: env(safe-area-inset-top, 0px);
+  inset-block-start: var(--dialog-top);
   width: min(var(--dialog-width), calc(100vw - var(--space-12)));
   max-width: calc(100vw - var(--space-12));
-  max-height: min(92dvh, var(--dialog-max-height));
+  max-height: min(
+    92dvh,
+    var(--dialog-max-height),
+    calc(100dvh - var(--dialog-top) - var(--space-8))
+  );
   margin: auto;
   padding: 0;
   overflow: hidden;
@@ -216,7 +225,7 @@ dialog::backdrop {
   .app-dialog {
     width: calc(100vw - var(--space-8));
     max-width: calc(100vw - var(--space-8));
-    max-height: calc(100dvh - var(--space-8));
+    max-height: calc(100dvh - var(--dialog-top) - var(--space-8));
     border-radius: var(--radius-card);
   }
   .dialog-header,
