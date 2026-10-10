@@ -172,7 +172,7 @@ eight views at 1440px and Focus at 390px: no alert, page error, server error or
 write request. Its session was revoked afterwards. The owner's resolution of the
 `needs_review` decision report and an earlier card edit are left as the owner's
 changes outside these commits. The
-[project result](https://github.com/Maciej1kti/astra/blob/498b3a1eac6acabe399e0c49fb8849da24cf6350/.project/updates/d6b01b61-8157-41a9-9463-15c3deb8969e.json)
+[project result](https://github.com/Maciej1kti/astra/blob/c20527e06515376e0319d6733ebb3e400c34f07c/.project/updates/d6b01b61-8157-41a9-9463-15c3deb8969e.json)
 was appended through the selected CLI project and read back.
 
 ## Limits

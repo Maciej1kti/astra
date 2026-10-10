@@ -45,8 +45,8 @@ The iOS and Mac apps are [closed source](2026-10-10-closed-source-apps.md)
 since the owner's 2026-10-10 direction: their code, build scripts and decision
 records moved with their history to a private repository, and this repository
 ignores their folders. Their unit tests and scratch host pass from the new
-place. The commits that published them here remain in this repository's
-history until the owner decides otherwise.
+place. On the owner's direction the history of `main` was rewritten without
+them; commits from 2026-10-09 onward have new identifiers.
 
 A [Mac app](2026-10-09-mac-app.md) was added to the iOS project on the owner's
 direction: the host's web interface in a window, the same four widgets, and

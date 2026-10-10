@@ -34,11 +34,10 @@ accordingly ([scope](SCOPE.md#apps-are-closed-source--owner-direction-2026-10-10
 
 ## Not done
 
-- The apps were public in this repository from 2026-10-09 to 2026-10-10, and
-  the commits that added them are still in its history, so their code and
-  both reports as of those commits can still be read here. The repository had no forks, stars or
-  watchers when the apps were removed. Removing those commits rewrites the
-  history of `main` and is the owner's decision.
+- The apps were public in this repository from 2026-10-09 to 2026-10-10. When
+  this report was written the commits that added them were still in its
+  history. The owner then asked for their removal; see the
+  [history rewrite](2026-10-10-three-repositories.md#history-rewrite).
 - No Xcode build, simulator run or upload was repeated from the private
   repository; only the unit tests and the scratch host were run there.
 - The project license remains deferred.

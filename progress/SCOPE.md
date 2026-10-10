@@ -420,10 +420,10 @@ the private repository of the apps.
 The owner said that the server and the web interface are open source, and that
 the iOS and Mac apps will not be, and asked for the repository to be arranged
 so that the apps are closed source. Their code, build scripts and decision
-records moved to a private repository and are ignored here. Whether the
-commits that published them between 2026-10-09 and 2026-10-10 are also removed
-from this repository's history is the owner's to decide. The project license
-remains deferred.
+records moved to a private repository and are ignored here. The owner then
+asked for the commits that published them between 2026-10-09 and 2026-10-10 to
+be removed from this repository's history as well (see the next section). The
+project license remains deferred.
 
 ## Three repositories — owner direction, 2026-10-10
 

@@ -122,5 +122,5 @@ the owner's counters at 1440, 768 and 390px and switched the range: no alert,
 page error, server error, page overflow or write request. Its session was
 revoked afterwards, leaving the 13 earlier sessions. The owner's own card edit
 and resolution report remain outside this change. The
-[project result](https://github.com/Maciej1kti/astra/blob/498b3a1eac6acabe399e0c49fb8849da24cf6350/.project/updates/4180d182-0cd1-4e75-b4a4-cc7fac32e81e.json)
+[project result](https://github.com/Maciej1kti/astra/blob/c20527e06515376e0319d6733ebb3e400c34f07c/.project/updates/4180d182-0cd1-4e75-b4a4-cc7fac32e81e.json)
 was appended and read back through the ordinary CLI.
