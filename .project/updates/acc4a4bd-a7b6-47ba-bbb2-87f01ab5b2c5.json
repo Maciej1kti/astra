@@ -1,0 +1,18 @@
+{
+  "body": "First bug from the phones. In the iPhone app Settings opened too high, with the title under the clock; the same was true of most other dialogs. Cause: in the app the page reaches under the status bar and dialogs did not keep clear of it. Fixed in the shared dialog rule, so all of them moved, and the full-screen card editor was kept as it was.\n\nChecked on simulators of an iPhone 13 mini and an iPhone 12 Pro Max: before, the Settings header was under the status bar; after, it sits below it with the content visible. The host is updated, so installed apps have the fix without a TestFlight update. A new TestFlight build, 202610100921, is also available.\n\nNot solved: on Tomek's iPhone 13 mini Settings showed only the header. That could not be reproduced on a simulator of the same model, with or without Reduce Motion. It needs his iOS version and a screenshot after reopening the app.\n\nDetails: progress/2026-10-10-dialog-safe-area.md.\n",
+  "metadata": {
+    "author": {
+      "kind": "human",
+      "label": "Claude Code"
+    },
+    "id": "acc4a4bd-a7b6-47ba-bbb2-87f01ab5b2c5",
+    "kind": "result",
+    "recorded_at": "2026-10-10T09:24:44.314Z",
+    "summary": "Dialogs no longer open under the status bar in the iPhone app; one report not reproduced",
+    "target": {
+      "id": "00066296-2e5b-4d19-ac4c-50cfa829ab1c",
+      "type": "project"
+    }
+  },
+  "type": "update"
+}

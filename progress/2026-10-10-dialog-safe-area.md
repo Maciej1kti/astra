@@ -55,3 +55,17 @@ host update.
 - Either physical phone.
 - The other dialogs one by one in the app; they share the rule, and only
   Settings and the card editor were opened there.
+
+## Rollout
+
+The release daemon was rebuilt with the new frontend and the owner's manual
+instance restarted with its settings unchanged. Instance ID, command epoch,
+both profiles, 18 sessions and 15 projects were identical before and after;
+`/healthz` answers 200 and `/api/v1/bootstrap` 401 without a session at the
+Tailscale address, and the stylesheet served there equals the built one and
+contains the top safe-area rule.
+
+iPhone build 202610100921 was uploaded to TestFlight and is in internal
+testing. It is not needed for this fix; it carries the native changes made
+since the first build, among them the check for an input device before
+dictation starts.
